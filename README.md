@@ -2,6 +2,9 @@
 
 **Local-first Home Assistant integration for newer-generation Samsung connected appliances.** One process supervises multiple appliances (dryer + oven currently), each over its own CoAP-DTLS session, publishing state + writes through MQTT with HA auto-discovery — no SmartThings cloud round-trip for any of it.
 
+<img width="778" height="367" alt="image" src="https://github.com/user-attachments/assets/cc1dca15-f272-4625-a13c-2dc82283ff95" />
+
+
 > ### Proof of concept — collaborators wanted
 >
 > This is working code running in my home and I rely on it daily, but it's a **proof of concept**, not a polished product. No unit tests; one person's hardware as the validation set (one dryer model, one oven model); hand-rolled MQTT-based integration instead of a proper HA custom component; "wired-but-untested" comments scattered through the oven descriptor; brittle to per-firmware quirks (the "oven doesn't push OBSERVE on options writes" finding is the kind of thing that needs ongoing care).
