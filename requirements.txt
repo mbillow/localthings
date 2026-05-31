@@ -1,0 +1,9 @@
+cbor2>=5.6
+paho-mqtt>=2.0
+# pyOpenSSL 23.x added the set_ciphertext_mtu API the DTLS handshake
+# needs; older versions fragment the client cert across two UDP
+# datagrams and TizenRT drops the second one.
+pyOpenSSL>=23.0
+# scapy is only needed for the offline analyze_pcap.py helper; keep
+# optional to avoid pulling it into the bridge container.
+# scapy>=2.5

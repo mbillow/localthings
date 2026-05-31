@@ -1,0 +1,21 @@
+services:
+  smartthings-local:
+    build: .
+    container_name: smartthings-local
+    restart: unless-stopped
+
+    # Bridge is outbound-only (DTLS UDP to each appliance, MQTT to the
+    # broker on 1883). No ports to expose.
+
+    volumes:
+      # Holds the ab0b0ac4 client cert + key. APPDATA_DIR comes from
+      # .env; on Unraid this is typically
+      # /mnt/user/appdata/smartthings-local/. Bare-metal dev falls
+      # back to ./certs alongside this compose file.
+      - ${APPDATA_DIR:-./certs}:/config:ro
+
+    # All runtime config is in .env. env_file passes every variable
+    # straight into the container, so adding a new appliance is a
+    # .env edit only — no compose change.
+    env_file:
+      - .env

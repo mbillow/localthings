@@ -1,0 +1,4 @@
+# Setup-only deps. bootstrap.py reuses cbor2 to parse the dryer's ACL
+# response and shells out to `openssl` for cert generation (so SHA-1
+# signing keeps working independent of python-cryptography's policy).
+-r requirements.txt
