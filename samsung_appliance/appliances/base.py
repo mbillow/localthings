@@ -61,6 +61,13 @@ class ApplianceDescriptor:
     # enabled gate themselves on it.
     remote_available_field: Optional[str] = None
 
+    # If set, the bridge maintains a third availability topic
+    # `<prefix>/cycle_active` derived from sensors[cycle_active_field]
+    # (boolean). HA entities that the appliance only accepts writes for
+    # while a cycle is running (e.g. oven setpoint, cook time, options
+    # toggles) gate themselves on it.
+    cycle_active_field: Optional[str] = None
+
     # Optional log-line callback for state-change notifications. Gets
     # the freshly-projected sensors dict; returns a short string.
     log_state_change: Optional[Callable[[dict], str]] = None
@@ -94,6 +101,34 @@ def avail_with_remote(avail_topic: str,
          'payload_available':     'online',
          'payload_not_available': 'offline'},
         {'topic': remote_topic,
+         'payload_available':     'online',
+         'payload_not_available': 'offline'},
+    ]
+
+
+def avail_with_cycle(avail_topic: str,
+                     cycle_topic: str) -> list[dict]:
+    return [
+        {'topic': avail_topic,
+         'payload_available':     'online',
+         'payload_not_available': 'offline'},
+        {'topic': cycle_topic,
+         'payload_available':     'online',
+         'payload_not_available': 'offline'},
+    ]
+
+
+def avail_with_remote_and_cycle(avail_topic: str,
+                                remote_topic: str,
+                                cycle_topic: str) -> list[dict]:
+    return [
+        {'topic': avail_topic,
+         'payload_available':     'online',
+         'payload_not_available': 'offline'},
+        {'topic': remote_topic,
+         'payload_available':     'online',
+         'payload_not_available': 'offline'},
+        {'topic': cycle_topic,
          'payload_available':     'online',
          'payload_not_available': 'offline'},
     ]

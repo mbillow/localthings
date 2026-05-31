@@ -18,6 +18,7 @@ Reader thread owns the UDP socket. Callers issue get()/post() and block
 on a per-token Event the reader signals. OBSERVE notifications are
 delivered via the on_notification callback.
 """
+import os
 import socket
 import struct
 import threading
@@ -26,6 +27,14 @@ import time
 from OpenSSL import SSL
 
 from .logger import logger
+
+
+# Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps
+# every received CoAP frame, every /operational/state/vs/0 + /oven/vs/0
+# + /power/vs/0 + /mode/vs/0-options rep change, the full link tree at
+# seed time, and the /oic/res directory. Useful for reverse-engineering
+# new resources and field semantics; otherwise quiet.
+DEBUG_BRIDGE = os.environ.get('DEBUG_BRIDGE') == '1'
 
 
 # CoAP option numbers (RFC 7252 + 7641 + 7959)
@@ -191,8 +200,17 @@ class DtlsCoapSession:
         self.dest = None
 
         self._send_lock = threading.Lock()
-        self._mid = 0x5000
-        self._tok_counter = 0
+        # Randomize MID and token counter starting points so reconnects
+        # don't reuse identifiers from previous sessions — Samsung's
+        # RT-OCF appears to remember observer state across DTLS
+        # sessions, and re-registering with a token it still thinks is
+        # active is silently no-ops.
+        self._mid = int.from_bytes(os.urandom(2), 'big')
+        self._tok_counter = int.from_bytes(os.urandom(4), 'big')
+        # OBSERVE tokens are 1-byte (Samsung silently drops TKL>1
+        # OBSERVE registrations). Pick a random starting byte in the
+        # 0x40..0xff range so each session uses fresh values.
+        self._observe_tok_counter = 0x40 + (os.urandom(1)[0] & 0xBF)
         # token (bytes) → (Event, container_dict)
         self._pending = {}
         # token (bytes) → href (str)
@@ -273,9 +291,35 @@ class DtlsCoapSession:
         if self._reader_thread is not None:
             self._reader_thread.join()
 
+    def _send_observe_dereg(self, tok, path_segs):
+        """Send a single OBSERVE deregister GET (Observe option = 1)
+        on the existing token. Best-effort — caller swallows errors."""
+        if self.conn is None:
+            return
+        mid = self._next_mid()
+        opts = [(URI_PATH, s.encode()) for s in path_segs]
+        opts.append((OBSERVE, OBSERVE_DEREGISTER))
+        opts.append((ACCEPT, CF_CBOR))
+        self._send_dgram(
+            build_coap(TYPE_CON, METHOD_GET, mid, tok, opts))
+
     def close(self):
-        """Tear down session. Signals reader_loop and wakes pending
-        waiters with an error."""
+        """Tear down session. Sends best-effort OBSERVE deregisters
+        first so Samsung's RT-OCF cleans up its observer table —
+        without this, the per-cert observer state survives DTLS close
+        and a quick reconnect with the same tokens silently no-ops."""
+        # Send dereg for every active observation while the conn is
+        # still healthy. Tiny sleep lets the records reach the wire
+        # before we shut DTLS down.
+        if self.conn is not None and self._observe_tokens:
+            for tok, href in list(self._observe_tokens.items()):
+                segs = [s for s in href.split('/') if s]
+                try:
+                    self._send_observe_dereg(tok, segs)
+                except Exception as e:
+                    logger.warning("dereg %s: %s", href, e)
+            time.sleep(0.1)
+
         self._stop.set()
         if self.conn is not None:
             try:
@@ -306,6 +350,19 @@ class DtlsCoapSession:
         # 4-byte tokens — fits within tkl=8 cap with headroom and
         # avoids collisions across long-running OBSERVE subscriptions.
         return self._tok_counter.to_bytes(4, 'big')
+
+    def _next_observe_tok(self):
+        # Single-byte tokens for OBSERVE registrations. Samsung
+        # RT-OCF accepts these but silently drops TKL=4 OBSERVE
+        # registrations. Counter is randomly seeded per session so
+        # reconnects don't collide with stale observer state Samsung
+        # may still be holding from the previous run.
+        self._observe_tok_counter = (self._observe_tok_counter + 1) & 0xFF
+        # Avoid 0x00 — some CoAP stacks treat an all-zero token as
+        # equivalent to "no token" / empty (TKL=0).
+        if self._observe_tok_counter == 0:
+            self._observe_tok_counter = 1
+        return bytes([self._observe_tok_counter])
 
     def _send_dgram(self, datagram):
         """Send a CoAP datagram. Holds the send lock for the
@@ -340,31 +397,46 @@ class DtlsCoapSession:
                     return
                 if not d:
                     continue
-                try:
-                    conn.bio_write(d)
-                except SSL.Error as e:
-                    logger.warning("DTLS bio_write: %s", e)
-                    return
-                # Drain all app data the DTLS conn has buffered. One
-                # UDP datagram can yield zero, one, or several CoAP
-                # records depending on how mbedtls packed them.
-                while True:
+                # pyOpenSSL's SSL.Connection is not thread-safe — the
+                # same SSL object must not be touched by multiple
+                # threads concurrently. Drain decrypted records into a
+                # local list under _send_lock so the reader never races
+                # a sender's conn.send()/bio_read(). Dispatch happens
+                # AFTER releasing the lock because _dispatch_coap may
+                # call _send_dgram (auto-ACK for CON frames), which
+                # re-acquires the lock — holding it across dispatch
+                # would deadlock.
+                packets = []
+                exit_reader = False
+                with self._send_lock:
                     try:
-                        pl = conn.recv(65535)
-                    except SSL.WantReadError:
-                        break
-                    except SSL.ZeroReturnError:
-                        logger.info("DTLS peer closed connection")
-                        return
+                        conn.bio_write(d)
                     except SSL.Error as e:
-                        logger.warning("DTLS recv: %s", e)
+                        logger.warning("DTLS bio_write: %s", e)
                         return
-                    if not pl:
-                        break
+                    while True:
+                        try:
+                            pl = conn.recv(65535)
+                        except SSL.WantReadError:
+                            break
+                        except SSL.ZeroReturnError:
+                            logger.info("DTLS peer closed connection")
+                            exit_reader = True
+                            break
+                        except SSL.Error as e:
+                            logger.warning("DTLS recv: %s", e)
+                            exit_reader = True
+                            break
+                        if not pl:
+                            break
+                        packets.append(pl)
+                for pl in packets:
                     try:
                         self._dispatch_coap(pl)
                     except Exception as e:
                         logger.warning("dispatch: %s", e)
+                if exit_reader:
+                    return
         finally:
             # Make sure pending waiters don't hang if the reader dies.
             for tok, (ev, container) in list(self._pending.items()):
@@ -377,6 +449,12 @@ class DtlsCoapSession:
         except Exception as e:
             logger.debug("malformed CoAP: %s", e)
             return
+
+        if DEBUG_BRIDGE:
+            kind = ['CON', 'NON', 'ACK', 'RST'][mt]
+            logger.info("rx %s code=%s mid=%04x tok=%s opts=%d pl=%d",
+                        kind, fmt_code(code), mid, tok.hex() or '-',
+                        len(ropts), len(payload))
 
         # ACK back any CON from the device to suppress retransmits.
         # RFC 7252 §4.2 — ACK is a bare frame (token len 0, code 0).
@@ -512,6 +590,27 @@ class DtlsCoapSession:
         finally:
             self._pending.pop(tok, None)
 
+    def ping(self):
+        """RFC 7252 §4.4 CoAP Ping — empty CON, no token, no payload.
+        Peer MUST respond with an RST sharing the same Message ID.
+        We don't block waiting for the RST here; the reader thread
+        sees it, finds nothing in _pending/_observe_tokens for an
+        empty token, and drops it quietly — which is the documented
+        behaviour for unsolicited RST.
+
+        Sole purpose is keepalive: gives Samsung's RT-OCF stack a
+        visible "client still here" signal so it doesn't expire our
+        OBSERVE subscriptions (symptom of expiry: POSTs still get
+        2.04 but OBSERVE notifications stop arriving)."""
+        if self.conn is None:
+            raise ConnectionError("DTLS session closed")
+        mid = self._next_mid()
+        # Empty message: ver=01, type=CON, tkl=0, code=0.00, mid, no
+        # token, no options, no payload. build_coap with empty token
+        # and no options yields exactly that.
+        self._send_dgram(build_coap(TYPE_CON, 0, mid, b'', []))
+        return mid
+
     def subscribe(self, path_segs):
         """Register an OBSERVE on the given path. The initial 2.05
         notification and all subsequent state-change notifications
@@ -521,7 +620,7 @@ class DtlsCoapSession:
         later)."""
         if self.conn is None:
             raise ConnectionError("DTLS session closed")
-        tok = self._next_tok()
+        tok = self._next_observe_tok()
         href = '/' + '/'.join(path_segs)
         # Register the token BEFORE sending — otherwise the device
         # could respond between send() and the dict insert, and the

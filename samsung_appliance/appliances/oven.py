@@ -26,7 +26,8 @@ import time
 from .base import (
     ApplianceDescriptor,
     avail_base,
-    avail_with_remote,
+    avail_with_cycle,
+    avail_with_remote_and_cycle,
     device_block,
     encode,
 )
@@ -52,29 +53,6 @@ OBSERVE_PATHS = [
     ['alarms',      'vs', '0'],             # alarm code (OV_E_OFF etc.)
     ['connected',   'vs', '0'],             # cloud connectivity status
     ['otninformation', 'vs', '0'],          # firmware-update flags
-]
-
-
-# ---------------------------------------------------------------------
-# Mode dropdown — supportedModes minus the explicitly NotSupported one.
-# Order matches the oven's own supportedModes list so the dropdown
-# matches the device UI's order.
-# ---------------------------------------------------------------------
-SUPPORTED_MODES = [
-    'Autocook',
-    'Convection',
-    'TopHeatPluseConvection',
-    'Conventional',
-    'LargeGrill',
-    'SmallGrill',
-    'BottomHeatPluseConvection',
-    'PlateWarm',
-    'KeepWarm',
-    'Bottom',
-    'EcoConvection',
-    'FanGrill',
-    'Defrost',
-    # 'SteamClean',  # control=NotSupported per modeSpec — exclude.
 ]
 
 
@@ -166,6 +144,16 @@ def flatten(links):
             rem_min = int(h) * 60 + int(m) + (1 if int(s) > 0 else 0)
         except Exception:
             pass
+    # operationTime parsed as minutes — the source of truth for "Cook
+    # time" in HA (mid-cycle SmartThings updates land here, not in
+    # /mode/vs/0 UpperTimerSet which is vestigial).
+    op_min = None
+    if operation_time:
+        try:
+            h, m, s = operation_time.split(':')
+            op_min = int(h) * 60 + int(m) + (1 if int(s) > 0 else 0)
+        except Exception:
+            pass
 
     # Cavity state — Cooking, Idle, Preheating, …
     oven_state = g('/oven/vs/0', 'x.com.samsung.da.state')
@@ -201,6 +189,12 @@ def flatten(links):
     lamp = _option_value(options, 'UpperLamp')          # 'On' / 'Off'
     sound = _option_value(options, 'Sound')             # 'On' / 'Off'
     fastpreheat = _option_value(options, 'fastpreheat') # 'On' / 'Off'
+    # NaturalSteam only appears in the options array after it's been
+    # touched in the SmartThings app at least once. Until then it's
+    # absent, so `_option_value` returns None — surface that as None
+    # (HA renders as "Unknown") rather than "Off", which would falsely
+    # imply we know it's disabled.
+    natural_steam = _option_value(options, 'NaturalSteam')  # 'On' / 'Off' / None
     timer_state = _option_value(options, 'UpperTimerState')   # 'Ready' / 'Running'
     # UpperTimerCurrent/UpperTimerSet are integer seconds. Format as
     # H:MM:SS for HA display so users see "1:10:00", not "4200".
@@ -230,10 +224,16 @@ def flatten(links):
 
     return {
         'machine_state':           machine_state,
+        # `cycle_active` gates the writable controls in HA. The oven
+        # only honours setpoint / cook-time / option writes (and Stop)
+        # while a cycle is active — outside an active cycle, writes
+        # return 2.04 but get rolled back within ~3s.
+        'cycle_active':            machine_state == 'active',
         'oven_state':              oven_state,
         'progress_percentage':     _int(g('/operational/state/vs/0',
                                           'x.com.samsung.da.progressPercentage')),
         'operation_time':          operation_time,
+        'operation_time_minutes':  op_min,
         'completion_time':         remaining,
         'completion_minutes':      rem_min,
         'current_temp_c':          cur_c,
@@ -250,6 +250,7 @@ def flatten(links):
         'lamp':                    lamp,
         'sound':                   sound,
         'fastpreheat':             fastpreheat,
+        'natural_steam':           natural_steam,
         'timer_state':             timer_state,
         'timer_current':           timer_current,
         'timer_set':               timer_set,
@@ -303,7 +304,9 @@ def log_state_change(sensors):
             f"oven={sensors.get('oven_state')} "
             f"temp={sensors.get('current_temp_c')}/"
             f"{sensors.get('target_temp_c')}°C "
-            f"mode={sensors.get('mode')}")
+            f"mode={sensors.get('mode')} "
+            f"timer_set={sensors.get('timer_set_seconds')} "
+            f"timer_cur={sensors.get('timer_current_seconds')}")
 
 
 # ---------------------------------------------------------------------
@@ -322,6 +325,9 @@ MODEL = 'OCF oven (TizenRT-iotivity, NV7000BS-class)'
 _SENSORS = [
     ('machine_state',       'Machine state',        {'icon': 'mdi:stove'}),
     ('oven_state',          'Cavity state',         {}),
+    # Cooking mode is read-only via local OCF — the oven owns the
+    # `modes` field once a cycle is active and rolls back any writes.
+    ('mode',                'Cooking mode',         {'icon': 'mdi:tune'}),
     ('progress_percentage', 'Progress percent',
         {'unit_of_measurement': '%', 'state_class': 'measurement'}),
     ('operation_time',      'Elapsed time',         {'icon': 'mdi:timer'}),
@@ -386,19 +392,39 @@ _BINARY_SENSORS = [
 
 
 # MQTT command-topic suffixes (under <prefix>/cmd/…)
-CMD_LAMP        = 'cmd/lamp'
-CMD_SOUND       = 'cmd/sound'
-CMD_FASTPREHEAT = 'cmd/fastpreheat'
-CMD_POWER       = 'cmd/power'
-CMD_STOP        = 'cmd/stop'
-CMD_MODE        = 'cmd/mode'
-CMD_SETPOINT    = 'cmd/setpoint'
+CMD_LAMP         = 'cmd/lamp'
+CMD_SOUND        = 'cmd/sound'
+CMD_FASTPREHEAT  = 'cmd/fastpreheat'
+CMD_NATURALSTEAM = 'cmd/naturalsteam'
+CMD_POWER        = 'cmd/power'
+CMD_STOP         = 'cmd/stop'
+CMD_SETPOINT     = 'cmd/setpoint'
+CMD_COOK_TIME    = 'cmd/cook_time'
+# NOTE — no CMD_START or CMD_MODE. Reverse-engineered 2026-05-31:
+#   * `state='Run'` writes to /operational/state/vs/0 are accepted
+#     (2.04) and machine briefly goes active, but the oven cavity
+#     stays Ready (no Preheat) and the cycle self-cancels within
+#     ~3s. Tried every byte-level approximation of SmartThings's
+#     working start (matching all four fields on /operational/state,
+#     +operationTime, +remainingTime, +progressPercentage='1', plus
+#     /temperatures/vs/0 desired, with and without /mode/vs/0 modes,
+#     with PUT vs POST, paced 1s apart, with OCF-version-options
+#     2049/2053, with Samsung vendor-option 65524=0xc0) — none of
+#     these engage the cavity. The differentiator must be something
+#     invisible at the OBSERVE-push level (likely a cloud-mediated
+#     auth path the SmartThings app uses). See project_oven_remote
+#     _start_open.md for full notes.
+#   * `modes=['Convection']` writes to /mode/vs/0 succeed (2.04)
+#     but the oven owns the field once a cycle is active and rolls
+#     local writes back to ['NoOperation']. mode is surfaced as a
+#     read-only sensor instead.
 
 
 def build_discovery(topic_prefix, ha_prefix, device_name):
     state_topic   = f"{topic_prefix}/state"
     avail_topic   = f"{topic_prefix}/availability"
     remote_topic  = f"{topic_prefix}/remote_available"
+    cycle_topic   = f"{topic_prefix}/cycle_active"
     dev = device_block(topic_prefix, device_name, MODEL)
     out = []
 
@@ -456,17 +482,35 @@ def build_discovery(topic_prefix, ha_prefix, device_name):
     out.append((f"{ha_prefix}/light/{topic_prefix}/lamp/config",
                 encode(cfg)))
 
-    # --- switches (RC-gated; untested mid-cook). Sound + fastpreheat
-    # are options-array writes (same RMW path as lamp); Power is a
-    # /power/vs/0 single-field write. --------------------------------
-    untested_switches = [
-        ('sound',       'Sound',        '{{ value_json.sound }}',       CMD_SOUND,       'mdi:volume-high'),
-        ('fastpreheat', 'Fast preheat', '{{ value_json.fastpreheat }}', CMD_FASTPREHEAT, 'mdi:fire'),
-        # Power deliberately omitted: turning the oven on at the
-        # cold-start panel is a physical action; the read-only
-        # power_state sensor (above) reflects its state.
+    # --- switches. Sound is always-available — independent of cycle
+    # state, no RC required. Fast preheat + Natural steam are
+    # options-array writes the oven only honours mid-cycle, so they
+    # gate on RC + cycle_active. Power deliberately omitted: turning
+    # the oven on is a physical-panel action; read-only power_state
+    # sensor reflects its state.
+    cfg = {
+        'name':           'Sound',
+        'unique_id':      f"{topic_prefix}_sound_switch",
+        'object_id':      f"{topic_prefix}_sound_switch",
+        'state_topic':    state_topic,
+        'value_template': '{{ value_json.sound }}',
+        'state_on':       'On',
+        'state_off':      'Off',
+        'command_topic':  f"{topic_prefix}/{CMD_SOUND}",
+        'payload_on':     'On',
+        'payload_off':    'Off',
+        'icon':           'mdi:volume-high',
+        'availability':   avail_base(avail_topic),
+        'device':         dev,
+    }
+    out.append((f"{ha_prefix}/switch/{topic_prefix}/sound/config",
+                encode(cfg)))
+
+    cycle_switches = [
+        ('fastpreheat',   'Fast preheat',  '{{ value_json.fastpreheat }}',   CMD_FASTPREHEAT,  'mdi:fire'),
+        ('natural_steam', 'Natural steam', '{{ value_json.natural_steam }}', CMD_NATURALSTEAM, 'mdi:kettle-steam'),
     ]
-    for key, name, tpl, cmd, icon in untested_switches:
+    for key, name, tpl, cmd, icon in cycle_switches:
         cfg = {
             'name':              name,
             'unique_id':         f"{topic_prefix}_{key}_switch",
@@ -479,7 +523,8 @@ def build_discovery(topic_prefix, ha_prefix, device_name):
             'payload_on':        'On',
             'payload_off':       'Off',
             'icon':              icon,
-            'availability':      avail_with_remote(avail_topic, remote_topic),
+            'availability':      avail_with_remote_and_cycle(
+                                     avail_topic, remote_topic, cycle_topic),
             'availability_mode': 'all',
             'device':            dev,
         }
@@ -501,47 +546,69 @@ def build_discovery(topic_prefix, ha_prefix, device_name):
         'device_class':      'temperature',
         'mode':              'slider',
         'icon':              'mdi:thermometer-chevron-up',
-        'availability':      avail_with_remote(avail_topic, remote_topic),
+        # RC + cycle_active gated — Samsung's local-OCF surface only
+        # honours setpoint changes while a cycle is actually running
+        # (idle writes get rolled back within ~3s).
+        'availability':      avail_with_remote_and_cycle(
+                                 avail_topic, remote_topic, cycle_topic),
         'availability_mode': 'all',
         'device':            dev,
     }
     out.append((f"{ha_prefix}/number/{topic_prefix}/setpoint/config",
                 encode(cfg)))
 
-    # --- select: mode (RC-gated) ------------------------------------
+    # --- button: Stop cycle ----------------------------------------
+    # Gated on cycle_active — there's nothing to stop when idle.
+    # There is no Start button: local-OCF cycle start is not
+    # reproducible on this firmware (see project_oven_remote_start
+    # _open.md memory note for the full investigation). Cooking mode
+    # is similarly omitted — read-only via local OCF, surfaced as a
+    # sensor.
     cfg = {
-        'name':              'Cooking mode',
-        'unique_id':         f"{topic_prefix}_mode_select",
-        'object_id':         f"{topic_prefix}_mode_select",
-        'state_topic':       state_topic,
-        'value_template':    '{{ value_json.mode }}',
-        'command_topic':     f"{topic_prefix}/{CMD_MODE}",
-        'options':           SUPPORTED_MODES,
-        'icon':              'mdi:tune',
-        'availability':      avail_with_remote(avail_topic, remote_topic),
+        'name':              'Stop cycle',
+        'unique_id':         f"{topic_prefix}_stop",
+        'object_id':         f"{topic_prefix}_stop",
+        'command_topic':     f"{topic_prefix}/{CMD_STOP}",
+        'payload_press':     'Stop',
+        'icon':              'mdi:stop',
+        'availability':      avail_with_cycle(avail_topic, cycle_topic),
         'availability_mode': 'all',
         'device':            dev,
     }
-    out.append((f"{ha_prefix}/select/{topic_prefix}/mode/config",
-                encode(cfg)))
-
-    # --- button: Stop cycle ----------------------------------------
-    # NOT gated on remote_available: the SmartThings app stops the
-    # oven regardless of the Remote Control switch state, so the
-    # device clearly honours Stop without that gate. Only requires
-    # the bridge itself to be online.
-    cfg = {
-        'name':           'Stop cycle',
-        'unique_id':      f"{topic_prefix}_stop",
-        'object_id':      f"{topic_prefix}_stop",
-        'command_topic':  f"{topic_prefix}/{CMD_STOP}",
-        'payload_press':  'Stop',
-        'icon':           'mdi:stop',
-        'availability':   avail_base(avail_topic),
-        'device':         dev,
-    }
     out.append((f"{ha_prefix}/button/{topic_prefix}/stop/config",
                 encode(cfg)))
+
+    # --- number: Cook time in minutes (RC + cycle gated; the oven
+    # only honours operationTime writes while running). Source of
+    # truth is `operationTime` on /operational/state/vs/0;
+    # SmartThings's mid-cycle time changes land in that same field.
+    cfg = {
+        'name':              'Cook time',
+        'unique_id':         f"{topic_prefix}_cook_time",
+        'object_id':         f"{topic_prefix}_cook_time",
+        'state_topic':       state_topic,
+        'value_template':    '{{ value_json.operation_time_minutes | int(0) }}',
+        'command_topic':     f"{topic_prefix}/{CMD_COOK_TIME}",
+        'min':               0,
+        'max':               1439,    # 23:59 — matches modeSpec timeMax
+        'step':              1,
+        'unit_of_measurement': 'min',
+        'mode':              'box',
+        'icon':              'mdi:timer',
+        'availability':      avail_with_remote_and_cycle(
+                                 avail_topic, remote_topic, cycle_topic),
+        'availability_mode': 'all',
+        'device':            dev,
+    }
+    out.append((f"{ha_prefix}/number/{topic_prefix}/cook_time/config",
+                encode(cfg)))
+
+    # --- removal: publish empty payload to the discovery topics of
+    # entities we used to expose. HA treats an empty retained payload
+    # on a discovery topic as "delete this entity", so previously-set
+    # up Start buttons and Cooking-mode selects disappear cleanly.
+    out.append((f"{ha_prefix}/button/{topic_prefix}/start/config", b''))
+    out.append((f"{ha_prefix}/select/{topic_prefix}/mode/config",  b''))
 
     return out
 
@@ -602,31 +669,39 @@ def command_handlers():
                 opts, 'fastpreheat', p),
         }
 
+    def _naturalsteam(p, links):
+        # NaturalSteam_* only appears in the options array after the
+        # SmartThings app has touched it once. If absent, append the
+        # slot — the oven creates it on first write, so the bridge
+        # doesn't need a "prime via app" dance.
+        if p not in ('On', 'Off'):
+            return None
+        opts = _mode_options(links)
+        if opts is None:
+            return None
+        if not any(o.startswith('NaturalSteam_') for o in opts):
+            opts = opts + [f'NaturalSteam_{p}']
+        else:
+            opts = _replace_in_options(opts, 'NaturalSteam', p)
+        return ['mode', 'vs', '0'], {
+            'x.com.samsung.da.options': opts,
+        }
+
     def _power(p, _links):
         if p not in ('On', 'Off'):
             return None
         return ['power', 'vs', '0'], {'x.com.samsung.da.power': p}
 
     def _stop(_p, _links):
-        # Untested for the oven. Dryer convention is state='Ready' to
-        # leave the cycle in idle. If this turns out to be wrong, the
-        # bridge will log the 4.xx but the oven won't be harmed —
-        # /operational/state/vs/0 isn't a wedge-trigger surface.
         return ['operational', 'state', 'vs', '0'], {
             'x.com.samsung.da.state': 'Ready',
         }
-
-    def _mode(p, _links):
-        if p not in SUPPORTED_MODES:
-            return None
-        return ['mode', 'vs', '0'], {'x.com.samsung.da.modes': [p]}
 
     def _setpoint(p, links):
         try:
             temp = float(p)
         except (TypeError, ValueError):
             return None
-        # Snap to step and bounds.
         temp_i = int(round(temp / SETPOINT_STEP_C) * SETPOINT_STEP_C)
         if not (SETPOINT_MIN_C <= temp_i <= SETPOINT_MAX_C):
             return None
@@ -638,14 +713,34 @@ def command_handlers():
             'x.com.samsung.da.items': items,
         }
 
+    def _cook_time(p, links):
+        # HA sends minutes; oven cycle duration lives in
+        # /operational/state/vs/0 as `operationTime` / `remainingTime`
+        # (H:MM:SS strings). Writing both — mirroring SmartThings's
+        # observed behaviour, which resets the live countdown to the
+        # new duration. Clamp to modeSpec's 0..23:59.
+        try:
+            minutes = int(round(float(p)))
+        except (TypeError, ValueError):
+            return None
+        if not (0 <= minutes <= 1439):
+            return None
+        h, m = divmod(minutes, 60)
+        hms = f"{h:02d}:{m:02d}:00"
+        return ['operational', 'state', 'vs', '0'], {
+            'x.com.samsung.da.operationTime': hms,
+            'x.com.samsung.da.remainingTime': hms,
+        }
+
     return {
-        CMD_LAMP:        _lamp,
-        CMD_SOUND:       _sound,
-        CMD_FASTPREHEAT: _fastpreheat,
-        CMD_POWER:       _power,
-        CMD_STOP:        _stop,
-        CMD_MODE:        _mode,
-        CMD_SETPOINT:    _setpoint,
+        CMD_LAMP:         _lamp,
+        CMD_SOUND:        _sound,
+        CMD_FASTPREHEAT:  _fastpreheat,
+        CMD_NATURALSTEAM: _naturalsteam,
+        CMD_POWER:        _power,
+        CMD_STOP:         _stop,
+        CMD_SETPOINT:     _setpoint,
+        CMD_COOK_TIME:    _cook_time,
     }
 
 
@@ -661,5 +756,6 @@ OVEN = ApplianceDescriptor(
     on_observation=on_observation,
     project=project,
     remote_available_field='remote_control_binary',
+    cycle_active_field='cycle_active',
     log_state_change=log_state_change,
 )

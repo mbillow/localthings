@@ -20,6 +20,7 @@ Multiple PushBridges run concurrently in a single process — see
 main.py. They share one MQTT client; each owns one DTLS session.
 """
 import json
+import os
 import threading
 import time
 
@@ -30,6 +31,16 @@ from .coap_dtls import DtlsCoapSession, fmt_code
 from .config import ApplianceConfig, SharedConfig
 from .logger import bridge_logger, logger as module_logger
 from .sensors import index_links
+
+
+# Re-enable with `DEBUG_BRIDGE=1` env var. When on, the bridge dumps:
+#   - every received CoAP frame (in coap_dtls.py)
+#   - the full /device/0 link tree at seed time
+#   - /oic/res directory
+#   - REP changes for /operational/state, /oven, /power, /mode-options
+# Designed for reverse-engineering new oven/dryer behaviour next
+# session — leave at 0 in production.
+DEBUG_BRIDGE = os.environ.get('DEBUG_BRIDGE') == '1'
 
 
 def _href_to_segs(href: str) -> list[str]:
@@ -76,6 +87,7 @@ class PushBridge:
 
         self.last_state_pub = None
         self.last_remote_pub = None
+        self.last_cycle_pub = None
         self.stop = threading.Event()
         self.started_ts = time.time()
         self.session_started_ts = None
@@ -100,6 +112,7 @@ class PushBridge:
         self.state_topic    = f"{p}/state"
         self.avail_topic    = f"{p}/availability"
         self.remote_topic   = f"{p}/remote_available"
+        self.cycle_topic    = f"{p}/cycle_active"
         self.health_topic   = f"{p}/bridge/health"
         self.cmd_handlers   = descriptor.command_handlers()
         self.cmd_topic_prefix = f"{p}/cmd/"
@@ -136,6 +149,17 @@ class PushBridge:
     def _apply_rep(self, href, rep):
         """Update self.links + fire descriptor hooks + maybe publish.
         Shared between the OBSERVE path and the Block2 fetch-back path."""
+        if DEBUG_BRIDGE:
+            # /mode/vs/0 carries a huge modeSpec JSON we don't want to
+            # log; surface just modes + options. Small resources get
+            # full-rep dumps.
+            if href == '/mode/vs/0' and isinstance(rep, dict):
+                self.log.info("mode modes=%r options=%r",
+                              rep.get('x.com.samsung.da.modes'),
+                              rep.get('x.com.samsung.da.options'))
+            elif href in ('/operational/state/vs/0', '/oven/vs/0',
+                          '/power/vs/0'):
+                self.log.info("REP %s = %r", href, rep)
         self.links[href] = rep
         hook = self.descriptor.on_observation
         if hook is not None:
@@ -254,6 +278,35 @@ class PushBridge:
 
         sess.start_reader()
 
+        # When the bridge is asked to stop, close the session — which
+        # fires the OBSERVE-dereg sequence and tears DTLS down. Without
+        # this, session_once would block forever in sess.join() because
+        # the reader only exits on stop/socket-death.
+        session_ended = threading.Event()
+
+        def _stop_watcher():
+            while not session_ended.is_set():
+                if self.stop.wait(1.0):
+                    try:
+                        sess.close()
+                    except Exception as e:
+                        self.log.warning("stop close: %s", e)
+                    return
+
+        threading.Thread(target=_stop_watcher, daemon=True,
+                         name=f'{self.app.klass}-stopw').start()
+
+        try:
+            self._run_session_inner(sess)
+        finally:
+            # Always release the watcher so it doesn't sit pinned on
+            # self.stop forever after the session ends.
+            session_ended.set()
+
+    def _run_session_inner(self, sess):
+        """Body of session_once after start_reader() — split out so
+        session_once's try/finally cleanly bounds the stop-watcher
+        thread's lifetime."""
         for path in self.descriptor.observe_paths:
             sess.subscribe(path)
             time.sleep(0.05)
@@ -275,6 +328,30 @@ class PushBridge:
         # the logger so the remaining log lines this session emits are
         # serial-tagged.
         self._retag_logger_with_serial()
+
+        if DEBUG_BRIDGE:
+            # Dump every link's rep (skipping the huge modeSpec on
+            # /mode/vs/0) + the /oic/res directory. Useful for finding
+            # new writable resources next session.
+            for href, rep in sorted(self.links.items()):
+                if href == '/mode/vs/0':
+                    short = {k: v for k, v in rep.items()
+                             if k not in (
+                                 'x.com.samsung.da.modeSpec',
+                                 'x.com.samsung.da.supportedModes',
+                             )}
+                    self.log.info("LINK %s = %r", href, short)
+                else:
+                    self.log.info("LINK %s = %r", href, rep)
+            try:
+                code, pl = sess.get(['oic', 'res'], timeout=10.0)
+                if code == 0x45 and pl:
+                    self.log.info("OIC_RES = %r", cbor2.loads(pl))
+                else:
+                    self.log.info("oic/res → %s", fmt_code(code))
+            except Exception as e:
+                self.log.warning("oic/res get: %s", e)
+
 
         hook = self.descriptor.on_observation
         if hook is not None:
@@ -345,6 +422,9 @@ class PushBridge:
         field = self.descriptor.remote_available_field
         if field is not None:
             self.publish_remote_available(sensors.get(field))
+        cycle_field = self.descriptor.cycle_active_field
+        if cycle_field is not None:
+            self.publish_cycle_active(sensors.get(cycle_field))
         if not force:
             log_fn = self.descriptor.log_state_change
             extra = log_fn(sensors) if log_fn is not None else ''
@@ -362,6 +442,17 @@ class PushBridge:
         except Exception as e:
             self.log.warning("remote_available publish: %s", e)
 
+    def publish_cycle_active(self, cycle_on, force=False):
+        value = 'online' if cycle_on else 'offline'
+        if not force and value == self.last_cycle_pub:
+            return
+        self.last_cycle_pub = value
+        try:
+            self.mqtt.publish(self.cycle_topic, value, qos=1, retain=True)
+            self.log.info("cycle_active → %s", value)
+        except Exception as e:
+            self.log.warning("cycle_active publish: %s", e)
+
     def reassert_availability(self):
         if self.session is None or self.last_state_pub is None:
             return
@@ -370,6 +461,10 @@ class PushBridge:
         if field is not None:
             self.publish_remote_available(
                 self.last_state_pub.get(field), force=True)
+        cycle_field = self.descriptor.cycle_active_field
+        if cycle_field is not None:
+            self.publish_cycle_active(
+                self.last_state_pub.get(cycle_field), force=True)
 
     def set_availability(self, online):
         try:
@@ -382,6 +477,13 @@ class PushBridge:
             self.last_remote_pub = None
             try:
                 self.mqtt.publish(self.remote_topic, 'offline',
+                                  qos=1, retain=True)
+            except Exception:
+                pass
+        if not online and self.descriptor.cycle_active_field is not None:
+            self.last_cycle_pub = None
+            try:
+                self.mqtt.publish(self.cycle_topic, 'offline',
                                   qos=1, retain=True)
             except Exception:
                 pass
@@ -418,30 +520,15 @@ class PushBridge:
             return
         self.log.info("command %s payload=%r → %s",
                       suffix, payload, fmt_code(code))
-        # Defensive re-read of the just-written resource. The dryer
-        # pushes an OBSERVE notification within ~100ms of a 2.xx write
-        # and we'd see the new state anyway, but the oven doesn't
-        # push on options-only writes (lamp/sound/fastpreheat). Without
-        # this fetchback, HA would only see the new state on the next
-        # heartbeat (10 min by default).
         if code >> 5 == 2:
             href = '/' + '/'.join(path_segs)
-            # Optimistic publish: apply the write to our local state
-            # and republish the MQTT state immediately. HA sees the
-            # new value with no UI flash. The fetchback that follows
-            # acts as verification — if the appliance didn't actually
-            # honour the write (silent coerce), the fetchback's
-            # publish will revert HA to the device's true state.
+            # Optimistic publish — apply the write to our local state.
+            # No fetchback: empirically (2026-05-31) the post-write
+            # Block2 GET was causing the appliance to roll our values
+            # back ~3s later, on every writable resource. OBSERVE
+            # pushes keep HA in sync without polling. (Was the root
+            # cause of the "mid-cycle setpoint reverts" symptom.)
             self._apply_optimistic(href, body)
-            # 3s settling window before the verification read.
-            # 1.5s was sometimes too short — the oven's read-side
-            # propagation lags more than that, and an early Block2
-            # GET on /mode/vs/0 right after a POST appears to be one
-            # of the triggers for the oven actively closing DTLS.
-            # The fetchback runs in its own worker thread, so this
-            # delay is non-blocking; the optimistic publish has
-            # already given HA the new state.
-            self._schedule_fetchback(href, delay_s=3.0)
 
     def publish_health(self):
         now = time.time()
@@ -474,6 +561,17 @@ class PushBridge:
                 self.maybe_publish_state()
             except Exception as e:
                 self.log.warning("publish tick: %s", e)
+
+    def ping_once(self):
+        """Send one CoAP Ping. Caller (main.py's per-bridge ping
+        thread) handles the cadence. No-op if no live session."""
+        sess = self.session
+        if sess is None:
+            return
+        try:
+            sess.ping()
+        except Exception as e:
+            self.log.warning("ping: %s", e)
 
     def run_forever(self):
         threading.Thread(target=self._publish_tick_loop, daemon=True,

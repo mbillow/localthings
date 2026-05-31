@@ -154,6 +154,14 @@ def main():
                 b.heartbeat()
         return loop
 
+    def make_ping(b: PushBridge):
+        def loop():
+            while not b.stop.is_set():
+                if b.stop.wait(shared.PING_INTERVAL_S):
+                    break
+                b.ping_once()
+        return loop
+
     for b in bridges:
         tag = b.app.klass
         threads.append(threading.Thread(
@@ -164,6 +172,10 @@ def main():
             threads.append(threading.Thread(
                 target=make_heartbeat(b), daemon=True,
                 name=f'{tag}-heartbeat'))
+        if shared.PING_INTERVAL_S > 0:
+            threads.append(threading.Thread(
+                target=make_ping(b), daemon=True,
+                name=f'{tag}-ping'))
 
     stopping = threading.Event()
 
