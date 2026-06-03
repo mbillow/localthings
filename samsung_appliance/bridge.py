@@ -1,23 +1,19 @@
-"""Push-mode bridge: OCF CoAP-DTLS Observe → MQTT.
+"""Bridge: OCF CoAP-DTLS appliance → MQTT, polling-first with opportunistic OBSERVE.
 
-  Appliance ──CoAP OBSERVE notifications──►  PushBridge
-                                                  │
-                                                  ▼
-                                              MQTT broker
-                                                  │
-                                                  ▼
-                                          Home Assistant
+  Appliance ──CoAP DTLS─►  PushBridge ──MQTT──►  Home Assistant
 
-State changes push from the appliance over a sustained DTLS session.
-The bridge updates an in-memory link dict, recomputes flat sensors via
-the appliance descriptor, and publishes to MQTT ONLY when the flat-
-sensor dict actually changes.
+State freshness comes from a tiered PollScheduler over a persistent DTLS
+session. OBSERVE registrations are kept as an opportunistic freshness
+accelerator — when the appliance has internet and pushes notifications,
+the cache absorbs them; when it's air-gapped, polling carries the UX
+unchanged.
 
-The bridge is appliance-class-agnostic — it delegates every
-appliance-specific decision to an ApplianceDescriptor.
+DTLS-layer liveness is a separate KeepaliveTask (CoAP empty-CON ping
+every PING_INTERVAL_S). Three consecutive failures publish MQTT
+availability=offline.
 
-Multiple PushBridges run concurrently in a single process — see
-main.py. They share one MQTT client; each owns one DTLS session.
+Multiple PushBridges run concurrently — see main.py. They share one
+MQTT client; each owns one DTLS session, one cache, one scheduler.
 """
 import json
 import os
@@ -26,43 +22,28 @@ import time
 
 import cbor2
 
-from .appliances.base import ApplianceDescriptor
+from .appliances.base import ApplianceDescriptor, bridge_diagnostic_discovery
 from .coap_dtls import DtlsCoapSession, fmt_code
 from .config import ApplianceConfig, SharedConfig
-from .logger import bridge_logger, logger as module_logger
+from .keepalive import KeepaliveTask
+from .logger import bridge_logger
+from .poll_scheduler import PollScheduler
 from .sensors import index_links
+from .state_cache import StateCache
 
 
-# Re-enable with `DEBUG_BRIDGE=1` env var. When on, the bridge dumps:
-#   - every received CoAP frame (in coap_dtls.py)
-#   - the full /device/0 link tree at seed time
-#   - /oic/res directory
-#   - REP changes for /operational/state, /oven, /power, /mode-options
-# Designed for reverse-engineering new oven/dryer behaviour next
-# session — leave at 0 in production.
 DEBUG_BRIDGE = os.environ.get('DEBUG_BRIDGE') == '1'
 
 
 def _href_to_segs(href: str) -> list[str]:
-    """`/mode/vs/0` → `['mode', 'vs', '0']`. Used to translate an
-    OBSERVE-notification href back into the path-segs the Block2 GET
-    needs."""
     return [s for s in href.split('/') if s]
 
 
-# Samsung's `/information/vs/0` resource carries a unique serial number.
-# Verified on both dryer (DV5000T) and oven (NV7000BS); we use the
-# value to tag per-bridge log lines once the seed completes.
 SERIAL_PATH = '/information/vs/0'
 SERIAL_FIELD = 'x.com.samsung.da.serialNum'
 
 
 class PushBridge:
-    """Single sustained DTLS-CoAP session to one appliance.
-
-    Reconnects with exponential backoff on session errors. Publishes
-    availability=offline when the appliance is unreachable so HA marks
-    entities unavailable instead of trusting stale state."""
 
     def __init__(self,
                  shared: SharedConfig,
@@ -74,20 +55,22 @@ class PushBridge:
         self.descriptor = descriptor
         self.mqtt = mqtt_client
 
-        # Bridge-scoped logger; retagged with serial after first seed.
         self.log = bridge_logger(app.klass)
         self._serial: str | None = None
 
-        # Resolve port (descriptor default if unset in env).
         self.port = app.ocf_port or descriptor.default_observe_port
 
         self.session: DtlsCoapSession | None = None
-        self.links: dict[str, dict] = {}     # href → rep
-        self.descriptor_state: dict = {}     # descriptor scratch space
+        self.scheduler: PollScheduler | None = None
+        self.keepalive: KeepaliveTask | None = None
+
+        self.cache = StateCache(descriptor)
+        self.cache.set_on_change(self._on_cache_change)
 
         self.last_state_pub = None
         self.last_remote_pub = None
         self.last_cycle_pub = None
+        self.last_avail_pub: str | None = None
         self.stop = threading.Event()
         self.started_ts = time.time()
         self.session_started_ts = None
@@ -97,14 +80,25 @@ class PushBridge:
         self.connect_count = 0
         self.error_count = 0
         self._publish_gate = False
+        self._last_change_source: str | None = None
+        self._last_observe_change_ts: float | None = None
+        self._last_push_active_pub: str | None = None
 
-        # Per-href fetchback generation counter. Every new schedule
-        # bumps the gen; a fetchback aborts on wake (and again after
-        # its GET completes) if its captured gen is no longer the
-        # latest. This coalesces bursts: rapid lamp toggles or slider
-        # drags result in many scheduled fetchbacks but only the
-        # latest one actually publishes. Lock guards the dict mutation
-        # and the gen comparison.
+        # Push is considered "active" if an OBSERVE-sourced change
+        # arrived within this window. Long enough that a quiet but
+        # working appliance doesn't flap to inactive; short enough that
+        # a genuinely silent push channel is visible within minutes.
+        self.push_active_window_s = 600.0
+
+        # Snapshot counters for the per-health-window deltas surfaced in
+        # publish_health's log summary.
+        self._win_prev_poll = 0
+        self._win_prev_poll_err = 0
+        self._win_prev_ping_fail = 0
+
+        # Per-href fetchback generation counter coalesces bursts of
+        # OBSERVE-block2 partial notifications: rapid changes scheduled
+        # many fetchbacks but only the latest actually publishes.
         self._fetch_gen: dict[str, int] = {}
         self._fetch_lock = threading.Lock()
 
@@ -114,27 +108,33 @@ class PushBridge:
         self.remote_topic   = f"{p}/remote_available"
         self.cycle_topic    = f"{p}/cycle_active"
         self.health_topic   = f"{p}/bridge/health"
+        self.push_active_topic = f"{p}/bridge/push_active"
         self.cmd_handlers   = descriptor.command_handlers()
         self.cmd_topic_prefix = f"{p}/cmd/"
 
-        # Pre-built HA discovery payloads. Republished on every MQTT
-        # (re)connect by main.py.
-        self.discovery_payloads = descriptor.build_discovery(
-            app.topic_prefix, shared.HA_DISCOVERY_PREFIX, app.device_name)
+        self.discovery_payloads = (
+            descriptor.build_discovery(
+                app.topic_prefix, shared.HA_DISCOVERY_PREFIX, app.device_name)
+            + bridge_diagnostic_discovery(
+                app.topic_prefix, shared.HA_DISCOVERY_PREFIX, app.device_name,
+                model=descriptor.name.title()))
 
-    # ---- DTLS session helpers ---------------------------------------
+    # ---- cache plumbing ---------------------------------------------
+
+    def _on_cache_change(self, changed: bool, source: str) -> None:
+        if changed:
+            self.notif_count += 1
+            self.last_change_ts = time.time()
+            self._last_change_source = source
+            if source == 'observe':
+                self._last_observe_change_ts = self.last_change_ts
+        self.maybe_publish_state()
 
     def _on_notification(self, href, payload_bytes):
-        """Invoked by the DTLS reader thread for OBSERVE notifications.
-
-        Resources larger than one CoAP block (notably the oven's
-        `/mode/vs/0` at ~9KB) arrive truncated: Samsung sends only
-        block 0 with Block2.M=1 and expects the client to fetch the
-        rest via Block2 GET. We use cbor decode failure as the
-        robust "this notification is partial" signal, then spawn a
-        worker thread to fetch the full resource."""
+        """Reader-thread callback for OBSERVE notifications. Large
+        resources (oven /mode/vs/0 ~9KB) arrive truncated with Block2.M=1
+        and we use cbor-decode failure as the partial signal."""
         if not payload_bytes:
-            # Empty payload — almost certainly a Block2 announcement.
             self._schedule_fetchback(href)
             return
         try:
@@ -144,53 +144,19 @@ class PushBridge:
             return
         if not isinstance(rep, dict):
             return
-        self._apply_rep(href, rep)
-
-    def _apply_rep(self, href, rep):
-        """Update self.links + fire descriptor hooks + maybe publish.
-        Shared between the OBSERVE path and the Block2 fetch-back path."""
         if DEBUG_BRIDGE:
-            # /mode/vs/0 carries a huge modeSpec JSON we don't want to
-            # log; surface just modes + options. Small resources get
-            # full-rep dumps.
-            if href == '/mode/vs/0' and isinstance(rep, dict):
-                self.log.info("mode modes=%r options=%r",
-                              rep.get('x.com.samsung.da.modes'),
-                              rep.get('x.com.samsung.da.options'))
-            elif href in ('/operational/state/vs/0', '/oven/vs/0',
-                          '/power/vs/0'):
-                self.log.info("REP %s = %r", href, rep)
-        self.links[href] = rep
-        hook = self.descriptor.on_observation
-        if hook is not None:
-            try:
-                hook(self.descriptor_state, href, rep)
-            except Exception as e:
-                self.log.warning("on_observation %s: %s", href, e)
-        self.notif_count += 1
-        self.last_change_ts = time.time()
-        self.maybe_publish_state()
+            self._debug_log_rep(href, rep)
+        self.cache.apply_rep(href, rep, source='observe')
 
-    def _apply_optimistic(self, href, body):
-        """Optimistically merge a just-POSTed body into the link dict
-        and republish state. Samsung accepts (2.04) writes whose
-        bodies are field-replacements — we mirror that semantics here:
-        each top-level key in `body` overwrites the corresponding key
-        in the existing rep. The fetchback that follows republishes
-        the device's real state, which corrects any field where the
-        write was silently coerced or rejected."""
-        if not isinstance(body, dict):
-            return
-        rep = dict(self.links.get(href) or {})
-        rep.update(body)
-        self._apply_rep(href, rep)
+    def _debug_log_rep(self, href, rep):
+        if href == '/mode/vs/0' and isinstance(rep, dict):
+            self.log.info("mode modes=%r options=%r",
+                          rep.get('x.com.samsung.da.modes'),
+                          rep.get('x.com.samsung.da.options'))
+        elif href in ('/operational/state/vs/0', '/oven/vs/0', '/power/vs/0'):
+            self.log.info("REP %s = %r", href, rep)
 
     def _schedule_fetchback(self, href, delay_s: float = 0.0):
-        """Spawn a worker thread to fetch the full payload of `href`
-        via Block2 GET. Each schedule bumps a per-href generation
-        counter — if a newer fetchback is scheduled before this one
-        fires, this one aborts (so rapid commands coalesce into a
-        single verification read of the FINAL state)."""
         with self._fetch_lock:
             gen = self._fetch_gen.get(href, 0) + 1
             self._fetch_gen[href] = gen
@@ -202,15 +168,8 @@ class PushBridge:
         ).start()
 
     def _fetch_back(self, href, delay_s: float, gen: int):
-        if delay_s > 0:
-            # Allow the device's read-side to propagate a recent
-            # write. The oven needs ~1s after a /mode/vs/0 POST;
-            # the dryer is faster but the delay is harmless there.
-            if self.stop.wait(delay_s):
-                return
-        # Has a newer fetchback been scheduled during our delay?
-        # If so, abort — our read would publish stale state relative
-        # to the user's most recent intent.
+        if delay_s > 0 and self.stop.wait(delay_s):
+            return
         with self._fetch_lock:
             if self._fetch_gen.get(href) != gen:
                 return
@@ -223,31 +182,24 @@ class PushBridge:
         except Exception as e:
             self.log.warning("fetchback %s: %s", href, e)
             return
-        # Re-check generation after the GET — a new write may have
-        # come in during the Block2 round-trip, in which case our
-        # payload is also superseded.
         with self._fetch_lock:
             if self._fetch_gen.get(href) != gen:
                 return
         if code != 0x45:
-            self.log.warning("fetchback %s: %s",
-                             href, fmt_code(code))
+            self.log.warning("fetchback %s: %s", href, fmt_code(code))
             return
         try:
             rep = cbor2.loads(payload) if payload else {}
         except Exception as e:
             self.log.warning("fetchback %s cbor: %s", href, e)
             return
-        if not isinstance(rep, dict):
-            return
-        self._apply_rep(href, rep)
+        if isinstance(rep, dict):
+            self.cache.apply_rep(href, rep, source='observe')
 
     def _retag_logger_with_serial(self):
-        """Look up the appliance's serial in the seeded link dict and
-        retarget self.log to a serial-tagged child. Idempotent."""
         if self._serial is not None:
             return
-        info = self.links.get(SERIAL_PATH) or {}
+        info = self.cache.get(SERIAL_PATH) or {}
         serial = info.get(SERIAL_FIELD)
         if not serial:
             return
@@ -258,8 +210,6 @@ class PushBridge:
     # ---- session lifecycle ------------------------------------------
 
     def session_once(self):
-        """Run one DTLS session end-to-end. Raises on error; the outer
-        run_forever wraps this with reconnect/backoff."""
         sess = DtlsCoapSession(
             self.app.ip, self.port,
             cert_path=self.shared.CERT_PATH,
@@ -270,7 +220,7 @@ class PushBridge:
         self.session = sess
         self.session_started_ts = time.time()
         self.connect_count += 1
-        self.descriptor_state = {}
+        self.cache.descriptor_state.clear()
         self._publish_gate = False
 
         self.log.info("DTLS connected — subscribing %d paths",
@@ -278,10 +228,6 @@ class PushBridge:
 
         sess.start_reader()
 
-        # When the bridge is asked to stop, close the session — which
-        # fires the OBSERVE-dereg sequence and tears DTLS down. Without
-        # this, session_once would block forever in sess.join() because
-        # the reader only exits on stop/socket-death.
         session_ended = threading.Event()
 
         def _stop_watcher():
@@ -299,18 +245,62 @@ class PushBridge:
         try:
             self._run_session_inner(sess)
         finally:
-            # Always release the watcher so it doesn't sit pinned on
-            # self.stop forever after the session ends.
             session_ended.set()
 
     def _run_session_inner(self, sess):
-        """Body of session_once after start_reader() — split out so
-        session_once's try/finally cleanly bounds the stop-watcher
-        thread's lifetime."""
         for path in self.descriptor.observe_paths:
             sess.subscribe(path)
             time.sleep(0.05)
 
+        # Inline seed so the publish gate opens before the scheduler's
+        # first tick. The scheduler's sweep tier will refresh /device/0
+        # on its own cadence afterwards.
+        self._seed_from_device0(sess)
+        self._retag_logger_with_serial()
+
+        if DEBUG_BRIDGE:
+            self._debug_dump_links(sess)
+
+        self._publish_gate = True
+        self.maybe_publish_state(force=True)
+        self.set_availability(True)
+        self.log.info("seeded → %d links; sensors live",
+                      len(self.cache.links))
+
+        scheduler = PollScheduler(
+            sess, self.cache,
+            tiers=self.descriptor.poll_tiers,
+            sweep_index_fn=index_links,
+            is_active_fn=self.descriptor.is_active,
+            logger=self.log,
+        )
+        keepalive = KeepaliveTask(
+            sess,
+            interval_s=float(self.shared.PING_INTERVAL_S),
+            fail_threshold=3,
+            on_reachable=self._on_reachable,
+            on_unreachable=self._on_unreachable,
+            logger=self.log,
+        )
+        self.scheduler = scheduler
+        self.keepalive = keepalive
+
+        sched_t = threading.Thread(
+            target=scheduler.run_forever, args=(self.stop,),
+            daemon=True, name=f'{self.app.klass}-poll')
+        ka_t = threading.Thread(
+            target=keepalive.run_forever, args=(self.stop,),
+            daemon=True, name=f'{self.app.klass}-ping')
+        sched_t.start()
+        ka_t.start()
+
+        try:
+            sess.join()
+        finally:
+            self.scheduler = None
+            self.keepalive = None
+
+    def _seed_from_device0(self, sess):
         code, pl = sess.get(self.descriptor.seed_path, timeout=15.0)
         if code != 0x45:
             raise RuntimeError(
@@ -321,100 +311,63 @@ class PushBridge:
             raise RuntimeError(
                 f"/{'/'.join(self.descriptor.seed_path)} cbor decode: {e}"
             ) from e
+        # During the seed we want the cache populated without triggering
+        # a publish per resource — gate the on_change callback off until
+        # the publish gate opens just below.
         for href, rep in index_links(body).items():
-            self.links.setdefault(href, rep)
-
-        # Once the seed is in, we know the appliance's serial — retag
-        # the logger so the remaining log lines this session emits are
-        # serial-tagged.
-        self._retag_logger_with_serial()
-
-        if DEBUG_BRIDGE:
-            # Dump every link's rep (skipping the huge modeSpec on
-            # /mode/vs/0) + the /oic/res directory. Useful for finding
-            # new writable resources next session.
-            for href, rep in sorted(self.links.items()):
-                if href == '/mode/vs/0':
-                    short = {k: v for k, v in rep.items()
-                             if k not in (
-                                 'x.com.samsung.da.modeSpec',
-                                 'x.com.samsung.da.supportedModes',
-                             )}
-                    self.log.info("LINK %s = %r", href, short)
-                else:
-                    self.log.info("LINK %s = %r", href, rep)
-            try:
-                code, pl = sess.get(['oic', 'res'], timeout=10.0)
-                if code == 0x45 and pl:
-                    self.log.info("OIC_RES = %r", cbor2.loads(pl))
-                else:
-                    self.log.info("oic/res → %s", fmt_code(code))
-            except Exception as e:
-                self.log.warning("oic/res get: %s", e)
-
-
-        hook = self.descriptor.on_observation
-        if hook is not None:
-            for href, rep in self.links.items():
-                try:
-                    hook(self.descriptor_state, href, rep)
-                except Exception as e:
-                    self.log.warning("seed on_observation %s: %s", href, e)
+            if href not in self.cache.links:
+                self.cache.apply_rep(href, rep, source='seed')
         self.last_seed_ts = time.time()
 
-        self._publish_gate = True
-        self.maybe_publish_state(force=True)
+    def _debug_dump_links(self, sess):
+        for href, rep in sorted(self.cache.links.items()):
+            if href == '/mode/vs/0':
+                short = {k: v for k, v in rep.items()
+                         if k not in (
+                             'x.com.samsung.da.modeSpec',
+                             'x.com.samsung.da.supportedModes',
+                         )}
+                self.log.info("LINK %s = %r", href, short)
+            else:
+                self.log.info("LINK %s = %r", href, rep)
+        try:
+            code, pl = sess.get(['oic', 'res'], timeout=10.0)
+            if code == 0x45 and pl:
+                self.log.info("OIC_RES = %r", cbor2.loads(pl))
+            else:
+                self.log.info("oic/res → %s", fmt_code(code))
+        except Exception as e:
+            self.log.warning("oic/res get: %s", e)
+
+    def _on_reachable(self) -> None:
         self.set_availability(True)
-        self.log.info("seeded → %d links; sensors live", len(self.links))
+        self.reassert_availability()
 
-        sess.join()
-
-    def heartbeat(self):
-        sess = self.session
-        if sess is None:
-            return
-        try:
-            code, pl = sess.get(self.descriptor.seed_path, timeout=15.0)
-        except Exception as e:
-            self.log.warning("heartbeat seed: %s", e)
-            return
-        if code != 0x45:
-            self.log.warning("heartbeat seed: %s", fmt_code(code))
-            return
-        try:
-            body = cbor2.loads(pl)
-        except Exception as e:
-            self.log.warning("heartbeat seed cbor: %s", e)
-            return
-        # Refresh ALL resources, not just non-observed ones. We used
-        # to skip observed resources on the assumption OBSERVE kept
-        # them fresh, but the oven doesn't reliably push OBSERVE on
-        # /mode/vs/0 option changes (timer / lamp / sound), so we'd
-        # be stuck with stale values until the next user-driven POST
-        # triggered a fetchback. Refreshing everything bounds HA's
-        # divergence to HEARTBEAT_INTERVAL_S in the worst case.
-        hook = self.descriptor.on_observation
-        for href, rep in index_links(body).items():
-            self.links[href] = rep
-            if hook is not None:
-                try:
-                    hook(self.descriptor_state, href, rep)
-                except Exception as e:
-                    self.log.warning("heartbeat hook %s: %s", href, e)
-        self.last_seed_ts = time.time()
-        self.maybe_publish_state()
+    def _on_unreachable(self) -> None:
+        self.set_availability(False)
 
     # ---- MQTT publishing --------------------------------------------
 
     def maybe_publish_state(self, force=False):
         if not force and not self._publish_gate:
             return
-        sensors = self.descriptor.flatten(self.links)
+        snap = self.cache.snapshot()
+        sensors = self.descriptor.flatten(snap)
         project = self.descriptor.project
         if project is not None:
-            sensors = project(self.descriptor_state, sensors)
+            sensors = project(self.cache.descriptor_state, sensors)
         if not force and sensors == self.last_state_pub:
             return
+        if DEBUG_BRIDGE and self.last_state_pub is not None:
+            diffs = {k: (self.last_state_pub.get(k), v)
+                     for k, v in sensors.items()
+                     if self.last_state_pub.get(k) != v}
+            diffs.update({k: (self.last_state_pub.get(k), None)
+                          for k in self.last_state_pub
+                          if k not in sensors})
+            if diffs:
+                self.log.info("sensor diff: %s",
+                              {k: f"{a!r} → {b!r}" for k, (a, b) in diffs.items()})
         self.last_state_pub = sensors
         self.mqtt.publish(self.state_topic,
                           json.dumps(sensors).encode(),
@@ -428,7 +381,8 @@ class PushBridge:
         if not force:
             log_fn = self.descriptor.log_state_change
             extra = log_fn(sensors) if log_fn is not None else ''
-            self.log.info("state changed (%s notif#%d)",
+            self.log.info("state changed [%s] (%s notif#%d)",
+                          self._last_change_source or '?',
                           extra or 'descriptor-no-log', self.notif_count)
 
     def publish_remote_available(self, remote_on, force=False):
@@ -465,12 +419,18 @@ class PushBridge:
         if cycle_field is not None:
             self.publish_cycle_active(
                 self.last_state_pub.get(cycle_field), force=True)
+        now = time.time()
+        active = (self._last_observe_change_ts is not None
+                  and (now - self._last_observe_change_ts) <= self.push_active_window_s)
+        self.publish_push_active(active, force=True)
 
     def set_availability(self, online):
+        value = 'online' if online else 'offline'
+        if value == self.last_avail_pub:
+            return
+        self.last_avail_pub = value
         try:
-            self.mqtt.publish(self.avail_topic,
-                              'online' if online else 'offline',
-                              qos=1, retain=True)
+            self.mqtt.publish(self.avail_topic, value, qos=1, retain=True)
         except Exception as e:
             self.log.warning("avail publish: %s", e)
         if not online and self.descriptor.remote_available_field is not None:
@@ -487,6 +447,13 @@ class PushBridge:
                                   qos=1, retain=True)
             except Exception:
                 pass
+        if not online:
+            self._last_push_active_pub = None
+            try:
+                self.mqtt.publish(self.push_active_topic, 'offline',
+                                  qos=1, retain=True)
+            except Exception:
+                pass
 
     # ---- MQTT command handling --------------------------------------
 
@@ -498,12 +465,9 @@ class PushBridge:
         if handler is None:
             self.log.warning("unknown command topic: %s", topic)
             return
-        # Shallow-snapshot self.links so the handler sees a consistent
-        # view across the read-modify-write it may need to perform
-        # (e.g. oven lamp / sound / fastpreheat all RMW /mode/vs/0
-        # options). Inner reps are mutated only by the OBSERVE reader
-        # thread; handlers that mutate items must deep-copy themselves.
-        result = handler(payload, dict(self.links))
+        # Handler gets a links snapshot so its read-modify-write sees a
+        # consistent view across the multi-field operation.
+        result = handler(payload, self.cache.snapshot())
         if result is None:
             self.log.warning("rejected command %s payload=%r",
                              topic, payload)
@@ -513,69 +477,113 @@ class PushBridge:
         if sess is None:
             self.log.warning("command %s: no DTLS session", topic)
             return
+        href = '/' + '/'.join(path_segs)
+        sched = self.scheduler
+        defer_s = 4.0
+        if sched is not None:
+            sched.write_in_progress(href, settle_s=defer_s)
         try:
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
         except Exception as e:
             self.log.warning("command %s POST failed: %s", topic, e)
             return
-        self.log.info("command %s payload=%r → %s",
-                      suffix, payload, fmt_code(code))
+        defer_note = f" (poll-defer {href} {defer_s:.0f}s)" if sched is not None else ''
+        self.log.info("command %s payload=%r → %s%s",
+                      suffix, payload, fmt_code(code), defer_note)
         if code >> 5 == 2:
-            href = '/' + '/'.join(path_segs)
-            # Optimistic publish — apply the write to our local state.
-            # No fetchback: empirically (2026-05-31) the post-write
-            # Block2 GET was causing the appliance to roll our values
-            # back ~3s later, on every writable resource. OBSERVE
-            # pushes keep HA in sync without polling. (Was the root
-            # cause of the "mid-cycle setpoint reverts" symptom.)
-            self._apply_optimistic(href, body)
+            # Optimistic local merge so HA sees the write reflected
+            # immediately. No Block2 fetchback — that triggers Samsung's
+            # 3-second revert (project_fetchback_revert_root_cause.md).
+            # The PollScheduler will reconcile on its next tier tick
+            # after the write_in_progress settle window expires.
+            self.cache.apply_optimistic(href, body)
 
     def publish_health(self):
         now = time.time()
+        sched = self.scheduler
+        ka = self.keepalive
+
+        last_obs_age = (round(now - self._last_observe_change_ts, 1)
+                        if self._last_observe_change_ts else None)
+        push_active = (last_obs_age is not None
+                       and last_obs_age <= self.push_active_window_s)
+
+        # Per-window deltas for the log summary AND the health topic
+        # (HA gets the same numbers without doing template arithmetic).
+        poll = sched.poll_count if sched else 0
+        poll_err = sched.poll_error_count if sched else 0
+        ping_fail = ka.ping_fail_count if ka else 0
+        d_poll = poll - self._win_prev_poll
+        d_err = poll_err - self._win_prev_poll_err
+        d_ping_fail = ping_fail - self._win_prev_ping_fail
+        self._win_prev_poll = poll
+        self._win_prev_poll_err = poll_err
+        self._win_prev_ping_fail = ping_fail
+        win_max_rtt, win_slow = (sched.take_window_stats()
+                                  if sched else (0.0, 0))
+        window_polls_ok = max(0, d_poll - d_err)
+
         h = {
-            'mode':              'push',
-            'device_class':      self.descriptor.name,
-            'serial':            self._serial,
-            'connect_count':     self.connect_count,
-            'error_count':       self.error_count,
-            'notif_count':       self.notif_count,
-            'last_change_age_s': (round(now - self.last_change_ts, 1)
-                                  if self.last_change_ts else None),
-            'last_seed_age_s':   (round(now - self.last_seed_ts, 1)
-                                  if self.last_seed_ts else None),
-            'session_age_s':     (round(now - self.session_started_ts, 1)
-                                  if self.session_started_ts else None),
-            'uptime_seconds':    round(now - self.started_ts, 0),
+            'mode':                      'poll+observe',
+            'device_class':              self.descriptor.name,
+            'serial':                    self._serial,
+            'connect_count':             self.connect_count,
+            'error_count':               self.error_count,
+            'notif_count':               self.notif_count,
+            'poll_count':                poll,
+            'poll_error_count':          poll_err,
+            'poll_window_ok':            window_polls_ok,
+            'poll_window_errors':        d_err,
+            'poll_window_max_rtt_ms':    round(win_max_rtt, 0),
+            'poll_window_slow_count':    win_slow,
+            'ping_count':                ka.ping_count if ka else 0,
+            'ping_fail_count':           ping_fail,
+            'reachable':                 ka.reachable if ka else None,
+            'last_change_source':        self._last_change_source,
+            'last_observe_age_s':        last_obs_age,
+            'push_active':               push_active,
+            'last_change_age_s':         (round(now - self.last_change_ts, 1)
+                                          if self.last_change_ts else None),
+            'last_seed_age_s':           (round(now - self.last_seed_ts, 1)
+                                          if self.last_seed_ts else None),
+            'session_age_s':             (round(now - self.session_started_ts, 1)
+                                          if self.session_started_ts else None),
+            'uptime_seconds':            round(now - self.started_ts, 0),
         }
+        stalest = self.cache.stalest()
+        if stalest is not None:
+            h['stalest_href'] = stalest[0]
+            h['stalest_age_s'] = round(stalest[1], 1)
         try:
             self.mqtt.publish(self.health_topic, json.dumps(h).encode(),
                               qos=0, retain=True)
         except Exception as e:
             self.log.warning("health publish: %s", e)
 
+        self.publish_push_active(push_active)
+
+        if d_poll > 0 or d_err > 0 or d_ping_fail > 0:
+            self.log.info(
+                "poll-window: %d ok, %d err, %d ping-fail, "
+                "p_max=%.0fms, slow=%d (%ds)",
+                window_polls_ok, d_err, d_ping_fail,
+                win_max_rtt, win_slow, self.shared.HEALTH_INTERVAL_S)
+
+    def publish_push_active(self, active: bool, force: bool = False) -> None:
+        value = 'online' if active else 'offline'
+        if not force and value == self._last_push_active_pub:
+            return
+        self._last_push_active_pub = value
+        try:
+            self.mqtt.publish(self.push_active_topic, value,
+                              qos=1, retain=True)
+            self.log.info("push_active → %s", value)
+        except Exception as e:
+            self.log.warning("push_active publish: %s", e)
+
     # ---- top-level loop ---------------------------------------------
 
-    def _publish_tick_loop(self):
-        while not self.stop.wait(15.0):
-            try:
-                self.maybe_publish_state()
-            except Exception as e:
-                self.log.warning("publish tick: %s", e)
-
-    def ping_once(self):
-        """Send one CoAP Ping. Caller (main.py's per-bridge ping
-        thread) handles the cadence. No-op if no live session."""
-        sess = self.session
-        if sess is None:
-            return
-        try:
-            sess.ping()
-        except Exception as e:
-            self.log.warning("ping: %s", e)
-
     def run_forever(self):
-        threading.Thread(target=self._publish_tick_loop, daemon=True,
-                         name=f'{self.app.klass}-tick').start()
         backoff = 1.0
         while not self.stop.is_set():
             try:

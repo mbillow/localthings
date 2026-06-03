@@ -3,13 +3,15 @@
 
 One process supervises N Samsung appliances over their OCF CoAP-DTLS
 local APIs, publishing state + HA discovery to MQTT. Each appliance
-runs its own DTLS session in its own thread. MQTT is shared.
+runs its own DTLS session in its own thread, with an in-session
+PollScheduler driving state freshness and a KeepaliveTask driving
+DTLS-layer liveness. MQTT is shared.
 
 Config is env-var driven:
   * APPLIANCE_COUNT plus APPLIANCE_<n>_{CLASS,IP,OCF_PORT,TOPIC,NAME}
     define the appliances to bridge.
   * Shared keys (MQTT_*, HA_DISCOVERY_PREFIX, CERT_PATH, KEY_PATH,
-    HEALTH_INTERVAL_S, HEARTBEAT_INTERVAL_S) apply to all.
+    HEALTH_INTERVAL_S, PING_INTERVAL_S) apply to all.
 
 Reconnects on session errors per-appliance; shuts down cleanly on
 SIGINT / SIGTERM."""
@@ -146,36 +148,12 @@ def main():
                     break
         return loop
 
-    def make_heartbeat(b: PushBridge):
-        def loop():
-            while not b.stop.is_set():
-                if b.stop.wait(shared.HEARTBEAT_INTERVAL_S):
-                    break
-                b.heartbeat()
-        return loop
-
-    def make_ping(b: PushBridge):
-        def loop():
-            while not b.stop.is_set():
-                if b.stop.wait(shared.PING_INTERVAL_S):
-                    break
-                b.ping_once()
-        return loop
-
     for b in bridges:
         tag = b.app.klass
         threads.append(threading.Thread(
             target=b.run_forever, daemon=True, name=f'{tag}-session'))
         threads.append(threading.Thread(
             target=make_health(b), daemon=True, name=f'{tag}-health'))
-        if shared.HEARTBEAT_INTERVAL_S > 0:
-            threads.append(threading.Thread(
-                target=make_heartbeat(b), daemon=True,
-                name=f'{tag}-heartbeat'))
-        if shared.PING_INTERVAL_S > 0:
-            threads.append(threading.Thread(
-                target=make_ping(b), daemon=True,
-                name=f'{tag}-ping'))
 
     stopping = threading.Event()
 

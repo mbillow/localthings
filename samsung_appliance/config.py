@@ -57,7 +57,6 @@ class SharedConfig:
     MQTT_PASS: Optional[str]
     HA_DISCOVERY_PREFIX: str
     HEALTH_INTERVAL_S: int
-    HEARTBEAT_INTERVAL_S: int
     PING_INTERVAL_S: int
 
     @classmethod
@@ -72,8 +71,6 @@ class SharedConfig:
             HA_DISCOVERY_PREFIX=os.getenv('HA_DISCOVERY_PREFIX',
                                           'homeassistant'),
             HEALTH_INTERVAL_S=int(os.getenv('HEALTH_INTERVAL_S', '60')),
-            HEARTBEAT_INTERVAL_S=int(os.getenv('HEARTBEAT_INTERVAL_S',
-                                               '600')),
             PING_INTERVAL_S=int(os.getenv('PING_INTERVAL_S', '25')),
         )
 

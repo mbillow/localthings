@@ -13,6 +13,7 @@ from .base import (
     device_block,
     encode,
 )
+from ..poll_scheduler import PollTier
 
 
 # --- OBSERVE paths -----------------------------------------------------
@@ -434,6 +435,50 @@ def command_handlers():
     }
 
 
+# --- Poll tiers --------------------------------------------------------
+# Empirical ceiling on this firmware is ~14 req/s (probe_poll_rate_combined.py
+# 2026-06-03). The hot tier sits at 1s idle / 0.5s active — comfortably under
+# the ceiling and leaves headroom for the warm + sweep budgets.
+DRYER_POLL_TIERS = [
+    PollTier(
+        name='hot',
+        interval_s=1.0,
+        active_interval_s=0.5,
+        paths=(
+            ('operational', 'state', 'vs', '0'),
+        ),
+    ),
+    PollTier(
+        name='warm',
+        interval_s=15.0,
+        paths=(
+            ('power', 'vs', '0'),
+            ('kidslock', 'vs', '0'),
+            ('remotectrl', 'vs', '0'),
+            ('alarms', 'vs', '0'),
+            ('course', 'vs', '0'),
+            ('washer', 'vs', '0'),
+            ('st', 'dryercourse', 'vs', '0'),
+            ('wm', 'jobbeginingstatus', 'vs', '0'),
+            ('energy', 'consumption', 'vs', '0'),
+            ('diagnosis', 'vs', '0'),
+        ),
+    ),
+    PollTier(
+        name='sweep',
+        interval_s=300.0,
+        paths=(('device', '0'),),
+        is_sweep=True,
+    ),
+]
+
+
+def _is_active(links: dict) -> bool:
+    rep = links.get('/operational/state/vs/0') or {}
+    sam_state = rep.get('x.com.samsung.da.state')
+    return _SAMSUNG_STATE_TO_OCF.get(sam_state) == 'active'
+
+
 # --- Descriptor --------------------------------------------------------
 DRYER = ApplianceDescriptor(
     name='dryer',
@@ -447,4 +492,6 @@ DRYER = ApplianceDescriptor(
     project=project,
     remote_available_field='remote_control_binary',
     log_state_change=log_state_change,
+    poll_tiers=DRYER_POLL_TIERS,
+    is_active=_is_active,
 )

@@ -31,6 +31,7 @@ from .base import (
     device_block,
     encode,
 )
+from ..poll_scheduler import PollTier
 
 
 # ---------------------------------------------------------------------
@@ -744,6 +745,56 @@ def command_handlers():
     }
 
 
+# --- Poll tiers --------------------------------------------------------
+# Empirical ceiling on this firmware is ~8 req/s (probe_poll_rate_combined.py
+# 2026-06-03). Hot tier covers what changes mid-cook; doors get the tightest
+# cadence because door open/close needs sub-second freshness in HA.
+OVEN_POLL_TIERS = [
+    PollTier(
+        name='hot',
+        interval_s=1.0,
+        active_interval_s=0.5,
+        paths=(
+            ('operational', 'state', 'vs', '0'),
+            ('doors', 'vs', '0'),
+            ('oven', 'vs', '0'),
+            ('temperatures', 'vs', '0'),
+        ),
+    ),
+    PollTier(
+        name='warm',
+        interval_s=30.0,
+        paths=(
+            ('power', 'vs', '0'),
+            ('kidslock', 'vs', '0'),
+            ('remotectrl', 'vs', '0'),
+            ('mode', 'vs', '0'),
+            ('alarms', 'vs', '0'),
+            ('connected', 'vs', '0'),
+        ),
+    ),
+    PollTier(
+        name='cold',
+        interval_s=600.0,
+        paths=(
+            ('otninformation', 'vs', '0'),
+        ),
+    ),
+    PollTier(
+        name='sweep',
+        interval_s=300.0,
+        paths=(('device', '0'),),
+        is_sweep=True,
+    ),
+]
+
+
+def _is_active(links: dict) -> bool:
+    rep = links.get('/operational/state/vs/0') or {}
+    sam_state = rep.get('x.com.samsung.da.state')
+    return _SAMSUNG_STATE_TO_OCF.get(sam_state) == 'active'
+
+
 # ---------------------------------------------------------------------
 OVEN = ApplianceDescriptor(
     name='oven',
@@ -758,4 +809,6 @@ OVEN = ApplianceDescriptor(
     remote_available_field='remote_control_binary',
     cycle_active_field='cycle_active',
     log_state_change=log_state_change,
+    poll_tiers=OVEN_POLL_TIERS,
+    is_active=_is_active,
 )
