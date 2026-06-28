@@ -3,11 +3,20 @@
 Built from the full list of Capability objects in the capabilities package.
 Consumed by discover() at connection time to bind device resources to entities.
 
-Note: each href must appear in at most one Capability across all modules.
-If two capabilities share an href, the later one in the scan order wins —
-this is a bug, not a feature. Add all entities for a given href to the same
-Capability object instead.
+Raises ValueError at import if any href appears in multiple capabilities.
 """
 from .capabilities import ALL
+from .capability import Capability
 
-CAPABILITIES: dict = {cap.href: cap for cap in ALL}
+
+def _build() -> dict[str, Capability]:
+    """Build the registry, raising ValueError if any href is duplicated."""
+    out: dict[str, Capability] = {}
+    for cap in ALL:
+        if cap.href in out:
+            raise ValueError(f"duplicate capability href: {cap.href}")
+        out[cap.href] = cap
+    return out
+
+
+CAPABILITIES: dict[str, Capability] = _build()
