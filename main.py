@@ -23,7 +23,6 @@ import threading
 
 import paho.mqtt.client as mqtt
 
-from samsung_appliance.appliances import get_descriptor
 from samsung_appliance.bridge import PushBridge
 from samsung_appliance.config import SharedConfig, load_appliances
 from samsung_appliance.logger import logger
@@ -46,26 +45,15 @@ def main():
             logger.error("client cert/key not found: %s", path)
             return 2
 
-    # Resolve descriptors up front — bad APPLIANCE_<n>_CLASS should fail
-    # at startup, not 10s into the first DTLS attempt.
-    pairs = []
-    for app in appliances:
-        try:
-            desc = get_descriptor(app.klass)
-        except ValueError as e:
-            logger.error("APPLIANCE_%d_CLASS: %s", app.index, e)
-            return 2
-        pairs.append((app, desc))
-
     logger.info("SmartThings-Local Bridge starting (%d appliance%s)",
                 len(appliances), '' if len(appliances) == 1 else 's')
     logger.info("  broker = %s:%d (user=%s)",
                 shared.MQTT_BROKER, shared.MQTT_PORT,
                 shared.MQTT_USER or '<anon>')
-    for app, desc in pairs:
-        port = app.ocf_port or desc.default_observe_port
+    for app in appliances:
+        port = app.ocf_port or 49154
         logger.info("  [%d] %s @ %s:%d (DTLS) → topic %s/*",
-                    app.index, app.klass, app.ip, port, app.topic_prefix)
+                    app.index, app.klass or '?', app.ip, port, app.topic_prefix)
 
     # --- MQTT client (shared) ---
     cli = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
@@ -85,9 +73,9 @@ def main():
     cli.will_set(f"{first_app.topic_prefix}/availability",
                  payload='offline', qos=1, retain=True)
 
-    # Build bridges. Each builds its own discovery payloads in __init__.
-    bridges: list[PushBridge] = [PushBridge(shared, app, desc, cli)
-                                 for app, desc in pairs]
+    # Build bridges. Each will discover entities at first connect.
+    bridges: list[PushBridge] = [PushBridge(shared, app, cli)
+                                 for app in appliances]
     by_prefix = {b.cmd_topic_prefix.rstrip('/'): b for b in bridges}
 
     def on_connect(client, userdata, flags, rc, props=None):
@@ -97,8 +85,6 @@ def main():
         logger.info("MQTT connected → %s:%d",
                     shared.MQTT_BROKER, shared.MQTT_PORT)
         for b in bridges:
-            for topic, payload in b.discovery_payloads:
-                client.publish(topic, payload, qos=1, retain=True)
             cmd_wildcard = f"{b.app.topic_prefix}/cmd/#"
             client.subscribe(cmd_wildcard, qos=1)
             b.reassert_availability()

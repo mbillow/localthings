@@ -83,25 +83,23 @@ class ApplianceConfig:
     just a stable identifier for logs; it does not appear in MQTT
     topics or HA discovery (those are keyed off `topic_prefix`)."""
     index: int
-    klass: str              # 'dryer', 'oven', …
+    klass: str              # 'dryer', 'oven', … — empty string if unknown
     ip: str
-    ocf_port: Optional[int]  # None → descriptor.default_observe_port
+    ocf_port: Optional[int]  # None → 49154 (default DTLS-CoAP port)
     topic_prefix: str
     device_name: str
 
     @classmethod
     def from_env(cls, index: int) -> 'ApplianceConfig':
         prefix = f'APPLIANCE_{index}_'
-        klass = os.getenv(prefix + 'CLASS')
-        if not klass:
-            raise ValueError(f"{prefix}CLASS not set")
+        klass = os.getenv(prefix + 'CLASS') or ''
         ip = os.getenv(prefix + 'IP')
         if not ip:
             raise ValueError(f"{prefix}IP not set")
         port_env = os.getenv(prefix + 'OCF_PORT')
         port = int(port_env) if port_env else None
-        topic = os.getenv(prefix + 'TOPIC') or f'samsung_{klass}'
-        name = os.getenv(prefix + 'NAME') or f'Samsung {klass.title()}'
+        topic = os.getenv(prefix + 'TOPIC') or (f'samsung_{klass}' if klass else 'samsung_appliance')
+        name = os.getenv(prefix + 'NAME') or (f'Samsung {klass.title()}' if klass else 'Samsung Appliance')
         return cls(
             index=index, klass=klass, ip=ip, ocf_port=port,
             topic_prefix=topic, device_name=name,

@@ -23,7 +23,6 @@ import time
 
 import cbor2
 
-from .appliances.base import ApplianceDescriptor, bridge_diagnostic_discovery
 from .coap_dtls import DtlsCoapSession, fmt_code
 from .config import ApplianceConfig, SharedConfig
 from .keepalive import KeepaliveTask
@@ -35,6 +34,10 @@ from .state_cache import StateCache
 
 
 DEBUG_BRIDGE = os.environ.get('DEBUG_BRIDGE') == '1'
+
+# /device/0 is the OCF resource that contains the full link dict used
+# to seed the state cache on every connect.
+SEED_PATH = ['device', '0']
 
 
 def _href_to_segs(href: str) -> list[str]:
@@ -60,29 +63,114 @@ UNREACHABLE_RECONNECT_S = 120.0
 OBSERVE_REFRESH_INTERVAL_S = 6 * 3600.0
 
 
+def _encode(cfg: dict) -> bytes:
+    return json.dumps(cfg).encode()
+
+
+def _bridge_diagnostic_discovery(topic_prefix: str,
+                                  ha_discovery_prefix: str,
+                                  device_name: str,
+                                  model: str = 'Bridge') -> list[tuple[str, bytes]]:
+    """HA-discovery payloads for the per-bridge diagnostic entities
+    (push state, polling RTT, freshness). Returned as a list of
+    (topic, payload-bytes) tuples to be merged with entity discovery."""
+    avail_topic  = f"{topic_prefix}/availability"
+    health_topic = f"{topic_prefix}/bridge/health"
+    push_topic   = f"{topic_prefix}/bridge/push_active"
+    device = {
+        'identifiers':  [topic_prefix],
+        'name':         device_name,
+        'manufacturer': 'Samsung',
+        'model':        model,
+    }
+    avail = [{'topic': avail_topic,
+              'payload_available':     'online',
+              'payload_not_available': 'offline'}]
+
+    def sensor(slug: str, name: str, value_template: str,
+               unit: str | None = None, device_class: str | None = None,
+               icon: str | None = None) -> tuple[str, bytes]:
+        cfg = {
+            'name':              name,
+            'unique_id':         f"{topic_prefix}_bridge_{slug}",
+            'object_id':         f"{topic_prefix}_bridge_{slug}",
+            'state_topic':       health_topic,
+            'value_template':    value_template,
+            'availability':      avail,
+            'device':            device,
+            'entity_category':   'diagnostic',
+        }
+        if unit is not None:         cfg['unit_of_measurement'] = unit
+        if device_class is not None: cfg['device_class']        = device_class
+        if icon is not None:         cfg['icon']                = icon
+        topic = (f"{ha_discovery_prefix}/sensor/"
+                 f"{topic_prefix}/bridge_{slug}/config")
+        return topic, _encode(cfg)
+
+    push_active_cfg = {
+        'name':              'Push Active',
+        'unique_id':         f"{topic_prefix}_bridge_push_active",
+        'object_id':         f"{topic_prefix}_bridge_push_active",
+        'state_topic':       push_topic,
+        'payload_on':        'online',
+        'payload_off':       'offline',
+        'availability':      avail,
+        'device':            device,
+        'entity_category':   'diagnostic',
+        'icon':              'mdi:rss',
+    }
+    push_active_topic = (f"{ha_discovery_prefix}/binary_sensor/"
+                         f"{topic_prefix}/bridge_push_active/config")
+
+    return [
+        (push_active_topic, _encode(push_active_cfg)),
+        sensor('update_source', 'Last Update Source',
+               "{{ value_json.last_change_source | default('?') }}",
+               icon='mdi:transit-connection-variant'),
+        sensor('stalest_age_s', 'Stalest Resource Age',
+               "{{ value_json.stalest_age_s | default(0) }}",
+               unit='s', icon='mdi:clock-alert-outline'),
+        sensor('poll_max_rtt_ms', 'Poll Max RTT',
+               "{{ value_json.poll_window_max_rtt_ms | default(0) | int }}",
+               unit='ms', icon='mdi:speedometer'),
+        sensor('slow_polls', 'Slow Polls (window)',
+               "{{ value_json.poll_window_slow_count | default(0) }}",
+               icon='mdi:timer-sand'),
+        sensor('poll_errors', 'Poll Errors (window)',
+               "{{ value_json.poll_window_errors | default(0) }}",
+               icon='mdi:alert-circle-outline'),
+        sensor('observe_age_s', 'Last OBSERVE Age',
+               "{{ value_json.last_observe_age_s if value_json.last_observe_age_s is not none else 'never' }}",
+               icon='mdi:radar'),
+    ]
+
+
 class PushBridge:
 
     def __init__(self,
                  shared: SharedConfig,
                  app: ApplianceConfig,
-                 descriptor: ApplianceDescriptor,
                  mqtt_client):
         self.shared = shared
         self.app = app
-        self.descriptor = descriptor
         self.mqtt = mqtt_client
 
         self.log = bridge_logger(app.klass)
         self._serial: str | None = None
 
-        self.port = app.ocf_port or descriptor.default_observe_port
+        self.port = app.ocf_port or 49154
 
         self.session: DtlsCoapSession | None = None
         self.scheduler: PollScheduler | None = None
         self.keepalive: KeepaliveTask | None = None
         self.observe_refresh: ObserveRefreshTask | None = None
 
-        self.cache = StateCache(descriptor)
+        # descriptor is None until _discover_and_publish completes after seed.
+        self.descriptor = None
+        self._discovered = False
+        self._entity_payloads: list = []
+
+        self.cache = StateCache()
         self.cache.set_on_change(self._on_cache_change)
 
         self.last_state_pub = None
@@ -132,15 +220,8 @@ class PushBridge:
         self.cycle_topic    = f"{p}/cycle_active"
         self.health_topic   = f"{p}/bridge/health"
         self.push_active_topic = f"{p}/bridge/push_active"
-        self.cmd_handlers   = descriptor.command_handlers()
+        self.cmd_handlers   = {}
         self.cmd_topic_prefix = f"{p}/cmd/"
-
-        self.discovery_payloads = (
-            descriptor.build_discovery(
-                app.topic_prefix, shared.HA_DISCOVERY_PREFIX, app.device_name)
-            + bridge_diagnostic_discovery(
-                app.topic_prefix, shared.HA_DISCOVERY_PREFIX, app.device_name,
-                model=descriptor.name.title()))
 
     # ---- cache plumbing ---------------------------------------------
 
@@ -248,8 +329,7 @@ class PushBridge:
         self._unreachable_since = None
         self._force_close_in_flight = False
 
-        self.log.info("DTLS connected — subscribing %d paths",
-                      len(self.descriptor.observe_paths))
+        self.log.info("DTLS connected — port %d", self.port)
 
         sess.start_reader()
 
@@ -273,18 +353,24 @@ class PushBridge:
             session_ended.set()
 
     def _run_session_inner(self, sess):
-        for path in self.descriptor.observe_paths:
-            sess.subscribe(path)
-            time.sleep(0.05)
-
-        # Inline seed so the publish gate opens before the scheduler's
-        # first tick. The scheduler's sweep tier will refresh /device/0
-        # on its own cadence afterwards.
+        # Seed first — populate cache before discovery can run.
+        # The publish gate stays closed so seed writes don't trigger
+        # per-resource publishes before the full snapshot is ready.
         self._seed_from_device0(sess)
         self._retag_logger_with_serial()
 
         if DEBUG_BRIDGE:
             self._debug_dump_links(sess)
+
+        # Discover entities from the seeded cache, build the runtime
+        # descriptor, and publish HA discovery payloads.  Idempotent:
+        # on reconnect the descriptor is reused from the first session.
+        self._discover_and_publish(sess)
+
+        # Now subscribe to observe paths (descriptor populated above).
+        for path in self.descriptor.observe_paths:
+            sess.subscribe(path)
+            time.sleep(0.05)
 
         self._publish_gate = True
         self.maybe_publish_state(force=True)
@@ -344,15 +430,15 @@ class PushBridge:
             self.observe_refresh = None
 
     def _seed_from_device0(self, sess):
-        code, pl = sess.get(self.descriptor.seed_path, timeout=15.0)
+        code, pl = sess.get(SEED_PATH, timeout=15.0)
         if code != 0x45:
             raise RuntimeError(
-                f"/{'/'.join(self.descriptor.seed_path)} -> {fmt_code(code)}")
+                f"/{'/'.join(SEED_PATH)} -> {fmt_code(code)}")
         try:
             body = cbor2.loads(pl)
         except Exception as e:
             raise RuntimeError(
-                f"/{'/'.join(self.descriptor.seed_path)} cbor decode: {e}"
+                f"/{'/'.join(SEED_PATH)} cbor decode: {e}"
             ) from e
         # During the seed we want the cache populated without triggering
         # a publish per resource — gate the on_change callback off until
@@ -361,6 +447,40 @@ class PushBridge:
             if href not in self.cache.links:
                 self.cache.apply_rep(href, rep, source='seed')
         self.last_seed_ts = time.time()
+
+    def _discover_and_publish(self, sess):
+        """Run entity discovery against the seeded cache and publish HA
+        discovery payloads.  Idempotent — on reconnect the descriptor
+        built during the first session is reused; entity payloads are
+        re-published via reassert_availability instead."""
+        if self._discovered:
+            return
+        from .registry import CAPABILITIES, discover, build_runtime_descriptor
+        from .registry.identity import read_identity
+        snapshot = self.cache.snapshot()
+        bound = discover(snapshot, CAPABILITIES,
+                         log=lambda m: self.log.debug("%s", m))
+        ident = read_identity(sess, self._serial)
+        model = ident.model or self.app.klass.title() or 'Samsung Appliance'
+        device_name = self.app.device_name or ident.name or model
+        self.descriptor = build_runtime_descriptor(
+            bound,
+            topic_prefix=self.app.topic_prefix,
+            ha_prefix=self.shared.HA_DISCOVERY_PREFIX,
+            device_name=device_name,
+            model=model,
+            name=(self.app.klass or 'appliance'),
+            default_port=self.port)
+        self.cache.set_on_observation(self.descriptor.on_observation)
+        self.cmd_handlers = self.descriptor.command_handlers()
+        diag_payloads = _bridge_diagnostic_discovery(
+            self.app.topic_prefix, self.shared.HA_DISCOVERY_PREFIX,
+            device_name, model=model)
+        self._entity_payloads = self.descriptor.discovery_payloads + diag_payloads
+        for topic, payload in self._entity_payloads:
+            self.mqtt.publish(topic, payload, qos=1, retain=True)
+        self._discovered = True
+        self.log.info("discovered %d entities", len(self.descriptor.discovery_payloads))
 
     def _debug_dump_links(self, sess):
         for href, rep in sorted(self.cache.links.items()):
@@ -417,6 +537,8 @@ class PushBridge:
     # ---- MQTT publishing --------------------------------------------
 
     def maybe_publish_state(self, force=False):
+        if self.descriptor is None:
+            return
         if not force and not self._publish_gate:
             return
         snap = self.cache.snapshot()
@@ -479,14 +601,21 @@ class PushBridge:
         if self.session is None or self.last_state_pub is None:
             return
         self.set_availability(True)
-        field = self.descriptor.remote_available_field
-        if field is not None:
-            self.publish_remote_available(
-                self.last_state_pub.get(field), force=True)
-        cycle_field = self.descriptor.cycle_active_field
-        if cycle_field is not None:
-            self.publish_cycle_active(
-                self.last_state_pub.get(cycle_field), force=True)
+        if self._discovered:
+            for topic, payload in self._entity_payloads:
+                try:
+                    self.mqtt.publish(topic, payload, qos=1, retain=True)
+                except Exception as e:
+                    self.log.warning("re-assert discovery: %s", e)
+        if self.descriptor is not None:
+            field = self.descriptor.remote_available_field
+            if field is not None:
+                self.publish_remote_available(
+                    self.last_state_pub.get(field), force=True)
+            cycle_field = self.descriptor.cycle_active_field
+            if cycle_field is not None:
+                self.publish_cycle_active(
+                    self.last_state_pub.get(cycle_field), force=True)
         now = time.time()
         active = (self._last_observe_change_ts is not None
                   and (now - self._last_observe_change_ts) <= self.push_active_window_s)
@@ -501,20 +630,21 @@ class PushBridge:
             self.mqtt.publish(self.avail_topic, value, qos=1, retain=True)
         except Exception as e:
             self.log.warning("avail publish: %s", e)
-        if not online and self.descriptor.remote_available_field is not None:
-            self.last_remote_pub = None
-            try:
-                self.mqtt.publish(self.remote_topic, 'offline',
-                                  qos=1, retain=True)
-            except Exception:
-                pass
-        if not online and self.descriptor.cycle_active_field is not None:
-            self.last_cycle_pub = None
-            try:
-                self.mqtt.publish(self.cycle_topic, 'offline',
-                                  qos=1, retain=True)
-            except Exception:
-                pass
+        if not online and self.descriptor is not None:
+            if self.descriptor.remote_available_field is not None:
+                self.last_remote_pub = None
+                try:
+                    self.mqtt.publish(self.remote_topic, 'offline',
+                                      qos=1, retain=True)
+                except Exception:
+                    pass
+            if self.descriptor.cycle_active_field is not None:
+                self.last_cycle_pub = None
+                try:
+                    self.mqtt.publish(self.cycle_topic, 'offline',
+                                      qos=1, retain=True)
+                except Exception:
+                    pass
         if not online:
             self._last_push_active_pub = None
             try:
@@ -593,7 +723,7 @@ class PushBridge:
 
         h = {
             'mode':                      'poll+observe',
-            'device_class':              self.descriptor.name,
+            'device_class':              self.app.klass or 'appliance',
             'serial':                    self._serial,
             'connect_count':             self.connect_count,
             'error_count':               self.error_count,
