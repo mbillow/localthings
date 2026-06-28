@@ -6,7 +6,7 @@ remaining-time extrapolation. Shared by dryer/dishwasher/oven/washer families.
 import time
 
 from ..capability import Capability
-from ..entities import SensorDesc
+from ..entities import ButtonDesc, SensorDesc
 
 _SAMSUNG_STATE_TO_OCF = {
     'Ready': 'idle', 'Run': 'active', 'Running': 'active',
@@ -87,6 +87,23 @@ OPERATIONAL_STATE = Capability(
                    name='Remaining minutes', unit='min', device_class='duration',
                    state_class='measurement',
                    value_fn=lambda r: _rem_minutes(r)),
+        SensorDesc(key='delay_start_time', field='x.com.samsung.da.delayStartTime',
+                   name='Delay start time', icon='mdi:timer-pause'),
+        ButtonDesc(key='start', field='', name='Start cycle', payload='Run',
+                   icon='mdi:play',
+                   write_fn=lambda p, rep: (
+                       ['operational', 'state', 'vs', '0'],
+                       {'x.com.samsung.da.state': p})),
+        ButtonDesc(key='pause', field='', name='Pause cycle', payload='Pause',
+                   icon='mdi:pause',
+                   write_fn=lambda p, rep: (
+                       ['operational', 'state', 'vs', '0'],
+                       {'x.com.samsung.da.state': p})),
+        ButtonDesc(key='stop', field='', name='Stop cycle', payload='Ready',
+                   icon='mdi:stop',
+                   write_fn=lambda p, rep: (
+                       ['operational', 'state', 'vs', '0'],
+                       {'x.com.samsung.da.state': p})),
     ),
     active_when=_active_when,
     on_observation=_on_observation,

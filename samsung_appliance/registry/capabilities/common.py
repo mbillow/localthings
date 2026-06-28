@@ -48,6 +48,9 @@ KIDS_LOCK = Capability(
         BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
                          name='Child lock', device_class='lock',
                          value_fn=lambda v: v != 'Ready'),
+        BinarySensorDesc(key='child_lock_binary', field='x.com.samsung.da.kidsLock',
+                         name='Child lock (binary)', device_class='lock',
+                         value_fn=lambda v: v != 'Ready'),
     ),
 )
 
@@ -57,6 +60,10 @@ REMOTE_CONTROL = Capability(
         BinarySensorDesc(key='remote_control',
                          field='x.com.samsung.da.remoteControlEnabled',
                          name='Remote control', device_class='connectivity',
+                         value_fn=lambda v: str(v).lower() == 'true'),
+        BinarySensorDesc(key='remote_control_binary',
+                         field='x.com.samsung.da.remoteControlEnabled',
+                         name='Remote control (binary)', device_class='connectivity',
                          value_fn=lambda v: str(v).lower() == 'true'),
     ),
 )
@@ -68,6 +75,11 @@ POWER = Capability(
                    name='Power',
                    value_fn=lambda v: v == 'On',
                    write_fn=lambda p, rep: (['/power/vs/0'], {'x.com.samsung.da.power': 'On' if p else 'Off'})),
+        SensorDesc(key='power_state', field='x.com.samsung.da.power',
+                   name='Power state'),
+        BinarySensorDesc(key='power_state_binary', field='x.com.samsung.da.power',
+                         name='Power state (binary)',
+                         value_fn=lambda v: v == 'On'),
     ),
 )
 
