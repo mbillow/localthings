@@ -8,25 +8,25 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Callable, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .appliances.base import ApplianceDescriptor
+from typing import Callable, Optional
 
 
 class StateCache:
 
-    def __init__(self, descriptor: 'ApplianceDescriptor'):
-        self.descriptor = descriptor
+    def __init__(self):
         self.links: dict[str, dict] = {}
         self.last_updated: dict[str, float] = {}
         self.source: dict[str, str] = {}
         self.descriptor_state: dict = {}
         self._on_change: Optional[Callable[[bool, str], None]] = None
+        self._on_observation: Optional[Callable[[dict, str, dict], None]] = None
         self._lock = threading.RLock()
 
     def set_on_change(self, cb: Callable[[bool, str], None]) -> None:
         self._on_change = cb
+
+    def set_on_observation(self, hook: Optional[Callable[[dict, str, dict], None]]) -> None:
+        self._on_observation = hook
 
     def apply_rep(self, href: str, rep: dict, source: str) -> bool:
         if not isinstance(rep, dict):
@@ -37,7 +37,7 @@ class StateCache:
             self.links[href] = rep
             self.last_updated[href] = time.time()
             self.source[href] = source
-        hook = self.descriptor.on_observation
+        hook = self._on_observation
         if hook is not None:
             try:
                 hook(self.descriptor_state, href, rep)
