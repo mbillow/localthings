@@ -1,4 +1,4 @@
-"""A Capability binds one OCF resource type (rt) to the entities it produces."""
+"""A Capability binds one OCF resource href to the entities it produces."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,7 +9,7 @@ from .entities import SamsungEntityDescription
 
 @dataclass(frozen=True, kw_only=True)
 class Capability:
-    rt: str
+    href: str
     entities: tuple[SamsungEntityDescription, ...]
     poll_tier: str = 'warm'                  # 'hot' | 'warm' | 'cold'
     observe: bool = True

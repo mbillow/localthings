@@ -5,10 +5,10 @@ from samsung_appliance.registry.discovery import (
 from samsung_appliance.registry.entities import BinarySensorDesc
 
 LOCK = Capability(
-    rt='x.com.samsung.da.kidsLock',
+    href='/kidslock/vs/0',
     entities=(BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock'),),
 )
-REG = {LOCK.rt: LOCK}
+REG = {LOCK.href: LOCK}
 
 
 def test_instance_suffix():
@@ -18,8 +18,7 @@ def test_instance_suffix():
 
 
 def test_discover_binds_present_capability():
-    resources = {'/kidslock/vs/0': {'rt': ['x.com.samsung.da.kidsLock'],
-                                     'x.com.samsung.da.kidsLock': 'On'}}
+    resources = {'/kidslock/vs/0': {'x.com.samsung.da.kidsLock': 'On'}}
     bound = discover(resources, REG)
     assert len(bound) == 1
     assert bound[0].href == '/kidslock/vs/0'
@@ -27,32 +26,35 @@ def test_discover_binds_present_capability():
     assert bound[0].instance == ''
 
 
-def test_discover_skips_unknown_rt():
+def test_discover_skips_unknown_href():
     seen = []
-    resources = {'/mystery/vs/0': {'rt': ['x.com.samsung.da.mystery']}}
+    resources = {'/mystery/vs/0': {'x.com.samsung.da.mystery': 'x'}}
     bound = discover(resources, REG, log=seen.append)
     assert bound == []
     assert any('mystery' in m for m in seen)
 
 
 def test_discover_multi_instance_suffixes():
-    cap = Capability(rt='x.com.samsung.da.door',
+    cap = Capability(href='/door/vs/0',
                      entities=(BinarySensorDesc(key='door', field='x.com.samsung.da.doorState'),))
     resources = {
-        '/door/vs/0': {'rt': ['x.com.samsung.da.door']},
-        '/door/vs/1': {'rt': ['x.com.samsung.da.door']},
+        '/door/vs/0': {'x.com.samsung.da.doorState': 'Open'},
+        '/door/vs/1': {'x.com.samsung.da.doorState': 'Closed'},
     }
-    bound = discover(resources, {cap.rt: cap})
+    reg = {'/door/vs/0': cap, '/door/vs/1': cap}
+    bound = discover(resources, reg)
     insts = sorted(b.instance for b in bound)
     assert insts == ['', '_1']
 
 
-def test_discover_logs_only_unknown_rt_in_mixed_resource():
+def test_discover_logs_unregistered_href():
     seen = []
-    cap = Capability(rt='x.com.samsung.da.kidsLock',
+    cap = Capability(href='/kidslock/vs/0',
                      entities=(BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock'),))
-    resources = {'/kidslock/vs/0': {'rt': ['x.com.samsung.da.kidsLock', 'x.com.samsung.da.mystery']}}
-    bound = discover(resources, {cap.rt: cap}, log=seen.append)
-    assert len(bound) == 1   # known rt still produces entity
-    assert any('mystery' in m for m in seen)   # unknown rt is logged
-    assert not any('kidsLock' in m for m in seen)   # known rt is NOT logged
+    resources = {
+        '/kidslock/vs/0': {'x.com.samsung.da.kidsLock': 'On'},
+        '/mystery/vs/0': {'x.com.samsung.da.mystery': 'x'},
+    }
+    bound = discover(resources, {'/kidslock/vs/0': cap}, log=seen.append)
+    assert len(bound) == 1
+    assert any('mystery' in m for m in seen)

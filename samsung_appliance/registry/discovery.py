@@ -1,8 +1,8 @@
 """Runtime discovery: device resources -> bound entities.
 
-A device advertises a set of OCF resources, each carrying one or more `rt`
-values. For every rt present in the registry, emit the capability's entities
-bound to that resource href. Unknown rt is a coverage gap, logged and skipped.
+A device advertises a set of OCF resources keyed by href. For every href
+present in the registry, emit the capability's entities bound to that resource.
+Unknown hrefs are a coverage gap, logged at debug and skipped.
 """
 from __future__ import annotations
 
@@ -30,21 +30,19 @@ def instance_suffix(href: str) -> str:
 
 
 def discover(resources: dict[str, dict],
-             registry: dict[str, Capability],
+             registry: dict[str, 'Capability'],
              log: Optional[Callable[[str], None]] = None) -> list[BoundEntity]:
     out: list[BoundEntity] = []
     for href, rep in resources.items():
         if not isinstance(rep, dict):
             continue
-        rts = rep.get('rt') or []
-        for rt in rts:
-            cap = registry.get(rt)
-            if cap is None:
-                if log is not None:
-                    log(f"unknown capability {rt} at {href}")
-                continue
-            inst = instance_suffix(href)
-            for desc in cap.entities:
-                out.append(BoundEntity(href=href, capability=cap,
-                                       desc=desc, instance=inst))
+        cap = registry.get(href)
+        if cap is None:
+            if log is not None:
+                log(f"unknown resource {href}")
+            continue
+        inst = instance_suffix(href)
+        for desc in cap.entities:
+            out.append(BoundEntity(href=href, capability=cap,
+                                   desc=desc, instance=inst))
     return out

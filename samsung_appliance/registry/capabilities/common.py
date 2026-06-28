@@ -1,21 +1,17 @@
 """Capabilities shared across multiple appliance families.
 
-rt strings verified against live device dumps:
-  /kidslock/vs/0        -> x.com.samsung.da.operation
-  /remotectrl/vs/0      -> x.com.samsung.da.configuration
-  /power/vs/0           -> x.com.samsung.da.operation  (shares rt with kidslock)
-  /alarms/vs/0          -> x.com.samsung.da.alarms
-  /energy/consumption/vs/0  -> x.com.samsung.da.energyconsumption
-  /water/consumption/vs/0   -> x.com.samsung.da.waterconsumption
-  /filter/waterfilter/vs/0  -> x.com.samsung.da.filter.water
-
-NOTE: KIDS_LOCK and POWER share the same rt (x.com.samsung.da.operation).
-When building a registry dict keyed by rt, only one can be present.
-They target different hrefs (/kidslock/vs/0 vs /power/vs/0) with different
-field keys — at runtime the absent field returns None and is filtered.
+Each capability is keyed on the stable OCF resource href (not rt), verified
+against live device dumps:
+  /kidslock/vs/0            -> x.com.samsung.da.kidsLock
+  /remotectrl/vs/0          -> x.com.samsung.da.remoteControlEnabled
+  /power/vs/0               -> x.com.samsung.da.power
+  /alarms/vs/0              -> x.com.samsung.da.items
+  /energy/consumption/vs/0  -> x.com.samsung.da.instantaneousPower / cumulativePower
+  /water/consumption/vs/0   -> x.com.samsung.da.cumulativeWater
+  /filter/waterfilter/vs/0  -> x.com.samsung.da.filterUsage / filterStatus
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SensorDesc
+from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
 
 
 def _num(v):
@@ -47,7 +43,7 @@ def _last_alarm_code(items):
 
 
 KIDS_LOCK = Capability(
-    rt='x.com.samsung.da.operation',
+    href='/kidslock/vs/0',
     entities=(
         BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
                          name='Child lock', device_class='lock',
@@ -56,7 +52,7 @@ KIDS_LOCK = Capability(
 )
 
 REMOTE_CONTROL = Capability(
-    rt='x.com.samsung.da.configuration',
+    href='/remotectrl/vs/0',
     entities=(
         BinarySensorDesc(key='remote_control',
                          field='x.com.samsung.da.remoteControlEnabled',
@@ -65,19 +61,18 @@ REMOTE_CONTROL = Capability(
     ),
 )
 
-# POWER shares rt with KIDS_LOCK (x.com.samsung.da.operation).
-# Do not include both in the same registry dict simultaneously.
 POWER = Capability(
-    rt='x.com.samsung.da.operation',
+    href='/power/vs/0',
     entities=(
-        BinarySensorDesc(key='power_state', field='x.com.samsung.da.power',
-                         name='Power', device_class='power',
-                         value_fn=lambda v: v == 'On'),
+        SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
+                   name='Power',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep: (['/power/vs/0'], {'x.com.samsung.da.power': 'On' if p else 'Off'})),
     ),
 )
 
 ALARMS = Capability(
-    rt='x.com.samsung.da.alarms',
+    href='/alarms/vs/0',
     entities=(
         SensorDesc(key='alarm_code', field='x.com.samsung.da.items',
                    name='Alarm code', icon='mdi:alert',
@@ -86,7 +81,7 @@ ALARMS = Capability(
 )
 
 ENERGY_METER = Capability(
-    rt='x.com.samsung.da.energyconsumption',
+    href='/energy/consumption/vs/0',
     entities=(
         SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
                    name='Power', device_class='power', state_class='measurement',
@@ -98,7 +93,7 @@ ENERGY_METER = Capability(
 )
 
 WATER_METER = Capability(
-    rt='x.com.samsung.da.waterconsumption',
+    href='/water/consumption/vs/0',
     entities=(
         SensorDesc(key='water_liters', field='x.com.samsung.da.cumulativeWater',
                    name='Water consumption', device_class='water',
@@ -108,7 +103,7 @@ WATER_METER = Capability(
 )
 
 WATER_FILTER = Capability(
-    rt='x.com.samsung.da.filter.water',
+    href='/filter/waterfilter/vs/0',
     entities=(
         SensorDesc(key='filter_usage', field='x.com.samsung.da.filterUsage',
                    name='Filter usage', unit='%', state_class='measurement',
