@@ -6,7 +6,7 @@ bound to that resource href. Unknown rt is a coverage gap, logged and skipped.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Optional
 
 from .capability import Capability
@@ -40,13 +40,11 @@ def discover(resources: dict[str, dict],
         for rt in rts:
             cap = registry.get(rt)
             if cap is None:
+                if log is not None:
+                    log(f"unknown capability {rt} at {href}")
                 continue
             inst = instance_suffix(href)
             for desc in cap.entities:
                 out.append(BoundEntity(href=href, capability=cap,
                                        desc=desc, instance=inst))
-        # Coverage logging: a resource none of whose rts are known.
-        if log is not None and not any(rt in registry for rt in rts):
-            for rt in rts:
-                log(f"unknown capability {rt} at {href}")
     return out

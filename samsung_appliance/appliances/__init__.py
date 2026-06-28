@@ -10,13 +10,17 @@ main.py imports get_descriptor(name) to look up the descriptor at
 startup; the bridge itself stays class-agnostic.
 """
 from .base import ApplianceDescriptor
+from .dishwasher import DISHWASHER
 from .dryer import DRYER
 from .oven import OVEN
+from .refrigerator import REFRIGERATOR
 
 
 DESCRIPTORS: dict[str, ApplianceDescriptor] = {
-    DRYER.name: DRYER,
-    OVEN.name:  OVEN,
+    DISHWASHER.name:   DISHWASHER,
+    DRYER.name:        DRYER,
+    OVEN.name:         OVEN,
+    REFRIGERATOR.name: REFRIGERATOR,
 }
 
 

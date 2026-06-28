@@ -45,3 +45,14 @@ def test_discover_multi_instance_suffixes():
     bound = discover(resources, {cap.rt: cap})
     insts = sorted(b.instance for b in bound)
     assert insts == ['', '_1']
+
+
+def test_discover_logs_only_unknown_rt_in_mixed_resource():
+    seen = []
+    cap = Capability(rt='x.com.samsung.da.kidsLock',
+                     entities=(BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock'),))
+    resources = {'/kidslock/vs/0': {'rt': ['x.com.samsung.da.kidsLock', 'x.com.samsung.da.mystery']}}
+    bound = discover(resources, {cap.rt: cap}, log=seen.append)
+    assert len(bound) == 1   # known rt still produces entity
+    assert any('mystery' in m for m in seen)   # unknown rt is logged
+    assert not any('kidsLock' in m for m in seen)   # known rt is NOT logged
