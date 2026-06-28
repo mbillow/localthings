@@ -6,7 +6,7 @@ remaining-time extrapolation. Shared by dryer/dishwasher/oven/washer families.
 import time
 
 from ..capability import Capability
-from ..entities import ButtonDesc, SensorDesc
+from ..entities import BinarySensorDesc, ButtonDesc, SensorDesc
 
 _SAMSUNG_STATE_TO_OCF = {
     'Ready': 'idle', 'Run': 'active', 'Running': 'active',
@@ -75,6 +75,12 @@ OPERATIONAL_STATE = Capability(
     entities=(
         SensorDesc(key='machine_state', field='x.com.samsung.da.state',
                    name='Machine state', value_fn=_to_ocf),
+        # cycle_active is a bool derived from machine_state; used by the
+        # adapter to gate oven writes (cycle_active_field='cycle_active').
+        # Harmless for non-oven appliances — just an extra bool in state.
+        BinarySensorDesc(key='cycle_active', field='x.com.samsung.da.state',
+                         name='Cycle active', device_class='running',
+                         value_fn=lambda v: _SAMSUNG_STATE_TO_OCF.get(v) == 'active'),
         SensorDesc(key='progress', field='x.com.samsung.da.progress',
                    name='Progress', icon='mdi:progress-wrench', value_fn=_progress),
         SensorDesc(key='progress_percentage',

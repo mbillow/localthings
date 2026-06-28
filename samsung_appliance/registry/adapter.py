@@ -16,6 +16,11 @@ from .entities import (
 
 _TIER_CADENCE = {'hot': (1.0, 0.5), 'warm': (15.0, None), 'cold': (300.0, None)}
 
+# Keys produced by oven capabilities that require cycle-active gating.
+# When any of these appear in the produced set, the runtime descriptor
+# exposes cycle_active_field='cycle_active' so the bridge can gate writes.
+_CYCLE_GATED_KEYS = {'oven_setpoint', 'oven_mode', 'cook_time'}
+
 
 def _segs(href: str) -> list[str]:
     return [s for s in href.strip('/').split('/') if s]
@@ -236,6 +241,6 @@ def build_runtime_descriptor(bound, *, topic_prefix, ha_prefix, device_name,
         project=_make_project(bound),
         on_observation=_make_on_observation(bound),
         remote_available_field='remote_control' if 'remote_control' in produced else None,
-        cycle_active_field=None,
+        cycle_active_field='cycle_active' if produced & _CYCLE_GATED_KEYS else None,
         log_state_change=None,
     )
