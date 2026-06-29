@@ -204,7 +204,11 @@ def _discovery_payloads(bound, topic_prefix, ha_prefix, device_name, model):
             cfg['options'] = list(opts) if isinstance(opts, (list, tuple)) else []
         elif isinstance(d, SwitchDesc):
             cfg['state_topic'] = state_topic
-            cfg['value_template'] = f"{{{{ value_json.{key} }}}}"
+            cfg['value_template'] = f"{{% if value_json.{key} %}}On{{% else %}}Off{{% endif %}}"
+            cfg['state_on'] = 'On'
+            cfg['state_off'] = 'Off'
+            cfg['payload_on'] = 'On'
+            cfg['payload_off'] = 'Off'
             cfg['command_topic'] = f"{topic_prefix}/cmd/{key}"
         elif isinstance(d, ButtonDesc):
             cfg['command_topic'] = f"{topic_prefix}/cmd/{key}"

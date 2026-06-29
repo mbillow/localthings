@@ -26,6 +26,14 @@ def _new_state_and_uids(name, resources):
 def test_registry_reproduces_golden_state_keys(name, ip, request):
     resources = json.load(open(f'local-tools/dumps/{ip}.json'))['resources']
     golden = json.loads((GOLDEN / f'{name}.json').read_text())
-    state_keys, _ = _new_state_and_uids(name, resources)
-    missing = set(golden['state_keys']) - set(state_keys)
-    assert not missing, f"registry missing state keys: {sorted(missing)}"
+    state_keys, uids = _new_state_and_uids(name, resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+    assert set(uids) == set(golden['discovery_unique_ids']), (
+        f"unique_ids mismatch:\n"
+        f"  extra:   {sorted(set(uids) - set(golden['discovery_unique_ids']))}\n"
+        f"  missing: {sorted(set(golden['discovery_unique_ids']) - set(uids))}"
+    )
