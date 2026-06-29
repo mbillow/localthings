@@ -1,7 +1,6 @@
-import json
-
 import pytest
 
+from tests.conftest import _load_resources
 from samsung_appliance.registry import (CAPABILITIES, discover,
                                         build_runtime_descriptor)
 
@@ -11,7 +10,7 @@ from samsung_appliance.registry import (CAPABILITIES, discover,
     ('refrigerator', '10.0.0.254'),
 ])
 def test_full_pipeline_produces_entities_and_intervals(name, ip):
-    resources = json.load(open(f'local-tools/dumps/{ip}.json'))['resources']
+    resources = _load_resources(ip)
     bound = discover(resources, CAPABILITIES)
     rd = build_runtime_descriptor(
         bound, topic_prefix=f'samsung_{name}', ha_prefix='homeassistant',

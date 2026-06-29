@@ -74,7 +74,6 @@ def test_discover_pattern_cap_binds_unmatched_href():
     door_pattern = Capability(
         href=None,
         rt_filter='oic.r.door',
-        key_fn=lambda href: href.split('/')[-2],
         entities=(BinarySensorDesc(key='door', field='x.com.samsung.da.doorState'),),
     )
     resources = {

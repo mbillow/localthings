@@ -15,8 +15,6 @@ REGISTRY = DeviceRegistry(
         fridge.TEMP_FREEZER_CURRENT,
         fridge.TEMP_FRIDGE_SETPOINT,
         fridge.TEMP_FREEZER_SETPOINT,
-        fridge.DOOR_FRIDGE,
-        fridge.DOOR_FREEZER,
         fridge.DOORS_STATUS,
         fridge.ICEMAKER_ONE,
         fridge.ICEMAKER_TWO,

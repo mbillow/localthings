@@ -11,7 +11,7 @@ from samsung_appliance.registry.adapter import build_runtime_descriptor
     ('refrigerator', '10.0.0.254', 'refrigerator'),
 ])
 def test_full_pipeline_v2(name, ip, expected_type_key):
-    with open(f'local-tools/dumps/{ip}.json') as f:
+    with open(f'tests/fixtures/dumps/{ip}.json') as f:
         dump = json.load(f)
     resources = _resources_from_dump(dump)
 

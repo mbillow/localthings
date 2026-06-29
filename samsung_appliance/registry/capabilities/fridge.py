@@ -345,19 +345,12 @@ FIRMWARE_UPDATE = Capability(
 # Generic door pattern capability (href=None — use as pattern_cap only)
 # ---------------------------------------------------------------------------
 
-def _door_key(href: str) -> str:
-    # /door/cooler/0 -> door_cooler_open ; /door/wine/0 -> door_wine_open
-    segs = [s for s in href.strip('/').split('/') if s and not s.isdigit()]
-    return '_'.join(segs) + '_open'
-
-
 DOOR_GENERIC = Capability(
     href=None,
     href_prefix='/door/',
     poll_tier='hot',
-    key_fn=_door_key,
     entities=(
-        BinarySensorDesc(key='door_open', field='openState',
+        BinarySensorDesc(key='open', field='openState',
                          name=None, device_class='door',
                          value_fn=lambda v: v == 'Open'),
     ),

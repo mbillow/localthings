@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-DUMPS = Path(__file__).resolve().parent.parent / 'local-tools' / 'dumps'
+DUMPS = Path(__file__).resolve().parent / 'fixtures' / 'dumps'
 
 
 def _resources_from_dump(dump: dict) -> dict[str, dict]:

@@ -68,10 +68,12 @@ def discover(
             if cap.match_fn is not None and not cap.match_fn(rep, resources):
                 continue
             inst = instance_suffix(href)
-            key = cap.key_fn(href) if cap.key_fn else None
+            # Auto-derive key prefix from href: strip digits, join non-empty segs with '_'
+            segs = [s for s in href.strip('/').split('/') if s and not s.isdigit()]
             for desc in cap.entities:
+                key_override = '_'.join(segs) + '_' + desc.key
                 out.append(BoundEntity(href=href, capability=cap, desc=desc,
-                                       instance=inst, key_override=key))
+                                       instance=inst, key_override=key_override))
             matched = True
             break
 

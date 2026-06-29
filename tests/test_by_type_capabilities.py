@@ -8,14 +8,9 @@ from samsung_appliance.registry.adapter import _key
 from samsung_appliance.registry.by_type import dishwasher, refrigerator
 from samsung_appliance.registry.capabilities import fridge
 from samsung_appliance.registry.discovery import discover
+from tests.conftest import _load_resources
 
 GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
-DUMPS = Path(__file__).resolve().parent.parent / 'local-tools' / 'dumps'
-
-
-def _load_resources(ip: str) -> dict[str, dict]:
-    data = json.loads((DUMPS / f'{ip}.json').read_text())
-    return {k: v for k, v in data['resources'].items() if isinstance(v, dict)}
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +57,7 @@ def test_door_generic_binds_unknown_door_href():
     bound = discover(resources, {}, [fridge.DOOR_GENERIC])
     assert len(bound) == 1
     b = bound[0]
+    # entity key 'open' + href segs ['door','wine'] -> 'door_wine_open'
     assert _key(b) == 'door_wine_open', f"Expected 'door_wine_open', got {_key(b)!r}"
 
 
@@ -76,21 +72,19 @@ def test_door_generic_does_not_bind_doors_aggregate():
     assert bound == [], f"Expected no bindings, got {bound}"
 
 
-def test_door_generic_does_not_bind_known_door():
-    """/door/cooler/0 is claimed by DOOR_FRIDGE exact cap; DOOR_GENERIC must not also bind it."""
+def test_door_generic_binds_cooler_door_with_auto_derived_key():
+    """/door/cooler/0 is now handled by DOOR_GENERIC pattern cap with auto-derived key door_cooler_open."""
     resources = {
         '/door/cooler/0': {'openState': 'Closed'},
     }
     reg = refrigerator.REGISTRY
-    bound = discover(resources, reg.capabilities, [fridge.DOOR_GENERIC])
-    # Should be bound only by DOOR_FRIDGE (exact cap), not DOOR_GENERIC
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     cooler_bindings = [b for b in bound if b.href == '/door/cooler/0']
-    assert len(cooler_bindings) > 0, "Expected at least one binding for /door/cooler/0"
-    for b in cooler_bindings:
-        assert b.capability is fridge.DOOR_FRIDGE, (
-            f"Expected capability DOOR_FRIDGE, got {b.capability!r}"
-        )
-        # key_override should be None when bound via exact cap
-        assert b.key_override is None, (
-            f"Expected no key_override (exact cap binding), got {b.key_override!r}"
-        )
+    assert len(cooler_bindings) == 1, (
+        f"Expected exactly one binding for /door/cooler/0, got {len(cooler_bindings)}"
+    )
+    b = cooler_bindings[0]
+    assert b.capability is fridge.DOOR_GENERIC, (
+        f"Expected DOOR_GENERIC, got {b.capability!r}"
+    )
+    assert _key(b) == 'door_cooler_open', f"Expected 'door_cooler_open', got {_key(b)!r}"
