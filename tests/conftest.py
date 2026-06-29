@@ -8,13 +8,7 @@ FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 
 def _resources_from_dump(dump: dict) -> dict[str, dict]:
     from samsung_appliance.bridge import _parse_device0_batch
-    d0 = dump.get('device0')
-    if isinstance(d0, list) and len(d0) > 1:
-        batch = _parse_device0_batch(d0)
-        if batch:
-            return batch
-    return {k: v for k, v in dump.get('resources', {}).items()
-            if isinstance(v, dict)}
+    return _parse_device0_batch(dump['device0'])
 
 
 def _load_device(name: str) -> dict[str, dict]:
