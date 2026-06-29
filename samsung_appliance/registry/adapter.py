@@ -27,7 +27,7 @@ def _segs(href: str) -> list[str]:
 
 
 def _key(b: BoundEntity) -> str:
-    return f"{b.desc.key}{b.instance}"
+    return f"{b.key_override or b.desc.key}{b.instance}"
 
 
 def _encode(cfg: dict) -> bytes:
@@ -70,7 +70,7 @@ def _make_flatten(bound: list[BoundEntity]) -> Callable[[dict], dict]:
 def _make_observe_paths(bound: list[BoundEntity]) -> list[list[str]]:
     seen, out = set(), []
     for b in bound:
-        if not b.capability.observe or b.href in seen:
+        if b.href in seen:
             continue
         seen.add(b.href)
         out.append(_segs(b.href))

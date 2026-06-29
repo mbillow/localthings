@@ -19,6 +19,7 @@ class BoundEntity:
     capability: Capability
     desc: SamsungEntityDescription
     instance: str = ''
+    key_override: Optional[str] = None
 
 
 def instance_suffix(href: str) -> str:

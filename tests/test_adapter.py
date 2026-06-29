@@ -57,3 +57,31 @@ def test_switch_discovery_config_has_correct_payloads(dishwasher_resources):
     assert cfg['state_off'] == 'Off'
     assert 'On' in cfg['value_template']
     assert 'Off' in cfg['value_template']
+
+
+def test_bound_entity_key_override_takes_precedence():
+    from samsung_appliance.registry.adapter import _key
+    from samsung_appliance.registry.discovery import BoundEntity
+    from samsung_appliance.registry.entities import SensorDesc
+
+    cap = common.ENERGY_METER
+    desc = SensorDesc(
+        key='power_watts',
+        field='x.com.samsung.da.power',
+        unit='W',
+        device_class='power',
+        state_class='measurement',
+        value_fn=lambda x: x,
+    )
+
+    # Without key_override, should use desc.key
+    b1 = BoundEntity(href='/power/vs/0', capability=cap, desc=desc, instance='')
+    assert _key(b1) == 'power_watts'
+
+    # With key_override, should use key_override
+    b2 = BoundEntity(href='/power/vs/0', capability=cap, desc=desc, instance='', key_override='foo')
+    assert _key(b2) == 'foo'
+
+    # key_override with instance suffix should preserve instance suffix
+    b3 = BoundEntity(href='/power/vs/0', capability=cap, desc=desc, instance='_1', key_override='bar')
+    assert _key(b3) == 'bar_1'

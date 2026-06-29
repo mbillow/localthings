@@ -10,9 +10,14 @@ from .capability import Capability
 
 
 def _build() -> dict[str, Capability]:
-    """Build the registry, raising ValueError if any href is duplicated."""
+    """Build the registry, raising ValueError if any href is duplicated.
+
+    Skips capabilities with href=None (pattern capabilities, handled elsewhere).
+    """
     out: dict[str, Capability] = {}
     for cap in ALL:
+        if cap.href is None:
+            continue
         if cap.href in out:
             raise ValueError(f"duplicate capability href: {cap.href}")
         out[cap.href] = cap
