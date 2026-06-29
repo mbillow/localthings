@@ -10,16 +10,16 @@ from samsung_appliance.registry import (CAPABILITIES, discover,
     ('dishwasher', '10.0.0.129'),
     ('refrigerator', '10.0.0.254'),
 ])
-def test_full_pipeline_produces_entities_and_observe_paths(name, ip):
+def test_full_pipeline_produces_entities_and_intervals(name, ip):
     resources = json.load(open(f'local-tools/dumps/{ip}.json'))['resources']
     bound = discover(resources, CAPABILITIES)
     rd = build_runtime_descriptor(
         bound, topic_prefix=f'samsung_{name}', ha_prefix='homeassistant',
         device_name=name.title(), model='M', name=name, default_port=49154)
     assert rd.discovery_payloads, "no entities discovered"
-    assert rd.observe_paths, "no observe paths"
-    assert any(t.name == 'hot' for t in rd.poll_tiers), "no hot tier"
-    assert any(t.is_sweep for t in rd.poll_tiers), "no sweep tier"
+    assert rd.active_interval_s > 0, "active_interval_s must be positive"
+    assert rd.idle_interval_s > rd.active_interval_s, (
+        "idle_interval_s must be greater than active_interval_s")
     # flatten runs cleanly over the real rep set
     flat = rd.flatten(resources)
     assert flat
