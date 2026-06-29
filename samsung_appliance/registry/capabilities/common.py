@@ -74,7 +74,7 @@ POWER = Capability(
         SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
                    name='Power',
                    value_fn=lambda v: v == 'On',
-                   write_fn=lambda p, rep: (['power', 'vs', '0'], {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
+                   write_fn=lambda p, rep, href=None: (['power', 'vs', '0'], {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
         SensorDesc(key='power_state', field='x.com.samsung.da.power',
                    name='Power state'),
         BinarySensorDesc(key='power_state_binary', field='x.com.samsung.da.power',

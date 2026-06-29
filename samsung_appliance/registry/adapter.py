@@ -118,7 +118,7 @@ def _make_command_handlers(bound):
 
             def handler(payload, links, _fn=fn, _href=href):
                 rep = (links or {}).get(_href) or {}
-                return _fn(payload, rep)
+                return _fn(payload, rep, _href)
 
             out[f"cmd/{_key(b)}"] = handler
         return out

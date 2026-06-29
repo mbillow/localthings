@@ -34,13 +34,13 @@ _COURSE_NAMES = {
 _COURSE_CODE_BY_NAME = {name: code for code, name in _COURSE_NAMES.items()}
 
 
-def _wrinkle_write(p, rep):
+def _wrinkle_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     return ['washer', 'vs', '0'], {'x.com.samsung.da.wrinklePrevent': p}
 
 
-def _course_write(p, rep):
+def _course_write(p, rep, href=None):
     """Encode a human course name to the Samsung hex-encoded course string."""
     code = _COURSE_CODE_BY_NAME.get(p)
     if code is None:
