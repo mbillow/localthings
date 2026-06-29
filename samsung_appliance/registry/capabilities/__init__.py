@@ -6,16 +6,13 @@ def _is_capability(v):
     return isinstance(v, Capability)
 
 
-# Oven capabilities with hrefs unique to the oven family.
-# OVEN_OPERATIONAL_STATE (/operational/state/vs/0) and OVEN_DOOR
-# (/doors/vs/0) are intentionally excluded — those hrefs are already
-# covered by the shared OPERATIONAL_STATE and fridge DOORS_STATUS
-# capabilities. Oven-specific entities from those hrefs (cook_time,
-# door sensor) will be wired by oven-specific discovery in Task 13.
+# Only OVEN_CAVITY (/oven/vs/0) is safe to include globally — that href
+# is oven-unique. OVEN_SETPOINT (/temperatures/vs/0) and OVEN_MODE
+# (/mode/vs/0) collide with fridge hrefs that share the same path but
+# have different schemas. Those capabilities require rt_filter or class-
+# scoped registry support before they can be added back to ALL.
 _OVEN_GLOBAL_CAPS = [
-    oven.OVEN_SETPOINT,
     oven.OVEN_CAVITY,
-    oven.OVEN_MODE,
 ]
 
 ALL = [v for mod in (common, operational, laundry, fridge)
