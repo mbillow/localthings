@@ -55,9 +55,9 @@ def test_refrigerator_registry_discovers_expected_keys():
 # ---------------------------------------------------------------------------
 
 def test_door_generic_binds_unknown_door_href():
-    """/door/wine/0 with oic.r.door rt binds via DOOR_GENERIC with key door_wine_open."""
+    """/door/wine/0 binds via DOOR_GENERIC (href_prefix='/door/') with key door_wine_open."""
     resources = {
-        '/door/wine/0': {'rt': ['oic.r.door'], 'openState': 'Open'},
+        '/door/wine/0': {'openState': 'Open'},
     }
     bound = discover(resources, {}, [fridge.DOOR_GENERIC])
     assert len(bound) == 1
@@ -66,10 +66,9 @@ def test_door_generic_binds_unknown_door_href():
 
 
 def test_door_generic_does_not_bind_doors_aggregate():
-    """/doors/vs/0 with Samsung-proprietary rt is not bound by DOOR_GENERIC."""
+    """/doors/vs/0 does not start with '/door/' so DOOR_GENERIC must not bind it."""
     resources = {
         '/doors/vs/0': {
-            'rt': ['x.com.samsung.da.doors'],
             'x.com.samsung.da.items': [],
         },
     }
@@ -80,7 +79,7 @@ def test_door_generic_does_not_bind_doors_aggregate():
 def test_door_generic_does_not_bind_known_door():
     """/door/cooler/0 is claimed by DOOR_FRIDGE exact cap; DOOR_GENERIC must not also bind it."""
     resources = {
-        '/door/cooler/0': {'rt': ['oic.r.door'], 'openState': 'Closed'},
+        '/door/cooler/0': {'openState': 'Closed'},
     }
     reg = refrigerator.REGISTRY
     bound = discover(resources, reg.capabilities, [fridge.DOOR_GENERIC])

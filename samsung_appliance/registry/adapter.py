@@ -37,7 +37,6 @@ def _encode(cfg: dict) -> bytes:
 class RuntimeDescriptor:
     name: str
     seed_path: list[str]
-    default_observe_port: int
     active_interval_s: float = 5.0
     idle_interval_s: float = 30.0
     is_active: Optional[Callable[[dict], bool]] = None
@@ -208,7 +207,6 @@ def build_runtime_descriptor(bound, *, topic_prefix, ha_prefix, device_name,
     return RuntimeDescriptor(
         name=name,
         seed_path=['device', '0'],
-        default_observe_port=default_port or 0,
         active_interval_s=active_interval_s,
         idle_interval_s=idle_interval_s,
         is_active=_make_is_active(bound),

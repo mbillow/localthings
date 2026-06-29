@@ -48,4 +48,10 @@ def for_device(one_ui_version: str) -> Optional[DeviceRegistry]:
         DeviceRegistry if a matching registry exists, None otherwise.
     """
     key = _type_key(one_ui_version)
-    return _REGISTRY_BY_KEY.get(key)
+    if key in _REGISTRY_BY_KEY:
+        return _REGISTRY_BY_KEY[key]
+    # Suffix fallback: e.g. "french_door_refrigerator" ends with "_refrigerator"
+    for rkey, reg in _REGISTRY_BY_KEY.items():
+        if key.endswith(f'_{rkey}'):
+            return reg
+    return None

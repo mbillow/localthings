@@ -37,7 +37,6 @@ def discover(
     log: Optional[Callable[[str], None]] = None,
 ) -> list[BoundEntity]:
     out: list[BoundEntity] = []
-    bound_hrefs: set[str] = set()
 
     for href, rep in resources.items():
         if not isinstance(rep, dict):
@@ -58,11 +57,12 @@ def discover(
             matched = True
 
         if matched:
-            bound_hrefs.add(href)
             continue
 
         # Pattern cap fallback — first matching pattern wins
         for cap in pattern_caps:
+            if cap.href_prefix and not href.startswith(cap.href_prefix):
+                continue
             if cap.rt_filter is not None and cap.rt_filter not in rts:
                 continue
             if cap.match_fn is not None and not cap.match_fn(rep, resources):

@@ -34,6 +34,13 @@ class TestForDevice:
         registry = for_device("7.0 Toaster")
         assert registry is None
 
+    def test_for_device_suffix_fallback(self):
+        """for_device("7.0 French Door Refrigerator") resolves via suffix fallback."""
+        registry = for_device("7.0 French Door Refrigerator")
+        assert registry is not None
+        assert isinstance(registry, DeviceRegistry)
+        assert registry.name == 'refrigerator'
+
 
 class TestDeviceRegistries:
     """Tests for device registries themselves."""

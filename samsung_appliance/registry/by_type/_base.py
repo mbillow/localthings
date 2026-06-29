@@ -32,6 +32,10 @@ def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
     for cap in caps:
         if cap.href is None:
             raise ValueError(f"Use pattern_capabilities for href=None caps")
+        if cap.href_prefix is not None:
+            raise ValueError(
+                f"href_prefix is only valid for pattern caps (href=None); "
+                f"cap with href={cap.href!r} must not set href_prefix")
         out.setdefault(cap.href, []).append(cap)
 
     # Validate that multi-cap hrefs have proper discrimination

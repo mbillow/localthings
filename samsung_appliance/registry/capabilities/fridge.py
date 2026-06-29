@@ -353,7 +353,7 @@ def _door_key(href: str) -> str:
 
 DOOR_GENERIC = Capability(
     href=None,
-    rt_filter='oic.r.door',
+    href_prefix='/door/',
     poll_tier='hot',
     key_fn=_door_key,
     entities=(
