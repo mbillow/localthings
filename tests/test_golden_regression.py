@@ -7,10 +7,18 @@ GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
 
 
 def _new_state_and_uids(name, resources):
-    from samsung_appliance.registry.registry import CAPABILITIES
+    from samsung_appliance.registry.by_type import for_device
     from samsung_appliance.registry.discovery import discover
     from samsung_appliance.registry.adapter import build_runtime_descriptor
-    bound = discover(resources, CAPABILITIES)
+    otn = resources.get('/otninformation/vs/0', {})
+    one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')
+    reg = for_device(one_ui) if one_ui else None
+    if reg is None:
+        from samsung_appliance.registry.registry import CAPABILITIES
+        caps, pats = CAPABILITIES, []
+    else:
+        caps, pats = reg.capabilities, reg.pattern_capabilities
+    bound = discover(resources, caps, pats)
     rd = build_runtime_descriptor(
         bound, topic_prefix=f'samsung_{name}', ha_prefix='homeassistant',
         device_name=name.title(), model='M', name=name, default_port=49154)
@@ -24,7 +32,8 @@ def _new_state_and_uids(name, resources):
     ('refrigerator', '10.0.0.254'),
 ])
 def test_registry_reproduces_golden_state_keys(name, ip, request):
-    resources = json.load(open(f'local-tools/dumps/{ip}.json'))['resources']
+    from tests.conftest import _load_resources
+    resources = _load_resources(ip)
     golden = json.loads((GOLDEN / f'{name}.json').read_text())
     state_keys, uids = _new_state_and_uids(name, resources)
     assert set(state_keys) == set(golden['state_keys']), (
@@ -37,3 +46,16 @@ def test_registry_reproduces_golden_state_keys(name, ip, request):
         f"  extra:   {sorted(set(uids) - set(golden['discovery_unique_ids']))}\n"
         f"  missing: {sorted(set(golden['discovery_unique_ids']) - set(uids))}"
     )
+
+
+def test_resources_from_batch_preferred_over_flat():
+    from tests.conftest import _resources_from_dump
+    dump = {
+        'device0': [
+            {'di': 'device'},  # [0] device-level rep, skipped
+            {'href': '/foo', 'rep': {'x': 1}},
+        ],
+        'resources': {'/foo': {'x': 99}},
+    }
+    result = _resources_from_dump(dump)
+    assert result == {'/foo': {'x': 1}}

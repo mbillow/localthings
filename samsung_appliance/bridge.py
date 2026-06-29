@@ -49,8 +49,12 @@ def _parse_device0_batch(device0: list) -> dict[str, dict]:
             continue
         href = entry.get('href')
         rep  = entry.get('rep')
-        if href and isinstance(rep, dict) and set(rep.keys()) != {'href'}:
-            out[href] = rep
+        if not href:
+            continue
+        # rep == {"href": "..."} is a stub (resource present, no current data).
+        # Include it as {} so capabilities still bind and the entity exists.
+        if isinstance(rep, dict):
+            out[href] = {} if set(rep.keys()) == {'href'} else rep
     return out
 
 

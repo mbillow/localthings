@@ -6,10 +6,20 @@ import pytest
 DUMPS = Path(__file__).resolve().parent.parent / 'local-tools' / 'dumps'
 
 
+def _resources_from_dump(dump: dict) -> dict[str, dict]:
+    from samsung_appliance.bridge import _parse_device0_batch
+    d0 = dump.get('device0')
+    if isinstance(d0, list) and len(d0) > 1:
+        batch = _parse_device0_batch(d0)
+        if batch:
+            return batch
+    return {k: v for k, v in dump.get('resources', {}).items()
+            if isinstance(v, dict)}
+
+
 def _load_resources(ip: str) -> dict[str, dict]:
     data = json.loads((DUMPS / f'{ip}.json').read_text())
-    # Filter to only dict values (skip non-dict representations like "<timeout>")
-    return {k: v for k, v in data['resources'].items() if isinstance(v, dict)}
+    return _resources_from_dump(data)
 
 
 @pytest.fixture
