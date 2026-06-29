@@ -306,21 +306,21 @@
     {
       "href": "/information/vs/0",
       "rep": {
-        "x.com.samsung.da.modelNum": "TP1X_REF_21K|00176141|00000850031813294103010041030000",
+        "x.com.samsung.da.modelNum": "TEST-MODEL",
         "x.com.samsung.da.description": "TP1X_REF_21K",
-        "x.com.samsung.da.serialNum": "1MZC43AX500056X",
-        "x.com.samsung.da.otnDUID": "H3CB2ZD46MEHY",
+        "x.com.samsung.da.serialNum": "TEST-SERIAL-0000",
+        "x.com.samsung.da.otnDUID": "TEST-DUID-0000",
         "x.com.samsung.da.diagDumpType": "file",
-        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagEndPoint": "test.example.com",
         "x.com.samsung.da.diagLogType": [
           "errCode",
           "dump"
         ],
-        "x.com.samsung.da.diagMnid": "0AJT",
-        "x.com.samsung.da.diagSetupid": "RRD",
+        "x.com.samsung.da.diagMnid": "TEST",
+        "x.com.samsung.da.diagSetupid": "TEST",
         "x.com.samsung.da.diagProtocolType": "BLE_OCF",
         "x.com.samsung.da.diagMinVersion": "3.0",
-        "x.com.samsung.da.diagTsId": "DA01",
+        "x.com.samsung.da.diagTsId": "TEST",
         "x.com.samsung.da.items": [
           {
             "x.com.samsung.da.id": "0",

@@ -1,19 +1,16 @@
-import json
 import pytest
-from tests.conftest import _resources_from_dump
+from tests.conftest import _load_device
 from samsung_appliance.registry.by_type import for_device, _type_key
 from samsung_appliance.registry.discovery import discover
 from samsung_appliance.registry.adapter import build_runtime_descriptor
 
 
-@pytest.mark.parametrize('name,ip,expected_type_key', [
-    ('dishwasher',   '10.0.0.129', 'dishwasher'),
-    ('refrigerator', '10.0.0.254', 'refrigerator'),
+@pytest.mark.parametrize('name,expected_type_key', [
+    ('dishwasher',   'dishwasher'),
+    ('refrigerator', 'refrigerator'),
 ])
-def test_full_pipeline_v2(name, ip, expected_type_key):
-    with open(f'tests/fixtures/dumps/{ip}.json') as f:
-        dump = json.load(f)
-    resources = _resources_from_dump(dump)
+def test_full_pipeline_v2(name, expected_type_key):
+    resources = _load_device(name)
 
     otn = resources.get('/otninformation/vs/0', {})
     one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')

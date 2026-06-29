@@ -184,21 +184,21 @@
     {
       "href": "/information/vs/0",
       "rep": {
-        "x.com.samsung.da.modelNum": "ADW-WW-RTL-24-AILITE|90000541|400002010019130059C1000500E10000",
+        "x.com.samsung.da.modelNum": "TEST-MODEL",
         "x.com.samsung.da.description": "ADW-WW-RTL-24-AILITE_DW9000F/DD91-00002A_0002",
-        "x.com.samsung.da.serialNum": "0MP0GDAYA02747Z",
-        "x.com.samsung.da.otnDUID": "RLCEUXS5HXG4O",
+        "x.com.samsung.da.serialNum": "TEST-SERIAL-0000",
+        "x.com.samsung.da.otnDUID": "TEST-DUID-0000",
         "x.com.samsung.da.diagProtocolType": "BLE_OCF",
         "x.com.samsung.da.diagLogType": [
           "errCode",
           "dump"
         ],
         "x.com.samsung.da.diagDumpType": "file",
-        "x.com.samsung.da.diagEndPoint": "SSM",
-        "x.com.samsung.da.diagMnid": "0AJT",
-        "x.com.samsung.da.diagSetupid": "WDA",
+        "x.com.samsung.da.diagEndPoint": "test.example.com",
+        "x.com.samsung.da.diagMnid": "TEST",
+        "x.com.samsung.da.diagSetupid": "TEST",
         "x.com.samsung.da.diagMinVersion": "3.0",
-        "x.com.samsung.da.diagTsId": "DA01",
+        "x.com.samsung.da.diagTsId": "TEST",
         "x.com.samsung.da.items": [
           {
             "x.com.samsung.da.id": "0",
@@ -881,21 +881,21 @@
         "oic.if.baseline",
         "oic.if.a"
       ],
-      "x.com.samsung.da.modelNum": "ADW-WW-RTL-24-AILITE|90000541|400002010019130059C1000500E10000",
+      "x.com.samsung.da.modelNum": "TEST-MODEL",
       "x.com.samsung.da.description": "ADW-WW-RTL-24-AILITE_DW9000F/DD91-00002A_0002",
-      "x.com.samsung.da.serialNum": "0MP0GDAYA02747Z",
-      "x.com.samsung.da.otnDUID": "RLCEUXS5HXG4O",
+      "x.com.samsung.da.serialNum": "TEST-SERIAL-0000",
+      "x.com.samsung.da.otnDUID": "TEST-DUID-0000",
       "x.com.samsung.da.diagProtocolType": "BLE_OCF",
       "x.com.samsung.da.diagLogType": [
         "errCode",
         "dump"
       ],
       "x.com.samsung.da.diagDumpType": "file",
-      "x.com.samsung.da.diagEndPoint": "SSM",
-      "x.com.samsung.da.diagMnid": "0AJT",
-      "x.com.samsung.da.diagSetupid": "WDA",
+      "x.com.samsung.da.diagEndPoint": "test.example.com",
+      "x.com.samsung.da.diagMnid": "TEST",
+      "x.com.samsung.da.diagSetupid": "TEST",
       "x.com.samsung.da.diagMinVersion": "3.0",
-      "x.com.samsung.da.diagTsId": "DA01",
+      "x.com.samsung.da.diagTsId": "TEST",
       "x.com.samsung.da.items": [
         {
           "x.com.samsung.da.id": "0",
