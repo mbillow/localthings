@@ -330,6 +330,17 @@ OVEN_DOOR = Capability(
     ),
 )
 
+OVEN_CONNECTED = Capability(
+    href='/connected/vs/0',
+    poll_tier='warm',
+    entities=(
+        BinarySensorDesc(key='cloud_connected', field='x.com.samsung.da.connected',
+                         name='Cloud connected', device_class='connectivity',
+                         entity_category='diagnostic',
+                         value_fn=lambda v: v == 'On'),
+    ),
+)
+
 OVEN_MODE = Capability(
     href='/mode/vs/0',
     poll_tier='warm',

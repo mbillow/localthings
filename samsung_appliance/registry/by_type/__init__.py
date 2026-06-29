@@ -2,13 +2,15 @@
 from typing import Optional
 
 from ._base import DeviceRegistry
-from . import dishwasher, refrigerator
+from . import dishwasher, dryer, oven, refrigerator
 
 __all__ = ['DeviceRegistry', '_type_key', 'for_device']
 
 
 _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     'dishwasher': dishwasher.REGISTRY,
+    'dryer': dryer.REGISTRY,
+    'oven': oven.REGISTRY,
     'refrigerator': refrigerator.REGISTRY,
 }
 
