@@ -3,9 +3,10 @@ from samsung_appliance.registry.registry import CAPABILITIES
 
 
 def test_registry_is_keyed_by_href():
-    """Registry keys should match capability hrefs."""
-    for href, cap in CAPABILITIES.items():
-        assert cap.href == href
+    """Registry keys should match capability hrefs for all caps in the group."""
+    for href, caps in CAPABILITIES.items():
+        for cap in caps:
+            assert cap.href == href
 
 
 def test_registry_has_no_duplicate_href():

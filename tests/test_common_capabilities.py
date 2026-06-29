@@ -3,7 +3,7 @@ from samsung_appliance.registry.discovery import discover
 
 
 def _reg():
-    return {c.href: c for c in (
+    return {c.href: [c] for c in (
         common.KIDS_LOCK, common.REMOTE_CONTROL, common.POWER,
         common.ALARMS, common.ENERGY_METER, common.WATER_METER,
         common.WATER_FILTER,

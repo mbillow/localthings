@@ -7,7 +7,7 @@ Unknown hrefs are a coverage gap, logged at debug and skipped.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 from .capability import Capability
 from .entities import SamsungEntityDescription
@@ -30,20 +30,52 @@ def instance_suffix(href: str) -> str:
     return ''
 
 
-def discover(resources: dict[str, dict],
-             registry: dict[str, 'Capability'],
-             log: Optional[Callable[[str], None]] = None) -> list[BoundEntity]:
+def discover(
+    resources: dict[str, dict],
+    registry: dict[str, list[Capability]],
+    pattern_caps: Iterable[Capability] = (),
+    log: Optional[Callable[[str], None]] = None,
+) -> list[BoundEntity]:
     out: list[BoundEntity] = []
+    bound_hrefs: set[str] = set()
+
     for href, rep in resources.items():
         if not isinstance(rep, dict):
             continue
-        cap = registry.get(href)
-        if cap is None:
-            if log is not None:
-                log(f"unknown resource {href}")
+        rts = rep.get('rt') or ()
+        caps = registry.get(href) or []
+        matched = False
+
+        for cap in caps:
+            if cap.rt_filter is not None and cap.rt_filter not in rts:
+                continue
+            if cap.match_fn is not None and not cap.match_fn(rep, resources):
+                continue
+            inst = instance_suffix(href)
+            for desc in cap.entities:
+                out.append(BoundEntity(href=href, capability=cap,
+                                       desc=desc, instance=inst))
+            matched = True
+
+        if matched:
+            bound_hrefs.add(href)
             continue
-        inst = instance_suffix(href)
-        for desc in cap.entities:
-            out.append(BoundEntity(href=href, capability=cap,
-                                   desc=desc, instance=inst))
+
+        # Pattern cap fallback — first matching pattern wins
+        for cap in pattern_caps:
+            if cap.rt_filter is not None and cap.rt_filter not in rts:
+                continue
+            if cap.match_fn is not None and not cap.match_fn(rep, resources):
+                continue
+            inst = instance_suffix(href)
+            key = cap.key_fn(href) if cap.key_fn else None
+            for desc in cap.entities:
+                out.append(BoundEntity(href=href, capability=cap, desc=desc,
+                                       instance=inst, key_override=key))
+            matched = True
+            break
+
+        if not matched and log is not None:
+            log(f"unknown resource {href}")
+
     return out

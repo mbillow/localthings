@@ -158,7 +158,7 @@ def test_cook_time_rejects_out_of_range():
 
 def test_adapter_sets_cycle_active_field_for_oven():
     """build_runtime_descriptor must set cycle_active_field when oven keys present."""
-    reg = {c.href: c for c in (oven.OVEN_OPERATIONAL_STATE, oven.OVEN_SETPOINT)}
+    reg = {c.href: [c] for c in (oven.OVEN_OPERATIONAL_STATE, oven.OVEN_SETPOINT)}
     resources = {
         '/operational/state/vs/0': {'x.com.samsung.da.state': 'Run'},
         '/temperatures/vs/0': {'x.com.samsung.da.items': [
@@ -177,7 +177,7 @@ def test_adapter_sets_cycle_active_field_for_oven():
 def test_adapter_no_cycle_active_without_oven_keys():
     """Non-oven appliances must not get cycle_active_field."""
     from samsung_appliance.registry.capabilities import common
-    reg = {c.href: c for c in (common.KIDS_LOCK,)}
+    reg = {c.href: [c] for c in (common.KIDS_LOCK,)}
     resources = {'/kidslock/vs/0': {'x.com.samsung.da.kidsLock': 'Ready'}}
     bound = discover(resources, reg)
     rd = build_runtime_descriptor(

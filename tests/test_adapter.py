@@ -6,12 +6,12 @@ from samsung_appliance.registry.discovery import discover
 
 
 def _bound(resources):
-    reg = {c.href: c for c in (common.KIDS_LOCK, common.ENERGY_METER)}
+    reg = {c.href: [c] for c in (common.KIDS_LOCK, common.ENERGY_METER)}
     return discover(resources, reg)
 
 
 def _bound_with_power(resources):
-    reg = {c.href: c for c in (common.KIDS_LOCK, common.ENERGY_METER, common.POWER)}
+    reg = {c.href: [c] for c in (common.KIDS_LOCK, common.ENERGY_METER, common.POWER)}
     return discover(resources, reg)
 
 
