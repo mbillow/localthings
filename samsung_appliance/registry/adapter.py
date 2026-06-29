@@ -7,7 +7,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from ..poll_scheduler import PollTier
 from .discovery import BoundEntity
 from .entities import (
     BinarySensorDesc, ButtonDesc, NumberDesc, PLATFORM_OF, SelectDesc,
@@ -39,17 +38,17 @@ class RuntimeDescriptor:
     name: str
     seed_path: list[str]
     default_observe_port: int
-    observe_paths: list[list[str]]
-    poll_tiers: list[PollTier]
-    is_active: Optional[Callable[[dict], bool]]
-    flatten: Callable[[dict], dict]
-    discovery_payloads: list[tuple[str, bytes]]
-    command_handlers: Callable[[], dict]
-    project: Optional[Callable[[dict, dict], dict]]
-    on_observation: Optional[Callable[[dict, str, dict], None]]
-    remote_available_field: Optional[str]
-    cycle_active_field: Optional[str]
-    log_state_change: Optional[Callable[[dict], str]]
+    active_interval_s: float = 5.0
+    idle_interval_s: float = 30.0
+    is_active: Optional[Callable[[dict], bool]] = None
+    flatten: Optional[Callable[[dict], dict]] = None
+    discovery_payloads: list[tuple[str, bytes]] = field(default_factory=list)
+    command_handlers: Optional[Callable[[], dict]] = None
+    project: Optional[Callable[[dict, dict], dict]] = None
+    on_observation: Optional[Callable[[dict, str, dict], None]] = None
+    remote_available_field: Optional[str] = None
+    cycle_active_field: Optional[str] = None
+    log_state_change: Optional[Callable[[dict], str]] = None
 
 
 def _make_flatten(bound: list[BoundEntity]) -> Callable[[dict], dict]:
@@ -65,31 +64,6 @@ def _make_flatten(bound: list[BoundEntity]) -> Callable[[dict], dict]:
         return out
 
     return flatten
-
-
-def _make_observe_paths(bound: list[BoundEntity]) -> list[list[str]]:
-    seen, out = set(), []
-    for b in bound:
-        if b.href in seen:
-            continue
-        seen.add(b.href)
-        out.append(_segs(b.href))
-    return out
-
-
-def _make_poll_tiers(bound: list[BoundEntity]) -> list[PollTier]:
-    groups: dict[str, set[str]] = {}
-    for b in bound:
-        groups.setdefault(b.capability.poll_tier, set()).add(b.href)
-    tiers: list[PollTier] = []
-    for name, hrefs in groups.items():
-        interval, active = _TIER_CADENCE.get(name, (15.0, None))
-        tiers.append(PollTier(
-            name=name, interval_s=interval, active_interval_s=active,
-            paths=tuple(tuple(_segs(h)) for h in sorted(hrefs))))
-    tiers.append(PollTier(name='sweep', interval_s=300.0,
-                          paths=(('device', '0'),), is_sweep=True))
-    return tiers
 
 
 def _make_is_active(bound):
@@ -200,8 +174,7 @@ def _discovery_payloads(bound, topic_prefix, ha_prefix, device_name, model):
             cfg['state_topic'] = state_topic
             cfg['value_template'] = f"{{{{ value_json.{key} }}}}"
             cfg['command_topic'] = f"{topic_prefix}/cmd/{key}"
-            opts = d.options
-            cfg['options'] = list(opts) if isinstance(opts, (list, tuple)) else []
+            cfg['options'] = list(d.options) if d.options else []
         elif isinstance(d, SwitchDesc):
             cfg['state_topic'] = state_topic
             cfg['value_template'] = f"{{% if value_json.{key} %}}On{{% else %}}Off{{% endif %}}"
@@ -229,14 +202,15 @@ def _discovery_payloads(bound, topic_prefix, ha_prefix, device_name, model):
 
 
 def build_runtime_descriptor(bound, *, topic_prefix, ha_prefix, device_name,
-                             model, name, default_port) -> RuntimeDescriptor:
+                             model, name, default_port=None,
+                             active_interval_s=5.0, idle_interval_s=30.0) -> RuntimeDescriptor:
     produced = {_key(b) for b in bound}
     return RuntimeDescriptor(
         name=name,
         seed_path=['device', '0'],
-        default_observe_port=default_port,
-        observe_paths=_make_observe_paths(bound),
-        poll_tiers=_make_poll_tiers(bound),
+        default_observe_port=default_port or 0,
+        active_interval_s=active_interval_s,
+        idle_interval_s=idle_interval_s,
         is_active=_make_is_active(bound),
         flatten=_make_flatten(bound),
         discovery_payloads=_discovery_payloads(

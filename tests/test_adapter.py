@@ -24,13 +24,6 @@ def test_flatten_applies_value_fn(dishwasher_resources):
     assert isinstance(flat['child_lock'], bool)
 
 
-def test_observe_paths_are_segment_lists(dishwasher_resources):
-    rd = build_runtime_descriptor(
-        _bound(dishwasher_resources), topic_prefix='t', ha_prefix='homeassistant',
-        device_name='Dishwasher', model='M', name='dishwasher', default_port=49154)
-    assert ['kidslock', 'vs', '0'] in rd.observe_paths
-
-
 def test_discovery_payloads_have_unique_ids(dishwasher_resources):
     rd = build_runtime_descriptor(
         _bound(dishwasher_resources), topic_prefix='samsung_dishwasher',
@@ -85,3 +78,11 @@ def test_bound_entity_key_override_takes_precedence():
     # key_override with instance suffix should preserve instance suffix
     b3 = BoundEntity(href='/power/vs/0', capability=cap, desc=desc, instance='_1', key_override='bar')
     assert _key(b3) == 'bar_1'
+
+
+def test_runtime_descriptor_has_active_and_idle_intervals(dishwasher_resources):
+    rd = build_runtime_descriptor(
+        _bound(dishwasher_resources), topic_prefix='t', ha_prefix='homeassistant',
+        device_name='Dishwasher', model='M', name='dishwasher', default_port=49154)
+    assert rd.active_interval_s == 5.0
+    assert rd.idle_interval_s == 30.0
