@@ -2,27 +2,29 @@
 
 The two physical door resources (/door/cooler/0, /door/freezer/0) and the two
 ice-maker resources (/icemaker/one/vs/0, /icemaker/two/vs/0) use named path
-segments rather than numeric indices, so they are modelled as separate
-Capability objects with distinct entity keys.
+segments rather than numeric indices, so they are modelled via DOOR_GENERIC
+pattern capability that auto-derives distinct keys from the href segments.
 """
-import json
+from tests.conftest import _load_resources
 
-from samsung_appliance.registry.registry import CAPABILITIES
+from samsung_appliance.registry.adapter import _key
+from samsung_appliance.registry.by_type import refrigerator
 from samsung_appliance.registry.discovery import discover
 
 
 def test_two_doors_get_distinct_keys():
-    res = json.load(open('local-tools/dumps/10.0.0.254.json'))['resources']
-    bound = discover(res, CAPABILITIES)
-    door_keys = sorted(f"{b.desc.key}{b.instance}" for b in bound
-                       if b.desc.key.startswith('door'))
-    # at least the two physical doors produce distinct keys
+    resources = _load_resources('10.0.0.254')
+    reg = refrigerator.REGISTRY
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    door_keys = sorted(_key(b) for b in bound if _key(b).startswith('door'))
+    # at least the two physical doors (cooler + freezer) produce distinct keys
     assert len(set(door_keys)) >= 2, f"Expected >= 2 distinct door keys, got: {door_keys}"
 
 
 def test_two_iceMakers_get_distinct_keys():
-    res = json.load(open('local-tools/dumps/10.0.0.254.json'))['resources']
-    bound = discover(res, CAPABILITIES)
+    resources = _load_resources('10.0.0.254')
+    reg = refrigerator.REGISTRY
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     ice_keys = sorted(f"{b.desc.key}{b.instance}" for b in bound
                       if b.desc.key.startswith('ice'))
     # ice1_* and ice2_* are distinct
