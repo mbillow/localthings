@@ -25,12 +25,11 @@ def test_two_iceMakers_get_distinct_keys():
     resources = _load_resources('10.0.0.254')
     reg = refrigerator.REGISTRY
     bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
-    ice_keys = sorted(f"{b.desc.key}{b.instance}" for b in bound
-                      if b.desc.key.startswith('ice'))
-    # ice1_* and ice2_* are distinct
-    ice1_keys = [k for k in ice_keys if k.startswith('ice1')]
-    ice2_keys = [k for k in ice_keys if k.startswith('ice2')]
-    assert ice1_keys, "No ice1_* keys found"
-    assert ice2_keys, "No ice2_* keys found"
-    assert set(ice1_keys).isdisjoint(set(ice2_keys)), \
-        f"ice1 and ice2 keys overlap: {ice1_keys} vs {ice2_keys}"
+    ice_keys = sorted(_key(b) for b in bound if _key(b).startswith('icemaker_'))
+    # icemaker_one_* and icemaker_two_* are distinct
+    ice_one_keys = [k for k in ice_keys if k.startswith('icemaker_one_')]
+    ice_two_keys = [k for k in ice_keys if k.startswith('icemaker_two_')]
+    assert ice_one_keys, "No icemaker_one_* keys found"
+    assert ice_two_keys, "No icemaker_two_* keys found"
+    assert set(ice_one_keys).isdisjoint(set(ice_two_keys)), \
+        f"icemaker_one and icemaker_two keys overlap: {ice_one_keys} vs {ice_two_keys}"

@@ -69,7 +69,7 @@ def discover(
                 continue
             inst = instance_suffix(href)
             # Auto-derive key prefix from href: strip digits, join non-empty segs with '_'
-            segs = [s for s in href.strip('/').split('/') if s and not s.isdigit()]
+            segs = [s for s in href.strip('/').split('/') if s and not s.isdigit() and s != 'vs']
             for desc in cap.entities:
                 key_override = '_'.join(segs) + '_' + desc.key
                 out.append(BoundEntity(href=href, capability=cap, desc=desc,

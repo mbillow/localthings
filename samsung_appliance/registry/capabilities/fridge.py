@@ -3,29 +3,18 @@
 Resources verified against the dump at local-tools/dumps/10.0.0.254.json.
 
 Temperature fields in all /temperature/* resources are in Fahrenheit on this
-model. Setpoints are NumberDesc with direct-write write_fn (no RMW needed
-because the individual /temperature/desired/* resources take a PUT with just
-the 'temperature' field, unlike the aggregated /temperatures/vs/0 path).
+model. Setpoints are NumberDesc with direct-write write_fn — generic caps
+derive the CoAP PUT path from href at write time.
 
 Multi-instance note: the two door resources (/door/cooler/0 and
 /door/freezer/0) and the two ice-maker resources (/icemaker/one/vs/0 and
-/icemaker/two/vs/0) use named path segments, so they are modelled as separate
-Capability objects with distinct entity keys rather than a single capability
-replicated via instance_suffix.
+/icemaker/two/vs/0) use named path segments, so they are modelled via
+pattern capabilities that auto-derive distinct entity keys from href segments.
 """
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc,
 )
-
-# Setpoint bounds (from /temperatures/vs/0 items on 2026-06-27)
-FREEZER_MIN_F = -8.0
-FREEZER_MAX_F = 5.0
-FRIDGE_MIN_F  = 34.0
-FRIDGE_MAX_F  = 44.0
-
-# Whiskey ball ice sizes.
-ICE2_MODES = ('Off', 'WHISKEY_ICEBALL_3', 'WHISKEY_ICEBALL_6', 'WHISKEY_ICEBALL_9')
 
 # Beverage zone flex modes.
 BZONE_MODES = ('SP_TTYPE_BEER_DRINKS', 'SP_TTYPE_WINE_DESSERT')
@@ -39,96 +28,73 @@ def _int(v):
 
 
 # ---------------------------------------------------------------------------
-# Temperatures
+# Temperature (generic — covers /temperature/current/* and /temperature/desired/*)
 # ---------------------------------------------------------------------------
 
-def _fridge_setpoint_write(p, rep):
-    try:
-        temp = int(round(float(p)))
-    except (TypeError, ValueError):
-        return None
-    if not (FRIDGE_MIN_F <= temp <= FRIDGE_MAX_F):
-        return None
-    return ['temperature', 'desired', 'cooler', '0'], {'temperature': temp}
-
-
-def _freezer_setpoint_write(p, rep):
-    try:
-        temp = int(round(float(p)))
-    except (TypeError, ValueError):
-        return None
-    if not (FREEZER_MIN_F <= temp <= FREEZER_MAX_F):
-        return None
-    return ['temperature', 'desired', 'freezer', '0'], {'temperature': temp}
-
-
-TEMP_FRIDGE_CURRENT = Capability(
-    href='/temperature/current/cooler/0',
+TEMP_CURRENT_GENERIC = Capability(
+    href=None,
+    href_prefix='/temperature/current/',
     poll_tier='warm',
     entities=(
-        SensorDesc(key='fridge_temp_f', field='temperature',
-                   name='Fridge temperature', device_class='temperature',
-                   state_class='measurement', unit='°F', value_fn=_int),
+        SensorDesc(key='temp_f', field='temperature',
+                   name=None, icon='mdi:thermometer'),
     ),
 )
 
-TEMP_FREEZER_CURRENT = Capability(
-    href='/temperature/current/freezer/0',
+TEMP_SETPOINT_GENERIC = Capability(
+    href=None,
+    href_prefix='/temperature/desired/',
     poll_tier='warm',
     entities=(
-        SensorDesc(key='freezer_temp_f', field='temperature',
-                   name='Freezer temperature', device_class='temperature',
-                   state_class='measurement', unit='°F', value_fn=_int),
+        NumberDesc(key='temp_f', field='temperature',
+                   name=None, native_min=-20.0, native_max=50.0,
+                   write_fn=lambda p, rep, href=None: (
+                       [s for s in href.strip('/').split('/') if s],
+                       {'temperature': int(round(float(p)))}
+                   ) if href else None),
     ),
 )
 
-TEMP_FRIDGE_SETPOINT = Capability(
-    href='/temperature/desired/cooler/0',
-    poll_tier='warm',
-    entities=(
-        NumberDesc(key='fridge_setpoint_f', field='temperature',
-                   name='Fridge setpoint', device_class='temperature',
-                   unit='°F', native_min=FRIDGE_MIN_F, native_max=FRIDGE_MAX_F,
-                   step=1.0, icon='mdi:thermometer-chevron-up',
-                   value_fn=_int, write_fn=_fridge_setpoint_write),
-    ),
-)
+# ---------------------------------------------------------------------------
+# Icemaker (generic — covers /icemaker/one/vs/0, /icemaker/two/vs/0)
+# /icemaker/status/vs/0 is kept as exact-href cap and binds first.
+# /icemaker/nighttime/vs/0 is excluded by match_fn (lacks iceMaker.state).
+# ---------------------------------------------------------------------------
 
-TEMP_FREEZER_SETPOINT = Capability(
-    href='/temperature/desired/freezer/0',
+def _icemaker_write(field):
+    return lambda p, rep, href=None: (
+        [s for s in href.strip('/').split('/') if s],
+        {field: p}
+    ) if href else None
+
+ICEMAKER_GENERIC = Capability(
+    href=None,
+    href_prefix='/icemaker/',
+    match_fn=lambda rep, resources: 'x.com.samsung.da.iceMaker.state' in rep,
     poll_tier='warm',
     entities=(
-        NumberDesc(key='freezer_setpoint_f', field='temperature',
-                   name='Freezer setpoint', device_class='temperature',
-                   unit='°F', native_min=FREEZER_MIN_F, native_max=FREEZER_MAX_F,
-                   step=1.0, icon='mdi:thermometer-chevron-down',
-                   value_fn=_int, write_fn=_freezer_setpoint_write),
+        SensorDesc(key='state', field='x.com.samsung.da.iceMaker.state',
+                   name=None, icon='mdi:cube-outline'),
+        BinarySensorDesc(key='on', field='x.com.samsung.da.iceMaker.state',
+                         name=None, device_class='running',
+                         value_fn=lambda v: v == 'On'),
+        SensorDesc(key='making_status',
+                   field='x.com.samsung.da.iceMaker.iceMakingStatus',
+                   name=None, icon='mdi:cube-outline'),
+        SwitchDesc(key='enabled', field='x.com.samsung.da.iceMaker.state',
+                   name=None, icon='mdi:cube-outline',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=_icemaker_write('x.com.samsung.da.iceMaker.state')),
+        SelectDesc(key='type', field='x.com.samsung.da.iceType.desired',
+                   name=None, icon='mdi:cube-outline',
+                   options=(),
+                   write_fn=_icemaker_write('x.com.samsung.da.iceType.desired')),
     ),
 )
 
 # ---------------------------------------------------------------------------
 # Doors
 # ---------------------------------------------------------------------------
-
-DOOR_FRIDGE = Capability(
-    href='/door/cooler/0',
-    poll_tier='hot',
-    entities=(
-        BinarySensorDesc(key='door_fridge_open', field='openState',
-                         name='Fridge door', device_class='door',
-                         value_fn=lambda v: v == 'Open'),
-    ),
-)
-
-DOOR_FREEZER = Capability(
-    href='/door/freezer/0',
-    poll_tier='hot',
-    entities=(
-        BinarySensorDesc(key='door_freezer_open', field='openState',
-                         name='Freezer door', device_class='door',
-                         value_fn=lambda v: v == 'Open'),
-    ),
-)
 
 DOORS_STATUS = Capability(
     href='/doors/vs/0',
@@ -148,53 +114,8 @@ DOORS_STATUS = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# Ice makers
+# Ice maker status (exact-href — binds before ICEMAKER_GENERIC pattern)
 # ---------------------------------------------------------------------------
-
-def _ice1_write(p, rep):
-    if p not in ('On', 'Off'):
-        return None
-    return ['icemaker', 'one', 'vs', '0'], {'x.com.samsung.da.iceMaker.state': p}
-
-
-def _ice2_type_write(p, rep):
-    if p not in ICE2_MODES:
-        return None
-    return ['icemaker', 'two', 'vs', '0'], {'x.com.samsung.da.iceType.desired': p}
-
-
-ICEMAKER_ONE = Capability(
-    href='/icemaker/one/vs/0',
-    poll_tier='warm',
-    entities=(
-        SensorDesc(key='ice1_state', field='x.com.samsung.da.iceMaker.state',
-                   name='Ice maker (cubed) state', icon='mdi:cube'),
-        BinarySensorDesc(key='ice1_on', field='x.com.samsung.da.iceMaker.state',
-                         name='Ice maker (cubed) on',
-                         device_class='running',
-                         value_fn=lambda v: v == 'On'),
-        SensorDesc(key='ice1_making_status',
-                   field='x.com.samsung.da.iceMaker.iceMakingStatus',
-                   name='Ice maker (cubed) status', icon='mdi:cube'),
-        SwitchDesc(key='ice1', field='x.com.samsung.da.iceMaker.state',
-                   name='Ice maker (cubed)', icon='mdi:cube',
-                   value_fn=lambda v: v == 'On',
-                   write_fn=_ice1_write),
-    ),
-)
-
-ICEMAKER_TWO = Capability(
-    href='/icemaker/two/vs/0',
-    poll_tier='warm',
-    entities=(
-        SensorDesc(key='ice2_making_status',
-                   field='x.com.samsung.da.iceMaker.iceMakingStatus',
-                   name='Ice maker (whiskey) status', icon='mdi:circle'),
-        SelectDesc(key='ice2_type', field='x.com.samsung.da.iceType.desired',
-                   name='Whiskey ball ice type', icon='mdi:circle',
-                   options=ICE2_MODES, write_fn=_ice2_type_write),
-    ),
-)
 
 ICEMAKER_STATUS = Capability(
     href='/icemaker/status/vs/0',
@@ -210,7 +131,7 @@ ICEMAKER_STATUS = Capability(
 # ---------------------------------------------------------------------------
 
 def _refrigeration_write(field_name):
-    def _write(p, rep):
+    def _write(p, rep, href=None):
         if p not in ('On', 'Off'):
             return None
         return ['refrigeration', 'vs', '0'], {field_name: p}
@@ -236,7 +157,7 @@ REFRIGERATION = Capability(
 # Autofill
 # ---------------------------------------------------------------------------
 
-def _autofill_write(p, rep):
+def _autofill_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     return ['autofill', 'vs', '0'], {'x.com.samsung.da.autofill': p}
@@ -257,7 +178,7 @@ AUTOFILL = Capability(
 # Cabinet light
 # ---------------------------------------------------------------------------
 
-def _cabinet_light_write(p, rep):
+def _cabinet_light_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     return ['cabinet', 'light', 'total', 'vs', '0'], {
@@ -285,7 +206,7 @@ CABINET_LIGHT = Capability(
 # Sabbath mode
 # ---------------------------------------------------------------------------
 
-def _sabbath_write(p, rep):
+def _sabbath_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     return ['sabbath', 'vs', '0'], {'x.com.samsung.da.sabbathMode': p}
@@ -306,7 +227,7 @@ SABBATH = Capability(
 # Beverage zone
 # ---------------------------------------------------------------------------
 
-def _bzone_write(p, rep):
+def _bzone_write(p, rep, href=None):
     if p not in BZONE_MODES:
         return None
     return ['specialzone', 'one', 'vs', '0'], {'roomDesiredMode': p}

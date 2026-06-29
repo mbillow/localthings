@@ -119,7 +119,7 @@ def _replace_in_options(options, prefix, new_value):
 # Write functions
 # ---------------------------------------------------------------------------
 
-def _oven_setpoint_write(p, rep):
+def _oven_setpoint_write(p, rep, href=None):
     """RMW write to /temperatures/vs/0 items array."""
     try:
         temp = float(p)
@@ -136,7 +136,7 @@ def _oven_setpoint_write(p, rep):
     return ['temperatures', 'vs', '0'], {'x.com.samsung.da.items': items}
 
 
-def _cook_time_write(p, rep):
+def _cook_time_write(p, rep, href=None):
     """Write operationTime + remainingTime (H:MM:SS) from minutes."""
     try:
         minutes = int(round(float(p)))
@@ -152,19 +152,19 @@ def _cook_time_write(p, rep):
     }
 
 
-def _stop_write(p, rep):
+def _stop_write(p, rep, href=None):
     return ['operational', 'state', 'vs', '0'], {
         'x.com.samsung.da.state': 'Ready',
     }
 
 
-def _oven_mode_write(p, rep):
+def _oven_mode_write(p, rep, href=None):
     if p not in _OVEN_MODES:
         return None
     return ['mode', 'vs', '0'], {'x.com.samsung.da.modes': [p]}
 
 
-def _lamp_write(p, rep):
+def _lamp_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     opts = list(rep.get('x.com.samsung.da.options') or [])
@@ -175,7 +175,7 @@ def _lamp_write(p, rep):
     }
 
 
-def _sound_write(p, rep):
+def _sound_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     opts = list(rep.get('x.com.samsung.da.options') or [])
@@ -186,7 +186,7 @@ def _sound_write(p, rep):
     }
 
 
-def _fastpreheat_write(p, rep):
+def _fastpreheat_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     opts = list(rep.get('x.com.samsung.da.options') or [])
@@ -197,7 +197,7 @@ def _fastpreheat_write(p, rep):
     }
 
 
-def _naturalsteam_write(p, rep):
+def _naturalsteam_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     opts = list(rep.get('x.com.samsung.da.options') or [])

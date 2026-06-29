@@ -11,19 +11,19 @@ _LED_LEVELS = ('Low', 'High')
 _SOUND_MODES = ('voice', 'tone', 'mute')
 
 
-def _led_brightness_write(p, rep):
+def _led_brightness_write(p, rep, href=None):
     if p not in _LED_LEVELS:
         return None
     return ['doorled', 'light', 'vs', '0'], {'setBrightness': p}
 
 
-def _led_night_write(p, rep):
+def _led_night_write(p, rep, href=None):
     if p not in ('On', 'Off'):
         return None
     return ['doorled', 'light', 'vs', '0'], {'setNightLight': p}
 
 
-def _sound_mode_write(p, rep):
+def _sound_mode_write(p, rep, href=None):
     if p not in _SOUND_MODES:
         return None
     return ['settings', 'sound', 'mode', 'vs', '0'], {'mode': p}
