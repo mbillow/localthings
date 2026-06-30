@@ -10,7 +10,7 @@ from .ocf.registry.entities import SensorDesc
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity
+from .entity import LocalThingsEntity, _is_included
 
 
 async def async_setup_entry(
@@ -22,7 +22,7 @@ async def async_setup_entry(
     async_add_entities(
         LocalThingsSensor(coordinator, b)
         for b in coordinator.bound
-        if isinstance(b.desc, SensorDesc)
+        if isinstance(b.desc, SensorDesc) and _is_included(b, coordinator)
     )
 
 
