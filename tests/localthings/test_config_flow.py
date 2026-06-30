@@ -1,0 +1,100 @@
+"""Tests for the localthings config flow."""
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pytest
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.localthings.const import (
+    CONF_CERT_PEM, CONF_HOST, CONF_KEY_PEM, CONF_PORT, DOMAIN,
+)
+
+from .conftest import (
+    ENTRY_DATA, MOCK_CERT_PEM, MOCK_HOST, MOCK_KEY_PEM, MOCK_PORT, MOCK_SERIAL,
+)
+
+
+async def test_form_first_device(hass: HomeAssistant) -> None:
+    """First device: form asks for host, cert, and key."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    assert result['type'] == FlowResultType.FORM
+    assert result['step_id'] == 'user'
+    assert CONF_CERT_PEM in result['data_schema'].schema
+    assert CONF_KEY_PEM in result['data_schema'].schema
+
+
+async def test_form_second_device_reuses_creds(hass: HomeAssistant) -> None:
+    """Second device: form only asks for host; cert/key schema fields absent."""
+    existing = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA)
+    existing.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    assert result['type'] == FlowResultType.FORM
+    assert CONF_CERT_PEM not in result['data_schema'].schema
+    assert CONF_KEY_PEM not in result['data_schema'].schema
+
+
+async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
+    """Happy path: valid IP connects, entry created with discovered port."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'],
+        {CONF_HOST: MOCK_HOST, CONF_CERT_PEM: MOCK_CERT_PEM, CONF_KEY_PEM: MOCK_KEY_PEM},
+    )
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+    assert result['data'][CONF_HOST] == MOCK_HOST
+    assert result['data'][CONF_PORT] == MOCK_PORT
+    assert result['data'][CONF_CERT_PEM] == MOCK_CERT_PEM
+
+
+async def test_cannot_connect(hass: HomeAssistant) -> None:
+    """Failed probe: form re-shown with cannot_connect error."""
+    from custom_components.localthings.config_flow import CannotConnect
+
+    with patch(
+        'custom_components.localthings.config_flow._probe_and_validate',
+        side_effect=CannotConnect('no port'),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={'source': 'user'}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result['flow_id'],
+            {CONF_HOST: MOCK_HOST, CONF_CERT_PEM: MOCK_CERT_PEM, CONF_KEY_PEM: MOCK_KEY_PEM},
+        )
+    assert result['type'] == FlowResultType.FORM
+    assert result['errors']['base'] == 'cannot_connect'
+
+
+async def test_duplicate_device_aborted(hass: HomeAssistant, mock_probe) -> None:
+    """Second add of same serial: flow aborts.
+
+    When a device already exists the form only asks for host (cert/key are
+    reused), so we only submit CONF_HOST in the second configure call.
+    """
+    existing = MockConfigEntry(
+        domain=DOMAIN,
+        data=ENTRY_DATA,
+        unique_id=f'localthings_{MOCK_SERIAL}',
+    )
+    existing.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    # Second-device form only has CONF_HOST; cert/key are reused from existing.
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'],
+        {CONF_HOST: MOCK_HOST},
+    )
+    assert result['type'] == FlowResultType.ABORT
+    assert result['reason'] == 'already_configured'
