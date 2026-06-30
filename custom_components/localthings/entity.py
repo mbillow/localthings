@@ -5,6 +5,7 @@ import re
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.const import EntityCategory
 
 from .ocf.registry.adapter import _key
 from .ocf.registry.discovery import BoundEntity
@@ -35,7 +36,8 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_serial}_{self._state_key}"
         self._attr_name = bound.desc.name if bound.desc.name is not None else _derive_name(self._state_key)
         self._attr_icon = bound.desc.icon
-        self._attr_entity_category = bound.desc.entity_category
+        raw_cat = bound.desc.entity_category
+        self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None
         self._attr_entity_registry_enabled_default = bound.desc.enabled_default
 
     @property

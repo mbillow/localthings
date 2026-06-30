@@ -42,6 +42,28 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
         if desc.step is not None:
             self._attr_native_step = desc.step
 
+    def _range_from_resource(self) -> list | None:
+        desc: NumberDesc = self._bound.desc
+        if not desc.range_field:
+            return None
+        rep = self.coordinator.last_resources.get(self._bound.href) or {}
+        r = rep.get(desc.range_field)
+        return r if (isinstance(r, (list, tuple)) and len(r) == 2) else None
+
+    @property
+    def native_min_value(self) -> float:
+        r = self._range_from_resource()
+        if r is not None:
+            return float(r[0])
+        return self._attr_native_min_value
+
+    @property
+    def native_max_value(self) -> float:
+        r = self._range_from_resource()
+        if r is not None:
+            return float(r[1])
+        return self._attr_native_max_value
+
     @property
     def native_value(self):
         return (self.coordinator.data or {}).get(self._state_key)

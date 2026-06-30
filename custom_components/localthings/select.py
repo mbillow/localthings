@@ -19,10 +19,21 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    def _include(b) -> bool:
+        if not isinstance(b.desc, SelectDesc):
+            return False
+        # Skip at registration time if exists_fn says the entity isn't present
+        if b.desc.exists_fn is not None:
+            rep = coordinator.last_resources.get(b.href) or {}
+            if not b.desc.exists_fn(rep):
+                return False
+        return True
+
     async_add_entities(
         LocalThingsSelect(coordinator, b)
         for b in coordinator.bound
-        if isinstance(b.desc, SelectDesc)
+        if _include(b)
     )
 
 
@@ -31,8 +42,17 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
-        opts = desc.options
-        self._attr_options = list(opts() if callable(opts) else opts)
+        if not desc.options_field:
+            opts = desc.options
+            self._attr_options = list(opts() if callable(opts) else opts)
+
+    @property
+    def options(self) -> list[str]:
+        desc: SelectDesc = self._bound.desc
+        if desc.options_field:
+            rep = self.coordinator.last_resources.get(self._bound.href) or {}
+            return list(rep.get(desc.options_field) or [])
+        return self._attr_options
 
     @property
     def current_option(self):

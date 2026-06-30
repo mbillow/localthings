@@ -3,21 +3,22 @@
     "step": {
       "user": {
         "title": "Add Samsung Appliance",
-        "description": "Enter the IP address of your Samsung appliance on the local network. {reuse_note}",
+        "description": "Enter the IP address of your Samsung appliance and the AC14K_M CA credentials used to mint device certificates. {reuse_note}",
         "data": {
           "host": "IP Address",
-          "cert_pem": "Certificate (PEM)",
-          "key_pem": "Private Key (PEM)"
+          "ca_cert_pem": "CA Certificate (PEM)",
+          "ca_key_pem": "CA Private Key (PEM)"
         },
         "data_description": {
           "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
-          "cert_pem": "The PEM-encoded client certificate used to authenticate with the appliance. Paste the full contents including the BEGIN/END CERTIFICATE header and footer.",
-          "key_pem": "The PEM-encoded private key matching the certificate above. Paste the full contents including the BEGIN/END PRIVATE KEY header and footer."
+          "ca_cert_pem": "The PEM-encoded AC14K_M CA certificate chain. Paste the full contents of your fullchain PEM including all BEGIN/END CERTIFICATE blocks.",
+          "ca_key_pem": "The PEM-encoded AC14K_M private key. Paste the full contents including the BEGIN/END PRIVATE KEY header and footer."
         }
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the certificate and key are correct.",
+      "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
+      "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details."
     },
     "abort": {

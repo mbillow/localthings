@@ -44,6 +44,7 @@ class BinarySensorDesc(SamsungEntityDescription):
 @dataclass(frozen=True, kw_only=True)
 class SelectDesc(SamsungEntityDescription):
     options: Any = ()        # tuple[str,...] | Callable[[dict], list[str]]
+    options_field: Optional[str] = None  # resource field that contains the live options list
     write_fn: WriteFn = None
 
 
@@ -66,6 +67,7 @@ class NumberDesc(SamsungEntityDescription):
     native_min: Optional[float] = None
     native_max: Optional[float] = None
     step: Optional[float] = None
+    range_field: Optional[str] = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
 
 

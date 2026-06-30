@@ -37,7 +37,9 @@ TEMP_CURRENT_GENERIC = Capability(
     poll_tier='warm',
     entities=(
         SensorDesc(key='temp_f', field='temperature',
-                   name=None, icon='mdi:thermometer'),
+                   name=None, icon='mdi:thermometer',
+                   device_class='temperature', unit='°F',
+                   state_class='measurement'),
     ),
 )
 
@@ -47,7 +49,9 @@ TEMP_SETPOINT_GENERIC = Capability(
     poll_tier='warm',
     entities=(
         NumberDesc(key='temp_f', field='temperature',
-                   name=None, native_min=-20.0, native_max=50.0,
+                   name=None, device_class='temperature', unit='°F',
+                   native_min=-20.0, native_max=50.0,
+                   range_field='range',
                    write_fn=lambda p, rep, href=None: (
                        [s for s in href.strip('/').split('/') if s],
                        {'temperature': int(round(float(p)))}
@@ -73,11 +77,6 @@ ICEMAKER_GENERIC = Capability(
     match_fn=lambda rep, resources: 'x.com.samsung.da.iceMaker.state' in rep,
     poll_tier='warm',
     entities=(
-        SensorDesc(key='state', field='x.com.samsung.da.iceMaker.state',
-                   name=None, icon='mdi:cube-outline'),
-        BinarySensorDesc(key='on', field='x.com.samsung.da.iceMaker.state',
-                         name=None, device_class='running',
-                         value_fn=lambda v: v == 'On'),
         SensorDesc(key='making_status',
                    field='x.com.samsung.da.iceMaker.iceMakingStatus',
                    name=None, icon='mdi:cube-outline'),
@@ -87,7 +86,8 @@ ICEMAKER_GENERIC = Capability(
                    write_fn=_icemaker_write('x.com.samsung.da.iceMaker.state')),
         SelectDesc(key='type', field='x.com.samsung.da.iceType.desired',
                    name=None, icon='mdi:cube-outline',
-                   options=(),
+                   options_field='x.com.samsung.da.iceType.supported',
+                   exists_fn=lambda rep: bool(rep.get('x.com.samsung.da.iceType.supported')),
                    write_fn=_icemaker_write('x.com.samsung.da.iceType.desired')),
     ),
 )
@@ -217,7 +217,7 @@ SABBATH = Capability(
     poll_tier='warm',
     entities=(
         SwitchDesc(key='sabbath_mode', field='x.com.samsung.da.sabbathMode',
-                   name='Sabbath mode', icon='mdi:star-david',
+                   name='Sabbath mode', icon='mdi:hands-pray',
                    value_fn=lambda v: v == 'On',
                    write_fn=_sabbath_write),
     ),
