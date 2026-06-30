@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import logging
-import tempfile
-import os
 from datetime import timedelta
 from typing import Any
 
@@ -68,34 +66,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._last_resources
 
     def _connect_session(self) -> None:
-        host = self._entry.data[CONF_HOST]
-        port = self._entry.data[CONF_PORT]
-        cert_pem: str = self._entry.data[CONF_LEAF_CERT_PEM]
-        key_pem: str  = self._entry.data[CONF_LEAF_KEY_PEM]
+        host     = self._entry.data[CONF_HOST]
+        port     = self._entry.data[CONF_PORT]
+        cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
+        key_pem  = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        cert_f = tempfile.NamedTemporaryFile(suffix='.pem', delete=False, mode='w')
-        key_f  = tempfile.NamedTemporaryFile(suffix='.pem', delete=False, mode='w')
+        sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
+        sess.connect()
+        sess.start_reader()
+        self._session = sess
+        _LOGGER.debug("DTLS connected to %s:%d", host, port)
         try:
-            cert_f.write(cert_pem); cert_f.flush(); cert_f.close()
-            key_f.write(key_pem);   key_f.flush();  key_f.close()
-            sess = DtlsCoapSession(host, port,
-                                   cert_path=cert_f.name,
-                                   key_path=key_f.name)
-            sess.connect()
-            sess.start_reader()
-            self._session = sess
-            _LOGGER.debug("DTLS connected to %s:%d", host, port)
-            try:
-                self._identity = read_identity(sess, None)
-            except Exception as e:
-                _LOGGER.debug("read_identity failed: %s", e)
-                self._identity = None
-        finally:
-            for f in (cert_f.name, key_f.name):
-                try:
-                    os.unlink(f)
-                except OSError:
-                    pass
+            self._identity = read_identity(sess, None)
+        except Exception as e:
+            _LOGGER.debug("read_identity failed: %s", e)
+            self._identity = None
 
     def _close_session(self) -> None:
         sess = self._session
@@ -105,6 +90,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sess.close()
             except Exception:
                 pass
+
+    async def async_close(self) -> None:
+        await self.hass.async_add_executor_job(self._close_session)
 
     def _poll_once(self) -> dict[str, dict]:
         """GET /device/0, return parsed resources. Blocking."""

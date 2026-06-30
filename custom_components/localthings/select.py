@@ -43,8 +43,7 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
         if not desc.options_field:
-            opts = desc.options
-            self._attr_options = list(opts() if callable(opts) else opts)
+            self._attr_options = list(desc.options)
 
     @property
     def options(self) -> list[str]:

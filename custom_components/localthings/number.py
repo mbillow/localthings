@@ -55,14 +55,18 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
         r = self._range_from_resource()
         if r is not None:
             return float(r[0])
-        return self._attr_native_min_value
+        if hasattr(self, '_attr_native_min_value'):
+            return self._attr_native_min_value
+        return super().native_min_value
 
     @property
     def native_max_value(self) -> float:
         r = self._range_from_resource()
         if r is not None:
             return float(r[1])
-        return self._attr_native_max_value
+        if hasattr(self, '_attr_native_max_value'):
+            return self._attr_native_max_value
+        return super().native_max_value
 
     @property
     def native_value(self):

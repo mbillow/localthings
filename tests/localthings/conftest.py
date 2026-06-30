@@ -32,7 +32,8 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 
 from custom_components.localthings.const import (
-    CONF_CERT_PEM, CONF_HOST, CONF_KEY_PEM, CONF_PORT, DOMAIN,
+    CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
+    CONF_HOST, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM, CONF_PORT, DOMAIN,
 )
 
 FIXTURES = Path(__file__).resolve().parent.parent / 'fixtures'
@@ -40,14 +41,18 @@ FIXTURES = Path(__file__).resolve().parent.parent / 'fixtures'
 MOCK_HOST = '10.0.0.254'
 MOCK_PORT = 49154
 MOCK_SERIAL = 'TEST-SERIAL-001'
-MOCK_CERT_PEM = '-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----'
-MOCK_KEY_PEM = '-----BEGIN PRIVATE KEY-----\nTEST\n-----END PRIVATE KEY-----'
+MOCK_CA_CERT_PEM = '-----BEGIN CERTIFICATE-----\nTEST-CA\n-----END CERTIFICATE-----'
+MOCK_CA_KEY_PEM = '-----BEGIN PRIVATE KEY-----\nTEST-CA-KEY\n-----END PRIVATE KEY-----'
+MOCK_LEAF_CERT_PEM = '-----BEGIN CERTIFICATE-----\nTEST-LEAF\n-----END CERTIFICATE-----'
+MOCK_LEAF_KEY_PEM = '-----BEGIN PRIVATE KEY-----\nTEST-LEAF-KEY\n-----END PRIVATE KEY-----'
 
 ENTRY_DATA = {
-    CONF_HOST: MOCK_HOST,
-    CONF_PORT: MOCK_PORT,
-    CONF_CERT_PEM: MOCK_CERT_PEM,
-    CONF_KEY_PEM: MOCK_KEY_PEM,
+    CONF_HOST:          MOCK_HOST,
+    CONF_PORT:          MOCK_PORT,
+    CONF_CA_CERT_PEM:   MOCK_CA_CERT_PEM,
+    CONF_CA_KEY_PEM:    MOCK_CA_KEY_PEM,
+    CONF_LEAF_CERT_PEM: MOCK_LEAF_CERT_PEM,
+    CONF_LEAF_KEY_PEM:  MOCK_LEAF_KEY_PEM,
 }
 
 
@@ -67,7 +72,12 @@ def mock_probe():
     """Patch _probe_and_validate to succeed without a real DTLS connection."""
     with patch(
         'custom_components.localthings.config_flow._probe_and_validate',
-        return_value={'port': MOCK_PORT, 'serial': MOCK_SERIAL},
+        return_value={
+            'port': MOCK_PORT,
+            'serial': MOCK_SERIAL,
+            'leaf_cert_pem': MOCK_LEAF_CERT_PEM,
+            'leaf_key_pem': MOCK_LEAF_KEY_PEM,
+        },
     ) as m:
         yield m
 

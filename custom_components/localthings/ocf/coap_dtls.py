@@ -31,6 +31,33 @@ _OCF_ROOT_CA = str(Path(__file__).parent / 'ocf_root_ca.pem')
 
 import logging
 logger = logging.getLogger(__name__)
+import re as _re
+_PEM_CERT_RE = _re.compile(
+    rb'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----',
+    _re.DOTALL,
+)
+
+
+def _load_pem_chain(ctx: SSL.Context, cert_pem: str, key_pem: str) -> None:
+    """Load a PEM cert chain and private key into an SSL context in memory.
+
+    Parses all certificate blocks from cert_pem: the first is the leaf
+    (use_certificate), the rest are intermediates (add_extra_chain_cert).
+    No temp files are written.
+    """
+    from OpenSSL import crypto
+    certs = _PEM_CERT_RE.findall(cert_pem.encode())
+    if not certs:
+        raise ValueError("No certificates found in cert_pem")
+    ctx.use_certificate(crypto.load_certificate(crypto.FILETYPE_PEM, certs[0]))
+    for extra in certs[1:]:
+        ctx.add_extra_chain_cert(
+            crypto.load_certificate(crypto.FILETYPE_PEM, extra)
+        )
+    ctx.use_privatekey(crypto.load_privatekey(crypto.FILETYPE_PEM, key_pem.encode()))
+    ctx.check_privatekey()
+
+
 # Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps
 # every received CoAP frame, every /operational/state/vs/0 + /oven/vs/0
 # + /power/vs/0 + /mode/vs/0-options rep change, the full link tree at
@@ -188,12 +215,12 @@ class DtlsCoapSession:
     READER_RECV_TIMEOUT_S = 1.0  # short so stop_event propagates quickly
     MAX_BLOCKS = 32              # safety bound for Block2 fetches
 
-    def __init__(self, host, port, cert_path, key_path,
+    def __init__(self, host, port, cert_pem, key_pem,
                  on_notification=None, mtu=1200):
         self.host = host
         self.port = port
-        self.cert_path = str(cert_path)
-        self.key_path  = str(key_path)
+        self.cert_pem = cert_pem
+        self.key_pem  = key_pem
         self.on_notification = on_notification  # fn(href, payload_bytes)
         self.mtu = mtu
 
@@ -235,9 +262,7 @@ class DtlsCoapSession:
         # the OpenSSL instance cryptography bundles — ctypes and cffi bindings
         # do not expose SSL_CTX_set_security_level on this build.
         ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256:@SECLEVEL=0')
-        ctx.use_certificate_chain_file(self.cert_path)
-        ctx.use_privatekey_file(self.key_path)
-        ctx.check_privatekey()
+        _load_pem_chain(ctx, self.cert_pem, self.key_pem)
 
         conn = SSL.Connection(ctx, None)
         conn.set_connect_state()

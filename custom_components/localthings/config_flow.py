@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import datetime
 import logging
-import os
 import re
 import socket
 import ssl
-import tempfile
 from typing import Any
 
 import voluptuous as vol
@@ -114,7 +112,11 @@ def _mint_leaf_cert(ca_cert_pem: str, ca_key_pem: str, uuid: str) -> tuple[str, 
         serialization.NoEncryption(),
     ).decode()
 
-    fullchain_pem = leaf_cert_pem + ca_cert_pem
+    # Ensure a newline separates the leaf and CA blocks regardless of
+    # whether the user's pasted CA PEM had a trailing newline.
+    fullchain_pem = leaf_cert_pem.rstrip('\n') + '\n' + ca_cert_pem
+    if not fullchain_pem.endswith('\n'):
+        fullchain_pem += '\n'
     return fullchain_pem, leaf_key_pem
 
 
@@ -143,61 +145,49 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
         raise CannotConnect(f"Failed to mint leaf cert: {exc}") from exc
     _LOGGER.debug("Leaf cert minted successfully")
 
-    cert_file = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
-    key_file  = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
-    try:
-        cert_file.write(fullchain_pem); cert_file.flush(); cert_file.close()
-        key_file.write(leaf_key_pem);   key_file.flush();  key_file.close()
-
-        last_exc = None
-        for port in PROBE_PORTS:
-            sess = None
-            try:
-                sess = DtlsCoapSession(
-                    host, port,
-                    cert_path=cert_file.name,
-                    key_path=key_file.name,
-                )
-                sess.connect()
-                sess.start_reader()
-                code, payload = sess.get(['device', '0'], timeout=15.0)
-                if code != 0x45 or not payload:
-                    raise CannotConnect(f"port {port}: unexpected code {code:#04x}")
-                body = cbor2.loads(payload)
-                resources = (
-                    parse_device0_batch(body) if isinstance(body, list) else {}
-                )
-                serial = (
-                    resources
-                    .get('/information/vs/0', {})
-                    .get('x.com.samsung.da.serialNum', '')
-                )
-                if not serial:
-                    serial = f"{host}:{port}"
-                return {
-                    "port": port,
-                    "serial": serial,
-                    "leaf_cert_pem": fullchain_pem,
-                    "leaf_key_pem": leaf_key_pem,
-                }
-            except CannotConnect:
-                raise
-            except Exception as exc:
-                last_exc = exc
-                _LOGGER.debug("port %d failed: %s", port, exc)
-            finally:
-                if sess is not None:
-                    try:
-                        sess.close()
-                    except Exception:
-                        pass
-        raise CannotConnect(f"no port responded on {host}: {last_exc}")
-    finally:
-        for path in (cert_file.name, key_file.name):
-            try:
-                os.unlink(path)
-            except OSError:
-                pass
+    last_exc = None
+    for port in PROBE_PORTS:
+        sess = None
+        try:
+            sess = DtlsCoapSession(
+                host, port,
+                cert_pem=fullchain_pem,
+                key_pem=leaf_key_pem,
+            )
+            sess.connect()
+            sess.start_reader()
+            code, payload = sess.get(['device', '0'], timeout=15.0)
+            if code != 0x45 or not payload:
+                raise CannotConnect(f"port {port}: unexpected code {code:#04x}")
+            body = cbor2.loads(payload)
+            resources = (
+                parse_device0_batch(body) if isinstance(body, list) else {}
+            )
+            serial = (
+                resources
+                .get('/information/vs/0', {})
+                .get('x.com.samsung.da.serialNum', '')
+            )
+            if not serial:
+                serial = f"{host}:{port}"
+            return {
+                "port": port,
+                "serial": serial,
+                "leaf_cert_pem": fullchain_pem,
+                "leaf_key_pem": leaf_key_pem,
+            }
+        except CannotConnect:
+            raise
+        except Exception as exc:
+            last_exc = exc
+            _LOGGER.debug("port %d failed: %s", port, exc)
+        finally:
+            if sess is not None:
+                try:
+                    sess.close()
+                except Exception:
+                    pass
+    raise CannotConnect(f"no port responded on {host}: {last_exc}")
 
 
 class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
