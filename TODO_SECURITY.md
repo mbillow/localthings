@@ -5,20 +5,12 @@ not malicious code — the repo is safe to run. Fix before exposing to untrusted
 
 ---
 
-## 1. DTLS Certificate Verification Disabled
+## 1. DTLS Certificate Verification Disabled ✅ RESOLVED
 
-**File:** `samsung_appliance/coap_dtls.py:228`
-**Severity:** High | **Category:** Authentication Bypass / Crypto
-
-The DTLS context uses `SSL.VERIFY_NONE` with a lambda that accepts any certificate.
-The bridge does not verify the appliance's identity.
-
-**Exploit:** LAN attacker ARP-spoofs the appliance IP, presents a self-signed cert,
-and either poisons state payloads (e.g. fake oven temp) or intercepts/drops commands.
-
-**Fix:** Use `SSL.VERIFY_PEER` + `ctx.load_verify_locations()` pointing to the Samsung
-CA cert already on disk. The `@SECLEVEL=0` SHA-1 workaround can coexist with peer
-verification — `VERIFY_NONE` is not required for it.
+`certs/ocf_root_ca.pem` (Samsung Electronics OCF Root CA) bundled at
+`samsung_appliance/ocf_root_ca.pem`. `coap_dtls.py` now uses
+`SSL.VERIFY_PEER` + `ctx.load_verify_locations(_OCF_ROOT_CA)`.
+ARP-spoof mitigation: the appliance's cert must chain to the Samsung OCF Root CA.
 
 ---
 
