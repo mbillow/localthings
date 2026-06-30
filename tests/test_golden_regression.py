@@ -7,14 +7,14 @@ GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
 
 
 def _new_state_keys(name, resources):
-    from samsung_appliance.registry.by_type import for_device
-    from samsung_appliance.registry.discovery import discover
-    from samsung_appliance.registry.adapter import flatten
+    from custom_components.localthings.ocf.registry.by_type import for_device
+    from custom_components.localthings.ocf.registry.discovery import discover
+    from custom_components.localthings.ocf.registry.adapter import flatten
     otn = resources.get('/otninformation/vs/0', {})
     one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')
     reg = for_device(one_ui) if one_ui else None
     if reg is None:
-        from samsung_appliance.registry.registry import CAPABILITIES
+        from custom_components.localthings.ocf.registry.registry import CAPABILITIES
         caps, pats = CAPABILITIES, []
     else:
         caps, pats = reg.capabilities, reg.pattern_capabilities

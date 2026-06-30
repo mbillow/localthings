@@ -11,7 +11,7 @@ certs/
 *.key
 
 # Exception: bundled Samsung OCF Root CA (public cert, no key material)
-!samsung_appliance/ocf_root_ca.pem
+!custom_components/localthings/ocf/ocf_root_ca.pem
 token.txt
 
 # Python artifacts

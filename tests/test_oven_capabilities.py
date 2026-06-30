@@ -1,6 +1,6 @@
 """Unit tests for oven-family capabilities."""
-from samsung_appliance.registry.capabilities import oven
-from samsung_appliance.registry.discovery import discover
+from custom_components.localthings.ocf.registry.capabilities import oven
+from custom_components.localthings.ocf.registry.discovery import discover
 
 
 # ---------------------------------------------------------------------------

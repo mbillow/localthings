@@ -1,6 +1,6 @@
 import cbor2
 
-from samsung_appliance.registry.identity import DeviceIdentity, read_identity
+from custom_components.localthings.ocf.registry.identity import DeviceIdentity, read_identity
 
 
 class FakeSession:

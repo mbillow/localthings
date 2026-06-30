@@ -14,13 +14,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from samsung_appliance.batch import parse_device0_batch
-from samsung_appliance.coap_dtls import DtlsCoapSession
-from samsung_appliance.registry.by_type import for_device
-from samsung_appliance.registry.discovery import discover, BoundEntity
-from samsung_appliance.registry import CAPABILITIES
-from samsung_appliance.registry.adapter import flatten, is_active
-from samsung_appliance.registry.identity import read_identity, DeviceIdentity
+from .ocf.batch import parse_device0_batch
+from .ocf.coap_dtls import DtlsCoapSession
+from .ocf.registry.by_type import for_device
+from .ocf.registry.discovery import discover, BoundEntity
+from .ocf.registry import CAPABILITIES
+from .ocf.registry.adapter import flatten, is_active
+from .ocf.registry.identity import read_identity, DeviceIdentity
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_CERT_PEM, CONF_KEY_PEM,
