@@ -39,22 +39,41 @@ def _set_security_level(ctx: SSL.Context, level: int) -> None:
     pyOpenSSL >= 24.0.0 exposes this directly; older builds require a cffi
     call into the underlying cryptography bindings.
     """
+    # pyOpenSSL >= 24.0.0
     if hasattr(ctx, 'set_security_level'):
+        logger.debug("_set_security_level: ctx.set_security_level(%d)", level)
         ctx.set_security_level(level)
         return
+    # cryptography/cffi bindings
     try:
         from OpenSSL._util import lib as _lib
-        _lib.SSL_CTX_set_security_level(ctx._context, level)
-    except AttributeError:
-        # Last resort: ctypes — works regardless of pyOpenSSL/cffi bindings.
-        import ctypes, ctypes.util
-        from OpenSSL._util import ffi as _ffi
-        _libssl = ctypes.CDLL(ctypes.util.find_library('ssl'))
-        _libssl.SSL_CTX_set_security_level.restype = None
-        _libssl.SSL_CTX_set_security_level.argtypes = [ctypes.c_void_p, ctypes.c_int]
-        _libssl.SSL_CTX_set_security_level(
-            int(_ffi.cast('uintptr_t', ctx._context)), level
-        )
+        if hasattr(_lib, 'SSL_CTX_set_security_level'):
+            logger.debug("_set_security_level: cffi SSL_CTX_set_security_level(%d)", level)
+            _lib.SSL_CTX_set_security_level(ctx._context, level)
+            return
+        logger.debug("_set_security_level: cffi binding missing SSL_CTX_set_security_level")
+    except Exception as exc:
+        logger.debug("_set_security_level: cffi attempt failed: %s", exc)
+    # ctypes — try common library names explicitly on Linux
+    import ctypes, ctypes.util
+    from OpenSSL._util import ffi as _ffi
+    for _name in ('ssl', 'libssl.so.3', 'libssl.so.1.1'):
+        _path = ctypes.util.find_library(_name) or _name
+        try:
+            _lib2 = ctypes.CDLL(_path)
+            _lib2.SSL_CTX_set_security_level.restype = None
+            _lib2.SSL_CTX_set_security_level.argtypes = [ctypes.c_void_p, ctypes.c_int]
+            _lib2.SSL_CTX_set_security_level(
+                int(_ffi.cast('uintptr_t', ctx._context)), level
+            )
+            logger.debug("_set_security_level: ctypes via %r succeeded", _path)
+            return
+        except Exception as exc:
+            logger.debug("_set_security_level: ctypes via %r failed: %s", _path, exc)
+    logger.warning(
+        "_set_security_level: all approaches failed — "
+        "SHA-1 cert chain will likely be rejected by OpenSSL"
+    )
 
 
 # Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps
@@ -265,7 +284,13 @@ class DtlsCoapSession:
         ctx.load_verify_locations(_OCF_ROOT_CA)
         ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
         ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256')
-        ctx.use_certificate_chain_file(self.cert_path)
+        # use_certificate_file loads only the leaf cert (first PEM block).
+        # Sending the full chain via use_certificate_chain_file causes
+        # OpenSSL 3.x to reject the AC14K_M intermediate (SHA-1 signed)
+        # with SSL_R_CA_MD_TOO_WEAK before the handshake even starts.
+        # Samsung's device already has AC14K_M in its own trust store,
+        # so it can verify the leaf cert without us sending the chain.
+        ctx.use_certificate_file(self.cert_path, SSL.FILETYPE_PEM)
         ctx.use_privatekey_file(self.key_path)
         ctx.check_privatekey()
 
