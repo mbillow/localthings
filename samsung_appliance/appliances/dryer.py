@@ -439,11 +439,15 @@ def command_handlers():
 # Empirical ceiling on this firmware is ~14 req/s (probe_poll_rate_combined.py
 # 2026-06-03). The hot tier sits at 1s idle / 0.5s active — comfortably under
 # the ceiling and leaves headroom for the warm + sweep budgets.
+# Per-tier timeouts are scaled to cadence: hot tier retries every 1s, so
+# a tight 2s ceiling caps the cascade damage from one wedged poll. Warm
+# tier has more headroom; sweep is multi-block Block2 and tolerates ~15s.
 DRYER_POLL_TIERS = [
     PollTier(
         name='hot',
         interval_s=1.0,
         active_interval_s=0.5,
+        timeout_s=2.0,
         paths=(
             ('operational', 'state', 'vs', '0'),
         ),
@@ -451,6 +455,7 @@ DRYER_POLL_TIERS = [
     PollTier(
         name='warm',
         interval_s=15.0,
+        timeout_s=4.0,
         paths=(
             ('power', 'vs', '0'),
             ('kidslock', 'vs', '0'),
@@ -467,6 +472,7 @@ DRYER_POLL_TIERS = [
     PollTier(
         name='sweep',
         interval_s=300.0,
+        timeout_s=15.0,
         paths=(('device', '0'),),
         is_sweep=True,
     ),

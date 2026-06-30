@@ -2,7 +2,7 @@
 
 Replaces the TLS-over-TCP transport used in the original dryer bridge.
 Both the oven (UDP/49154) and the dryer (UDP/49155) speak CoAP-over-DTLS
-with the ECDHE-ECDSA-AES128-GCM-SHA256 cipher and ab0b0ac4 client cert.
+with the ECDHE-ECDSA-AES128-GCM-SHA256 cipher and a client cert.
 
 Wire-level details that matter (from local-tools/oven-findings.md §17):
   * DTLS ciphertext MTU must be 1200; otherwise OpenSSL fragments the
@@ -226,10 +226,8 @@ class DtlsCoapSession:
         ConnectionError / TimeoutError on failure."""
         ctx = SSL.Context(SSL.DTLS_METHOD)
         ctx.set_verify(SSL.VERIFY_NONE, lambda *_: True)
-        # @SECLEVEL=0 needed because the AC14K_M-rooted ab0b0ac4 chain
-        # is SHA-1 signed, which OpenSSL 3.x's default security level
-        # rejects. The chain comes from Samsung's leaked CA so the
-        # signature algorithm isn't ours to change.
+        # @SECLEVEL=0 — the AC14K_M-rooted chain is SHA-1 signed, which
+        # OpenSSL 3.x's default security level rejects.
         ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256:@SECLEVEL=0')
         ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
@@ -592,24 +590,50 @@ class DtlsCoapSession:
 
     def ping(self):
         """RFC 7252 §4.4 CoAP Ping — empty CON, no token, no payload.
-        Peer MUST respond with an RST sharing the same Message ID.
-        We don't block waiting for the RST here; the reader thread
-        sees it, finds nothing in _pending/_observe_tokens for an
-        empty token, and drops it quietly — which is the documented
-        behaviour for unsolicited RST.
+        Fire-and-forget: we do not wait for the matching RST because
+        Samsung's RT-OCF doesn't reliably emit one (verified
+        2026-06-04: every sync ping timed out while polls succeeded
+        at 200+/window). The send itself is the keepalive — it
+        tickles Samsung's observer state so OBSERVE subscriptions
+        aren't aged out.
 
-        Sole purpose is keepalive: gives Samsung's RT-OCF stack a
-        visible "client still here" signal so it doesn't expire our
-        OBSERVE subscriptions (symptom of expiry: POSTs still get
-        2.04 but OBSERVE notifications stop arriving)."""
+        Real half-open-session detection lives in PollScheduler's
+        `last_success_ts`, surfaced through KeepaliveTask's
+        `liveness_fn`."""
         if self.conn is None:
             raise ConnectionError("DTLS session closed")
         mid = self._next_mid()
-        # Empty message: ver=01, type=CON, tkl=0, code=0.00, mid, no
-        # token, no options, no payload. build_coap with empty token
-        # and no options yields exactly that.
         self._send_dgram(build_coap(TYPE_CON, 0, mid, b'', []))
         return mid
+
+    def refresh_observes(self, paths):
+        """Drop all current OBSERVE registrations and re-subscribe to
+        the given paths. Used as a periodic safety net — CoAP OBSERVE
+        has no built-in TTL but Samsung's RT-OCF can age out its
+        observer table during cloud blips even while the DTLS session
+        stays healthy. Without this, internet recovery on a still-
+        reachable device leaves push permanently dead.
+
+        Best-effort: dereg failures are logged and we still bind fresh
+        tokens via subscribe. Brief race window where a notify on the
+        old token gets dropped as 'stale' — acceptable for a 6h-scale
+        safety net."""
+        if self.conn is None:
+            raise ConnectionError("DTLS session closed")
+        for tok, href in list(self._observe_tokens.items()):
+            segs = [s for s in href.split('/') if s]
+            try:
+                self._send_observe_dereg(tok, segs)
+            except Exception as e:
+                logger.warning("refresh dereg %s: %s", href, e)
+        self._observe_tokens.clear()
+        time.sleep(0.1)
+        for path in paths:
+            try:
+                self.subscribe(list(path))
+                time.sleep(0.05)
+            except Exception as e:
+                logger.warning("refresh subscribe %s: %s", path, e)
 
     def subscribe(self, path_segs):
         """Register an OBSERVE on the given path. The initial 2.05
