@@ -1,20 +1,19 @@
 services:
-  smartthings-local:
-    build: .
-    container_name: smartthings-local
-    restart: unless-stopped
-
-    # Bridge is outbound-only (DTLS UDP to each appliance, MQTT to the
-    # broker on 1883). No ports to expose.
-
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: localthings-ha
+    # host networking is required — DTLS runs over UDP and won't
+    # traverse Docker's bridge NAT to reach LAN appliances.
+    network_mode: host
     volumes:
-      # Holds the client cert + key. APPDATA_DIR comes from .env;
-      # on Unraid this is typically /mnt/user/appdata/smartthings-local/.
-      # Bare-metal dev falls back to ./certs alongside this compose file.
-      - ${APPDATA_DIR:-./certs}:/config:ro
-
-    # All runtime config is in .env. env_file passes every variable
-    # straight into the container, so adding a new appliance is a
-    # .env edit only — no compose change.
-    env_file:
-      - .env
+      - ./ha_config:/config
+      - ./custom_components/localthings:/config/custom_components/localthings:ro
+    environment:
+      - TZ=America/Chicago
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
