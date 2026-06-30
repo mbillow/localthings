@@ -22,23 +22,10 @@ verification — `VERIFY_NONE` is not required for it.
 
 ---
 
-## 2. MQTT — No TLS, No Publisher Authentication
+## 2. MQTT — No TLS, No Publisher Authentication ✅ RESOLVED
 
-**Files:** `main.py:137`, `samsung_appliance/config.py:68`
-**Severity:** High | **Category:** Missing Encryption / Unauthenticated Commands
-
-MQTT connects on plaintext port 1883. `tls_set()` is never called. The bridge
-executes any payload published to `<prefix>/cmd/#` — only value range is checked,
-not who sent it. Credentials (if set) are sent in cleartext CONNECT packets.
-
-**Exploit:**
-- Any LAN host publishes `270` to `samsung_oven/cmd/setpoint` → oven raised to max
-- LAN attacker sniffs TCP stream → captures `MQTT_USER`/`MQTT_PASS`
-- All appliance state (energy, temp, run state) readable by any subscriber
-
-**Fix:** Call `cli.tls_set()` with the broker CA before connecting. Add
-`MQTT_TLS_CA` / `MQTT_TLS_CERT` / `MQTT_TLS_KEY` to the `.env` schema.
-Enforce broker-side ACLs so only the bridge credential can publish to `cmd/#`.
+MQTT bridge removed. The integration now communicates directly with HA
+via the `localthings` custom component — no MQTT broker in the path.
 
 ---
 
@@ -66,16 +53,12 @@ NOT what the firmware is checking. The README's "the appliance validates chains
 to AC14K_M" framing (`README.md:73-127`) is more restrictive than reality — the
 check is a signature check, not a chain check.
 
-### Cleanup opportunities (low risk, follow-up commits)
+### Cleanup opportunities ✅ RESOLVED
 
-1. **`coap_dtls.py:229-233` — drop `@SECLEVEL=0`.** The comment says it's
-   needed because "the AC14K_M-rooted ab0b0ac4 chain is SHA-1 signed." But we
-   just proved the firmware accepts SHA-256-signed leaves, and `setup_cert.py`
-   could trivially be updated to sign with SHA-256 by default. SHA-1 is dead
-   weight in the runtime.
+1. **`coap_dtls.py` — `@SECLEVEL=0` dropped.** Cipher string is now
+   `ECDHE-ECDSA-AES128-GCM-SHA256` with no seclevel override.
 
-2. **`setup_cert.py:151` — sign with SHA-256 instead of SHA-1.** Modern,
-   faster, no deprecation noise. Works on tested firmware.
+2. **`setup_cert.py` — signs with SHA-256.** `leaf_cert.sign(ac14k_key, 'sha256')`.
 
 3. **Document leaf-only mode.** `setup_cert_leaf_only.py` shows only the leaf
    cert needs to be sent — the chain is dead weight on every handshake. The
