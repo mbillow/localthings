@@ -1,8 +1,19 @@
-"""DTLS-layer liveness via CoAP empty-CON ping.
+"""DTLS-layer liveness via CoAP empty-CON ping + poll-success watchdog.
 
-Pings the appliance every interval_s. After fail_threshold consecutive
-failures, fires on_unreachable. First success after a fail streak fires
-on_reachable. Bridge wires these to MQTT availability.
+Each interval_s the task:
+  1. Sends a CoAP ping. This is fire-and-forget — Samsung's RT-OCF
+     doesn't reliably reply with an RST, so the send itself is the
+     keepalive (it tickles Samsung's observer state). The send only
+     fails if the underlying socket is gone, in which case the failure
+     counts toward fail_threshold.
+  2. Calls liveness_fn() if provided. This is the real half-open
+     detection: PollScheduler exposes last_success_ts, and the bridge
+     wraps it as "did we get a 2.05 in the last 60s". If not, count
+     the tick as a failure even though the ping send succeeded.
+
+After fail_threshold consecutive failures, fires on_unreachable. First
+success after a fail streak fires on_reachable. Bridge wires these to
+MQTT availability.
 """
 from __future__ import annotations
 
@@ -20,13 +31,15 @@ class KeepaliveTask:
                  fail_threshold: int = 3,
                  on_reachable: Optional[Callable[[], None]] = None,
                  on_unreachable: Optional[Callable[[], None]] = None,
-                 logger=None):
+                 logger=None,
+                 liveness_fn: Optional[Callable[[], bool]] = None):
         self.session = session
         self.interval_s = interval_s
         self.fail_threshold = fail_threshold
         self.on_reachable = on_reachable
         self.on_unreachable = on_unreachable
         self.log = logger
+        self.liveness_fn = liveness_fn
 
         self._fail_streak = 0
         self._reachable = True
@@ -56,6 +69,21 @@ class KeepaliveTask:
             ok = True
         except Exception as e:
             if self.log: self.log.warning("ping: %s", e)
+        # Real half-open detection: ping sends can succeed against a
+        # silently-wedged peer, but polls won't. If the scheduler
+        # hasn't recorded a 2.05 inside the liveness window, treat
+        # this tick as a failure even though the ping itself went out.
+        if ok and self.liveness_fn is not None:
+            try:
+                alive = bool(self.liveness_fn())
+            except Exception as e:
+                if self.log: self.log.warning("liveness_fn: %s", e)
+                alive = True
+            if not alive:
+                if self.log:
+                    self.log.warning("liveness: no successful poll "
+                                     "in the liveness window")
+                ok = False
         self._ping_count += 1
         if ok:
             if not self._reachable:

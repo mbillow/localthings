@@ -1,6 +1,6 @@
 """Oven descriptor (Samsung NV7000BS-class).
 
-Resource map captured 2026-05-31 via DTLS-CoAP with the ab0b0ac4 cert.
+Resource map captured 2026-05-31 via DTLS-CoAP with the client cert.
 See `local-tools/comparisons/oven-tree.md` for the full field reference.
 
 Write surfaces this descriptor exposes:
@@ -188,6 +188,11 @@ def flatten(links):
     current_mode = modes[0] if modes else None
     options = g('/mode/vs/0', 'x.com.samsung.da.options') or []
     lamp = _option_value(options, 'UpperLamp')          # 'On' / 'Off'
+    # The door-coupling override (open → On, close → Off) lives in
+    # project() below — it needs descriptor_state to compare the
+    # latest door transition against the latest lamp value change so
+    # an HA-initiated optimistic write isn't clobbered by stale door
+    # state.
     sound = _option_value(options, 'Sound')             # 'On' / 'Off'
     fastpreheat = _option_value(options, 'fastpreheat') # 'On' / 'Off'
     # NaturalSteam only appears in the options array after it's been
@@ -273,30 +278,65 @@ def flatten(links):
 # extrapolate downward while machine_state == active.
 # ---------------------------------------------------------------------
 def on_observation(state, href, rep):
-    if href != '/operational/state/vs/0':
+    now = time.time()
+    if href == '/operational/state/vs/0':
+        rem = rep.get('x.com.samsung.da.remainingTime')
+        if isinstance(rem, str):
+            try:
+                h, m, s = rem.split(':')
+                state['remaining_anchor'] = (now,
+                                             int(h) * 3600 + int(m) * 60 + int(s))
+            except (ValueError, AttributeError):
+                pass
         return
-    rem = rep.get('x.com.samsung.da.remainingTime')
-    if not isinstance(rem, str):
+    # Door + lamp tracking feeds the lamp/door coupling in project().
+    # Both timestamps bump only on value CHANGES so the comparison
+    # tells us which event happened more recently. /doors is hot-tier
+    # (1s) and would otherwise dominate; /mode is warm-tier (30s) and
+    # picks up HA optimistic writes via apply_optimistic → apply_rep.
+    if href == '/doors/vs/0':
+        items = rep.get('x.com.samsung.da.items') or []
+        door = items[0].get('x.com.samsung.da.openState') if items else None
+        if door != state.get('_door_last'):
+            state['_door_last'] = door
+            state['_door_change_ts'] = now
         return
-    try:
-        h, m, s = rem.split(':')
-        state['remaining_anchor'] = (time.time(),
-                                     int(h) * 3600 + int(m) * 60 + int(s))
-    except (ValueError, AttributeError):
-        pass
+    if href == '/mode/vs/0':
+        options = rep.get('x.com.samsung.da.options') or []
+        lamp = _option_value(options, 'UpperLamp')
+        if lamp != state.get('_lamp_last'):
+            state['_lamp_last'] = lamp
+            state['_lamp_change_ts'] = now
 
 
 def project(state, sensors):
-    anchor = state.get('remaining_anchor')
-    if sensors.get('machine_state') != 'active' or anchor is None:
-        return sensors
-    ts, total = anchor
-    remaining = max(0, int(total - (time.time() - ts)))
-    h, rest = divmod(remaining, 3600)
-    m, s = divmod(rest, 60)
     sensors = dict(sensors)
-    sensors['completion_time'] = f"{h}:{m:02d}:{s:02d}"
-    sensors['completion_minutes'] = h * 60 + m + (1 if s > 0 else 0)
+    # Remaining-time projection: the oven pushes /operational/state on
+    # state transitions but not on remainingTime ticks. Extrapolate
+    # from the most recent anchor while the machine is active.
+    anchor = state.get('remaining_anchor')
+    if sensors.get('machine_state') == 'active' and anchor is not None:
+        ts, total = anchor
+        remaining = max(0, int(total - (time.time() - ts)))
+        h, rest = divmod(remaining, 3600)
+        m, s = divmod(rest, 60)
+        sensors['completion_time'] = f"{h}:{m:02d}:{s:02d}"
+        sensors['completion_minutes'] = h * 60 + m + (1 if s > 0 else 0)
+    # Lamp / door coupling. The oven hardware auto-drives the lamp from
+    # the door state, but /mode/vs/0 only polls every 30s. When a door
+    # TRANSITION is more recent than the last lamp VALUE change, derive
+    # lamp from door for sub-second freshness. When a lamp toggle is
+    # more recent (HA optimistic write, or panel-driven /mode diff),
+    # the cache value wins — preserves HA toggle responsiveness even
+    # while the door is closed.
+    door_ts = state.get('_door_change_ts')
+    lamp_ts = state.get('_lamp_change_ts')
+    door_open = sensors.get('door_open')
+    if door_ts is not None and (lamp_ts is None or door_ts > lamp_ts):
+        if door_open is True:
+            sensors['lamp'] = 'On'
+        elif door_open is False:
+            sensors['lamp'] = 'Off'
     return sensors
 
 
@@ -749,11 +789,16 @@ def command_handlers():
 # Empirical ceiling on this firmware is ~8 req/s (probe_poll_rate_combined.py
 # 2026-06-03). Hot tier covers what changes mid-cook; doors get the tightest
 # cadence because door open/close needs sub-second freshness in HA.
+# Per-tier timeouts are scaled to cadence: hot tier retries every 1s, so
+# a tight 2s ceiling caps the cascade damage from one wedged poll. Warm
+# and cold tiers have more headroom; sweep is multi-block Block2 and
+# tolerates ~15s.
 OVEN_POLL_TIERS = [
     PollTier(
         name='hot',
         interval_s=1.0,
         active_interval_s=0.5,
+        timeout_s=2.0,
         paths=(
             ('operational', 'state', 'vs', '0'),
             ('doors', 'vs', '0'),
@@ -764,6 +809,7 @@ OVEN_POLL_TIERS = [
     PollTier(
         name='warm',
         interval_s=30.0,
+        timeout_s=4.0,
         paths=(
             ('power', 'vs', '0'),
             ('kidslock', 'vs', '0'),
@@ -776,6 +822,7 @@ OVEN_POLL_TIERS = [
     PollTier(
         name='cold',
         interval_s=600.0,
+        timeout_s=6.0,
         paths=(
             ('otninformation', 'vs', '0'),
         ),
@@ -783,6 +830,7 @@ OVEN_POLL_TIERS = [
     PollTier(
         name='sweep',
         interval_s=300.0,
+        timeout_s=15.0,
         paths=(('device', '0'),),
         is_sweep=True,
     ),

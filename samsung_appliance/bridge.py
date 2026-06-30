@@ -17,6 +17,7 @@ MQTT client; each owns one DTLS session, one cache, one scheduler.
 """
 import json
 import os
+import random
 import threading
 import time
 
@@ -27,6 +28,7 @@ from .coap_dtls import DtlsCoapSession, fmt_code
 from .config import ApplianceConfig, SharedConfig
 from .keepalive import KeepaliveTask
 from .logger import bridge_logger
+from .observe_refresh import ObserveRefreshTask
 from .poll_scheduler import PollScheduler
 from .sensors import index_links
 from .state_cache import StateCache
@@ -41,6 +43,21 @@ def _href_to_segs(href: str) -> list[str]:
 
 SERIAL_PATH = '/information/vs/0'
 SERIAL_FIELD = 'x.com.samsung.da.serialNum'
+
+# If the keepalive watchdog flags the device unreachable for this long,
+# force a session reconnect. Catches the half-open case where the DTLS
+# socket is still writable but the peer has gone silent — without this,
+# the bridge sits in offline state until the reader thread dies on its
+# own (which may not happen at all if the OS sees no socket errors).
+UNREACHABLE_RECONNECT_S = 120.0
+
+# Periodic OBSERVE re-subscribe interval. Safety net for the case where
+# the device stays reachable on the DTLS layer but Samsung's RT-OCF
+# clears its observer table (e.g. during cloud auth blips). Without
+# this, push delivery stays dead even after upstream connectivity
+# recovers, since nothing triggers a fresh subscribe on the existing
+# session.
+OBSERVE_REFRESH_INTERVAL_S = 6 * 3600.0
 
 
 class PushBridge:
@@ -63,6 +80,7 @@ class PushBridge:
         self.session: DtlsCoapSession | None = None
         self.scheduler: PollScheduler | None = None
         self.keepalive: KeepaliveTask | None = None
+        self.observe_refresh: ObserveRefreshTask | None = None
 
         self.cache = StateCache(descriptor)
         self.cache.set_on_change(self._on_cache_change)
@@ -83,6 +101,11 @@ class PushBridge:
         self._last_change_source: str | None = None
         self._last_observe_change_ts: float | None = None
         self._last_push_active_pub: str | None = None
+        # Wall-clock timestamp the keepalive watchdog first reported the
+        # device unreachable on the current session. Cleared on recovery
+        # or session start. Drives the force-reconnect watchdog below.
+        self._unreachable_since: float | None = None
+        self._force_close_in_flight: bool = False
 
         # Push is considered "active" if an OBSERVE-sourced change
         # arrived within this window. Long enough that a quiet but
@@ -222,6 +245,8 @@ class PushBridge:
         self.connect_count += 1
         self.cache.descriptor_state.clear()
         self._publish_gate = False
+        self._unreachable_since = None
+        self._force_close_in_flight = False
 
         self.log.info("DTLS connected — subscribing %d paths",
                       len(self.descriptor.observe_paths))
@@ -274,6 +299,10 @@ class PushBridge:
             is_active_fn=self.descriptor.is_active,
             logger=self.log,
         )
+        # Half-open detection: if no successful poll lands inside this
+        # window the session is wedged, regardless of whether ping sends
+        # leave the socket. 60s gives ~60 hot-tier cycles of margin.
+        liveness_window_s = 60.0
         keepalive = KeepaliveTask(
             sess,
             interval_s=float(self.shared.PING_INTERVAL_S),
@@ -281,9 +310,18 @@ class PushBridge:
             on_reachable=self._on_reachable,
             on_unreachable=self._on_unreachable,
             logger=self.log,
+            liveness_fn=lambda: (time.monotonic() - scheduler.last_success_ts
+                                 ) < liveness_window_s,
+        )
+        observe_refresh = ObserveRefreshTask(
+            sess,
+            paths=self.descriptor.observe_paths,
+            interval_s=OBSERVE_REFRESH_INTERVAL_S,
+            logger=self.log,
         )
         self.scheduler = scheduler
         self.keepalive = keepalive
+        self.observe_refresh = observe_refresh
 
         sched_t = threading.Thread(
             target=scheduler.run_forever, args=(self.stop,),
@@ -291,14 +329,19 @@ class PushBridge:
         ka_t = threading.Thread(
             target=keepalive.run_forever, args=(self.stop,),
             daemon=True, name=f'{self.app.klass}-ping')
+        ref_t = threading.Thread(
+            target=observe_refresh.run_forever, args=(self.stop,),
+            daemon=True, name=f'{self.app.klass}-obsref')
         sched_t.start()
         ka_t.start()
+        ref_t.start()
 
         try:
             sess.join()
         finally:
             self.scheduler = None
             self.keepalive = None
+            self.observe_refresh = None
 
     def _seed_from_device0(self, sess):
         code, pl = sess.get(self.descriptor.seed_path, timeout=15.0)
@@ -340,11 +383,36 @@ class PushBridge:
             self.log.warning("oic/res get: %s", e)
 
     def _on_reachable(self) -> None:
+        self._unreachable_since = None
         self.set_availability(True)
         self.reassert_availability()
 
     def _on_unreachable(self) -> None:
+        if self._unreachable_since is None:
+            self._unreachable_since = time.time()
         self.set_availability(False)
+
+    def _maybe_force_reconnect(self) -> None:
+        """If the device has been unreachable for UNREACHABLE_RECONNECT_S,
+        close the DTLS session to break run_forever's session_once() out
+        of its sess.join() and trigger a fresh connect. Without this, a
+        half-open session (writable socket, silent peer) holds the bridge
+        in offline limbo until the OS surfaces a socket error."""
+        if self._unreachable_since is None or self._force_close_in_flight:
+            return
+        elapsed = time.time() - self._unreachable_since
+        if elapsed < UNREACHABLE_RECONNECT_S:
+            return
+        sess = self.session
+        if sess is None:
+            return
+        self.log.warning(
+            "unreachable for %.0fs — forcing session reconnect", elapsed)
+        self._force_close_in_flight = True
+        try:
+            sess.close()
+        except Exception as e:
+            self.log.warning("force-close: %s", e)
 
     # ---- MQTT publishing --------------------------------------------
 
@@ -519,8 +587,8 @@ class PushBridge:
         self._win_prev_poll = poll
         self._win_prev_poll_err = poll_err
         self._win_prev_ping_fail = ping_fail
-        win_max_rtt, win_slow = (sched.take_window_stats()
-                                  if sched else (0.0, 0))
+        win_max_rtt, win_slow, win_timeouts = (
+            sched.take_window_stats() if sched else (0.0, 0, 0))
         window_polls_ok = max(0, d_poll - d_err)
 
         h = {
@@ -536,6 +604,7 @@ class PushBridge:
             'poll_window_errors':        d_err,
             'poll_window_max_rtt_ms':    round(win_max_rtt, 0),
             'poll_window_slow_count':    win_slow,
+            'poll_window_timeout_count': win_timeouts,
             'ping_count':                ka.ping_count if ka else 0,
             'ping_fail_count':           ping_fail,
             'reachable':                 ka.reachable if ka else None,
@@ -561,13 +630,15 @@ class PushBridge:
             self.log.warning("health publish: %s", e)
 
         self.publish_push_active(push_active)
+        self._maybe_force_reconnect()
 
         if d_poll > 0 or d_err > 0 or d_ping_fail > 0:
             self.log.info(
                 "poll-window: %d ok, %d err, %d ping-fail, "
-                "p_max=%.0fms, slow=%d (%ds)",
+                "p_max=%.0fms, slow=%d, timeouts=%d (%ds)",
                 window_polls_ok, d_err, d_ping_fail,
-                win_max_rtt, win_slow, self.shared.HEALTH_INTERVAL_S)
+                win_max_rtt, win_slow, win_timeouts,
+                self.shared.HEALTH_INTERVAL_S)
 
     def publish_push_active(self, active: bool, force: bool = False) -> None:
         value = 'online' if active else 'offline'
@@ -601,8 +672,12 @@ class PushBridge:
             self.session_started_ts = None
             if self.stop.is_set():
                 break
-            wait = min(backoff, 30.0)
-            self.log.info("reconnect in %.0fs", wait)
+            # Jitter the backoff so multiple bridges (dryer + oven) don't
+            # reconnect in lockstep after a router blip — synchronized
+            # storms make the broker / DTLS layer flap harder than need
+            # be. ±30% noise spreads the retry attempts.
+            wait = min(backoff, 30.0) * random.uniform(0.7, 1.3)
+            self.log.info("reconnect in %.1fs", wait)
             if self.stop.wait(wait):
                 break
             backoff = min(backoff * 2, 30.0)
