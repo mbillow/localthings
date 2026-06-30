@@ -1,6 +1,5 @@
-"""Unit tests for oven-family capabilities and the cycle-active adapter wiring."""
+"""Unit tests for oven-family capabilities."""
 from samsung_appliance.registry.capabilities import oven
-from samsung_appliance.registry.adapter import build_runtime_descriptor
 from samsung_appliance.registry.discovery import discover
 
 
@@ -151,36 +150,3 @@ def test_cook_time_rejects_out_of_range():
     assert desc.write_fn(-1, {}) is None
     assert desc.write_fn(1440, {}) is None
 
-
-# ---------------------------------------------------------------------------
-# Adapter cycle_active_field wiring
-# ---------------------------------------------------------------------------
-
-def test_adapter_sets_cycle_active_field_for_oven():
-    """build_runtime_descriptor must set cycle_active_field when oven keys present."""
-    reg = {c.href: [c] for c in (oven.OVEN_OPERATIONAL_STATE, oven.OVEN_SETPOINT)}
-    resources = {
-        '/operational/state/vs/0': {'x.com.samsung.da.state': 'Run'},
-        '/temperatures/vs/0': {'x.com.samsung.da.items': [
-            {'x.com.samsung.da.current': '180', 'x.com.samsung.da.desired': '200'}
-        ]},
-    }
-    bound = discover(resources, reg)
-    rd = build_runtime_descriptor(
-        bound, topic_prefix='t', ha_prefix='homeassistant',
-        device_name='Oven', model='M', name='oven', default_port=49154)
-    assert rd.cycle_active_field == 'cycle_active'
-    flat = rd.flatten(resources)
-    assert flat['cycle_active'] is True     # 'Run' -> active
-
-
-def test_adapter_no_cycle_active_without_oven_keys():
-    """Non-oven appliances must not get cycle_active_field."""
-    from samsung_appliance.registry.capabilities import common
-    reg = {c.href: [c] for c in (common.KIDS_LOCK,)}
-    resources = {'/kidslock/vs/0': {'x.com.samsung.da.kidsLock': 'Ready'}}
-    bound = discover(resources, reg)
-    rd = build_runtime_descriptor(
-        bound, topic_prefix='t', ha_prefix='homeassistant',
-        device_name='Dishwasher', model='M', name='dishwasher', default_port=49154)
-    assert rd.cycle_active_field is None

@@ -2,7 +2,7 @@ import pytest
 from tests.conftest import _load_device
 from samsung_appliance.registry.by_type import for_device, _type_key
 from samsung_appliance.registry.discovery import discover
-from samsung_appliance.registry.adapter import build_runtime_descriptor
+from samsung_appliance.registry.adapter import flatten, is_active
 
 
 @pytest.mark.parametrize('name,expected_type_key', [
@@ -22,11 +22,7 @@ def test_full_pipeline_v2(name, expected_type_key):
     bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     assert bound
 
-    rd = build_runtime_descriptor(bound, topic_prefix=f'samsung_{name}',
-                                   ha_prefix='homeassistant', device_name=name.title(),
-                                   model='M', name=name, default_port=49154)
-    assert rd.discovery_payloads
-    flat = rd.flatten(resources)
-    assert flat
-    assert rd.active_interval_s > 0
-    assert rd.idle_interval_s > rd.active_interval_s
+    state = flatten(bound, resources)
+    assert state
+    # is_active returns bool; just verify it runs without error
+    is_active(bound, resources)

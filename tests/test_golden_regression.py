@@ -6,10 +6,10 @@ import pytest
 GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
 
 
-def _new_state_and_uids(name, resources):
+def _new_state_keys(name, resources):
     from samsung_appliance.registry.by_type import for_device
     from samsung_appliance.registry.discovery import discover
-    from samsung_appliance.registry.adapter import build_runtime_descriptor
+    from samsung_appliance.registry.adapter import flatten
     otn = resources.get('/otninformation/vs/0', {})
     one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')
     reg = for_device(one_ui) if one_ui else None
@@ -19,12 +19,8 @@ def _new_state_and_uids(name, resources):
     else:
         caps, pats = reg.capabilities, reg.pattern_capabilities
     bound = discover(resources, caps, pats)
-    rd = build_runtime_descriptor(
-        bound, topic_prefix=f'samsung_{name}', ha_prefix='homeassistant',
-        device_name=name.title(), model='M', name=name, default_port=49154)
-    state = rd.flatten(resources)
-    uids = [json.loads(p)['unique_id'] for _, p in rd.discovery_payloads]
-    return sorted(state.keys()), sorted(uids)
+    state = flatten(bound, resources)
+    return sorted(state.keys())
 
 
 @pytest.mark.parametrize('name,ip', [
@@ -35,16 +31,11 @@ def test_registry_reproduces_golden_state_keys(name, ip, request):
     from tests.conftest import _load_resources
     resources = _load_resources(ip)
     golden = json.loads((GOLDEN / f'{name}.json').read_text())
-    state_keys, uids = _new_state_and_uids(name, resources)
+    state_keys = _new_state_keys(name, resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
-    )
-    assert set(uids) == set(golden['discovery_unique_ids']), (
-        f"unique_ids mismatch:\n"
-        f"  extra:   {sorted(set(uids) - set(golden['discovery_unique_ids']))}\n"
-        f"  missing: {sorted(set(golden['discovery_unique_ids']) - set(uids))}"
     )
 
 

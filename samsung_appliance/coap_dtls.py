@@ -26,7 +26,8 @@ import time
 
 from OpenSSL import SSL
 
-from .logger import logger
+import logging
+logger = logging.getLogger(__name__)
 
 
 # Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps

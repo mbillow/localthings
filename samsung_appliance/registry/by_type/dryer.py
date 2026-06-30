@@ -1,7 +1,7 @@
 """Dryer device registry.
 
-Note: dryer devices use port 49155 (not 49154). Pass default_port=49155
-when calling build_runtime_descriptor() for this registry.
+Note: dryer devices use port 49155 (not 49154). The config flow handles
+this automatically via port probing.
 """
 from ..capabilities import common, dryer, fridge, laundry, operational
 from ._base import DeviceRegistry, _build
