@@ -54,22 +54,28 @@ def _set_security_level(ctx: SSL.Context, level: int) -> None:
         logger.debug("_set_security_level: cffi binding missing SSL_CTX_set_security_level")
     except Exception as exc:
         logger.debug("_set_security_level: cffi attempt failed: %s", exc)
-    # ctypes — try common library names explicitly on Linux
+    # ctypes — None means RTLD_DEFAULT (already-loaded libs in this process),
+    # which finds the same OpenSSL instance pyOpenSSL is using. Named paths
+    # open a fresh handle that may be a different instance (wrong ctx space).
     import ctypes, ctypes.util
     from OpenSSL._util import ffi as _ffi
-    for _name in ('ssl', 'libssl.so.3', 'libssl.so.1.1'):
-        _path = ctypes.util.find_library(_name) or _name
+    raw_ptr = int(_ffi.cast('uintptr_t', ctx._context))
+    logger.debug("_set_security_level: ctx._context=0x%x", raw_ptr)
+    for _handle in (None, 'libssl.so.3', 'libssl.so.1.1',
+                    ctypes.util.find_library('ssl')):
+        if _handle is None:
+            _desc = 'RTLD_DEFAULT'
+        else:
+            _desc = _handle
         try:
-            _lib2 = ctypes.CDLL(_path)
+            _lib2 = ctypes.CDLL(_handle)
             _lib2.SSL_CTX_set_security_level.restype = None
             _lib2.SSL_CTX_set_security_level.argtypes = [ctypes.c_void_p, ctypes.c_int]
-            _lib2.SSL_CTX_set_security_level(
-                int(_ffi.cast('uintptr_t', ctx._context)), level
-            )
-            logger.debug("_set_security_level: ctypes via %r succeeded", _path)
+            _lib2.SSL_CTX_set_security_level(raw_ptr, level)
+            logger.debug("_set_security_level: ctypes via %s succeeded", _desc)
             return
         except Exception as exc:
-            logger.debug("_set_security_level: ctypes via %r failed: %s", _path, exc)
+            logger.debug("_set_security_level: ctypes via %s failed: %s", _desc, exc)
     logger.warning(
         "_set_security_level: all approaches failed — "
         "SHA-1 cert chain will likely be rejected by OpenSSL"
