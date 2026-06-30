@@ -8,10 +8,9 @@ services:
     # broker on 1883). No ports to expose.
 
     volumes:
-      # Holds the ab0b0ac4 client cert + key. APPDATA_DIR comes from
-      # .env; on Unraid this is typically
-      # /mnt/user/appdata/smartthings-local/. Bare-metal dev falls
-      # back to ./certs alongside this compose file.
+      # Holds the client cert + key. APPDATA_DIR comes from .env;
+      # on Unraid this is typically /mnt/user/appdata/smartthings-local/.
+      # Bare-metal dev falls back to ./certs alongside this compose file.
       - ${APPDATA_DIR:-./certs}:/config:ro
 
     # All runtime config is in .env. env_file passes every variable
