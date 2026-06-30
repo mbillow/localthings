@@ -1,4 +1,52 @@
 {
+  "entity": {
+    "sensor": {
+      "ice_making_status": {
+        "state": {
+          "ICESTATUS_STOP": "Idle"
+        }
+      }
+    },
+    "select": {
+      "door_alert": {
+        "state": {
+          "1": "Alarm 1",
+          "2": "Alarm 2",
+          "3": "Alarm 3",
+          "4": "Alarm 4"
+        }
+      },
+      "brightness_level": {
+        "state": {
+          "33": "Low",
+          "66": "Medium",
+          "100": "High"
+        }
+      },
+      "ice_type": {
+        "state": {
+          "WHISKEY_ICEBALL_3": "3 Balls/Day",
+          "WHISKEY_ICEBALL_6": "6 Balls/Day",
+          "WHISKEY_ICEBALL_9": "9 Balls/Day"
+        }
+      },
+      "beverage_zone_mode": {
+        "state": {
+          "SP_TTYPE_BEER_DRINKS": "Beverage",
+          "SP_TTYPE_WINE_DESSERT": "Wine and Dessert"
+        }
+      },
+      "flex_zone_mode": {
+        "state": {
+          "CV_TTYPE_RF9000A_FREEZE": "Freeze",
+          "CV_TTYPE_RF9000A_SOFTFREEZE": "Soft Freeze",
+          "CV_TTYPE_RF9000A_MEAT_FISH": "Meat/Fish",
+          "CV_TTYPE_RF9000A_FRUIT_VEGGIES": "Fruit & Veggies",
+          "CV_TTYPE_RF9000A_BEVERAGE": "Beverage"
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {

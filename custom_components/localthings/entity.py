@@ -35,6 +35,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_serial}_{self._state_key}"
         self._attr_name = bound.desc.name if bound.desc.name is not None else _derive_name(self._state_key)
+        self._attr_translation_key = bound.desc.translation_key
         self._attr_icon = bound.desc.icon
         raw_cat = bound.desc.entity_category
         self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None

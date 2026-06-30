@@ -26,6 +26,7 @@ class SamsungEntityDescription:
     entity_category: Optional[str] = None      # 'diagnostic' | 'config' | None
     enabled_default: bool = True
     value_fn: Callable[[Any], Any] = _identity
+    rep_fn: Optional[Callable[[dict], Any]] = None   # replaces field+value_fn; receives full rep
     exists_fn: Optional[Callable[[dict], bool]] = None
 
 
@@ -71,6 +72,11 @@ class NumberDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class TimeDesc(SamsungEntityDescription):
+    write_fn: WriteFn = None
+
+
 PLATFORM_OF: dict[type, str] = {
     SensorDesc:       'sensor',
     BinarySensorDesc: 'binary_sensor',
@@ -78,4 +84,5 @@ PLATFORM_OF: dict[type, str] = {
     SwitchDesc:       'switch',
     ButtonDesc:       'button',
     NumberDesc:       'number',
+    TimeDesc:         'time',
 }

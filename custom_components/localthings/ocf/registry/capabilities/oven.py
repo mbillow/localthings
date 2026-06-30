@@ -264,8 +264,6 @@ OVEN_OPERATIONAL_STATE = Capability(
                    field='x.com.samsung.da.progressPercentage',
                    name='Progress percent', unit='%', state_class='measurement',
                    value_fn=_int),
-        SensorDesc(key='operation_time', field='x.com.samsung.da.operationTime',
-                   name='Elapsed time', icon='mdi:timer'),
         SensorDesc(key='operation_time_minutes',
                    field='x.com.samsung.da.operationTime',
                    name='Operation time (minutes)', unit='min',
@@ -317,11 +315,6 @@ OVEN_DOOR = Capability(
     href='/doors/vs/0',
     poll_tier='hot',
     entities=(
-        SensorDesc(key='door', field='x.com.samsung.da.items',
-                   name='Door state',
-                   value_fn=lambda items: (
-                       items[0].get('x.com.samsung.da.openState')
-                       if items else None)),
         BinarySensorDesc(key='door_open', field='x.com.samsung.da.items',
                          name='Door', device_class='door',
                          value_fn=lambda items: (
@@ -357,6 +350,7 @@ OVEN_MODE = Capability(
                    write_fn=_lamp_write),
         SwitchDesc(key='sound', field='x.com.samsung.da.options',
                    name='Sound', icon='mdi:volume-high',
+                   entity_category='config',
                    value_fn=lambda opts: _option_value(opts, 'Sound') == 'On',
                    write_fn=_sound_write),
         SwitchDesc(key='fast_preheat', field='x.com.samsung.da.options',

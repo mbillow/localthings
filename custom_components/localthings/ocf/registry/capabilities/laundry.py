@@ -34,9 +34,11 @@ DOOR_LED = Capability(
     entities=(
         SelectDesc(key='led_brightness', field='setBrightness',
                    name='Door LED brightness', icon='mdi:brightness-6',
+                   entity_category='config',
                    options=_LED_LEVELS, write_fn=_led_brightness_write),
         SwitchDesc(key='led_night_light', field='setNightLight',
                    name='Door LED night light', icon='mdi:weather-night',
+                   entity_category='config',
                    value_fn=lambda v: v == 'On',
                    write_fn=_led_night_write),
     ),
@@ -47,6 +49,7 @@ SOUND_MODE = Capability(
     entities=(
         SelectDesc(key='sound_mode', field='mode',
                    name='Sound mode', icon='mdi:volume-high',
+                   entity_category='config',
                    options=_SOUND_MODES, write_fn=_sound_mode_write),
     ),
 )
