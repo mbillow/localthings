@@ -23,8 +23,11 @@ import socket
 import struct
 import threading
 import time
+from pathlib import Path
 
 from OpenSSL import SSL
+
+_OCF_ROOT_CA = str(Path(__file__).parent / 'ocf_root_ca.pem')
 
 import logging
 logger = logging.getLogger(__name__)
@@ -226,7 +229,8 @@ class DtlsCoapSession:
         """DTLS handshake. Blocks up to HANDSHAKE_TIMEOUT_S. Raises
         ConnectionError / TimeoutError on failure."""
         ctx = SSL.Context(SSL.DTLS_METHOD)
-        ctx.set_verify(SSL.VERIFY_NONE, lambda *_: True)
+        ctx.load_verify_locations(_OCF_ROOT_CA)
+        ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
         ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256')
         ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
