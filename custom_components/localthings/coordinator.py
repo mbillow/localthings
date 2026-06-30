@@ -23,7 +23,7 @@ from .ocf.registry.adapter import flatten, is_active
 from .ocf.registry.identity import read_identity, DeviceIdentity
 
 from .const import (
-    DOMAIN, CONF_HOST, CONF_PORT, CONF_CERT_PEM, CONF_KEY_PEM,
+    DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
     ACTIVE_INTERVAL_S, IDLE_INTERVAL_S,
 )
 
@@ -63,11 +63,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Session management (all blocking — must run in executor)
     # ------------------------------------------------------------------
 
+    @property
+    def last_resources(self) -> dict:
+        return self._last_resources
+
     def _connect_session(self) -> None:
         host = self._entry.data[CONF_HOST]
         port = self._entry.data[CONF_PORT]
-        cert_pem: str = self._entry.data[CONF_CERT_PEM]
-        key_pem: str  = self._entry.data[CONF_KEY_PEM]
+        cert_pem: str = self._entry.data[CONF_LEAF_CERT_PEM]
+        key_pem: str  = self._entry.data[CONF_LEAF_KEY_PEM]
 
         cert_f = tempfile.NamedTemporaryFile(suffix='.pem', delete=False, mode='w')
         key_f  = tempfile.NamedTemporaryFile(suffix='.pem', delete=False, mode='w')

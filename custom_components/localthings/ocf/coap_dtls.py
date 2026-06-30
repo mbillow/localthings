@@ -31,57 +31,6 @@ _OCF_ROOT_CA = str(Path(__file__).parent / 'ocf_root_ca.pem')
 
 import logging
 logger = logging.getLogger(__name__)
-
-
-def _set_security_level(ctx: SSL.Context, level: int) -> None:
-    """Call SSL_CTX_set_security_level on an OpenSSL context.
-
-    pyOpenSSL >= 24.0.0 exposes this directly; older builds require a cffi
-    call into the underlying cryptography bindings.
-    """
-    # pyOpenSSL >= 24.0.0
-    if hasattr(ctx, 'set_security_level'):
-        logger.debug("_set_security_level: ctx.set_security_level(%d)", level)
-        ctx.set_security_level(level)
-        return
-    # cryptography/cffi bindings
-    try:
-        from OpenSSL._util import lib as _lib
-        if hasattr(_lib, 'SSL_CTX_set_security_level'):
-            logger.debug("_set_security_level: cffi SSL_CTX_set_security_level(%d)", level)
-            _lib.SSL_CTX_set_security_level(ctx._context, level)
-            return
-        logger.debug("_set_security_level: cffi binding missing SSL_CTX_set_security_level")
-    except Exception as exc:
-        logger.debug("_set_security_level: cffi attempt failed: %s", exc)
-    # ctypes — None means RTLD_DEFAULT (already-loaded libs in this process),
-    # which finds the same OpenSSL instance pyOpenSSL is using. Named paths
-    # open a fresh handle that may be a different instance (wrong ctx space).
-    import ctypes, ctypes.util
-    from OpenSSL._util import ffi as _ffi
-    raw_ptr = int(_ffi.cast('uintptr_t', ctx._context))
-    logger.debug("_set_security_level: ctx._context=0x%x", raw_ptr)
-    for _handle in (None, 'libssl.so.3', 'libssl.so.1.1',
-                    ctypes.util.find_library('ssl')):
-        if _handle is None:
-            _desc = 'RTLD_DEFAULT'
-        else:
-            _desc = _handle
-        try:
-            _lib2 = ctypes.CDLL(_handle)
-            _lib2.SSL_CTX_set_security_level.restype = None
-            _lib2.SSL_CTX_set_security_level.argtypes = [ctypes.c_void_p, ctypes.c_int]
-            _lib2.SSL_CTX_set_security_level(raw_ptr, level)
-            logger.debug("_set_security_level: ctypes via %s succeeded", _desc)
-            return
-        except Exception as exc:
-            logger.debug("_set_security_level: ctypes via %s failed: %s", _desc, exc)
-    logger.warning(
-        "_set_security_level: all approaches failed — "
-        "SHA-1 cert chain will likely be rejected by OpenSSL"
-    )
-
-
 # Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps
 # every received CoAP frame, every /operational/state/vs/0 + /oven/vs/0
 # + /power/vs/0 + /mode/vs/0-options rep change, the full link tree at
@@ -279,24 +228,14 @@ class DtlsCoapSession:
         ConnectionError / TimeoutError on failure."""
         ctx = SSL.Context(SSL.DTLS_METHOD)
 
-        # The AC14K_M intermediate CA in our client cert chain is SHA-1
-        # signed; Samsung's OCF Root CA is SHA-1 self-signed. OpenSSL 3.x
-        # SECLEVEL=2 rejects SHA-1 in any cert it processes — including
-        # the LOCAL chain we're sending — raising SSL_R_CA_MD_TOO_WEAK
-        # before the verify callback is ever reached.
-        # Must be called before loading any certs.
-        _set_security_level(ctx, 1)
-
         ctx.load_verify_locations(_OCF_ROOT_CA)
         ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
-        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256')
-        # use_certificate_file loads only the leaf cert (first PEM block).
-        # Sending the full chain via use_certificate_chain_file causes
-        # OpenSSL 3.x to reject the AC14K_M intermediate (SHA-1 signed)
-        # with SSL_R_CA_MD_TOO_WEAK before the handshake even starts.
-        # Samsung's device already has AC14K_M in its own trust store,
-        # so it can verify the leaf cert without us sending the chain.
-        ctx.use_certificate_file(self.cert_path, SSL.FILETYPE_PEM)
+        # @SECLEVEL=0 permits SHA-1 in Samsung's server cert chain (AC14K_M
+        # intermediate is SHA-1 signed). This is the only channel that reaches
+        # the OpenSSL instance cryptography bundles — ctypes and cffi bindings
+        # do not expose SSL_CTX_set_security_level on this build.
+        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256:@SECLEVEL=0')
+        ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
         ctx.check_privatekey()
 
@@ -307,15 +246,25 @@ class DtlsCoapSession:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(2.0)
         dest = (self.host, self.port)
+        logger.debug(
+            "DTLS handshake starting to %s:%d (timeout=%.1fs)",
+            self.host, self.port, self.HANDSHAKE_TIMEOUT_S,
+        )
 
         t0 = time.time()
+        iterations = 0
         while time.time() - t0 < self.HANDSHAKE_TIMEOUT_S:
+            iterations += 1
             try:
                 conn.do_handshake()
+                logger.debug(
+                    "DTLS handshake succeeded after %d iterations", iterations,
+                )
                 break
             except SSL.WantReadError:
                 pass
             except SSL.Error as e:
+                logger.debug("DTLS SSL.Error on iter %d: %s", iterations, e)
                 sock.close()
                 raise ConnectionError(f"DTLS handshake error: {e}") from e
             try:
@@ -333,6 +282,10 @@ class DtlsCoapSession:
                 pass
             time.sleep(0.05)
         else:
+            logger.debug(
+                "DTLS handshake timeout after %d iterations, elapsed=%.2fs",
+                iterations, time.time() - t0,
+            )
             sock.close()
             raise TimeoutError(
                 f"DTLS handshake timeout to {self.host}:{self.port}")
@@ -435,8 +388,8 @@ class DtlsCoapSession:
         with self._send_lock:
             if self.conn is None:
                 raise ConnectionError("DTLS session closed")
-            self.conn.send(datagram)
             try:
+                self.conn.send(datagram)
                 while True:
                     o = self.conn.bio_read(65535)
                     if not o:
@@ -564,6 +517,10 @@ class DtlsCoapSession:
             return
 
         # Stale token (post-reconnect or unknown) — drop quietly.
+        logger.debug(
+            "stale CoAP response: code=%s tok=%s mid=%04x",
+            fmt_code(code), tok.hex() or '-', mid,
+        )
 
     # ---- request primitives ------------------------------------------
 
@@ -577,6 +534,10 @@ class DtlsCoapSession:
         if self.conn is None:
             raise ConnectionError("DTLS session closed")
         tok = self._next_tok()
+        logger.debug(
+            "GET /%s token=%s timeout=%.1fs",
+            '/'.join(path_segs), tok.hex(), timeout,
+        )
         blob = b''
         num = 0
         last_code = None
@@ -598,8 +559,27 @@ class DtlsCoapSession:
                     build_coap(TYPE_CON, METHOD_GET, mid, tok, opts))
                 wait = max(0.1, deadline - time.time())
                 if not ev.wait(wait):
+                    logger.debug(
+                        "GET /%s block %d: timed out after %.2fs",
+                        '/'.join(path_segs), num, wait,
+                    )
                     raise TimeoutError(
                         f"GET /{'/'.join(path_segs)} block {num} timeout")
+                code_seen = container.get('code', 0)
+                # 4.01 = OCF cert/ACL rejection — surface at WARNING
+                # so it's visible without debug logging.
+                if code_seen == 0x81:
+                    logger.warning(
+                        "GET /%s → 4.01 Unauthorized",
+                        '/'.join(path_segs),
+                    )
+                else:
+                    logger.debug(
+                        "GET /%s block %d: %s (%d bytes)",
+                        '/'.join(path_segs), num,
+                        fmt_code(code_seen),
+                        len(container.get('payload', b'')),
+                    )
                 if 'err' in container:
                     raise ConnectionError(container['err'])
             finally:
