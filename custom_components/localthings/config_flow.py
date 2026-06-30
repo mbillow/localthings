@@ -9,8 +9,16 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
 from .const import DOMAIN, CONF_HOST, CONF_PORT, CONF_CERT_PEM, CONF_KEY_PEM, PROBE_PORTS
+
+_TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
+_MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -151,13 +159,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         if has_creds:
-            schema = vol.Schema({vol.Required(CONF_HOST): str})
+            schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
             reuse_note = "Certificate and key will be reused from the existing device."
         else:
             schema = vol.Schema({
-                vol.Required(CONF_HOST): str,
-                vol.Required(CONF_CERT_PEM): str,
-                vol.Required(CONF_KEY_PEM): str,
+                vol.Required(CONF_HOST): _TEXT,
+                vol.Required(CONF_CERT_PEM): _MULTILINE,
+                vol.Required(CONF_KEY_PEM): _MULTILINE,
             })
             reuse_note = ""
 
