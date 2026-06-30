@@ -1,5 +1,5 @@
-"""Samsung appliance local-API → MQTT bridge with HA discovery.
+"""Samsung appliance local-API library.
 
-Multi-device: dryer, oven, etc. Entities are discovered at connect-time
-from the live device resources via samsung_appliance.registry."""
+CoAP/DTLS session management, OCF batch resource parsing, and a
+capability registry for discovering and reading Samsung appliance state."""
 __version__ = "2.0.0"

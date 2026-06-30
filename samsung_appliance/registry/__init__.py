@@ -1,6 +1,5 @@
-from .adapter import RuntimeDescriptor, build_runtime_descriptor
+from .adapter import flatten, is_active, _key
 from .discovery import BoundEntity, discover
 from .registry import CAPABILITIES
 
-__all__ = ['CAPABILITIES', 'discover', 'BoundEntity',
-           'RuntimeDescriptor', 'build_runtime_descriptor']
+__all__ = ['CAPABILITIES', 'discover', 'BoundEntity', 'flatten', 'is_active', '_key']

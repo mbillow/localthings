@@ -1,0 +1,10 @@
+{
+  "domain": "localthings",
+  "name": "Local Things",
+  "version": "0.1.0",
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "requirements": ["cbor2>=5.4.6", "pyOpenSSL>=22.0.0"],
+  "dependencies": [],
+  "codeowners": []
+}
