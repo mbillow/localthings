@@ -5,7 +5,7 @@
 #   REMOTE_DIR  — compose project (source code, .env, docker-compose.yml)
 #                 Convention: /mnt/user/compose/samsung-bridge/
 #   APPDATA_DIR — bind-mount source for /config inside the container
-#                 (ab0b0ac4 client cert + key live here).
+#                 (client cert + key live here).
 #                 Convention: /mnt/user/appdata/samsung-bridge/
 #
 # The remote must already have the certs in $APPDATA_DIR. Run once
@@ -13,7 +13,7 @@
 #
 #   source .env
 #   ssh "$SSH_HOST" mkdir -p "$APPDATA_DIR"
-#   scp certs/ab0b0ac4_fullchain.pem certs/ab0b0ac4.key \
+#   scp certs/client_fullchain.pem certs/client.key \
 #       "$SSH_HOST:$APPDATA_DIR/"
 #
 # Subsequent deploys (this script) ship source code + .env only; the
@@ -63,13 +63,13 @@ ssh "${SSH_HOST}" "chmod 600 ${REMOTE_DIR}/.env"
 
 # Verify certs are present on the remote — they have to be uploaded
 # once before the first build.
-if ! ssh "${SSH_HOST}" "test -s ${APPDATA_DIR}/ab0b0ac4_fullchain.pem && test -s ${APPDATA_DIR}/ab0b0ac4.key"; then
+if ! ssh "${SSH_HOST}" "test -s ${APPDATA_DIR}/client_fullchain.pem && test -s ${APPDATA_DIR}/client.key"; then
     echo
-    echo "WARNING: ${APPDATA_DIR}/ab0b0ac4_fullchain.pem and ab0b0ac4.key not"
+    echo "WARNING: ${APPDATA_DIR}/client_fullchain.pem and client.key not"
     echo "found on the remote. The container will start but fail to"
     echo "connect to the appliance until you upload them, e.g.:"
     echo "  ssh ${SSH_HOST} mkdir -p ${APPDATA_DIR}"
-    echo "  scp certs/ab0b0ac4_fullchain.pem certs/ab0b0ac4.key ${SSH_HOST}:${APPDATA_DIR}/"
+    echo "  scp certs/client_fullchain.pem certs/client.key ${SSH_HOST}:${APPDATA_DIR}/"
     echo
 fi
 

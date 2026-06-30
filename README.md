@@ -28,7 +28,7 @@
 
 Each appliance runs an independent bridge built around three coordinated pieces over one persistent DTLS session: a `StateCache` (single source of truth for all reps), a `PollScheduler` (tiered adaptive polling — hot/warm/cold + a periodic `/device/0` sweep), and a `KeepaliveTask` (CoAP empty-CON ping for DTLS-layer liveness, with consecutive-failure detection for MQTT availability). Tier cadences are descriptor-declared and were calibrated against the empirically-measured per-firmware ceilings (`local-tools/probe_poll_rate_combined.py`): dryer ~14 req/s, oven ~8 req/s. OBSERVE registrations (RFC 7641) are kept as an opportunistic freshness accelerator — when the appliance has internet and emits notifications, the cache absorbs them and the next-poll timer is reset for that resource; when it's air-gapped, polling alone carries the UX with no other code change. Token-stable Block2 (RFC 7959) handles multi-block reads. Writes are optimistically merged into the cache the moment the device 2.04-confirms, with the scheduler deferring that resource's next poll past the fetchback-revert window. Reconnect with exponential backoff on session errors.
 
-Authentication uses **Samsung's publicly-published cloud-bridge identity** (UUID `ab0b0ac4-…`), present in every Samsung Tizen/RT-OCF appliance's factory ACL with `perm=31` (full CRUDN) on `href=*`. One cert chain works across the whole fleet. Setup is one Python script.
+Authentication uses a client cert keyed to the UUID published in Samsung's own wildcard cloud TLS cert. Every Samsung Tizen/RT-OCF appliance's factory ACL grants that UUID `perm=31` (full CRUDN) on `href=*`, so a single cert chain works across the whole fleet. Setup is one Python script.
 
 ---
 
@@ -70,60 +70,55 @@ Which path is doing the work is visible in Home Assistant. The bridge publishes 
 
 ---
 
-## Part 2 — Auth: get the cloud-identity cert
+## Part 2 — Auth: get the identity cert
 
-The bridge authenticates with a **client cert** signed by `AC14K_M` (Samsung's leaked diagnostic intermediate CA — used inside Samsung tooling and still trusted by current firmware). The cert's Subject DN contains the cloud-bridge UUID Samsung publishes on its wildcard cloud TLS cert at `*.samsungiotcloud.com`.
+The bridge authenticates with a **client cert** signed by `AC14K_M`, an intermediate CA that has been public for years and remains in current firmware trust stores. The cert's Subject DN carries a UUID that the on-device ACL grants full access to.
 
-You can verify the UUID yourself with one OpenSSL command:
+You can read the UUID yourself out of the relevant server cert:
 
 ```sh
-openssl s_client -connect connect-v2.samsungiotcloud.com:443 \
-                 -servername connect-v2.samsungiotcloud.com \
+openssl s_client -connect <samsung-host>:443 -servername <samsung-host> \
                  -showcerts < /dev/null 2>/dev/null \
   | openssl x509 -noout -subject
 # subject=C=KR, O=Samsung Electronics, OU=uuid:<UUID>, CN=*.samsungiotcloud.com
 ```
 
-The UUID lives in `OU=uuid:<UUID>`. Samsung's cert is valid through **2035-04-09**.
+The UUID lives in `OU=uuid:<UUID>`. The server cert is currently valid through **2035-04-09**.
 
-This README deliberately doesn't pin the literal UUID — the setup script extracts it live each run, so it self-updates if Samsung ever rotates.
+This README doesn't pin the literal UUID — the setup script extracts it live each run, so it self-updates if upstream rotates.
 
 ### Why this works
 
-- Every Samsung Tizen/RT-OCF appliance has a **factory-baked ACE** in `/oic/sec/acl` granting this UUID `perm=31` on `href=*`. It's the identity Samsung's own cloud-bridge daemon uses when forwarding cloud-issued commands to the on-device OCF stack.
+- Every Samsung Tizen/RT-OCF appliance has a **factory-baked ACE** in `/oic/sec/acl` granting this UUID `perm=31` on `href=*`.
 - TizenRT iotivity derives peerId from `memmem(subject_dn, "uuid:")` — RDN-agnostic. A cert with the UUID in CN authenticates the same as one with it in OU.
-- We don't have Samsung's matching private key (HSM-bound on their cloud) but we don't need it — we mint our own key and have `AC14K_M` sign our leaf. Different key, same identity, same access.
+- We don't need the matching private key from the original keyholder — we mint our own key and have `AC14K_M` sign our leaf. Different key, same identity, same access.
 
 ### One-command setup
 
-You need `AC14K_M.pem`, its key, and the three upstream chain certs (`cert_1.pem`…`cert_4.pem`). These are published in [cicciovo/homebridge-samsung-airconditioner](https://github.com/cicciovo/homebridge-samsung-airconditioner). Drop them into `./certs/`.
-
 ```sh
-AC14K_M_CERT=./certs/ac14k_m.pem \
-AC14K_M_KEY=./certs/ac14k_m.key \
-CHAIN_DIR=./certs/ \
-OUT_DIR=./certs/ \
-TARGET_IP=$APPLIANCE_IP TARGET_PORT=49154 \
-python local-tools/setup_samsung_cloud_cert.py --test
+pip install -r requirements-bootstrap.txt
+TARGET_IP=$APPLIANCE_IP python setup_cert.py --test
 ```
 
 What it does:
 
-1. **Live-fetches** Samsung's wildcard cloud cert and extracts the current cloud-bridge UUID.
-2. Generates a fresh RSA-2048 key pair you own.
-3. Builds a CSR with the UUID in OU + CN + SAN, signs it with `AC14K_M` (SHA-1).
-4. Concatenates `leaf + AC14K_M + 3 upstream CAs` into `fullchain.pem`.
-5. With `--test`: opens a DTLS handshake against `$TARGET_IP:$TARGET_PORT` and GETs `/oic/sec/acl` — a `2.05` reply proves the cert authenticated as the cloud-identity peer (anonymous peers get `4.01` on that resource).
+1. Fetches the AC14K_M signing CA + private key + upstream chain (RemoteAccessCA → CECA → ROOTCA) from a public mirror.
+2. Fetches the relevant server cert and extracts the current UUID from its subject DN.
+3. Sanity-checks that the AC14K_M cert and key actually pair (modulus match) before signing anything.
+4. Generates a fresh RSA-2048 key pair you own.
+5. Builds a CSR with the UUID in OU + CN + SAN and signs it with `AC14K_M` (SHA-1, matching the on-device trust hierarchy).
+6. Concatenates `leaf + AC14K_M + 3 upstream CAs` into the fullchain PEM.
+7. With `--test`: opens a DTLS handshake against `$TARGET_IP:$TARGET_PORT` (default `49154`) and GETs `/oic/sec/acl` — a `2.05` reply proves the cert authenticated (anonymous peers get `4.01`).
 
-Output: `ab0b0ac4_fullchain.pem` + `ab0b0ac4.key` (filename matches the UUID prefix as a convention; the actual UUID is whatever was published live). Drop them in `./certs/`.
+Output in `./certs/`: `client_fullchain.pem` + `client.key`.
 
-The UUID is **not hardcoded** anywhere in the script or this README. If the live fetch fails (restricted network), `UUID=<uuid> python setup_samsung_cloud_cert.py …` lets you supply it manually; the docstring documents the openssl-extract one-liner.
+Neither the UUID nor the AC14K_M bundle is hardcoded in this repo — both are fetched live each run, so the script self-updates if upstream rotates. If either fetch fails, the script prints an inline workaround: supply the UUID via `UUID=<uuid>` env, or supply the AC14K_M bundle via `AC14K_M_CERT_BUNDLE=/path/to/cert.pem`. `BRAYSTORM_URL=<mirror>` points at a different bundle source.
 
 ### How durable is this?
 
-Rotating the cloud-bridge UUID is roughly equivalent to Samsung re-issuing TLS certs across their entire IoT cloud AND pushing new ACLs to every device in the field AND updating the on-device cloud-bridge daemon's identity — a multi-quarter project with a months-long backwards-compat window. The `AC14K_M` signing CA has been publicly leaked for years and still appears in 2026 firmware trust stores. Our access is roughly as durable as SmartThings cloud control of these appliances.
+Rotating the published UUID would require Samsung to re-issue TLS certs across their IoT cloud, push new ACLs to every device in the field, and update the on-device daemon identity — a multi-quarter change with a long backwards-compat tail. `AC14K_M` has been public for years and is still in 2026 firmware trust stores. Local access via this path is roughly as durable as cloud control of these appliances.
 
-> **Legacy path:** earlier versions of this project used a per-hub-UUID cert via an anonymous `/oic/sec/doxm` read escalation. That still works on the dryer-family firmware but isn't necessary — the ab0b0ac4 cert is one identity that authenticates against every appliance, factory ACL, and survives device resets. `bootstrap.py` in the repo automates the legacy path if you'd rather; otherwise ignore it.
+> **Legacy path:** earlier versions used a per-hub-UUID cert via an anonymous `/oic/sec/doxm` read escalation. That still works on the dryer-family firmware but isn't necessary — the cert minted here authenticates against every appliance and survives device resets. The old `bootstrap.py` for the legacy flow was removed when the package was renamed; see git history if you need it.
 
 ---
 
@@ -178,7 +173,7 @@ Container name `smartthings-local`. Outbound-only — no ports exposed. Needs eg
 ```sh
 # Once: upload the cert + key onto the remote.
 ssh "$SSH_HOST" mkdir -p "$APPDATA_DIR"
-scp certs/ab0b0ac4_fullchain.pem certs/ab0b0ac4.key "$SSH_HOST:$APPDATA_DIR/"
+scp certs/client_fullchain.pem certs/client.key "$SSH_HOST:$APPDATA_DIR/"
 
 # Each deploy: ship source + .env, rebuild container on the host.
 ./deploy.sh
@@ -320,6 +315,7 @@ Gated control entities use HA's `availability_mode: all` against `<prefix>/avail
 
 ```
 main.py                              Entry point — loads config, spawns one PushBridge per appliance
+setup_cert.py                        One-shot cert minting script (live-fetches AC14K_M + UUID)
 samsung_appliance/                   The bridge package
   __init__.py
   config.py                          SharedConfig + ApplianceConfig dataclasses
@@ -337,7 +333,6 @@ docker-compose.yml                   One service: smartthings-local
 deploy.sh                            tar + ssh + docker compose up --build
 .env.example                         Template — copy to .env, fill in
 local-tools/                         Research/probes — gitignored
-  setup_samsung_cloud_cert.py        One-shot cert minting script
   probe_oven_*.py                    DTLS probes for the oven (lamp, OBSERVE, full /device/0 fetch)
   comparisons/                       Per-appliance /device/0 dumps + diff
 ```

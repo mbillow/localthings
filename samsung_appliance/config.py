@@ -62,8 +62,8 @@ class SharedConfig:
     @classmethod
     def from_env(cls) -> 'SharedConfig':
         return cls(
-            CERT_PATH=_resolve_cert('CERT_PATH', 'ab0b0ac4_fullchain.pem'),
-            KEY_PATH=_resolve_cert('KEY_PATH',  'ab0b0ac4.key'),
+            CERT_PATH=_resolve_cert('CERT_PATH', 'client_fullchain.pem'),
+            KEY_PATH=_resolve_cert('KEY_PATH',  'client.key'),
             MQTT_BROKER=os.getenv('MQTT_BROKER'),
             MQTT_PORT=int(os.getenv('MQTT_PORT', '1883')),
             MQTT_USER=os.getenv('MQTT_USER') or None,
