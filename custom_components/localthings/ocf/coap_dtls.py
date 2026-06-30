@@ -96,6 +96,12 @@ OBSERVE_DEREGISTER = bytes([1])    # deregister
 # will honour and the only one the probes have validated end-to-end.
 BLOCK_SZX = 6
 
+# Per-block retransmission: send up to this many times before giving up.
+# Each attempt waits at most _BLOCK_ACK_TIMEOUT seconds (capped by the
+# overall deadline). Matches RFC 7252 CON retransmit behaviour.
+_BLOCK_MAX_ATTEMPTS = 3
+_BLOCK_ACK_TIMEOUT  = 4.0
+
 
 def _vlen(v):
     """Variable-length integer encoder used in option deltas + lengths."""
@@ -565,50 +571,62 @@ class DtlsCoapSession:
         )
         blob = b''
         num = 0
+        szx = BLOCK_SZX   # server may negotiate down; track per-transfer
         last_code = None
         last_opts = []
         deadline = time.time() + timeout
         while True:
-            ev = threading.Event()
             container = {}
-            self._pending[tok] = (ev, container)
-            try:
-                mid = self._next_mid()
-                opts = [(URI_PATH, s.encode()) for s in path_segs]
-                for q in query:
-                    opts.append((URI_QUERY, q.encode()))
-                opts.append((ACCEPT, CF_CBOR))
-                if num > 0:
-                    opts.append((BLOCK2, block_value(num, 0, BLOCK_SZX)))
-                self._send_dgram(
-                    build_coap(TYPE_CON, METHOD_GET, mid, tok, opts))
-                wait = max(0.1, deadline - time.time())
-                if not ev.wait(wait):
+            for attempt in range(_BLOCK_MAX_ATTEMPTS):
+                ev = threading.Event()
+                container = {}
+                self._pending[tok] = (ev, container)
+                try:
+                    mid = self._next_mid()
+                    opts = [(URI_PATH, s.encode()) for s in path_segs]
+                    for q in query:
+                        opts.append((URI_QUERY, q.encode()))
+                    opts.append((ACCEPT, CF_CBOR))
+                    if num > 0:
+                        opts.append((BLOCK2, block_value(num, 0, szx)))
+                    self._send_dgram(
+                        build_coap(TYPE_CON, METHOD_GET, mid, tok, opts))
+                    per_wait = min(_BLOCK_ACK_TIMEOUT,
+                                   max(0.1, deadline - time.time()))
+                    if ev.wait(per_wait):
+                        break  # got a response
+                    remaining = deadline - time.time()
+                    if remaining <= 0 or attempt == _BLOCK_MAX_ATTEMPTS - 1:
+                        logger.debug(
+                            "GET /%s block %d: timed out after %d attempt(s)",
+                            '/'.join(path_segs), num, attempt + 1,
+                        )
+                        raise TimeoutError(
+                            f"GET /{'/'.join(path_segs)} block {num} timeout")
                     logger.debug(
-                        "GET /%s block %d: timed out after %.2fs",
-                        '/'.join(path_segs), num, wait,
-                    )
-                    raise TimeoutError(
-                        f"GET /{'/'.join(path_segs)} block {num} timeout")
-                code_seen = container.get('code', 0)
-                # 4.01 = OCF cert/ACL rejection — surface at WARNING
-                # so it's visible without debug logging.
-                if code_seen == 0x81:
-                    logger.warning(
-                        "GET /%s → 4.01 Unauthorized",
-                        '/'.join(path_segs),
-                    )
-                else:
-                    logger.debug(
-                        "GET /%s block %d: %s (%d bytes)",
+                        "GET /%s block %d: attempt %d/%d timeout, retrying",
                         '/'.join(path_segs), num,
-                        fmt_code(code_seen),
-                        len(container.get('payload', b'')),
+                        attempt + 1, _BLOCK_MAX_ATTEMPTS,
                     )
-                if 'err' in container:
-                    raise ConnectionError(container['err'])
-            finally:
-                self._pending.pop(tok, None)
+                finally:
+                    self._pending.pop(tok, None)
+            code_seen = container.get('code', 0)
+            # 4.01 = OCF cert/ACL rejection — surface at WARNING
+            # so it's visible without debug logging.
+            if code_seen == 0x81:
+                logger.warning(
+                    "GET /%s → 4.01 Unauthorized",
+                    '/'.join(path_segs),
+                )
+            else:
+                logger.debug(
+                    "GET /%s block %d: %s (%d bytes)",
+                    '/'.join(path_segs), num,
+                    fmt_code(code_seen),
+                    len(container.get('payload', b'')),
+                )
+            if 'err' in container:
+                raise ConnectionError(container['err'])
 
             code = container['code']
             payload = container['payload']
@@ -625,6 +643,13 @@ class DtlsCoapSession:
             if b2:
                 bv = int.from_bytes(b2[0], 'big')
                 more = (bv >> 3) & 1
+                server_szx = bv & 0x07
+                if server_szx != szx:
+                    logger.debug(
+                        "GET /%s: server negotiated SZX %d→%d (%d-byte blocks)",
+                        '/'.join(path_segs), szx, server_szx, 1 << (server_szx + 4),
+                    )
+                    szx = server_szx
             if not more:
                 break
             num += 1

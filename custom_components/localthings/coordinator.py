@@ -1,6 +1,7 @@
 """Coordinator for Local Things integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
@@ -158,10 +159,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             resources = await self.hass.async_add_executor_job(self._poll_once)
         except Exception as e:
-            # One reconnect attempt
+            # One reconnect attempt — pause briefly so the device can
+            # clean up its DTLS session state before we knock again.
             _LOGGER.warning("poll failed, reconnecting: %s", e)
+            await self.hass.async_add_executor_job(self._close_session)
+            await asyncio.sleep(5.0)
             try:
-                await self.hass.async_add_executor_job(self._close_session)
                 resources = await self.hass.async_add_executor_job(self._poll_once)
             except Exception as e2:
                 raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2

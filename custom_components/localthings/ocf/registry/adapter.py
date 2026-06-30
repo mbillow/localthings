@@ -14,12 +14,13 @@ def flatten(bound: list[BoundEntity], resources: dict) -> dict[str, Any]:
     """Map bound entities to their current scalar values."""
     out: dict[str, Any] = {}
     for b in bound:
-        if not b.desc.field:
-            continue
         rep = resources.get(b.href) or {}
         if b.desc.exists_fn is not None and not b.desc.exists_fn(rep):
             continue
-        out[_key(b)] = b.desc.value_fn(rep.get(b.desc.field))
+        if b.desc.rep_fn is not None:
+            out[_key(b)] = b.desc.rep_fn(rep)
+        elif b.desc.field:
+            out[_key(b)] = b.desc.value_fn(rep.get(b.desc.field))
     return out
 
 
