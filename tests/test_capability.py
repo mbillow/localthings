@@ -1,5 +1,5 @@
-from samsung_appliance.registry.capability import Capability
-from samsung_appliance.registry.entities import BinarySensorDesc
+from custom_components.localthings.ocf.registry.capability import Capability
+from custom_components.localthings.ocf.registry.entities import BinarySensorDesc
 
 
 def test_capability_defaults():

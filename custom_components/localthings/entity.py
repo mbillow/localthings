@@ -4,8 +4,8 @@ from __future__ import annotations
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from samsung_appliance.registry.adapter import _key
-from samsung_appliance.registry.discovery import BoundEntity
+from .ocf.registry.adapter import _key
+from .ocf.registry.discovery import BoundEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator

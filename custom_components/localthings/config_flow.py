@@ -26,8 +26,8 @@ def _probe_and_validate(host: str, cert_pem: str, key_pem: str) -> dict:
     to a temp-file pair and cleaned up in the finally block.
     """
     import cbor2
-    from samsung_appliance.coap_dtls import DtlsCoapSession
-    from samsung_appliance.batch import parse_device0_batch
+    from .ocf.coap_dtls import DtlsCoapSession
+    from .ocf.batch import parse_device0_batch
 
     # Write PEM strings to temporary files — DtlsCoapSession requires
     # cert_path / key_path rather than in-memory PEM strings.

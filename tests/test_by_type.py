@@ -1,6 +1,6 @@
 """Tests for samsung_appliance/registry/by_type."""
 import pytest
-from samsung_appliance.registry.by_type import _type_key, for_device, DeviceRegistry
+from custom_components.localthings.ocf.registry.by_type import _type_key, for_device, DeviceRegistry
 
 
 class TestTypeKey:

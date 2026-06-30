@@ -52,7 +52,7 @@ ENTRY_DATA = {
 
 
 def _load_fridge_resources() -> dict:
-    from samsung_appliance.batch import parse_device0_batch
+    from custom_components.localthings.ocf.batch import parse_device0_batch
     data = json.loads((FIXTURES / 'refrigerator_device.json').read_text())
     return parse_device0_batch(data['device0'])
 

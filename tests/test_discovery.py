@@ -1,8 +1,8 @@
-from samsung_appliance.registry.capability import Capability
-from samsung_appliance.registry.discovery import (
+from custom_components.localthings.ocf.registry.capability import Capability
+from custom_components.localthings.ocf.registry.discovery import (
     BoundEntity, discover, instance_suffix,
 )
-from samsung_appliance.registry.entities import BinarySensorDesc
+from custom_components.localthings.ocf.registry.entities import BinarySensorDesc
 
 LOCK = Capability(
     href='/kidslock/vs/0',
