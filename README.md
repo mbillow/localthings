@@ -332,9 +332,6 @@ Dockerfile                           Container build (python:3.11-slim + 3 deps)
 docker-compose.yml                   One service: smartthings-local
 deploy.sh                            tar + ssh + docker compose up --build
 .env.example                         Template — copy to .env, fill in
-local-tools/                         Research/probes — gitignored
-  probe_oven_*.py                    DTLS probes for the oven (lamp, OBSERVE, full /device/0 fetch)
-  comparisons/                       Per-appliance /device/0 dumps + diff
 ```
 
 `certs/` is gitignored. Drop the privileged client cert + key there; the container mounts that directory read-only at `/config`.
