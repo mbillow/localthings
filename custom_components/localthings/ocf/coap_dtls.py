@@ -228,12 +228,19 @@ class DtlsCoapSession:
     def connect(self):
         """DTLS handshake. Blocks up to HANDSHAKE_TIMEOUT_S. Raises
         ConnectionError / TimeoutError on failure."""
+        # X509_V_ERR_CA_MD_TOO_WEAK (66): OpenSSL 3.x SECLEVEL=2 rejects
+        # SHA-1 signed CA certs. Samsung's OCF Root CA is SHA-1 signed.
+        # We explicitly allow this one error while still enforcing everything
+        # else (chain trust, expiry, key usage). @SECLEVEL=1 in the cipher
+        # string is also set but DTLS_METHOD may not honour it in all builds.
+        _CA_MD_TOO_WEAK = 66
+
+        def _verify(conn, cert, errnum, depth, ok):
+            return True if errnum == _CA_MD_TOO_WEAK else ok
+
         ctx = SSL.Context(SSL.DTLS_METHOD)
         ctx.load_verify_locations(_OCF_ROOT_CA)
-        ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
-        # SECLEVEL=1 (80-bit) allows the Samsung OCF Root CA which is SHA-1
-        # signed. SECLEVEL=2 (the OpenSSL 3.x default) rejects SHA-1 in the
-        # cert chain entirely, which kills CA verification on connect.
+        ctx.set_verify(SSL.VERIFY_PEER, _verify)
         ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256@SECLEVEL=1')
         ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
