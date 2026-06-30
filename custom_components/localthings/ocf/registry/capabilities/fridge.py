@@ -34,9 +34,10 @@ def _int(v):
 TEMP_CURRENT_GENERIC = Capability(
     href=None,
     href_prefix='/temperature/current/',
+    strip_prefix_in_key=True,
     poll_tier='warm',
     entities=(
-        SensorDesc(key='temp_f', field='temperature',
+        SensorDesc(key='temperature', field='temperature',
                    name=None, icon='mdi:thermometer',
                    device_class='temperature', unit='°F',
                    state_class='measurement'),
@@ -46,9 +47,10 @@ TEMP_CURRENT_GENERIC = Capability(
 TEMP_SETPOINT_GENERIC = Capability(
     href=None,
     href_prefix='/temperature/desired/',
+    strip_prefix_in_key=True,
     poll_tier='warm',
     entities=(
-        NumberDesc(key='temp_f', field='temperature',
+        NumberDesc(key='setpoint', field='temperature',
                    name=None, device_class='temperature', unit='°F',
                    native_min=-20.0, native_max=50.0,
                    range_field='range',
@@ -110,19 +112,6 @@ DOORS_STATUS = Capability(
                 for it in (items or [])
             ),
         ),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Ice maker status (exact-href — binds before ICEMAKER_GENERIC pattern)
-# ---------------------------------------------------------------------------
-
-ICEMAKER_STATUS = Capability(
-    href='/icemaker/status/vs/0',
-    poll_tier='warm',
-    entities=(
-        SensorDesc(key='ice_maker_enabled', field='x.com.samsung.da.iceMaker',
-                   name='Ice maker enabled', icon='mdi:snowflake'),
     ),
 )
 
@@ -190,11 +179,6 @@ CABINET_LIGHT = Capability(
     href='/cabinet/light/total/vs/0',
     poll_tier='warm',
     entities=(
-        SensorDesc(key='cabinet_light', field='x.com.samsung.da.lightControl',
-                   name='Cabinet light level', icon='mdi:fridge-outline'),
-        BinarySensorDesc(key='cabinet_light_on', field='x.com.samsung.da.lightControl',
-                         name='Cabinet light on', icon='mdi:fridge-outline',
-                         value_fn=lambda v: v == 'On'),
         SwitchDesc(key='cabinet_light_switch', field='x.com.samsung.da.lightControl',
                    name='Cabinet light', icon='mdi:fridge-outline',
                    value_fn=lambda v: v == 'On',

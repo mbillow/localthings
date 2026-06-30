@@ -68,8 +68,9 @@ def discover(
             if cap.match_fn is not None and not cap.match_fn(rep, resources):
                 continue
             inst = instance_suffix(href)
-            # Auto-derive key prefix from href: strip digits, join non-empty segs with '_'
-            segs = [s for s in href.strip('/').split('/') if s and not s.isdigit() and s != 'vs']
+            # Auto-derive key prefix from href segments (skip digits and 'vs')
+            src = href[len(cap.href_prefix):] if (cap.strip_prefix_in_key and cap.href_prefix) else href
+            segs = [s for s in src.strip('/').split('/') if s and not s.isdigit() and s != 'vs']
             for desc in cap.entities:
                 key_override = '_'.join(segs) + '_' + desc.key
                 out.append(BoundEntity(href=href, capability=cap, desc=desc,

@@ -28,7 +28,7 @@ async def async_setup_entry(
 
 class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
-    _attr_mode = NumberMode.BOX
+    _attr_mode = NumberMode.SLIDER
 
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)

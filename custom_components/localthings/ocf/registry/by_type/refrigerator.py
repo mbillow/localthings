@@ -12,7 +12,6 @@ REGISTRY = DeviceRegistry(
         common.ENERGY_METER,
         common.WATER_FILTER,
         fridge.DOORS_STATUS,
-        fridge.ICEMAKER_STATUS,
         fridge.REFRIGERATION,
         fridge.AUTOFILL,
         fridge.CABINET_LIGHT,
