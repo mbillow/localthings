@@ -10,7 +10,7 @@ from .ocf.registry.entities import SelectDesc
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity
+from .entity import LocalThingsEntity, _is_included
 
 
 async def async_setup_entry(
@@ -19,21 +19,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-
-    def _include(b) -> bool:
-        if not isinstance(b.desc, SelectDesc):
-            return False
-        # Skip at registration time if exists_fn says the entity isn't present
-        if b.desc.exists_fn is not None:
-            rep = coordinator.last_resources.get(b.href) or {}
-            if not b.desc.exists_fn(rep):
-                return False
-        return True
-
     async_add_entities(
         LocalThingsSelect(coordinator, b)
         for b in coordinator.bound
-        if _include(b)
+        if isinstance(b.desc, SelectDesc) and _is_included(b, coordinator)
     )
 
 

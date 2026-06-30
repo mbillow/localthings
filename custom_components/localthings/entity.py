@@ -14,6 +14,21 @@ from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 
 
+def _is_included(bound: BoundEntity, coordinator: 'LocalThingsCoordinator') -> bool:
+    """Return False if the entity should not be registered for this device.
+
+    Explicit exists_fn takes priority. Otherwise, if the entity has a field,
+    require that field to be present in the resource rep so that optional
+    fields on shared resources don't create phantom entities.
+    """
+    rep = coordinator.last_resources.get(bound.href) or {}
+    if bound.desc.exists_fn is not None:
+        return bound.desc.exists_fn(rep)
+    if bound.desc.field:
+        return bound.desc.field in rep
+    return True  # rep_fn or no-field entities (ButtonDesc) are always included
+
+
 def _derive_name(state_key: str) -> str:
     """Turn a snake_case state key into a title-cased display name.
 
