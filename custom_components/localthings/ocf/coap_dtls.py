@@ -231,7 +231,10 @@ class DtlsCoapSession:
         ctx = SSL.Context(SSL.DTLS_METHOD)
         ctx.load_verify_locations(_OCF_ROOT_CA)
         ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
-        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256')
+        # SECLEVEL=1 (80-bit) allows the Samsung OCF Root CA which is SHA-1
+        # signed. SECLEVEL=2 (the OpenSSL 3.x default) rejects SHA-1 in the
+        # cert chain entirely, which kills CA verification on connect.
+        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256@SECLEVEL=1')
         ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
         ctx.check_privatekey()
