@@ -36,3 +36,6 @@ local-tools/
 
 # Claude Code per-project state (permissions allowlist, etc.)
 .claude/
+
+# HA dev instance — persisted config and secrets
+ha_config/
