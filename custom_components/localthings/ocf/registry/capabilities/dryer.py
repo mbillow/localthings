@@ -77,7 +77,11 @@ DRYER_COURSE = Capability(
     entities=(
         SelectDesc(key='dryer_mode', field='x.com.samsung.da.st.dryerMode',
                    name='Dryer mode', icon='mdi:tumble-dryer',
-                   options=(), write_fn=_course_write),
+                   options=tuple(_COURSE_CODE_BY_NAME),
+                   value_fn=lambda v: _COURSE_NAMES.get(
+                       int(v.split('_')[1], 16) if isinstance(v, str) and '_' in v else -1
+                   ),
+                   write_fn=_course_write),
     ),
 )
 

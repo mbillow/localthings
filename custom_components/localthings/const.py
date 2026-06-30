@@ -1,6 +1,6 @@
 DOMAIN = "localthings"
 
-PLATFORMS = ["sensor", "binary_sensor", "switch", "number", "select"]
+PLATFORMS = ["sensor", "binary_sensor", "switch", "number", "select", "button"]
 
 CONF_HOST         = "host"
 CONF_PORT         = "port"
