@@ -33,6 +33,30 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _set_security_level(ctx: SSL.Context, level: int) -> None:
+    """Call SSL_CTX_set_security_level on an OpenSSL context.
+
+    pyOpenSSL >= 24.0.0 exposes this directly; older builds require a cffi
+    call into the underlying cryptography bindings.
+    """
+    if hasattr(ctx, 'set_security_level'):
+        ctx.set_security_level(level)
+        return
+    try:
+        from OpenSSL._util import lib as _lib
+        _lib.SSL_CTX_set_security_level(ctx._context, level)
+    except AttributeError:
+        # Last resort: ctypes — works regardless of pyOpenSSL/cffi bindings.
+        import ctypes, ctypes.util
+        from OpenSSL._util import ffi as _ffi
+        _libssl = ctypes.CDLL(ctypes.util.find_library('ssl'))
+        _libssl.SSL_CTX_set_security_level.restype = None
+        _libssl.SSL_CTX_set_security_level.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        _libssl.SSL_CTX_set_security_level(
+            int(_ffi.cast('uintptr_t', ctx._context)), level
+        )
+
+
 # Diagnostic logging — when DEBUG_BRIDGE=1 in env, the bridge dumps
 # every received CoAP frame, every /operational/state/vs/0 + /oven/vs/0
 # + /power/vs/0 + /mode/vs/0-options rep change, the full link tree at
@@ -228,20 +252,19 @@ class DtlsCoapSession:
     def connect(self):
         """DTLS handshake. Blocks up to HANDSHAKE_TIMEOUT_S. Raises
         ConnectionError / TimeoutError on failure."""
-        # X509_V_ERR_CA_MD_TOO_WEAK (66): OpenSSL 3.x SECLEVEL=2 rejects
-        # SHA-1 signed CA certs. Samsung's OCF Root CA is SHA-1 signed.
-        # We explicitly allow this one error while still enforcing everything
-        # else (chain trust, expiry, key usage). @SECLEVEL=1 in the cipher
-        # string is also set but DTLS_METHOD may not honour it in all builds.
-        _CA_MD_TOO_WEAK = 66
-
-        def _verify(conn, cert, errnum, depth, ok):
-            return True if errnum == _CA_MD_TOO_WEAK else ok
-
         ctx = SSL.Context(SSL.DTLS_METHOD)
+
+        # The AC14K_M intermediate CA in our client cert chain is SHA-1
+        # signed; Samsung's OCF Root CA is SHA-1 self-signed. OpenSSL 3.x
+        # SECLEVEL=2 rejects SHA-1 in any cert it processes — including
+        # the LOCAL chain we're sending — raising SSL_R_CA_MD_TOO_WEAK
+        # before the verify callback is ever reached.
+        # Must be called before loading any certs.
+        _set_security_level(ctx, 1)
+
         ctx.load_verify_locations(_OCF_ROOT_CA)
-        ctx.set_verify(SSL.VERIFY_PEER, _verify)
-        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256@SECLEVEL=1')
+        ctx.set_verify(SSL.VERIFY_PEER, lambda conn, cert, err, depth, ok: ok)
+        ctx.set_cipher_list(b'ECDHE-ECDSA-AES128-GCM-SHA256')
         ctx.use_certificate_chain_file(self.cert_path)
         ctx.use_privatekey_file(self.key_path)
         ctx.check_privatekey()
