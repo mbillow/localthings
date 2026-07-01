@@ -36,10 +36,11 @@ def _ml_to_l(v):
     return round(n / 1000.0, 1) if n is not None else None
 
 
-def _last_alarm_code(items):
-    if items and isinstance(items, list):
-        return items[-1].get('x.com.samsung.da.code')
-    return None
+def _active_alarm_codes(items):
+    if not items or not isinstance(items, list):
+        return 'none'
+    codes = [i.get('x.com.samsung.da.code') for i in items if i.get('x.com.samsung.da.code')]
+    return ', '.join(codes) if codes else 'none'
 
 
 KIDS_LOCK = Capability(
@@ -77,7 +78,7 @@ ALARMS = Capability(
     entities=(
         SensorDesc(key='alarm_code', field='x.com.samsung.da.items',
                    name='Alarm code', icon='mdi:alert',
-                   entity_category='diagnostic', value_fn=_last_alarm_code),
+                   entity_category='diagnostic', value_fn=_active_alarm_codes),
     ),
 )
 
