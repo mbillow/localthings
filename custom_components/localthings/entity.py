@@ -20,11 +20,19 @@ def _is_included(bound: BoundEntity, coordinator: 'LocalThingsCoordinator') -> b
     Explicit exists_fn takes priority. Otherwise, if the entity has a field,
     require that field to be present in the resource rep so that optional
     fields on shared resources don't create phantom entities.
+
+    An empty rep ({}) means /device/0 returned a stub for this resource —
+    the resource exists on the device but data hasn't been fetched yet.
+    In that case we include the entity so it can be populated by sub-polls.
     """
-    rep = coordinator.last_resources.get(bound.href) or {}
+    rep = coordinator.last_resources.get(bound.href)
+    if rep is None:
+        return False
     if bound.desc.exists_fn is not None:
         return bound.desc.exists_fn(rep)
     if bound.desc.field:
+        if not rep:  # stub — resource known to exist, data not yet fetched
+            return True
         return bound.desc.field in rep
     return True  # rep_fn or no-field entities (ButtonDesc) are always included
 
