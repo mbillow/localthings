@@ -18,12 +18,12 @@ from .ocf.coap_dtls import DtlsCoapSession
 from .ocf.registry.by_type import for_device
 from .ocf.registry.discovery import discover, BoundEntity
 from .ocf.registry import CAPABILITIES
-from .ocf.registry.adapter import flatten, is_active
+from .ocf.registry.adapter import flatten
 from .ocf.registry.identity import read_identity, DeviceIdentity
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
-    ACTIVE_INTERVAL_S, IDLE_INTERVAL_S,
+    SUMMARY_INTERVAL_S,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.data[CONF_HOST]}",
-            update_interval=timedelta(seconds=IDLE_INTERVAL_S),
+            update_interval=timedelta(seconds=SUMMARY_INTERVAL_S),
         )
         self._entry = entry
         self._session: DtlsCoapSession | None = None
@@ -57,6 +57,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"Samsung Appliance ({entry.data[CONF_HOST]})",
             manufacturer="Samsung",
         )
+        self._session_lock = asyncio.Lock()
+        self._subpoll_task: asyncio.Task | None = None
+        self._hot_hrefs: list[str] = []
+        self._warm_hrefs: list[str] = []
 
     # ------------------------------------------------------------------
     # Session management (all blocking — must run in executor)
@@ -93,6 +97,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 pass
 
     async def async_close(self) -> None:
+        if self._subpoll_task is not None:
+            self._subpoll_task.cancel()
+            self._subpoll_task = None
         await self.hass.async_add_executor_job(self._close_session)
 
     def _poll_once(self) -> dict[str, dict]:
@@ -113,6 +120,59 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception as e:
             raise RuntimeError(f"poll cbor decode: {e}") from e
         return parse_device0_batch(body) if isinstance(body, list) else {}
+
+    def _poll_hrefs_blocking(self, hrefs: list[str]) -> dict[str, dict]:
+        """GET individual hrefs sequentially. Does not reconnect on failure. Blocking."""
+        if self._session is None:
+            return {}
+        results = {}
+        first = True
+        for href in hrefs:
+            if not first:
+                self._session.pace()
+            first = False
+            try:
+                path = [s for s in href.strip('/').split('/')]
+                code, payload = self._session.get(path, timeout=10.0)
+                if code == 0x45 and payload:
+                    rep = cbor2.loads(payload)
+                    if isinstance(rep, dict):
+                        results[href] = rep
+            except Exception as e:
+                _LOGGER.debug("sub-poll %s: %s", href, e)
+        return results
+
+    # ------------------------------------------------------------------
+    # Sub-poll loop (runs between summary polls)
+    # ------------------------------------------------------------------
+
+    async def _run_subpolls(self) -> None:
+        """Poll hot/warm hrefs in the gaps between summary polls.
+
+        Schedule over a SUMMARY_INTERVAL_S window:
+          hot hrefs  every slot  (10x, ~3 s apart)
+          warm hrefs every other slot (5x, ~6 s apart)
+        The lock prevents overlap with the summary poll or a concurrent sub-poll.
+        """
+        hot = self._hot_hrefs
+        warm = self._warm_hrefs
+        if not hot and not warm:
+            return
+        step = SUMMARY_INTERVAL_S / 10  # 3.0 s
+        for i in range(1, 10):          # slots 1..9  (T+3 s … T+27 s)
+            await asyncio.sleep(step)
+            hrefs = list(hot) + (list(warm) if i % 2 == 0 else [])
+            async with self._session_lock:
+                try:
+                    updates = await self.hass.async_add_executor_job(
+                        self._poll_hrefs_blocking, hrefs
+                    )
+                except Exception as e:
+                    _LOGGER.debug("sub-poll batch failed: %s", e)
+                    continue
+            if updates:
+                self._last_resources.update(updates)
+                self.async_set_updated_data(flatten(self.bound, self._last_resources))
 
     # ------------------------------------------------------------------
     # Discovery (runs once on first successful poll)
@@ -148,37 +208,56 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             manufacturer=mfr,
             model=model,
         )
+        hot, warm = set(), set()
+        for be in bound:
+            tier = be.capability.poll_tier
+            if tier == 'hot':
+                hot.add(be.href)
+            elif tier == 'warm':
+                warm.add(be.href)
+        self._hot_hrefs = sorted(hot)
+        self._warm_hrefs = sorted(warm)
+
         self._discovered = True
-        _LOGGER.info("discovered %d entities (serial=%s)", len(bound), serial)
+        _LOGGER.info(
+            "discovered %d entities (serial=%s) hot=%s warm=%s",
+            len(bound), serial, self._hot_hrefs, self._warm_hrefs,
+        )
 
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
     # ------------------------------------------------------------------
 
     async def _async_update_data(self) -> dict[str, Any]:
-        try:
-            resources = await self.hass.async_add_executor_job(self._poll_once)
-        except Exception as e:
-            # One reconnect attempt — pause briefly so the device can
-            # clean up its DTLS session state before we knock again.
-            _LOGGER.warning("poll failed, reconnecting: %s", e)
-            await self.hass.async_add_executor_job(self._close_session)
-            await asyncio.sleep(5.0)
+        # Stop any in-flight sub-poll before taking the session lock.
+        if self._subpoll_task is not None:
+            self._subpoll_task.cancel()
+            self._subpoll_task = None
+
+        async with self._session_lock:
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
-            except Exception as e2:
-                raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
+            except Exception as e:
+                # One reconnect attempt — pause briefly so the device can
+                # clean up its DTLS session state before we knock again.
+                _LOGGER.warning("poll failed, reconnecting: %s", e)
+                await self.hass.async_add_executor_job(self._close_session)
+                await asyncio.sleep(5.0)
+                try:
+                    resources = await self.hass.async_add_executor_job(self._poll_once)
+                except Exception as e2:
+                    raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
 
         self._last_resources = resources
 
         if not self._discovered:
             self._run_discovery(resources)
 
-        # Adjust polling interval dynamically
-        active = is_active(self.bound, resources)
-        self.update_interval = timedelta(
-            seconds=ACTIVE_INTERVAL_S if active else IDLE_INTERVAL_S
-        )
+        # Schedule sub-polls for hot/warm hrefs between summary polls.
+        if self._hot_hrefs or self._warm_hrefs:
+            self._subpoll_task = self.hass.async_create_task(
+                self._run_subpolls(), name="localthings_subpoll"
+            )
 
         return flatten(self.bound, resources)
 

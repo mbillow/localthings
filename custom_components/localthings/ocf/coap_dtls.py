@@ -102,6 +102,13 @@ BLOCK_SZX = 6
 _BLOCK_MAX_ATTEMPTS = 3
 _BLOCK_ACK_TIMEOUT  = 4.0
 
+# Inter-request pacing: minimum seconds between CoAP CON sends on one session.
+# Samsung's RT-OCF stacks drop requests when hit faster than their firmware
+# ceiling (dryer ~14 req/s, oven ~8 req/s, dishwasher unknown). 5 req/s
+# (200 ms) is conservative enough for all tested devices; tune per device
+# once the ceiling is measured empirically.
+_DEFAULT_RATE_LIMIT_RPS = 5.0
+
 
 def _vlen(v):
     """Variable-length integer encoder used in option deltas + lengths."""
@@ -222,13 +229,15 @@ class DtlsCoapSession:
     MAX_BLOCKS = 32              # safety bound for Block2 fetches
 
     def __init__(self, host, port, cert_pem, key_pem,
-                 on_notification=None, mtu=1200):
+                 on_notification=None, mtu=1200,
+                 rate_limit_rps: float = _DEFAULT_RATE_LIMIT_RPS):
         self.host = host
         self.port = port
         self.cert_pem = cert_pem
         self.key_pem  = key_pem
         self.on_notification = on_notification  # fn(href, payload_bytes)
         self.mtu = mtu
+        self._min_req_interval = 1.0 / rate_limit_rps
 
         self.sock = None
         self.conn = None
@@ -253,6 +262,10 @@ class DtlsCoapSession:
 
         self._stop = threading.Event()
         self._reader_thread = None
+
+    def pace(self) -> None:
+        """Sleep one rate-limit interval. Uses _stop so session teardown wakes it."""
+        self._stop.wait(self._min_req_interval)
 
     # ---- lifecycle ---------------------------------------------------
 
@@ -566,8 +579,8 @@ class DtlsCoapSession:
             raise ConnectionError("DTLS session closed")
         tok = self._next_tok()
         logger.debug(
-            "GET /%s token=%s timeout=%.1fs",
-            '/'.join(path_segs), tok.hex(), timeout,
+            "GET %s /%s token=%s timeout=%.1fs",
+            self.host, '/'.join(path_segs), tok.hex(), timeout,
         )
         blob = b''
         num = 0
@@ -576,6 +589,8 @@ class DtlsCoapSession:
         last_opts = []
         deadline = time.time() + timeout
         while True:
+            if num > 0:
+                self.pace()
             container = {}
             for attempt in range(_BLOCK_MAX_ATTEMPTS):
                 ev = threading.Event()
@@ -598,14 +613,14 @@ class DtlsCoapSession:
                     remaining = deadline - time.time()
                     if remaining <= 0 or attempt == _BLOCK_MAX_ATTEMPTS - 1:
                         logger.debug(
-                            "GET /%s block %d: timed out after %d attempt(s)",
-                            '/'.join(path_segs), num, attempt + 1,
+                            "GET %s /%s block %d: timed out after %d attempt(s)",
+                            self.host, '/'.join(path_segs), num, attempt + 1,
                         )
                         raise TimeoutError(
                             f"GET /{'/'.join(path_segs)} block {num} timeout")
                     logger.debug(
-                        "GET /%s block %d: attempt %d/%d timeout, retrying",
-                        '/'.join(path_segs), num,
+                        "GET %s /%s block %d: attempt %d/%d timeout, retrying",
+                        self.host, '/'.join(path_segs), num,
                         attempt + 1, _BLOCK_MAX_ATTEMPTS,
                     )
                 finally:
@@ -620,8 +635,8 @@ class DtlsCoapSession:
                 )
             else:
                 logger.debug(
-                    "GET /%s block %d: %s (%d bytes)",
-                    '/'.join(path_segs), num,
+                    "GET %s /%s block %d: %s (%d bytes)",
+                    self.host, '/'.join(path_segs), num,
                     fmt_code(code_seen),
                     len(container.get('payload', b'')),
                 )

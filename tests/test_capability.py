@@ -5,7 +5,7 @@ from custom_components.localthings.ocf.registry.entities import BinarySensorDesc
 def test_capability_defaults():
     c = Capability(href='/kidslock/vs/0',
                    entities=(BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock'),))
-    assert c.poll_tier == 'warm'
+    assert c.poll_tier == 'cold'
     assert c.active_when is None
     assert len(c.entities) == 1
 

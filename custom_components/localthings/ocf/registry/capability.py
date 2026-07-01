@@ -11,7 +11,7 @@ from .entities import SamsungEntityDescription
 class Capability:
     href: Optional[str] = None
     entities: tuple[SamsungEntityDescription, ...] = ()
-    poll_tier: str = 'warm'                  # 'hot' | 'warm' | 'cold'
+    poll_tier: str = 'cold'                  # 'hot' | 'warm' | 'cold'
     rt_filter: Optional[str] = None          # bind only if rt_filter in rep.get('rt', ())
     href_prefix: Optional[str] = None        # pattern caps only: bind only if href starts with this
     strip_prefix_in_key: bool = False         # strip href_prefix segs before building key_override

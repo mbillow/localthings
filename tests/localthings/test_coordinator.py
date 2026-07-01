@@ -8,7 +8,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.localthings.const import (
-    ACTIVE_INTERVAL_S, DOMAIN, IDLE_INTERVAL_S,
+    DOMAIN, SUMMARY_INTERVAL_S,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 
@@ -42,15 +42,15 @@ async def test_device_info_populated(
     )
 
 
-async def test_idle_interval_by_default(
+async def test_summary_interval(
     hass: HomeAssistant, mock_entry, mock_coordinator_session
 ) -> None:
-    """Interval defaults to idle when no active_when fires."""
+    """Summary poll interval is always SUMMARY_INTERVAL_S."""
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
 
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
-    assert coordinator.update_interval == timedelta(seconds=IDLE_INTERVAL_S)
+    assert coordinator.update_interval == timedelta(seconds=SUMMARY_INTERVAL_S)
 
 
 async def test_update_failed_on_persistent_poll_error(
