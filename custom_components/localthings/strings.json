@@ -3,7 +3,8 @@
     "sensor": {
       "ice_making_status": {
         "state": {
-          "ICESTATUS_STOP": "Idle"
+          "ICESTATUS_STOP": "Idle",
+          "ICESTATUS_RUN": "Making ice"
         }
       }
     },
