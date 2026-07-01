@@ -11,7 +11,7 @@ against live device dumps:
   /filter/waterfilter/vs/0  -> x.com.samsung.da.filterUsage / filterStatus
 """
 from ..capability import Capability
-from ..entities import SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
 
 
 def _num(v):
@@ -58,13 +58,10 @@ KIDS_LOCK = Capability(
 REMOTE_CONTROL = Capability(
     href='/remotectrl/vs/0',
     entities=(
-        SwitchDesc(key='remote_control',
-                   field='x.com.samsung.da.remoteControlEnabled',
-                   name='Remote control', device_class='connectivity',
-                   value_fn=lambda v: str(v).lower() == 'true',
-                   write_fn=lambda p, rep, href=None: (
-                       ['remotectrl', 'vs', '0'],
-                       {'x.com.samsung.da.remoteControlEnabled': 'true' if p == 'On' else 'false'})),
+        BinarySensorDesc(key='remote_control',
+                         field='x.com.samsung.da.remoteControlEnabled',
+                         name='Smart Control', device_class='connectivity',
+                         value_fn=lambda v: str(v).lower() == 'true'),
     ),
 )
 
@@ -112,6 +109,7 @@ WATER_METER = Capability(
 
 WATER_FILTER = Capability(
     href='/filter/waterfilter/vs/0',
+    match_fn=lambda rep, _: rep.get('x.com.samsung.da.filterStatus', '').lower() != 'notused',
     entities=(
         SensorDesc(key='filter_usage', field='x.com.samsung.da.filterUsage',
                    name='Filter usage', unit='%', state_class='measurement',

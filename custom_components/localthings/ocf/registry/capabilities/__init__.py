@@ -1,4 +1,4 @@
-from . import common, fridge, laundry, operational, oven
+from . import common, dishwasher, fridge, laundry, operational, oven
 from ..capability import Capability
 
 

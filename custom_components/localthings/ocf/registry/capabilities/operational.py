@@ -64,18 +64,33 @@ OPERATIONAL_STATE = Capability(
         # cycle_active is a bool derived from machine_state; used by the
         # adapter to gate oven writes (cycle_active_field='cycle_active').
         # Harmless for non-oven appliances — just an extra bool in state.
-        BinarySensorDesc(key='cycle_active', field='x.com.samsung.da.state',
-                         name='Cycle active', device_class='running',
-                         value_fn=lambda v: _SAMSUNG_STATE_TO_OCF.get(v) == 'active'),
-        SensorDesc(key='progress', field='x.com.samsung.da.progress',
-                   name='Progress', icon='mdi:progress-wrench', value_fn=_progress),
+        # Samsung firmware keeps state='Run' after progress reaches 'Finish',
+        # so we also gate on progress to avoid a stuck 'Running' indication.
+        BinarySensorDesc(key='cycle_active', device_class='running',
+                         name='Cycle active',
+                         rep_fn=lambda rep: (
+                             _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
+                             and rep.get('x.com.samsung.da.progress') != 'Finish'
+                         )),
+        SensorDesc(key='progress', name='Progress', icon='mdi:progress-wrench',
+                   rep_fn=lambda rep: (
+                       'Idle' if _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) != 'active'
+                       else _progress(rep.get('x.com.samsung.da.progress'))
+                   )),
         SensorDesc(key='progress_percentage',
                    field='x.com.samsung.da.progressPercentage',
                    name='Progress percent', unit='%', state_class='measurement',
                    value_fn=_int),
-        SensorDesc(key='finish_time', field='x.com.samsung.da.remainingTime',
-                   name='Estimated finish', device_class='timestamp',
-                   value_fn=_finish_time),
+        # Only show finish time when machine is actively running. Samsung
+        # firmware leaves a stale remainingTime after a cycle ends, and
+        # freezes it at '00:01:00' when progress reaches 'Finish'.
+        SensorDesc(key='finish_time', device_class='timestamp',
+                   name='Estimated finish',
+                   rep_fn=lambda rep: (
+                       None if _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) != 'active'
+                            or rep.get('x.com.samsung.da.progress') == 'Finish'
+                       else _finish_time(rep.get('x.com.samsung.da.remainingTime'))
+                   )),
         TimeDesc(key='delay_start_time', field='x.com.samsung.da.delayStartTime',
                  name='Delay start',
                  value_fn=_parse_hms,
