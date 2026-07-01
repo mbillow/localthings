@@ -246,6 +246,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 try:
                     resources = await self.hass.async_add_executor_job(self._poll_once)
                 except Exception as e2:
+                    _LOGGER.error("poll failed after reconnect: %s", e2)
+                    if self._last_resources:
+                        _LOGGER.debug("Full error:", exc_info=e2)
+                        return flatten(self.bound, self._last_resources)
                     raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
 
         self._last_resources = resources

@@ -11,7 +11,7 @@ against live device dumps:
   /filter/waterfilter/vs/0  -> x.com.samsung.da.filterUsage / filterStatus
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
+from ..entities import SensorDesc, SwitchDesc
 
 
 def _num(v):
@@ -46,19 +46,25 @@ def _active_alarm_codes(items):
 KIDS_LOCK = Capability(
     href='/kidslock/vs/0',
     entities=(
-        BinarySensorDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
-                         name='Child lock', device_class='lock',
-                         value_fn=lambda v: v != 'Ready'),
+        SwitchDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
+                   name='Child lock', device_class='lock',
+                   value_fn=lambda v: v != 'Ready',
+                   write_fn=lambda p, rep, href=None: (
+                       ['kidslock', 'vs', '0'],
+                       {'x.com.samsung.da.kidsLock': 'Enable' if p == 'On' else 'Ready'})),
     ),
 )
 
 REMOTE_CONTROL = Capability(
     href='/remotectrl/vs/0',
     entities=(
-        BinarySensorDesc(key='remote_control',
-                         field='x.com.samsung.da.remoteControlEnabled',
-                         name='Remote control', device_class='connectivity',
-                         value_fn=lambda v: str(v).lower() == 'true'),
+        SwitchDesc(key='remote_control',
+                   field='x.com.samsung.da.remoteControlEnabled',
+                   name='Remote control', device_class='connectivity',
+                   value_fn=lambda v: str(v).lower() == 'true',
+                   write_fn=lambda p, rep, href=None: (
+                       ['remotectrl', 'vs', '0'],
+                       {'x.com.samsung.da.remoteControlEnabled': 'true' if p == 'On' else 'false'})),
     ),
 )
 

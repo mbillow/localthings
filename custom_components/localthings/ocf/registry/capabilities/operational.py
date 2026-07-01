@@ -2,10 +2,10 @@
 
 Shared by dryer/dishwasher/oven/washer families.
 """
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time as dt_time
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, ButtonDesc, SensorDesc
+from ..entities import BinarySensorDesc, ButtonDesc, SensorDesc, TimeDesc
 
 _SAMSUNG_STATE_TO_OCF = {
     'Ready': 'idle', 'Run': 'active', 'Running': 'active',
@@ -30,6 +30,16 @@ def _int(v):
 
 def _active_when(rep):
     return _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
+
+
+def _parse_hms(v):
+    if not v:
+        return None
+    try:
+        h, m, s = v.split(':')
+        return dt_time(int(h) % 24, int(m), int(s))
+    except Exception:
+        return None
 
 
 def _finish_time(remaining_str):
@@ -66,8 +76,12 @@ OPERATIONAL_STATE = Capability(
         SensorDesc(key='finish_time', field='x.com.samsung.da.remainingTime',
                    name='Estimated finish', device_class='timestamp',
                    value_fn=_finish_time),
-        SensorDesc(key='delay_start_time', field='x.com.samsung.da.delayStartTime',
-                   name='Delay start time', icon='mdi:timer-pause'),
+        TimeDesc(key='delay_start_time', field='x.com.samsung.da.delayStartTime',
+                 name='Delay start',
+                 value_fn=_parse_hms,
+                 write_fn=lambda p, rep, href=None: (
+                     ['operational', 'state', 'vs', '0'],
+                     {'x.com.samsung.da.delayStartTime': f'{p.hour}:{p.minute:02d}:{p.second:02d}'})),
         ButtonDesc(key='start', field='', name='Start cycle', payload='Run',
                    icon='mdi:play',
                    write_fn=lambda p, rep, href=None: (
