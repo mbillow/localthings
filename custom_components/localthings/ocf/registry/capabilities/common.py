@@ -73,6 +73,7 @@ POWER = Capability(
 
 ALARMS = Capability(
     href='/alarms/vs/0',
+    poll_tier='hot',
     entities=(
         SensorDesc(key='alarm_code', field='x.com.samsung.da.items',
                    name='Alarm code', icon='mdi:alert',
