@@ -22,7 +22,7 @@ _start_open.md). Mode writes are also unreliable — the oven rolls them back
 once a cycle is active. OVEN_MODE is provided as a SelectDesc for fidelity
 but is effectively read-only in practice.
 """
-import time
+from datetime import datetime, timezone, timedelta
 
 from ..capability import Capability
 from ..entities import (
@@ -76,12 +76,15 @@ def _int(v):
         return None
 
 
-def _rem_minutes(remaining):
-    if not remaining:
+def _finish_time(remaining_str):
+    if not remaining_str:
         return None
     try:
-        h, m, s = remaining.split(':')
-        return int(h) * 60 + int(m) + (1 if int(s) > 0 else 0)
+        h, m, s = remaining_str.split(':')
+        total_s = int(h) * 3600 + int(m) * 60 + int(s)
+        if total_s == 0:
+            return None
+        return datetime.now(timezone.utc) + timedelta(seconds=total_s)
     except Exception:
         return None
 
@@ -211,37 +214,8 @@ def _naturalsteam_write(p, rep, href=None):
 
 
 # ---------------------------------------------------------------------------
-# on_observation / project for remaining-time extrapolation
-# ---------------------------------------------------------------------------
-
 def _active_when(rep):
     return _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
-
-
-def _on_observation(state, rep):
-    rem = rep.get('x.com.samsung.da.remainingTime')
-    if not isinstance(rem, str):
-        return
-    try:
-        h, m, s = rem.split(':')
-        state['remaining_anchor'] = (time.time(),
-                                     int(h) * 3600 + int(m) * 60 + int(s))
-    except (ValueError, AttributeError):
-        pass
-
-
-def _project(state, sensors):
-    anchor = state.get('remaining_anchor')
-    if sensors.get('machine_state') != 'active' or anchor is None:
-        return sensors
-    ts, total = anchor
-    remaining = max(0, int(total - (time.time() - ts)))
-    h, rest = divmod(remaining, 3600)
-    m, s = divmod(rest, 60)
-    sensors = dict(sensors)
-    sensors['completion_time'] = f"{h}:{m:02d}:{s:02d}"
-    sensors['completion_minutes'] = h * 60 + m + (1 if s > 0 else 0)
-    return sensors
 
 
 # ---------------------------------------------------------------------------
@@ -252,8 +226,6 @@ OVEN_OPERATIONAL_STATE = Capability(
     href='/operational/state/vs/0',
     poll_tier='hot',
     active_when=_active_when,
-    on_observation=_on_observation,
-    project=_project,
     entities=(
         SensorDesc(key='machine_state', field='x.com.samsung.da.state',
                    name='Machine state', icon='mdi:stove', value_fn=_to_ocf),
@@ -268,11 +240,9 @@ OVEN_OPERATIONAL_STATE = Capability(
                    field='x.com.samsung.da.operationTime',
                    name='Operation time (minutes)', unit='min',
                    state_class='measurement', value_fn=_op_minutes),
-        SensorDesc(key='completion_time', field='x.com.samsung.da.remainingTime',
-                   name='Completion time', icon='mdi:timer-sand'),
-        SensorDesc(key='completion_minutes', field='x.com.samsung.da.remainingTime',
-                   name='Remaining minutes', unit='min', device_class='duration',
-                   state_class='measurement', value_fn=_rem_minutes),
+        SensorDesc(key='finish_time', field='x.com.samsung.da.remainingTime',
+                   name='Estimated finish', device_class='timestamp',
+                   value_fn=_finish_time),
         NumberDesc(key='cook_time', field='x.com.samsung.da.operationTime',
                    name='Cook time', unit='min', native_min=0, native_max=1439,
                    step=1.0, icon='mdi:timer', value_fn=_op_minutes,
