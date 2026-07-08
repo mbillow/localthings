@@ -128,6 +128,17 @@ docker-compose.yml / ha_config/    Local HA dev environment
 
 ---
 
+## Reporting a capability gap
+
+If your appliance's type isn't recognized, or it exposes resources this integration doesn't model yet, a Repairs
+issue appears under Settings > System > Repairs pointing you at Settings > Devices & Services > this device >
+the menu > Download diagnostics. That download is already redacted of account/network identifiers (Bixby login
+email, access tokens, device IDs, MAC addresses, serial numbers) before it's generated, so it's safe to attach
+directly to a new issue using the linked device-support template. This is the fastest way to help add or expand
+support for hardware the maintainers don't have.
+
+---
+
 ## Adding a new appliance type
 
 1. Capture the appliance's `/device/0` response to see what resources/fields it exposes. An authenticated `DtlsCoapSession` from `smartthings_local.protocol.dtls_session` GET is enough; `local-tools/probe_device.py` wraps this.

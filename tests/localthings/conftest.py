@@ -69,7 +69,7 @@ def fridge_resources():
 
 @pytest.fixture
 def mock_probe():
-    """Patch _probe_and_validate to succeed without a real DTLS connection."""
+    """Patch _probe_and_validate to succeed (recognized type) without a real DTLS connection."""
     with patch(
         'custom_components.localthings.config_flow._probe_and_validate',
         return_value={
@@ -77,6 +77,25 @@ def mock_probe():
             'serial': MOCK_SERIAL,
             'leaf_cert_pem': MOCK_LEAF_CERT_PEM,
             'leaf_key_pem': MOCK_LEAF_KEY_PEM,
+            'one_ui_version': '7.0 Refrigerator',
+            'device_type_recognized': True,
+        },
+    ) as m:
+        yield m
+
+
+@pytest.fixture
+def mock_probe_unknown_type():
+    """Patch _probe_and_validate to succeed, but with an unrecognized device type."""
+    with patch(
+        'custom_components.localthings.config_flow._probe_and_validate',
+        return_value={
+            'port': MOCK_PORT,
+            'serial': MOCK_SERIAL,
+            'leaf_cert_pem': MOCK_LEAF_CERT_PEM,
+            'leaf_key_pem': MOCK_LEAF_KEY_PEM,
+            'one_ui_version': '9.0 Space Heater',
+            'device_type_recognized': False,
         },
     ) as m:
         yield m

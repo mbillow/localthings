@@ -125,6 +125,7 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     import cbor2
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
     from .registry.batch import parse_device0_batch
+    from .registry.by_type import for_device
 
     _LOGGER.debug("Fetching Samsung cloud UUID from %s", _SAMSUNG_CLOUD_HOST)
     try:
@@ -170,11 +171,21 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
             )
             if not serial:
                 serial = f"{host}:{port}"
+            one_ui_version = (
+                resources
+                .get('/otninformation/vs/0', {})
+                .get('swVersionInfo', {})
+                .get('oneUiVersion', '')
+            )
             return {
                 "port": port,
                 "serial": serial,
                 "leaf_cert_pem": fullchain_pem,
                 "leaf_key_pem": leaf_key_pem,
+                "one_ui_version": one_ui_version,
+                "device_type_recognized": bool(
+                    one_ui_version and for_device(one_ui_version) is not None
+                ),
             }
         except CannotConnect:
             raise
@@ -197,6 +208,20 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._host: str = ""
         self._ca_cert_pem: str = ""
         self._ca_key_pem: str = ""
+        self._pending_info: dict | None = None
+
+    def _create_entry(self, info: dict) -> FlowResult:
+        return self.async_create_entry(
+            title=f"Samsung Appliance ({self._host})",
+            data={
+                CONF_HOST:          self._host,
+                CONF_PORT:          info["port"],
+                CONF_CA_CERT_PEM:   self._ca_cert_pem,
+                CONF_CA_KEY_PEM:    self._ca_key_pem,
+                CONF_LEAF_CERT_PEM: info["leaf_cert_pem"],
+                CONF_LEAF_KEY_PEM:  info["leaf_key_pem"],
+            },
+        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -232,17 +257,10 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 await self.async_set_unique_id(f"localthings_{info['serial']}")
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=f"Samsung Appliance ({self._host})",
-                    data={
-                        CONF_HOST:          self._host,
-                        CONF_PORT:          info["port"],
-                        CONF_CA_CERT_PEM:   self._ca_cert_pem,
-                        CONF_CA_KEY_PEM:    self._ca_key_pem,
-                        CONF_LEAF_CERT_PEM: info["leaf_cert_pem"],
-                        CONF_LEAF_KEY_PEM:  info["leaf_key_pem"],
-                    },
-                )
+                if info["device_type_recognized"]:
+                    return self._create_entry(info)
+                self._pending_info = info
+                return await self.async_step_confirm_unknown_type()
 
         if has_creds:
             schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
@@ -260,4 +278,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
             description_placeholders={"reuse_note": reuse_note},
+        )
+
+    async def async_step_confirm_unknown_type(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Shown only when the probe already knows the device type is unrecognized."""
+        if user_input is not None:
+            return self._create_entry(self._pending_info)
+
+        return self.async_show_form(
+            step_id="confirm_unknown_type",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "one_ui_version": self._pending_info["one_ui_version"] or "(none reported)",
+            },
         )

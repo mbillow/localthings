@@ -75,6 +75,42 @@ async def test_cannot_connect(hass: HomeAssistant) -> None:
     assert result['errors']['base'] == 'cannot_connect'
 
 
+async def test_recognized_type_skips_confirmation_step(
+    hass: HomeAssistant, mock_probe
+) -> None:
+    """A recognized device type creates the entry with no extra step."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'],
+        {CONF_HOST: MOCK_HOST, CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM, CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM},
+    )
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+
+
+async def test_unknown_type_shows_confirmation_step(
+    hass: HomeAssistant, mock_probe_unknown_type
+) -> None:
+    """An unrecognized device type shows a confirmation step before creating the entry."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'],
+        {CONF_HOST: MOCK_HOST, CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM, CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM},
+    )
+    assert result['type'] == FlowResultType.FORM
+    assert result['step_id'] == 'confirm_unknown_type'
+    assert result['description_placeholders']['one_ui_version'] == '9.0 Space Heater'
+
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'], {},
+    )
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+    assert result['data'][CONF_HOST] == MOCK_HOST
+
+
 async def test_duplicate_device_aborted(hass: HomeAssistant, mock_probe) -> None:
     """Second add of same serial: flow aborts.
 

@@ -1,0 +1,31 @@
+name: Device support / capability gap
+description: Report an appliance type that wasn't recognized, or one that's missing some capabilities
+labels: ["device-support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping expand device coverage. The most useful thing you can attach here is a diagnostics
+        download: Settings > Devices & Services > this device > the menu (top right) > Download diagnostics.
+        It's already redacted of account/network identifiers before it's generated.
+  - type: input
+    id: model
+    attributes:
+      label: Appliance model
+      description: The model number or product name, if known (e.g. from a label on the appliance or its manual)
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: What's missing or wrong
+      description: What entities are missing, or what behavior didn't match what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics file
+      description: Drag and drop the downloaded diagnostics JSON file here
+    validations:
+      required: false

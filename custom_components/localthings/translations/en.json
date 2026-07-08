@@ -63,6 +63,10 @@
           "ca_cert_pem": "The PEM-encoded AC14K_M CA certificate chain. Paste the full contents of your fullchain PEM including all BEGIN/END CERTIFICATE blocks.",
           "ca_key_pem": "The PEM-encoded AC14K_M private key. Paste the full contents including the BEGIN/END PRIVATE KEY header and footer."
         }
+      },
+      "confirm_unknown_type": {
+        "title": "Appliance type not recognized",
+        "description": "This appliance reported oneUiVersion \"{one_ui_version}\", which isn't a recognized type. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
       }
     },
     "error": {
@@ -72,6 +76,12 @@
     },
     "abort": {
       "already_configured": "This device is already configured."
+    }
+  },
+  "issues": {
+    "device_gap": {
+      "title": "Incomplete capability coverage for {device_name}",
+      "description": "This device is missing full capability coverage. Either its appliance type wasn't recognized, or some of the resources it exposes aren't modeled yet. It'll keep working with whatever is already supported. You can help expand support by going to Settings > Devices & Services > {device_name} > the menu (top right) > Download diagnostics, then filing it with the linked issue template."
     }
   }
 }
