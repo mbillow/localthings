@@ -47,16 +47,13 @@ nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
 
 ## Part 2 — One-time: get the AC14K_M CA credentials
 
-The integration authenticates with a client cert chained to `AC14K_M`, an intermediate CA that's been public for years and remains in current firmware trust stores. Every Samsung Tizen/RT-OCF appliance's factory ACL grants the identity in that chain full CRUDN access, so the same CA can mint a working cert for any appliance on your LAN — HA does the per-device minting itself once you give it the CA.
+The config flow (Part 3) needs a **CA certificate and CA private key** to mint each device's leaf cert itself. Specifically, it needs the `AC14K_M` intermediate CA: a cert chain that's been public for years and still ships in current Samsung firmware trust stores. It's required because every Samsung Tizen/RT-OCF appliance's factory ACL grants full CRUDN access (`perm=31` on `href=*`) to whatever identity is chained to that CA — so a cert signed by it is the one thing that lets HA talk to your appliance without Samsung's cloud in the loop. HA doesn't need the *device's* original cert or key, just something `AC14K_M` has signed, and it mints that itself once you give it the CA.
 
-```sh
-pip install -r requirements-bootstrap.txt
-python setup_cert.py
-```
+This repo doesn't vendor a script to fetch that CA bundle — the canonical way to obtain it lives in the `smartthings-local` protocol project:
 
-This fetches the AC14K_M CA cert + key + upstream chain from a public mirror and writes them to `./certs/ac14k_m.pem` and `./certs/ac14k_m.key`. Nothing device-specific happens at this step — no IP, no handshake needed. (Pass `--test` with `TARGET_IP=<appliance-ip>` set if you want to sanity-check connectivity against a real device before touching HA at all.)
+**[`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py)**
 
-If the live fetch fails, the script prints an inline workaround: supply `AC14K_M_CERT_BUNDLE=/path/to/cert.pem`, or point `BRAYSTORM_URL=<mirror>` at an alternate source.
+Run that script (see its own usage docs) to fetch and verify the AC14K_M cert + key. It writes `ac14k_m.pem` (cert) and `ac14k_m.key` (key) — paste the contents of both into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once; every appliance you add afterward reuses the same stored CA.
 
 ### Why this works
 
@@ -129,8 +126,6 @@ custom_components/localthings/
       by_type/                    One DeviceRegistry per appliance type, composed from capabilities/
 tests/                            80+ tests: registry composition, discovery, entity descriptors,
                                    golden-file regression against captured device dumps
-setup_cert.py                     One-shot AC14K_M CA bundle fetcher (Part 2)
-requirements-bootstrap.txt         Deps for setup_cert.py only
 requirements-dev.txt               Test deps, including the smartthings-local package
 docker-compose.yml / ha_config/    Local HA dev environment
 ```

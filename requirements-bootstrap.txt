@@ -1,4 +1,0 @@
-# Setup-only deps for setup_cert.py: shells out to `openssl` for SHA-1
-# signing (independent of python-cryptography's policy) and uses
-# pyOpenSSL for the optional --test DTLS handshake.
--r requirements.txt
