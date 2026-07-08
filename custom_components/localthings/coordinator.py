@@ -13,8 +13,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import DeviceInfo
 
+from smartthings_local.protocol.dtls_session import DtlsCoapSession
+
 from .ocf.batch import parse_device0_batch
-from .ocf.coap_dtls import DtlsCoapSession
 from .ocf.registry.by_type import for_device
 from .ocf.registry.discovery import discover, BoundEntity
 from .ocf.registry import CAPABILITIES

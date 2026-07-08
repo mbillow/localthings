@@ -1,385 +1,159 @@
-# SmartThings-Local
+# Local Things
 
-**Local-first Home Assistant integration for newer-generation Samsung connected appliances.** One process supervises multiple appliances (dryer + oven currently), each over its own CoAP-DTLS session, publishing state + writes through MQTT with HA auto-discovery — no SmartThings cloud round-trip for any of it.
+**A native Home Assistant custom integration for local control of newer-generation Samsung connected appliances.** No cloud round-trip, no MQTT broker, no separate bridge process — add a device through HA's normal *Settings → Devices & Services* flow and it talks CoAP-over-DTLS straight to the appliance on your LAN.
 
-<img width="778" height="367" alt="image" src="https://github.com/user-attachments/assets/cc1dca15-f272-4625-a13c-2dc82283ff95" />
-
-
-> ### Proof of concept — collaborators wanted
+> ### Where things live
 >
-> This is working code running in my home and I rely on it daily, but it's a **proof of concept**, not a polished product. No unit tests; one person's hardware as the validation set (one dryer model, one oven model); hand-rolled MQTT-based integration instead of a proper HA custom component; "wired-but-untested" comments scattered through the oven descriptor; brittle to per-firmware quirks (the "oven doesn't push OBSERVE on options writes" finding is the kind of thing that needs ongoing care).
+> This project split into two repos partway through development:
 >
-> **I would love for someone to take this further and build a proper HA integration out of it.** All the protocol research is done — DTLS auth via Samsung's published cloud identity, token-stable Block2 reads, OBSERVE-then-fetchback notifications, write semantics, the optimistic-publish-then-verify pattern, brick-avoiding resource boundaries — and the descriptor pattern is the seed of a clean per-appliance abstraction. The HA-side polish that's missing is custom-component shape: config flow, native entity classes, async-Python DTLS instead of MQTT round-trips, error surfacing into HA's notification system, support across more firmware versions, and someone who actually lives in the HA codebase.
+> - **[`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local)** (PyPI package) — the reusable protocol layer: DTLS session handling, CoAP wire encoding, Block2 reads, bounded retry/retransmit, inter-request rate limiting, cert-chain validation. No HA dependency; usable from any Python project.
+> - **This repo** — the Home Assistant integration built on top of it: config flow, a per-device-type capability registry, the polling coordinator, and all the HA entity classes.
 >
-> If you're that person, get in touch — happy to co-author, hand off, or hand over entirely.
+> `custom_components/localthings/manifest.json` pulls in `smartthings-local` from PyPI like any other HA integration dependency.
 
 ### What you get
 
-- **Multi-appliance, one container.** Single Docker service holds N DTLS sessions in parallel, one per appliance, sharing one MQTT client. Adding an appliance class is ~150 lines and one descriptor file.
-- **Bounded state latency.** Hot-tier resources (job state, door, operational state) refresh on a sub-second cadence regardless of whether the appliance has internet. Worst-case lag is the tier interval (≤1s idle, ≤500ms during an active cycle on the dryer).
-- **Writes that work**: dryer Start/Pause/Stop, course selection, wrinkle prevent; oven lamp (light entity), sound, fast preheat, setpoint slider, mode select, stop.
-- **Optimistic publish + verify**: HA sees the new value the instant the device 2.04-confirms the write; the PollScheduler verifies on its next tier tick (after a 4s defer past Samsung's fetchback-revert window).
-- **HA Energy Dashboard ready** (dryer): live watts + cumulative kWh as `total_increasing`.
-- **Bridge logs tagged per-appliance** with `<class>.<serial>` once each device's serial is read on connect — `dryer.<serial>` vs `oven.<serial>` interleaved in the same log stream, easy to grep.
-- **Zero HA YAML.** Every entity is auto-discovered via MQTT discovery.
-- **Your state stays on your LAN.** Bridge → broker → HA. Samsung's cloud sees nothing from HA. *(The appliance still maintains its own TLS session to Samsung — appliance design, not ours.)*
+- **Auto-detected device type.** Add a host + your CA credentials in the UI; the integration reads the appliance's `oneUiVersion` and picks the matching capability registry (dryer, oven, dishwasher, refrigerator) itself. No per-model descriptor to write for a new unit of a type that's already supported.
+- **One-time credential setup, then it's just "add integration."** The first device you add asks for the AC14K_M CA cert + key (see Part 2). Every device after that reuses the same stored CA credentials — the config flow mints a fresh per-device leaf cert automatically and only asks for the host IP.
+- **Standard HA entities**, not a hand-rolled dashboard: `sensor`, `binary_sensor`, `switch`, `number`, `select`, `button`, and `time` platforms, all backed by a single `DataUpdateCoordinator`-driven poller per device.
+- **Capability registry, not a monolith.** Each appliance family's resources (power, kids lock, remote control, alarms, energy/water meters, cycle state, per-family settings) are declared once as `Capability` objects keyed on the stable OCF resource `href`, verified against live device dumps.
+- **Stale-state resilience.** A failed poll doesn't blank out entities — the coordinator falls back to the last-known state rather than flapping devices to `unavailable`.
+- **Your state stays on your LAN.** HA ↔ appliance is a direct DTLS session; Samsung's cloud sees nothing from this integration. *(The appliance still maintains its own connection to Samsung — that's appliance firmware behavior, not something this integration does or can prevent.)*
 
-### Under the hood
+### Supported appliance types
 
-Each appliance runs an independent bridge built around three coordinated pieces over one persistent DTLS session: a `StateCache` (single source of truth for all reps), a `PollScheduler` (tiered adaptive polling — hot/warm/cold + a periodic `/device/0` sweep), and a `KeepaliveTask` (CoAP empty-CON ping for DTLS-layer liveness, with consecutive-failure detection for MQTT availability). Tier cadences are descriptor-declared and were calibrated against the empirically-measured per-firmware ceilings: dryer ~14 req/s, oven ~8 req/s. OBSERVE registrations (RFC 7641) are kept as an opportunistic freshness accelerator — when the appliance has internet and emits notifications, the cache absorbs them and the next-poll timer is reset for that resource; when it's air-gapped, polling alone carries the UX with no other code change. Token-stable Block2 (RFC 7959) handles multi-block reads. Writes are optimistically merged into the cache the moment the device 2.04-confirms, with the scheduler deferring that resource's next poll past the fetchback-revert window. Reconnect with exponential backoff on session errors.
+| Type | Registry | Notable capabilities |
+|---|---|---|
+| Dryer | `by_type/dryer.py` | Power, kids lock, remote control, alarms, energy meter, operational state, door LED, sound mode, dryer settings/course, job-beginning status, diagnosis, firmware-update sensor |
+| Oven | `by_type/oven.py` | Power, kids lock, remote control, alarms, cavity state, setpoint, mode, operational state, door, connectivity, firmware-update sensor |
+| Dishwasher | `by_type/dishwasher.py` | Power, kids lock, remote control, alarms, energy + water meters, water filter, operational state, cycle options/settings, door LED, sound mode/volume, firmware-update sensor |
+| Refrigerator | `by_type/refrigerator.py` | Power, kids lock, remote control, alarms, energy meter, water filter, status lock, door alert, icemaker (nighttime + generic per-compartment), flex zone, refrigeration mode, autofill, welcome/cabinet lighting, Sabbath mode, beverage zone, plus pattern-matched per-compartment temperature/setpoint/icemaker/door capabilities for multi-cavity fridges, firmware-update sensor |
 
-Authentication uses a client cert keyed to the UUID published in Samsung's own wildcard cloud TLS cert. Every Samsung Tizen/RT-OCF appliance's factory ACL grants that UUID `perm=31` (full CRUDN) on `href=*`, so a single cert chain works across the whole fleet. Setup is one Python script.
+Other Tizen RT / DAWIT-family appliances almost certainly speak the same protocol underneath (the auth path and CoAP primitives are shared across the fleet) — adding a new type is a new `by_type/<name>.py` registry file, not a protocol reverse-engineering project. See **Adding a new appliance type** below.
 
 ---
 
 ## Part 1 — Is your appliance compatible?
-
-Check before anything else; if it's older firmware, this project doesn't target it.
 
 ```sh
 # UDP scan for DTLS-CoAP ports
 nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
 ```
 
-Read the result:
-
-- **`49154/udp` (or similar 4915x) open|filtered with a DTLS handshake responding** → newer firmware (Tizen RT 3.x with DAWIT 3.0). This is what the bridge talks to.
+- **`49154/udp` or `49155/udp` open|filtered with a DTLS handshake responding** → newer firmware (Tizen RT 3.x, DAWIT 3.0+). This is what the integration talks to. The config flow probes both ports automatically — you don't need to know which one your device uses.
 - **Only `8888/tcp` open (token-based HTTPS)** → older firmware (~2018–2022). **Not supported here.**
 
-### Tested combinations
-
-| Appliance class | Model family | Confirmed |
-|---|---|---|
-| Dryer | DV5000T (`DA_WM_TP2_20_COMMON`, `mnid=0AJT`) | All entities, ≤1s hot-tier poll (OBSERVE accelerates when online) |
-| Oven | NV7000BS-class (`TP1X_DA-KS-OVEN-0107X`, `mnid=0AJT`) | All entities; hot-tier poll covers door + operational state regardless of cloud reachability |
-
-Other appliances on the same firmware family (washers, dishwashers, AC units) almost certainly speak the same protocol — the auth path and read primitives are common. You'd write one new descriptor in `samsung_appliance/appliances/`.
-
 ---
 
-## How the app keeps in sync with the appliance
+## Part 2 — One-time: get the AC14K_M CA credentials
 
-There are two parallel paths between the appliance and the app over the local CoAP-DTLS socket:
-
-- **Push (OBSERVE).** When the appliance can reach Samsung's cloud, it emits a CoAP OBSERVE notification on the LAN socket within ~100ms of any state change — cycle start, door open, mode flip. The notification travels over the LAN; nothing about the push itself routes via Samsung. **But** the appliance's decision to emit it at all is gated inside its cloud-publish thread. Block the appliance from the internet and the LAN OBSERVE pushes stop, even though the LAN path itself is unaffected and the appliance still answers reads + accepts writes normally.
-- **Polling.** The app always polls a small tier of hot resources (operational state, door, etc.) on a sub-second cadence, a warmer tier (mode, kidslock, alarms, …) every 15–30 s, and a full `/device/0` sweep every 5 minutes. This carries the UX regardless of whether OBSERVE is firing.
-
-In normal operation both happen at once: an OBSERVE notification arrives first, the cache absorbs it, and the next-poll timer for that resource is reset. In an air-gapped LAN the app keeps working — only the worst-case freshness changes (from ~100 ms with push to ≤1 s on hot-tier resources via polling). Reads, writes, and HA entities behave identically.
-
-Which path is doing the work is visible in Home Assistant. The bridge publishes per-appliance diagnostic entities including **Push Active** (on while OBSERVE is firing), **Last Update Source** (`observe` / `poll` / `sweep` / `optimistic`), **Last OBSERVE Age**, **Poll Max RTT**, **Slow Polls (window)**, **Poll Errors (window)**, and **Stalest Resource Age** — all under each device's Diagnostic section.
-
----
-
-## Part 2 — Auth: get the identity cert
-
-The bridge authenticates with a **client cert** signed by `AC14K_M`, an intermediate CA that has been public for years and remains in current firmware trust stores. The cert's Subject DN carries a UUID that the on-device ACL grants full access to.
-
-You can read the UUID yourself out of the relevant server cert:
-
-```sh
-openssl s_client -connect <samsung-host>:443 -servername <samsung-host> \
-                 -showcerts < /dev/null 2>/dev/null \
-  | openssl x509 -noout -subject
-# subject=C=KR, O=Samsung Electronics, OU=uuid:<UUID>, CN=*.samsungiotcloud.com
-```
-
-The UUID lives in `OU=uuid:<UUID>`. The server cert is currently valid through **2035-04-09**.
-
-This README doesn't pin the literal UUID — the setup script extracts it live each run, so it self-updates if upstream rotates.
-
-### Why this works
-
-- Every Samsung Tizen/RT-OCF appliance has a **factory-baked ACE** in `/oic/sec/acl` granting this UUID `perm=31` on `href=*`.
-- TizenRT iotivity derives peerId from `memmem(subject_dn, "uuid:")` — RDN-agnostic. A cert with the UUID in CN authenticates the same as one with it in OU.
-- We don't need the matching private key from the original keyholder — we mint our own key and have `AC14K_M` sign our leaf. Different key, same identity, same access.
-
-### One-command setup
+The integration authenticates with a client cert chained to `AC14K_M`, an intermediate CA that's been public for years and remains in current firmware trust stores. Every Samsung Tizen/RT-OCF appliance's factory ACL grants the identity in that chain full CRUDN access, so the same CA can mint a working cert for any appliance on your LAN — HA does the per-device minting itself once you give it the CA.
 
 ```sh
 pip install -r requirements-bootstrap.txt
-TARGET_IP=$APPLIANCE_IP python setup_cert.py --test
+python setup_cert.py
 ```
 
-What it does:
+This fetches the AC14K_M CA cert + key + upstream chain from a public mirror and writes them to `./certs/ac14k_m.pem` and `./certs/ac14k_m.key`. Nothing device-specific happens at this step — no IP, no handshake needed. (Pass `--test` with `TARGET_IP=<appliance-ip>` set if you want to sanity-check connectivity against a real device before touching HA at all.)
 
-1. Fetches the AC14K_M signing CA + private key + upstream chain (RemoteAccessCA → CECA → ROOTCA) from a public mirror.
-2. Fetches the relevant server cert and extracts the current UUID from its subject DN.
-3. Sanity-checks that the AC14K_M cert and key actually pair (modulus match) before signing anything.
-4. Generates a fresh RSA-2048 key pair you own.
-5. Builds a CSR with the UUID in OU + CN + SAN and signs it with `AC14K_M` (SHA-1, matching the on-device trust hierarchy).
-6. Concatenates `leaf + AC14K_M + 3 upstream CAs` into the fullchain PEM.
-7. With `--test`: opens a DTLS handshake against `$TARGET_IP:$TARGET_PORT` (default `49154`) and GETs `/oic/sec/acl` — a `2.05` reply proves the cert authenticated (anonymous peers get `4.01`).
+If the live fetch fails, the script prints an inline workaround: supply `AC14K_M_CERT_BUNDLE=/path/to/cert.pem`, or point `BRAYSTORM_URL=<mirror>` at an alternate source.
 
-Output in `./certs/`: `client_fullchain.pem` + `client.key`.
+### Why this works
 
-Neither the UUID nor the AC14K_M bundle is hardcoded in this repo — both are fetched live each run, so the script self-updates if upstream rotates. If either fetch fails, the script prints an inline workaround: supply the UUID via `UUID=<uuid>` env, or supply the AC14K_M bundle via `AC14K_M_CERT_BUNDLE=/path/to/cert.pem`. `BRAYSTORM_URL=<mirror>` points at a different bundle source.
-
-### How durable is this?
-
-Rotating the published UUID would require Samsung to re-issue TLS certs across their IoT cloud, push new ACLs to every device in the field, and update the on-device daemon identity — a multi-quarter change with a long backwards-compat tail. `AC14K_M` has been public for years and is still in 2026 firmware trust stores. Local access via this path is roughly as durable as cloud control of these appliances.
-
-> **Legacy path:** earlier versions used a per-hub-UUID cert via an anonymous `/oic/sec/doxm` read escalation. That still works on the dryer-family firmware but isn't necessary — the cert minted here authenticates against every appliance and survives device resets. The old `bootstrap.py` for the legacy flow was removed when the package was renamed; see git history if you need it.
+- Every Samsung Tizen/RT-OCF appliance has a factory-baked ACE in `/oic/sec/acl` granting the AC14K_M-chained identity `perm=31` on `href=*`.
+- TizenRT iotivity derives the peer ID via `memmem(subject_dn, "uuid:")` — RDN-agnostic, so a cert with the UUID in any RDN authenticates the same way.
+- You don't need the original keyholder's private key — the config flow mints its own key and has `AC14K_M` sign the leaf. Different key, same identity, same access.
 
 ---
 
-## Part 3 — Configure your appliances
+## Part 3 — Add the integration in Home Assistant
 
-Copy `.env.example` to `.env` and fill in.
+1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory (or install via a custom HACS repository — no `hacs.json` is checked in yet, so add this repo as a custom integration repository in HACS if you use it that way).
+2. Restart HA.
+3. **Settings → Devices & Services → Add Integration → Local Things.**
+4. First device: paste the appliance's IP, plus the contents of `certs/ac14k_m.pem` and `certs/ac14k_m.key` from Part 2.
+5. The flow fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, probes ports `49154`/`49155`, and confirms the device answers `/device/0`. On success it creates the config entry and detects the device type automatically.
+6. Every subsequent device only asks for the host IP — the stored CA credentials are reused to mint that device's leaf cert.
 
-### Layered envs
-
-The bridge config splits into:
-
-- **Shared keys** (one per process): MQTT broker + creds, HA discovery prefix, cert paths, timer intervals.
-- **Per-appliance keys** (one block per appliance) under `APPLIANCE_<n>_*` (1-indexed).
-
-`APPLIANCE_COUNT` tells the bridge how many indexed blocks to read. Bump it as you add appliances.
-
-```bash
-APPLIANCE_COUNT=2
-
-# Appliance 1 — dryer
-APPLIANCE_1_CLASS=dryer
-APPLIANCE_1_IP=192.168.1.100
-APPLIANCE_1_OCF_PORT=             # blank → descriptor default (49155 for dryer)
-APPLIANCE_1_TOPIC=samsung_dryer
-APPLIANCE_1_NAME=Samsung Dryer
-
-# Appliance 2 — oven
-APPLIANCE_2_CLASS=oven
-APPLIANCE_2_IP=192.168.1.101
-APPLIANCE_2_OCF_PORT=             # blank → descriptor default (49154 for oven)
-APPLIANCE_2_TOPIC=samsung_oven
-APPLIANCE_2_NAME=Samsung Oven
-```
-
-Each `APPLIANCE_<n>_CLASS` must match a descriptor key in `samsung_appliance/appliances/__init__.py::DESCRIPTORS` — currently `dryer` and `oven`.
+Entities appear under one HA device per appliance, named `Samsung Appliance (<ip>)` initially (rename freely — the config entry is keyed on the device's serial, not the name).
 
 ---
 
-## Part 4 — Run it
+## Development
 
-### Docker (the real deployment)
+### Docker Compose dev environment
 
 ```sh
-docker compose up -d --build
+docker compose up -d
 docker compose logs -f
 ```
 
-Container name `smartthings-local`. Outbound-only — no ports exposed. Needs egress to each appliance's IP/port (UDP) and to your MQTT broker. The certs in `./certs/` (or whatever `APPDATA_DIR` points to via the volume mount) are read-only mounted at `/config`.
+Runs the official `home-assistant/home-assistant:stable` image with `network_mode: host` (required — DTLS is UDP and won't traverse Docker's bridge NAT to reach LAN appliances) and `custom_components/localthings/` bind-mounted read-only into `ha_config/custom_components/`. Bump `custom_components.localthings` to `debug` in `ha_config/configuration.yaml` for verbose protocol logging.
 
-### Deploying to a remote Linux host (Unraid, etc.)
-
-```sh
-# Once: upload the cert + key onto the remote.
-ssh "$SSH_HOST" mkdir -p "$APPDATA_DIR"
-scp certs/client_fullchain.pem certs/client.key "$SSH_HOST:$APPDATA_DIR/"
-
-# Each deploy: ship source + .env, rebuild container on the host.
-./deploy.sh
-```
-
-Set `SSH_HOST`, `REMOTE_DIR`, `APPDATA_DIR` in `.env`. `deploy.sh` extracts those three keys via `grep` rather than `source .env`, so values containing spaces (like `APPLIANCE_1_NAME=Samsung Dryer`) don't break it.
-
-### Bare metal (first test / debugging)
+### Tests
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python main.py
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install pytest-homeassistant-custom-component homeassistant
+.venv/bin/pytest tests/ -q
 ```
 
-### Expected first-run logs
-
-```
-14:08:42  INFO   samsung_appliance        SmartThings-Local Bridge starting (2 appliances)
-14:08:42  INFO   samsung_appliance          broker = <broker-ip>:1883 (user=<mqtt-user>)
-14:08:42  INFO   samsung_appliance          [1] dryer @ <dryer-ip>:49155 (DTLS) → topic samsung_dryer/*
-14:08:42  INFO   samsung_appliance          [2] oven  @ <oven-ip>:49154 (DTLS) → topic samsung_oven/*
-14:08:42  INFO   samsung_appliance        MQTT connected → <broker-ip>:1883
-14:08:43  INFO   dryer                    DTLS connected — subscribing 11 paths
-14:08:44  INFO   dryer.<dryer-serial>     identified — serial=…
-14:08:44  INFO   dryer.<dryer-serial>     seeded → 25 links; sensors live
-14:08:44  INFO   oven                     DTLS connected — subscribing 11 paths
-14:08:46  INFO   oven.<oven-serial>       identified — serial=…
-14:08:46  INFO   oven.<oven-serial>       seeded → 16 links; sensors live
-```
-
-In HA: **Settings → Devices & Services → MQTT** should show both devices populated.
+`requirements-dev.txt` pins `smartthings-local` the same way `manifest.json` does, so tests exercise the real published protocol layer rather than a vendored copy.
 
 ---
 
-## Per-appliance notes
+## Repo layout
 
-### Dryer
-
-| Capability | Works? | Notes |
-|---|---|---|
-| Read all state | ✅ | Machine state, job state, energy (W + kWh), course, dry level, completion time, remote control, child lock, alarms |
-| Wrinkle Prevent toggle | ✅ | Persists |
-| Start / Pause / Stop | ✅ | Via `/operational/state/vs/0`; needs Remote Control on |
-| Change course | ✅ | Via `/st/dryercourse/vs/0`; needs Remote Control on. **Not exposed by the SmartThings cloud HA integration.** |
-| Power on/off | ❌ | Accepted (2.04) but reverts within seconds — hardware-mirrored |
-| Child Lock / Remote Control toggle | ❌ | Same — hardware-mirrored physical buttons |
-
-The dryer's `/operational/state/vs/0` is on the bridge's hot poll tier (1s idle / 0.5s while a cycle is active) and also accepts OBSERVE registration. When the appliance has internet it pushes notifications within ~100ms of any state change and the cache absorbs them as fast freshness; when air-gapped the hot-tier poll carries the same UX with worst-case lag of one tier interval.
-
-### Oven
-
-| Capability | Works? | Notes |
-|---|---|---|
-| Read state | ✅ | Cavity state, current/target temp, door, mode, alarms, firmware-update-available |
-| Lamp (light entity) | ✅ | Binary On/Off only — High/Low/Dim values are accepted (2.04) but silently coerced back. Works regardless of Remote Control. |
-| Sound, Fast preheat | ⚠️ | Wired but untested RC-gated. |
-| Setpoint slider | ⚠️ | Wired but untested RC-gated. |
-| Mode select | ⚠️ | Wired but untested RC-gated. |
-| Stop button | ✅ |  |
-| **Kitchen timer (`⏲` icon)** | ❌ | **The oven's panel kitchen timer is not exposed via CoAP at all.** Confirmed by full `/device/0` dump — `UpperTimer*` fields in `/mode/vs/0` only populate when set via the API, not from the panel. |
-
-**The oven doesn't push OBSERVE on `/mode/vs/0` writes** (the dryer does). The bridge handles this transparently because state freshness comes from polling rather than from OBSERVE:
-1. **Optimistic publish** — the moment a POST returns 2.04, the bridge merges the write body into the cache and publishes to MQTT. HA reflects the new value instantly.
-2. **Scheduler reconciliation** — the PollScheduler defers polling the just-written resource for ~4s (past Samsung's fetchback-revert window), then refreshes it on its tier cadence. If the device silently coerced the value, the corrected state is republished and HA reverts.
-3. **Periodic `/device/0` sweep** — every 5 minutes the scheduler's sweep tier re-fetches the whole device tree, bounding worst-case drift on any resource the per-tier polls don't cover.
+```
+custom_components/localthings/
+  manifest.json                  Requirements (incl. the smartthings-local PyPI dep), version, domain
+  __init__.py                    async_setup_entry / async_unload_entry
+  config_flow.py                 UUID fetch, leaf cert minting, port probing, config entry creation
+  coordinator.py                 DataUpdateCoordinator: polling, stale-state fallback, write dispatch
+  const.py                       Domain, config keys, probe ports
+  entity.py                      Base entity wiring capability registry -> HA entity
+  sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py
+                                  One module per HA platform
+  strings.json / translations/   Config-flow copy + entity state translations
+  ocf/
+    batch.py                     /device/0 batch response parsing
+    registry/
+      capability.py              Capability dataclass (href, entities, transforms)
+      entities.py                Per-platform entity descriptor dataclasses
+      discovery.py                Binds a device's live resources to registered capabilities
+      adapter.py                  Flattens bound entities into HA-ready state
+      identity.py                 Reads device identity (serial, oneUiVersion) for type detection
+      capabilities/               Shared + per-family Capability definitions (common, dryer, oven,
+                                   dishwasher, fridge, laundry, operational)
+      by_type/                    One DeviceRegistry per appliance type, composed from capabilities/
+tests/                            80+ tests: registry composition, discovery, entity descriptors,
+                                   golden-file regression against captured device dumps
+setup_cert.py                     One-shot AC14K_M CA bundle fetcher (Part 2)
+requirements-bootstrap.txt         Deps for setup_cert.py only
+requirements-dev.txt               Test deps, including the smartthings-local package
+docker-compose.yml / ha_config/    Local HA dev environment
+```
 
 ---
 
-## Reference
+## Adding a new appliance type
 
-### Config keys
+1. Capture the appliance's `/device/0` response to see what resources/fields it exposes — an authenticated `DtlsCoapSession` from `smartthings_local.protocol.dtls_session` GET is enough; `local-tools/probe_device.py` wraps this.
+2. Reuse existing `Capability` objects from `ocf/registry/capabilities/` wherever the resource matches one already declared (most `common.py` capabilities — power, kids lock, remote control, alarms, energy/water meters — are shared verbatim across families); add new ones only for resources unique to the new type.
+3. Create `ocf/registry/by_type/<name>.py` with a `DeviceRegistry(name=..., capabilities=_build([...]))`. Use `pattern_capabilities` instead of `capabilities` for any resource whose `href` isn't fixed (e.g. per-compartment fridge resources) — see `refrigerator.py` for the pattern.
+4. Register it in `_REGISTRY_BY_KEY` in `ocf/registry/by_type/__init__.py`, keyed on the lowercased, space/hyphen-to-underscore-converted suffix of the device's `oneUiVersion` string (see `_type_key()` in that file for the exact transform).
+5. Add golden-file coverage in `tests/` against a captured `/device/0` dump for the new type.
 
-| Key | Meaning |
-|---|---|
-| `APPLIANCE_COUNT` | Number of `APPLIANCE_<n>_*` blocks to read (1-indexed) |
-| `APPLIANCE_<n>_CLASS` | Descriptor name: `dryer`, `oven` |
-| `APPLIANCE_<n>_IP` | LAN IP of the appliance |
-| `APPLIANCE_<n>_OCF_PORT` | Optional override (blank → descriptor default: dryer=49155, oven=49154) |
-| `APPLIANCE_<n>_TOPIC` | MQTT topic prefix (also the HA device identifier — changing it re-keys the device) |
-| `APPLIANCE_<n>_NAME` | Friendly name on the HA device card |
-| `MQTT_BROKER` / `MQTT_PORT` / `MQTT_USER` / `MQTT_PASS` | Broker config |
-| `HA_DISCOVERY_PREFIX` | HA discovery topic root (default `homeassistant`) |
-| `CERT_PATH` / `KEY_PATH` | Override cert lookup (auto-detects `/config/` then `./certs/`) |
-| `HEALTH_INTERVAL_S` | Seconds between `<prefix>/bridge/health` publishes (default 60) |
-| `PING_INTERVAL_S` | CoAP empty-CON ping cadence; three consecutive failures publish `availability=offline` (default 25). Tier polling cadences are descriptor-declared, not env-tunable. |
-| `SSH_HOST` / `REMOTE_DIR` / `APPDATA_DIR` | Used by `deploy.sh` only |
-
-### MQTT topics — outgoing (bridge → broker)
-
-Per appliance, where `<prefix>` is its `APPLIANCE_<n>_TOPIC`.
-
-| Topic | Retain | When |
-|---|---|---|
-| `<prefix>/availability` | ✓ | `online` after seed; `offline` on disconnect (LWT for appliance #1) |
-| `<prefix>/remote_available` | ✓ | `online` iff bridge is up AND Remote Control on the appliance is on. Gates the control entities. |
-| `<prefix>/state` | ✓ | JSON sensor dict; published only when sensors actually diff |
-| `<prefix>/bridge/health` | ✓ | Every `HEALTH_INTERVAL_S` — connect_count, error_count, notif_count, poll_count, poll_error_count, ping_count, ping_fail_count, reachable, last_change_age_s, last_seed_age_s, session_age_s, stalest_href, stalest_age_s, serial |
-| `<ha_prefix>/{sensor,binary_sensor,switch,light,number,select,button}/<prefix>/.../config` | ✓ | HA MQTT discovery, republished on every MQTT (re)connect |
-
-### MQTT topics — incoming (bridge subscribes)
-
-`<prefix>/cmd/#`. **The MQTT user must have READ permission on this subtree** — without it the broker silently drops the TCP connection shortly after SUBSCRIBE. Check broker logs if writes never land.
-
-Dryer:
-
-| Suffix | Payloads | Effect |
-|---|---|---|
-| `cmd/wrinkle_prevent` | `On`, `Off` | POST `/washer/vs/0` |
-| `cmd/operational_state` | `Run`, `Pause`, `Ready` | POST `/operational/state/vs/0` — requires RC |
-| `cmd/dryer_mode` | Course name (e.g. `Cotton`) | Translated to `Course_HH` then POST `/st/dryercourse/vs/0` — requires RC |
-
-Oven:
-
-| Suffix | Payloads | Effect |
-|---|---|---|
-| `cmd/lamp` | `On`, `Off` | RMW of `/mode/vs/0 .options[UpperLamp_*]` |
-| `cmd/sound` | `On`, `Off` | RMW of `/mode/vs/0 .options[Sound_*]` |
-| `cmd/fastpreheat` | `On`, `Off` | RMW of `/mode/vs/0 .options[fastpreheat_*]` |
-| `cmd/setpoint` | Integer °C (30–270, step 5) | RMW of `/temperatures/vs/0 .items[0].desired` — requires RC |
-| `cmd/mode` | Mode name (e.g. `Convection`, `LargeGrill`) | POST `/mode/vs/0 {modes: [<name>]}` — requires RC |
-| `cmd/stop` | (button press) | POST `/operational/state/vs/0 {state: Ready}` |
-
-### Entity counts (approximate, per appliance)
-
-| Type | Dryer | Oven |
-|---|---|---|
-| `sensor` | 17 | 17 |
-| `binary_sensor` | 4 | 7 |
-| `switch` | 1 (wrinkle) | 2 (sound, fastpreheat) |
-| `light` | — | 1 (lamp) |
-| `number` | — | 1 (setpoint slider) |
-| `select` | 1 (course) | 1 (mode) |
-| `button` | 3 (start/pause/stop) | 1 (stop) |
-
-Gated control entities use HA's `availability_mode: all` against `<prefix>/availability` AND `<prefix>/remote_available`. Flip Remote Control on the appliance's front panel and those entities un-grey in HA.
-
-### Repo layout
-
-```
-main.py                              Entry point — loads config, spawns one PushBridge per appliance
-setup_cert.py                        One-shot cert minting script (live-fetches AC14K_M + UUID)
-samsung_appliance/                   The bridge package
-  __init__.py
-  config.py                          SharedConfig + ApplianceConfig dataclasses
-  logger.py                          Tagged logger helpers
-  bridge.py                          PushBridge — one DTLS session per appliance, descriptor-driven
-  coap_dtls.py                       DTLS-CoAP session: handshake, token-stable Block2 GET, POST, OBSERVE
-  sensors.py                         /device/0 link-dict indexer (shared util)
-  appliances/
-    __init__.py                      DESCRIPTORS registry + get_descriptor()
-    base.py                          ApplianceDescriptor dataclass + HA discovery helpers
-    dryer.py                         Dryer descriptor (paths, flatten, discovery, commands)
-    oven.py                          Oven descriptor
-Dockerfile                           Container build (python:3.11-slim + 3 deps)
-docker-compose.yml                   One service: smartthings-local
-deploy.sh                            tar + ssh + docker compose up --build
-.env.example                         Template — copy to .env, fill in
-```
-
-`certs/` is gitignored. Drop the privileged client cert + key there; the container mounts that directory read-only at `/config`.
+No config-flow or coordinator changes needed — device-type detection and entity wiring are fully driven by the registry.
 
 ---
 
-## Adding a new appliance class
+## Known DTLS behavior
 
-The bridge is appliance-agnostic. Adding e.g. a washer is mechanical:
+Samsung's RT-OCF DTLS stack occasionally closes sessions actively, usually right after a Block2 GET or in the seconds after a POST. Retry/retransmit bounds and inter-request pacing live in the `smartthings-local` protocol layer (tuned against measured per-firmware request-rate ceilings); reconnect-with-backoff and stale-state fallback live in this repo's `coordinator.py`. From HA's perspective a brief reconnect looks like an entity holding its last value for one poll cycle rather than going `unavailable`.
 
-1. Capture the appliance's `/device/0` to see what resources/fields it exposes. Use the GET helpers in `samsung_appliance/coap_dtls.py` against your authenticated session.
-2. Create `samsung_appliance/appliances/washer.py` with:
-   - `OBSERVE_PATHS` — list of `[seg, …]` paths to subscribe to (only `/<x>/vs/0` resources push; the OCF-standard `/<x>/0` siblings register but never fire)
-   - `flatten(links) -> dict` — map link dict to the flat sensor dict that goes on MQTT
-   - `build_discovery(prefix, ha_prefix, name) -> [(topic, payload), …]` — HA discovery configs
-   - `command_handlers() -> {suffix: fn(payload, links)}` — MQTT commands → `(path_segs, body_dict)`
-   - A module-level `WASHER = ApplianceDescriptor(name='washer', default_observe_port=…, …)`
-3. Add `WASHER` to `DESCRIPTORS` in `samsung_appliance/appliances/__init__.py`.
-4. Add `APPLIANCE_<n>_CLASS=washer` to `.env`, bump `APPLIANCE_COUNT`, redeploy.
-
-For a new appliance class also declare a `poll_tiers: list[PollTier]` and (optionally) an `is_active(links) -> bool` predicate on the descriptor. Hot-tier resources are whatever needs sub-second freshness for HA UX; warm covers everything else that's not static; the `/device/0` sweep tier catches anything you forgot. The descriptor pattern handles everything else — DTLS, MQTT, HA discovery, optimistic writes, Block2 reads, OBSERVE accelerator, reconnect, liveness pings.
-
----
-
-## Traps to avoid
-
-These each looked like obvious improvements at some point. Each one broke something.
-
-- **Don't add OBSERVE subscriptions on OCF-standard `/<x>/0` paths.** They register successfully but never push. Use the Samsung `/<x>/vs/0` siblings (which do).
-- **Don't assume OBSERVE silence means the appliance is broken.** When the appliance can't reach Samsung's cloud, its OBSERVE notify dispatch goes quiet even though the local DTLS session, GETs, POSTs, and the cache continue to work normally (measured at `~14 req/s` dryer / `~8 req/s` oven with 200/200 GETs successful while firewalled). The polling tiers are the structural answer to this; treat OBSERVE strictly as an optional accelerator.
-- **Don't touch `/oic/sec/*` (doxm, pstat, cred, acl).** The bridge doesn't, and you shouldn't from helper scripts either — those resources have wedge/brick risk on Samsung's RT-OCF security stack. The bridge surfaces are strictly `/<x>/vs/0` and `/device/0`.
-- **Don't run two clients against the same appliance simultaneously.** Samsung's RT-OCF DTLS allows one active session per peer; a second handshake will get the device to drop the new socket. If HA seems to flap, check whether you've got `main.py` running locally AND the Docker container up.
-- **Don't expect parity from every write surface.** Samsung's firmware accepts a lot of writes with `2.04 Changed` but only some of them stick — power, child-lock, and remote-control writes are accepted-then-reverted because they're hardware-mirrored. The bridge's optimistic-publish-then-verify pattern handles this transparently: HA briefly shows the new value, the 3s fetch-back republishes the actual value, HA reverts.
-
----
-
-## Known DTLS flakiness
-
-Samsung's RT-OCF DTLS stack occasionally closes sessions actively — usually right after a Block2 GET or in the seconds after a POST. The bridge handles this with exponential reconnect (1s → 30s) and a re-seed on each new session. From HA's perspective the entity briefly goes offline then comes back; from the bridge's perspective you'll see lines like:
-
-```
-oven.…  DTLS recv: Unexpected EOF
-oven.…  reconnect in 1s
-oven.…  DTLS connected — subscribing 11 paths
-oven.…  seeded → 16 links; sensors live
-```
-
-If reconnects become persistent (e.g. >10 in a minute) something's actually wrong — check the appliance's Wi-Fi link first, then look for a competing DTLS client on the LAN.
+If reconnects become persistent (e.g. more than a handful per minute) something's actually wrong — check the appliance's Wi-Fi link first, then look for a competing DTLS client on the LAN (Samsung's RT-OCF DTLS allows only one active session per peer).
 
 ---
 
@@ -387,8 +161,8 @@ If reconnects become persistent (e.g. >10 in a minute) something's actually wron
 
 Patches welcome — especially:
 
-- New appliance descriptors (washer, dishwasher, AC, fridge, etc.) on the same Tizen RT 3.x firmware family.
-- Confirmation/refutation on additional dryer or oven models. `nmap` + `/device/0` dump + `/oic/d` GET is enough to know if you're on the same firmware family.
-- A proper HA custom component wrapping the bridge so there's a config flow instead of YAML/env editing.
+- New `by_type/` registries for appliance families not yet covered (washer, AC, microwave, etc.) on the same Tizen RT 3.x firmware family.
+- Confirmation/refutation on additional models within an already-supported type.
+- Protocol-level fixes belong upstream in [`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local); HA-side fixes (entities, config flow, coordinator, registry) belong here.
 
-If you submit a PR, please don't include real device UUIDs, MACs, serials, IPs, or bearer tokens — use the placeholders from `.env.example`.
+If you submit a PR, please don't include real device UUIDs, MACs, serials, IPs, or CA private key material — use the placeholders from the config-flow form.

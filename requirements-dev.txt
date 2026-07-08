@@ -1,1 +1,2 @@
 pytest>=8.0
+smartthings-local>=0.1.0
