@@ -76,11 +76,13 @@ Entities appear under one HA device per appliance, named `Samsung Appliance (<ip
 ### Docker Compose dev environment
 
 ```sh
-docker compose up -d
+docker compose up -d --build
 docker compose logs -f
 ```
 
-Runs the official `home-assistant/home-assistant:stable` image with `network_mode: host` (required, since DTLS is UDP and won't traverse Docker's bridge NAT to reach LAN appliances) and `custom_components/localthings/` bind-mounted read-only into `ha_config/custom_components/`. Bump `custom_components.localthings` to `debug` in `ha_config/configuration.yaml` for verbose protocol logging.
+The `Dockerfile` builds on the official `home-assistant/home-assistant:stable` image and pre-installs `smartthings-local`, so the dependency is present at container start instead of depending on HA's own runtime pip-install step (which needs outbound network access at exactly the moment the integration loads, and repeats on every container recreate). Re-run with `--build` whenever the pinned `smartthings-local` version changes.
+
+`docker-compose.yml` sets `network_mode: host`, which is required since DTLS is UDP and won't traverse Docker's bridge NAT to reach LAN appliances, and bind-mounts `custom_components/localthings/` read-only into `ha_config/custom_components/`. Bump `custom_components.localthings` to `debug` in `ha_config/configuration.yaml` for verbose protocol logging.
 
 ### Tests
 

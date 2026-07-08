@@ -1,6 +1,7 @@
 services:
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:stable
+    build: .
+    image: localthings-ha-dev
     container_name: localthings-ha
     # host networking is required — DTLS runs over UDP and won't
     # traverse Docker's bridge NAT to reach LAN appliances.
