@@ -49,11 +49,7 @@ nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
 
 The config flow (Part 3) needs a **CA certificate and CA private key** to mint each device's leaf cert itself. Specifically, it needs the `AC14K_M` intermediate CA: a cert chain that's been public for years and still ships in current Samsung firmware trust stores. It's required because every Samsung Tizen/RT-OCF appliance's factory ACL grants full CRUDN access (`perm=31` on `href=*`) to whatever identity is chained to that CA — so a cert signed by it is the one thing that lets HA talk to your appliance without Samsung's cloud in the loop. HA doesn't need the *device's* original cert or key, just something `AC14K_M` has signed, and it mints that itself once you give it the CA.
 
-This repo doesn't vendor a script to fetch that CA bundle — the canonical way to obtain it lives in the `smartthings-local` protocol project:
-
-**[`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py)**
-
-Run that script (see its own usage docs) to fetch and verify the AC14K_M cert + key. It writes `ac14k_m.pem` (cert) and `ac14k_m.key` (key) — paste the contents of both into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once; every appliance you add afterward reuses the same stored CA.
+This repo doesn't vendor a script to fetch that CA bundle. For an example of how to obtain it — fetching the AC14K_M cert + key and verifying they pair — see the `smartthings-local` protocol project's [`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py). However you obtain the CA cert and key, paste their PEM contents into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once; every appliance you add afterward reuses the same stored CA.
 
 ### Why this works
 
