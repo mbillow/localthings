@@ -10,6 +10,8 @@
     "cooler_setpoint",
     "cooler_temperature",
     "day_brightness",
+    "defrost_blocked",
+    "defrost_delay",
     "door_alert",
     "door_cooler_open",
     "door_freezer_open",
@@ -33,6 +35,8 @@
     "rapid_freezing",
     "rapid_fridge",
     "sabbath_mode",
+    "selfcheck_result",
+    "selfcheck_status",
     "welcome_lighting"
   ],
   "discovery_unique_ids": [
@@ -46,6 +50,8 @@
     "samsung_refrigerator_cooler_setpoint",
     "samsung_refrigerator_cooler_temperature",
     "samsung_refrigerator_day_brightness",
+    "samsung_refrigerator_defrost_blocked",
+    "samsung_refrigerator_defrost_delay",
     "samsung_refrigerator_door_alert",
     "samsung_refrigerator_door_cooler_open",
     "samsung_refrigerator_door_freezer_open",
@@ -69,6 +75,9 @@
     "samsung_refrigerator_rapid_freezing",
     "samsung_refrigerator_rapid_fridge",
     "samsung_refrigerator_sabbath_mode",
+    "samsung_refrigerator_selfcheck_result",
+    "samsung_refrigerator_selfcheck_start",
+    "samsung_refrigerator_selfcheck_status",
     "samsung_refrigerator_welcome_lighting"
   ]
 }

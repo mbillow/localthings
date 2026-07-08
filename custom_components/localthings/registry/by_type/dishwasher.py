@@ -1,5 +1,5 @@
 """Dishwasher device registry."""
-from ..capabilities import common, dishwasher, fridge, ignored, laundry, operational
+from ..capabilities import common, dishwasher, dryer, fridge, ignored, laundry, operational
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -16,6 +16,9 @@ REGISTRY = DeviceRegistry(
         operational.OPERATIONAL_STATE,
         dishwasher.CYCLE_OPTIONS,
         dishwasher.DISHWASHER_SETTINGS,
+        dishwasher.DIAGNOSIS,
+        dishwasher.OPERATION_ORIGIN,
+        dryer.JOB_BEGINNING_STATUS,
         laundry.DOOR_LED,
         laundry.SOUND_MODE,
         laundry.SOUND_VOLUME,

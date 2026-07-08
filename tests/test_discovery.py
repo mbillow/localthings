@@ -138,6 +138,26 @@ def test_discover_match_fn_filters_wrong_device():
     assert bound == []
 
 
+def test_discover_match_fn_decline_is_not_logged_as_gap():
+    """A registered href whose match_fn declines is known, not a gap.
+
+    Distinguishes "no capability registered for this href" (a real
+    coverage gap) from "a capability is registered but chose not to bind
+    for this device" (e.g. a filter capability on hardware that doesn't
+    have that filter) — only the former should be reported via `log`.
+    """
+    seen = []
+    cap = Capability(
+        href='/filter/vs/0',
+        match_fn=lambda rep, resources: False,
+        entities=(BinarySensorDesc(key='filter', field='x.com.samsung.da.filterStatus'),),
+    )
+    resources = {'/filter/vs/0': {'x.com.samsung.da.filterStatus': 'notused'}}
+    bound = discover(resources, {'/filter/vs/0': [cap]}, log=seen.append)
+    assert bound == []
+    assert seen == []
+
+
 def test_discover_rt_filter_gates_binding():
     """Cap with rt_filter must not bind a rep whose rt list does not match."""
     oven_mode_cap = Capability(

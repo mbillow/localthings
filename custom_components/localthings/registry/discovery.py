@@ -4,6 +4,12 @@ A device advertises a set of OCF resources keyed by href. For every href
 present in the registry, emit the capability's entities bound to that resource.
 Unknown hrefs are a coverage gap; each one is passed to the optional `log`
 callback (as the raw href, not a formatted message) and otherwise skipped.
+
+An href with a registered capability whose rt_filter/match_fn declines for
+this particular device (e.g. a filter capability sitting on hardware that
+doesn't have that filter) is *not* a gap — a maintainer already looked at
+that href and decided how to handle it. Only hrefs absent from the registry
+entirely are reported.
 """
 from __future__ import annotations
 
@@ -79,7 +85,7 @@ def discover(
             matched = True
             break
 
-        if not matched and log is not None:
+        if not matched and not caps and log is not None:
             log(href)
 
     return out

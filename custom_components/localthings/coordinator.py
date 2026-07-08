@@ -202,15 +202,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.bound = bound
         self._unbound_hrefs = unbound
 
-        serial = (resources.get('/information/vs/0', {})
-                  .get('x.com.samsung.da.serialNum', ''))
+        info = resources.get('/information/vs/0', {})
+        serial = info.get('x.com.samsung.da.serialNum', '')
         if not serial:
             serial = self._entry.data[CONF_HOST]
         self.device_serial = serial
 
         ident = self._identity
-        model = (ident.model if ident else '') or (reg.name.title() if reg else 'Appliance')
-        name  = (ident.name  if ident else '') or f"Samsung {model}"
+        device_type = reg.name.title() if reg else 'Appliance'
+        model_num = info.get('x.com.samsung.da.modelNum', '')
+        model = model_num.split('|', 1)[0] if model_num else (ident.model if ident else '')
+        name  = f"Samsung {device_type} ({model})" if model else f"Samsung {device_type}"
         mfr   = (ident.manufacturer if ident else '') or 'Samsung'
 
         self.device_info = DeviceInfo(

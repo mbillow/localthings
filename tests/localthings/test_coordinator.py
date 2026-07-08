@@ -79,30 +79,34 @@ async def test_update_failed_on_persistent_poll_error(
 # Coverage-gap detection and the Repairs issue it raises
 # ---------------------------------------------------------------------------
 
-async def test_discovery_populates_device_type_and_unbound_hrefs(
+async def test_discovery_populates_device_type_with_no_unbound_hrefs(
     hass: HomeAssistant, mock_entry, mock_coordinator_session
 ) -> None:
-    """The real refrigerator fixture is a recognized type with some gaps left."""
+    """The real refrigerator fixture is a recognized type, fully covered.
+
+    Every href in this fixture is either mapped to a capability or listed
+    in capabilities.ignored — see tests/test_registry_ignored.py for the
+    noise-suppression checks. If this starts failing because a genuinely
+    new gap appeared, map it or ignore it rather than deleting the assertion.
+    """
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
 
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     assert coordinator.device_type_name == 'refrigerator'
     assert coordinator.one_ui_version == '7.0 Refrigerator'
-    # Real, currently-unmodeled hrefs on this fixture (not noise — see
-    # tests/test_registry_ignored.py for the noise-suppression checks).
-    assert '/bespoke/vs/0' in coordinator._unbound_hrefs
+    assert coordinator._unbound_hrefs == []
 
 
-async def test_coverage_gap_issue_created_for_real_fixture_gaps(
+async def test_coverage_gap_issue_absent_for_fully_covered_real_fixture(
     hass: HomeAssistant, mock_entry, mock_coordinator_session
 ) -> None:
-    """A recognized device with leftover unbound hrefs still raises the issue."""
+    """A recognized device with no unbound hrefs does not raise the issue."""
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
 
     issue_id = f"device_gap_{mock_entry.entry_id}"
-    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is not None
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
 
 
 def test_update_coverage_gap_issue_creates_issue_for_unknown_type(

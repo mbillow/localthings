@@ -24,6 +24,12 @@ REGISTRY = DeviceRegistry(
         fridge.SABBATH,
         fridge.BEVERAGE_ZONE,
         fridge.FIRMWARE_UPDATE,
+        fridge.DEFROST_DELAY,
+        fridge.DEFROST_BLOCK_STATUS,
+        fridge.SELF_CHECK,
+        fridge.DOORS_FALLBACK,
+        fridge.TEMPERATURES_FALLBACK,
+        fridge.ICEMAKER_STATUS_FALLBACK,
     ]),
     pattern_capabilities=[
         fridge.TEMP_CURRENT_GENERIC,

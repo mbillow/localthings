@@ -45,14 +45,15 @@ def test_ignored_hrefs_absent_from_refrigerator_gaps():
     assert not present_ignored, f"ignored hrefs leaked into gap report: {present_ignored}"
 
 
-def test_dishwasher_fixture_still_has_genuine_gaps():
+def test_dishwasher_fixture_has_no_remaining_gaps():
     """Sanity check that the gap mechanism isn't silencing everything.
 
-    If this starts failing because the fixture is now fully covered, that's
-    good news — just trim the expected set down (or to empty) rather than
-    deleting the test.
+    Every href in the dishwasher fixture is now either mapped to a
+    capability or listed in capabilities.ignored — if this starts failing
+    because a genuinely new gap appeared, that's the interesting case to
+    look at (add the href to ignored.py or map it, don't just delete this
+    assertion).
     """
     resources = _load('dishwasher_device.json')
     unbound = set(_unbound_hrefs(resources, dishwasher.REGISTRY))
-    assert '/wm/jobbeginingstatus/vs/0' in unbound
-    assert '/diagnosis/vs/0' in unbound
+    assert unbound == set()

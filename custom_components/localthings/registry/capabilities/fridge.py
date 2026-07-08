@@ -15,7 +15,8 @@ import datetime
 
 from ..capability import Capability
 from ..entities import (
-    BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc, TimeDesc,
+    BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
+    SwitchDesc, TimeDesc,
 )
 
 # Beverage zone flex modes.
@@ -161,6 +162,62 @@ STATUS_LOCK = Capability(
                    entity_category='config',
                    value_fn=lambda v: v == 'On',
                    write_fn=_status_lock_write('x.com.samsung.da.device.sound')),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Defrost delay
+#
+# /defrost/delay/vs/0 is the writable toggle. /defrost/block/vs/0 just
+# reports whether the defrost cycle is currently blocked as a result (a
+# derived status, not an independent control) — exposed as a read-only
+# diagnostic binary sensor.
+# ---------------------------------------------------------------------------
+
+DEFROST_DELAY = Capability(
+    href='/defrost/delay/vs/0',
+    poll_tier='warm',
+    entities=(
+        SwitchDesc(key='defrost_delay', field='x.com.samsung.da.delayDefrost',
+                   name='Defrost delay', icon='mdi:snowflake-off',
+                   entity_category='config',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['defrost', 'delay', 'vs', '0'],
+                       {'x.com.samsung.da.delayDefrost': 'On' if p else 'Off'})),
+    ),
+)
+
+DEFROST_BLOCK_STATUS = Capability(
+    href='/defrost/block/vs/0',
+    poll_tier='warm',
+    entities=(
+        BinarySensorDesc(key='defrost_blocked', field='x.com.samsung.da.modes',
+                         name='Defrost blocked', icon='mdi:snowflake-off',
+                         entity_category='diagnostic',
+                         value_fn=lambda modes: bool(modes) and modes[0] == 'DEFROST_BLOCK_ON'),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Self-check diagnostic
+# ---------------------------------------------------------------------------
+
+SELF_CHECK = Capability(
+    href='/selfcheck/vs/0',
+    poll_tier='cold',
+    entities=(
+        SensorDesc(key='selfcheck_status', field='x.com.samsung.da.status',
+                   name='Self-check status', icon='mdi:stethoscope',
+                   entity_category='diagnostic'),
+        SensorDesc(key='selfcheck_result', field='x.com.samsung.da.result',
+                   name='Self-check result', icon='mdi:clipboard-check-outline',
+                   entity_category='diagnostic'),
+        ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
+                   payload='Start', icon='mdi:play-circle-outline',
+                   entity_category='diagnostic',
+                   write_fn=lambda p, rep, href=None: (
+                       ['selfcheck', 'vs', '0'], {'x.com.samsung.da.status': p})),
     ),
 )
 
@@ -482,5 +539,87 @@ DOOR_GENERIC = Capability(
         BinarySensorDesc(key='open', field='openState',
                          name=None, device_class='door',
                          value_fn=lambda v: v == 'Open'),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Aggregate-resource fallbacks
+#
+# /doors/vs/0, /temperatures/vs/0, and /icemaker/status/vs/0 each duplicate
+# information exposed more precisely by per-instance hrefs (DOOR_GENERIC,
+# TEMP_CURRENT_GENERIC/TEMP_SETPOINT_GENERIC, ICEMAKER_GENERIC) on hardware
+# that has them. Not every fridge does — a simpler model may only ever
+# advertise the aggregate resource. Each fallback's match_fn checks the
+# full resource set for the richer sibling hrefs and only binds when
+# they're absent, so it's a no-op (not a gap — see discovery.py) wherever
+# the richer hrefs exist, and a real (if coarser) source of the same data
+# where they don't.
+# ---------------------------------------------------------------------------
+
+def _any_door_generic(resources):
+    return any(h.startswith('/door/') for h in resources)
+
+
+DOORS_FALLBACK = Capability(
+    href='/doors/vs/0',
+    match_fn=lambda rep, resources: not _any_door_generic(resources),
+    poll_tier='hot',
+    entities=(
+        BinarySensorDesc(key='door_open', field='x.com.samsung.da.items',
+                         name='Door', device_class='door',
+                         value_fn=lambda items: any(
+                             i.get('x.com.samsung.da.openState') == 'Open'
+                             for i in (items or []))),
+    ),
+)
+
+
+def _any_temperature_generic(resources):
+    return any(h.startswith('/temperature/') for h in resources)
+
+
+def _temp_item_value(items, keyword):
+    for item in (items or []):
+        if keyword.lower() in (item.get('x.com.samsung.da.description') or '').lower():
+            return _int(item.get('x.com.samsung.da.current'))
+    return None
+
+
+TEMPERATURES_FALLBACK = Capability(
+    href='/temperatures/vs/0',
+    match_fn=lambda rep, resources: not _any_temperature_generic(resources),
+    poll_tier='warm',
+    entities=(
+        SensorDesc(key='freezer_temperature', field='x.com.samsung.da.items',
+                   name='Freezer temperature', icon='mdi:thermometer',
+                   device_class='temperature', unit='°F', state_class='measurement',
+                   value_fn=lambda items: _temp_item_value(items, 'Freezer')),
+        SensorDesc(key='fridge_temperature', field='x.com.samsung.da.items',
+                   name='Fridge temperature', icon='mdi:thermometer',
+                   device_class='temperature', unit='°F', state_class='measurement',
+                   value_fn=lambda items: _temp_item_value(items, 'Fridge')),
+    ),
+)
+
+
+def _any_icemaker_unit_generic(resources):
+    return any(
+        h.startswith('/icemaker/') and isinstance(r, dict)
+        and 'x.com.samsung.da.iceMaker.state' in r
+        for h, r in resources.items()
+    )
+
+
+ICEMAKER_STATUS_FALLBACK = Capability(
+    href='/icemaker/status/vs/0',
+    match_fn=lambda rep, resources: not _any_icemaker_unit_generic(resources),
+    poll_tier='warm',
+    entities=(
+        SwitchDesc(key='ice_maker_enabled', field='x.com.samsung.da.iceMaker',
+                   name='Ice maker', icon='mdi:cube-outline',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['icemaker', 'status', 'vs', '0'],
+                       {'x.com.samsung.da.iceMaker': 'On' if p else 'Off'})),
     ),
 )

@@ -64,4 +64,34 @@ IGNORED: list[Capability] = [
     # /wm/editcourse/vs/0 is the raw encoded course-list byte string already
     # decoded and exposed via /course/vs/0 (dishwasher.CYCLE_OPTIONS).
     Capability(href='/wm/editcourse/vs/0'),
+
+    # Bixby audio feedback (chime + volume played when Bixby starts/stops
+    # listening) — only meaningful with Bixby enabled, which this
+    # integration has no local path to configure or use.
+    Capability(href='/sec/networkaudio/audio/vs/0'),
+
+    # Static Bespoke-product-line flag, not appliance state.
+    Capability(href='/bespoke/vs/0'),
+    # Empty resource on every dump seen so far — nothing to expose.
+    Capability(href='/defrost/prediction/vs/0'),
+    # Seasonal defrost schedule (start/period/end per season). Automating
+    # this cleanly would need a multi-field schedule editor; the practical
+    # on/off control is fridge.DEFROST_DELAY.
+    Capability(href='/defrost/reservation/vs/0'),
+    # Warranty/service-plan enrollment status — every field reads "Unknown"
+    # on hardware not enrolled in a Samsung Care+ style program.
+    Capability(href='/dginformation/vs/0'),
+    # AI energy-saving level; only one value ('1') is ever in
+    # supportedAiLevel on hardware seen so far, so there's no real choice
+    # to expose. Revisit if a device surfaces more than one supported level.
+    Capability(href='/energy/ailevel/vs/0'),
+    # Opaque integer with no supportedModes/options list to interpret it
+    # against — meaning unclear from the raw resource alone.
+    Capability(href='/runningmode/vs/0'),
+
+    # Demand-response energy planner — same utility-program dependency as
+    # /drlc/vs/0 above; every dump seen so far is inert (plan: 'none').
+    Capability(href='/energy/planner/vs/0'),
+    # Temperature-unit display preference, redundant with HA's own units.
+    Capability(href='/wm/submode/vs/0'),
 ]

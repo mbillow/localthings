@@ -3,7 +3,7 @@
 Resources verified against the live device dump at 10.0.0.129.
 """
 from ..capability import Capability
-from ..entities import SelectDesc, SwitchDesc
+from ..entities import ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 
 # ---------------------------------------------------------------------------
 # /dishwasher/vs/0 — cycle wash/dry settings
@@ -117,5 +117,34 @@ CYCLE_OPTIONS = Capability(
                    rep_fn=lambda rep: _option_value(
                        rep.get('x.com.samsung.da.options'), 'AutoDoorRelease') == 'On',
                    write_fn=_auto_release_write),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Self-diagnostic trigger and last-operation-source sensor
+# ---------------------------------------------------------------------------
+
+DIAGNOSIS = Capability(
+    href='/diagnosis/vs/0',
+    poll_tier='cold',
+    entities=(
+        SensorDesc(key='diagnosis_status', field='x.com.samsung.da.diagnosisStart',
+                   name='Diagnosis status', icon='mdi:stethoscope',
+                   entity_category='diagnostic'),
+        ButtonDesc(key='diagnosis_start', field='', name='Start diagnosis',
+                   payload='Start', icon='mdi:play-circle-outline',
+                   entity_category='diagnostic',
+                   write_fn=lambda p, rep, href=None: (
+                       ['diagnosis', 'vs', '0'], {'x.com.samsung.da.diagnosisStart': p})),
+    ),
+)
+
+OPERATION_ORIGIN = Capability(
+    href='/operation/origin/vs/0',
+    poll_tier='cold',
+    entities=(
+        SensorDesc(key='operation_origin', field='origin',
+                   name='Last operation source', icon='mdi:remote',
+                   entity_category='diagnostic'),
     ),
 )

@@ -18,7 +18,7 @@ async def test_diagnostics_shape_and_redaction(
 
     assert diagnostics["device_type"] == 'refrigerator'
     assert diagnostics["one_ui_version"] == '7.0 Refrigerator'
-    assert '/bespoke/vs/0' in diagnostics["unbound_hrefs"]
+    assert diagnostics["unbound_hrefs"] == []
     assert diagnostics["integration_version"] == '0.1.0'
     assert diagnostics["smartthings_local_version"]
 
