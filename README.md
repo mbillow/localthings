@@ -1,6 +1,6 @@
 # Local Things
 
-**A native Home Assistant custom integration for local control of newer-generation Samsung connected appliances.** There's no cloud round-trip, no MQTT broker, and no separate bridge process. Add a device through HA's normal *Settings > Devices & Services* flow and it talks CoAP-over-DTLS straight to the appliance on your LAN.
+**A native Home Assistant custom integration for local control of newer-generation Samsung connected appliances.** No cloud round-trip. Add a device through HA's normal *Settings > Devices & Services* flow and it talks CoAP-over-DTLS straight to the appliance on your LAN.
 
 > ### Where things live
 >
@@ -16,12 +16,6 @@
 Adding a device just needs a host IP and your CA credentials in the UI. The integration reads the appliance's `oneUiVersion` and picks the matching capability registry (dryer, oven, dishwasher, refrigerator) on its own, so there's no per-model descriptor to write for a new unit of a type that's already supported.
 
 Credential setup is one-time. The first device you add asks for the AC14K_M CA cert and key (see Part 2); every device after that reuses the same stored CA and only asks for the host IP, minting its own per-device leaf cert automatically.
-
-Entities are standard HA platforms, not a hand-rolled dashboard: `sensor`, `binary_sensor`, `switch`, `number`, `select`, `button`, and `time`, all backed by a single `DataUpdateCoordinator`-driven poller per device.
-
-Each appliance family's resources (power, kids lock, remote control, alarms, energy/water meters, cycle state, per-family settings) are declared once as `Capability` objects keyed on the stable OCF resource `href`, verified against live device dumps, rather than hardcoded per entity.
-
-A failed poll doesn't blank out entities either. The coordinator falls back to the last-known state rather than flapping devices to `unavailable`.
 
 Your state stays on your LAN: HA talks to the appliance over a direct DTLS session, and Samsung's cloud sees nothing from this integration. (The appliance itself still maintains its own connection to Samsung; that's firmware behavior on the device side, not something this integration controls.)
 
@@ -54,7 +48,7 @@ nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
 
 The config flow (Part 3) needs a **CA certificate and CA private key** to mint each device's leaf cert itself. Specifically, it needs the `AC14K_M` intermediate CA: a cert chain that's been public for years and still ships in current Samsung firmware trust stores. It's required because every Samsung Tizen/RT-OCF appliance's factory ACL grants full CRUDN access (`perm=31` on `href=*`) to whatever identity is chained to that CA, so a cert signed by it is the one thing that lets HA talk to your appliance without Samsung's cloud in the loop. HA doesn't need the *device's* original cert or key, only something `AC14K_M` has signed, and it mints that itself once you give it the CA.
 
-This repo doesn't vendor a script to fetch that CA bundle. For an example of how to obtain it, including fetching the AC14K_M cert and key and verifying they pair, see the `smartthings-local` protocol project's [`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py). However you obtain the CA cert and key, paste their PEM contents into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once, since every appliance you add afterward reuses the same stored CA.
+This repo doesn't include the needed CA bundle. For an example of how to obtain it, including fetching the AC14K_M cert and key and verifying they pair, see the `smartthings-local` protocol project's [`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py). However you obtain the CA cert and key, paste their PEM contents into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once, since every appliance you add afterward reuses the same stored CA.
 
 ### Why this works
 
@@ -69,7 +63,7 @@ This repo doesn't vendor a script to fetch that CA bundle. For an example of how
 1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or install via a custom HACS repository: no `hacs.json` is checked in yet, so add this repo as a custom integration repository in HACS if you use it that way.)
 2. Restart HA.
 3. **Settings > Devices & Services > Add Integration > Local Things.**
-4. First device: paste the appliance's IP, plus the contents of `certs/ac14k_m.pem` and `certs/ac14k_m.key` from Part 2.
+4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
 5. The flow fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, probes ports `49154`/`49155`, and confirms the device answers `/device/0`. On success it creates the config entry and detects the device type automatically.
 6. Every subsequent device only asks for the host IP; the stored CA credentials are reused to mint that device's leaf cert.
 
