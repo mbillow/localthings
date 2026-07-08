@@ -9,9 +9,6 @@ certs/
 *.p12
 *.pfx
 *.key
-
-# Exception: bundled Samsung OCF Root CA (public cert, no key material)
-!custom_components/localthings/ocf/ocf_root_ca.pem
 token.txt
 
 # Python artifacts
@@ -20,10 +17,6 @@ __pycache__/
 .venv/
 venv/
 
-# Bridge runtime
-bridge.log
-course_mapper.log
-
 # Capture / dump files
 *.pcap
 *.har
@@ -31,7 +24,7 @@ course_mapper.log
 capture/
 flows/
 
-# Local-only research tools (not part of the bridge runtime)
+# Local-only research tools (not part of the HA integration)
 local-tools/
 
 # Claude Code per-project state (permissions allowlist, etc.)
