@@ -1,4 +1,4 @@
-from custom_components.localthings.ocf.registry.entities import (
+from custom_components.localthings.registry.entities import (
     SensorDesc, BinarySensorDesc, SelectDesc, SwitchDesc, ButtonDesc,
     NumberDesc, PLATFORM_OF,
 )

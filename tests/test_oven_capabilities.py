@@ -1,6 +1,6 @@
 """Unit tests for oven-family capabilities."""
-from custom_components.localthings.ocf.registry.capabilities import oven
-from custom_components.localthings.ocf.registry.discovery import discover
+from custom_components.localthings.registry.capabilities import oven
+from custom_components.localthings.registry.discovery import discover
 
 
 # ---------------------------------------------------------------------------

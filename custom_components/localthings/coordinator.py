@@ -15,12 +15,12 @@ from homeassistant.helpers.device_registry import DeviceInfo
 
 from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
-from .ocf.batch import parse_device0_batch
-from .ocf.registry.by_type import for_device
-from .ocf.registry.discovery import discover, BoundEntity
-from .ocf.registry import CAPABILITIES
-from .ocf.registry.adapter import flatten
-from .ocf.registry.identity import read_identity, DeviceIdentity
+from .registry.batch import parse_device0_batch
+from .registry.by_type import for_device
+from .registry.discovery import discover, BoundEntity
+from .registry import CAPABILITIES
+from .registry.adapter import flatten
+from .registry.identity import read_identity, DeviceIdentity
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,

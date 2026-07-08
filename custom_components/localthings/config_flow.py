@@ -124,7 +124,7 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     """Fetch UUID, mint leaf cert, probe each port. Returns config entry data dict."""
     import cbor2
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
-    from .ocf.batch import parse_device0_batch
+    from .registry.batch import parse_device0_batch
 
     _LOGGER.debug("Fetching Samsung cloud UUID from %s", _SAMSUNG_CLOUD_HOST)
     try:

@@ -1,5 +1,5 @@
 """Tests for the CAPABILITIES registry."""
-from custom_components.localthings.ocf.registry.registry import CAPABILITIES
+from custom_components.localthings.registry.registry import CAPABILITIES
 
 
 def test_registry_is_keyed_by_href():

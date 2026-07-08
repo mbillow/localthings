@@ -1,4 +1,4 @@
-from custom_components.localthings.ocf.registry.capabilities.operational import OPERATIONAL_STATE
+from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
 
 
 def test_machine_state_maps_samsung_to_ocf():

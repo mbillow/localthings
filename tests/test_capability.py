@@ -1,5 +1,5 @@
-from custom_components.localthings.ocf.registry.capability import Capability
-from custom_components.localthings.ocf.registry.entities import BinarySensorDesc
+from custom_components.localthings.registry.capability import Capability
+from custom_components.localthings.registry.entities import BinarySensorDesc
 
 
 def test_capability_defaults():

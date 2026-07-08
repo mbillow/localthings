@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.localthings.ocf.registry.adapter import _key
-from custom_components.localthings.ocf.registry.by_type import dishwasher, refrigerator
-from custom_components.localthings.ocf.registry.capabilities import fridge
-from custom_components.localthings.ocf.registry.discovery import discover
+from custom_components.localthings.registry.adapter import _key
+from custom_components.localthings.registry.by_type import dishwasher, refrigerator
+from custom_components.localthings.registry.capabilities import fridge
+from custom_components.localthings.registry.discovery import discover
 from tests.conftest import _load_resources
 
 GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'

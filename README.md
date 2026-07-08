@@ -110,17 +110,16 @@ custom_components/localthings/
   sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py
                                   One module per HA platform
   strings.json / translations/   Config-flow copy + entity state translations
-  ocf/
+  registry/
     batch.py                     /device/0 batch response parsing
-    registry/
-      capability.py              Capability dataclass (href, entities, transforms)
-      entities.py                Per-platform entity descriptor dataclasses
-      discovery.py                Binds a device's live resources to registered capabilities
-      adapter.py                  Flattens bound entities into HA-ready state
-      identity.py                 Reads device identity (serial, oneUiVersion) for type detection
-      capabilities/               Shared + per-family Capability definitions (common, dryer, oven,
+    capability.py                Capability dataclass (href, entities, transforms)
+    entities.py                  Per-platform entity descriptor dataclasses
+    discovery.py                  Binds a device's live resources to registered capabilities
+    adapter.py                    Flattens bound entities into HA-ready state
+    identity.py                   Reads device identity (serial, oneUiVersion) for type detection
+    capabilities/                 Shared + per-family Capability definitions (common, dryer, oven,
                                    dishwasher, fridge, laundry, operational)
-      by_type/                    One DeviceRegistry per appliance type, composed from capabilities/
+    by_type/                      One DeviceRegistry per appliance type, composed from capabilities/
 tests/                            80+ tests: registry composition, discovery, entity descriptors,
                                    golden-file regression against captured device dumps
 requirements-dev.txt               Test deps, including the smartthings-local package
@@ -132,9 +131,9 @@ docker-compose.yml / ha_config/    Local HA dev environment
 ## Adding a new appliance type
 
 1. Capture the appliance's `/device/0` response to see what resources/fields it exposes. An authenticated `DtlsCoapSession` from `smartthings_local.protocol.dtls_session` GET is enough; `local-tools/probe_device.py` wraps this.
-2. Reuse existing `Capability` objects from `ocf/registry/capabilities/` wherever the resource matches one already declared. Most `common.py` capabilities (power, kids lock, remote control, alarms, energy/water meters) are shared verbatim across families; add new ones only for resources unique to the new type.
-3. Create `ocf/registry/by_type/<name>.py` with a `DeviceRegistry(name=..., capabilities=_build([...]))`. Use `pattern_capabilities` instead of `capabilities` for any resource whose `href` isn't fixed (for example per-compartment fridge resources); see `refrigerator.py` for the pattern.
-4. Register it in `_REGISTRY_BY_KEY` in `ocf/registry/by_type/__init__.py`, keyed on the lowercased, space/hyphen-to-underscore-converted suffix of the device's `oneUiVersion` string (see `_type_key()` in that file for the exact transform).
+2. Reuse existing `Capability` objects from `registry/capabilities/` wherever the resource matches one already declared. Most `common.py` capabilities (power, kids lock, remote control, alarms, energy/water meters) are shared verbatim across families; add new ones only for resources unique to the new type.
+3. Create `registry/by_type/<name>.py` with a `DeviceRegistry(name=..., capabilities=_build([...]))`. Use `pattern_capabilities` instead of `capabilities` for any resource whose `href` isn't fixed (for example per-compartment fridge resources); see `refrigerator.py` for the pattern.
+4. Register it in `_REGISTRY_BY_KEY` in `registry/by_type/__init__.py`, keyed on the lowercased, space/hyphen-to-underscore-converted suffix of the device's `oneUiVersion` string (see `_type_key()` in that file for the exact transform).
 5. Add golden-file coverage in `tests/` against a captured `/device/0` dump for the new type.
 
 No config-flow or coordinator changes are needed. Device-type detection and entity wiring are fully driven by the registry.

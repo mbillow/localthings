@@ -1,6 +1,6 @@
 import cbor2
 
-from custom_components.localthings.ocf.registry.identity import DeviceIdentity, read_identity
+from custom_components.localthings.registry.identity import DeviceIdentity, read_identity
 
 
 class FakeSession:

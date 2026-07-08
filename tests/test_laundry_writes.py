@@ -1,6 +1,6 @@
 """Write-handler unit tests for laundry-family capabilities."""
-from custom_components.localthings.ocf.registry.capabilities import laundry
-from custom_components.localthings.ocf.registry.capabilities.operational import OPERATIONAL_STATE
+from custom_components.localthings.registry.capabilities import laundry
+from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
 
 
 def test_start_button_writes_run():

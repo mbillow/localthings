@@ -7,9 +7,9 @@ pattern capability that auto-derives distinct keys from the href segments.
 """
 from tests.conftest import _load_resources
 
-from custom_components.localthings.ocf.registry.adapter import _key
-from custom_components.localthings.ocf.registry.by_type import refrigerator
-from custom_components.localthings.ocf.registry.discovery import discover
+from custom_components.localthings.registry.adapter import _key
+from custom_components.localthings.registry.by_type import refrigerator
+from custom_components.localthings.registry.discovery import discover
 
 
 def test_two_doors_get_distinct_keys():

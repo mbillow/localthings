@@ -1,8 +1,8 @@
-from custom_components.localthings.ocf.registry.capability import Capability
-from custom_components.localthings.ocf.registry.discovery import (
+from custom_components.localthings.registry.capability import Capability
+from custom_components.localthings.registry.discovery import (
     BoundEntity, discover, instance_suffix,
 )
-from custom_components.localthings.ocf.registry.entities import BinarySensorDesc
+from custom_components.localthings.registry.entities import BinarySensorDesc
 
 LOCK = Capability(
     href='/kidslock/vs/0',

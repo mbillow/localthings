@@ -1,8 +1,8 @@
 import pytest
 from tests.conftest import _load_device
-from custom_components.localthings.ocf.registry.by_type import for_device, _type_key
-from custom_components.localthings.ocf.registry.discovery import discover
-from custom_components.localthings.ocf.registry.adapter import flatten, is_active
+from custom_components.localthings.registry.by_type import for_device, _type_key
+from custom_components.localthings.registry.discovery import discover
+from custom_components.localthings.registry.adapter import flatten, is_active
 
 
 @pytest.mark.parametrize('name,expected_type_key', [

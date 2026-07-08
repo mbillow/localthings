@@ -7,8 +7,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.const import EntityCategory
 
-from .ocf.registry.adapter import _key
-from .ocf.registry.discovery import BoundEntity
+from .registry.adapter import _key
+from .registry.discovery import BoundEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
