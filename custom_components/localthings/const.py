@@ -12,3 +12,7 @@ CONF_LEAF_KEY_PEM  = "leaf_key_pem"
 PROBE_PORTS = [49154, 49155]
 
 SUMMARY_INTERVAL_S = 30.0
+
+DEVICE_SUPPORT_ISSUE_URL = (
+    "https://github.com/mbillow/localthings/issues/new?template=device-support.yml"
+)

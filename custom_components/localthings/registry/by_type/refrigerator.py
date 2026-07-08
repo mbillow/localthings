@@ -1,10 +1,11 @@
 """Refrigerator device registry."""
-from ..capabilities import common, fridge
+from ..capabilities import common, fridge, ignored
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='refrigerator',
     capabilities=_build([
+        *ignored.IGNORED,
         common.POWER,
         fridge.STATUS_LOCK,
         fridge.DOOR_ALERT,

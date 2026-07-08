@@ -73,5 +73,11 @@
     "abort": {
       "already_configured": "This device is already configured."
     }
+  },
+  "issues": {
+    "device_gap": {
+      "title": "Incomplete capability coverage for {device_name}",
+      "description": "This device is missing full capability coverage. Either its appliance type wasn't recognized, or some of the resources it exposes aren't modeled yet. It'll keep working with whatever is already supported. You can help expand support by going to Settings > Devices & Services > {device_name} > the menu (top right) > Download diagnostics, then filing it with the linked issue template."
+    }
   }
 }

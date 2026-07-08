@@ -3,12 +3,13 @@
 Note: dryer devices use port 49155 (not 49154). The config flow handles
 this automatically via port probing.
 """
-from ..capabilities import common, dryer, fridge, laundry, operational
+from ..capabilities import common, dryer, fridge, ignored, laundry, operational
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='dryer',
     capabilities=_build([
+        *ignored.IGNORED,
         common.POWER,
         common.KIDS_LOCK,
         common.REMOTE_CONTROL,

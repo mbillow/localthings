@@ -1,10 +1,11 @@
 """Oven device registry."""
-from ..capabilities import common, fridge, oven
+from ..capabilities import common, fridge, ignored, oven
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='oven',
     capabilities=_build([
+        *ignored.IGNORED,
         common.POWER,
         common.KIDS_LOCK,
         common.REMOTE_CONTROL,

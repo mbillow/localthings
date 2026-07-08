@@ -1,10 +1,11 @@
 """Dishwasher device registry."""
-from ..capabilities import common, dishwasher, fridge, laundry, operational
+from ..capabilities import common, dishwasher, fridge, ignored, laundry, operational
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='dishwasher',
     capabilities=_build([
+        *ignored.IGNORED,
         common.POWER,
         common.KIDS_LOCK,
         common.REMOTE_CONTROL,

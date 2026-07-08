@@ -10,6 +10,7 @@ import cbor2
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -24,7 +25,7 @@ from .registry.identity import read_identity, DeviceIdentity
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
-    SUMMARY_INTERVAL_S,
+    DEVICE_SUPPORT_ISSUE_URL, SUMMARY_INTERVAL_S,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._subpoll_task: asyncio.Task | None = None
         self._hot_hrefs: list[str] = []
         self._warm_hrefs: list[str] = []
+        self.device_type_name: str | None = None
+        self.one_ui_version: str = ''
+        self._unbound_hrefs: list[str] = []
 
     # ------------------------------------------------------------------
     # Session management (all blocking — must run in executor)
@@ -183,14 +187,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         one_ui = (resources.get('/otninformation/vs/0', {})
                   .get('swVersionInfo', {})
                   .get('oneUiVersion', ''))
+        self.one_ui_version = one_ui
         reg = for_device(one_ui) if one_ui else None
+        unbound: list[str] = []
         if reg is not None:
             _LOGGER.debug("device type: %s (oneUiVersion=%r)", reg.name, one_ui)
-            bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+            bound = discover(resources, reg.capabilities, reg.pattern_capabilities,
+                              log=unbound.append)
+            self.device_type_name = reg.name
         else:
             _LOGGER.warning("unknown device type oneUiVersion=%r; using common caps", one_ui)
-            bound = discover(resources, CAPABILITIES)
+            bound = discover(resources, CAPABILITIES, log=unbound.append)
+            self.device_type_name = None
         self.bound = bound
+        self._unbound_hrefs = unbound
 
         serial = (resources.get('/information/vs/0', {})
                   .get('x.com.samsung.da.serialNum', ''))
@@ -209,6 +219,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             manufacturer=mfr,
             model=model,
         )
+        self._update_coverage_gap_issue(reg is None, unbound, name)
+
         hot, warm = set(), set()
         for be in bound:
             tier = be.capability.poll_tier
@@ -224,6 +236,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "discovered %d entities (serial=%s) hot=%s warm=%s",
             len(bound), serial, self._hot_hrefs, self._warm_hrefs,
         )
+
+    def _update_coverage_gap_issue(
+        self, unknown_type: bool, unbound_hrefs: list[str], device_name: str,
+    ) -> None:
+        """Raise or clear a Repairs issue when capability coverage is incomplete.
+
+        Fires once, at discovery time, either because the device type itself
+        wasn't recognized or because some of its resources didn't bind to
+        any capability. Diagnostics (diagnostics.py) is what a user actually
+        downloads to help; this just tells them there's something to send.
+        """
+        issue_id = f"device_gap_{self._entry.entry_id}"
+        if unknown_type or unbound_hrefs:
+            ir.async_create_issue(
+                self.hass, DOMAIN, issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="device_gap",
+                translation_placeholders={"device_name": device_name},
+                learn_more_url=DEVICE_SUPPORT_ISSUE_URL,
+            )
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook

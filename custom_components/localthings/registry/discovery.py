@@ -2,7 +2,8 @@
 
 A device advertises a set of OCF resources keyed by href. For every href
 present in the registry, emit the capability's entities bound to that resource.
-Unknown hrefs are a coverage gap, logged at debug and skipped.
+Unknown hrefs are a coverage gap; each one is passed to the optional `log`
+callback (as the raw href, not a formatted message) and otherwise skipped.
 """
 from __future__ import annotations
 
@@ -79,6 +80,6 @@ def discover(
             break
 
         if not matched and log is not None:
-            log(f"unknown resource {href}")
+            log(href)
 
     return out

@@ -1,4 +1,4 @@
-from . import common, dishwasher, fridge, laundry, operational, oven
+from . import common, dishwasher, fridge, ignored, laundry, operational, oven
 from ..capability import Capability
 
 
@@ -16,4 +16,4 @@ _OVEN_GLOBAL_CAPS = [
 ]
 
 ALL = [v for mod in (common, operational, laundry, fridge)
-       for v in vars(mod).values() if _is_capability(v)] + _OVEN_GLOBAL_CAPS
+       for v in vars(mod).values() if _is_capability(v)] + _OVEN_GLOBAL_CAPS + ignored.IGNORED
