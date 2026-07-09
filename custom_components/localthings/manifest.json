@@ -1,14 +1,16 @@
 {
   "domain": "localthings",
   "name": "Local Things",
-  "version": "0.1.0",
+  "codeowners": ["@mbillow"],
   "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/mbillow/localthings",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/mbillow/localthings/issues",
   "requirements": [
     "cbor2>=5.4.6",
     "pyOpenSSL>=23.0",
     "smartthings-local>=0.1.0"
   ],
-  "dependencies": [],
-  "codeowners": []
+  "version": "0.1.0"
 }

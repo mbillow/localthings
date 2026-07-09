@@ -60,7 +60,7 @@ This repo doesn't include the needed CA bundle. For an example of how to obtain 
 
 ## Part 3: Add the integration in Home Assistant
 
-1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or install via a custom HACS repository: no `hacs.json` is checked in yet, so add this repo as a custom integration repository in HACS if you use it that way.)
+1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or add this repo as a custom repository in HACS — `Integration` category — and install it from there.)
 2. Restart HA.
 3. **Settings > Devices & Services > Add Integration > Local Things.**
 4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
