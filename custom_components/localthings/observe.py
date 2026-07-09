@@ -14,6 +14,8 @@ import logging
 import threading
 import time
 
+import cbor2
+
 from smartthings_local.ocf.state_cache import StateCache
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,6 +24,8 @@ MODE_OBSERVE = 'observe'
 MODE_POLL = 'poll'
 
 DEFAULT_SETTLE_S = 4.0
+GRACE_PERIOD_S = 15.0
+SUCCESS_FRACTION = 0.8
 
 
 class ObserveManager:
@@ -38,6 +42,8 @@ class ObserveManager:
         self.last_mode_change_wall = time.time()
         self._settle_until: dict[str, float] = {}
         self._settle_lock = threading.Lock()
+        self.subscribed_hrefs: set[str] = set()
+        self._notified: set[str] = set()
 
     def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> None:
         with self._settle_lock:
@@ -59,3 +65,56 @@ class ObserveManager:
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
         return self.cache.apply_rep(href, rep, source=source)
+
+    def on_notification(self, href: str, payload: bytes) -> None:
+        """Wired as DtlsCoapSession.on_notification. Runs on the DTLS
+        reader thread — must not touch asyncio."""
+        try:
+            rep = cbor2.loads(payload)
+        except Exception as e:
+            self.log.warning("observe %s: cbor decode failed: %s", href, e)
+            return
+        if not isinstance(rep, dict):
+            return
+        self._notified.add(href)
+        self.apply(href, rep, source='observe')
+
+    def try_enter_observe_mode(
+        self, session, hrefs: list[str],
+        grace_period_s: float = GRACE_PERIOD_S,
+        success_fraction: float = SUCCESS_FRACTION,
+    ) -> bool:
+        """Blocking — subscribes to every href then sleeps for the whole
+        grace period. Caller must run this in an executor, never on the
+        event loop."""
+        subscribed: set[str] = set()
+        for href in hrefs:
+            segs = [s for s in href.strip('/').split('/') if s]
+            try:
+                session.subscribe(segs)
+                subscribed.add(href)
+            except Exception as e:
+                self.log.warning("subscribe %s failed: %s", href, e)
+        if not subscribed:
+            self._set_mode(MODE_POLL)
+            self.subscribed_hrefs = set()
+            return False
+
+        time.sleep(grace_period_s)
+
+        fraction = len(self._notified & subscribed) / len(subscribed)
+        if fraction >= success_fraction:
+            self.subscribed_hrefs = subscribed
+            self._set_mode(MODE_OBSERVE)
+            return True
+
+        self.subscribed_hrefs = set()
+        self._set_mode(MODE_POLL)
+        return False
+
+    def _set_mode(self, mode: str) -> None:
+        if mode != self.mode:
+            self.log.info("observe-mode transition: %s -> %s", self.mode, mode)
+            self.mode = mode
+            self.last_mode_change_ts = time.monotonic()
+            self.last_mode_change_wall = time.time()
