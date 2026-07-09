@@ -34,6 +34,8 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
         self._attr_native_unit_of_measurement = desc.unit
         self._attr_device_class = desc.device_class
         self._attr_state_class = desc.state_class
+        if desc.options:
+            self._attr_options = list(desc.options)
 
     @property
     def native_value(self):

@@ -35,6 +35,7 @@ class SensorDesc(SamsungEntityDescription):
     device_class: Optional[str] = None
     state_class: Optional[str] = None
     unit: Optional[str] = None
+    options: Optional[tuple] = None  # required by HA when device_class == 'enum'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -46,7 +47,6 @@ class BinarySensorDesc(SamsungEntityDescription):
 class SelectDesc(SamsungEntityDescription):
     options: Any = ()        # tuple[str,...] | Callable[[dict], list[str]]
     options_field: Optional[str] = None  # resource field that contains the live options list
-    option_names: Optional[dict] = None  # raw device value -> human-readable name
     write_fn: WriteFn = None
 
 

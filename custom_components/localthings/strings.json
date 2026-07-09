@@ -15,6 +15,36 @@
           "66": "Medium",
           "100": "High"
         }
+      },
+      "ice_type": {
+        "state": {
+          "whiskey_iceball_3": "3 Balls/Day",
+          "whiskey_iceball_6": "6 Balls/Day",
+          "whiskey_iceball_9": "9 Balls/Day"
+        }
+      },
+      "beverage_zone_mode": {
+        "state": {
+          "sp_ttype_beer_drinks": "Beverage",
+          "sp_ttype_wine_dessert": "Wine and Dessert"
+        }
+      },
+      "flex_zone_mode": {
+        "state": {
+          "cv_ttype_rf9000a_freeze": "Freeze",
+          "cv_ttype_rf9000a_softfreeze": "Soft Freeze",
+          "cv_ttype_rf9000a_meat_fish": "Meat/Fish",
+          "cv_ttype_rf9000a_fruit_veggies": "Fruit & Veggies",
+          "cv_ttype_rf9000a_beverage": "Beverage"
+        }
+      }
+    },
+    "sensor": {
+      "ice_making_status": {
+        "state": {
+          "icestatus_stop": "Idle",
+          "icestatus_run": "Making ice"
+        }
       }
     }
   },
