@@ -17,8 +17,11 @@ import time
 import cbor2
 
 from smartthings_local.ocf.state_cache import StateCache
+from smartthings_local.ocf.observe_refresh import ObserveRefreshTask
 
 _LOGGER = logging.getLogger(__name__)
+
+REFRESH_INTERVAL_S = 6 * 3600.0
 
 MODE_OBSERVE = 'observe'
 MODE_POLL = 'poll'
@@ -45,6 +48,9 @@ class ObserveManager:
         self.subscribed_hrefs: set[str] = set()
         self._notified: set[str] = set()
         self.fallback_hrefs: set[str] = set()
+        self._refresh_task: ObserveRefreshTask | None = None
+        self._refresh_stop: threading.Event | None = None
+        self._refresh_thread: threading.Thread | None = None
 
     def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> None:
         with self._settle_lock:
@@ -98,6 +104,7 @@ class ObserveManager:
             except Exception as e:
                 self.log.warning("subscribe %s failed: %s", href, e)
         if not subscribed:
+            self._stop_refresh_task()
             self._set_mode(MODE_POLL)
             self.subscribed_hrefs = set()
             return False
@@ -108,8 +115,10 @@ class ObserveManager:
         if fraction >= success_fraction:
             self.subscribed_hrefs = subscribed
             self._set_mode(MODE_OBSERVE)
+            self.start_refresh_task(session)
             return True
 
+        self._stop_refresh_task()
         self.subscribed_hrefs = set()
         self._set_mode(MODE_POLL)
         return False
@@ -144,4 +153,29 @@ class ObserveManager:
     def downgrade_to_poll(self) -> None:
         self.fallback_hrefs = set(self.subscribed_hrefs)
         self.subscribed_hrefs = set()
+        self._stop_refresh_task()
         self._set_mode(MODE_POLL)
+
+    def start_refresh_task(self, session) -> None:
+        self._stop_refresh_task()
+        paths = [tuple(h.strip('/').split('/')) for h in self.subscribed_hrefs]
+        self._refresh_task = ObserveRefreshTask(
+            session, paths, interval_s=REFRESH_INTERVAL_S, logger=self.log,
+        )
+        self._refresh_stop = threading.Event()
+        self._refresh_thread = threading.Thread(
+            target=self._refresh_task.run_forever,
+            args=(self._refresh_stop,),
+            daemon=True, name='localthings-observe-refresh',
+        )
+        self._refresh_thread.start()
+
+    def _stop_refresh_task(self) -> None:
+        if self._refresh_stop is not None:
+            self._refresh_stop.set()
+        self._refresh_thread = None
+        self._refresh_task = None
+        self._refresh_stop = None
+
+    def close(self) -> None:
+        self._stop_refresh_task()
