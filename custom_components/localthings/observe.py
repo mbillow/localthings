@@ -87,6 +87,7 @@ class ObserveManager:
         """Blocking — subscribes to every href then sleeps for the whole
         grace period. Caller must run this in an executor, never on the
         event loop."""
+        self._notified.clear()
         subscribed: set[str] = set()
         for href in hrefs:
             segs = [s for s in href.strip('/').split('/') if s]
