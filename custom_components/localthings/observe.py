@@ -44,6 +44,7 @@ class ObserveManager:
         self._settle_lock = threading.Lock()
         self.subscribed_hrefs: set[str] = set()
         self._notified: set[str] = set()
+        self.fallback_hrefs: set[str] = set()
 
     def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> None:
         with self._settle_lock:
@@ -119,3 +120,28 @@ class ObserveManager:
             self.mode = mode
             self.last_mode_change_ts = time.monotonic()
             self.last_mode_change_wall = time.time()
+
+    def check_sweep_for_misses(self, sweep_resources: dict[str, dict]) -> bool:
+        """Compare a safety-net sweep result against the cache for every
+        subscribed href. A mismatch outside its settle window means
+        OBSERVE silently missed a change (it only notifies on change, so
+        any disagreement is a real miss, not a case of "nothing changed
+        yet"). Returns True if a miss was detected."""
+        if self.mode != MODE_OBSERVE:
+            return False
+        for href in self.subscribed_hrefs:
+            if href not in sweep_resources or self._is_settling(href):
+                continue
+            cached = self.cache.get(href)
+            if cached is not None and cached != sweep_resources[href]:
+                self.log.warning(
+                    "observe missed a change on %s (sweep disagrees with cache)",
+                    href,
+                )
+                return True
+        return False
+
+    def downgrade_to_poll(self) -> None:
+        self.fallback_hrefs = set(self.subscribed_hrefs)
+        self.subscribed_hrefs = set()
+        self._set_mode(MODE_POLL)

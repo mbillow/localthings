@@ -189,3 +189,65 @@ def test_try_enter_observe_mode_clears_stale_notifications_on_retry():
     assert entered is False
     assert mgr.mode == 'poll'
     assert mgr.subscribed_hrefs == set()
+
+
+def test_check_sweep_for_misses_false_when_not_in_observe_mode():
+    mgr = _manager()
+    assert mgr.check_sweep_for_misses({'/oven/vs/0': {'a': 2}}) is False
+
+
+def test_check_sweep_for_misses_detects_mismatch():
+    mgr = _manager()
+    session = _FakeSession()
+    href = '/oven/vs/0'
+
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        mgr.on_notification(href, cbor2.dumps({'a': 1}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+
+    mgr.try_enter_observe_mode(session, [href], grace_period_s=0.02)
+    notifier.join()
+    assert mgr.mode == 'observe'
+
+    # Sweep sees a value the cache never got via notify -> observe missed it.
+    missed = mgr.check_sweep_for_misses({href: {'a': 2}})
+
+    assert missed is True
+
+
+def test_check_sweep_for_misses_ignores_href_during_settle_window():
+    mgr = _manager()
+    session = _FakeSession()
+    href = '/oven/vs/0'
+    mgr.on_notification(href, cbor2.dumps({'a': 1}))
+    mgr.try_enter_observe_mode(session, [href], grace_period_s=0.01)
+    mgr.mark_write_pending(href, settle_s=5.0)
+
+    missed = mgr.check_sweep_for_misses({href: {'a': 2}})
+
+    assert missed is False
+
+
+def test_downgrade_to_poll_moves_subscribed_to_fallback():
+    mgr = _manager()
+    session = _FakeSession()
+    href = '/oven/vs/0'
+
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        mgr.on_notification(href, cbor2.dumps({'a': 1}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+
+    mgr.try_enter_observe_mode(session, [href], grace_period_s=0.02)
+    notifier.join()
+
+    mgr.downgrade_to_poll()
+
+    assert mgr.mode == 'poll'
+    assert mgr.subscribed_hrefs == set()
+    assert mgr.fallback_hrefs == {href}
