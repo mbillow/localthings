@@ -20,7 +20,32 @@ from ..entities import (
 )
 
 # Beverage zone flex modes.
-_BZONE_MODES = ('SP_TTYPE_BEER_DRINKS', 'SP_TTYPE_WINE_DESSERT')
+_BZONE_MODE_NAMES = {
+    'SP_TTYPE_BEER_DRINKS': 'Beverage',
+    'SP_TTYPE_WINE_DESSERT': 'Wine and Dessert',
+}
+_BZONE_MODES = tuple(_BZONE_MODE_NAMES)
+
+# Flex zone (convertible drawer) modes.
+_FLEX_ZONE_MODE_NAMES = {
+    'CV_TTYPE_RF9000A_FREEZE': 'Freeze',
+    'CV_TTYPE_RF9000A_SOFTFREEZE': 'Soft Freeze',
+    'CV_TTYPE_RF9000A_MEAT_FISH': 'Meat/Fish',
+    'CV_TTYPE_RF9000A_FRUIT_VEGGIES': 'Fruit & Veggies',
+    'CV_TTYPE_RF9000A_BEVERAGE': 'Beverage',
+}
+
+# Icemaker ball-production rate options (whiskey icemaker models).
+_ICE_TYPE_NAMES = {
+    'WHISKEY_ICEBALL_3': '3 Balls/Day',
+    'WHISKEY_ICEBALL_6': '6 Balls/Day',
+    'WHISKEY_ICEBALL_9': '9 Balls/Day',
+}
+
+_ICE_MAKING_STATUS_NAMES = {
+    'ICESTATUS_STOP': 'Idle',
+    'ICESTATUS_RUN': 'Making ice',
+}
 
 
 def _int(v):
@@ -102,17 +127,17 @@ ICEMAKER_GENERIC = Capability(
     entities=(
         SensorDesc(key='making_status',
                    field='x.com.samsung.da.iceMaker.iceMakingStatus',
-                   name=None, icon='mdi:cube-outline',
-                   translation_key='ice_making_status'),
+                   name='Making status', icon='mdi:cube-outline',
+                   value_fn=lambda v: _ICE_MAKING_STATUS_NAMES.get(v, v)),
         SwitchDesc(key='enabled', field='x.com.samsung.da.iceMaker.state',
                    name=None, icon='mdi:cube-outline',
                    value_fn=lambda v: v == 'On',
                    write_fn=_icemaker_write('x.com.samsung.da.iceMaker.state')),
         SelectDesc(key='type', field='x.com.samsung.da.iceType.desired',
-                   name=None, icon='mdi:cube-outline',
-                   translation_key='ice_type',
+                   name='Ice type', icon='mdi:cube-outline',
                    entity_category='config',
                    options_field='x.com.samsung.da.iceType.supported',
+                   option_names=_ICE_TYPE_NAMES,
                    exists_fn=lambda rep: bool(rep.get('x.com.samsung.da.iceType.supported')),
                    write_fn=_icemaker_write('x.com.samsung.da.iceType.desired')),
     ),
@@ -468,9 +493,9 @@ BEVERAGE_ZONE = Capability(
     entities=(
         SelectDesc(key='beverage_zone_mode', field='roomDesiredMode',
                    name='Beverage zone mode', icon='mdi:glass-wine',
-                   translation_key='beverage_zone_mode',
                    entity_category='config',
-                   options=_BZONE_MODES, write_fn=_bzone_write),
+                   options=_BZONE_MODES, option_names=_BZONE_MODE_NAMES,
+                   write_fn=_bzone_write),
     ),
 )
 
@@ -496,9 +521,9 @@ FLEX_ZONE = Capability(
         SelectDesc(key='flex_zone_mode',
                    field='x.com.samsung.da.modes',
                    name='Flex zone mode', icon='mdi:thermostat',
-                   translation_key='flex_zone_mode',
                    entity_category='config',
                    options_field='x.com.samsung.da.supportedOptions',
+                   option_names=_FLEX_ZONE_MODE_NAMES,
                    exists_fn=lambda rep: bool(
                        rep.get('x.com.samsung.da.supportedOptions')),
                    value_fn=lambda modes: next(

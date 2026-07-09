@@ -46,6 +46,7 @@ class BinarySensorDesc(SamsungEntityDescription):
 class SelectDesc(SamsungEntityDescription):
     options: Any = ()        # tuple[str,...] | Callable[[dict], list[str]]
     options_field: Optional[str] = None  # resource field that contains the live options list
+    option_names: Optional[dict] = None  # raw device value -> human-readable name
     write_fn: WriteFn = None
 
 

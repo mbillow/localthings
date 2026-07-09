@@ -39,12 +39,24 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         desc: SelectDesc = self._bound.desc
         if desc.options_field:
             rep = self.coordinator.last_resources.get(self._bound.href) or {}
-            return list(rep.get(desc.options_field) or [])
-        return self._attr_options
+            raw = list(rep.get(desc.options_field) or [])
+        else:
+            raw = self._attr_options
+        if desc.option_names:
+            return [desc.option_names.get(o, o) for o in raw]
+        return raw
 
     @property
     def current_option(self):
-        return (self.coordinator.data or {}).get(self._state_key)
+        desc: SelectDesc = self._bound.desc
+        raw = (self.coordinator.data or {}).get(self._state_key)
+        if desc.option_names:
+            return desc.option_names.get(raw, raw)
+        return raw
 
     async def async_select_option(self, option: str) -> None:
+        desc: SelectDesc = self._bound.desc
+        if desc.option_names:
+            reverse = {v: k for k, v in desc.option_names.items()}
+            option = reverse.get(option, option)
         await self.coordinator.async_send_command(self._bound, option)
