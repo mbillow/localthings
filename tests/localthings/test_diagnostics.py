@@ -27,3 +27,18 @@ async def test_diagnostics_shape_and_redaction(
     assert resources['/wirelessinfo/vs/0']['macaddressWiFi'] == REDACTED
     # Ordinary state survives.
     assert resources['/status/lock/vs/0']['x.com.samsung.da.ado.devicecontrol'] == 'On'
+
+
+async def test_diagnostics_include_observe_mode_fields(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    diag = await async_get_config_entry_diagnostics(hass, mock_entry)
+
+    assert diag['observe_mode'] == 'poll'
+    assert diag['observe_subscribed_hrefs'] == []
+    assert diag['observe_fallback_hrefs'] == []
+    assert 'observe_last_mode_change' in diag
+    assert diag['observe_href_freshness_s'] == {}

@@ -33,4 +33,12 @@ async def async_get_config_entry_diagnostics(
         "resources": redact_resources(coordinator.last_resources),
         "integration_version": integration.version,
         "smartthings_local_version": pkg_version("smartthings-local"),
+        "observe_mode": coordinator.observe_mode,
+        "observe_subscribed_hrefs": sorted(coordinator._observe.subscribed_hrefs),
+        "observe_fallback_hrefs": sorted(coordinator._observe.fallback_hrefs),
+        "observe_last_mode_change": coordinator._observe.last_mode_change_wall,
+        "observe_href_freshness_s": {
+            href: coordinator._cache.freshness_s(href)
+            for href in coordinator._observe.subscribed_hrefs
+        },
     }
