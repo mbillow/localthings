@@ -345,6 +345,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         _LOGGER.debug("Full error:", exc_info=e2)
                         return flatten(self.bound, snapshot)
                     raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
+                else:
+                    # The reconnect gave us a brand-new session with zero
+                    # OBSERVE registrations. If we were in observe mode,
+                    # that state is now stale — the refresh task is still
+                    # pinned to the old (closed) session and nothing will
+                    # ever re-subscribe on the new one. Tear it down now so
+                    # the existing poll-mode retry path (_maybe_retry_observe_mode)
+                    # re-subscribes on the live session on its next cycle.
+                    if self._observe.mode == MODE_OBSERVE:
+                        _LOGGER.debug(
+                            "reconnect while in observe mode; downgrading to "
+                            "poll so recovery re-subscribes on the new session"
+                        )
+                        self._observe.downgrade_to_poll()
 
         source = 'sweep' if self._discovered else 'poll'
         if self._observe.mode == MODE_OBSERVE and self._observe.check_sweep_for_misses(resources):

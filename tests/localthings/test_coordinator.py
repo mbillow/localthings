@@ -4,7 +4,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import cbor2
 import pytest
@@ -222,6 +222,59 @@ async def test_enters_observe_mode_when_hot_warm_hrefs_notify(
 
     assert entered is True
     assert coordinator._observe.mode == MODE_OBSERVE
+
+
+async def test_reconnect_while_observe_mode_downgrades_to_poll(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources
+) -> None:
+    """A poll-failure-triggered reconnect while in observe mode must tear
+    down the (now stale) observe state rather than leave it dangling on a
+    dead session — see _async_update_data's reconnect branch.
+
+    After the reconnect the coordinator should be back in poll mode, which
+    hands recovery to the existing _maybe_retry_observe_mode path so it
+    re-subscribes on the live session on its next eligible cycle.
+    """
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
+
+    # Get the coordinator into observe mode the same way
+    # test_enters_observe_mode_when_hot_warm_hrefs_notify does.
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        for href in hrefs:
+            fake.on_notification(href, cbor2.dumps({'notified': True}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+    entered = await hass.async_add_executor_job(
+        coordinator._observe.try_enter_observe_mode,
+        fake, hrefs, 0.02, 0.8,
+    )
+    notifier.join()
+    assert entered is True
+    assert coordinator.observe_mode == MODE_OBSERVE
+
+    # Simulate the existing "poll failed, reconnecting" branch: _poll_once
+    # fails once (triggering the reconnect/backoff path), then succeeds.
+    with (
+        patch(
+            'custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once',
+            side_effect=[RuntimeError('connection lost'), fridge_resources],
+        ),
+        patch(
+            'custom_components.localthings.coordinator.asyncio.sleep',
+            new=AsyncMock(),
+        ),
+    ):
+        await coordinator.async_request_refresh()
+        await hass.async_block_till_done()
+
+    assert coordinator._observe.mode == MODE_POLL
 
 
 async def test_write_marks_href_pending_before_post(

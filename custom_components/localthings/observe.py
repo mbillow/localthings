@@ -111,7 +111,7 @@ class ObserveManager:
 
         time.sleep(grace_period_s)
 
-        fraction = len(self._notified & subscribed) / len(subscribed)
+        fraction = len(set(self._notified) & subscribed) / len(subscribed)
         if fraction >= success_fraction:
             self.subscribed_hrefs = subscribed
             self._set_mode(MODE_OBSERVE)
