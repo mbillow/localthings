@@ -115,6 +115,55 @@ def mock_coordinator_session(fridge_resources):
         yield
 
 
+class FakeObserveSession:
+    """Stand-in for DtlsCoapSession that supports subscribe()/on_notification
+    for coordinator-level observe tests, without a real DTLS connection."""
+
+    def __init__(self, on_notification=None):
+        self.on_notification = on_notification
+        self.subscribed: list[str] = []
+        self.fail_hrefs: set[str] = set()
+        self.closed = False
+
+    def subscribe(self, path_segs):
+        href = '/' + '/'.join(path_segs)
+        if href in self.fail_hrefs:
+            raise ConnectionError("subscribe failed")
+        self.subscribed.append(href)
+        return b'\x01'
+
+    def refresh_observes(self, paths):
+        return None
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def mock_coordinator_observe_session(fridge_resources):
+    """Like mock_coordinator_session, but _connect_session installs a
+    FakeObserveSession on coordinator._session so subscribe()/on_notification
+    wiring can be exercised."""
+    fake = FakeObserveSession()
+
+    def _connect(self):
+        fake.on_notification = self._observe.on_notification
+        self._session = fake
+
+    with (
+        patch(
+            'custom_components.localthings.coordinator.LocalThingsCoordinator._connect_session',
+            _connect,
+        ),
+        patch(
+            'custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once',
+            return_value=fridge_resources,
+        ),
+        patch('custom_components.localthings.coordinator.LocalThingsCoordinator._close_session'),
+    ):
+        yield fake
+
+
 @pytest.fixture
 def mock_entry(hass):
     """A MockConfigEntry added to hass, ready for async_setup."""

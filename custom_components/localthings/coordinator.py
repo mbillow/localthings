@@ -3,18 +3,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import timedelta
 from typing import Any
 
 import cbor2
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from smartthings_local.protocol.dtls_session import DtlsCoapSession
+from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
 from .registry.by_type import for_device
@@ -22,6 +24,7 @@ from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
 from .registry.identity import read_identity, DeviceIdentity
+from .observe import ObserveManager, MODE_OBSERVE, MODE_POLL
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
@@ -31,6 +34,17 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _SEED_PATH = ['device', '0']
+
+
+class _NoOpDescriptor:
+    """StateCache requires a descriptor with an on_observation hook. This
+    integration doesn't use per-capability observation hooks, so this is a
+    deliberate no-op, not a placeholder for missing functionality."""
+    def on_observation(self, state: dict, href: str, rep: dict) -> None:
+        return None
+
+
+_RECOVERY_RETRY_S = 600.0  # re-attempt observe mode this often while polling
 
 
 class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -52,7 +66,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._identity: DeviceIdentity | None = None
         self._discovered = False
         self.bound = []
-        self._last_resources: dict[str, dict] = {}
+        self._cache = StateCache(_NoOpDescriptor())
+        self._cache.set_on_change(self._on_cache_changed)
+        self._observe = ObserveManager(self._cache, logger=_LOGGER)
         self.device_serial = entry.data[CONF_HOST]  # placeholder until first poll
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.data[CONF_HOST])},
@@ -73,7 +89,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def last_resources(self) -> dict:
-        return self._last_resources
+        return self._cache.snapshot()
+
+    @property
+    def observe_mode(self) -> str:
+        return self._observe.mode
 
     def _connect_session(self) -> None:
         host     = self._entry.data[CONF_HOST]
@@ -81,7 +101,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
         key_pem  = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
+        sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem,
+                               on_notification=self._observe.on_notification)
         sess.connect()
         sess.start_reader()
         self._session = sess
@@ -105,7 +126,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
+        self._observe.close()
         await self.hass.async_add_executor_job(self._close_session)
+
+    def _on_cache_changed(self, changed: bool, source: str) -> None:
+        """StateCache.set_on_change callback. Runs on whatever thread
+        applied the update (DTLS reader thread for observe notifications,
+        an executor thread for poll/sweep) — never the event loop, so the
+        HA push must be scheduled thread-safely."""
+        if not changed:
+            return
+        self.hass.add_job(self._push_cache_snapshot)
+
+    @callback
+    def _push_cache_snapshot(self) -> None:
+        if self.bound:
+            self.async_set_updated_data(flatten(self.bound, self._cache.snapshot()))
 
     def _poll_once(self) -> dict[str, dict]:
         """GET /device/0, return parsed resources. Blocking."""
@@ -142,6 +178,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if code == 0x45 and payload:
                     rep = cbor2.loads(payload)
                     if isinstance(rep, dict):
+                        self._observe.apply(href, rep, source='poll')
                         results[href] = rep
             except Exception as e:
                 _LOGGER.debug("sub-poll %s: %s", href, e)
@@ -152,13 +189,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ------------------------------------------------------------------
 
     async def _run_subpolls(self) -> None:
-        """Poll hot/warm hrefs in the gaps between summary polls.
-
-        Schedule over a SUMMARY_INTERVAL_S window:
-          hot hrefs  every slot  (10x, ~3 s apart)
-          warm hrefs every other slot (5x, ~6 s apart)
-        The lock prevents overlap with the summary poll or a concurrent sub-poll.
-        """
+        """Poll hot/warm hrefs in the gaps between summary polls. Only
+        runs in poll-only mode — in observe-primary mode those hrefs are
+        already covered by push notifications."""
+        if self._observe.mode == MODE_OBSERVE:
+            return
         hot = self._hot_hrefs
         warm = self._warm_hrefs
         if not hot and not warm:
@@ -169,15 +204,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hrefs = list(hot) + (list(warm) if i % 2 == 0 else [])
             async with self._session_lock:
                 try:
-                    updates = await self.hass.async_add_executor_job(
+                    await self.hass.async_add_executor_job(
                         self._poll_hrefs_blocking, hrefs
                     )
                 except Exception as e:
                     _LOGGER.debug("sub-poll batch failed: %s", e)
-                    continue
-            if updates:
-                self._last_resources.update(updates)
-                self.async_set_updated_data(flatten(self.bound, self._last_resources))
 
     # ------------------------------------------------------------------
     # Discovery (runs once on first successful poll)
@@ -262,6 +293,30 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+    async def _attempt_observe_mode(self) -> None:
+        """Called once, right after first discovery. Blocking (sleeps for
+        the whole grace period) — must run in an executor."""
+        hrefs = self._hot_hrefs + self._warm_hrefs
+        if not hrefs:
+            return
+        if self._session is None:
+            # _poll_once already connects on a real poll; this only fires
+            # if the session was closed out from under us concurrently.
+            await self.hass.async_add_executor_job(self._connect_session)
+        sess = self._session
+        if sess is None:
+            return
+        await self.hass.async_add_executor_job(
+            self._observe.try_enter_observe_mode, sess, hrefs
+        )
+
+    async def _maybe_retry_observe_mode(self) -> None:
+        """While in poll-only mode, periodically re-attempt observe mode
+        so a device that gains internet access recovers push automatically."""
+        if time.monotonic() - self._observe.last_mode_change_ts < _RECOVERY_RETRY_S:
+            return
+        await self._attempt_observe_mode()
+
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
     # ------------------------------------------------------------------
@@ -285,23 +340,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     resources = await self.hass.async_add_executor_job(self._poll_once)
                 except Exception as e2:
                     _LOGGER.error("poll failed after reconnect: %s", e2)
-                    if self._last_resources:
+                    snapshot = self._cache.snapshot()
+                    if snapshot:
                         _LOGGER.debug("Full error:", exc_info=e2)
-                        return flatten(self.bound, self._last_resources)
+                        return flatten(self.bound, snapshot)
                     raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
 
-        self._last_resources = resources
+        source = 'sweep' if self._discovered else 'poll'
+        if self._observe.mode == MODE_OBSERVE and self._observe.check_sweep_for_misses(resources):
+            self._observe.downgrade_to_poll()
+        for href, rep in resources.items():
+            self._observe.apply(href, rep, source=source)
 
         if not self._discovered:
             self._run_discovery(resources)
+            await self._attempt_observe_mode()
+        elif self._observe.mode == MODE_POLL:
+            await self._maybe_retry_observe_mode()
 
-        # Schedule sub-polls for hot/warm hrefs between summary polls.
+        # Schedule sub-polls for hot/warm hrefs between summary polls
+        # (no-op in observe-primary mode; _run_subpolls checks the mode).
         if self._hot_hrefs or self._warm_hrefs:
             self._subpoll_task = self.hass.async_create_task(
                 self._run_subpolls(), name="localthings_subpoll"
             )
 
-        return flatten(self.bound, resources)
+        return flatten(self.bound, self._cache.snapshot())
 
     # ------------------------------------------------------------------
     # Command dispatch (called by entity platforms in Task 5)
@@ -315,7 +379,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if write_fn is None:
             return
         href = bound_entity.href
-        rep = self._last_resources.get(href or '', {})
+        rep = self._cache.get(href or '') or {}
         result = write_fn(payload, rep, href)
         if result is None:
             _LOGGER.warning("write_fn rejected payload %r for %s", payload, href)
@@ -326,6 +390,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
+            self._observe.mark_write_pending(href)
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
             _LOGGER.info("PUT %s → code %#04x", href, code)
 

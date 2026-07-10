@@ -1,9 +1,12 @@
 """Tests for the LocalThingsCoordinator."""
 from __future__ import annotations
 
+import threading
+import time
 from datetime import timedelta
 from unittest.mock import patch
 
+import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
@@ -12,6 +15,7 @@ from custom_components.localthings.const import (
     DOMAIN, SUMMARY_INTERVAL_S,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL
 
 from .conftest import ENTRY_DATA, MOCK_SERIAL
 
@@ -158,3 +162,89 @@ def test_update_coverage_gap_issue_clears_previous_issue(
 
     coordinator._update_coverage_gap_issue(False, [], 'Test Appliance')
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
+
+
+# ---------------------------------------------------------------------------
+# StateCache / ObserveManager wiring
+# ---------------------------------------------------------------------------
+
+async def test_last_resources_backed_by_state_cache(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """coordinator.last_resources still returns a plain href->rep dict."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    resources = coordinator.last_resources
+    assert isinstance(resources, dict)
+    assert all(isinstance(v, dict) for v in resources.values())
+    assert resources  # fridge fixture is non-empty
+
+
+async def test_enters_poll_mode_when_no_notifies_arrive(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """No fake notifies are sent, so the grace period should time out
+    and the coordinator should stay in poll mode (unchanged behavior)."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    assert coordinator.observe_mode == MODE_POLL
+
+
+async def test_enters_observe_mode_when_hot_warm_hrefs_notify(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
+
+    # try_enter_observe_mode clears prior notifications as soon as it
+    # starts, so notifies must land *during* its grace-period sleep (same
+    # pattern test_observe.py uses), not before the call.
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        for href in hrefs:
+            fake.on_notification(href, cbor2.dumps({'notified': True}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+    entered = await hass.async_add_executor_job(
+        coordinator._observe.try_enter_observe_mode,
+        fake, hrefs, 0.02, 0.8,
+    )
+    notifier.join()
+
+    assert entered is True
+    assert coordinator._observe.mode == MODE_OBSERVE
+
+
+async def test_write_marks_href_pending_before_post(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """async_send_command must call mark_write_pending before POSTing so a
+    slow-to-settle device can't immediately revert the optimistic write."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
