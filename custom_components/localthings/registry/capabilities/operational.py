@@ -47,6 +47,16 @@ def _format_delay(hours):
     return f'{h}:{m:02d}:00'
 
 
+def _delay_field(rep):
+    """Washer hardware reports the delay-until-start duration under
+    'delayEndTime' instead of 'delayStartTime' (both hold a duration, not a
+    wall-clock time -- see _delay_hours). Write back whichever key the
+    device itself is using; default to delayStartTime for hardware that
+    reports neither yet (matches prior behavior)."""
+    return ('x.com.samsung.da.delayEndTime' if 'x.com.samsung.da.delayEndTime' in rep
+            else 'x.com.samsung.da.delayStartTime')
+
+
 def _finish_time(remaining_str):
     if not remaining_str:
         return None
@@ -96,14 +106,15 @@ OPERATIONAL_STATE = Capability(
                             or rep.get('x.com.samsung.da.progress') == 'Finish'
                        else _finish_time(rep.get('x.com.samsung.da.remainingTime'))
                    )),
-        NumberDesc(key='delay_start_hours', field='x.com.samsung.da.delayStartTime',
-                   name='Delay start', icon='mdi:timer-plus-outline',
+        NumberDesc(key='delay_start_hours', name='Delay start', icon='mdi:timer-plus-outline',
                    device_class='duration', unit='h',
                    native_min=0, native_max=24, step=1,
-                   value_fn=_delay_hours,
+                   rep_fn=lambda rep: _delay_hours(
+                       rep.get('x.com.samsung.da.delayStartTime')
+                       or rep.get('x.com.samsung.da.delayEndTime')),
                    write_fn=lambda p, rep, href=None: (
                        ['operational', 'state', 'vs', '0'],
-                       {'x.com.samsung.da.delayStartTime': _format_delay(p)})),
+                       {_delay_field(rep): _format_delay(p)})),
         ButtonDesc(key='start', field='', name='Start cycle', payload='Run',
                    icon='mdi:play',
                    write_fn=lambda p, rep, href=None: (
