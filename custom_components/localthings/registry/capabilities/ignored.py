@@ -109,4 +109,18 @@ IGNORED: list[Capability] = [
     # data -- common.ENERGY_METER on /energy/consumption/vs/0 is the only
     # real source for this control.
     Capability(href='/energy/consumption/0'),
+    # Empty ({}) on every washer dump seen so far -- nothing to expose.
+    Capability(href='/cycleinterface/vs/0'),
+    # OCF-native duplicate of /drlc/vs/0 above -- same utility-program
+    # dependency this integration doesn't support locally.
+    Capability(href='/drlc/0'),
+    # OCF-native duplicate of /operational/state/vs/0, which is already
+    # modeled by operational.OPERATIONAL_STATE (a richer, write-capable
+    # capability with start/pause/stop buttons and a delay-start control)
+    # used by washer, dishwasher, dryer, and oven. This generic href only
+    # carries read-only overlapping data (current job state, remaining
+    # time, progress percentage) with no write path -- not worth building a
+    # parallel write-capable capability around an unverified generic OCF
+    # write contract.
+    Capability(href='/operational/state/0'),
 ]

@@ -68,5 +68,8 @@ class TestWasherIgnoredHrefs:
             '/wm/welcomemsg/vs/0',
             '/wm/personalcourse/vs/0',
             '/energy/consumption/0',
+            '/cycleinterface/vs/0',
+            '/drlc/0',
+            '/operational/state/0',
         ):
             assert href in ignored_hrefs, f"{href} should be in ignored.IGNORED"
