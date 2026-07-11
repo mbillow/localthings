@@ -1,6 +1,8 @@
 """Select platform for Local Things."""
 from __future__ import annotations
 
+import re
+
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -26,15 +28,33 @@ async def async_setup_entry(
     )
 
 
-def _normalize(value):
-    """HA option/state values must be lowercase to serve as translation keys.
+_CAMEL_BOUNDARY_RE = re.compile(r'(?<=[a-z0-9])(?=[A-Z])')
 
-    Samsung's raw enum values are upper snake case (e.g.
-    CV_TTYPE_RF9000A_FREEZE); the device still expects that exact casing
-    back on write, so callers must map the normalized value back via
-    _raw_options() before sending a command.
+
+def _display(value, desc: SelectDesc):
+    """Turn a raw device option/state value into what's shown in the UI.
+
+    An entity with a translation_key looks its state up in strings.json,
+    and hassfest requires those keys to be lowercase -- so those values
+    must be lowercased exactly to match, and the device still expects
+    that same raw casing back on write (callers map the displayed value
+    back to raw via _raw_options()).
+
+    Everything else has no strings.json lookup, so there's no reason to
+    destroy the device's own casing. Only two cosmetic fixups apply: a
+    fully lowercase device-native token (e.g. "voice") is title-cased,
+    and a PascalCase token (e.g. "ExtraHigh") gets a space inserted at
+    the case boundary ("Extra High"). A value that's already
+    human-friendly (e.g. "AI Wash") matches neither pattern and passes
+    through unchanged.
     """
-    return value.lower() if isinstance(value, str) else value
+    if not isinstance(value, str):
+        return value
+    if desc.translation_key:
+        return value.lower()
+    if value.islower():
+        return value.replace('_', ' ').title()
+    return _CAMEL_BOUNDARY_RE.sub(' ', value)
 
 
 class LocalThingsSelect(LocalThingsEntity, SelectEntity):
@@ -43,7 +63,7 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
         if not desc.options_field:
-            self._attr_options = [_normalize(o) for o in desc.options]
+            self._attr_options = [_display(o, desc) for o in desc.options]
 
     def _raw_options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
@@ -56,16 +76,17 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
         if desc.options_field:
-            return [_normalize(o) for o in self._raw_options()]
+            return [_display(o, desc) for o in self._raw_options()]
         return self._attr_options
 
     @property
     def current_option(self):
         raw = (self.coordinator.data or {}).get(self._state_key)
-        return _normalize(raw)
+        return _display(raw, self._bound.desc)
 
     async def async_select_option(self, option: str) -> None:
+        desc: SelectDesc = self._bound.desc
         raw = next(
-            (o for o in self._raw_options() if _normalize(o) == option), option
+            (o for o in self._raw_options() if _display(o, desc) == option), option
         )
         await self.coordinator.async_send_command(self._bound, raw)
