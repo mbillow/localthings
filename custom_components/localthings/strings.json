@@ -45,6 +45,12 @@
           "icestatus_stop": "Idle",
           "icestatus_run": "Making ice"
         }
+      },
+      "connection_mode": {
+        "state": {
+          "observe": "Push (observe)",
+          "poll": "Polling"
+        }
       }
     }
   },

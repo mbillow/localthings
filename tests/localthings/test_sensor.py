@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.observe import MODE_POLL
 
 
 async def test_sensors_registered(
@@ -45,3 +46,37 @@ async def test_sensor_state_from_coordinator(
     assert state.state not in ('unknown', 'unavailable'), (
         f"Sensor state is {state.state}"
     )
+
+
+async def test_connection_mode_sensor_registered_disabled_by_default(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """The connection-mode diagnostic sensor is registered but disabled by
+    default — it's for troubleshooting, not everyday use."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    ent_reg = er.async_get(hass)
+    entries = er.async_entries_for_config_entry(ent_reg, mock_entry.entry_id)
+    mode_entries = [e for e in entries if e.unique_id.endswith('_connection_mode')]
+    assert len(mode_entries) == 1
+    entry = mode_entries[0]
+    assert entry.disabled_by is not None
+    assert entry.entity_category == 'diagnostic'
+
+
+async def test_connection_mode_sensor_reflects_coordinator_mode(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """native_value reads coordinator.observe_mode directly, live."""
+    from custom_components.localthings.sensor import LocalThingsConnectionModeSensor
+
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    sensor = LocalThingsConnectionModeSensor(coordinator)
+    assert sensor.native_value == MODE_POLL
+
+    coordinator._observe._set_mode('observe')
+    assert sensor.native_value == 'observe'
