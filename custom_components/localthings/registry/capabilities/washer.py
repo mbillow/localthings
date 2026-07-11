@@ -7,7 +7,7 @@ family). Washers never report `oneUiVersion` -- see
 detection this device type requires.
 """
 from ..capability import Capability
-from ..entities import SelectDesc, SensorDesc
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 
 # ---------------------------------------------------------------------------
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count
@@ -106,5 +106,86 @@ WASHER_JOB_BEGINNING_STATUS = Capability(
                    field='x.com.samsung.da.currentStatus',
                    name='Job beginning status',
                    entity_category='diagnostic'),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# OCF-native / '-vs' fallback pairs for power, kids-lock, remote control.
+#
+# Same shape as fridge.py's "Aggregate-resource fallbacks": the generic OCF
+# href (/power/0, plain boolean 'value') is preferred when present; the
+# vendor '-vs' href (richer historically, but for these three controls just
+# a string-encoded duplicate) only binds when the generic href is absent
+# from this device's resource set, via match_fn. Scoped to washer.py, not
+# common.py -- no other device type has been confirmed to expose the
+# generic hrefs, so this must not change behavior for dishwasher/dryer/
+# oven/refrigerator.
+# ---------------------------------------------------------------------------
+
+POWER_GENERIC = Capability(
+    href='/power/0',
+    entities=(
+        SwitchDesc(key='power_switch', field='value',
+                   name='Power',
+                   value_fn=lambda v: bool(v),
+                   write_fn=lambda p, rep, href=None: (
+                       ['power', '0'], {'value': p == 'On'})),
+    ),
+)
+
+POWER_VS_FALLBACK = Capability(
+    href='/power/vs/0',
+    match_fn=lambda rep, resources: '/power/0' not in resources,
+    entities=(
+        SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
+                   name='Power',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['power', 'vs', '0'],
+                       {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
+    ),
+)
+
+KIDS_LOCK_GENERIC = Capability(
+    href='/kidslock/0',
+    entities=(
+        SwitchDesc(key='child_lock', field='value',
+                   name='Child lock', device_class='lock',
+                   value_fn=lambda v: bool(v),
+                   write_fn=lambda p, rep, href=None: (
+                       ['kidslock', '0'], {'value': p == 'On'})),
+    ),
+)
+
+KIDS_LOCK_VS_FALLBACK = Capability(
+    href='/kidslock/vs/0',
+    match_fn=lambda rep, resources: '/kidslock/0' not in resources,
+    entities=(
+        SwitchDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
+                   name='Child lock', device_class='lock',
+                   value_fn=lambda v: v != 'Ready',
+                   write_fn=lambda p, rep, href=None: (
+                       ['kidslock', 'vs', '0'],
+                       {'x.com.samsung.da.kidsLock': 'Enable' if p == 'On' else 'Ready'})),
+    ),
+)
+
+REMOTE_CONTROL_GENERIC = Capability(
+    href='/remotectrl/0',
+    entities=(
+        BinarySensorDesc(key='remote_control', field='value',
+                         name='Smart Control', device_class='connectivity',
+                         value_fn=lambda v: bool(v)),
+    ),
+)
+
+REMOTE_CONTROL_VS_FALLBACK = Capability(
+    href='/remotectrl/vs/0',
+    match_fn=lambda rep, resources: '/remotectrl/0' not in resources,
+    entities=(
+        BinarySensorDesc(key='remote_control',
+                         field='x.com.samsung.da.remoteControlEnabled',
+                         name='Smart Control', device_class='connectivity',
+                         value_fn=lambda v: str(v).lower() == 'true'),
     ),
 )

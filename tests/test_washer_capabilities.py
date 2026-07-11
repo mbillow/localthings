@@ -81,3 +81,59 @@ class TestJobBeginningStatus:
         assert washer.WASHER_JOB_BEGINNING_STATUS.href == '/wm/jobbeginingstatus/vs/0'
         desc = washer.WASHER_JOB_BEGINNING_STATUS.entities[0]
         assert desc.field == 'x.com.samsung.da.currentStatus'
+
+
+class TestPowerFallback:
+    def test_generic_href(self):
+        assert washer.POWER_GENERIC.href == '/power/0'
+
+    def test_generic_read_write(self):
+        desc = washer.POWER_GENERIC.entities[0]
+        assert desc.value_fn(True) is True
+        assert desc.value_fn(False) is False
+        path, body = desc.write_fn('On', {})
+        assert path == ['power', '0']
+        assert body == {'value': True}
+        path, body = desc.write_fn('Off', {})
+        assert body == {'value': False}
+
+    def test_vs_fallback_binds_only_when_generic_absent(self):
+        assert washer.POWER_VS_FALLBACK.href == '/power/vs/0'
+        assert washer.POWER_VS_FALLBACK.match_fn({}, {'/power/vs/0': {}}) is True
+        assert washer.POWER_VS_FALLBACK.match_fn({}, {'/power/0': {}, '/power/vs/0': {}}) is False
+
+    def test_vs_fallback_read_write(self):
+        desc = washer.POWER_VS_FALLBACK.entities[0]
+        assert desc.value_fn('On') is True
+        assert desc.value_fn('Off') is False
+        path, body = desc.write_fn('On', {})
+        assert path == ['power', 'vs', '0']
+        assert body == {'x.com.samsung.da.power': 'On'}
+
+
+class TestKidsLockFallback:
+    def test_generic_read_write(self):
+        assert washer.KIDS_LOCK_GENERIC.href == '/kidslock/0'
+        desc = washer.KIDS_LOCK_GENERIC.entities[0]
+        assert desc.value_fn(True) is True
+        path, body = desc.write_fn('On', {})
+        assert path == ['kidslock', '0']
+        assert body == {'value': True}
+
+    def test_vs_fallback_gated(self):
+        assert washer.KIDS_LOCK_VS_FALLBACK.match_fn({}, {'/kidslock/vs/0': {}}) is True
+        assert washer.KIDS_LOCK_VS_FALLBACK.match_fn(
+            {}, {'/kidslock/0': {}, '/kidslock/vs/0': {}}) is False
+
+
+class TestRemoteControlFallback:
+    def test_generic_read(self):
+        assert washer.REMOTE_CONTROL_GENERIC.href == '/remotectrl/0'
+        desc = washer.REMOTE_CONTROL_GENERIC.entities[0]
+        assert desc.value_fn(True) is True
+        assert desc.value_fn(False) is False
+
+    def test_vs_fallback_gated(self):
+        assert washer.REMOTE_CONTROL_VS_FALLBACK.match_fn({}, {'/remotectrl/vs/0': {}}) is True
+        assert washer.REMOTE_CONTROL_VS_FALLBACK.match_fn(
+            {}, {'/remotectrl/0': {}, '/remotectrl/vs/0': {}}) is False
