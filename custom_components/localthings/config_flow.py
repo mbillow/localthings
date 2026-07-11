@@ -125,7 +125,7 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     import cbor2
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
     from .registry.batch import parse_device0_batch
-    from .registry.by_type import for_device
+    from .registry.by_type import for_device, for_device_by_model
 
     _LOGGER.debug("Fetching Samsung cloud UUID from %s", _SAMSUNG_CLOUD_HOST)
     try:
@@ -177,15 +177,20 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
                 .get('swVersionInfo', {})
                 .get('oneUiVersion', '')
             )
+            info_resource = resources.get('/information/vs/0', {})
+            recognized_registry = (
+                for_device(one_ui_version) if one_ui_version else None
+            ) or for_device_by_model(
+                info_resource.get('x.com.samsung.da.modelNum', ''),
+                info_resource.get('x.com.samsung.da.description', ''),
+            )
             return {
                 "port": port,
                 "serial": serial,
                 "leaf_cert_pem": fullchain_pem,
                 "leaf_key_pem": leaf_key_pem,
                 "one_ui_version": one_ui_version,
-                "device_type_recognized": bool(
-                    one_ui_version and for_device(one_ui_version) is not None
-                ),
+                "device_type_recognized": recognized_registry is not None,
             }
         except CannotConnect:
             raise
