@@ -70,3 +70,32 @@ class TestDeviceRegistries:
                 for cap in caps:
                     assert cap.rt_filter is not None or cap.match_fn is not None, \
                         f"href {href!r} has multiple caps but {cap!r} lacks rt_filter and match_fn"
+
+
+class TestWasherRegistry:
+    def test_washer_registry_registered(self):
+        from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY
+        assert 'washer' in _REGISTRY_BY_KEY
+        assert _REGISTRY_BY_KEY['washer'].name == 'washer'
+
+    def test_washer_registry_has_no_dup_hrefs(self):
+        from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY
+        registry = _REGISTRY_BY_KEY['washer']
+        for href, caps in registry.capabilities.items():
+            if len(caps) > 1:
+                for cap in caps:
+                    assert cap.rt_filter is not None or cap.match_fn is not None, \
+                        f"href {href!r} has multiple caps but {cap!r} lacks rt_filter and match_fn"
+
+    def test_washer_registry_covers_known_hrefs(self):
+        from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY
+        registry = _REGISTRY_BY_KEY['washer']
+        for href in (
+            '/power/0', '/power/vs/0', '/kidslock/0', '/kidslock/vs/0',
+            '/remotectrl/0', '/remotectrl/vs/0', '/alarms/vs/0',
+            '/energy/consumption/vs/0', '/water/consumption/vs/0',
+            '/operational/state/vs/0', '/washer/vs/0', '/course/vs/0',
+            '/buzzersound/vs/0', '/wm/jobbeginingstatus/vs/0',
+            '/diagnosis/vs/0', '/otninformation/vs/0',
+        ):
+            assert href in registry.capabilities, f"{href} missing from washer registry"
