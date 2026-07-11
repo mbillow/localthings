@@ -1,6 +1,6 @@
 {
   "domain": "localthings",
-  "name": "Local Things",
+  "name": "LocalThings",
   "codeowners": ["@mbillow"],
   "config_flow": true,
   "dependencies": [],

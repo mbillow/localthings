@@ -1,4 +1,4 @@
-# Local Things
+# LocalThings
 
 **A native Home Assistant custom integration for local control of newer-generation Samsung connected appliances.** No cloud round-trip. Add a device through HA's normal *Settings > Devices & Services* flow and it talks CoAP-over-DTLS straight to the appliance on your LAN.
 
@@ -62,7 +62,7 @@ This repo doesn't include the needed CA bundle. For an example of how to obtain 
 
 1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or add this repo as a custom repository in HACS — `Integration` category — and install it from there.)
 2. Restart HA.
-3. **Settings > Devices & Services > Add Integration > Local Things.**
+3. **Settings > Devices & Services > Add Integration > LocalThings.**
 4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
 5. The flow fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, probes ports `49154`/`49155`, and confirms the device answers `/device/0`. On success it creates the config entry and detects the device type automatically.
 6. Every subsequent device only asks for the host IP; the stored CA credentials are reused to mint that device's leaf cert.
