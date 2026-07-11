@@ -28,7 +28,31 @@ MODE_POLL = 'poll'
 
 DEFAULT_SETTLE_S = 4.0
 GRACE_PERIOD_S = 15.0
+
+
+def _rep_diff(cached: dict, sweep: dict) -> dict:
+    """Fields present in BOTH reps whose values differ, as
+    {field: (cached_value, sweep_value)}.
+
+    The batch `/device/0` sweep and an individual GET/notify can return
+    genuinely different-shaped reps for the same href (e.g. Samsung's
+    batch interface omits `rt`/`if` baseline fields that a direct GET
+    includes) — that's a representation-shape difference, not a missed
+    state change. Only comparing shared fields keeps the diff (and the
+    caller's miss detection) about real content changes.
+    """
+    common = set(cached) & set(sweep)
+    return {k: (cached[k], sweep[k]) for k in common if cached[k] != sweep[k]}
+
+
 SUCCESS_FRACTION = 0.8
+
+# A notify within this long counts as proof the DTLS session is alive,
+# even if the summary poll's blockwise GET just timed out on a slow
+# device. Twice the coordinator's 30s summary interval: generous enough
+# to absorb jitter, tight enough that a channel that's actually gone
+# quiet doesn't get credit for a notify from a while ago.
+PUSH_HEALTH_WINDOW_S = 60.0
 
 
 class ObserveManager:
@@ -47,6 +71,7 @@ class ObserveManager:
         self._settle_lock = threading.Lock()
         self.subscribed_hrefs: set[str] = set()
         self._notified: set[str] = set()
+        self._last_notify_ts: float | None = None
         self.fallback_hrefs: set[str] = set()
         self._refresh_task: ObserveRefreshTask | None = None
         self._refresh_stop: threading.Event | None = None
@@ -84,7 +109,24 @@ class ObserveManager:
         if not isinstance(rep, dict):
             return
         self._notified.add(href)
+        self._last_notify_ts = time.monotonic()
+        self.log.debug("observe notify: %s", href)
         self.apply(href, rep, source='observe')
+
+    def recently_notified(self, window_s: float = PUSH_HEALTH_WINDOW_S) -> bool:
+        """True if any OBSERVE notify has arrived within `window_s`.
+
+        Used only to gate whether a poll (summary GET) failure should
+        close/reconnect the DTLS session — NOT to decide observe-mode
+        health in general (see `log_sweep_discrepancies` for why that
+        distinction matters: a notify recent enough to prove the session
+        itself is alive is a much stronger, narrower claim than "the
+        channel has been perfectly healthy").
+        """
+        return (
+            self._last_notify_ts is not None
+            and time.monotonic() - self._last_notify_ts < window_s
+        )
 
     def try_enter_observe_mode(
         self, session, hrefs: list[str],
@@ -130,25 +172,54 @@ class ObserveManager:
             self.last_mode_change_ts = time.monotonic()
             self.last_mode_change_wall = time.time()
 
-    def check_sweep_for_misses(self, sweep_resources: dict[str, dict]) -> bool:
-        """Compare a safety-net sweep result against the cache for every
-        subscribed href. A mismatch outside its settle window means
-        OBSERVE silently missed a change (it only notifies on change, so
-        any disagreement is a real miss, not a case of "nothing changed
-        yet"). Returns True if a miss was detected."""
+    def log_sweep_discrepancies(self, sweep_resources: dict[str, dict]) -> bool:
+        """Log any subscribed href where the safety-net sweep disagrees
+        with the cache, on fields present in both reps (see `_rep_diff`
+        for why only shared fields count). Returns True if any
+        discrepancy was found (False if not in observe mode).
+
+        This never changes mode or subscriptions. The sweep already
+        re-applies the full /device/0 result to the cache every cycle
+        regardless of mode, so a missed notify never leaves data stale
+        beyond one sweep interval — there's nothing to correct here. And
+        a still-live OBSERVE session should never be torn down over a
+        data-drift inference: some resources (e.g. an alarm's derived
+        "triggeredTime") appear to update without ever emitting a notify
+        even when the channel is otherwise perfectly healthy, so treating
+        a mismatch as proof of channel death produces false positives.
+        Downgrading also throws away working push coverage for every
+        *other* subscribed href just to react to one that isn't the
+        problem.
+
+        The return value lets the caller respond more cheaply: without
+        an activity signal there's no way to tell "idle device, healthy
+        channel, nothing to notify about" from "dead channel, nothing
+        gets through" — both look the same here. So instead of guessing,
+        the coordinator uses a discrepancy as a trigger for extra hot/warm
+        subpolls this cycle (see `_run_subpolls`'s `force` parameter) —
+        a bounded, self-limiting response to a channel that's gone silent
+        for a reason OTHER than a reconnect (e.g. the device's OBSERVE
+        relay loses its internet connection while the local DTLS session
+        stays up), without tearing down subscriptions that will recover
+        on their own once notifies resume.
+        """
         if self.mode != MODE_OBSERVE:
             return False
+        found = False
         for href in self.subscribed_hrefs:
             if href not in sweep_resources or self._is_settling(href):
                 continue
             cached = self.cache.get(href)
-            if cached is not None and cached != sweep_resources[href]:
-                self.log.warning(
-                    "observe missed a change on %s (sweep disagrees with cache)",
-                    href,
+            if cached is None:
+                continue
+            diff = _rep_diff(cached, sweep_resources[href])
+            if diff:
+                found = True
+                self.log.debug(
+                    "observe missed a change on %s (sweep disagrees with cache): %s",
+                    href, diff,
                 )
-                return True
-        return False
+        return found
 
     def downgrade_to_poll(self) -> None:
         self.fallback_hrefs = set(self.subscribed_hrefs)

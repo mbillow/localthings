@@ -28,10 +28,6 @@ def _int(v):
         return None
 
 
-def _active_when(rep):
-    return _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
-
-
 def _parse_hms(v):
     if not v:
         return None
@@ -113,5 +109,4 @@ OPERATIONAL_STATE = Capability(
                        ['operational', 'state', 'vs', '0'],
                        {'x.com.samsung.da.state': p})),
     ),
-    active_when=_active_when,
 )

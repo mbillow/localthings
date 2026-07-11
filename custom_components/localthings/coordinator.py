@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 from datetime import timedelta
 from typing import Any
@@ -24,7 +25,7 @@ from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
 from .registry.identity import read_identity, DeviceIdentity
-from .observe import ObserveManager, MODE_OBSERVE, MODE_POLL
+from .observe import ObserveManager, MODE_OBSERVE, MODE_POLL, GRACE_PERIOD_S
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
@@ -54,10 +55,30 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     device_info: DeviceInfo
     device_serial: str
 
+    # Class-level knobs (not instance attrs) so tests can shrink real-time
+    # delays via `patch.object(LocalThingsCoordinator, ...)` without
+    # touching the production defaults these are computed from. Production
+    # code always sees these two values; only tests override them.
+    _SUBPOLL_STEP_S: float = SUMMARY_INTERVAL_S / 10  # 3.0 s
+    _OBSERVE_GRACE_PERIOD_S: float = GRACE_PERIOD_S
+    _RECONNECT_PAUSE_S: float = 5.0
+
+    # A block-level ACK timeout on the summary GET doesn't prove the
+    # session is dead (see _poll_once) — require this many in a row
+    # before treating it as one. A single slow transfer on an otherwise
+    # fine session shouldn't tear down a working OBSERVE subscription.
+    _POLL_TIMEOUT_LIMIT: int = 3
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        # Per-device logger (module logger scoped to this device's host) so
+        # every log line — including the base DataUpdateCoordinator's own
+        # messages and ObserveManager's — identifies which device it's
+        # about. A bare module-level logger is shared across every
+        # configured device, which makes multi-device logs ambiguous.
+        self._log = logging.getLogger(f"{__name__}.{entry.data[CONF_HOST]}")
         super().__init__(
             hass,
-            _LOGGER,
+            self._log,
             name=f"{DOMAIN}_{entry.data[CONF_HOST]}",
             update_interval=timedelta(seconds=SUMMARY_INTERVAL_S),
         )
@@ -68,7 +89,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.bound = []
         self._cache = StateCache(_NoOpDescriptor())
         self._cache.set_on_change(self._on_cache_changed)
-        self._observe = ObserveManager(self._cache, logger=_LOGGER)
+        self._observe = ObserveManager(self._cache, logger=self._log)
+        self._push_pending = False
+        self._push_pending_lock = threading.Lock()
         self.device_serial = entry.data[CONF_HOST]  # placeholder until first poll
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.data[CONF_HOST])},
@@ -81,6 +104,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._warm_hrefs: list[str] = []
         self.device_type_name: str | None = None
         self.one_ui_version: str = ''
+        self._consecutive_poll_timeouts = 0
         self._unbound_hrefs: list[str] = []
 
     # ------------------------------------------------------------------
@@ -106,11 +130,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess.connect()
         sess.start_reader()
         self._session = sess
-        _LOGGER.debug("DTLS connected to %s:%d", host, port)
+        self._log.debug("DTLS connected to %s:%d", host, port)
         try:
             self._identity = read_identity(sess, None)
         except Exception as e:
-            _LOGGER.debug("read_identity failed: %s", e)
+            self._log.debug("read_identity failed: %s", e)
             self._identity = None
 
     def _close_session(self) -> None:
@@ -133,23 +157,48 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """StateCache.set_on_change callback. Runs on whatever thread
         applied the update (DTLS reader thread for observe notifications,
         an executor thread for poll/sweep) — never the event loop, so the
-        HA push must be scheduled thread-safely."""
+        HA push must be scheduled thread-safely. A sweep/poll cycle can
+        call apply_rep for dozens of hrefs in a tight loop; coalesce those
+        into a single push instead of one hass.add_job per href."""
         if not changed:
             return
+        with self._push_pending_lock:
+            if self._push_pending:
+                return
+            self._push_pending = True
         self.hass.add_job(self._push_cache_snapshot)
 
     @callback
     def _push_cache_snapshot(self) -> None:
+        with self._push_pending_lock:
+            self._push_pending = False
         if self.bound:
             self.async_set_updated_data(flatten(self.bound, self._cache.snapshot()))
 
     def _poll_once(self) -> dict[str, dict]:
-        """GET /device/0, return parsed resources. Blocking."""
+        """GET /device/0, return parsed resources. Blocking.
+
+        `sess.get()` raises `TimeoutError` when one block's ACK doesn't
+        arrive in time — the transfer was progressing (earlier blocks
+        succeeded) and just didn't finish before the deadline on a slow
+        device. That does NOT prove the session is dead, so it's left
+        open here; `_async_update_data` decides whether repeated timeouts
+        (or a lack of them) warrant a reconnect. Anything else (a
+        `ConnectionError` from an explicitly closed/broken session, a bad
+        response code) is unambiguous — close immediately.
+        """
         if self._session is None:
             self._connect_session()
         sess = self._session
         try:
-            code, payload = sess.get(_SEED_PATH, timeout=15.0)
+            # A slow device can still be mid-transfer (block 8, block 11)
+            # when a tighter deadline cuts it off — that's a poll that
+            # would have succeeded, not a dead session. 35s gives a slow
+            # blockwise transfer room to actually finish instead of
+            # generating a TimeoutError every cycle.
+            code, payload = sess.get(_SEED_PATH, timeout=35.0)
+        except TimeoutError:
+            raise
         except Exception as e:
             self._close_session()
             raise RuntimeError(f"poll GET failed: {e}") from e
@@ -181,24 +230,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._observe.apply(href, rep, source='poll')
                         results[href] = rep
             except Exception as e:
-                _LOGGER.debug("sub-poll %s: %s", href, e)
+                self._log.debug("sub-poll %s: %s", href, e)
         return results
 
     # ------------------------------------------------------------------
     # Sub-poll loop (runs between summary polls)
     # ------------------------------------------------------------------
 
-    async def _run_subpolls(self) -> None:
+    async def _run_subpolls(self, force: bool = False) -> None:
         """Poll hot/warm hrefs in the gaps between summary polls. Only
         runs in poll-only mode — in observe-primary mode those hrefs are
-        already covered by push notifications."""
-        if self._observe.mode == MODE_OBSERVE:
+        already covered by push notifications — unless `force` is set,
+        which this cycle's sweep found disagreeing with the cache on a
+        still-live observe session (see log_sweep_discrepancies): a
+        bounded, self-limiting fallback for a channel that's gone silent
+        without a reconnect, without tearing down subscriptions that
+        would otherwise recover on their own once notifies resume."""
+        if self._observe.mode == MODE_OBSERVE and not force:
             return
         hot = self._hot_hrefs
         warm = self._warm_hrefs
         if not hot and not warm:
             return
-        step = SUMMARY_INTERVAL_S / 10  # 3.0 s
+        step = self._SUBPOLL_STEP_S
         for i in range(1, 10):          # slots 1..9  (T+3 s … T+27 s)
             await asyncio.sleep(step)
             hrefs = list(hot) + (list(warm) if i % 2 == 0 else [])
@@ -208,7 +262,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._poll_hrefs_blocking, hrefs
                     )
                 except Exception as e:
-                    _LOGGER.debug("sub-poll batch failed: %s", e)
+                    self._log.debug("sub-poll batch failed: %s", e)
 
     # ------------------------------------------------------------------
     # Discovery (runs once on first successful poll)
@@ -222,12 +276,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         reg = for_device(one_ui) if one_ui else None
         unbound: list[str] = []
         if reg is not None:
-            _LOGGER.debug("device type: %s (oneUiVersion=%r)", reg.name, one_ui)
+            self._log.debug("device type: %s (oneUiVersion=%r)", reg.name, one_ui)
             bound = discover(resources, reg.capabilities, reg.pattern_capabilities,
                               log=unbound.append)
             self.device_type_name = reg.name
         else:
-            _LOGGER.warning("unknown device type oneUiVersion=%r; using common caps", one_ui)
+            self._log.warning("unknown device type oneUiVersion=%r; using common caps", one_ui)
             bound = discover(resources, CAPABILITIES, log=unbound.append)
             self.device_type_name = None
         self.bound = bound
@@ -265,7 +319,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._warm_hrefs = sorted(warm)
 
         self._discovered = True
-        _LOGGER.info(
+        self._log.info(
             "discovered %d entities (serial=%s) hot=%s warm=%s",
             len(bound), serial, self._hot_hrefs, self._warm_hrefs,
         )
@@ -307,7 +361,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if sess is None:
             return
         await self.hass.async_add_executor_job(
-            self._observe.try_enter_observe_mode, sess, hrefs
+            self._observe.try_enter_observe_mode, sess, hrefs,
+            self._OBSERVE_GRACE_PERIOD_S,
         )
 
     async def _maybe_retry_observe_mode(self) -> None:
@@ -316,6 +371,34 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if time.monotonic() - self._observe.last_mode_change_ts < _RECOVERY_RETRY_S:
             return
         await self._attempt_observe_mode()
+
+    def _defer_reconnect_for(self, e: Exception) -> bool:
+        """True if this poll failure should NOT trigger a reconnect this
+        cycle.
+
+        A `TimeoutError` (see `_poll_once`) means one block's ACK didn't
+        arrive in time — not that the session is dead. A recent OBSERVE
+        notify is direct proof the channel is still live, so always defer
+        in that case. Otherwise, defer until `_POLL_TIMEOUT_LIMIT`
+        consecutive timeouts have piled up — a single slow transfer is
+        normal on a flaky device; a run of them is a real problem. Any
+        other exception (a `ConnectionError`, an explicitly closed
+        session) is unambiguous and always reconnects immediately.
+        """
+        if not isinstance(e, TimeoutError):
+            return False
+        if self._observe.mode == MODE_OBSERVE and self._observe.recently_notified():
+            # Recent push is proof of life — reset the counter too, so
+            # timeouts from an earlier quiet stretch don't carry over and
+            # trigger a reconnect once the device goes quiet again. The
+            # counter should mean "consecutive timeouts with no push
+            # activity to vouch for the session," not just "consecutive
+            # timeouts" — otherwise an intermittently-active device could
+            # still accumulate its way into a false reconnect.
+            self._consecutive_poll_timeouts = 0
+            return True
+        self._consecutive_poll_timeouts += 1
+        return self._consecutive_poll_timeouts < self._POLL_TIMEOUT_LIMIT
 
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
@@ -327,22 +410,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._subpoll_task.cancel()
             self._subpoll_task = None
 
+        just_downgraded_from_observe = False
         async with self._session_lock:
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
+                self._consecutive_poll_timeouts = 0
             except Exception as e:
+                if self._defer_reconnect_for(e):
+                    self._log.debug(
+                        "poll failed (%s), not yet treated as session "
+                        "death; skipping this cycle: %s",
+                        type(e).__name__, e,
+                    )
+                    return flatten(self.bound, self._cache.snapshot())
+                self._consecutive_poll_timeouts = 0
                 # One reconnect attempt — pause briefly so the device can
                 # clean up its DTLS session state before we knock again.
-                _LOGGER.warning("poll failed, reconnecting: %s", e)
+                self._log.warning("poll failed, reconnecting: %s", e)
                 await self.hass.async_add_executor_job(self._close_session)
-                await asyncio.sleep(5.0)
+                await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     resources = await self.hass.async_add_executor_job(self._poll_once)
                 except Exception as e2:
-                    _LOGGER.error("poll failed after reconnect: %s", e2)
+                    self._log.error("poll failed after reconnect: %s", e2)
                     snapshot = self._cache.snapshot()
                     if snapshot:
-                        _LOGGER.debug("Full error:", exc_info=e2)
+                        self._log.debug("Full error:", exc_info=e2)
                         return flatten(self.bound, snapshot)
                     raise UpdateFailed(f"poll failed after reconnect: {e2}") from e2
                 else:
@@ -350,33 +443,50 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # OBSERVE registrations. If we were in observe mode,
                     # that state is now stale — the refresh task is still
                     # pinned to the old (closed) session and nothing will
-                    # ever re-subscribe on the new one. Tear it down now so
-                    # the existing poll-mode retry path (_maybe_retry_observe_mode)
-                    # re-subscribes on the live session on its next cycle.
+                    # ever re-subscribe on the new one. Tear it down and
+                    # try to resubscribe immediately below rather than
+                    # waiting for the poll-mode retry timer — that timer
+                    # exists to throttle devices that never had observe
+                    # working at all, but a reconnect just proved this
+                    # session is healthy, so there's no reason to wait.
                     if self._observe.mode == MODE_OBSERVE:
-                        _LOGGER.debug(
+                        self._log.debug(
                             "reconnect while in observe mode; downgrading to "
-                            "poll so recovery re-subscribes on the new session"
+                            "poll and resubscribing on the new session"
                         )
                         self._observe.downgrade_to_poll()
+                        just_downgraded_from_observe = True
 
         source = 'sweep' if self._discovered else 'poll'
-        if self._observe.mode == MODE_OBSERVE and self._observe.check_sweep_for_misses(resources):
-            self._observe.downgrade_to_poll()
+        sweep_mismatch = False
+        if self._observe.mode == MODE_OBSERVE:
+            # A sweep/cache mismatch never tears down a still-live OBSERVE
+            # session (see log_sweep_discrepancies) — the sweep below
+            # re-applies the authoritative state to the cache regardless,
+            # so there's nothing to correct by downgrading. Only a
+            # reconnect (above) proves subscriptions are actually gone.
+            # Instead, a mismatch triggers extra hot/warm subpolls this
+            # cycle below, so a channel gone silent without a reconnect
+            # (e.g. lost internet on an otherwise-live local session)
+            # still gets fresher-than-30s data.
+            sweep_mismatch = self._observe.log_sweep_discrepancies(resources)
         for href, rep in resources.items():
             self._observe.apply(href, rep, source=source)
 
         if not self._discovered:
             self._run_discovery(resources)
             await self._attempt_observe_mode()
+        elif just_downgraded_from_observe:
+            await self._attempt_observe_mode()
         elif self._observe.mode == MODE_POLL:
             await self._maybe_retry_observe_mode()
 
         # Schedule sub-polls for hot/warm hrefs between summary polls
-        # (no-op in observe-primary mode; _run_subpolls checks the mode).
+        # (no-op in observe-primary mode unless this cycle's sweep found a
+        # mismatch; _run_subpolls checks the mode/force).
         if self._hot_hrefs or self._warm_hrefs:
             self._subpoll_task = self.hass.async_create_task(
-                self._run_subpolls(), name="localthings_subpoll"
+                self._run_subpolls(force=sweep_mismatch), name="localthings_subpoll"
             )
 
         return flatten(self.bound, self._cache.snapshot())
@@ -396,7 +506,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rep = self._cache.get(href or '') or {}
         result = write_fn(payload, rep, href)
         if result is None:
-            _LOGGER.warning("write_fn rejected payload %r for %s", payload, href)
+            self._log.warning("write_fn rejected payload %r for %s", payload, href)
             return
         path_segs, body = result
 
@@ -406,11 +516,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 raise RuntimeError("no session")
             self._observe.mark_write_pending(href)
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
-            _LOGGER.info("PUT %s → code %#04x", href, code)
+            self._log.info("PUT %s → code %#04x", href, code)
 
         try:
             await self.hass.async_add_executor_job(_do_put)
         except Exception as e:
-            _LOGGER.error("command failed for %s: %s", href, e)
+            self._log.error("command failed for %s: %s", href, e)
         else:
             await self.async_request_refresh()

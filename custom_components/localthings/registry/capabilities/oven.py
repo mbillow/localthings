@@ -214,18 +214,12 @@ def _naturalsteam_write(p, rep, href=None):
 
 
 # ---------------------------------------------------------------------------
-def _active_when(rep):
-    return _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
-
-
-# ---------------------------------------------------------------------------
 # Capabilities
 # ---------------------------------------------------------------------------
 
 OVEN_OPERATIONAL_STATE = Capability(
     href='/operational/state/vs/0',
     poll_tier='hot',
-    active_when=_active_when,
     entities=(
         SensorDesc(key='machine_state', field='x.com.samsung.da.state',
                    name='Machine state', icon='mdi:stove', value_fn=_to_ocf),

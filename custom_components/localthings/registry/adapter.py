@@ -22,13 +22,3 @@ def flatten(bound: list[BoundEntity], resources: dict) -> dict[str, Any]:
         elif b.desc.field:
             out[_key(b)] = b.desc.value_fn(rep.get(b.desc.field))
     return out
-
-
-def is_active(bound: list[BoundEntity], resources: dict) -> bool:
-    """Return True if any capability's active_when fires."""
-    for b in bound:
-        if b.capability.active_when:
-            rep = resources.get(b.href) or {}
-            if b.capability.active_when(rep):
-                return True
-    return False

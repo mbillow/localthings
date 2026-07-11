@@ -35,6 +35,32 @@ from custom_components.localthings.const import (
     CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
     CONF_HOST, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM, CONF_PORT, DOMAIN,
 )
+from custom_components.localthings.coordinator import LocalThingsCoordinator
+
+
+@pytest.fixture(autouse=True)
+def _fast_coordinator_timers():
+    """Shrink the coordinator's real-time delays for every localthings test.
+
+    `_run_subpolls` and `_attempt_observe_mode` are, by design, blocking/
+    real-time operations in production (a real sub-poll cadence and a real
+    CoAP OBSERVE grace period). Tests that drive them through a full
+    `hass.config_entries.async_setup(...)` + `hass.async_block_till_done()`
+    would otherwise burn tens of real seconds per test waiting them out.
+
+    This patches only the *class* attributes coordinator.py exposes for
+    this purpose (`_SUBPOLL_STEP_S`, `_OBSERVE_GRACE_PERIOD_S`) — the
+    production defaults they're computed from (`SUMMARY_INTERVAL_S`,
+    `GRACE_PERIOD_S`) are untouched. Tests that need to exercise the real
+    grace-period race (e.g. test_observe.py's own `ObserveManager` tests)
+    still pass `grace_period_s=` explicitly and are unaffected.
+    """
+    with (
+        patch.object(LocalThingsCoordinator, '_SUBPOLL_STEP_S', 0.001),
+        patch.object(LocalThingsCoordinator, '_OBSERVE_GRACE_PERIOD_S', 0.02),
+        patch.object(LocalThingsCoordinator, '_RECONNECT_PAUSE_S', 0.01),
+    ):
+        yield
 
 FIXTURES = Path(__file__).resolve().parent.parent / 'fixtures'
 

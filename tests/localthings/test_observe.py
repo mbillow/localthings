@@ -9,7 +9,9 @@ import pytest
 
 from smartthings_local.ocf.state_cache import StateCache
 
-from custom_components.localthings.observe import ObserveManager, MODE_POLL
+from custom_components.localthings.observe import (
+    ObserveManager, MODE_POLL, _rep_diff,
+)
 
 
 class _NullDescriptor:
@@ -156,6 +158,25 @@ def test_on_notification_ignores_malformed_cbor():
     assert mgr.cache.get('/oven/vs/0') is None
 
 
+def test_recently_notified_false_before_any_notify():
+    mgr = _manager()
+    assert mgr.recently_notified() is False
+
+
+def test_recently_notified_true_just_after_a_notify():
+    mgr = _manager()
+    mgr.on_notification('/oven/vs/0', cbor2.dumps({'a': 1}))
+    assert mgr.recently_notified() is True
+
+
+def test_recently_notified_false_after_window_elapses():
+    mgr = _manager()
+    mgr.on_notification('/oven/vs/0', cbor2.dumps({'a': 1}))
+    assert mgr.recently_notified(window_s=0.01) is True
+    time.sleep(0.02)
+    assert mgr.recently_notified(window_s=0.01) is False
+
+
 def test_try_enter_observe_mode_clears_stale_notifications_on_retry():
     """Regression test: verify second call to try_enter_observe_mode() doesn't
     get polluted by notifications from the first call. This happens in real
@@ -200,19 +221,65 @@ def test_try_enter_observe_mode_clears_stale_notifications_on_retry():
         mgr.close()
 
 
-def test_check_sweep_for_misses_false_when_not_in_observe_mode():
+def test_log_sweep_discrepancies_noop_when_not_in_observe_mode(caplog):
     mgr = _manager()
-    assert mgr.check_sweep_for_misses({'/oven/vs/0': {'a': 2}}) is False
+    with caplog.at_level('DEBUG'):
+        mgr.log_sweep_discrepancies({'/oven/vs/0': {'a': 2}})
+    assert 'observe missed a change' not in caplog.text
 
 
-def test_check_sweep_for_misses_detects_mismatch():
+def test_log_sweep_discrepancies_never_changes_mode():
+    """A sweep/cache mismatch is diagnostic-only — a still-live OBSERVE
+    session is never torn down over a data-drift inference. The 30s sweep
+    already re-applies the authoritative state to the cache regardless of
+    mode, so there's nothing a downgrade would fix; it would only throw
+    away working push coverage on every other subscribed href."""
+    mgr = _manager()
+    session = _FakeSession()
+    hrefs = ['/oven/vs/0', '/power/vs/0']
+
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        for href in hrefs:
+            mgr.on_notification(href, cbor2.dumps({'a': 1}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+
+    try:
+        mgr.try_enter_observe_mode(session, hrefs, grace_period_s=0.02)
+        notifier.join()
+        assert mgr.mode == 'observe'
+
+        # Sweep sees values the cache never got via notify on BOTH hrefs.
+        mgr.log_sweep_discrepancies({hrefs[0]: {'a': 2}, hrefs[1]: {'a': 2}})
+
+        assert mgr.mode == 'observe'
+    finally:
+        mgr.close()
+
+
+def test_rep_diff_reports_only_shared_fields_that_differ():
+    """Fields present on only one side (a shape difference, e.g. batch
+    sweep vs. individual GET/notify returning different fields for the
+    same href) must not be reported — only shared fields with different
+    values."""
+    diff = _rep_diff({'a': 1, 'b': 2, 'c': 3}, {'a': 1, 'b': 5, 'd': 9})
+
+    assert diff == {'b': (2, 5)}
+
+
+def test_log_sweep_discrepancies_ignores_shape_only_differences(caplog):
+    """A sweep rep missing/adding fields the cache doesn't have (or vice
+    versa) is a representation-shape difference, not a missed change —
+    must not be logged as a discrepancy."""
     mgr = _manager()
     session = _FakeSession()
     href = '/oven/vs/0'
 
     def _notify_during_grace_period():
         time.sleep(0.005)
-        mgr.on_notification(href, cbor2.dumps({'a': 1}))
+        mgr.on_notification(href, cbor2.dumps({'a': 1, 'rt': ['x'], 'if': ['y']}))
 
     notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
     notifier.start()
@@ -222,15 +289,48 @@ def test_check_sweep_for_misses_detects_mismatch():
         notifier.join()
         assert mgr.mode == 'observe'
 
-        # Sweep sees a value the cache never got via notify -> observe missed it.
-        missed = mgr.check_sweep_for_misses({href: {'a': 2}})
+        # Sweep rep has the same 'a' value but lacks rt/if and adds 'href' —
+        # a shape difference (batch interface), not a missed content change.
+        with caplog.at_level('DEBUG'):
+            mgr.log_sweep_discrepancies({href: {'a': 1, 'href': href}})
+    finally:
+        mgr.close()
 
-        assert missed is True
+    assert 'observe missed a change' not in caplog.text
+
+
+def test_log_sweep_discrepancies_includes_the_diff(caplog):
+    """The log line must include what actually differed, not just that it
+    did."""
+    mgr = _manager()
+    session = _FakeSession()
+    hrefs = ['/oven/vs/0', '/power/vs/0']
+
+    def _notify_during_grace_period():
+        time.sleep(0.005)
+        for href in hrefs:
+            mgr.on_notification(href, cbor2.dumps({'a': 1, 'b': 2}))
+
+    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
+    notifier.start()
+
+    try:
+        mgr.try_enter_observe_mode(session, hrefs, grace_period_s=0.02)
+        notifier.join()
+        assert mgr.mode == 'observe'
+
+        with caplog.at_level('DEBUG'):
+            mgr.log_sweep_discrepancies(
+                {hrefs[0]: {'a': 1, 'b': 5}, hrefs[1]: {'a': 1, 'b': 9}}
+            )
+
+        assert "{'b': (2, 5)}" in caplog.text
+        assert mgr.mode == 'observe'
     finally:
         mgr.close()
 
 
-def test_check_sweep_for_misses_ignores_href_during_settle_window():
+def test_log_sweep_discrepancies_ignores_href_during_settle_window(caplog):
     mgr = _manager()
     session = _FakeSession()
     href = '/oven/vs/0'
@@ -238,9 +338,10 @@ def test_check_sweep_for_misses_ignores_href_during_settle_window():
     mgr.try_enter_observe_mode(session, [href], grace_period_s=0.01)
     mgr.mark_write_pending(href, settle_s=5.0)
 
-    missed = mgr.check_sweep_for_misses({href: {'a': 2}})
+    with caplog.at_level('DEBUG'):
+        mgr.log_sweep_discrepancies({href: {'a': 2}})
 
-    assert missed is False
+    assert 'observe missed a change' not in caplog.text
 
 
 def test_downgrade_to_poll_moves_subscribed_to_fallback():
