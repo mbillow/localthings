@@ -35,6 +35,3 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
-          # Remove this 'ignore' key once real brand images are added at
-          # custom_components/localthings/brand/
-          ignore: brands
