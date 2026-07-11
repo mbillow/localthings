@@ -2,10 +2,10 @@
 
 Shared by dryer/dishwasher/oven/washer families.
 """
-from datetime import datetime, timezone, timedelta, time as dt_time
+from datetime import datetime, timezone, timedelta
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, ButtonDesc, SensorDesc, TimeDesc
+from ..entities import BinarySensorDesc, ButtonDesc, NumberDesc, SensorDesc
 
 _SAMSUNG_STATE_TO_OCF = {
     'Ready': 'idle', 'Run': 'active', 'Running': 'active',
@@ -28,14 +28,23 @@ def _int(v):
         return None
 
 
-def _parse_hms(v):
+def _delay_hours(v):
+    """delayStartTime is a duration until the cycle starts, not a
+    wall-clock time -- "01:00" means "1 hour from when you press start",
+    not "1 AM"."""
     if not v:
-        return None
+        return 0.0
     try:
         h, m, s = v.split(':')
-        return dt_time(int(h) % 24, int(m), int(s))
+        return int(h) + int(m) / 60 + int(s) / 3600
     except Exception:
         return None
+
+
+def _format_delay(hours):
+    total_minutes = round(max(float(hours), 0) * 60)
+    h, m = divmod(total_minutes, 60)
+    return f'{h}:{m:02d}:00'
 
 
 def _finish_time(remaining_str):
@@ -87,12 +96,14 @@ OPERATIONAL_STATE = Capability(
                             or rep.get('x.com.samsung.da.progress') == 'Finish'
                        else _finish_time(rep.get('x.com.samsung.da.remainingTime'))
                    )),
-        TimeDesc(key='delay_start_time', field='x.com.samsung.da.delayStartTime',
-                 name='Delay start',
-                 value_fn=_parse_hms,
-                 write_fn=lambda p, rep, href=None: (
-                     ['operational', 'state', 'vs', '0'],
-                     {'x.com.samsung.da.delayStartTime': f'{p.hour}:{p.minute:02d}:{p.second:02d}'})),
+        NumberDesc(key='delay_start_hours', field='x.com.samsung.da.delayStartTime',
+                   name='Delay start', icon='mdi:timer-plus-outline',
+                   device_class='duration', unit='h',
+                   native_min=0, native_max=24, step=1,
+                   value_fn=_delay_hours,
+                   write_fn=lambda p, rep, href=None: (
+                       ['operational', 'state', 'vs', '0'],
+                       {'x.com.samsung.da.delayStartTime': _format_delay(p)})),
         ButtonDesc(key='start', field='', name='Start cycle', payload='Run',
                    icon='mdi:play',
                    write_fn=lambda p, rep, href=None: (
