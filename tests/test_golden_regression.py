@@ -7,12 +7,18 @@ GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
 
 
 def _new_state_keys(name, resources):
-    from custom_components.localthings.registry.by_type import for_device
+    from custom_components.localthings.registry.by_type import for_device, for_device_by_model
     from custom_components.localthings.registry.discovery import discover
     from custom_components.localthings.registry.adapter import flatten
     otn = resources.get('/otninformation/vs/0', {})
     one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')
+    info = resources.get('/information/vs/0', {})
     reg = for_device(one_ui) if one_ui else None
+    if reg is None:
+        reg = for_device_by_model(
+            info.get('x.com.samsung.da.modelNum', ''),
+            info.get('x.com.samsung.da.description', ''),
+        )
     if reg is None:
         from custom_components.localthings.registry.registry import CAPABILITIES
         caps, pats = CAPABILITIES, []
@@ -32,6 +38,18 @@ def test_registry_reproduces_golden_state_keys(name, ip, request):
     resources = _load_resources(ip)
     golden = json.loads((GOLDEN / f'{name}.json').read_text())
     state_keys = _new_state_keys(name, resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer():
+    from tests.conftest import _load_device
+    resources = _load_device('washer')
+    golden = json.loads((GOLDEN / 'washer.json').read_text())
+    state_keys = _new_state_keys('washer', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

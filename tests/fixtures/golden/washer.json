@@ -1,0 +1,25 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "buzzer_sound",
+    "child_lock",
+    "cycle",
+    "cycle_active",
+    "delay_start_hours",
+    "diagnosis_status",
+    "energy_kwh",
+    "finish_time",
+    "firmware_update",
+    "job_beginning_status",
+    "machine_state",
+    "power_switch",
+    "power_watts",
+    "progress",
+    "progress_percentage",
+    "remote_control",
+    "rinse_cycles",
+    "spin_speed",
+    "wash_temperature",
+    "water_liters"
+  ]
+}
