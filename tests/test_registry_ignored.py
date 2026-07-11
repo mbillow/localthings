@@ -57,3 +57,16 @@ def test_dishwasher_fixture_has_no_remaining_gaps():
     resources = _load('dishwasher_device.json')
     unbound = set(_unbound_hrefs(resources, dishwasher.REGISTRY))
     assert unbound == set()
+
+
+class TestWasherIgnoredHrefs:
+    def test_washer_hrefs_are_ignored(self):
+        from custom_components.localthings.registry.capabilities.ignored import IGNORED
+        ignored_hrefs = {cap.href for cap in IGNORED}
+        for href in (
+            '/st/washercourse/vs/0',
+            '/wm/welcomemsg/vs/0',
+            '/wm/personalcourse/vs/0',
+            '/energy/consumption/0',
+        ):
+            assert href in ignored_hrefs, f"{href} should be in ignored.IGNORED"

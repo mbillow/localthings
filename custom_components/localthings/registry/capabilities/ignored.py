@@ -94,4 +94,19 @@ IGNORED: list[Capability] = [
     Capability(href='/energy/planner/vs/0'),
     # Temperature-unit display preference, redundant with HA's own units.
     Capability(href='/wm/submode/vs/0'),
+
+    # Read-only re-encoding of the course already exposed by
+    # washer.WASHER_COURSE at /course/vs/0 (x.com.samsung.da.st.washerMode
+    # is literally "Table_02_Course_<same hex code>").
+    Capability(href='/st/washercourse/vs/0'),
+    # Empty on every washer dump seen so far.
+    Capability(href='/wm/welcomemsg/vs/0'),
+    # User-saved custom course slots (F1-FA). No controllable/observable
+    # state without a multi-slot editor; revisit if that becomes valuable.
+    Capability(href='/wm/personalcourse/vs/0'),
+    # OCF-native energy resource is empty ({}) on washer hardware seen so
+    # far, unlike /power/0, /kidslock/0, /remotectrl/0 which do carry real
+    # data -- common.ENERGY_METER on /energy/consumption/vs/0 is the only
+    # real source for this control.
+    Capability(href='/energy/consumption/0'),
 ]
