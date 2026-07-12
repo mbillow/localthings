@@ -112,6 +112,49 @@ class TestCycleOptions:
         assert washer._cycle_options(resources) == []
 
 
+class TestDrumClean:
+    def test_cycles_remaining(self):
+        """DrumCleanProposal_40 - WashingTimes_3 == 37, matching a live
+        app screenshot's 'Potreba cistenia po 37 cykloch'."""
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_cycles_remaining')
+        rep = {'x.com.samsung.da.options': ['WashingTimes_3', 'DrumCleanProposal_40']}
+        assert desc.rep_fn(rep) == 37
+
+    def test_cycles_remaining_never_negative(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_cycles_remaining')
+        rep = {'x.com.samsung.da.options': ['WashingTimes_50', 'DrumCleanProposal_40']}
+        assert desc.rep_fn(rep) == 0
+
+    def test_cycles_remaining_missing_fields(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_cycles_remaining')
+        assert desc.rep_fn({'x.com.samsung.da.options': []}) is None
+
+    def test_cycles_remaining_exists_only_when_computable(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_cycles_remaining')
+        assert desc.exists_fn({'x.com.samsung.da.options': []}, {}) is False
+        rep = {'x.com.samsung.da.options': ['WashingTimes_3', 'DrumCleanProposal_40']}
+        assert desc.exists_fn(rep, {}) is True
+
+    def test_last_cleaned(self):
+        """DrumCleanLog_2026-07-01T20:18:07 -> a UTC-aware datetime,
+        matching the same screenshot's '10 days ago' (as of 2026-07-11)."""
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_last_cleaned')
+        rep = {'x.com.samsung.da.options': ['DrumCleanLog_2026-07-01T20:18:07']}
+        from datetime import datetime, timezone
+        assert desc.rep_fn(rep) == datetime(2026, 7, 1, 20, 18, 7, tzinfo=timezone.utc)
+
+    def test_last_cleaned_missing(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities
+                    if e.key == 'drum_clean_last_cleaned')
+        assert desc.rep_fn({'x.com.samsung.da.options': []}) is None
+        assert desc.exists_fn({'x.com.samsung.da.options': []}, {}) is False
+
+
 class TestBuzzerSound:
     def test_href(self):
         assert washer.BUZZER_SOUND.href == '/buzzersound/vs/0'
