@@ -10,6 +10,52 @@ from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 
 # ---------------------------------------------------------------------------
+# Course_XX hex codes. The 23 codes named in strings.json/translations
+# under entity.select.washer_cycle.state.<id, lowercased> were captured
+# from a live WW90DG6U25LEU4's x.com.samsung.da.editCourseList
+# (EditCourseList_1C1D211B1E29243328262722202325322F2E30662D8F96), matched
+# positionally against a Slovak-UI user's screenshots of their app's course
+# list (same order, same count -- see issue #2) and cross-checked against
+# the printed user manual's course table (confirming e.g. '8F' as 'Intense
+# Cold', not the position-adjacent-looking but distinct 'Mixed Load', a
+# cycle the manual marks "applicable models only" and that does not appear
+# in this device's editCourseList -- nor does 'AI Wash', also "applicable
+# models only"). FixedCourseList_1C29 (the two courses always pinned in the
+# app) maps to '1C'/'29' = Eco 40-60 and Drum Clean+, which matches what
+# you'd expect to be pinned (default cycle + maintenance cycle),
+# corroborating the positional match.
+#
+# No static fallback list of those codes is kept here, deliberately: other
+# washer models have a different actual course set (a second dump's active
+# course, '65', isn't even in the list above; models with 'AI Wash'/'Mixed
+# Load' -- both "applicable models only" per the manual -- would have yet
+# another set), so hardcoding one device's list would show/hide the wrong
+# options on a different model. _cycle_options() below reads only the live
+# x.com.samsung.da.editCourseList; if a device doesn't populate that
+# resource, the cycle select isn't created at all (see WASHER_COURSE's
+# exists_fn). x.com.samsung.da.options' MostUsed_* entry was considered as
+# a fallback source (its first byte reliably equals the currently-selected
+# Course_XX on both dumps we have), but the bytes after that don't
+# correspond to any confirmed course code on either device -- e.g. dump 1's
+# MostUsed_1C8410923FA67F00000000000000 decodes to
+# ['1C','84','10','92','3F','A6','7F',...] and only '1C' is a real code --
+# so it isn't trustworthy as a list of selectable courses and isn't used.
+# ---------------------------------------------------------------------------
+
+
+def _parse_edit_course_list(raw):
+    """'EditCourseList_1C1D211B1E29...' -> ['1C', '1D', '21', '1B', '1E', '29', ...]."""
+    if not isinstance(raw, str) or '_' not in raw:
+        return []
+    codes = raw.split('_', 1)[1]
+    return [codes[i:i + 2] for i in range(0, len(codes) - 1, 2)]
+
+
+def _cycle_options(resources):
+    rep = resources.get('/wm/editcourse/vs/0') or {}
+    return _parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
+
+# ---------------------------------------------------------------------------
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count
 #
 # Despite the shared href, this is unrelated to dryer.DRYER_SETTINGS (also
@@ -43,13 +89,8 @@ WASHER_SETTINGS = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# /course/vs/0 -- selected course, read-only.
-#
-# Unlike dishwasher.CYCLE_OPTIONS, we have no verified Course_XX -> name
-# table for washer hardware (only two codes observed: 1C, 65) and no
-# supported-course list field to validate a write against. Exposing this
-# as a plain sensor of the raw hex code is honest about what we actually
-# know; add write support once a real course-name table exists.
+# /course/vs/0 -- selected course, read/write (RMW on the options array,
+# same shape as dishwasher.CYCLE_OPTIONS._cycle_write).
 # ---------------------------------------------------------------------------
 
 def _option_value(options, prefix):
@@ -59,12 +100,30 @@ def _option_value(options, prefix):
     return None
 
 
+def _replace_in_options(options, prefix, new_value):
+    return [f"{prefix}_{new_value}" if isinstance(o, str) and o.startswith(prefix + '_') else o
+            for o in options]
+
+
+def _cycle_write(p, rep, href=None):
+    opts = list(rep.get('x.com.samsung.da.options') or [])
+    if not opts:
+        return None
+    return ['course', 'vs', '0'], {
+        'x.com.samsung.da.options': _replace_in_options(opts, 'Course', p),
+    }
+
+
 WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
-        SensorDesc(key='cycle', name='Cycle', icon='mdi:washing-machine',
+        SelectDesc(key='cycle', name='Cycle', icon='mdi:washing-machine',
+                   translation_key='washer_cycle',
+                   options=_cycle_options,
+                   exists_fn=lambda rep, resources: bool(_cycle_options(resources)),
                    rep_fn=lambda rep: _option_value(
-                       rep.get('x.com.samsung.da.options'), 'Course')),
+                       rep.get('x.com.samsung.da.options'), 'Course'),
+                   write_fn=_cycle_write),
     ),
 )
 
@@ -86,7 +145,7 @@ BUZZER_SOUND = Capability(
         SelectDesc(key='finish_sound', field='setFinishSound',
                    name='Finish sound', icon='mdi:bell-ring',
                    entity_category='config',
-                   exists_fn=lambda rep: 'supportedFinishSound' in rep,
+                   exists_fn=lambda rep, resources: 'supportedFinishSound' in rep,
                    options_field='supportedFinishSound',
                    write_fn=lambda p, rep, href=None: (
                        ['buzzersound', 'vs', '0'], {'setFinishSound': p})),

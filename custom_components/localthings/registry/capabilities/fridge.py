@@ -119,7 +119,7 @@ ICEMAKER_GENERIC = Capability(
                    translation_key='ice_type',
                    entity_category='config',
                    options_field='x.com.samsung.da.iceType.supported',
-                   exists_fn=lambda rep: bool(rep.get('x.com.samsung.da.iceType.supported')),
+                   exists_fn=lambda rep, resources: bool(rep.get('x.com.samsung.da.iceType.supported')),
                    write_fn=_icemaker_write('x.com.samsung.da.iceType.desired')),
     ),
 )
@@ -504,7 +504,7 @@ FLEX_ZONE = Capability(
                    translation_key='flex_zone_mode',
                    entity_category='config',
                    options_field='x.com.samsung.da.supportedOptions',
-                   exists_fn=lambda rep: bool(
+                   exists_fn=lambda rep, resources: bool(
                        rep.get('x.com.samsung.da.supportedOptions')),
                    value_fn=lambda modes: next(
                        (m for m in (modes or [])

@@ -37,6 +37,47 @@
           "cv_ttype_rf9000a_fruit_veggies": "Fruit & Veggies",
           "cv_ttype_rf9000a_beverage": "Beverage"
         }
+      },
+      "dishwasher_cycle": {
+        "state": {
+          "0e": "AI Wash",
+          "07": "Pre blast",
+          "90": "Self clean",
+          "86": "Normal",
+          "83": "Express 60",
+          "84": "Heavy",
+          "8d": "Pots and pans",
+          "80": "Delicate",
+          "8e": "Plastic",
+          "8f": "Baby Care"
+        }
+      },
+      "washer_cycle": {
+        "state": {
+          "1c": "Eco 40-60",
+          "1d": "Super Speed",
+          "21": "Colours",
+          "1b": "Cotton",
+          "1e": "15' Quick Wash",
+          "29": "Drum Clean+",
+          "24": "Towels",
+          "33": "Bedding",
+          "28": "Drain/Spin",
+          "26": "Delicates",
+          "27": "Rinse+Spin",
+          "22": "Wool",
+          "20": "Hygiene Steam",
+          "23": "Outdoor",
+          "25": "Synthetics",
+          "32": "Shirts",
+          "2f": "Activewear",
+          "2e": "Baby Care",
+          "30": "Cloudy Day",
+          "66": "Denim",
+          "2d": "Silent Wash",
+          "8f": "Intense Cold",
+          "96": "Less Microfiber"
+        }
       }
     },
     "sensor": {

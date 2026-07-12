@@ -15,7 +15,7 @@ def flatten(bound: list[BoundEntity], resources: dict) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for b in bound:
         rep = resources.get(b.href) or {}
-        if b.desc.exists_fn is not None and not b.desc.exists_fn(rep):
+        if b.desc.exists_fn is not None and not b.desc.exists_fn(rep, resources):
             continue
         if b.desc.rep_fn is not None:
             out[_key(b)] = b.desc.rep_fn(rep)

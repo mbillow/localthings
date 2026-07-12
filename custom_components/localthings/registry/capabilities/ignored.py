@@ -61,8 +61,12 @@ IGNORED: list[Capability] = [
     # Redundant with capabilities already declared elsewhere.
     # /speakersound/vs/0 duplicates /settings/sound/volume/vs/0 (laundry.SOUND_VOLUME).
     Capability(href='/speakersound/vs/0'),
-    # /wm/editcourse/vs/0 is the raw encoded course-list byte string already
-    # decoded and exposed via /course/vs/0 (dishwasher.CYCLE_OPTIONS).
+    # /wm/editcourse/vs/0 has no entities of its own -- x.com.samsung.da.
+    # editCourseList is read directly out of the resource snapshot by
+    # dishwasher.CYCLE_OPTIONS's and washer.WASHER_COURSE's cycle select
+    # (options=_cycle_options) to build that device's actual supported
+    # course list, rather than exposing this href's raw byte string
+    # through its own entity.
     Capability(href='/wm/editcourse/vs/0'),
 
     # Bixby audio feedback (chime + volume played when Bixby starts/stops

@@ -27,7 +27,10 @@ class SamsungEntityDescription:
     enabled_default: bool = True
     value_fn: Callable[[Any], Any] = _identity
     rep_fn: Optional[Callable[[dict], Any]] = None   # replaces field+value_fn; receives full rep
-    exists_fn: Optional[Callable[[dict], bool]] = None
+    # (rep, resources): rep is this entity's own href's representation;
+    # resources is the coordinator's full href->rep snapshot, for gating
+    # presence on a sibling resource (e.g. washer._cycle_options's source).
+    exists_fn: Optional[Callable[[dict, dict], bool]] = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,7 +48,10 @@ class BinarySensorDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class SelectDesc(SamsungEntityDescription):
-    options: Any = ()        # tuple[str,...] | Callable[[dict], list[str]]
+    options: Any = ()        # tuple[str,...] | Callable[[dict[str, dict]], list[str]]
+    # callable form receives the coordinator's full href->rep resource
+    # snapshot (not just this entity's own href) and returns raw device
+    # option values; see select.py's LocalThingsSelect._raw_options().
     options_field: Optional[str] = None  # resource field that contains the live options list
     write_fn: WriteFn = None
 

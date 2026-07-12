@@ -39,7 +39,14 @@ class TestWasherCourse:
     def test_href(self):
         assert washer.WASHER_COURSE.href == '/course/vs/0'
 
-    def test_reads_course_code_from_options_array(self):
+    def test_translation_key(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
+        assert desc.translation_key == 'washer_cycle'
+
+    def test_reads_raw_course_code_from_options_array(self):
+        """rep_fn returns the raw device code; display names come from
+        strings.json via translation_key, not from Python (see select.py's
+        _display())."""
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
         rep = {'x.com.samsung.da.options': ['DeviceType_0167', 'Course_1C', 'GMT_04']}
         assert desc.rep_fn(rep) == '1C'
@@ -48,10 +55,61 @@ class TestWasherCourse:
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
         assert desc.rep_fn({'x.com.samsung.da.options': ['GMT_04']}) is None
 
-    def test_no_write_fn_yet(self):
-        """Read-only until a verified course-name table exists."""
+    def test_cycle_desc_uses_cycle_options_callable(self):
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
-        assert getattr(desc, 'write_fn', None) is None
+        assert desc.options is washer._cycle_options
+
+    def test_exists_only_when_edit_course_list_is_live(self):
+        """No hardcoded course table is kept -- the selector only appears
+        when a device actually populates editCourseList (see
+        _cycle_options's docstring for why MostUsed_ isn't used either)."""
+        desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
+        assert desc.exists_fn({}, {}) is False
+        assert desc.exists_fn({}, {'/wm/editcourse/vs/0': {}}) is False
+        live = {'/wm/editcourse/vs/0': {'x.com.samsung.da.editCourseList': 'EditCourseList_1C'}}
+        assert desc.exists_fn({}, live) is True
+
+    def test_cycle_write(self):
+        desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
+        rep = {'x.com.samsung.da.options': ['DeviceType_0167', 'Course_1C', 'GMT_04']}
+        path, body = desc.write_fn('1D', rep)
+        assert path == ['course', 'vs', '0']
+        assert body == {
+            'x.com.samsung.da.options': ['DeviceType_0167', 'Course_1D', 'GMT_04'],
+        }
+
+
+class TestCycleOptions:
+    def test_parses_edit_course_list(self):
+        raw = 'EditCourseList_1C1D211B1E29243328262722202325322F2E30662D8F96'
+        assert washer._parse_edit_course_list(raw) == [
+            '1C', '1D', '21', '1B', '1E', '29', '24', '33', '28', '26', '27',
+            '22', '20', '23', '25', '32', '2F', '2E', '30', '66', '2D', '8F', '96',
+        ]
+
+    def test_parse_edit_course_list_handles_missing_or_malformed(self):
+        assert washer._parse_edit_course_list(None) == []
+        assert washer._parse_edit_course_list('') == []
+        assert washer._parse_edit_course_list('no underscore') == []
+
+    def test_cycle_options_reads_live_edit_course_list(self):
+        """A different washer model's own course list -- including a code
+        ('65') never seen on the primary dump -- is used as-is; there is
+        no hardcoded table to fall back to or reconcile against."""
+        resources = {
+            '/wm/editcourse/vs/0': {
+                'x.com.samsung.da.editCourseList': 'EditCourseList_651C',
+            },
+        }
+        assert washer._cycle_options(resources) == ['65', '1C']
+
+    def test_cycle_options_empty_when_resource_absent(self):
+        assert washer._cycle_options({}) == []
+
+    def test_cycle_options_empty_when_resource_empty(self):
+        """The second known washer dump has /wm/editcourse/vs/0 == {}."""
+        resources = {'/wm/editcourse/vs/0': {}}
+        assert washer._cycle_options(resources) == []
 
 
 class TestBuzzerSound:
@@ -66,8 +124,8 @@ class TestBuzzerSound:
 
     def test_finish_sound_exists_only_when_supported(self):
         desc = next(e for e in washer.BUZZER_SOUND.entities if e.key == 'finish_sound')
-        assert desc.exists_fn({'setBuzzerSound': 'On'}) is False
-        assert desc.exists_fn({'supportedFinishSound': ['FinishSound_1']}) is True
+        assert desc.exists_fn({'setBuzzerSound': 'On'}, {}) is False
+        assert desc.exists_fn({'supportedFinishSound': ['FinishSound_1']}, {}) is True
 
     def test_finish_sound_write(self):
         desc = next(e for e in washer.BUZZER_SOUND.entities if e.key == 'finish_sound')
