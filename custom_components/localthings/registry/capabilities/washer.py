@@ -6,6 +6,8 @@ family). Washers never report `oneUiVersion` -- see
 `registry/by_type/__init__.py`'s `for_device_by_model()` for the fallback
 detection this device type requires.
 """
+from datetime import datetime, timezone
+
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 
@@ -114,6 +116,38 @@ def _cycle_write(p, rep, href=None):
     }
 
 
+# Drum Clean+ maintenance tracking, from the same options[] array as the
+# selected course. DrumCleanProposal_<N> is the wash-cycle interval between
+# recommended cleans; WashingTimes_<N> is the count since the last one --
+# their difference is exactly the "N cycles until due" figure the Samsung
+# app shows (verified: DrumCleanProposal_40 - WashingTimes_3 == 37, matching
+# a live app screenshot's "Potreba cistenia po 37 cykloch"). DrumCleanLog_
+# is the last-clean timestamp (verified against the same screenshot's "10
+# days ago"); no explicit timezone field accompanies it on this resource,
+# so it's treated as UTC, matching this integration's convention for other
+# bare ISO datetime fields (see fridge.py's night-light schedule comment).
+def _drum_clean_cycles_remaining(rep):
+    opts = rep.get('x.com.samsung.da.options') or []
+    proposal = _option_value(opts, 'DrumCleanProposal')
+    washed = _option_value(opts, 'WashingTimes')
+    if proposal is None or washed is None:
+        return None
+    try:
+        return max(int(proposal) - int(washed), 0)
+    except ValueError:
+        return None
+
+
+def _drum_clean_last_cleaned(rep):
+    raw = _option_value(rep.get('x.com.samsung.da.options'), 'DrumCleanLog')
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
@@ -124,6 +158,16 @@ WASHER_COURSE = Capability(
                    rep_fn=lambda rep: _option_value(
                        rep.get('x.com.samsung.da.options'), 'Course'),
                    write_fn=_cycle_write),
+        SensorDesc(key='drum_clean_cycles_remaining', name='Drum clean due in',
+                   icon='mdi:washing-machine-alert', unit='cycles',
+                   state_class='measurement',
+                   exists_fn=lambda rep, resources: _drum_clean_cycles_remaining(rep) is not None,
+                   rep_fn=_drum_clean_cycles_remaining),
+        SensorDesc(key='drum_clean_last_cleaned', name='Drum last cleaned',
+                   icon='mdi:calendar-clock', device_class='timestamp',
+                   entity_category='diagnostic',
+                   exists_fn=lambda rep, resources: _drum_clean_last_cleaned(rep) is not None,
+                   rep_fn=_drum_clean_last_cleaned),
     ),
 )
 
