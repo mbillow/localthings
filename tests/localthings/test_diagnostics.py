@@ -1,11 +1,18 @@
 """Tests for the diagnostics platform."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from homeassistant.core import HomeAssistant
 
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.diagnostics import async_get_config_entry_diagnostics
 from custom_components.localthings.registry.redact import REDACTED
+
+_MANIFEST_VERSION = json.loads(
+    (Path(__file__).parents[2] / 'custom_components' / 'localthings' / 'manifest.json').read_text()
+)['version']
 
 
 async def test_diagnostics_shape_and_redaction(
@@ -19,7 +26,7 @@ async def test_diagnostics_shape_and_redaction(
     assert diagnostics["device_type"] == 'refrigerator'
     assert diagnostics["one_ui_version"] == '7.0 Refrigerator'
     assert diagnostics["unbound_hrefs"] == []
-    assert diagnostics["integration_version"] == '0.1.0'
+    assert diagnostics["integration_version"] == _MANIFEST_VERSION
     assert diagnostics["smartthings_local_version"]
 
     resources = diagnostics["resources"]
