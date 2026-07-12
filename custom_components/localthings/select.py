@@ -62,11 +62,18 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
-        if not desc.options_field:
+        if not desc.options_field and not callable(desc.options):
             self._attr_options = [_display(o, desc) for o in desc.options]
 
     def _raw_options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
+        if callable(desc.options):
+            # Per-device option list computed from the full resource
+            # snapshot (not just this entity's own href) -- e.g. a course
+            # list decoded from a sibling resource. There is no static
+            # fallback: when that resource isn't populated the callable
+            # returns [] and the entity's exists_fn suppresses it entirely.
+            return list(desc.options(self.coordinator.last_resources) or [])
         if desc.options_field:
             rep = self.coordinator.last_resources.get(self._bound.href) or {}
             return list(rep.get(desc.options_field) or [])
@@ -75,7 +82,7 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     @property
     def options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
-        if desc.options_field:
+        if desc.options_field or callable(desc.options):
             return [_display(o, desc) for o in self._raw_options()]
         return self._attr_options
 

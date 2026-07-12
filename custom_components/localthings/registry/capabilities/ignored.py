@@ -61,8 +61,12 @@ IGNORED: list[Capability] = [
     # Redundant with capabilities already declared elsewhere.
     # /speakersound/vs/0 duplicates /settings/sound/volume/vs/0 (laundry.SOUND_VOLUME).
     Capability(href='/speakersound/vs/0'),
-    # /wm/editcourse/vs/0 is the raw encoded course-list byte string already
-    # decoded and exposed via /course/vs/0 (dishwasher.CYCLE_OPTIONS).
+    # /wm/editcourse/vs/0 has no entities of its own -- x.com.samsung.da.
+    # editCourseList is read directly out of the resource snapshot by
+    # dishwasher.CYCLE_OPTIONS's and washer.WASHER_COURSE's cycle select
+    # (options=_cycle_options) to build that device's actual supported
+    # course list, rather than exposing this href's raw byte string
+    # through its own entity.
     Capability(href='/wm/editcourse/vs/0'),
 
     # Bixby audio feedback (chime + volume played when Bixby starts/stops
@@ -94,4 +98,33 @@ IGNORED: list[Capability] = [
     Capability(href='/energy/planner/vs/0'),
     # Temperature-unit display preference, redundant with HA's own units.
     Capability(href='/wm/submode/vs/0'),
+
+    # Read-only re-encoding of the course already exposed by
+    # washer.WASHER_COURSE at /course/vs/0 (x.com.samsung.da.st.washerMode
+    # is literally "Table_02_Course_<same hex code>").
+    Capability(href='/st/washercourse/vs/0'),
+    # Empty on every washer dump seen so far.
+    Capability(href='/wm/welcomemsg/vs/0'),
+    # User-saved custom course slots (F1-FA). No controllable/observable
+    # state without a multi-slot editor; revisit if that becomes valuable.
+    Capability(href='/wm/personalcourse/vs/0'),
+    # OCF-native energy resource is empty ({}) on washer hardware seen so
+    # far, unlike /power/0, /kidslock/0, /remotectrl/0 which do carry real
+    # data -- common.ENERGY_METER on /energy/consumption/vs/0 is the only
+    # real source for this control.
+    Capability(href='/energy/consumption/0'),
+    # Empty ({}) on every washer dump seen so far -- nothing to expose.
+    Capability(href='/cycleinterface/vs/0'),
+    # OCF-native duplicate of /drlc/vs/0 above -- same utility-program
+    # dependency this integration doesn't support locally.
+    Capability(href='/drlc/0'),
+    # OCF-native duplicate of /operational/state/vs/0, which is already
+    # modeled by operational.OPERATIONAL_STATE (a richer, write-capable
+    # capability with start/pause/stop buttons and a delay-start control)
+    # used by washer, dishwasher, dryer, and oven. This generic href only
+    # carries read-only overlapping data (current job state, remaining
+    # time, progress percentage) with no write path -- not worth building a
+    # parallel write-capable capability around an unverified generic OCF
+    # write contract.
+    Capability(href='/operational/state/0'),
 ]

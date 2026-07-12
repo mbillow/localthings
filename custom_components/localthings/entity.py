@@ -29,7 +29,7 @@ def _is_included(bound: BoundEntity, coordinator: 'LocalThingsCoordinator') -> b
     if rep is None:
         return False
     if bound.desc.exists_fn is not None:
-        return bound.desc.exists_fn(rep)
+        return bound.desc.exists_fn(rep, coordinator.last_resources)
     if bound.desc.field:
         if not rep:  # stub — resource known to exist, data not yet fetched
             return True

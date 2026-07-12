@@ -113,6 +113,27 @@ async def test_coverage_gap_issue_absent_for_fully_covered_real_fixture(
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
 
 
+def test_run_discovery_detects_washer_via_model_fallback(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Washer hardware reports no oneUiVersion; device type must resolve
+    via for_device_by_model instead of falling back to generic CAPABILITIES."""
+    resources = {
+        '/information/vs/0': {
+            'x.com.samsung.da.modelNum':
+                'DA_WM_TP1_21_COMMON|20375141|20010002001811424AA30217008A0000',
+            'x.com.samsung.da.description':
+                'DA_WM_TP1_21_COMMON_WW5000C/DC92-03495A_B048',
+            'x.com.samsung.da.serialNum': 'TEST-SERIAL',
+        },
+        '/otninformation/vs/0': {'otnStatus': 'None'},
+        '/power/vs/0': {'x.com.samsung.da.power': 'On'},
+    }
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._run_discovery(resources)
+    assert coordinator.device_type_name == 'washer'
+
+
 def test_update_coverage_gap_issue_creates_issue_for_unknown_type(
     hass: HomeAssistant, mock_entry
 ) -> None:

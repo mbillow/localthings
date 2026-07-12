@@ -36,3 +36,8 @@ def dishwasher_resources() -> dict[str, dict]:
 @pytest.fixture
 def fridge_resources() -> dict[str, dict]:
     return _load_device('refrigerator')
+
+
+@pytest.fixture
+def washer_resources() -> dict[str, dict]:
+    return _load_device('washer')

@@ -31,22 +31,37 @@ DISHWASHER_SETTINGS = Capability(
 # /course/vs/0 — cycle selection and course options (RMW on options array)
 # ---------------------------------------------------------------------------
 
-# Course IDs in editCourseList byte order, matched to Samsung app display names.
-# IDs are uppercase hex strings matching the Course_XX encoding in options[].
-_COURSE_ID_TO_NAME: dict[str, str] = {
-    '0E': 'AI Wash',
-    '07': 'Pre blast',
-    '90': 'Self clean',
-    '86': 'Normal',
-    '83': 'Express 60',
-    '84': 'Heavy',
-    '8D': 'Pots and pans',
-    '80': 'Delicate',
-    '8E': 'Plastic',
-    '8F': 'Baby Care',
-}
-_COURSE_NAME_TO_ID = {v: k for k, v in _COURSE_ID_TO_NAME.items()}
-_CYCLE_OPTIONS = tuple(_COURSE_ID_TO_NAME.values())
+# Course IDs are uppercase hex strings matching the Course_XX encoding in
+# options[]. Display names are not kept here -- they live in
+# strings.json/translations under entity.select.dishwasher_cycle.state.<id,
+# lowercased>, same as every other device-enum select in this integration
+# (see fridge.py's translation_key entities and select.py's _display()), so
+# they can be localized instead of hardcoded to English.
+#
+# No static fallback list is kept here -- a hardcoded course table would
+# show options a given dishwasher model doesn't actually have (or hide ones
+# it does). The only trustworthy per-device source is the live
+# x.com.samsung.da.editCourseList on /wm/editcourse/vs/0. When that's
+# absent (e.g. never populated until the app's course-edit screen has been
+# opened at least once), the cycle select isn't created at all -- see
+# CYCLE_OPTIONS's exists_fn below. (x.com.samsung.da.options' MostUsed_*
+# entry was considered as a second fallback source, but its bytes beyond
+# the first don't correspond to any confirmed course code on hardware we
+# have dumps for, so it isn't trustworthy either -- see washer.py's
+# _cycle_options docstring for the byte-level evidence.)
+
+
+def _parse_edit_course_list(raw):
+    """'EditCourseList_0E07908683848D808E8F' -> ['0E', '07', ...]."""
+    if not isinstance(raw, str) or '_' not in raw:
+        return []
+    codes = raw.split('_', 1)[1]
+    return [codes[i:i + 2] for i in range(0, len(codes) - 1, 2)]
+
+
+def _cycle_options(resources):
+    rep = resources.get('/wm/editcourse/vs/0') or {}
+    return _parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
 
 
 def _option_value(options, prefix):
@@ -63,14 +78,11 @@ def _replace_in_options(options, prefix, new_value):
 
 
 def _cycle_write(p, rep, href=None):
-    course_id = _COURSE_NAME_TO_ID.get(p)
-    if not course_id:
-        return None
     opts = list(rep.get('x.com.samsung.da.options') or [])
     if not opts:
         return None
     return ['course', 'vs', '0'], {
-        'x.com.samsung.da.options': _replace_in_options(opts, 'Course', course_id),
+        'x.com.samsung.da.options': _replace_in_options(opts, 'Course', p),
     }
 
 
@@ -100,17 +112,18 @@ CYCLE_OPTIONS = Capability(
     href='/course/vs/0',
     entities=(
         SelectDesc(key='cycle', name='Cycle', icon='mdi:dishwasher',
-                   options=_CYCLE_OPTIONS,
-                   rep_fn=lambda rep: _COURSE_ID_TO_NAME.get(
-                       _option_value(rep.get('x.com.samsung.da.options'), 'Course')
-                   ),
+                   translation_key='dishwasher_cycle',
+                   options=_cycle_options,
+                   exists_fn=lambda rep, resources: bool(_cycle_options(resources)),
+                   rep_fn=lambda rep: _option_value(
+                       rep.get('x.com.samsung.da.options'), 'Course'),
                    write_fn=_cycle_write),
         SwitchDesc(key='storm_wash', name='Storm Wash+', icon='mdi:weather-lightning-rainy',
                    rep_fn=lambda rep: _option_value(
                        rep.get('x.com.samsung.da.options'), 'StormWashZone') == 'On',
                    write_fn=_storm_wash_write),
         SwitchDesc(key='auto_release_dry', name='Auto release dry', icon='mdi:door-open',
-                   exists_fn=lambda rep: any(
+                   exists_fn=lambda rep, resources: any(
                        isinstance(o, str) and o.startswith('AutoDoorRelease_')
                        for o in (rep.get('x.com.samsung.da.options') or [])
                    ),

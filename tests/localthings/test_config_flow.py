@@ -134,3 +134,38 @@ async def test_duplicate_device_aborted(hass: HomeAssistant, mock_probe) -> None
     )
     assert result['type'] == FlowResultType.ABORT
     assert result['reason'] == 'already_configured'
+
+
+def test_probe_marks_washer_as_recognized(monkeypatch):
+    """A washer's probe response (no oneUiVersion) must still resolve via
+    the modelNum/description fallback so setup doesn't warn about an
+    unrecognized device type."""
+    from custom_components.localthings import config_flow
+
+    device0 = [
+        {'rt': ['x.com.samsung.devcol']},
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum':
+                'DA_WM_TP1_21_COMMON|20375141|20010002001811424AA30217008A0000',
+            'x.com.samsung.da.description':
+                'DA_WM_TP1_21_COMMON_WW5000C/DC92-03495A_B048',
+            'x.com.samsung.da.serialNum': 'TEST-SERIAL',
+        }},
+        {'href': '/otninformation/vs/0', 'rep': {'otnStatus': 'None'}},
+    ]
+    from custom_components.localthings.registry.batch import parse_device0_batch
+    resources = parse_device0_batch(device0)
+
+    info_resource = resources.get('/information/vs/0', {})
+    one_ui_version = (
+        resources.get('/otninformation/vs/0', {}).get('swVersionInfo', {}).get('oneUiVersion', '')
+    )
+    from custom_components.localthings.registry.by_type import for_device, for_device_by_model
+    recognized = bool(
+        (one_ui_version and for_device(one_ui_version) is not None)
+        or for_device_by_model(
+            info_resource.get('x.com.samsung.da.modelNum', ''),
+            info_resource.get('x.com.samsung.da.description', ''),
+        ) is not None
+    )
+    assert recognized is True

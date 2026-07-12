@@ -20,7 +20,7 @@ from smartthings_local.protocol.dtls_session import DtlsCoapSession
 from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
-from .registry.by_type import for_device
+from .registry.by_type import for_device, for_device_by_model
 from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
@@ -273,7 +273,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                   .get('swVersionInfo', {})
                   .get('oneUiVersion', ''))
         self.one_ui_version = one_ui
+        info = resources.get('/information/vs/0', {})
         reg = for_device(one_ui) if one_ui else None
+        if reg is None:
+            reg = for_device_by_model(
+                info.get('x.com.samsung.da.modelNum', ''),
+                info.get('x.com.samsung.da.description', ''),
+            )
         unbound: list[str] = []
         if reg is not None:
             self._log.debug("device type: %s (oneUiVersion=%r)", reg.name, one_ui)
@@ -287,7 +293,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.bound = bound
         self._unbound_hrefs = unbound
 
-        info = resources.get('/information/vs/0', {})
         serial = info.get('x.com.samsung.da.serialNum', '')
         if not serial:
             serial = self._entry.data[CONF_HOST]
