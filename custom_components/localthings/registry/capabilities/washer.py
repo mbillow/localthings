@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 
+from .common import clamp_power, wh_to_kwh
+
 # ---------------------------------------------------------------------------
 # Course_XX hex codes. The 23 codes named in strings.json/translations
 # under entity.select.washer_cycle.state.<id, lowercased> were captured
@@ -290,5 +292,42 @@ REMOTE_CONTROL_VS_FALLBACK = Capability(
                          field='x.com.samsung.da.remoteControlEnabled',
                          name='Smart Control', device_class='connectivity',
                          value_fn=lambda v: str(v).lower() == 'true'),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# /energy/consumption/vs/0 -- washer-specific override of common.ENERGY_METER
+# (issue #6).
+#
+# instantaneousPower is a dead field on every TP1-class washer dump collected
+# so far (7 dumps, 3 physical devices): always the literal sentinel '-500',
+# unchanged between off/idle-on/mid-cycle states and across different
+# courses. common.clamp_power floors that to a misleading "0 W" that reads
+# as a real (if idle) measurement rather than "unsupported". Gate the entity
+# out entirely when the sentinel is seen, but only then -- if some washer
+# model ever reports a real value, this still shows it.
+#
+# cumulativePower is absent outright on at least one washer model (issue #6),
+# unlike every other washer dump. entity.py's generic field-presence gate
+# already excludes the entity in that case; the exists_fn here just makes
+# that explicit at the capability level instead of relying on the fallback.
+# ---------------------------------------------------------------------------
+
+_DEAD_INSTANTANEOUS_POWER = '-500'
+
+
+WASHER_ENERGY_METER = Capability(
+    href='/energy/consumption/vs/0',
+    entities=(
+        SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
+                   name='Power', device_class='power', state_class='measurement',
+                   unit='W', value_fn=clamp_power,
+                   exists_fn=lambda rep, resources: (
+                       rep.get('x.com.samsung.da.instantaneousPower')
+                       != _DEAD_INSTANTANEOUS_POWER)),
+        SensorDesc(key='energy_kwh', field='x.com.samsung.da.cumulativePower',
+                   name='Energy', device_class='energy',
+                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: 'x.com.samsung.da.cumulativePower' in rep),
     ),
 )

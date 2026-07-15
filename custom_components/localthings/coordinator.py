@@ -115,6 +115,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def last_resources(self) -> dict:
         return self._cache.snapshot()
 
+    def resource(self, href: str) -> dict:
+        """A single href's current rep. Cheaper than `last_resources.get(href)`
+        for callers that only need one href — `last_resources` copies every
+        tracked href's rep to build the snapshot dict, while this is a
+        direct O(1) cache lookup."""
+        return self._cache.get(href) or {}
+
     @property
     def observe_mode(self) -> str:
         return self._observe.mode

@@ -42,12 +42,18 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
         if desc.step is not None:
             self._attr_native_step = desc.step
 
+    @property
+    def native_unit_of_measurement(self):
+        desc: NumberDesc = self._bound.desc
+        if desc.unit_fn is not None:
+            return desc.unit_fn(self.coordinator.resource(self._bound.href))
+        return self._attr_native_unit_of_measurement
+
     def _range_from_resource(self) -> list | None:
         desc: NumberDesc = self._bound.desc
         if not desc.range_field:
             return None
-        rep = self.coordinator.last_resources.get(self._bound.href) or {}
-        r = rep.get(desc.range_field)
+        r = self.coordinator.resource(self._bound.href).get(desc.range_field)
         return r if (isinstance(r, (list, tuple)) and len(r) == 2) else None
 
     @property

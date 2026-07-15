@@ -29,6 +29,7 @@ from ..entities import (
     BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
     SwitchDesc,
 )
+from .common import normalize_temp_unit
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -255,13 +256,26 @@ OVEN_CAVITY = Capability(
     ),
 )
 
+def _oven_temp_unit(rep):
+    """Same shape/risk as fridge.py's TEMPERATURES_FALLBACK: this is the
+    same aggregate `/temperatures/vs/0` items[] resource type, which on
+    fridge hardware carries a per-item `x.com.samsung.da.unit` field
+    ('Celsius'/'Fahrenheit') that was previously hardcoded away (issue #7).
+    No live oven dump has surfaced a non-Celsius reading yet, so this keeps
+    the verified '°C' default when the field is absent, but reads it live
+    if a device ever reports otherwise."""
+    items = rep.get('x.com.samsung.da.items') or []
+    unit = items[0].get('x.com.samsung.da.unit') if items else None
+    return normalize_temp_unit(unit, default='°C')
+
+
 OVEN_SETPOINT = Capability(
     href='/temperatures/vs/0',
     poll_tier='hot',
     entities=(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(key='oven_setpoint', field='x.com.samsung.da.items',
-                   name='Setpoint', device_class='temperature', unit='°C',
+                   name='Setpoint', device_class='temperature', unit_fn=_oven_temp_unit,
                    native_min=float(SETPOINT_MIN_C), native_max=float(SETPOINT_MAX_C),
                    step=float(SETPOINT_STEP_C), icon='mdi:thermometer-chevron-up',
                    value_fn=lambda items: _int(
@@ -269,7 +283,7 @@ OVEN_SETPOINT = Capability(
                    write_fn=_oven_setpoint_write),
         SensorDesc(key='current_temp_c', field='x.com.samsung.da.items',
                    name='Temperature', device_class='temperature',
-                   state_class='measurement', unit='°C',
+                   state_class='measurement', unit_fn=_oven_temp_unit,
                    value_fn=lambda items: _int(
                        (items[0].get('x.com.samsung.da.current') if items else None))),
     ),

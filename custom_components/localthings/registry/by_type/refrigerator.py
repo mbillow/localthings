@@ -30,6 +30,7 @@ REGISTRY = DeviceRegistry(
         fridge.DOORS_FALLBACK,
         fridge.TEMPERATURES_FALLBACK,
         fridge.ICEMAKER_STATUS_FALLBACK,
+        fridge.REFRIGERATION_FALLBACK,
     ]),
     pattern_capabilities=[
         fridge.TEMP_CURRENT_GENERIC,

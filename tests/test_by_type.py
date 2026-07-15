@@ -154,6 +154,20 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'refrigerator'
 
+    def test_refrigerator_rl_series_via_ref_token(self):
+        """Issue #7: RL38C6B0CWW/EG (a bottom-freezer RL-series fridge, not
+        the RF9000-style french-door this module was originally verified
+        against) reports description/modelNum 'TP1X_REF_21K' -- same
+        internal platform code as any other TP1X-based fridge, so the
+        existing '_REF_' fallback already resolves it correctly."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_REF_21K|00156941|00050126001611304100000031010000',
+            'TP1X_REF_21K',
+        )
+        assert reg is not None
+        assert reg.name == 'refrigerator'
+
     def test_unknown_model_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
         reg = for_device_by_model('SOME-UNKNOWN-BOARD', 'SOME-UNKNOWN-BOARD')

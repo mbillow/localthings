@@ -238,3 +238,29 @@ class TestRemoteControlFallback:
         assert washer.REMOTE_CONTROL_VS_FALLBACK.match_fn({}, {'/remotectrl/vs/0': {}}) is True
         assert washer.REMOTE_CONTROL_VS_FALLBACK.match_fn(
             {}, {'/remotectrl/0': {}, '/remotectrl/vs/0': {}}) is False
+
+
+class TestWasherEnergyMeter:
+    """Issue #6: instantaneousPower is a dead sentinel ('-500', unchanged
+    across off/idle-on/running-eco/running-fabrics states and across 3
+    physical devices) on every TP1-class washer dump collected so far;
+    cumulativePower is outright absent on at least one washer model."""
+
+    def test_href(self):
+        assert washer.WASHER_ENERGY_METER.href == '/energy/consumption/vs/0'
+
+    def test_power_watts_hidden_for_dead_sentinel(self):
+        desc = next(e for e in washer.WASHER_ENERGY_METER.entities if e.key == 'power_watts')
+        assert desc.exists_fn({'x.com.samsung.da.instantaneousPower': '-500'}, {}) is False
+
+    def test_power_watts_shown_for_real_value(self):
+        desc = next(e for e in washer.WASHER_ENERGY_METER.entities if e.key == 'power_watts')
+        assert desc.exists_fn({'x.com.samsung.da.instantaneousPower': '150'}, {}) is True
+
+    def test_energy_kwh_hidden_when_cumulative_power_absent(self):
+        desc = next(e for e in washer.WASHER_ENERGY_METER.entities if e.key == 'energy_kwh')
+        assert desc.exists_fn({'x.com.samsung.da.instantaneousPower': '-500'}, {}) is False
+
+    def test_energy_kwh_shown_when_present(self):
+        desc = next(e for e in washer.WASHER_ENERGY_METER.entities if e.key == 'energy_kwh')
+        assert desc.exists_fn({'x.com.samsung.da.cumulativePower': '58900'}, {}) is True

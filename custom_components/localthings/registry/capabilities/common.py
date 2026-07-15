@@ -21,14 +21,27 @@ def _num(v):
         return None
 
 
-def _clamp_power(v):
+def clamp_power(v):
     n = _num(v)
     return 0.0 if (n is not None and n < 0) else n
 
 
-def _wh_to_kwh(v):
+def wh_to_kwh(v):
     n = _num(v)
     return round(n / 1000.0, 2) if n is not None else None
+
+
+def normalize_temp_unit(raw, default='°F'):
+    """'C'/'Celsius' -> '°C', 'F'/'Fahrenheit' -> '°F'. Falls back to
+    `default` for any other/missing value. Shared by fridge.py and oven.py,
+    both of which read a per-device unit off a `/temperature*` resource
+    instead of assuming one (see fridge.py's module docstring, issue #7)."""
+    raw = (raw or '').strip().upper()
+    if raw.startswith('C'):
+        return '°C'
+    if raw.startswith('F'):
+        return '°F'
+    return default
 
 
 def _ml_to_l(v):
@@ -90,10 +103,10 @@ ENERGY_METER = Capability(
     entities=(
         SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
                    name='Power', device_class='power', state_class='measurement',
-                   unit='W', value_fn=_clamp_power),
+                   unit='W', value_fn=clamp_power),
         SensorDesc(key='energy_kwh', field='x.com.samsung.da.cumulativePower',
                    name='Energy', device_class='energy',
-                   state_class='total_increasing', unit='kWh', value_fn=_wh_to_kwh),
+                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh),
     ),
 )
 
