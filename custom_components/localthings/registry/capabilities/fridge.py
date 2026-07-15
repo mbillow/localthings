@@ -2,9 +2,13 @@
 
 Resources verified against the dump at local-tools/dumps/10.0.0.254.json.
 
-Temperature fields in all /temperature/* resources are in Fahrenheit on this
-model. Setpoints are NumberDesc with direct-write write_fn — generic caps
-derive the CoAP PUT path from href at write time.
+Temperature unit is read live from each resource, not assumed: the RF9000B
+dump reports Fahrenheit ("units": "F" / "x.com.samsung.da.unit": "Fahrenheit"),
+but a TP1X_REF_21K dump (issue #7) reports the same fields in Celsius for the
+exact same resources — the device tells you which one it is, it's just never
+been read before. See `_temp_unit`/`_temp_item_unit` below. Setpoints are
+NumberDesc with direct-write write_fn — generic caps derive the CoAP PUT path
+from href at write time.
 
 Multi-instance note: the two door resources (/door/cooler/0 and
 /door/freezer/0) and the two ice-maker resources (/icemaker/one/vs/0 and
@@ -18,6 +22,7 @@ from ..entities import (
     BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
     SwitchDesc, TimeDesc,
 )
+from .common import normalize_temp_unit
 
 # Display names for the beverage zone, flex zone, ice type, and
 # ice-making-status enums below live in strings.json / translations/en.json,
@@ -33,6 +38,12 @@ def _int(v):
         return None
 
 
+def _temp_unit(rep):
+    """'units': 'C'/'F' (or 'Celsius'/'Fahrenheit') -> '°C'/'°F'. Defaults to
+    °F (this module's original assumption) if the device omits the field."""
+    return normalize_temp_unit(rep.get('units'))
+
+
 # ---------------------------------------------------------------------------
 # Temperature (generic — covers /temperature/current/* and /temperature/desired/*)
 # ---------------------------------------------------------------------------
@@ -45,7 +56,7 @@ TEMP_CURRENT_GENERIC = Capability(
     entities=(
         SensorDesc(key='temperature', field='temperature',
                    name=None, icon='mdi:thermometer',
-                   device_class='temperature', unit='°F',
+                   device_class='temperature', unit_fn=_temp_unit,
                    state_class='measurement'),
     ),
 )
@@ -57,7 +68,7 @@ TEMP_SETPOINT_GENERIC = Capability(
     poll_tier='warm',
     entities=(
         NumberDesc(key='setpoint', field='temperature',
-                   name=None, device_class='temperature', unit='°F',
+                   name=None, device_class='temperature', unit_fn=_temp_unit,
                    native_min=-20.0, native_max=50.0,
                    range_field='range', entity_category='config',
                    write_fn=lambda p, rep, href=None: (
@@ -172,12 +183,16 @@ STATUS_LOCK = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# Defrost delay
+# Defrost delay / active-defrost status
 #
-# /defrost/delay/vs/0 is the writable toggle. /defrost/block/vs/0 just
-# reports whether the defrost cycle is currently blocked as a result (a
-# derived status, not an independent control) — exposed as a read-only
-# diagnostic binary sensor.
+# /defrost/delay/vs/0 is the writable toggle to postpone a scheduled
+# defrost. /defrost/block/vs/0 is an unrelated, independently-varying
+# status: despite its "block" naming (originally assumed to mean "defrost
+# is being withheld"), live dumps confirm DEFROST_BLOCK_ON means the
+# defrost cycle is *actively running* right now, seen with defrost_delay
+# off -- i.e. "block" refers to the evaporator/coil block being defrosted,
+# not a blocking/prevention state. Exposed as a read-only diagnostic
+# binary sensor.
 # ---------------------------------------------------------------------------
 
 DEFROST_DELAY = Capability(
@@ -198,8 +213,8 @@ DEFROST_BLOCK_STATUS = Capability(
     href='/defrost/block/vs/0',
     poll_tier='warm',
     entities=(
-        BinarySensorDesc(key='defrost_blocked', field='x.com.samsung.da.modes',
-                         name='Defrost blocked', icon='mdi:snowflake-off',
+        BinarySensorDesc(key='defrost_active', field='x.com.samsung.da.modes',
+                         name='Defrost active', icon='mdi:snowflake-melt',
                          entity_category='diagnostic',
                          value_fn=lambda modes: bool(modes) and modes[0] == 'DEFROST_BLOCK_ON'),
     ),
@@ -590,6 +605,13 @@ def _temp_item_value(items, keyword):
     return None
 
 
+def _temp_item_unit(items, keyword):
+    for item in (items or []):
+        if keyword.lower() in (item.get('x.com.samsung.da.description') or '').lower():
+            return normalize_temp_unit(item.get('x.com.samsung.da.unit'))
+    return '°F'
+
+
 TEMPERATURES_FALLBACK = Capability(
     href='/temperatures/vs/0',
     match_fn=lambda rep, resources: not _any_temperature_generic(resources),
@@ -597,11 +619,15 @@ TEMPERATURES_FALLBACK = Capability(
     entities=(
         SensorDesc(key='freezer_temperature', field='x.com.samsung.da.items',
                    name='Freezer temperature', icon='mdi:thermometer',
-                   device_class='temperature', unit='°F', state_class='measurement',
+                   device_class='temperature', state_class='measurement',
+                   unit_fn=lambda rep: _temp_item_unit(
+                       rep.get('x.com.samsung.da.items'), 'Freezer'),
                    value_fn=lambda items: _temp_item_value(items, 'Freezer')),
         SensorDesc(key='fridge_temperature', field='x.com.samsung.da.items',
                    name='Fridge temperature', icon='mdi:thermometer',
-                   device_class='temperature', unit='°F', state_class='measurement',
+                   device_class='temperature', state_class='measurement',
+                   unit_fn=lambda rep: _temp_item_unit(
+                       rep.get('x.com.samsung.da.items'), 'Fridge'),
                    value_fn=lambda items: _temp_item_value(items, 'Fridge')),
     ),
 )
@@ -626,5 +652,36 @@ ICEMAKER_STATUS_FALLBACK = Capability(
                    write_fn=lambda p, rep, href=None: (
                        ['icemaker', 'status', 'vs', '0'],
                        {'x.com.samsung.da.iceMaker': 'On' if p else 'Off'})),
+    ),
+)
+
+# OCF-native /refrigeration/0 (issue #7's unbound_hrefs) -- the odd one out
+# in this section: its three fields duplicate two *different* richer
+# hrefs (REFRIGERATION's rapidFridge/rapidFreezing and
+# DEFROST_BLOCK_STATUS's defrost_active), each absent independently, so a
+# single capability-level match_fn can't express it. Gated per-entity
+# (exists_fn) instead: rapid_fridge/rapid_freezing back off only when
+# REFRIGERATION's href is present; defrost_active only when
+# DEFROST_BLOCK_STATUS's is. No write path confirmed for this href, so
+# these are read-only, unlike REFRIGERATION's switches.
+REFRIGERATION_FALLBACK = Capability(
+    href='/refrigeration/0',
+    poll_tier='warm',
+    entities=(
+        BinarySensorDesc(key='defrost_active', field='defrost',
+                         name='Defrost active', icon='mdi:snowflake-melt',
+                         entity_category='diagnostic',
+                         value_fn=lambda v: bool(v),
+                         exists_fn=lambda rep, resources: '/defrost/block/vs/0' not in resources),
+        BinarySensorDesc(key='rapid_fridge', field='rapidCool',
+                         name='Rapid fridge', icon='mdi:fridge-industrial',
+                         entity_category='config',
+                         value_fn=lambda v: bool(v),
+                         exists_fn=lambda rep, resources: '/refrigeration/vs/0' not in resources),
+        BinarySensorDesc(key='rapid_freezing', field='rapidFreeze',
+                         name='Rapid freezing', icon='mdi:snowflake',
+                         entity_category='config',
+                         value_fn=lambda v: bool(v),
+                         exists_fn=lambda rep, resources: '/refrigeration/vs/0' not in resources),
     ),
 )

@@ -89,6 +89,11 @@ IGNORED: list[Capability] = [
     # supportedAiLevel on hardware seen so far, so there's no real choice
     # to expose. Revisit if a device surfaces more than one supported level.
     Capability(href='/energy/ailevel/vs/0'),
+    # OCF-native vacation-mode flag (fridge). Only one value ('RVACATION_OFF')
+    # has ever been seen in `modes` (issue #7's dump), same "no real choice
+    # to expose yet" situation as /energy/ailevel/vs/0 above. Revisit if a
+    # device surfaces it toggled on.
+    Capability(href='/mode/0'),
     # Opaque integer with no supportedModes/options list to interpret it
     # against — meaning unclear from the raw resource alone.
     Capability(href='/runningmode/vs/0'),

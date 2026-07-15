@@ -17,7 +17,7 @@ REGISTRY = DeviceRegistry(
         washer.BUZZER_SOUND,
         washer.WASHER_JOB_BEGINNING_STATUS,
         common.ALARMS,
-        common.ENERGY_METER,
+        washer.WASHER_ENERGY_METER,
         common.WATER_METER,
         operational.OPERATIONAL_STATE,
         dishwasher.DIAGNOSIS,

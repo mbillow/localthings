@@ -44,6 +44,13 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
             self._attr_options = list(desc.options)
 
     @property
+    def native_unit_of_measurement(self):
+        desc: SensorDesc = self._bound.desc
+        if desc.unit_fn is not None:
+            return desc.unit_fn(self.coordinator.resource(self._bound.href))
+        return self._attr_native_unit_of_measurement
+
+    @property
     def native_value(self):
         return (self.coordinator.data or {}).get(self._state_key)
 

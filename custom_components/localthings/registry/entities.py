@@ -38,6 +38,7 @@ class SensorDesc(SamsungEntityDescription):
     device_class: Optional[str] = None
     state_class: Optional[str] = None
     unit: Optional[str] = None
+    unit_fn: Optional[Callable[[dict], str]] = None  # overrides `unit` from the live rep, when set
     options: Optional[tuple] = None  # required by HA when device_class == 'enum'
 
 
@@ -72,6 +73,7 @@ class ButtonDesc(SamsungEntityDescription):
 class NumberDesc(SamsungEntityDescription):
     device_class: Optional[str] = None
     unit: Optional[str] = None
+    unit_fn: Optional[Callable[[dict], str]] = None  # overrides `unit` from the live rep, when set
     native_min: Optional[float] = None
     native_max: Optional[float] = None
     step: Optional[float] = None
