@@ -164,11 +164,22 @@ def _drum_clean_last_cleaned(rep):
 # valid raw codes for its field, same hex-pair shape as EditCourseList.
 # '<Prefix>Alarm_<On/Off>' is a low-reservoir warning flag.
 #
-# Raw codes are shown as-is (no translation_key): unlike Course_XX, there's
-# no code->label mapping cross-referenced against multiple devices yet --
-# just a single dump's DetergentLevelCtrl_3/SoftenerLevelCtrl_3 plausibly
-# matching that same report's screenshot of "Élevé" (High), which isn't
-# enough to commit a full 00-03 mapping to strings.json.
+# Label mapping (entity.select.washer_dosing_quantity/washer_detergent_
+# water_hardness/washer_softener_concentration in strings.json) is an
+# assumed, not cross-device-verified, reading of the single issue #9 dump +
+# screenshots: LevelCtrl's 4 codes as None/Low/Medium/High (00 has no
+# on-screen equivalent -- the app's Quantité picker only offers
+# Faible/Moyen/Élevé, i.e. codes 01-03; 00 is assumed to be what
+# "Activation" off collapses to) matches DetergentLevelCtrl_3/
+# SoftenerLevelCtrl_3 = "Élevé" on both dispensers. Level2Ctrl's 3 codes as
+# Soft/Medium/Hard for detergent (Dureté de l'eau: Douce/Moyenne/Dure)
+# matches DetergentLevel2Ctrl_2 = "Moyenne". The same 3-code shape as
+# 1x/2x/3x for softener concentration does *not* cleanly match
+# SoftenerLevel2Ctrl_2 against the screenshot's "3x" -- assumed to be a
+# setting the user changed in the app between the dump (issue body) and the
+# screenshots (a later comment), not a different code scheme, since it's
+# otherwise identical in shape to the detergent side. Revisit if a second
+# device's dump contradicts this.
 def _supported_level_options(resources, prefix):
     rep = resources.get('/course/vs/0') or {}
     raw = _option_value(rep.get('x.com.samsung.da.options'), f'Supported{prefix}')
@@ -221,6 +232,7 @@ WASHER_COURSE = Capability(
                    exists_fn=lambda rep, resources: _drum_clean_last_cleaned(rep) is not None,
                    rep_fn=_drum_clean_last_cleaned),
         SelectDesc(key='detergent_quantity', name='Detergent quantity', icon='mdi:cup-water',
+                   translation_key='washer_dosing_quantity',
                    entity_category='config',
                    options=_level_options('DetergentLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
@@ -230,6 +242,7 @@ WASHER_COURSE = Capability(
                    write_fn=_level_write('DetergentLevelCtrl')),
         SelectDesc(key='detergent_water_hardness', name='Detergent water hardness',
                    icon='mdi:water-opacity',
+                   translation_key='washer_detergent_water_hardness',
                    entity_category='config',
                    options=_level_options('DetergentLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(
@@ -238,6 +251,7 @@ WASHER_COURSE = Capability(
                        rep.get('x.com.samsung.da.options'), 'DetergentLevel2Ctrl'),
                    write_fn=_level_write('DetergentLevel2Ctrl')),
         SelectDesc(key='softener_quantity', name='Softener quantity', icon='mdi:flask-outline',
+                   translation_key='washer_dosing_quantity',
                    entity_category='config',
                    options=_level_options('SoftenerLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
@@ -247,6 +261,7 @@ WASHER_COURSE = Capability(
                    write_fn=_level_write('SoftenerLevelCtrl')),
         SelectDesc(key='softener_concentration', name='Softener concentration',
                    icon='mdi:flask-plus-outline',
+                   translation_key='washer_softener_concentration',
                    entity_category='config',
                    options=_level_options('SoftenerLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(

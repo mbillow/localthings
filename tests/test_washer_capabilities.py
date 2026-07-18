@@ -185,6 +185,16 @@ class TestDetergentSoftenerDosing:
         assert self._desc('softener_quantity').rep_fn(rep) == '3'
         assert self._desc('softener_concentration').rep_fn(rep) == '2'
 
+    def test_translation_keys(self):
+        """detergent_quantity and softener_quantity share one translation_key
+        (same 00-03 -> None/Low/Medium/High vocabulary on both dispensers,
+        same shape as fridge.py's shared 'brightness_level' key); hardness
+        and concentration each have their own since their labels differ."""
+        assert self._desc('detergent_quantity').translation_key == 'washer_dosing_quantity'
+        assert self._desc('softener_quantity').translation_key == 'washer_dosing_quantity'
+        assert self._desc('detergent_water_hardness').translation_key == 'washer_detergent_water_hardness'
+        assert self._desc('softener_concentration').translation_key == 'washer_softener_concentration'
+
     def test_quantity_and_hardness_options_decode_supported_list(self):
         assert self._desc('detergent_quantity').options(_DOSING_RESOURCES) == ['00', '01', '02', '03']
         assert self._desc('softener_quantity').options(_DOSING_RESOURCES) == ['00', '01', '02', '03']
