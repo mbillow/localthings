@@ -6,6 +6,7 @@
     "cycle",
     "cycle_active",
     "delay_start_hours",
+    "detergent_low",
     "diagnosis_status",
     "drum_clean_cycles_remaining",
     "drum_clean_last_cleaned",
@@ -19,6 +20,7 @@
     "progress_percentage",
     "remote_control",
     "rinse_cycles",
+    "softener_low",
     "spin_speed",
     "wash_temperature",
     "water_liters"

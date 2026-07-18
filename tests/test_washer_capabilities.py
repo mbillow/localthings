@@ -155,6 +155,79 @@ class TestDrumClean:
         assert desc.exists_fn({'x.com.samsung.da.options': []}, {}) is False
 
 
+# Raw options array from issue #9's diagnostic dump (trimmed to the fields
+# relevant to detergent/softener dosing).
+_DOSING_OPTIONS = [
+    'Course_1C',
+    'DetergentAlarm_Off',
+    'SoftenerAlarm_Off',
+    'DetergentLevelCtrl_3',
+    'SoftenerLevelCtrl_3',
+    'SupportedDetergentLevelCtrl_00010203',
+    'SupportedSoftenerLevelCtrl_00010203',
+    'DetergentLevel2Ctrl_2',
+    'SoftenerLevel2Ctrl_2',
+    'SupportedDetergentLevel2Ctrl_010203',
+    'SupportedSoftenerLevel2Ctrl_010203',
+]
+_DOSING_RESOURCES = {'/course/vs/0': {'x.com.samsung.da.options': _DOSING_OPTIONS}}
+
+
+class TestDetergentSoftenerDosing:
+    @staticmethod
+    def _desc(key):
+        return next(e for e in washer.WASHER_COURSE.entities if e.key == key)
+
+    def test_quantity_and_hardness_read(self):
+        rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
+        assert self._desc('detergent_quantity').rep_fn(rep) == '3'
+        assert self._desc('detergent_water_hardness').rep_fn(rep) == '2'
+        assert self._desc('softener_quantity').rep_fn(rep) == '3'
+        assert self._desc('softener_concentration').rep_fn(rep) == '2'
+
+    def test_quantity_and_hardness_options_decode_supported_list(self):
+        assert self._desc('detergent_quantity').options(_DOSING_RESOURCES) == ['00', '01', '02', '03']
+        assert self._desc('softener_quantity').options(_DOSING_RESOURCES) == ['00', '01', '02', '03']
+        assert self._desc('detergent_water_hardness').options(_DOSING_RESOURCES) == ['01', '02', '03']
+        assert self._desc('softener_concentration').options(_DOSING_RESOURCES) == ['01', '02', '03']
+
+    def test_exists_only_when_supported_list_present(self):
+        for key in ('detergent_quantity', 'detergent_water_hardness',
+                    'softener_quantity', 'softener_concentration'):
+            desc = self._desc(key)
+            assert desc.exists_fn({}, {}) is False
+            assert desc.exists_fn({}, _DOSING_RESOURCES) is True
+
+    def test_quantity_write(self):
+        rep = {'x.com.samsung.da.options': list(_DOSING_OPTIONS)}
+        path, body = self._desc('detergent_quantity').write_fn('01', rep)
+        assert path == ['course', 'vs', '0']
+        assert 'DetergentLevelCtrl_01' in body['x.com.samsung.da.options']
+        assert 'DetergentLevelCtrl_3' not in body['x.com.samsung.da.options']
+
+    def test_hardness_write(self):
+        rep = {'x.com.samsung.da.options': list(_DOSING_OPTIONS)}
+        path, body = self._desc('softener_concentration').write_fn('03', rep)
+        assert path == ['course', 'vs', '0']
+        assert 'SoftenerLevel2Ctrl_03' in body['x.com.samsung.da.options']
+
+    def test_low_reservoir_off_when_alarm_off(self):
+        rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
+        assert self._desc('detergent_low').rep_fn(rep) is False
+        assert self._desc('softener_low').rep_fn(rep) is False
+
+    def test_low_reservoir_on_when_alarm_active(self):
+        opts = ['DetergentAlarm_On', 'SoftenerAlarm_On']
+        rep = {'x.com.samsung.da.options': opts}
+        assert self._desc('detergent_low').rep_fn(rep) is True
+        assert self._desc('softener_low').rep_fn(rep) is True
+
+    def test_low_reservoir_exists_only_when_alarm_field_present(self):
+        assert self._desc('detergent_low').exists_fn({'x.com.samsung.da.options': []}, {}) is False
+        rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
+        assert self._desc('detergent_low').exists_fn(rep, {}) is True
+
+
 class TestBuzzerSound:
     def test_href(self):
         assert washer.BUZZER_SOUND.href == '/buzzersound/vs/0'
