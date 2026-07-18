@@ -78,6 +78,28 @@
           "8f": "Intense Cold",
           "96": "Less Microfiber"
         }
+      },
+      "washer_dosing_quantity": {
+        "state": {
+          "00": "None",
+          "01": "Low",
+          "02": "Medium",
+          "03": "High"
+        }
+      },
+      "washer_detergent_water_hardness": {
+        "state": {
+          "01": "Soft",
+          "02": "Medium",
+          "03": "Hard"
+        }
+      },
+      "washer_softener_concentration": {
+        "state": {
+          "01": "1x",
+          "02": "2x",
+          "03": "3x"
+        }
       }
     },
     "sensor": {

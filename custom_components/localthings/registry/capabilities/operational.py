@@ -93,9 +93,11 @@ OPERATIONAL_STATE = Capability(
                        else _progress(rep.get('x.com.samsung.da.progress'))
                    )),
         SensorDesc(key='progress_percentage',
-                   field='x.com.samsung.da.progressPercentage',
                    name='Progress percent', unit='%', state_class='measurement',
-                   value_fn=_int),
+                   rep_fn=lambda rep: (
+                       0 if _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) != 'active'
+                       else _int(rep.get('x.com.samsung.da.progressPercentage'))
+                   )),
         # Only show finish time when machine is actively running. Samsung
         # firmware leaves a stale remainingTime after a cycle ends, and
         # freezes it at '00:01:00' when progress reaches 'Finish'.

@@ -8,6 +8,22 @@ def test_machine_state_maps_samsung_to_ocf():
     assert ms.value_fn('Ready') == 'idle'
 
 
+class TestProgressPercentage:
+    """issue #9: device firmware leaves progressPercentage stale (e.g. '1')
+    after a cycle ends instead of resetting it, so it must be gated on
+    active state the same way `progress`/`cycle_active`/`finish_time` are."""
+
+    def test_zeroed_when_not_active(self):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == 'progress_percentage')
+        rep = {'x.com.samsung.da.state': 'Ready', 'x.com.samsung.da.progressPercentage': '1'}
+        assert desc.rep_fn(rep) == 0
+
+    def test_passes_through_when_active(self):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == 'progress_percentage')
+        rep = {'x.com.samsung.da.state': 'Run', 'x.com.samsung.da.progressPercentage': '42'}
+        assert desc.rep_fn(rep) == 42
+
+
 class TestDelayFieldFallback:
     def test_reads_delay_end_time_when_delay_start_time_absent(self):
         from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
