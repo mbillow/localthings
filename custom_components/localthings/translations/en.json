@@ -18,6 +18,7 @@
       },
       "ice_type": {
         "state": {
+          "off": "Off",
           "whiskey_iceball_3": "3 Balls/Day",
           "whiskey_iceball_6": "6 Balls/Day",
           "whiskey_iceball_9": "9 Balls/Day"
@@ -113,6 +114,13 @@
         "state": {
           "observe": "Push (observe)",
           "poll": "Polling"
+        }
+      },
+      "machine_state": {
+        "state": {
+          "idle": "Idle",
+          "active": "Active",
+          "pause": "Paused"
         }
       }
     }

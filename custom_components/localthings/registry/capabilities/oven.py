@@ -223,7 +223,9 @@ OVEN_OPERATIONAL_STATE = Capability(
     poll_tier='hot',
     entities=(
         SensorDesc(key='machine_state', field='x.com.samsung.da.state',
-                   name='Machine state', icon='mdi:stove', value_fn=_to_ocf),
+                   name='Machine state', icon='mdi:stove',
+                   device_class='enum', options=('idle', 'active', 'pause'),
+                   translation_key='machine_state', value_fn=_to_ocf),
         BinarySensorDesc(key='cycle_active', field='x.com.samsung.da.state',
                          name='Cycle active', device_class='running',
                          value_fn=lambda v: _SAMSUNG_STATE_TO_OCF.get(v) == 'active'),

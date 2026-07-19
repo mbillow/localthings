@@ -75,7 +75,9 @@ OPERATIONAL_STATE = Capability(
     poll_tier='hot',
     entities=(
         SensorDesc(key='machine_state', field='x.com.samsung.da.state',
-                   name='Machine state', value_fn=_to_ocf),
+                   name='Machine state', device_class='enum',
+                   options=('idle', 'active', 'pause'),
+                   translation_key='machine_state', value_fn=_to_ocf),
         # cycle_active is a bool derived from machine_state; used by the
         # adapter to gate oven writes (cycle_active_field='cycle_active').
         # Harmless for non-oven appliances — just an extra bool in state.
