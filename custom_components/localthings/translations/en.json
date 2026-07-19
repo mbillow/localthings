@@ -115,6 +115,13 @@
           "observe": "Push (observe)",
           "poll": "Polling"
         }
+      },
+      "machine_state": {
+        "state": {
+          "idle": "Idle",
+          "active": "Active",
+          "pause": "Paused"
+        }
       }
     }
   },
