@@ -2,14 +2,7 @@
 
 **A native Home Assistant custom integration for local control of newer-generation Samsung connected appliances.** No cloud round-trip. Add a device through HA's normal *Settings > Devices & Services* flow and it talks CoAP-over-DTLS straight to the appliance on your LAN.
 
-> ### Where things live
->
-> This project split into two repos partway through development.
->
-> - **[`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local)** (PyPI package): the reusable protocol layer. Handles the low-level networking — DTLS encryption, retries, and per-device certificate minting. No HA dependency; usable from any Python project.
-> - **This repo**: the Home Assistant integration built on top of it. Config flow, a per-device-type capability registry, the polling/push coordinator, and all the HA entity classes.
->
-> `custom_components/localthings/manifest.json` pulls in `smartthings-local` from PyPI like any other HA integration dependency.
+This integration uses the [`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local) library to handle the low-level DTLS/CoAP communication with devices.
 
 ### What you get
 
