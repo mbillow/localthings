@@ -56,6 +56,109 @@ async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
     assert result['data'][CONF_CA_CERT_PEM] == MOCK_CA_CERT_PEM
 
 
+def test_order_candidates_prefers_known_ports() -> None:
+    """Live ports are ordered with the historically known DTLS ports first,
+    then the rest ascending."""
+    from custom_components.localthings.config_flow import _order_candidates
+
+    assert _order_candidates([49160, 49153, 49155, 49154]) == [
+        49154, 49155, 49153, 49160,
+    ]
+    assert _order_candidates([49153]) == [49153]
+
+
+def test_find_live_ports_detects_silent_port() -> None:
+    """The UDP liveness sweep flags a bound-but-silent port as live and drops
+    ports that refuse with ICMP port-unreachable.
+
+    A bound, never-recv'd UDP socket stands in for a device that listens but
+    stays silent (open|filtered), like the dishwasher in issue #13 on 49153.
+    Two sibling ports are reserved then closed so loopback refuses datagrams
+    to them, standing in for the closed ports the scan should discard.
+    """
+    import socket
+
+    from custom_components.localthings.config_flow import _find_live_ports
+
+    reserve = [socket.socket(socket.AF_INET, socket.SOCK_DGRAM) for _ in range(3)]
+    for s in reserve:
+        s.bind(('127.0.0.1', 0))
+    ports = [s.getsockname()[1] for s in reserve]
+    live_sock, live_port = reserve[0], ports[0]
+    reserve[1].close()
+    reserve[2].close()
+    closed_ports = ports[1:]
+
+    try:
+        result = _find_live_ports(
+            '127.0.0.1', [closed_ports[0], live_port, closed_ports[1]], 0.8,
+        )
+    finally:
+        live_sock.close()
+
+    assert result == [live_port]
+
+
+async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch) -> None:
+    """A device that only answers on 49153 — outside the historical
+    49154/49155 pair — is found by the liveness sweep and its port is stored
+    on the config entry (issue #13)."""
+    import cbor2
+
+    from custom_components.localthings import config_flow
+
+    device0 = [
+        {'rt': ['x.com.samsung.devcol']},
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum':
+                'DA_WM_TP1_21_COMMON|20375141|20010002001811424AA30217008A0000',
+            'x.com.samsung.da.description':
+                'DA_WM_TP1_21_COMMON_WW5000C/DC92-03495A_B048',
+            'x.com.samsung.da.serialNum': 'DISHWASHER-49153',
+        }},
+        {'href': '/otninformation/vs/0', 'rep': {'otnStatus': 'None'}},
+    ]
+
+    class _FakeSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.host, self.port = host, port
+
+        def connect(self):
+            pass
+
+        def start_reader(self):
+            pass
+
+        def get(self, path, timeout=15.0):
+            return 0x45, cbor2.dumps(device0)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: 'test-uuid')
+    monkeypatch.setattr(
+        config_flow, '_mint_leaf_cert',
+        lambda ca_cert, ca_key, uuid: ('FULLCHAIN', 'LEAFKEY'),
+    )
+    monkeypatch.setattr(
+        config_flow, '_find_live_ports',
+        lambda host, ports, timeout: [49153],
+    )
+    monkeypatch.setattr(
+        'smartthings_local.protocol.dtls_session.DtlsCoapSession', _FakeSession,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={'source': 'user'}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'],
+        {CONF_HOST: MOCK_HOST, CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM, CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM},
+    )
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+    assert result['data'][CONF_PORT] == 49153
+
+
 async def test_cannot_connect(hass: HomeAssistant) -> None:
     """Failed probe: form re-shown with cannot_connect error."""
     from custom_components.localthings.config_flow import CannotConnect

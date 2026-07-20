@@ -35,7 +35,7 @@ Other Tizen RT / DAWIT-family appliances almost certainly speak the same protoco
 nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
 ```
 
-- `49154/udp` or `49155/udp` open|filtered with a DTLS handshake responding: newer firmware (Tizen RT 3.x, DAWIT 3.0+). This is what the integration talks to. The config flow probes both ports automatically, so you don't need to know which one your device uses.
+- Any UDP port in `49152-49160` open|filtered with a DTLS handshake responding: newer firmware (Tizen RT 3.x, DAWIT 3.0+). This is what the integration talks to. Most devices answer on `49154`/`49155`, but some builds bind lower (e.g. `49153`). The config flow sweeps the whole range and auto-detects the live port, so you don't need to know which one your device uses.
 - Only `8888/tcp` open (token-based HTTPS): older firmware (roughly 2018-2022). **Not supported here.**
 
 ---
@@ -54,7 +54,7 @@ This repo doesn't include the needed CA bundle. For an example of how to obtain 
 2. Restart HA.
 3. **Settings > Devices & Services > Add Integration > LocalThings.**
 4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
-5. The flow fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, probes ports `49154`/`49155`, and confirms the device answers `/device/0`. On success it creates the config entry and detects the device type automatically.
+5. The flow fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, sweeps the `49152-49160` range to find the live DTLS port, and confirms the device answers `/device/0`. On success it creates the config entry and detects the device type automatically.
 6. Every subsequent device only asks for the host IP; the stored CA credentials are reused to mint that device's leaf cert.
 
 Entities appear under one HA device per appliance, named `Samsung Appliance (<ip>)` initially. Rename freely: the config entry is keyed on the device's serial, not the name.

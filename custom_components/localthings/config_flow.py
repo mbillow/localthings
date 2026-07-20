@@ -4,8 +4,10 @@ from __future__ import annotations
 import datetime
 import logging
 import re
+import selectors
 import socket
 import ssl
+import time
 from typing import Any
 
 import voluptuous as vol
@@ -22,7 +24,8 @@ from .const import (
     CONF_HOST, CONF_PORT,
     CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
     CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
-    PROBE_PORTS,
+    PROBE_PORT_RANGE, PREFERRED_PROBE_PORTS, LIVENESS_PROBE_TIMEOUT_S,
+    PROBE_GET_TIMEOUT_S,
 )
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
@@ -120,6 +123,73 @@ def _mint_leaf_cert(ca_cert_pem: str, ca_key_pem: str, uuid: str) -> tuple[str, 
     return fullchain_pem, leaf_key_pem
 
 
+def _order_candidates(ports: list[int]) -> list[int]:
+    """Order live ports so the historically known DTLS ports are tried first."""
+    preferred = [p for p in PREFERRED_PROBE_PORTS if p in ports]
+    rest = sorted(p for p in ports if p not in PREFERRED_PROBE_PORTS)
+    return preferred + rest
+
+
+def _find_live_ports(host: str, ports: list[int], timeout: float) -> list[int]:
+    """Fast UDP liveness sweep to narrow the range before the DTLS handshake.
+
+    UDP is connectionless, but a *connected* UDP socket surfaces the ICMP
+    port-unreachable that a closed port returns as ECONNREFUSED on its next
+    recv. So we send one probe datagram per port and watch for that error:
+
+      * ECONNREFUSED       -> port is closed (device actively rejected it)
+      * silence / any data -> port may be live (open|filtered); a candidate
+
+    This is the in-process equivalent of ``nmap -sU``: it lets us take a
+    nine-port range down to the one or two ports actually worth a full DTLS
+    handshake + /device/0 GET, and bounds the total wait to ``timeout``
+    instead of stalling on every dead port when a firewall swallows the ICMP
+    replies.
+    """
+    sockets: dict[int, socket.socket] = {}
+    sel = selectors.DefaultSelector()
+    # A single byte is enough to provoke an ICMP port-unreach from a closed
+    # port; a real DTLS ClientHello is unnecessary just to test for life.
+    probe = b"\x00"
+    try:
+        for port in ports:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setblocking(False)
+            try:
+                sock.connect((host, port))
+                sock.send(probe)
+            except OSError:
+                sock.close()
+                continue
+            sockets[port] = sock
+            sel.register(sock, selectors.EVENT_READ, port)
+
+        # Ports drop out of the selector as they refuse; whatever is still
+        # registered when the deadline passes is silent-but-live (a candidate).
+        deadline = time.monotonic() + timeout
+        while sel.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            for key, _ in sel.select(timeout=remaining):
+                try:
+                    # Data back means live; ECONNREFUSED (or any other socket
+                    # error) means the port is closed/unusable — rule it out.
+                    key.fileobj.recv(1)
+                except OSError:
+                    sel.unregister(key.fileobj)
+        live = [key.data for key in sel.get_map().values()]
+    finally:
+        sel.close()
+        for sock in sockets.values():
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+    return _order_candidates(live)
+
+
 def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     """Fetch UUID, mint leaf cert, probe each port. Returns config entry data dict."""
     import cbor2
@@ -146,8 +216,21 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
         raise CannotConnect(f"Failed to mint leaf cert: {exc}") from exc
     _LOGGER.debug("Leaf cert minted successfully")
 
+    candidates = _find_live_ports(
+        host, PROBE_PORT_RANGE, LIVENESS_PROBE_TIMEOUT_S
+    )
+    if not candidates:
+        # Every port in the range actively refused: there is no DTLS/CoAP
+        # listener on this host, so a handshake can't succeed. Fail now with a
+        # clear message instead of retrying doomed ports.
+        raise CannotConnect(
+            f"no live DTLS port found on {host} "
+            f"in {PROBE_PORT_RANGE[0]}-{PROBE_PORT_RANGE[-1]}"
+        )
+    _LOGGER.debug("Live DTLS port candidates on %s: %s", host, candidates)
+
     last_exc = None
-    for port in PROBE_PORTS:
+    for port in candidates:
         sess = None
         try:
             sess = DtlsCoapSession(
@@ -157,7 +240,7 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
             )
             sess.connect()
             sess.start_reader()
-            code, payload = sess.get(['device', '0'], timeout=15.0)
+            code, payload = sess.get(['device', '0'], timeout=PROBE_GET_TIMEOUT_S)
             if code != 0x45 or not payload:
                 raise CannotConnect(f"port {port}: unexpected code {code:#04x}")
             body = cbor2.loads(payload)
