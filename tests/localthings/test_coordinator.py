@@ -1,8 +1,6 @@
 """Tests for the LocalThingsCoordinator."""
 from __future__ import annotations
 
-import threading
-import time
 from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 
@@ -261,20 +259,15 @@ async def test_enters_observe_mode_when_hot_warm_hrefs_notify(
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
     # try_enter_observe_mode clears prior notifications as soon as it
-    # starts, so notifies must land *during* its grace-period sleep (same
-    # pattern test_observe.py uses), not before the call.
-    def _notify_during_grace_period():
-        time.sleep(0.005)
-        for href in hrefs:
-            fake.on_notification(href, cbor2.dumps({'notified': True}))
-
-    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
-    notifier.start()
+    # starts, so notifies must land *during* its grace-period sleep. The
+    # fake session delivers one synchronously from subscribe() (see
+    # FakeObserveSession.notify_on_subscribe in conftest.py), which puts
+    # them inside that window by construction rather than by timing.
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
 
     assert entered is True
     assert coordinator._observe.mode == MODE_OBSERVE
@@ -300,18 +293,11 @@ async def test_reconnect_while_observe_mode_downgrades_to_poll(
 
     # Get the coordinator into observe mode the same way
     # test_enters_observe_mode_when_hot_warm_hrefs_notify does.
-    def _notify_during_grace_period():
-        time.sleep(0.005)
-        for href in hrefs:
-            fake.on_notification(href, cbor2.dumps({'notified': True}))
-
-    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
-    notifier.start()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -324,12 +310,12 @@ async def test_reconnect_while_observe_mode_downgrades_to_poll(
 
     # Simulate the existing "poll failed, reconnecting" branch: _poll_once
     # fails once (triggering the reconnect/backoff path), then succeeds.
-    # No fresh notifies are supplied for the immediate resubscribe attempt
-    # this now triggers, so its grace period (shortened for tests by the
-    # `_fast_coordinator_timers` autouse fixture — see conftest.py) times
-    # out and mode stays 'poll' — this test only asserts the tear-down half of
-    # the fix; test_reconnect_from_observe_mode_resubscribes_immediately
-    # covers the successful-immediate-resubscribe half.
+    # The device stops notifying on subscribe, so the immediate resubscribe
+    # attempt this now triggers gets nothing back and mode stays 'poll' —
+    # this test only asserts the tear-down half of the fix;
+    # test_reconnect_from_observe_mode_resubscribes_immediately covers the
+    # successful-immediate-resubscribe half.
+    fake.notify_on_subscribe = None
     with (
         patch(
             'custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once',
@@ -362,18 +348,11 @@ async def test_poll_timeout_skips_reconnect_when_push_is_healthy(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
-    def _notify_during_grace_period():
-        time.sleep(0.005)
-        for href in hrefs:
-            fake.on_notification(href, cbor2.dumps({'notified': True}))
-
-    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
-    notifier.start()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -408,18 +387,11 @@ async def test_poll_timeout_reconnects_after_consecutive_limit_even_with_push(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
-    def _notify_during_grace_period():
-        time.sleep(0.005)
-        for href in hrefs:
-            fake.on_notification(href, cbor2.dumps({'notified': True}))
-
-    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
-    notifier.start()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -441,7 +413,10 @@ async def test_poll_timeout_reconnects_after_consecutive_limit_even_with_push(
             assert coordinator.observe_mode == MODE_OBSERVE
 
     # The final consecutive timeout crosses the limit and triggers the
-    # existing reconnect path, which then succeeds and downgrades.
+    # existing reconnect path, which then succeeds and downgrades. The
+    # device stops notifying on subscribe, so the resubscribe attempt that
+    # follows the reconnect finds nothing and mode stays 'poll'.
+    fake.notify_on_subscribe = None
     with (
         patch(
             'custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once',
@@ -473,18 +448,11 @@ async def test_poll_timeout_counter_resets_when_push_is_healthy_again(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
-    def _notify_during_grace_period():
-        time.sleep(0.005)
-        for href in hrefs:
-            fake.on_notification(href, cbor2.dumps({'notified': True}))
-
-    notifier = threading.Thread(target=_notify_during_grace_period, daemon=True)
-    notifier.start()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -526,21 +494,11 @@ async def test_reconnect_from_observe_mode_resubscribes_immediately(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
-    def _notify(delay: float = 0.005) -> threading.Thread:
-        def _run():
-            time.sleep(delay)
-            for href in hrefs:
-                fake.on_notification(href, cbor2.dumps({'notified': True}))
-        t = threading.Thread(target=_run, daemon=True)
-        t.start()
-        return t
-
-    notifier = _notify()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -563,10 +521,8 @@ async def test_reconnect_from_observe_mode_resubscribes_immediately(
             new=AsyncMock(),
         ),
     ):
-        notifier = _notify()
         await coordinator.async_request_refresh()
         await hass.async_block_till_done()
-        notifier.join()
 
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -587,21 +543,11 @@ async def test_sweep_mismatch_never_downgrades_a_live_observe_session(
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
     assert len(hrefs) >= 2
 
-    def _notify(delay: float = 0.005) -> threading.Thread:
-        def _run():
-            time.sleep(delay)
-            for href in hrefs:
-                fake.on_notification(href, cbor2.dumps({'notified': True}))
-        t = threading.Thread(target=_run, daemon=True)
-        t.start()
-        return t
-
-    notifier = _notify()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
@@ -637,21 +583,11 @@ async def test_sweep_mismatch_forces_subpolls_on_a_live_observe_session(
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
     assert len(hrefs) >= 2
 
-    def _notify(delay: float = 0.005) -> threading.Thread:
-        def _run():
-            time.sleep(delay)
-            for href in hrefs:
-                fake.on_notification(href, cbor2.dumps({'notified': True}))
-        t = threading.Thread(target=_run, daemon=True)
-        t.start()
-        return t
-
-    notifier = _notify()
+    fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
         fake, hrefs, 0.02, 0.8,
     )
-    notifier.join()
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 

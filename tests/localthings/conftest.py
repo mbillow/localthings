@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import cbor2
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -150,12 +151,24 @@ class FakeObserveSession:
         self.subscribed: list[str] = []
         self.fail_hrefs: set[str] = set()
         self.closed = False
+        # When set to a rep dict, subscribe() immediately delivers that rep
+        # as an OBSERVE notification for the href — what a real device does
+        # when it answers a subscription with the current representation.
+        # `try_enter_observe_mode` clears its notified set before it
+        # subscribes, so this is the only way to deliver a notify that
+        # reliably lands inside the grace period: a notify raced in from
+        # another thread can be wiped by that clear (or arrive after the
+        # grace period ends) depending on scheduling. Set to None to model
+        # a device that answers subscriptions but never notifies.
+        self.notify_on_subscribe: dict | None = None
 
     def subscribe(self, path_segs):
         href = '/' + '/'.join(path_segs)
         if href in self.fail_hrefs:
             raise ConnectionError("subscribe failed")
         self.subscribed.append(href)
+        if self.notify_on_subscribe is not None and self.on_notification is not None:
+            self.on_notification(href, cbor2.dumps(self.notify_on_subscribe))
         return b'\x01'
 
     def refresh_observes(self, paths):
