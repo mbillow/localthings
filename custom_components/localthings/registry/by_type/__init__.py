@@ -2,12 +2,14 @@
 from typing import Optional
 
 from ._base import DeviceRegistry
-from . import dishwasher, dryer, oven, refrigerator, washer
+from . import airconditioner, dishwasher, dryer, oven, refrigerator, washer
 
 __all__ = ['DeviceRegistry', '_type_key', 'for_device', 'for_device_by_model']
 
 
 _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
+    'airconditioner': airconditioner.REGISTRY,
+    'air_conditioner': airconditioner.REGISTRY,
     'dishwasher': dishwasher.REGISTRY,
     'dryer': dryer.REGISTRY,
     'oven': oven.REGISTRY,
@@ -88,4 +90,8 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     key = _CONSUMER_PREFIX_TO_KEY.get(token[:2].upper())
     if key is None and '_REF_' in (model_num or ''):
         key = 'refrigerator'
+    # Room air conditioners (e.g. ARTIK051_PRAC_20K) report no oneUiVersion and
+    # a modelNum carrying the '_PRAC_' (Package Room Air Conditioner) token.
+    if key is None and '_PRAC_' in (model_num or ''):
+        key = 'airconditioner'
     return _REGISTRY_BY_KEY.get(key) if key else None

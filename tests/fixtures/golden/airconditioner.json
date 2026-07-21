@@ -1,0 +1,13 @@
+{
+  "state_keys": [
+    "air_filter_status",
+    "air_filter_usage",
+    "air_purify",
+    "alarm_code",
+    "auto_clean",
+    "climate",
+    "diagnosis_status",
+    "energy_kwh",
+    "power_watts"
+  ]
+}
