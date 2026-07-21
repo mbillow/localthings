@@ -28,11 +28,13 @@ REGISTRY = DeviceRegistry(
         fridge.BEVERAGE_ZONE,
         fridge.FIRMWARE_UPDATE,
         fridge.DEFROST_DELAY,
+        fridge.DEFROST_DELAY_NATIVE_DUPLICATE,
         fridge.DEFROST_BLOCK_STATUS,
         fridge.SELF_CHECK,
         fridge.DOORS_FALLBACK,
         fridge.TEMPERATURES_FALLBACK,
         fridge.ICEMAKER_STATUS_FALLBACK,
+        fridge.ICEMAKER_STATUS_NATIVE_DUPLICATE,
         fridge.REFRIGERATION_FALLBACK,
     ]),
     pattern_capabilities=[

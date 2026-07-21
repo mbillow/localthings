@@ -1,0 +1,30 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "autofill",
+    "cooler_setpoint",
+    "cooler_temperature",
+    "defrost_active",
+    "defrost_delay",
+    "door_cooler_open",
+    "door_cvroom_open",
+    "door_freezer_open",
+    "energy_kwh",
+    "filter_status",
+    "filter_usage",
+    "firmware_update",
+    "flex_zone_mode",
+    "freezer_setpoint",
+    "freezer_temperature",
+    "icemaker_one_enabled",
+    "icemaker_one_making_status",
+    "icemaker_two_enabled",
+    "icemaker_two_making_status",
+    "power_watts",
+    "rapid_freezing",
+    "rapid_fridge",
+    "sabbath_mode",
+    "selfcheck_result",
+    "selfcheck_status"
+  ]
+}
