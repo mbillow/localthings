@@ -116,3 +116,17 @@ class TestEnergyMeter:
     def test_energy_kwh_shown_when_present(self):
         kwh = next(e for e in common.ENERGY_METER.entities if e.key == 'energy_kwh')
         assert kwh.exists_fn({'x.com.samsung.da.cumulativePower': '58900'}, {}) is True
+
+    def test_both_entities_included_on_empty_stub(self):
+        """An empty {} rep means the resource exists but data isn't fetched yet
+        (see entity._is_included) -- include both so sub-polls populate them."""
+        pw = next(e for e in common.ENERGY_METER.entities if e.key == 'power_watts')
+        kwh = next(e for e in common.ENERGY_METER.entities if e.key == 'energy_kwh')
+        assert pw.exists_fn({}, {}) is True
+        assert kwh.exists_fn({}, {}) is True
+
+    def test_power_watts_hidden_when_field_absent_in_populated_rep(self):
+        """A populated rep that lacks instantaneousPower must not spawn a
+        phantom power sensor (the exists_fn replaces the field-presence gate)."""
+        pw = next(e for e in common.ENERGY_METER.entities if e.key == 'power_watts')
+        assert pw.exists_fn({'x.com.samsung.da.cumulativePower': '5'}, {}) is False

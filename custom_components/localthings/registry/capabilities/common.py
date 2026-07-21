@@ -160,16 +160,21 @@ _DEAD_INSTANTANEOUS_POWER = '-500'
 ENERGY_METER = Capability(
     href='/energy/consumption/vs/0',
     entities=(
+        # `not rep` keeps the empty-{} stub carve-out (see entity._is_included):
+        # an explicit exists_fn otherwise bypasses it, which would drop the
+        # entity when /device/0 returns a not-yet-fetched stub. On a populated
+        # rep, hide power only for the dead sentinel or an absent field.
         SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
                    name='Power', device_class='power', state_class='measurement',
                    unit='W', value_fn=clamp_power,
-                   exists_fn=lambda rep, resources: (
+                   exists_fn=lambda rep, resources: not rep or (
                        rep.get('x.com.samsung.da.instantaneousPower')
-                       != _DEAD_INSTANTANEOUS_POWER)),
+                       not in (None, _DEAD_INSTANTANEOUS_POWER))),
         SensorDesc(key='energy_kwh', field='x.com.samsung.da.cumulativePower',
                    name='Energy', device_class='energy',
                    state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
-                   exists_fn=lambda rep, resources: 'x.com.samsung.da.cumulativePower' in rep),
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.cumulativePower' in rep)),
     ),
 )
 
