@@ -36,7 +36,7 @@ def test_options_field_unaffected():
 def test_callable_options_receives_full_resource_snapshot():
     """A callable options is handed the coordinator's full href->rep
     snapshot, not just this entity's own href's rep -- needed for course
-    lists decoded from a sibling resource (see washer._cycle_options)."""
+    lists decoded from a sibling resource (see laundry.cycle_options)."""
     calls = []
 
     def _options_fn(resources):
