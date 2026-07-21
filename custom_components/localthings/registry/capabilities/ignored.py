@@ -108,6 +108,10 @@ IGNORED: list[Capability] = [
     # washer.WASHER_COURSE at /course/vs/0 (x.com.samsung.da.st.washerMode
     # is literally "Table_02_Course_<same hex code>").
     Capability(href='/st/washercourse/vs/0'),
+    # Dryer counterpart of the above: re-encoding of the course already
+    # exposed by dryer.DRYER_COURSE at /course/vs/0
+    # (x.com.samsung.da.st.dryerMode is "Table_03_Course_<same hex code>").
+    Capability(href='/st/dryercourse/vs/0'),
     # Empty on every washer dump seen so far.
     Capability(href='/wm/welcomemsg/vs/0'),
     # User-saved custom course slots (F1-FA). No controllable/observable

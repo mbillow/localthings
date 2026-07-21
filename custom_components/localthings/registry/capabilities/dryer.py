@@ -1,37 +1,16 @@
-"""Capabilities specific to the dryer family (Samsung DV5000T-class).
+"""Capabilities specific to the dryer family (Samsung DA_WM_TP1/TP2-class).
 
-Resources derived from the old dryer.py descriptor OBSERVE_PATHS and
-flatten() implementation:
-  /washer/vs/0              -> DRYER_SETTINGS (dryLevel, dryTime, dryerType, wrinklePrevent)
-  /st/dryercourse/vs/0      -> DRYER_COURSE (dryer_mode SelectDesc)
-  /wm/jobbeginingstatus/vs/0 -> JOB_BEGINNING_STATUS
-  /diagnosis/vs/0           -> DRYER_DIAGNOSIS
+Dryer-specific controls only. The shared laundry surface -- power/kids-lock/
+remote-control fallback pairs, buzzer, energy meter, job-beginning-status, and
+the /course/vs/0 cycle select -- lives in laundry.py.
 
-Course table captured 2026-05-29 on a DA_WM_TP2_20_COMMON_DV5000T. Other
-dryer models may use a different course table; options=() means HA renders
-whatever the device reports, and the write_fn validates against this table.
+  /washer/vs/0   -> DRYER_SETTINGS (dryLevel, dryTime, dryerType, wrinklePrevent)
+  /course/vs/0   -> DRYER_COURSE (shared cycle select; see below)
+  /diagnosis/vs/0 -> DRYER_DIAGNOSIS
 """
 from ..capability import Capability
-from ..entities import SelectDesc, SensorDesc, SwitchDesc
-
-# Course table: hex codes -> human names (Table_03, DV5000T-class).
-_COURSE_NAMES = {
-    0x16: 'Cotton',
-    0x18: 'Synthetics',
-    0x19: 'Delicates',
-    0x1A: 'Wool',
-    0x1B: 'Bedding',
-    0x1C: 'Shirts',
-    0x1D: 'Towels',
-    0x1E: 'Outdoor',
-    0x1F: 'Mixed Load',
-    0x20: 'Iron Dry',
-    0x23: 'Quick Dry 35',
-    0x24: 'Cool Air',
-    0x25: 'Warm Air',
-    0x27: 'Time Dry',
-}
-_COURSE_CODE_BY_NAME = {name: code for code, name in _COURSE_NAMES.items()}
+from ..entities import SensorDesc, SwitchDesc
+from .laundry import cycle_select
 
 
 def _wrinkle_write(p, rep, href=None):
@@ -39,20 +18,6 @@ def _wrinkle_write(p, rep, href=None):
         return None
     return ['washer', 'vs', '0'], {'x.com.samsung.da.wrinklePrevent': p}
 
-
-def _course_write(p, rep, href=None):
-    """Encode a human course name to the Samsung hex-encoded course string."""
-    code = _COURSE_CODE_BY_NAME.get(p)
-    if code is None:
-        return None
-    return ['st', 'dryercourse', 'vs', '0'], {
-        'x.com.samsung.da.st.dryerMode': f'Course_{code:02X}',
-    }
-
-
-# ---------------------------------------------------------------------------
-# Capabilities
-# ---------------------------------------------------------------------------
 
 DRYER_SETTINGS = Capability(
     href='/washer/vs/0',
@@ -71,28 +36,19 @@ DRYER_SETTINGS = Capability(
     ),
 )
 
+# /course/vs/0 -- cycle selection, shared with washer/dishwasher via
+# laundry.cycle_select (options read live from /wm/editcourse/vs/0, written as
+# an RMW on the options array). Course display names live in translations
+# under entity.select.dryer_cycle (Table_03, DV5000-class, captured
+# 2026-05-29). Codes 0x21 and 0x4C appear in the issue #14 DV90BB5245AES1
+# editCourseList but aren't identified yet -- they render as the raw code
+# until named. The /st/dryercourse/vs/0 resource re-encodes the same selected
+# course and is ignored (ignored.py) -- the mirror of how /st/washercourse/vs/0
+# is ignored for washers.
 DRYER_COURSE = Capability(
-    href='/st/dryercourse/vs/0',
-    poll_tier='warm',
+    href='/course/vs/0',
     entities=(
-        SelectDesc(key='dryer_mode', field='x.com.samsung.da.st.dryerMode',
-                   name='Dryer mode', icon='mdi:tumble-dryer',
-                   options=tuple(_COURSE_CODE_BY_NAME),
-                   value_fn=lambda v: _COURSE_NAMES.get(
-                       int(v.split('_')[1], 16) if isinstance(v, str) and '_' in v else -1
-                   ),
-                   write_fn=_course_write),
-    ),
-)
-
-JOB_BEGINNING_STATUS = Capability(
-    href='/wm/jobbeginingstatus/vs/0',
-    poll_tier='warm',
-    entities=(
-        SensorDesc(key='job_beginning_status',
-                   field='x.com.samsung.da.jobBeginingStatus',
-                   name='Job beginning status',
-                   entity_category='diagnostic'),
+        cycle_select(translation_key='dryer_cycle', icon='mdi:tumble-dryer'),
     ),
 )
 

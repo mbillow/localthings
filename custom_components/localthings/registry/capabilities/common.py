@@ -56,8 +56,57 @@ def _active_alarm_codes(items):
     return ', '.join(codes) if codes else 'none'
 
 
-KIDS_LOCK = Capability(
+# OCF-native / vendor '-vs' fallback pairs for power, kids-lock, remote control.
+#
+# These three controls exist as both a standard OCF resource (/power/0,
+# oic.r.switch.binary, plain boolean 'value') and a Samsung vendor resource
+# (/power/vs/0, x.com.samsung.da.power) -- Samsung advertises both as its
+# firmware migrates onto the OCF standard model. Prefer the OCF-standard href
+# when the device exposes it; the '-vs' href (a string-encoded duplicate for
+# these three) binds only when the generic href is absent, via match_fn. Older
+# firmware has only the '-vs' resource, so the pair is behaviour-identical to a
+# lone '-vs' cap there. See the adding-device-support skill's "OCF-standard vs
+# vendor" section for why this is preferred-non-vs-with-fallback, not a blanket
+# choice. Every device registry lists both caps of each pair.
+
+POWER_GENERIC = Capability(
+    href='/power/0',
+    entities=(
+        SwitchDesc(key='power_switch', field='value',
+                   name='Power',
+                   value_fn=lambda v: bool(v),
+                   write_fn=lambda p, rep, href=None: (
+                       ['power', '0'], {'value': p == 'On'})),
+    ),
+)
+
+POWER_VS_FALLBACK = Capability(
+    href='/power/vs/0',
+    match_fn=lambda rep, resources: '/power/0' not in resources,
+    entities=(
+        SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
+                   name='Power',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['power', 'vs', '0'],
+                       {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
+    ),
+)
+
+KIDS_LOCK_GENERIC = Capability(
+    href='/kidslock/0',
+    entities=(
+        SwitchDesc(key='child_lock', field='value',
+                   name='Child lock', device_class='lock',
+                   value_fn=lambda v: bool(v),
+                   write_fn=lambda p, rep, href=None: (
+                       ['kidslock', '0'], {'value': p == 'On'})),
+    ),
+)
+
+KIDS_LOCK_VS_FALLBACK = Capability(
     href='/kidslock/vs/0',
+    match_fn=lambda rep, resources: '/kidslock/0' not in resources,
     entities=(
         SwitchDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
                    name='Child lock', device_class='lock',
@@ -68,23 +117,23 @@ KIDS_LOCK = Capability(
     ),
 )
 
-REMOTE_CONTROL = Capability(
+REMOTE_CONTROL_GENERIC = Capability(
+    href='/remotectrl/0',
+    entities=(
+        BinarySensorDesc(key='remote_control', field='value',
+                         name='Smart Control', device_class='connectivity',
+                         value_fn=lambda v: bool(v)),
+    ),
+)
+
+REMOTE_CONTROL_VS_FALLBACK = Capability(
     href='/remotectrl/vs/0',
+    match_fn=lambda rep, resources: '/remotectrl/0' not in resources,
     entities=(
         BinarySensorDesc(key='remote_control',
                          field='x.com.samsung.da.remoteControlEnabled',
                          name='Smart Control', device_class='connectivity',
                          value_fn=lambda v: str(v).lower() == 'true'),
-    ),
-)
-
-POWER = Capability(
-    href='/power/vs/0',
-    entities=(
-        SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
-                   name='Power',
-                   value_fn=lambda v: v == 'On',
-                   write_fn=lambda p, rep, href=None: (['power', 'vs', '0'], {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
     ),
 )
 
@@ -98,15 +147,34 @@ ALARMS = Capability(
     ),
 )
 
+# instantaneousPower is a dead field on DA_WM_-class laundry dumps (washers and
+# the issue #14 dryer) and on dishwashers too: the literal sentinel '-500',
+# unchanged across off/idle/running. clamp_power floors it to a misleading
+# "0 W" that reads as a real idle measurement. Gate power_watts out when the
+# sentinel is seen -- but only then, so a device reporting a real value (e.g. a
+# fridge's 93 W) still shows it (issue #6). cumulativePower is absent on at
+# least one washer model; the exists_fn makes that explicit rather than relying
+# on the generic field-presence gate.
+_DEAD_INSTANTANEOUS_POWER = '-500'
+
 ENERGY_METER = Capability(
     href='/energy/consumption/vs/0',
     entities=(
+        # `not rep` keeps the empty-{} stub carve-out (see entity._is_included):
+        # an explicit exists_fn otherwise bypasses it, which would drop the
+        # entity when /device/0 returns a not-yet-fetched stub. On a populated
+        # rep, hide power only for the dead sentinel or an absent field.
         SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
                    name='Power', device_class='power', state_class='measurement',
-                   unit='W', value_fn=clamp_power),
+                   unit='W', value_fn=clamp_power,
+                   exists_fn=lambda rep, resources: not rep or (
+                       rep.get('x.com.samsung.da.instantaneousPower')
+                       not in (None, _DEAD_INSTANTANEOUS_POWER))),
         SensorDesc(key='energy_kwh', field='x.com.samsung.da.cumulativePower',
                    name='Energy', device_class='energy',
-                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh),
+                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.cumulativePower' in rep)),
     ),
 )
 

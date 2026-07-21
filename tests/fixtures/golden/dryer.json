@@ -1,0 +1,24 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "buzzer_sound",
+    "child_lock",
+    "cycle",
+    "cycle_active",
+    "delay_start_hours",
+    "diagnosis",
+    "dry_level",
+    "dry_time",
+    "dryer_type",
+    "energy_kwh",
+    "finish_time",
+    "firmware_update",
+    "job_beginning_status",
+    "machine_state",
+    "power_switch",
+    "progress",
+    "progress_percentage",
+    "remote_control",
+    "wrinkle_prevent"
+  ]
+}

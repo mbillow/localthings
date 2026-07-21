@@ -1,23 +1,23 @@
 """Washer device registry."""
-from ..capabilities import common, dishwasher, fridge, ignored, operational, washer
+from ..capabilities import common, dishwasher, fridge, ignored, laundry, operational, washer
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='washer',
     capabilities=_build([
         *ignored.IGNORED,
-        washer.POWER_GENERIC,
-        washer.POWER_VS_FALLBACK,
-        washer.KIDS_LOCK_GENERIC,
-        washer.KIDS_LOCK_VS_FALLBACK,
-        washer.REMOTE_CONTROL_GENERIC,
-        washer.REMOTE_CONTROL_VS_FALLBACK,
+        common.POWER_GENERIC,
+        common.POWER_VS_FALLBACK,
+        common.KIDS_LOCK_GENERIC,
+        common.KIDS_LOCK_VS_FALLBACK,
+        common.REMOTE_CONTROL_GENERIC,
+        common.REMOTE_CONTROL_VS_FALLBACK,
         washer.WASHER_SETTINGS,
         washer.WASHER_COURSE,
-        washer.BUZZER_SOUND,
-        washer.WASHER_JOB_BEGINNING_STATUS,
+        laundry.BUZZER_SOUND,
+        laundry.JOB_BEGINNING_STATUS,
         common.ALARMS,
-        washer.WASHER_ENERGY_METER,
+        common.ENERGY_METER,
         common.WATER_METER,
         operational.OPERATIONAL_STATE,
         dishwasher.DIAGNOSIS,

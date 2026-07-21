@@ -5,13 +5,19 @@ Resources verified against two live WW90DG6U25LEU4 dumps (Table_02 course
 family). Washers never report `oneUiVersion` -- see
 `registry/by_type/__init__.py`'s `for_device_by_model()` for the fallback
 detection this device type requires.
+
+The shared laundry surface -- power/kids-lock/remote-control OCF+vendor
+fallback pairs, buzzer, energy meter, job-beginning-status, and the
+/course/vs/0 cycle-select machinery -- lives in laundry.py. Only washer-
+specific controls (wash settings, drum-clean tracking, dispenser dosing) are
+here; they read washer-only fields off the same shared /course/vs/0 options
+array.
 """
 from datetime import datetime, timezone
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
-
-from .common import clamp_power, wh_to_kwh
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
+from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
 
 # ---------------------------------------------------------------------------
 # Course_XX hex codes. The 23 codes named in strings.json/translations
@@ -34,34 +40,17 @@ from .common import clamp_power, wh_to_kwh
 # course, '65', isn't even in the list above; models with 'AI Wash'/'Mixed
 # Load' -- both "applicable models only" per the manual -- would have yet
 # another set), so hardcoding one device's list would show/hide the wrong
-# options on a different model. _cycle_options() below reads only the live
+# options on a different model. laundry.cycle_options() reads only the live
 # x.com.samsung.da.editCourseList; if a device doesn't populate that
-# resource, the cycle select isn't created at all (see WASHER_COURSE's
-# exists_fn). x.com.samsung.da.options' MostUsed_* entry was considered as
-# a fallback source (its first byte reliably equals the currently-selected
+# resource, the cycle select isn't created at all (see cycle_select's
+# exists_fn). x.com.samsung.da.options' MostUsed_* entry was considered as a
+# fallback source (its first byte reliably equals the currently-selected
 # Course_XX on both dumps we have), but the bytes after that don't
 # correspond to any confirmed course code on either device -- e.g. dump 1's
 # MostUsed_1C8410923FA67F00000000000000 decodes to
 # ['1C','84','10','92','3F','A6','7F',...] and only '1C' is a real code --
 # so it isn't trustworthy as a list of selectable courses and isn't used.
 # ---------------------------------------------------------------------------
-
-
-def _hex_pairs(codes):
-    """'1C1D211B1E29...' -> ['1C', '1D', '21', '1B', '1E', '29', ...]."""
-    return [codes[i:i + 2] for i in range(0, len(codes) - 1, 2)]
-
-
-def _parse_edit_course_list(raw):
-    """'EditCourseList_1C1D211B1E29...' -> ['1C', '1D', '21', '1B', '1E', '29', ...]."""
-    if not isinstance(raw, str) or '_' not in raw:
-        return []
-    return _hex_pairs(raw.split('_', 1)[1])
-
-
-def _cycle_options(resources):
-    rep = resources.get('/wm/editcourse/vs/0') or {}
-    return _parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
 
 # ---------------------------------------------------------------------------
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count
@@ -97,29 +86,10 @@ WASHER_SETTINGS = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# /course/vs/0 -- selected course, read/write (RMW on the options array,
-# same shape as dishwasher.CYCLE_OPTIONS._cycle_write).
+# /course/vs/0 -- the cycle select is the shared laundry.cycle_select; the
+# drum-clean and dispenser-dosing entities below are washer-specific reads off
+# the same options array.
 # ---------------------------------------------------------------------------
-
-def _option_value(options, prefix):
-    for o in (options or []):
-        if isinstance(o, str) and o.startswith(prefix + '_'):
-            return o.split('_', 1)[1]
-    return None
-
-
-def _replace_in_options(options, prefix, new_value):
-    return [f"{prefix}_{new_value}" if isinstance(o, str) and o.startswith(prefix + '_') else o
-            for o in options]
-
-
-def _cycle_write(p, rep, href=None):
-    opts = list(rep.get('x.com.samsung.da.options') or [])
-    if not opts:
-        return None
-    return ['course', 'vs', '0'], {
-        'x.com.samsung.da.options': _replace_in_options(opts, 'Course', p),
-    }
 
 
 # Drum Clean+ maintenance tracking, from the same options[] array as the
@@ -134,8 +104,8 @@ def _cycle_write(p, rep, href=None):
 # bare ISO datetime fields (see fridge.py's night-light schedule comment).
 def _drum_clean_cycles_remaining(rep):
     opts = rep.get('x.com.samsung.da.options') or []
-    proposal = _option_value(opts, 'DrumCleanProposal')
-    washed = _option_value(opts, 'WashingTimes')
+    proposal = option_value(opts, 'DrumCleanProposal')
+    washed = option_value(opts, 'WashingTimes')
     if proposal is None or washed is None:
         return None
     try:
@@ -145,7 +115,7 @@ def _drum_clean_cycles_remaining(rep):
 
 
 def _drum_clean_last_cleaned(rep):
-    raw = _option_value(rep.get('x.com.samsung.da.options'), 'DrumCleanLog')
+    raw = option_value(rep.get('x.com.samsung.da.options'), 'DrumCleanLog')
     if not raw:
         return None
     try:
@@ -182,8 +152,8 @@ def _drum_clean_last_cleaned(rep):
 # device's dump contradicts this.
 def _supported_level_options(resources, prefix):
     rep = resources.get('/course/vs/0') or {}
-    raw = _option_value(rep.get('x.com.samsung.da.options'), f'Supported{prefix}')
-    return _hex_pairs(raw) if raw else []
+    raw = option_value(rep.get('x.com.samsung.da.options'), f'Supported{prefix}')
+    return hex_pairs(raw) if raw else []
 
 
 def _level_options(prefix):
@@ -196,31 +166,25 @@ def _level_write(prefix):
         if not opts:
             return None
         return ['course', 'vs', '0'], {
-            'x.com.samsung.da.options': _replace_in_options(opts, prefix, p),
+            'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
         }
     return write
 
 
 def _dosing_low(prefix):
-    return lambda rep: _option_value(
+    return lambda rep: option_value(
         rep.get('x.com.samsung.da.options'), prefix) not in (None, 'Off')
 
 
 def _dosing_alarm_exists(prefix):
-    return lambda rep, resources: _option_value(
+    return lambda rep, resources: option_value(
         rep.get('x.com.samsung.da.options'), prefix) is not None
 
 
 WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
-        SelectDesc(key='cycle', name='Cycle', icon='mdi:washing-machine',
-                   translation_key='washer_cycle',
-                   options=_cycle_options,
-                   exists_fn=lambda rep, resources: bool(_cycle_options(resources)),
-                   rep_fn=lambda rep: _option_value(
-                       rep.get('x.com.samsung.da.options'), 'Course'),
-                   write_fn=_cycle_write),
+        cycle_select(translation_key='washer_cycle', icon='mdi:washing-machine'),
         SensorDesc(key='drum_clean_cycles_remaining', name='Drum clean due in',
                    icon='mdi:washing-machine-alert', unit='cycles',
                    state_class='measurement',
@@ -237,7 +201,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('DetergentLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('DetergentLevelCtrl')(resources)),
-                   rep_fn=lambda rep: _option_value(
+                   rep_fn=lambda rep: option_value(
                        rep.get('x.com.samsung.da.options'), 'DetergentLevelCtrl'),
                    write_fn=_level_write('DetergentLevelCtrl')),
         SelectDesc(key='detergent_water_hardness', name='Detergent water hardness',
@@ -247,7 +211,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('DetergentLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('DetergentLevel2Ctrl')(resources)),
-                   rep_fn=lambda rep: _option_value(
+                   rep_fn=lambda rep: option_value(
                        rep.get('x.com.samsung.da.options'), 'DetergentLevel2Ctrl'),
                    write_fn=_level_write('DetergentLevel2Ctrl')),
         SelectDesc(key='softener_quantity', name='Softener quantity', icon='mdi:flask-outline',
@@ -256,7 +220,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('SoftenerLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('SoftenerLevelCtrl')(resources)),
-                   rep_fn=lambda rep: _option_value(
+                   rep_fn=lambda rep: option_value(
                        rep.get('x.com.samsung.da.options'), 'SoftenerLevelCtrl'),
                    write_fn=_level_write('SoftenerLevelCtrl')),
         SelectDesc(key='softener_concentration', name='Softener concentration',
@@ -266,7 +230,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('SoftenerLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('SoftenerLevel2Ctrl')(resources)),
-                   rep_fn=lambda rep: _option_value(
+                   rep_fn=lambda rep: option_value(
                        rep.get('x.com.samsung.da.options'), 'SoftenerLevel2Ctrl'),
                    write_fn=_level_write('SoftenerLevel2Ctrl')),
         BinarySensorDesc(key='detergent_low', name='Detergent low',
@@ -277,164 +241,5 @@ WASHER_COURSE = Capability(
                          icon='mdi:alert-circle-outline', device_class='problem',
                          exists_fn=_dosing_alarm_exists('SoftenerAlarm'),
                          rep_fn=_dosing_low('SoftenerAlarm')),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# /buzzersound/vs/0 -- buzzer volume and (on some units) a separate finish
-# chime. Fields have no 'x.com.samsung.da.' prefix in this resource, unlike
-# most other washer hrefs.
-# ---------------------------------------------------------------------------
-
-BUZZER_SOUND = Capability(
-    href='/buzzersound/vs/0',
-    entities=(
-        SelectDesc(key='buzzer_sound', field='setBuzzerSound',
-                   name='Buzzer sound', icon='mdi:volume-high',
-                   entity_category='config',
-                   options_field='supportedBuzzerSound',
-                   write_fn=lambda p, rep, href=None: (
-                       ['buzzersound', 'vs', '0'], {'setBuzzerSound': p})),
-        SelectDesc(key='finish_sound', field='setFinishSound',
-                   name='Finish sound', icon='mdi:bell-ring',
-                   entity_category='config',
-                   exists_fn=lambda rep, resources: 'supportedFinishSound' in rep,
-                   options_field='supportedFinishSound',
-                   write_fn=lambda p, rep, href=None: (
-                       ['buzzersound', 'vs', '0'], {'setFinishSound': p})),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# /wm/jobbeginingstatus/vs/0 -- same href as dryer.JOB_BEGINNING_STATUS, but
-# a different field name (currentStatus, not jobBeginingStatus).
-# ---------------------------------------------------------------------------
-
-WASHER_JOB_BEGINNING_STATUS = Capability(
-    href='/wm/jobbeginingstatus/vs/0',
-    poll_tier='warm',
-    entities=(
-        SensorDesc(key='job_beginning_status',
-                   field='x.com.samsung.da.currentStatus',
-                   name='Job beginning status',
-                   entity_category='diagnostic'),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# OCF-native / '-vs' fallback pairs for power, kids-lock, remote control.
-#
-# Same shape as fridge.py's "Aggregate-resource fallbacks": the generic OCF
-# href (/power/0, plain boolean 'value') is preferred when present; the
-# vendor '-vs' href (richer historically, but for these three controls just
-# a string-encoded duplicate) only binds when the generic href is absent
-# from this device's resource set, via match_fn. Scoped to washer.py, not
-# common.py -- no other device type has been confirmed to expose the
-# generic hrefs, so this must not change behavior for dishwasher/dryer/
-# oven/refrigerator.
-# ---------------------------------------------------------------------------
-
-POWER_GENERIC = Capability(
-    href='/power/0',
-    entities=(
-        SwitchDesc(key='power_switch', field='value',
-                   name='Power',
-                   value_fn=lambda v: bool(v),
-                   write_fn=lambda p, rep, href=None: (
-                       ['power', '0'], {'value': p == 'On'})),
-    ),
-)
-
-POWER_VS_FALLBACK = Capability(
-    href='/power/vs/0',
-    match_fn=lambda rep, resources: '/power/0' not in resources,
-    entities=(
-        SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
-                   name='Power',
-                   value_fn=lambda v: v == 'On',
-                   write_fn=lambda p, rep, href=None: (
-                       ['power', 'vs', '0'],
-                       {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
-    ),
-)
-
-KIDS_LOCK_GENERIC = Capability(
-    href='/kidslock/0',
-    entities=(
-        SwitchDesc(key='child_lock', field='value',
-                   name='Child lock', device_class='lock',
-                   value_fn=lambda v: bool(v),
-                   write_fn=lambda p, rep, href=None: (
-                       ['kidslock', '0'], {'value': p == 'On'})),
-    ),
-)
-
-KIDS_LOCK_VS_FALLBACK = Capability(
-    href='/kidslock/vs/0',
-    match_fn=lambda rep, resources: '/kidslock/0' not in resources,
-    entities=(
-        SwitchDesc(key='child_lock', field='x.com.samsung.da.kidsLock',
-                   name='Child lock', device_class='lock',
-                   value_fn=lambda v: v != 'Ready',
-                   write_fn=lambda p, rep, href=None: (
-                       ['kidslock', 'vs', '0'],
-                       {'x.com.samsung.da.kidsLock': 'Enable' if p == 'On' else 'Ready'})),
-    ),
-)
-
-REMOTE_CONTROL_GENERIC = Capability(
-    href='/remotectrl/0',
-    entities=(
-        BinarySensorDesc(key='remote_control', field='value',
-                         name='Smart Control', device_class='connectivity',
-                         value_fn=lambda v: bool(v)),
-    ),
-)
-
-REMOTE_CONTROL_VS_FALLBACK = Capability(
-    href='/remotectrl/vs/0',
-    match_fn=lambda rep, resources: '/remotectrl/0' not in resources,
-    entities=(
-        BinarySensorDesc(key='remote_control',
-                         field='x.com.samsung.da.remoteControlEnabled',
-                         name='Smart Control', device_class='connectivity',
-                         value_fn=lambda v: str(v).lower() == 'true'),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# /energy/consumption/vs/0 -- washer-specific override of common.ENERGY_METER
-# (issue #6).
-#
-# instantaneousPower is a dead field on every TP1-class washer dump collected
-# so far (7 dumps, 3 physical devices): always the literal sentinel '-500',
-# unchanged between off/idle-on/mid-cycle states and across different
-# courses. common.clamp_power floors that to a misleading "0 W" that reads
-# as a real (if idle) measurement rather than "unsupported". Gate the entity
-# out entirely when the sentinel is seen, but only then -- if some washer
-# model ever reports a real value, this still shows it.
-#
-# cumulativePower is absent outright on at least one washer model (issue #6),
-# unlike every other washer dump. entity.py's generic field-presence gate
-# already excludes the entity in that case; the exists_fn here just makes
-# that explicit at the capability level instead of relying on the fallback.
-# ---------------------------------------------------------------------------
-
-_DEAD_INSTANTANEOUS_POWER = '-500'
-
-
-WASHER_ENERGY_METER = Capability(
-    href='/energy/consumption/vs/0',
-    entities=(
-        SensorDesc(key='power_watts', field='x.com.samsung.da.instantaneousPower',
-                   name='Power', device_class='power', state_class='measurement',
-                   unit='W', value_fn=clamp_power,
-                   exists_fn=lambda rep, resources: (
-                       rep.get('x.com.samsung.da.instantaneousPower')
-                       != _DEAD_INSTANTANEOUS_POWER)),
-        SensorDesc(key='energy_kwh', field='x.com.samsung.da.cumulativePower',
-                   name='Energy', device_class='energy',
-                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
-                   exists_fn=lambda rep, resources: 'x.com.samsung.da.cumulativePower' in rep),
     ),
 )

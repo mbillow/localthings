@@ -80,6 +80,24 @@
           "96": "Less Microfiber"
         }
       },
+      "dryer_cycle": {
+        "state": {
+          "16": "Cotton",
+          "18": "Synthetics",
+          "19": "Delicates",
+          "1a": "Wool",
+          "1b": "Bedding",
+          "1c": "Shirts",
+          "1d": "Towels",
+          "1e": "Outdoor",
+          "1f": "Mixed Load",
+          "20": "Iron Dry",
+          "23": "Quick Dry 35",
+          "24": "Cool Air",
+          "25": "Warm Air",
+          "27": "Time Dry"
+        }
+      },
       "washer_dosing_quantity": {
         "state": {
           "00": "None",

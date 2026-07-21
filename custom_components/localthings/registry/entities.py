@@ -29,7 +29,7 @@ class SamsungEntityDescription:
     rep_fn: Optional[Callable[[dict], Any]] = None   # replaces field+value_fn; receives full rep
     # (rep, resources): rep is this entity's own href's representation;
     # resources is the coordinator's full href->rep snapshot, for gating
-    # presence on a sibling resource (e.g. washer._cycle_options's source).
+    # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Optional[Callable[[dict, dict], bool]] = None
 
 
