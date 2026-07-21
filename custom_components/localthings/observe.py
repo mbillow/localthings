@@ -92,9 +92,24 @@ class ObserveManager:
             return True
 
     def apply(self, href: str, rep: dict, source: str) -> bool:
-        """Gate a StateCache.apply_rep call through the write-settle guard."""
+        """Gate a StateCache.apply_rep call through the write-settle guard and
+        the empty-rep guard."""
         if self._is_settling(href):
             self.log.debug("dropping %s update for %s (settling)", source, href)
+            return False
+        if not rep and self.cache.get(href):
+            # A busy device (e.g. a washer mid-cycle) intermittently returns an
+            # empty/stub rep for a resource in the batch /device/0 sweep -- the
+            # batch parser surfaces those as {} (issue #9). apply_rep would then
+            # replace the cached fields with nothing, sending every entity on
+            # that resource (the wash-setting selects, dosing selects, etc.) to
+            # "unknown" until the next good sweep. A Samsung OCF resource never
+            # reports a *genuinely* empty state -- empty always means "no data
+            # this cycle" -- so keep the last known-good rep instead of
+            # clobbering it. A later sweep/notify carrying real fields updates
+            # it normally.
+            self.log.debug(
+                "keeping last state for %s (%s update had no data)", href, source)
             return False
         return self.cache.apply_rep(href, rep, source=source)
 

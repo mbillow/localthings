@@ -76,6 +76,34 @@ class _FakeSession:
         return b'\x01'
 
 
+def test_apply_keeps_last_state_on_empty_then_resumes_on_real_data():
+    """A busy device (e.g. a washer mid-cycle) intermittently returns an
+    empty/stub rep in the batch sweep (issue #9). That empty update must be
+    rejected so the resource's entities (the wash-setting / dosing selects)
+    keep their last known-good value instead of going to 'unknown'; a later
+    sweep carrying real fields updates normally."""
+    mgr = _manager()
+    mgr.cache.apply_rep('/washer/vs/0', {'lvl': '2'}, source='seed')
+
+    # Empty stub during a busy cycle is rejected, last state kept.
+    assert mgr.apply('/washer/vs/0', {}, source='sweep') is False
+    assert mgr.cache.get('/washer/vs/0') == {'lvl': '2'}
+
+    # A later sweep with real data updates normally.
+    assert mgr.apply('/washer/vs/0', {'lvl': '3'}, source='sweep') is True
+    assert mgr.cache.get('/washer/vs/0') == {'lvl': '3'}
+
+
+def test_apply_allows_empty_rep_before_any_data_exists():
+    """The empty-rep guard only protects existing data -- a first-ever stub is
+    not short-circuited, so a resource with no data yet is still handled the
+    same as before (the entity exists, pending real data)."""
+    mgr = _manager()
+    # No prior data for this href -> guard does not reject; apply_rep runs.
+    mgr.apply('/washer/vs/0', {}, source='sweep')
+    assert mgr.cache.get('/washer/vs/0') in (None, {})
+
+
 def test_try_enter_observe_mode_succeeds_when_all_hrefs_notify():
     mgr = _manager()
     session = _FakeSession()
