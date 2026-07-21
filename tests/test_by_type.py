@@ -168,6 +168,18 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'refrigerator'
 
+    def test_airconditioner_via_prac_token(self):
+        """Issue #17: a room AC (ARTIK051_PRAC_20K) reports no oneUiVersion and
+        an unrecognized consumer token ('20K'); it falls back to the '_PRAC_'
+        (Package Room Air Conditioner) token in modelNum."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'ARTIK051_PRAC_20K|10217841|60010532001411004200003000000000',
+            'ARTIK051_PRAC_20K',
+        )
+        assert reg is not None
+        assert reg.name == 'airconditioner'
+
     def test_unknown_model_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
         reg = for_device_by_model('SOME-UNKNOWN-BOARD', 'SOME-UNKNOWN-BOARD')

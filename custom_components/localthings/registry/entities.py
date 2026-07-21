@@ -86,6 +86,16 @@ class TimeDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class ClimateDesc(SamsungEntityDescription):
+    # A composite entity: it binds one *primary* resource (its href) but the
+    # climate platform reads sibling resources (power, temperature, wind) from
+    # the coordinator snapshot and writes to several of them. write_fn takes a
+    # (kind, value) payload from the platform and returns the (path_segs, body)
+    # for that one sub-write, so a single desc drives multi-resource writes.
+    write_fn: WriteFn = None
+
+
 PLATFORM_OF: dict[type, str] = {
     SensorDesc:       'sensor',
     BinarySensorDesc: 'binary_sensor',
@@ -94,4 +104,5 @@ PLATFORM_OF: dict[type, str] = {
     ButtonDesc:       'button',
     NumberDesc:       'number',
     TimeDesc:         'time',
+    ClimateDesc:      'climate',
 }

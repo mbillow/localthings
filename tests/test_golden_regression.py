@@ -69,6 +69,18 @@ def test_registry_reproduces_golden_state_keys_for_dryer():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_airconditioner():
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner')
+    golden = json.loads((GOLDEN / 'airconditioner.json').read_text())
+    state_keys = _new_state_keys('airconditioner', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_resources_from_batch_preferred_over_flat():
     from tests.conftest import _resources_from_dump
     dump = {

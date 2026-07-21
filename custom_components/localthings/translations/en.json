@@ -140,6 +140,44 @@
           "active": "Active",
           "pause": "Paused"
         }
+      },
+      "air_filter_status": {
+        "state": {
+          "normal": "Normal",
+          "wash": "Wash",
+          "replace": "Replace"
+        }
+      }
+    },
+    "climate": {
+      "airconditioner": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "auto": "Auto",
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "turbo": "Turbo"
+            }
+          },
+          "swing_mode": {
+            "state": {
+              "off": "Fixed",
+              "both": "All directions",
+              "vertical": "Up and down"
+            }
+          },
+          "preset_mode": {
+            "state": {
+              "none": "Off",
+              "sleep": "Sleep",
+              "quiet": "Quiet",
+              "smart": "Smart",
+              "speed": "Speed"
+            }
+          }
+        }
       }
     }
   },
