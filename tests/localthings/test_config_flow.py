@@ -67,7 +67,7 @@ def test_order_candidates_prefers_known_ports() -> None:
     assert _order_candidates([49153]) == [49153]
 
 
-def test_find_live_ports_detects_silent_port() -> None:
+def test_find_live_ports_detects_silent_port(socket_enabled) -> None:
     """The UDP liveness sweep flags a bound-but-silent port as live and drops
     ports that refuse with ICMP port-unreachable.
 
@@ -75,6 +75,10 @@ def test_find_live_ports_detects_silent_port() -> None:
     stays silent (open|filtered), like the dishwasher in issue #13 on 49153.
     Two sibling ports are reserved then closed so loopback refuses datagrams
     to them, standing in for the closed ports the scan should discard.
+
+    `socket_enabled` lifts pytest-socket's default block (the HA test harness
+    disables real sockets); this test genuinely needs loopback UDP to exercise
+    the ICMP-unreachable path.
     """
     import socket
 

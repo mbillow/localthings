@@ -1,2 +1,11 @@
-pytest>=8.0
+# Test harness — pulls in home-assistant, pytest, and pytest-socket at the
+# matching versions. Current Home Assistant requires Python >= 3.14; pip will
+# resolve the newest home-assistant your interpreter supports.
+pytest-homeassistant-custom-component>=0.13.316
+
+# Integration runtime deps, needed to import the component under test
+# (also declared in custom_components/localthings/manifest.json).
 smartthings-local>=0.1.0
+cbor2>=5.4.6
+pyOpenSSL>=23.0
+cryptography>=41.0
