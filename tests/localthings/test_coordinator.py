@@ -134,6 +134,31 @@ def test_run_discovery_detects_washer_via_model_fallback(
     assert coordinator.device_type_name == 'washer'
 
 
+def test_run_discovery_detects_cooktop_via_resource_signature(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """NA9300K omits oneUiVersion and information but has burner options."""
+    from tests.conftest import _load_device
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._run_discovery(_load_device('cooktop'))
+
+    assert coordinator.device_type_name == 'cooktop'
+    assert coordinator._unbound_hrefs == []
+
+
+def test_run_discovery_detects_range_hood_via_model(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    from tests.conftest import _load_device
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._run_discovery(_load_device('range_hood'))
+
+    assert coordinator.device_type_name == 'range_hood'
+    assert coordinator._unbound_hrefs == []
+
+
 def test_update_coverage_gap_issue_creates_issue_for_unknown_type(
     hass: HomeAssistant, mock_entry
 ) -> None:

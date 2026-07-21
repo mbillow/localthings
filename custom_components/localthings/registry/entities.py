@@ -96,6 +96,13 @@ class ClimateDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class FanDesc(SamsungEntityDescription):
+    # Composite fan entity: reads power from /power/0 and speed/support data
+    # from its bound href.  Payloads are (kind, value), like ClimateDesc.
+    write_fn: WriteFn = None
+
+
 PLATFORM_OF: dict[type, str] = {
     SensorDesc:       'sensor',
     BinarySensorDesc: 'binary_sensor',
@@ -105,4 +112,5 @@ PLATFORM_OF: dict[type, str] = {
     NumberDesc:       'number',
     TimeDesc:         'time',
     ClimateDesc:      'climate',
+    FanDesc:          'fan',
 }

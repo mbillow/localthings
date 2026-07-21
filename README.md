@@ -18,6 +18,8 @@ Your state stays on your LAN: HA talks to the appliance over a direct DTLS sessi
 |---|---|
 | Dryer | `by_type/dryer.py` |
 | Oven | `by_type/oven.py` |
+| Cooktop (read-only burner/hood status) | `by_type/cooktop.py` |
+| Range hood | `by_type/range_hood.py` |
 | Dishwasher | `by_type/dishwasher.py` |
 | Refrigerator | `by_type/refrigerator.py` |
 | Washer | `by_type/washer.py` |
@@ -99,7 +101,7 @@ custom_components/localthings/
   diagnostics.py           Redacted diagnostics download (device state + coverage metadata)
   const.py                 Domain, config keys, probe ports
   entity.py                Base entity wiring capability registry -> HA entity
-  sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py
+  sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py / fan.py
                             One module per HA platform
   strings.json / translations/   Config-flow copy + entity state translations
   registry/
@@ -110,8 +112,9 @@ custom_components/localthings/
     adapter.py               Flattens bound entities into HA-ready state
     identity.py              Reads device identity for type detection
     redact.py                 Strips account/identity data before diagnostics leave HA
-    capabilities/             Shared + per-family Capability definitions (common, dryer, oven,
-                               dishwasher, fridge, washer, laundry, operational, ignored)
+    capabilities/             Shared + per-family Capability definitions (common, cooktop,
+                               range_hood, dryer, oven, dishwasher, fridge, washer, laundry,
+                               operational, ignored)
     by_type/                  One DeviceRegistry per appliance type, composed from capabilities/
 tests/                    Registry composition, discovery, entity descriptors, coordinator/observe
                             behavior, and golden-file regression against captured device dumps
@@ -137,7 +140,7 @@ support for hardware the maintainers don't have.
 1. Get a capture of the appliance's `/device/0` response. The easiest way: add the device to HA (type detection failing is fine) and pull its Diagnostics download from Settings > Devices & Services > the device > the menu > Download diagnostics — it already contains a redacted dump of the device's resources.
 2. Reuse existing `Capability` objects from `registry/capabilities/` wherever the resource matches one already declared. Most `common.py` capabilities (power, kids lock, remote control, alarms, energy/water meters) are shared verbatim across families; add new ones only for resources unique to the new type.
 3. Create `registry/by_type/<name>.py` with a `DeviceRegistry(name=..., capabilities=_build([...]))`. Use `pattern_capabilities` instead of `capabilities` for any resource whose `href` isn't fixed (for example per-compartment fridge resources); see `refrigerator.py` for the pattern.
-4. Register it in `_REGISTRY_BY_KEY` in `registry/by_type/__init__.py`, keyed on the lowercased, space/hyphen-to-underscore-converted suffix of the device's `oneUiVersion` string (see `_type_key()` in that file for the exact transform). If the device never reports `oneUiVersion` — confirmed true for washers — add its consumer-model prefix to `_CONSUMER_PREFIX_TO_KEY` instead, so `for_device_by_model()` can route it.
+4. Register it in `_REGISTRY_BY_KEY` in `registry/by_type/__init__.py`, keyed on the lowercased, space/hyphen-to-underscore-converted suffix of the device's `oneUiVersion` string (see `_type_key()` in that file for the exact transform). If the device never reports `oneUiVersion`, add its consumer-model prefix to `_CONSUMER_PREFIX_TO_KEY` so `for_device_by_model()` can route it. If it also omits `/information/vs/0` (as the verified NA9300K cooktop does), add a distinctive, conservative resource-signature rule to `for_device_by_resources()`.
 5. Add golden-file coverage in `tests/` against a captured `/device/0` dump for the new type.
 
 No config-flow changes are needed. Device-type detection and entity wiring are fully driven by the registry.

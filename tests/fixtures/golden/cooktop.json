@@ -1,0 +1,21 @@
+{
+  "state_keys": [
+    "any_burner_active",
+    "burner_0_state",
+    "burner_1_state",
+    "burner_3_state",
+    "burner_4_state",
+    "burner_5_state",
+    "cloud_connected",
+    "firmware_update",
+    "main_timer_current",
+    "main_timer_state",
+    "paired_hood_connected",
+    "paired_hood_fan_speed",
+    "paired_hood_firmware",
+    "paired_hood_light",
+    "paired_hood_model",
+    "paired_hood_power",
+    "power_state"
+  ]
+}

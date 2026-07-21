@@ -7,7 +7,9 @@ GOLDEN = Path(__file__).parent / 'fixtures' / 'golden'
 
 
 def _new_state_keys(name, resources):
-    from custom_components.localthings.registry.by_type import for_device, for_device_by_model
+    from custom_components.localthings.registry.by_type import (
+        for_device, for_device_by_model, for_device_by_resources,
+    )
     from custom_components.localthings.registry.discovery import discover
     from custom_components.localthings.registry.adapter import flatten
     otn = resources.get('/otninformation/vs/0', {})
@@ -19,6 +21,8 @@ def _new_state_keys(name, resources):
             info.get('x.com.samsung.da.modelNum', ''),
             info.get('x.com.samsung.da.description', ''),
         )
+    if reg is None:
+        reg = for_device_by_resources(resources)
     if reg is None:
         from custom_components.localthings.registry.registry import CAPABILITIES
         caps, pats = CAPABILITIES, []
@@ -74,6 +78,30 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner():
     resources = _load_device('airconditioner')
     golden = json.loads((GOLDEN / 'airconditioner.json').read_text())
     state_keys = _new_state_keys('airconditioner', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_cooktop():
+    from tests.conftest import _load_device
+    resources = _load_device('cooktop')
+    golden = json.loads((GOLDEN / 'cooktop.json').read_text())
+    state_keys = _new_state_keys('cooktop', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_range_hood():
+    from tests.conftest import _load_device
+    resources = _load_device('range_hood')
+    golden = json.loads((GOLDEN / 'range_hood.json').read_text())
+    state_keys = _new_state_keys('range_hood', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

@@ -1,0 +1,199 @@
+{
+  "device0": [
+    {
+      "rt": ["x.com.samsung.devcol", "oic.wk.col"],
+      "if": ["oic.if.baseline", "oic.if.ll", "oic.if.b"]
+    },
+    {
+      "href": "/personality/presence/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "",
+            "x.com.samsung.da.deviceId": "TEST-DEVICE-ID",
+            "x.com.samsung.da.value": ""
+          }
+        ]
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.longnotisubscription": "false",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/airlevelcheck/vs/0",
+      "rep": {
+        "x.com.samsung.da.periodicSensingActivationState": "Off",
+        "x.com.samsung.da.periodicSensingInterval": "3600",
+        "x.com.samsung.da.startSensingOnce": "Off",
+        "x.com.samsung.da.sensingState": "NonProcessing",
+        "x.com.samsung.da.lastSensingTime": "1784651378",
+        "x.com.samsung.da.lastSensingLevel": "Kr2",
+        "x.com.samsung.da.autoExeState": "Sensing",
+        "x.com.samsung.da.supportedAutoExeState": ["Airpurify", "Alarm"],
+        "x.com.samsung.da.periodicSensingSkipStatus": "Off",
+        "x.com.samsung.da.periodicSensingSkipTime": "00000000"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "ErrorCode_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-07-21T20:18:51",
+            "x.com.samsung.da.state": "Deleted"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.cumulativePower": "165620",
+        "x.com.samsung.da.cumulativeSavedPower": "0",
+        "x.com.samsung.da.cumulativeDate": "1784647130",
+        "x.com.samsung.da.cumulativeDateUTC": "1784665130",
+        "x.com.samsung.da.cumulativeUnit": "Wh"
+      }
+    },
+    {"href": "/energy/consumption/0", "rep": {}},
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": ["OptionCode_19322", "UpdateAllow_NotAllowed"]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {"x.com.samsung.da.power": "Off"}
+    },
+    {"href": "/power/0", "rep": {"value": false}},
+    {
+      "href": "/sensors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Sensor for CleanLevel",
+            "x.com.samsung.da.type": "CleanLevel",
+            "x.com.samsung.da.value": ["2"]
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Sensor for Dust",
+            "x.com.samsung.da.type": "Dust",
+            "x.com.samsung.da.value": ["18", "1"]
+          },
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "Sensor for FineDust",
+            "x.com.samsung.da.type": "FineDust",
+            "x.com.samsung.da.value": ["14", "1"]
+          },
+          {
+            "x.com.samsung.da.id": "4",
+            "x.com.samsung.da.description": "Sensor for SuperFineDust",
+            "x.com.samsung.da.type": "SuperFineDust",
+            "x.com.samsung.da.value": ["9", "1"]
+          }
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "AHD-WW-TP1-22-COMMON|20136141|7800006B001713C44D00090001030000",
+        "x.com.samsung.da.description": "AHD-WW-TP1-22-COMMON",
+        "x.com.samsung.da.serialNum": "TEST-HOOD-SERIAL",
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagSetupid": "KH0"
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {"x.com.samsung.timeoffset": "-05:00"}
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "0000000000",
+        "x.com.samsung.da.airconOptionList": ["DR"],
+        "x.com.samsung.da.countryCode": ""
+      }
+    },
+    {
+      "href": "/drlc/0",
+      "rep": {
+        "DRLevel": 0,
+        "start": "1970-01-01T00:00:00Z",
+        "durationminutes": 0,
+        "override": false
+      }
+    },
+    {
+      "href": "/drlc/vs/0",
+      "rep": {
+        "x.com.samsung.da.drlcLevel": "0",
+        "x.com.samsung.da.durationminutes": "0",
+        "x.com.samsung.da.start": "1970-01-01T00:00:00Z",
+        "x.com.samsung.da.override": "Off",
+        "x.com.samsung.da.realSaving": "Off"
+      }
+    },
+    {
+      "href": "/availablecontrolsets/vs/0",
+      "rep": {
+        "x.com.samsung.da.sets": "0000000000012000000000000000",
+        "x.com.samsung.da.id": "HOOD",
+        "x.com.samsung.da.version": "1.0"
+      }
+    },
+    {
+      "href": "/da/softreset/vs/0",
+      "rep": {"x.com.samsung.da.softwarereset": "false"}
+    },
+    {
+      "href": "/filter/hoodfilter/vs/0",
+      "rep": {
+        "x.com.samsung.da.filterUsage": "100",
+        "x.com.samsung.da.filterUsageResolution": "1",
+        "x.com.samsung.da.filterStatus": "wash",
+        "x.com.samsung.da.filterCapacity": "60",
+        "x.com.samsung.da.filterCapacityUnit": "Hour",
+        "x.com.samsung.da.filterResetType": ["replaceable", "washable"]
+      }
+    },
+    {
+      "href": "/hood/fanspeed/vs/0",
+      "rep": {
+        "x.com.samsung.da.hood.autoOperation": "Off",
+        "x.com.samsung.da.hood.fanSpeed": "14",
+        "x.com.samsung.da.hood.supportedFanSpeed": ["14", "15", "16", "17"]
+      }
+    },
+    {
+      "href": "/hood/lamp/vs/0",
+      "rep": {
+        "x.com.samsung.lamp.power": "Off",
+        "x.com.samsung.lamp.current": "2",
+        "x.com.samsung.lamp.range": ["1", "2"]
+      }
+    },
+    {"href": "/autoventilation/vs/0", "rep": {"action": "Start"}},
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    }
+  ]
+}
