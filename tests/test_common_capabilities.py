@@ -142,10 +142,14 @@ class TestEnergyMeter:
 # ---------------------------------------------------------------------------
 
 
+def _ai_energy_level_desc(cls_name):
+    return next(e for e in common.AI_ENERGY_LEVEL.entities
+                if e.__class__.__name__ == cls_name)
+
+
 class TestAiEnergyLevelSwitch:
     def _desc(self):
-        return next(e for e in common.AI_ENERGY_LEVEL.entities
-                    if e.__class__.__name__ == 'SwitchDesc')
+        return _ai_energy_level_desc('SwitchDesc')
 
     def test_href(self):
         assert common.AI_ENERGY_LEVEL.href == '/energy/ailevel/vs/0'
@@ -190,8 +194,7 @@ class TestAiEnergyLevelSwitch:
 
 class TestAiEnergyLevelSelect:
     def _desc(self):
-        return next(e for e in common.AI_ENERGY_LEVEL.entities
-                    if e.__class__.__name__ == 'SelectDesc')
+        return _ai_energy_level_desc('SelectDesc')
 
     def test_shown_only_with_multiple_supported_levels(self):
         desc = self._desc()
@@ -282,10 +285,7 @@ class TestUniversalAndPowerBundles:
         }
 
     def test_power_kept_separate_for_airconditioners_sake(self):
-        """airconditioner.py deliberately doesn't unpack this bundle -- its
-        climate entity already owns /power/0 and /power/vs/0 via a bare,
-        no-entity claim (airconditioner.COVERAGE); a real POWER_GENERIC/
-        POWER_VS_FALLBACK cap on the same href would make _build() raise."""
+        """See common.POWER's own comment for why airconditioner opts out."""
         assert set(common.POWER) == {common.POWER_GENERIC, common.POWER_VS_FALLBACK}
 
     def test_no_overlap_between_the_two_bundles(self):

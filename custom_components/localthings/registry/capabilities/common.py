@@ -348,15 +348,16 @@ SELF_CHECK = Capability(
 # these to a new family is a safe, harmless guess (issue #40's AI energy
 # level: 2 of 6 families confirmed, blanket-added everywhere else).
 #
-# POWER is kept separate: airconditioner deliberately does NOT include it.
-# AC's climate entity (registry/capabilities/airconditioner.py) already
-# owns /power/0 and /power/vs/0 -- they're pre-claimed there via bare,
-# no-entity Capability objects (COVERAGE) so a second, real POWER_GENERIC/
-# POWER_VS_FALLBACK cap on the same href would make _build() raise
-# (a href with >1 cap must have every cap discriminated by rt_filter/
-# match_fn, and the bare COVERAGE cap has neither). Kids-lock and remote-
-# control don't have this conflict -- no AC dump has ever reported those
-# hrefs -- so they stay in UNIVERSAL.
+# POWER is kept separate -- airconditioner is the one family that opts out
+# of it. Canonical reason (see by_type/airconditioner.py and its test for
+# pointers back here, not restatements): AC's climate entity already owns
+# /power/0 and /power/vs/0 via bare, no-entity Capability objects
+# (airconditioner.COVERAGE), and a second, real POWER_GENERIC/
+# POWER_VS_FALLBACK cap on the same href would make _build() raise (a href
+# with >1 cap must have every cap discriminated by rt_filter/match_fn, and
+# the bare COVERAGE cap has neither). Kids-lock/remote-control don't have
+# this conflict -- no AC dump has ever reported those hrefs -- so they stay
+# in UNIVERSAL.
 # ---------------------------------------------------------------------------
 
 UNIVERSAL = (
