@@ -227,3 +227,72 @@ class TestAiEnergyLevelSelect:
         path, body = desc.write_fn('2', {})
         assert path == ['energy', 'ailevel', 'vs', '0']
         assert body == {'aiLevel': '2'}
+
+
+class TestSelfCheckError:
+    """Self-check diagnostic error list -- surfaced on hardware that reports
+    x.com.samsung.da.error, joined into a single display string."""
+
+    def _desc(self):
+        return next(e for e in common.SELF_CHECK.entities if e.key == 'selfcheck_error')
+
+    def test_exists_when_field_present(self):
+        desc = self._desc()
+        assert desc.exists_fn({'x.com.samsung.da.error': ['DA_ERROR_NONE']}, {}) is True
+
+    def test_does_not_exist_when_field_absent(self):
+        desc = self._desc()
+        assert desc.exists_fn({'x.com.samsung.da.status': 'Ready'}, {}) is False
+
+    def test_exists_for_empty_stub_rep(self):
+        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
+        must be included-for-now, same as ENERGY_METER's fields."""
+        desc = self._desc()
+        assert desc.exists_fn({}, {}) is True
+
+    def test_value_joins_list(self):
+        desc = self._desc()
+        assert desc.value_fn(['E1', 'E2']) == 'E1, E2'
+
+    def test_value_passes_through_scalar(self):
+        desc = self._desc()
+        assert desc.value_fn('DA_ERROR_NONE') == 'DA_ERROR_NONE'
+
+    def test_value_none_for_empty_list(self):
+        """An empty error list means no value to show -- None (unknown),
+        not an empty string."""
+        desc = self._desc()
+        assert desc.value_fn([]) is None
+
+
+# ---------------------------------------------------------------------------
+# Cross-family bundles (UNIVERSAL / POWER) -- unpacked into every by_type
+# registry's _build([...]) call in place of the hand-duplicated capability
+# lists that used to live there.
+# ---------------------------------------------------------------------------
+
+
+class TestUniversalAndPowerBundles:
+    def test_universal_contains_the_no_conflict_capabilities(self):
+        assert set(common.UNIVERSAL) == {
+            common.ALARMS, common.ENERGY_METER, common.FIRMWARE_UPDATE,
+            common.SELF_CHECK, common.AI_ENERGY_LEVEL,
+            common.KIDS_LOCK_GENERIC, common.KIDS_LOCK_VS_FALLBACK,
+            common.REMOTE_CONTROL_GENERIC, common.REMOTE_CONTROL_VS_FALLBACK,
+        }
+
+    def test_power_kept_separate_for_airconditioners_sake(self):
+        """airconditioner.py deliberately doesn't unpack this bundle -- its
+        climate entity already owns /power/0 and /power/vs/0 via a bare,
+        no-entity claim (airconditioner.COVERAGE); a real POWER_GENERIC/
+        POWER_VS_FALLBACK cap on the same href would make _build() raise."""
+        assert set(common.POWER) == {common.POWER_GENERIC, common.POWER_VS_FALLBACK}
+
+    def test_no_overlap_between_the_two_bundles(self):
+        assert not (set(common.UNIVERSAL) & set(common.POWER))
+
+    def test_airconditioner_registry_does_not_include_power(self):
+        from custom_components.localthings.registry.by_type import airconditioner
+        bound_caps = {c for caps in airconditioner.REGISTRY.capabilities.values() for c in caps}
+        assert common.POWER_GENERIC not in bound_caps
+        assert common.POWER_VS_FALLBACK not in bound_caps

@@ -11,7 +11,9 @@ against live device dumps:
   /filter/waterfilter/vs/0  -> x.com.samsung.da.filterUsage / filterStatus
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
+from ..entities import (
+    BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc,
+)
 
 
 def _num(v):
@@ -290,4 +292,86 @@ AI_ENERGY_LEVEL = Capability(
                        not rep or len(_ai_energy_supported_levels(rep)) > 1),
                    write_fn=_ai_energy_level_write),
     ),
+)
+
+FIRMWARE_UPDATE = Capability(
+    href='/otninformation/vs/0',
+    poll_tier='cold',
+    entities=(
+        BinarySensorDesc(
+            key='firmware_update',
+            field='x.com.samsung.da.newVersionAvailable',
+            name='Firmware update available',
+            device_class='update',
+            entity_category='diagnostic',
+            value_fn=lambda v: str(v).lower() == 'true' if v is not None else None,
+        ),
+    ),
+)
+
+SELF_CHECK = Capability(
+    href='/selfcheck/vs/0',
+    poll_tier='cold',
+    entities=(
+        SensorDesc(key='selfcheck_status', field='x.com.samsung.da.status',
+                   name='Self-check status', icon='mdi:stethoscope',
+                   entity_category='diagnostic'),
+        SensorDesc(key='selfcheck_result', field='x.com.samsung.da.result',
+                   name='Self-check result', icon='mdi:clipboard-check-outline',
+                   entity_category='diagnostic'),
+        # List of error codes from the last self-check; joined for display.
+        # Not every fridge reports the field, hence the exists_fn.
+        SensorDesc(key='selfcheck_error', field='x.com.samsung.da.error',
+                   name='Self-check error', icon='mdi:alert-circle-outline',
+                   entity_category='diagnostic',
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.error' in rep),
+                   value_fn=lambda v: (', '.join(v) if v else None) if isinstance(v, list) else v),
+        ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
+                   payload='Start', icon='mdi:play-circle-outline',
+                   entity_category='diagnostic',
+                   write_fn=lambda p, rep, href=None: (
+                       ['selfcheck', 'vs', '0'], {'x.com.samsung.da.status': p})),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Cross-family bundles, unpacked into every by_type registry's _build([...])
+# call the same way ignored.IGNORED is (*common.UNIVERSAL / *common.POWER).
+# discover() only binds a capability whose href is actually present in a
+# given device's resource dump, so listing one here for a family that
+# doesn't expose the href is a no-op, not a phantom entity -- see the
+# adding-device-support skill's coverage-discipline section.
+#
+# UNIVERSAL holds every capability with no known family that both (a) has
+# the href and (b) needs to model it some other way -- broadening one of
+# these to a new family is a safe, harmless guess (issue #40's AI energy
+# level: 2 of 6 families confirmed, blanket-added everywhere else).
+#
+# POWER is kept separate: airconditioner deliberately does NOT include it.
+# AC's climate entity (registry/capabilities/airconditioner.py) already
+# owns /power/0 and /power/vs/0 -- they're pre-claimed there via bare,
+# no-entity Capability objects (COVERAGE) so a second, real POWER_GENERIC/
+# POWER_VS_FALLBACK cap on the same href would make _build() raise
+# (a href with >1 cap must have every cap discriminated by rt_filter/
+# match_fn, and the bare COVERAGE cap has neither). Kids-lock and remote-
+# control don't have this conflict -- no AC dump has ever reported those
+# hrefs -- so they stay in UNIVERSAL.
+# ---------------------------------------------------------------------------
+
+UNIVERSAL = (
+    ALARMS,
+    ENERGY_METER,
+    FIRMWARE_UPDATE,
+    SELF_CHECK,
+    AI_ENERGY_LEVEL,
+    KIDS_LOCK_GENERIC,
+    KIDS_LOCK_VS_FALLBACK,
+    REMOTE_CONTROL_GENERIC,
+    REMOTE_CONTROL_VS_FALLBACK,
+)
+
+POWER = (
+    POWER_GENERIC,
+    POWER_VS_FALLBACK,
 )

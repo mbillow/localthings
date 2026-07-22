@@ -231,42 +231,6 @@ class TestArtik051AndTp2xFixturesHaveCompleteCoverage:
         assert state['flex_zone_mode'] == 'CV_FDR_BEVERAGE'
 
 
-class TestSelfCheckError:
-    """Self-check diagnostic error list -- surfaced on hardware that reports
-    x.com.samsung.da.error, joined into a single display string."""
-
-    def _desc(self):
-        return next(e for e in fridge.SELF_CHECK.entities if e.key == 'selfcheck_error')
-
-    def test_exists_when_field_present(self):
-        desc = self._desc()
-        assert desc.exists_fn({'x.com.samsung.da.error': ['DA_ERROR_NONE']}, {}) is True
-
-    def test_does_not_exist_when_field_absent(self):
-        desc = self._desc()
-        assert desc.exists_fn({'x.com.samsung.da.status': 'Ready'}, {}) is False
-
-    def test_exists_for_empty_stub_rep(self):
-        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
-        must be included-for-now, same as ENERGY_METER's fields."""
-        desc = self._desc()
-        assert desc.exists_fn({}, {}) is True
-
-    def test_value_joins_list(self):
-        desc = self._desc()
-        assert desc.value_fn(['E1', 'E2']) == 'E1, E2'
-
-    def test_value_passes_through_scalar(self):
-        desc = self._desc()
-        assert desc.value_fn('DA_ERROR_NONE') == 'DA_ERROR_NONE'
-
-    def test_value_none_for_empty_list(self):
-        """An empty error list means no value to show -- None (unknown),
-        not an empty string."""
-        desc = self._desc()
-        assert desc.value_fn([]) is None
-
-
 class TestRefrigeratorAiEnergyLevelFixtureCoverage:
     """AI energy-saving level (common.AI_ENERGY_LEVEL, see
     test_common_capabilities.py) is exercised end-to-end here against the

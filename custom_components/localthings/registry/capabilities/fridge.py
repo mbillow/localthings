@@ -19,7 +19,7 @@ import datetime
 
 from ..capability import Capability
 from ..entities import (
-    BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
+    BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc,
     SwitchDesc, TimeDesc,
 )
 from .common import normalize_temp_unit
@@ -225,36 +225,6 @@ DEFROST_BLOCK_STATUS = Capability(
                          name='Defrost active', icon='mdi:snowflake-melt',
                          entity_category='diagnostic',
                          value_fn=lambda modes: bool(modes) and modes[0] == 'DEFROST_BLOCK_ON'),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Self-check diagnostic
-# ---------------------------------------------------------------------------
-
-SELF_CHECK = Capability(
-    href='/selfcheck/vs/0',
-    poll_tier='cold',
-    entities=(
-        SensorDesc(key='selfcheck_status', field='x.com.samsung.da.status',
-                   name='Self-check status', icon='mdi:stethoscope',
-                   entity_category='diagnostic'),
-        SensorDesc(key='selfcheck_result', field='x.com.samsung.da.result',
-                   name='Self-check result', icon='mdi:clipboard-check-outline',
-                   entity_category='diagnostic'),
-        # List of error codes from the last self-check; joined for display.
-        # Not every fridge reports the field, hence the exists_fn.
-        SensorDesc(key='selfcheck_error', field='x.com.samsung.da.error',
-                   name='Self-check error', icon='mdi:alert-circle-outline',
-                   entity_category='diagnostic',
-                   exists_fn=lambda rep, resources: (
-                       not rep or 'x.com.samsung.da.error' in rep),
-                   value_fn=lambda v: (', '.join(v) if v else None) if isinstance(v, list) else v),
-        ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
-                   payload='Start', icon='mdi:play-circle-outline',
-                   entity_category='diagnostic',
-                   write_fn=lambda p, rep, href=None: (
-                       ['selfcheck', 'vs', '0'], {'x.com.samsung.da.status': p})),
     ),
 )
 
@@ -585,25 +555,6 @@ FLEX_ZONE = Capability(
                        rep.get('x.com.samsung.da.supportedOptions')),
                    rep_fn=_flex_zone_current,
                    write_fn=_flex_zone_write),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Firmware update
-# ---------------------------------------------------------------------------
-
-FIRMWARE_UPDATE = Capability(
-    href='/otninformation/vs/0',
-    poll_tier='cold',
-    entities=(
-        BinarySensorDesc(
-            key='firmware_update',
-            field='x.com.samsung.da.newVersionAvailable',
-            name='Firmware update available',
-            device_class='update',
-            entity_category='diagnostic',
-            value_fn=lambda v: str(v).lower() == 'true' if v is not None else None,
-        ),
     ),
 )
 
