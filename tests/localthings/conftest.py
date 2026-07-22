@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import cbor2
@@ -156,11 +157,13 @@ class FakeObserveSession:
         # when it answers a subscription with the current representation.
         # `try_enter_observe_mode` clears its notified set before it
         # subscribes, so this is the only way to deliver a notify that
-        # reliably lands inside the grace period: a notify raced in from
-        # another thread can be wiped by that clear (or arrive after the
-        # grace period ends) depending on scheduling. Set to None to model
-        # a device that answers subscriptions but never notifies.
-        self.notify_on_subscribe: dict | None = None
+        # reliably counts: it lands synchronously via on_notification,
+        # after that clear and before the post-sleep fraction check — a
+        # notify raced in from another thread can be wiped by the clear
+        # (or arrive after the check) depending on scheduling. Set to
+        # None to model a device that answers subscriptions but never
+        # notifies.
+        self.notify_on_subscribe: dict[str, Any] | None = None
 
     def subscribe(self, path_segs):
         href = '/' + '/'.join(path_segs)

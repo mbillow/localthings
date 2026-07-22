@@ -258,11 +258,13 @@ async def test_enters_observe_mode_when_hot_warm_hrefs_notify(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
 
-    # try_enter_observe_mode clears prior notifications as soon as it
-    # starts, so notifies must land *during* its grace-period sleep. The
-    # fake session delivers one synchronously from subscribe() (see
-    # FakeObserveSession.notify_on_subscribe in conftest.py), which puts
-    # them inside that window by construction rather than by timing.
+    # try_enter_observe_mode clears prior notifications before it
+    # subscribes, then checks the notified fraction after the grace-period
+    # sleep — a notify counts as long as it arrives in that window, not
+    # specifically during the sleep itself. The fake session delivers one
+    # synchronously from subscribe() for every href it subscribes to (see
+    # FakeObserveSession.notify_on_subscribe in conftest.py), which lands
+    # it in that window by construction rather than by timing.
     fake.notify_on_subscribe = {'notified': True}
     entered = await hass.async_add_executor_job(
         coordinator._observe.try_enter_observe_mode,
