@@ -153,6 +153,24 @@ def test_registry_reproduces_golden_state_keys_for_tp2x_ref_20k():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_ac_tp1x_da_ac_rac_01011():
+    """Newer AC firmware (Tizen Lite, oneUiVersion "7.0 Air conditioner"; model
+    TP1X_DA-AC-RAC-01011) reports temperature via the vendor /temperatures/vs/0
+    items[] resource and adds a /light/vs/0 display light, with 13 extra vendor
+    housekeeping hrefs -- issue #17 for this model class."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_tp1x_da_ac_rac_01011')
+    golden = json.loads(
+        (GOLDEN / 'airconditioner_tp1x_da_ac_rac_01011.json').read_text()
+    )
+    state_keys = _new_state_keys('airconditioner_tp1x_da_ac_rac_01011', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_resources_from_batch_preferred_over_flat():
     from tests.conftest import _resources_from_dump
     dump = {

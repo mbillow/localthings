@@ -24,6 +24,7 @@ REGISTRY = DeviceRegistry(
         airconditioner.AIR_PURIFY,
         airconditioner.AUTO_CLEAN,
         airconditioner.AIR_FILTER,
+        airconditioner.DISPLAY_LIGHT,
         *airconditioner.COVERAGE,
     ]),
 )

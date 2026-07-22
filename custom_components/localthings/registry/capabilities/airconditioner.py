@@ -34,10 +34,12 @@ HREF_TEMP_CONTROL = '/temperature/control/vs/0'   # target_temperature_step
 HREF_WIND_STRENGTH = '/wind/strength/vs/0'        # fan_mode
 HREF_WIND_DIRECTION = '/wind/direction/vs/0'      # swing_mode
 HREF_CONVENIENT = '/mode/convenient/vs/0'         # preset_mode
+HREF_TEMPS_VS = '/temperatures/vs/0'              # vendor temp fallback (items[] array)
 
 CLIMATE_CONSUMED_HREFS = [
     HREF_POWER, HREF_POWER_VS, HREF_TEMP_CURRENT, HREF_TEMP_DESIRED,
-    HREF_TEMP_CONTROL, HREF_WIND_STRENGTH, HREF_WIND_DIRECTION, HREF_CONVENIENT,
+    HREF_TEMP_CONTROL, HREF_TEMPS_VS, HREF_WIND_STRENGTH, HREF_WIND_DIRECTION,
+    HREF_CONVENIENT,
 ]
 
 
@@ -146,6 +148,20 @@ AIR_FILTER = Capability(
     ),
 )
 
+DISPLAY_LIGHT = Capability(
+    href='/light/vs/0',
+    poll_tier='cold',
+    entities=(
+        SwitchDesc(key='display_light', field='mode',
+                   name='Display light', icon='mdi:led-on',
+                   entity_category='config',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['light', 'vs', '0'],
+                       {'mode': 'On' if p == 'On' else 'Off'})),
+    ),
+)
+
 # ---------------------------------------------------------------------------
 # AC-scoped coverage: the CLIMATE_CONSUMED_HREFS above (read by the climate
 # entity) plus vendor duplicates / all-zero-ambiguous / plumbing resources.
@@ -155,8 +171,6 @@ AIR_FILTER = Capability(
 # bound so discover() reports no coverage gap.
 # ---------------------------------------------------------------------------
 _AC_IGNORED = [
-    # Vendor superset that duplicates the OCF /temperature/current+desired pair.
-    '/temperatures/vs/0',
     # All-zero and ambiguously encoded on this model (2-value arrays); the
     # 'don't guess' rule -- leave unmodeled rather than invent entities.
     '/sensors/vs/0',
@@ -164,6 +178,24 @@ _AC_IGNORED = [
     '/humidity/vs/0',
     # Presence-personalization plumbing (empty item list here).
     '/personality/presence/vs/0',
+    # --- TP1X-class (oneUiVersion "7.0 Air conditioner") housekeeping / opaque
+    # blobs. These carry no user-actionable state or no documented write
+    # contract, so per the 'don't guess' rule they are ignored rather than
+    # modeled. (Temperature for this class lives at /temperatures/vs/0, now
+    # consumed by the climate entity -- see CLIMATE_CONSUMED_HREFS.)
+    '/airlevelcheck/vs/0',         # periodic air-quality sensing scheduler plumbing
+    '/aisleep/vs/0',               # AI-sleep feedback state (no actionable control)
+    '/availablecontrolsets/vs/0',  # opaque hex-encoded control-set bitmap
+    '/da/softreset/vs/0',          # soft-reset trigger plumbing
+    '/keepnormalstate/vs/0',       # internal keep-normal flag
+    '/mds/absencemonitoring/vs/0', # motion-detection sensor plumbing (empty here)
+    '/mds/absencestate/vs/0',      # motion-detection state (empty here)
+    '/option/muteonce/vs/0',       # one-shot buzzer mute (no persistent state)
+    '/remotedatacontrol/vs/0',     # remote data-control session status
+    '/remotetemperature/vs/0',     # external temp-sensor feed (unset on this unit)
+    '/reserverulesets/vs/0',       # opaque hex-encoded schedule reservation blob
+    '/selfcheck/vs/0',             # self-diagnosis action (start/cancel, no simple state)
+    '/welcome/temperature/vs/0',   # welcome-cooling plumbing
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).
