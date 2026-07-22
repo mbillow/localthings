@@ -166,10 +166,15 @@ class TestAiEnergyLevelSwitch:
         desc = self._desc()
         assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': '1'}, {}) is False
 
+    def test_hidden_when_supported_level_missing(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1'}, {}) is False
+
+    def test_hidden_when_supported_level_empty_list(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '0', 'supportedAiLevel': []}, {}) is False
+
     def test_hidden_on_empty_stub_rep(self):
-        """Unlike the select, the switch requires a confirmed single-entry
-        list -- an unfetched stub defaults to the select branch instead (see
-        TestAiEnergyLevelSelect.test_shown_for_empty_stub_rep)."""
         desc = self._desc()
         assert desc.exists_fn({}, {}) is False
 
@@ -201,11 +206,17 @@ class TestAiEnergyLevelSelect:
         assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is True
         assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is False
 
-    def test_shown_for_empty_stub_rep(self):
-        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
-        defaults to the select so sub-polls can populate it either way."""
+    def test_hidden_when_supported_level_is_non_list_scalar(self):
         desc = self._desc()
-        assert desc.exists_fn({}, {}) is True
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': '12'}, {}) is False
+
+    def test_hidden_when_supported_level_missing(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1'}, {}) is False
+
+    def test_hidden_when_supported_level_empty_list(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '0', 'supportedAiLevel': []}, {}) is False
 
     def test_no_translation_key(self):
         """aiLevel's values are plain digits that render fine untranslated
@@ -230,6 +241,28 @@ class TestAiEnergyLevelSelect:
         path, body = desc.write_fn('2', {})
         assert path == ['energy', 'ailevel', 'vs', '0']
         assert body == {'aiLevel': '2'}
+
+
+class TestAiEnergyLevelStubDoesNotDecideThePlatform:
+    """Issue found in review: entity *creation* runs once, against whatever
+    snapshot is current when platforms are set up (see
+    __init__.py's async_config_entry_first_refresh-before-forward-entry-setups
+    ordering), while flatten() re-evaluates exists_fn every poll against live
+    data. Both descriptors share key='ai_energy_level' (see adapter._key), so
+    if a stub carve-out let one of them win at setup time while the other
+    wins once real data lands, flatten() would feed the already-instantiated
+    entity a value shaped for the other platform (e.g. a bool into a Select
+    expecting a string option). Neither side gets a `not rep` carve-out, so
+    an unfetched stub can never win entity creation for either platform --
+    the entity simply doesn't appear until a reload happens with real data,
+    same as any other exists_fn-gated entity in this codebase that's unlucky
+    on first-poll timing, instead of appearing as the wrong widget type."""
+
+    def test_neither_widget_exists_on_empty_stub_rep(self):
+        switch = _ai_energy_level_desc('SwitchDesc')
+        select = _ai_energy_level_desc('SelectDesc')
+        assert switch.exists_fn({}, {}) is False
+        assert select.exists_fn({}, {}) is False
 
 
 class TestSelfCheckError:

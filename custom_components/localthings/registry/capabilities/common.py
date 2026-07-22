@@ -277,6 +277,22 @@ AI_ENERGY_LEVEL = Capability(
     href='/energy/ailevel/vs/0',
     poll_tier='cold',
     entities=(
+        # No `not rep` stub carve-out on either side, unlike most exists_fn
+        # gates in this file -- entity creation only ever runs once, against
+        # whichever snapshot happens to be current the moment platforms are
+        # set up (see entity._is_included / __init__.py's
+        # async_config_entry_first_refresh-before-forward-entry-setups
+        # ordering), while flatten() re-evaluates exists_fn every poll
+        # against live data. Both descriptors share key='ai_energy_level',
+        # so if a stub carve-out let one of them win at setup time while the
+        # other wins once real data lands, flatten() would feed the
+        # instantiated entity a value shaped for the other platform (e.g. a
+        # bool into a Select). Requiring real, populated data on both sides
+        # keeps the entity-creation decision and the live-value decision in
+        # permanent agreement -- the cost is this entity doesn't appear
+        # until a reload if the device's very first poll stubs this
+        # cold-tier href, the same reload already required to fix which
+        # platform got picked in that case.
         SwitchDesc(key='ai_energy_level', field='aiLevel',
                    name='AI energy level', icon='mdi:leaf',
                    entity_category='config',
@@ -289,7 +305,7 @@ AI_ENERGY_LEVEL = Capability(
                    entity_category='config',
                    options=_ai_energy_level_options,
                    exists_fn=lambda rep, resources: (
-                       not rep or len(_ai_energy_supported_levels(rep)) > 1),
+                       len(_ai_energy_supported_levels(rep)) > 1),
                    write_fn=_ai_energy_level_write),
     ),
 )
