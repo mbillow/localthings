@@ -9,6 +9,10 @@
     "display_light",
     "energy_kwh",
     "energy_saved_kwh",
-    "firmware_update"
+    "firmware_update",
+    "mute_once",
+    "selfcheck_error",
+    "selfcheck_result",
+    "selfcheck_status"
   ]
 }
