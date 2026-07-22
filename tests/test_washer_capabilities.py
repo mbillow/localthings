@@ -151,11 +151,32 @@ class TestDetergentSoftenerDosing:
         return next(e for e in washer.WASHER_COURSE.entities if e.key == key)
 
     def test_quantity_and_hardness_read(self):
+        """The device reports the level un-padded ('3'), but the options and
+        translation keys are zero-padded supported codes ('03'); rep_fn
+        normalizes to the supported code so the value is a valid option
+        (issue #9 -- otherwise HA renders the select 'unknown')."""
         rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
-        assert self._desc('detergent_quantity').rep_fn(rep) == '3'
-        assert self._desc('detergent_water_hardness').rep_fn(rep) == '2'
-        assert self._desc('softener_quantity').rep_fn(rep) == '3'
-        assert self._desc('softener_concentration').rep_fn(rep) == '2'
+        assert self._desc('detergent_quantity').rep_fn(rep) == '03'
+        assert self._desc('detergent_water_hardness').rep_fn(rep) == '02'
+        assert self._desc('softener_quantity').rep_fn(rep) == '03'
+        assert self._desc('softener_concentration').rep_fn(rep) == '02'
+
+    def test_current_value_is_a_valid_option_for_every_dosing_select(self):
+        """The core regression: HA shows a select 'unknown' when current_option
+        is not in options. Each dosing select's value must be one of its own
+        options."""
+        rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
+        for key in ('detergent_quantity', 'detergent_water_hardness',
+                    'softener_quantity', 'softener_concentration'):
+            desc = self._desc(key)
+            assert desc.rep_fn(rep) in desc.options(_DOSING_RESOURCES), key
+
+    def test_read_passes_through_when_no_supported_match(self):
+        """A value with no matching supported code is returned as-is rather than
+        dropped, so an unexpected device stays visible instead of blank."""
+        rep = {'x.com.samsung.da.options': ['DetergentLevelCtrl_7',
+                                            'SupportedDetergentLevelCtrl_00010203']}
+        assert self._desc('detergent_quantity').rep_fn(rep) == '7'
 
     def test_translation_keys(self):
         """detergent_quantity and softener_quantity share one translation_key
@@ -181,17 +202,21 @@ class TestDetergentSoftenerDosing:
             assert desc.exists_fn({}, _DOSING_RESOURCES) is True
 
     def test_quantity_write(self):
+        """The UI selects a padded supported code ('01'); the write posts the
+        un-padded device code ('1'), mirroring how the device reports it."""
         rep = {'x.com.samsung.da.options': list(_DOSING_OPTIONS)}
         path, body = self._desc('detergent_quantity').write_fn('01', rep)
         assert path == ['course', 'vs', '0']
-        assert 'DetergentLevelCtrl_01' in body['x.com.samsung.da.options']
+        assert 'DetergentLevelCtrl_1' in body['x.com.samsung.da.options']
         assert 'DetergentLevelCtrl_3' not in body['x.com.samsung.da.options']
+        # untouched siblings survive the read-modify-write
+        assert 'SoftenerLevelCtrl_3' in body['x.com.samsung.da.options']
 
     def test_hardness_write(self):
         rep = {'x.com.samsung.da.options': list(_DOSING_OPTIONS)}
         path, body = self._desc('softener_concentration').write_fn('03', rep)
         assert path == ['course', 'vs', '0']
-        assert 'SoftenerLevel2Ctrl_03' in body['x.com.samsung.da.options']
+        assert 'SoftenerLevel2Ctrl_3' in body['x.com.samsung.da.options']
 
     def test_low_reservoir_off_when_alarm_off(self):
         rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}

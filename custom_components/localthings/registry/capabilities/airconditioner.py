@@ -17,6 +17,29 @@ by_type registry.
 from ..capability import Capability
 from ..entities import ClimateDesc, SensorDesc, SwitchDesc
 
+# ---------------------------------------------------------------------------
+# Canonical AC resource hrefs. The climate entity (climate.py) binds the
+# primary HREF_MODE via CLIMATE below and reads the CLIMATE_CONSUMED_HREFS
+# siblings off the coordinator snapshot; those siblings are marked covered
+# (no-entity caps) so discover() reports no gap. Declared once here and
+# imported by climate.py, so a new sibling read can't drift out of sync with
+# its coverage entry.
+# ---------------------------------------------------------------------------
+HREF_MODE = '/mode/vs/0'                          # primary (bound by CLIMATE)
+HREF_POWER = '/power/0'                           # on/off -> HVACMode.OFF / TURN_ON/OFF
+HREF_POWER_VS = '/power/vs/0'                     # vendor fallback for on/off
+HREF_TEMP_CURRENT = '/temperature/current/0'      # current_temperature
+HREF_TEMP_DESIRED = '/temperature/desired/0'      # target_temperature (write target)
+HREF_TEMP_CONTROL = '/temperature/control/vs/0'   # target_temperature_step
+HREF_WIND_STRENGTH = '/wind/strength/vs/0'        # fan_mode
+HREF_WIND_DIRECTION = '/wind/direction/vs/0'      # swing_mode
+HREF_CONVENIENT = '/mode/convenient/vs/0'         # preset_mode
+
+CLIMATE_CONSUMED_HREFS = [
+    HREF_POWER, HREF_POWER_VS, HREF_TEMP_CURRENT, HREF_TEMP_DESIRED,
+    HREF_TEMP_CONTROL, HREF_WIND_STRENGTH, HREF_WIND_DIRECTION, HREF_CONVENIENT,
+]
+
 
 def _num(v):
     try:
@@ -71,7 +94,7 @@ def _climate_write(payload, rep, href=None):
 
 
 CLIMATE = Capability(
-    href='/mode/vs/0',
+    href=HREF_MODE,
     poll_tier='warm',
     entities=(
         ClimateDesc(key='climate', translation_key='airconditioner',
@@ -124,24 +147,13 @@ AIR_FILTER = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# AC-scoped coverage: hrefs consumed by the composite climate entity, and
-# vendor duplicates / all-zero-ambiguous / plumbing resources. These are NOT in
-# the global ignored.IGNORED because several of them (/mode/vs/0 handled above,
-# /temperatures/vs/0, /humidity/*) collide with other families' schemas. A
-# no-entity Capability still marks the href as bound so discover() reports no
-# coverage gap.
+# AC-scoped coverage: the CLIMATE_CONSUMED_HREFS above (read by the climate
+# entity) plus vendor duplicates / all-zero-ambiguous / plumbing resources.
+# These are NOT in the global ignored.IGNORED because several of them
+# (/mode/vs/0 handled above, /temperatures/vs/0, /humidity/*) collide with
+# other families' schemas. A no-entity Capability still marks the href as
+# bound so discover() reports no coverage gap.
 # ---------------------------------------------------------------------------
-_CONSUMED_BY_CLIMATE = [
-    '/power/0',                  # on/off -> climate HVACMode.OFF / TURN_ON/OFF
-    '/power/vs/0',               # vendor fallback for on/off
-    '/temperature/current/0',    # climate current_temperature
-    '/temperature/desired/0',    # climate target_temperature (write target)
-    '/temperature/control/vs/0', # climate target_temperature_step
-    '/wind/strength/vs/0',       # climate fan_mode
-    '/wind/direction/vs/0',      # climate swing_mode
-    '/mode/convenient/vs/0',     # climate preset_mode
-]
-
 _AC_IGNORED = [
     # Vendor superset that duplicates the OCF /temperature/current+desired pair.
     '/temperatures/vs/0',
@@ -155,4 +167,4 @@ _AC_IGNORED = [
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).
-COVERAGE = [Capability(href=h) for h in (_CONSUMED_BY_CLIMATE + _AC_IGNORED)]
+COVERAGE = [Capability(href=h) for h in (CLIMATE_CONSUMED_HREFS + _AC_IGNORED)]

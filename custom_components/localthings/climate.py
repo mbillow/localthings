@@ -30,23 +30,26 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .registry.entities import ClimateDesc
+# The AC's canonical resource hrefs live in the capability module (the single
+# source of truth shared with its COVERAGE caps); power prefers the OCF-standard
+# href, falling back to the vendor one, mirroring common.POWER_GENERIC /
+# POWER_VS_FALLBACK.
+from .registry.capabilities.airconditioner import (
+    HREF_MODE as MODE_HREF,
+    HREF_POWER as POWER_HREF,
+    HREF_POWER_VS as POWER_VS_HREF,
+    HREF_TEMP_CURRENT as TEMP_CURRENT_HREF,
+    HREF_TEMP_DESIRED as TEMP_DESIRED_HREF,
+    HREF_TEMP_CONTROL as TEMP_CONTROL_HREF,
+    HREF_WIND_STRENGTH as WIND_STRENGTH_HREF,
+    HREF_WIND_DIRECTION as WIND_DIRECTION_HREF,
+    HREF_CONVENIENT as CONVENIENT_HREF,
+)
+from .registry.capabilities.common import normalize_temp_unit
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
-
-# Sibling OCF resources the climate entity reads (the primary bound href is
-# /mode/vs/0). Power prefers the OCF-standard href, falling back to the vendor
-# one, mirroring common.POWER_GENERIC / POWER_VS_FALLBACK.
-POWER_HREF = '/power/0'
-POWER_VS_HREF = '/power/vs/0'
-MODE_HREF = '/mode/vs/0'
-TEMP_CURRENT_HREF = '/temperature/current/0'
-TEMP_DESIRED_HREF = '/temperature/desired/0'
-TEMP_CONTROL_HREF = '/temperature/control/vs/0'
-WIND_STRENGTH_HREF = '/wind/strength/vs/0'
-WIND_DIRECTION_HREF = '/wind/direction/vs/0'
-CONVENIENT_HREF = '/mode/convenient/vs/0'
 
 _MODES_FIELD = 'x.com.samsung.da.modes'
 _SUPPORTED_FIELD = 'x.com.samsung.da.supportedModes'
@@ -159,12 +162,22 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     def _supported(self, href: str) -> list[str]:
         return list(self._rep(href).get(_SUPPORTED_FIELD) or [])
 
+    def _read_mode(self, href: str, mapping: dict):
+        """Current mode of a wind/convenient resource, mapped to its HA value."""
+        return mapping.get(_first(self._rep(href).get(_MODES_FIELD)))
+
+    def _read_modes(self, href: str, mapping: dict) -> list[str]:
+        """Supported modes of a resource, mapped to HA values (unknowns dropped)."""
+        return [mapping[c] for c in self._supported(href) if c in mapping]
+
     # -- temperature --------------------------------------------------------
 
     @property
     def temperature_unit(self) -> str:
-        units = str(self._rep(TEMP_DESIRED_HREF).get('units', 'C')).upper()
-        return UnitOfTemperature.FAHRENHEIT if units.startswith('F') else UnitOfTemperature.CELSIUS
+        raw = self._rep(TEMP_DESIRED_HREF).get('units')
+        return (UnitOfTemperature.FAHRENHEIT
+                if normalize_temp_unit(raw, '°C') == '°F'
+                else UnitOfTemperature.CELSIUS)
 
     @property
     def current_temperature(self):
@@ -214,30 +227,27 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def fan_mode(self):
-        return _DEVICE_TO_FAN.get(_first(self._rep(WIND_STRENGTH_HREF).get(_MODES_FIELD)))
+        return self._read_mode(WIND_STRENGTH_HREF, _DEVICE_TO_FAN)
 
     @property
     def fan_modes(self) -> list[str]:
-        return [_DEVICE_TO_FAN[c] for c in self._supported(WIND_STRENGTH_HREF)
-                if c in _DEVICE_TO_FAN]
+        return self._read_modes(WIND_STRENGTH_HREF, _DEVICE_TO_FAN)
 
     @property
     def swing_mode(self):
-        return _DEVICE_TO_SWING.get(_first(self._rep(WIND_DIRECTION_HREF).get(_MODES_FIELD)))
+        return self._read_mode(WIND_DIRECTION_HREF, _DEVICE_TO_SWING)
 
     @property
     def swing_modes(self) -> list[str]:
-        return [_DEVICE_TO_SWING[c] for c in self._supported(WIND_DIRECTION_HREF)
-                if c in _DEVICE_TO_SWING]
+        return self._read_modes(WIND_DIRECTION_HREF, _DEVICE_TO_SWING)
 
     @property
     def preset_mode(self):
-        return _DEVICE_TO_PRESET.get(_first(self._rep(CONVENIENT_HREF).get(_MODES_FIELD)))
+        return self._read_mode(CONVENIENT_HREF, _DEVICE_TO_PRESET)
 
     @property
     def preset_modes(self) -> list[str]:
-        return [_DEVICE_TO_PRESET[c] for c in self._supported(CONVENIENT_HREF)
-                if c in _DEVICE_TO_PRESET]
+        return self._read_modes(CONVENIENT_HREF, _DEVICE_TO_PRESET)
 
     # -- writes -------------------------------------------------------------
 
@@ -263,17 +273,17 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     async def async_turn_off(self) -> None:
         await self.coordinator.async_send_command(self._bound, ('power', False))
 
-    async def async_set_fan_mode(self, fan_mode: str) -> None:
-        device = _FAN_TO_DEVICE.get(fan_mode)
+    async def _set_mapped(self, kind: str, mapping: dict, value: str) -> None:
+        """Map an HA fan/swing/preset value back to its device code and write it."""
+        device = mapping.get(value)
         if device is not None:
-            await self.coordinator.async_send_command(self._bound, ('fan', device))
+            await self.coordinator.async_send_command(self._bound, (kind, device))
+
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
+        await self._set_mapped('fan', _FAN_TO_DEVICE, fan_mode)
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
-        device = _SWING_TO_DEVICE.get(swing_mode)
-        if device is not None:
-            await self.coordinator.async_send_command(self._bound, ('swing', device))
+        await self._set_mapped('swing', _SWING_TO_DEVICE, swing_mode)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        device = _PRESET_TO_DEVICE.get(preset_mode)
-        if device is not None:
-            await self.coordinator.async_send_command(self._bound, ('preset', device))
+        await self._set_mapped('preset', _PRESET_TO_DEVICE, preset_mode)

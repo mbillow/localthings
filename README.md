@@ -16,6 +16,7 @@ Your state stays on your LAN: HA talks to the appliance over a direct DTLS sessi
 
 | Type | Registry |
 |---|---|
+| Air conditioner | `by_type/airconditioner.py` |
 | Dryer | `by_type/dryer.py` |
 | Oven | `by_type/oven.py` |
 | Dishwasher | `by_type/dishwasher.py` |
@@ -99,7 +100,7 @@ custom_components/localthings/
   diagnostics.py           Redacted diagnostics download (device state + coverage metadata)
   const.py                 Domain, config keys, probe ports
   entity.py                Base entity wiring capability registry -> HA entity
-  sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py
+  sensor.py / binary_sensor.py / switch.py / number.py / select.py / button.py / time.py / climate.py
                             One module per HA platform
   strings.json / translations/   Config-flow copy + entity state translations
   registry/
@@ -110,8 +111,8 @@ custom_components/localthings/
     adapter.py               Flattens bound entities into HA-ready state
     identity.py              Reads device identity for type detection
     redact.py                 Strips account/identity data before diagnostics leave HA
-    capabilities/             Shared + per-family Capability definitions (common, dryer, oven,
-                               dishwasher, fridge, washer, laundry, operational, ignored)
+    capabilities/             Shared + per-family Capability definitions (common, airconditioner,
+                               dryer, oven, dishwasher, fridge, washer, laundry, operational, ignored)
     by_type/                  One DeviceRegistry per appliance type, composed from capabilities/
 tests/                    Registry composition, discovery, entity descriptors, coordinator/observe
                             behavior, and golden-file regression against captured device dumps

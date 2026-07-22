@@ -160,13 +160,50 @@ def _level_options(prefix):
     return lambda resources: _supported_level_options(resources, prefix)
 
 
+def _dosing_level(prefix):
+    """Current dose code, normalized to the `Supported<prefix>` code format.
+
+    The device reports the selected level as `<prefix>_<code>` with the code
+    un-padded (e.g. '3'), but the valid codes -- which are also this select's
+    options and its translation keys -- come from `Supported<prefix>_<hexpairs>`
+    as zero-padded hex pairs (e.g. '03'). Left as '3', the current value sits
+    outside the select's own option list, so HA renders it 'unknown' (issue #9).
+    Resolve it to the supported code with the same integer value so
+    current_option matches an option (and its translation)."""
+    def fn(rep):
+        opts = rep.get('x.com.samsung.da.options')
+        raw = option_value(opts, prefix)
+        if raw is None:
+            return None
+        supported_raw = option_value(opts, f'Supported{prefix}')
+        try:
+            target = int(raw, 16)
+        except (TypeError, ValueError):
+            return raw
+        for code in hex_pairs(supported_raw) if supported_raw else []:
+            try:
+                if int(code, 16) == target:
+                    return code
+            except (TypeError, ValueError):
+                continue
+        return raw
+    return fn
+
+
 def _level_write(prefix):
     def write(p, rep, href=None):
         opts = list(rep.get('x.com.samsung.da.options') or [])
         if not opts:
             return None
+        # `p` is the zero-padded supported code the UI selected (e.g. '03');
+        # the device stores the level un-padded (e.g. '3'), matching how it
+        # reports it, so write it back in that native shape.
+        try:
+            native = format(int(p, 16), 'X')
+        except (TypeError, ValueError):
+            native = p
         return ['course', 'vs', '0'], {
-            'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
+            'x.com.samsung.da.options': replace_in_options(opts, prefix, native),
         }
     return write
 
@@ -201,8 +238,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('DetergentLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('DetergentLevelCtrl')(resources)),
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'DetergentLevelCtrl'),
+                   rep_fn=_dosing_level('DetergentLevelCtrl'),
                    write_fn=_level_write('DetergentLevelCtrl')),
         SelectDesc(key='detergent_water_hardness', name='Detergent water hardness',
                    icon='mdi:water-opacity',
@@ -211,8 +247,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('DetergentLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('DetergentLevel2Ctrl')(resources)),
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'DetergentLevel2Ctrl'),
+                   rep_fn=_dosing_level('DetergentLevel2Ctrl'),
                    write_fn=_level_write('DetergentLevel2Ctrl')),
         SelectDesc(key='softener_quantity', name='Softener quantity', icon='mdi:flask-outline',
                    translation_key='washer_dosing_quantity',
@@ -220,8 +255,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('SoftenerLevelCtrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('SoftenerLevelCtrl')(resources)),
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'SoftenerLevelCtrl'),
+                   rep_fn=_dosing_level('SoftenerLevelCtrl'),
                    write_fn=_level_write('SoftenerLevelCtrl')),
         SelectDesc(key='softener_concentration', name='Softener concentration',
                    icon='mdi:flask-plus-outline',
@@ -230,8 +264,7 @@ WASHER_COURSE = Capability(
                    options=_level_options('SoftenerLevel2Ctrl'),
                    exists_fn=lambda rep, resources: bool(
                        _level_options('SoftenerLevel2Ctrl')(resources)),
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'SoftenerLevel2Ctrl'),
+                   rep_fn=_dosing_level('SoftenerLevel2Ctrl'),
                    write_fn=_level_write('SoftenerLevel2Ctrl')),
         BinarySensorDesc(key='detergent_low', name='Detergent low',
                          icon='mdi:alert-circle-outline', device_class='problem',
