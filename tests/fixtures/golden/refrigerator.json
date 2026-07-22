@@ -1,5 +1,6 @@
 {
   "state_keys": [
+    "ai_energy_level",
     "alarm_code",
     "auto_door_opener",
     "autofill",
@@ -39,11 +40,13 @@
     "rapid_freezing",
     "rapid_fridge",
     "sabbath_mode",
+    "selfcheck_error",
     "selfcheck_result",
     "selfcheck_status",
     "welcome_lighting"
   ],
   "discovery_unique_ids": [
+    "samsung_refrigerator_ai_energy_level",
     "samsung_refrigerator_alarm_code",
     "samsung_refrigerator_auto_door_opener",
     "samsung_refrigerator_autofill",
@@ -83,6 +86,7 @@
     "samsung_refrigerator_rapid_freezing",
     "samsung_refrigerator_rapid_fridge",
     "samsung_refrigerator_sabbath_mode",
+    "samsung_refrigerator_selfcheck_error",
     "samsung_refrigerator_selfcheck_result",
     "samsung_refrigerator_selfcheck_start",
     "samsung_refrigerator_selfcheck_status",

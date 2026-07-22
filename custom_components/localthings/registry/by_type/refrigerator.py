@@ -20,6 +20,7 @@ REGISTRY = DeviceRegistry(
         dishwasher.DIAGNOSIS,
         fridge.ICEMAKER_NIGHTTIME,
         fridge.FLEX_ZONE,
+        fridge.AI_ENERGY_LEVEL,
         fridge.REFRIGERATION,
         fridge.AUTOFILL,
         fridge.WELCOME_LIGHTING,

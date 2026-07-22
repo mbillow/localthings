@@ -85,14 +85,9 @@ IGNORED: list[Capability] = [
     # Warranty/service-plan enrollment status — every field reads "Unknown"
     # on hardware not enrolled in a Samsung Care+ style program.
     Capability(href='/dginformation/vs/0'),
-    # AI energy-saving level; only one value ('1') is ever in
-    # supportedAiLevel on hardware seen so far, so there's no real choice
-    # to expose. Revisit if a device surfaces more than one supported level.
-    Capability(href='/energy/ailevel/vs/0'),
     # OCF-native vacation-mode flag (fridge). Only one value ('RVACATION_OFF')
-    # has ever been seen in `modes` (issue #7's dump), same "no real choice
-    # to expose yet" situation as /energy/ailevel/vs/0 above. Revisit if a
-    # device surfaces it toggled on.
+    # has ever been seen in `modes` (issue #7's dump) -- no real choice to
+    # expose yet. Revisit if a device surfaces it toggled on.
     Capability(href='/mode/0'),
     # Opaque integer with no supportedModes/options list to interpret it
     # against — meaning unclear from the raw resource alone.

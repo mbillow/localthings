@@ -279,7 +279,8 @@
       "rep": {
         "aiLevel": "1",
         "supportedAiLevel": [
-          "1"
+          "1",
+          "2"
         ],
         "href": "/energy/ailevel/vs/0"
       }
