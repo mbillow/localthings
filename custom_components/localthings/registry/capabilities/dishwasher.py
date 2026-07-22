@@ -8,7 +8,7 @@ wash, auto release dry) are read locally here.
 """
 from ..capability import Capability
 from ..entities import ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
-from .laundry import cycle_select, option_value, replace_in_options
+from .laundry import bool_option_switch, cycle_select
 
 # ---------------------------------------------------------------------------
 # /dishwasher/vs/0 — cycle wash/dry settings
@@ -35,49 +35,20 @@ DISHWASHER_SETTINGS = Capability(
 # ---------------------------------------------------------------------------
 # /course/vs/0 — cycle selection (shared laundry.cycle_select) plus the
 # dishwasher-only StormWashZone / AutoDoorRelease toggles that ride in the
-# same options array. Course display names live in translations under
+# same options array (shared laundry.bool_option_switch, same options[]
+# boolean-toggle contract washer's bubble-soak/pre-wash/intensive switches
+# use). Course display names live in translations under
 # entity.select.dishwasher_cycle (see laundry.cycle_select).
 # ---------------------------------------------------------------------------
-
-
-def _storm_wash_write(p, rep, href=None):
-    if p not in ('On', 'Off'):
-        return None
-    opts = list(rep.get('x.com.samsung.da.options') or [])
-    if not opts:
-        return None
-    return ['course', 'vs', '0'], {
-        'x.com.samsung.da.options': replace_in_options(opts, 'StormWashZone', p),
-    }
-
-
-def _auto_release_write(p, rep, href=None):
-    if p not in ('On', 'Off'):
-        return None
-    opts = list(rep.get('x.com.samsung.da.options') or [])
-    if not opts:
-        return None
-    return ['course', 'vs', '0'], {
-        'x.com.samsung.da.options': replace_in_options(opts, 'AutoDoorRelease', p),
-    }
-
 
 CYCLE_OPTIONS = Capability(
     href='/course/vs/0',
     entities=(
         cycle_select(translation_key='dishwasher_cycle', icon='mdi:dishwasher'),
-        SwitchDesc(key='storm_wash', name='Storm Wash+', icon='mdi:weather-lightning-rainy',
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'StormWashZone') == 'On',
-                   write_fn=_storm_wash_write),
-        SwitchDesc(key='auto_release_dry', name='Auto release dry', icon='mdi:door-open',
-                   exists_fn=lambda rep, resources: any(
-                       isinstance(o, str) and o.startswith('AutoDoorRelease_')
-                       for o in (rep.get('x.com.samsung.da.options') or [])
-                   ),
-                   rep_fn=lambda rep: option_value(
-                       rep.get('x.com.samsung.da.options'), 'AutoDoorRelease') == 'On',
-                   write_fn=_auto_release_write),
+        bool_option_switch('storm_wash', 'Storm Wash+', 'mdi:weather-lightning-rainy',
+                            'StormWashZone'),
+        bool_option_switch('auto_release_dry', 'Auto release dry', 'mdi:door-open',
+                            'AutoDoorRelease', gate_on_presence=True),
     ),
 )
 

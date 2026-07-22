@@ -16,8 +16,11 @@ array.
 from datetime import datetime, timezone
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
-from .laundry import cycle_options, cycle_select, hex_pairs, option_value, replace_in_options
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
+from .laundry import (
+    bool_option_exists, bool_option_switch, cycle_options, cycle_select, hex_pairs, option_value,
+    replace_in_options,
+)
 
 # ---------------------------------------------------------------------------
 # Course_XX hex codes. 23 of the codes named in strings.json/translations
@@ -233,11 +236,6 @@ def _dosing_low(prefix):
         rep.get('x.com.samsung.da.options'), prefix) not in (None, 'Off')
 
 
-def _option_exists(prefix):
-    return lambda rep, resources: option_value(
-        rep.get('x.com.samsung.da.options'), prefix) is not None
-
-
 # Bubble soak / pre-wash / intensive-wash toggles, from the same options[]
 # array (issue #22 follow-up on a WD90T654DBN/S1 combo). Each rides as a
 # plain '<Prefix>_On'/'<Prefix>_Off' token, confirmed by a dump taken with
@@ -257,18 +255,12 @@ def _option_exists(prefix):
 # validate_fn runs on every write attempt instead (dispatched from
 # coordinator.async_send_command, ahead of write_fn), rejecting an on-write
 # for a course whose byte isn't 'F0' with a user-facing error rather than
-# silently no-opping against the device.
+# silently no-opping against the device. The read/write/presence machinery
+# itself is laundry.bool_option_switch, shared with dishwasher's storm-wash/
+# auto-release-dry toggles -- only this per-course gating is washer-only, so
+# it stays here rather than in laundry.py (see laundry.bool_option_switch's
+# docstring: it takes a prebuilt validate_fn and has no opinion on it).
 def _bool_option_switch(key, name, icon, prefix, availability_field):
-    def write(p, rep, href=None):
-        if p not in ('On', 'Off'):
-            return None
-        opts = list(rep.get('x.com.samsung.da.options') or [])
-        if not opts:
-            return None
-        return ['course', 'vs', '0'], {
-            'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
-        }
-
     def validate(p, rep, resources):
         """Reject turning on when the selected course's byte in
         `availability_field` isn't 'F0'. Turning off is never blocked. Falls
@@ -293,13 +285,9 @@ def _bool_option_switch(key, name, icon, prefix, availability_field):
             return f"{name} isn't available on the selected cycle."
         return None
 
-    return SwitchDesc(
-        key=key, name=name, icon=icon, entity_category='config',
-        exists_fn=_option_exists(prefix),
-        rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), prefix) == 'On',
-        write_fn=write,
-        validate_fn=validate,
-    )
+    return bool_option_switch(
+        key, name, icon, prefix,
+        entity_category='config', gate_on_presence=True, validate_fn=validate)
 
 
 WASHER_COURSE = Capability(
@@ -352,11 +340,11 @@ WASHER_COURSE = Capability(
                    write_fn=_level_write('SoftenerLevel2Ctrl')),
         BinarySensorDesc(key='detergent_low', name='Detergent low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_option_exists('DetergentAlarm'),
+                         exists_fn=bool_option_exists('DetergentAlarm'),
                          rep_fn=_dosing_low('DetergentAlarm')),
         BinarySensorDesc(key='softener_low', name='Softener low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_option_exists('SoftenerAlarm'),
+                         exists_fn=bool_option_exists('SoftenerAlarm'),
                          rep_fn=_dosing_low('SoftenerAlarm')),
         _bool_option_switch('bubble_soak', 'Bubble soak', 'mdi:chart-bubble',
                              'BubbleSoak', 'BubbleSoakSet'),
