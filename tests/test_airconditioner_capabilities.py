@@ -23,6 +23,22 @@ def _ac():
     return reg, resources
 
 
+def _resolve(name):
+    """Mirror the coordinator's detection order: oneUiVersion first, modelNum
+    fallback second (needed for issue #37's board, which reports neither
+    oneUiVersion nor a '_PRAC_' modelNum token)."""
+    resources = _load_device(name)
+    otn = resources.get('/otninformation/vs/0', {})
+    one_ui = otn.get('swVersionInfo', {}).get('oneUiVersion', '')
+    info = resources['/information/vs/0']
+    reg = for_device(one_ui) if one_ui else None
+    if reg is None:
+        reg = for_device_by_model(
+            info['x.com.samsung.da.modelNum'], info['x.com.samsung.da.description'],
+        )
+    return reg, resources
+
+
 def _bound():
     reg, resources = _ac()
     return discover(resources, reg.capabilities, reg.pattern_capabilities), resources
@@ -113,7 +129,7 @@ def test_climate_consumed_hrefs_declared_as_coverage():
 # newer model class than the ARTIK051_PRAC dump above. It has no OCF-standard
 # /temperature/current+desired pair (temperature lives on the vendor
 # /temperatures/vs/0 items[] resource), exposes a /light/vs/0 display light, and
-# carries 13 extra vendor housekeeping hrefs. Issue #17 for this class.
+# carries extra vendor housekeeping hrefs. Issue #17 for this class (PR #36).
 # ---------------------------------------------------------------------------
 
 def _ac_tp1x():
@@ -129,7 +145,7 @@ def test_tp1x_resolves_to_airconditioner_registry():
 
 def test_tp1x_no_unbound_hrefs():
     """Every resource in the TP1X dump binds or is covered -- including
-    /temperatures/vs/0, /light/vs/0 and the 13 housekeeping hrefs absent from
+    /temperatures/vs/0, /light/vs/0 and the housekeeping hrefs absent from
     the ARTIK051 dump. Clears the coverage-gap repair."""
     reg, resources = _ac_tp1x()
     unbound = []
@@ -159,3 +175,61 @@ def test_tp1x_climate_entity_is_bound():
     bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     climate = [b for b in bound if isinstance(b.desc, ClimateDesc)]
     assert len(climate) == 1 and climate[0].href == '/mode/vs/0'
+
+
+def test_tp2x_rac_20k_model_resolves_via_model_fallback():
+    """TP2X_RAC_20K (issue #37) reports no oneUiVersion and no '_PRAC_' token
+    -- resolved via the '_RAC_' modelNum fallback added for this device."""
+    reg, _ = _resolve('airconditioner_tp2x_rac_20k')
+    assert reg is not None and reg.name == 'airconditioner'
+
+
+def test_tp2x_rac_20k_no_unbound_hrefs():
+    reg, resources = _resolve('airconditioner_tp2x_rac_20k')
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def test_tp1x_rac_model_resolves_via_one_ui_version():
+    """TP1X_DA-AC-RAC-01001_0000 (issue #38) self-reports oneUiVersion
+    '7.0 Air conditioner' -- resolved via for_device(), not the modelNum
+    fallback."""
+    reg, _ = _resolve('airconditioner_tp1x_rac')
+    assert reg is not None and reg.name == 'airconditioner'
+
+
+def test_tp1x_rac_no_unbound_hrefs():
+    reg, resources = _resolve('airconditioner_tp1x_rac')
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def test_tp1x_rac_expected_state_keys_present():
+    reg, resources = _resolve('airconditioner_tp1x_rac')
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    state = flatten(bound, resources)
+    for key in ('climate', 'display_light', 'mute_once', 'selfcheck_status',
+                'selfcheck_result', 'current_limit_enabled', 'current_limit_level'):
+        assert key in state, key
+
+
+def test_mute_once_write_target():
+    write = airconditioner.MUTE_ONCE.entities[0].write_fn
+    assert write('On', {}) == (['option', 'muteonce', 'vs', '0'], {'muteonce': 'On'})
+    assert write('Off', {}) == (['option', 'muteonce', 'vs', '0'], {'muteonce': 'Off'})
+
+
+def test_display_light_write_target():
+    write = airconditioner.DISPLAY_LIGHT.entities[0].write_fn
+    assert write('On', {}) == (['light', 'vs', '0'], {'mode': 'On'})
+    assert write('Off', {}) == (['light', 'vs', '0'], {'mode': 'Off'})
+
+
+def test_current_limit_is_read_only():
+    """Meaning/write contract for the current-limit levels isn't confirmed
+    from the dump alone -- exposed as read-only diagnostic sensors rather
+    than a guessed writable control."""
+    for desc in airconditioner.CURRENT_LIMIT.entities:
+        assert getattr(desc, 'write_fn', None) is None

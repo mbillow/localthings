@@ -15,7 +15,7 @@ different schema (see capabilities/__init__.py). They live only in the AC
 by_type registry.
 """
 from ..capability import Capability
-from ..entities import ClimateDesc, SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, ClimateDesc, SensorDesc, SwitchDesc
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -162,6 +162,43 @@ DISPLAY_LIGHT = Capability(
     ),
 )
 
+# Confirmed against issue #38's dump (TP1X_DA-AC-RAC-01001_0000): a single
+# boolean field, no vendor prefix, mirroring the On/Off convention used
+# throughout the rest of this API.
+MUTE_ONCE = Capability(
+    href='/option/muteonce/vs/0',
+    poll_tier='warm',
+    entities=(
+        SwitchDesc(key='mute_once', field='muteonce',
+                   name='Mute once', icon='mdi:volume-mute',
+                   entity_category='config',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['option', 'muteonce', 'vs', '0'],
+                       {'muteonce': 'On' if p == 'On' else 'Off'})),
+    ),
+)
+
+# Circuit-breaker current-limit setting (issue #38, TP1X board): `operation`
+# toggles the limiter and `modes` picks a level out of `supportedModes`
+# (seen as '3'..'9'). No vendor field-name prefix and no unit/label in the
+# dump to confirm what the levels mean (amps vs. an abstract tier) --
+# exposed read-only per the 'don't guess' rule rather than risking an
+# unverified write to live HVAC hardware.
+CURRENT_LIMIT = Capability(
+    href='/electriccurrent/vs/0',
+    poll_tier='cold',
+    entities=(
+        BinarySensorDesc(key='current_limit_enabled', field='operation',
+                          name='Current limit enabled', icon='mdi:current-ac',
+                          entity_category='diagnostic',
+                          value_fn=lambda v: v == 'On'),
+        SensorDesc(key='current_limit_level', field='modes',
+                   name='Current limit level', icon='mdi:current-ac',
+                   entity_category='diagnostic'),
+    ),
+)
+
 # ---------------------------------------------------------------------------
 # AC-scoped coverage: the CLIMATE_CONSUMED_HREFS above (read by the climate
 # entity) plus vendor duplicates / all-zero-ambiguous / plumbing resources.
@@ -178,11 +215,12 @@ _AC_IGNORED = [
     '/humidity/vs/0',
     # Presence-personalization plumbing (empty item list here).
     '/personality/presence/vs/0',
-    # --- TP1X-class (oneUiVersion "7.0 Air conditioner") housekeeping / opaque
-    # blobs. These carry no user-actionable state or no documented write
-    # contract, so per the 'don't guess' rule they are ignored rather than
-    # modeled. (Temperature for this class lives at /temperatures/vs/0, now
-    # consumed by the climate entity -- see CLIMATE_CONSUMED_HREFS.)
+    # --- TP1X/TP2X-class housekeeping / opaque blobs. These carry no
+    # user-actionable state or no documented write contract, so per the
+    # 'don't guess' rule they are ignored rather than modeled.
+    # /option/muteonce/vs/0 and /selfcheck/vs/0 are deliberately NOT here --
+    # see MUTE_ONCE and fridge.SELF_CHECK above/in the by_type registry,
+    # both of which have a confirmed, cleanly modelable contract.
     '/airlevelcheck/vs/0',         # periodic air-quality sensing scheduler plumbing
     '/aisleep/vs/0',               # AI-sleep feedback state (no actionable control)
     '/availablecontrolsets/vs/0',  # opaque hex-encoded control-set bitmap
@@ -190,11 +228,9 @@ _AC_IGNORED = [
     '/keepnormalstate/vs/0',       # internal keep-normal flag
     '/mds/absencemonitoring/vs/0', # motion-detection sensor plumbing (empty here)
     '/mds/absencestate/vs/0',      # motion-detection state (empty here)
-    '/option/muteonce/vs/0',       # one-shot buzzer mute (no persistent state)
     '/remotedatacontrol/vs/0',     # remote data-control session status
     '/remotetemperature/vs/0',     # external temp-sensor feed (unset on this unit)
     '/reserverulesets/vs/0',       # opaque hex-encoded schedule reservation blob
-    '/selfcheck/vs/0',             # self-diagnosis action (start/cancel, no simple state)
     '/welcome/temperature/vs/0',   # welcome-cooling plumbing
 ]
 

@@ -156,14 +156,42 @@ def test_registry_reproduces_golden_state_keys_for_tp2x_ref_20k():
 def test_registry_reproduces_golden_state_keys_for_ac_tp1x_da_ac_rac_01011():
     """Newer AC firmware (Tizen Lite, oneUiVersion "7.0 Air conditioner"; model
     TP1X_DA-AC-RAC-01011) reports temperature via the vendor /temperatures/vs/0
-    items[] resource and adds a /light/vs/0 display light, with 13 extra vendor
-    housekeeping hrefs -- issue #17 for this model class."""
+    items[] resource and adds a /light/vs/0 display light, with extra vendor
+    housekeeping hrefs -- issue #17 for this model class (PR #36)."""
     from tests.conftest import _load_device
     resources = _load_device('airconditioner_tp1x_da_ac_rac_01011')
     golden = json.loads(
         (GOLDEN / 'airconditioner_tp1x_da_ac_rac_01011.json').read_text()
     )
     state_keys = _new_state_keys('airconditioner_tp1x_da_ac_rac_01011', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_tp2x_rac_20k():
+    """TP2X_RAC_20K (issue #37) -- reports no oneUiVersion; resolved via the
+    '_RAC_' modelNum token fallback in for_device_by_model."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_tp2x_rac_20k')
+    golden = json.loads((GOLDEN / 'airconditioner_tp2x_rac_20k.json').read_text())
+    state_keys = _new_state_keys('airconditioner_tp2x_rac_20k', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_tp1x_rac():
+    """TP1X_DA-AC-RAC-01001_0000 (issue #38) -- fuller RAC board with display
+    light, self-check, mute-once, and a current-limit setting."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_tp1x_rac')
+    golden = json.loads((GOLDEN / 'airconditioner_tp1x_rac.json').read_text())
+    state_keys = _new_state_keys('airconditioner_tp1x_rac', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
