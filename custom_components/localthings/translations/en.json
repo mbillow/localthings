@@ -89,7 +89,12 @@
           "66": "Denim",
           "2d": "Silent Wash",
           "8f": "Intense Cold",
-          "96": "Less Microfiber"
+          "96": "Less Microfiber",
+          "36": "Wash+Dry",
+          "37": "Air Wash",
+          "38": "Cotton Dry",
+          "39": "Synthetics Dry",
+          "1f": "Intense Cold"
         }
       },
       "dryer_cycle": {
