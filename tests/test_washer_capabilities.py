@@ -379,6 +379,33 @@ class TestWashOptionToggleValidation:
         assert desc.validate_fn('On', rep, _EDIT_COURSE_RESOURCES) is None
 
 
+class TestAiEnergyLevel:
+    """Issue #40 -- /energy/ailevel/vs/0 was unbound on a plain washer.
+
+    The capability itself (common.AI_ENERGY_LEVEL) is tested in
+    test_common_capabilities.py; this just confirms it's wired into the
+    washer registry and that the fixture's single-entry supportedAiLevel
+    (['1'], matching the issue's dump) surfaces as a switch, not a select."""
+
+    def test_fixture_has_complete_coverage(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import washer as washer_registry
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('washer')
+        unbound = []
+        bound = discover(
+            resources,
+            washer_registry.REGISTRY.capabilities,
+            washer_registry.REGISTRY.pattern_capabilities,
+            log=unbound.append,
+        )
+        assert unbound == []
+        state = flatten(bound, resources)
+        assert state['ai_energy_level'] is False  # aiLevel '0' -- off
+
+
 class TestFlexWashAndComboFixturesHaveCompleteCoverage:
     """FlexWash (issue #19, previously unrecognized entirely) and
     washer/dryer combo (issue #22, dry_level) dumps must both resolve to

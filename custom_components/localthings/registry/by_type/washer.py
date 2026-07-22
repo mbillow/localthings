@@ -19,6 +19,7 @@ REGISTRY = DeviceRegistry(
         common.ALARMS,
         common.ENERGY_METER,
         common.WATER_METER,
+        common.AI_ENERGY_LEVEL,
         operational.OPERATIONAL_STATE,
         dishwasher.DIAGNOSIS,
         fridge.FIRMWARE_UPDATE,

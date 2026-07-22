@@ -130,3 +130,100 @@ class TestEnergyMeter:
         phantom power sensor (the exists_fn replaces the field-presence gate)."""
         pw = next(e for e in common.ENERGY_METER.entities if e.key == 'power_watts')
         assert pw.exists_fn({'x.com.samsung.da.cumulativePower': '5'}, {}) is False
+
+
+# ---------------------------------------------------------------------------
+# AI energy-saving level. '0' is off; supportedAiLevel lists the additional
+# level(s) on offer. A single-entry list (issue #21 fridge, issue #40 washer)
+# is really a binary toggle, so it's exposed as a switch instead of a
+# one-choice select; multiple entries get a select with '0' synthesized back
+# in as the explicit off option (supportedAiLevel never lists '0' itself, but
+# it's a real, observed value of aiLevel).
+# ---------------------------------------------------------------------------
+
+
+class TestAiEnergyLevelSwitch:
+    def _desc(self):
+        return next(e for e in common.AI_ENERGY_LEVEL.entities
+                    if e.__class__.__name__ == 'SwitchDesc')
+
+    def test_href(self):
+        assert common.AI_ENERGY_LEVEL.href == '/energy/ailevel/vs/0'
+
+    def test_shown_only_with_single_supported_level(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is True
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is False
+
+    def test_hidden_when_supported_level_is_non_list_scalar(self):
+        """A stray scalar (e.g. a string) must not be len()-checked as if it
+        were a list -- a 2-char string would otherwise wrongly pass `== 1`
+        style checks."""
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': '1'}, {}) is False
+
+    def test_hidden_on_empty_stub_rep(self):
+        """Unlike the select, the switch requires a confirmed single-entry
+        list -- an unfetched stub defaults to the select branch instead (see
+        TestAiEnergyLevelSelect.test_shown_for_empty_stub_rep)."""
+        desc = self._desc()
+        assert desc.exists_fn({}, {}) is False
+
+    def test_value_fn(self):
+        desc = self._desc()
+        assert desc.value_fn('0') is False
+        assert desc.value_fn('1') is True
+
+    def test_write_on_uses_the_single_supported_level(self):
+        """The on-value is whatever the device calls its one level, not a
+        hardcoded '1'."""
+        desc = self._desc()
+        path, body = desc.write_fn('On', {'supportedAiLevel': ['2']})
+        assert path == ['energy', 'ailevel', 'vs', '0']
+        assert body == {'aiLevel': '2'}
+
+    def test_write_off(self):
+        desc = self._desc()
+        path, body = desc.write_fn('Off', {'supportedAiLevel': ['1']})
+        assert body == {'aiLevel': '0'}
+
+
+class TestAiEnergyLevelSelect:
+    def _desc(self):
+        return next(e for e in common.AI_ENERGY_LEVEL.entities
+                    if e.__class__.__name__ == 'SelectDesc')
+
+    def test_shown_only_with_multiple_supported_levels(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is True
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is False
+
+    def test_shown_for_empty_stub_rep(self):
+        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
+        defaults to the select so sub-polls can populate it either way."""
+        desc = self._desc()
+        assert desc.exists_fn({}, {}) is True
+
+    def test_no_translation_key(self):
+        """aiLevel's values are plain digits that render fine untranslated
+        (select.py's _display()) -- no strings.json entry to maintain
+        against an unknown number of future levels."""
+        desc = self._desc()
+        assert desc.translation_key is None
+
+    def test_options_synthesize_off(self):
+        """'0' is never in supportedAiLevel but is a real, observed aiLevel
+        value -- synthesized back in as the explicit off option."""
+        desc = self._desc()
+        resources = {'/energy/ailevel/vs/0': {'supportedAiLevel': ['1', '2']}}
+        assert desc.options(resources) == ['0', '1', '2']
+
+    def test_options_empty_when_resource_missing(self):
+        desc = self._desc()
+        assert desc.options({}) == ['0']
+
+    def test_write(self):
+        desc = self._desc()
+        path, body = desc.write_fn('2', {})
+        assert path == ['energy', 'ailevel', 'vs', '0']
+        assert body == {'aiLevel': '2'}

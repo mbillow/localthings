@@ -589,33 +589,6 @@ FLEX_ZONE = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# AI energy-saving level
-#
-# supportedAiLevel is a single-entry list ('1' only) on some hardware, where
-# a select would offer no real choice — gated to >1 supported level.
-# ---------------------------------------------------------------------------
-
-AI_ENERGY_LEVEL = Capability(
-    href='/energy/ailevel/vs/0',
-    poll_tier='cold',
-    entities=(
-        # Only levels '1'/'2' have translated labels in strings.json/translations;
-        # a higher supportedAiLevel entry renders as its raw value until added.
-        SelectDesc(key='ai_energy_level', field='aiLevel',
-                   name='AI energy level', icon='mdi:leaf',
-                   translation_key='ai_energy_level',
-                   entity_category='config',
-                   options_field='supportedAiLevel',
-                   exists_fn=lambda rep, resources: (
-                       not rep or (
-                           isinstance((sl := rep.get('supportedAiLevel')), (list, tuple))
-                           and len(sl) > 1)),
-                   write_fn=lambda p, rep, href=None: (
-                       ['energy', 'ailevel', 'vs', '0'], {'aiLevel': p})),
-    ),
-)
-
-# ---------------------------------------------------------------------------
 # Firmware update
 # ---------------------------------------------------------------------------
 

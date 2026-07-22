@@ -45,6 +45,21 @@
       "rep": {}
     },
     {
+      "href": "/energy/ailevel/vs/0",
+      "rep": {
+        "aiLevel": "0",
+        "supportedAiLevel": [
+          "1"
+        ],
+        "energySavingInfo": [
+          {
+            "aiLevel": "1",
+            "maxEnergySavingRate": "70"
+          }
+        ]
+      }
+    },
+    {
       "href": "/course/vs/0",
       "rep": {
         "x.com.samsung.da.supportedModes": [
