@@ -1,19 +1,14 @@
 {
   "state_keys": [
     "alarm_code",
-    "buzzer_sound",
     "child_lock",
-    "cycle",
     "cycle_active",
     "delay_start_hours",
     "detergent_low",
     "diagnosis_status",
     "drum_clean_cycles_remaining",
-    "drum_clean_last_cleaned",
     "energy_kwh",
-    "energy_saved_kwh",
     "finish_time",
-    "firmware_update",
     "job_beginning_status",
     "machine_state",
     "power_switch",
@@ -21,9 +16,7 @@
     "progress_percentage",
     "remote_control",
     "rinse_cycles",
-    "softener_low",
     "spin_speed",
-    "wash_temperature",
-    "water_liters"
+    "wash_temperature"
   ]
 }

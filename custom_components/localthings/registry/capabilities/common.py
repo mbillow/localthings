@@ -175,6 +175,38 @@ ENERGY_METER = Capability(
                    state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
                    exists_fn=lambda rep, resources: (
                        not rep or 'x.com.samsung.da.cumulativePower' in rep)),
+        # cumulativeConsumption is a second, independently-varying running
+        # total alongside cumulativePower -- some fridges (issue #26) report
+        # both. Self-gates off where only cumulativePower is present. `not
+        # rep or` keeps the same empty-{} stub carve-out as power_watts/
+        # energy_kwh above -- without it, an exists_fn permanently drops the
+        # entity if setup happens to land on a not-yet-fetched stub.
+        SensorDesc(key='power_energy_kwh', field='x.com.samsung.da.cumulativeConsumption',
+                   name='Power energy', device_class='energy',
+                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.cumulativeConsumption' in rep)),
+        # AI Energy Mode's lifetime savings estimate vs. an unoptimized
+        # baseline -- present on some models (e.g. TP1X_REF_21K, issue #21/
+        # #27) and absent on others (issue #20/#26), unlike cumulativePower.
+        SensorDesc(key='energy_saved_kwh', field='x.com.samsung.da.cumulativeSavedPower',
+                   name='Energy saved', device_class='energy',
+                   state_class='total_increasing', unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.cumulativeSavedPower' in rep)),
+        # Monthly billing-cycle totals -- the completed prior month and the
+        # in-progress current month. Not ever-increasing (each resets at
+        # month boundary), so no state_class.
+        SensorDesc(key='energy_last_month_kwh', field='x.com.samsung.da.monthlyConsumption',
+                   name='Energy (last month)', device_class='energy',
+                   unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.monthlyConsumption' in rep)),
+        SensorDesc(key='energy_this_month_kwh', field='x.com.samsung.da.thismonthlyConsumption',
+                   name='Energy (this month)', device_class='energy',
+                   unit='kWh', value_fn=wh_to_kwh,
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.thismonthlyConsumption' in rep)),
     ),
 )
 

@@ -8,6 +8,7 @@
     "climate",
     "diagnosis_status",
     "energy_kwh",
+    "energy_saved_kwh",
     "power_watts"
   ]
 }

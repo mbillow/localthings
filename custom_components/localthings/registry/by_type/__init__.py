@@ -69,6 +69,7 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     'WW': 'washer',
     'WD': 'washer',
     'WF': 'washer',
+    'WV': 'washer',  # FlexWash twin units (e.g. WV55M9600AW) -- issue #19
     'DV': 'dryer',
     'DW': 'dishwasher',
 }

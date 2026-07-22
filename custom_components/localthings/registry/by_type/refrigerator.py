@@ -1,5 +1,5 @@
 """Refrigerator device registry."""
-from ..capabilities import common, fridge, ignored
+from ..capabilities import common, dishwasher, fridge, ignored
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -17,6 +17,7 @@ REGISTRY = DeviceRegistry(
         common.ALARMS,
         common.ENERGY_METER,
         common.WATER_FILTER,
+        dishwasher.DIAGNOSIS,
         fridge.ICEMAKER_NIGHTTIME,
         fridge.FLEX_ZONE,
         fridge.REFRIGERATION,
@@ -26,6 +27,7 @@ REGISTRY = DeviceRegistry(
         fridge.CABINET_LIGHT_ENHANCED,
         fridge.SABBATH,
         fridge.BEVERAGE_ZONE,
+        fridge.PANTRY_ZONE,
         fridge.FIRMWARE_UPDATE,
         fridge.DEFROST_DELAY,
         fridge.DEFROST_DELAY_NATIVE_DUPLICATE,
