@@ -1,0 +1,351 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "0",
+            "x.com.samsung.da.maximum": "5",
+            "x.com.samsung.da.minimum": "-8",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.desired": "37",
+            "x.com.samsung.da.current": "37",
+            "x.com.samsung.da.maximum": "44",
+            "x.com.samsung.da.minimum": "34",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/temperature/current/freezer/0",
+      "rep": {
+        "range": [
+          -8.0,
+          5.0
+        ],
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/desired/freezer/0",
+      "rep": {
+        "range": [
+          -8.0,
+          5.0
+        ],
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/current/cooler/0",
+      "rep": {
+        "range": [
+          34.0,
+          44.0
+        ],
+        "units": "F",
+        "temperature": 37.0
+      }
+    },
+    {
+      "href": "/temperature/desired/cooler/0",
+      "rep": {
+        "range": [
+          34.0,
+          44.0
+        ],
+        "units": "F",
+        "temperature": 37.0
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.cumulativeConsumption": "288048",
+        "x.com.samsung.da.cumulativePower": "1797027",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.instantaneousPower": "115",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.monthlyConsumption": "55400",
+        "x.com.samsung.da.thismonthlyConsumption": "39737"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2",
+          "ENERGY_REPORT_MODEL",
+          "18K_REF_OUTDOOR_CONTROL_V2",
+          "SUPPORT_SABBATH_CONTROL"
+        ],
+        "x.com.samsung.da.modes": [
+          "CVN_CONVERTIBLE_ZONE",
+          "CV_FDR_BEVERAGE",
+          "WATERFILTER_DISABLE"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "CV_FDR_WINE",
+          "CV_FDR_DELI",
+          "CV_FDR_BEVERAGE",
+          "CV_FDR_MEAT"
+        ]
+      }
+    },
+    {
+      "href": "/mode/0",
+      "rep": {
+        "supportedModes": [
+          "HOMECARE_WIZARD_V2",
+          "ENERGY_REPORT_MODEL",
+          "18K_REF_OUTDOOR_CONTROL_V2",
+          "SUPPORT_SABBATH_CONTROL"
+        ],
+        "modes": [
+          "CVN_CONVERTIBLE_ZONE",
+          "CV_FDR_BEVERAGE",
+          "WATERFILTER_DISABLE"
+        ]
+      }
+    },
+    {
+      "href": "/defrost/block/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "DEFROST_BLOCK_ON",
+          "DEFROST_BLOCK_OFF"
+        ],
+        "x.com.samsung.da.modes": [
+          "DEFROST_BLOCK_OFF"
+        ]
+      }
+    },
+    {
+      "href": "/sabbath/vs/0",
+      "rep": {
+        "x.com.samsung.da.sabbathMode": "Off"
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP2X_REF_20K|00113141|0002033F051311200103000010000000",
+        "x.com.samsung.da.description": "TP2X_REF_20K",
+        "x.com.samsung.da.serialNum": "REDACTED",
+        "x.com.samsung.da.otnDUID": "REDACTED",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "WiFi Module",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02144A220110",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Micom",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "2011030E,FFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+00:00",
+        "x.com.samsung.supprtedtype": 1
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/door/freezer/0",
+      "rep": {
+        "openState": "Close"
+      }
+    },
+    {
+      "href": "/door/cooler/0",
+      "rep": {
+        "openState": "Close"
+      }
+    },
+    {
+      "href": "/door/cvroom/0",
+      "rep": {
+        "openState": "Close"
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.countryCode": "US",
+        "x.com.samsung.da.region": ""
+      }
+    },
+    {
+      "href": "/defrost/delay/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/defrost/delay/vs/0",
+      "rep": {
+        "x.com.samsung.da.delayDefrost": "Off"
+      }
+    },
+    {
+      "href": "/defrost/reservation/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Summer Season",
+            "x.com.samsung.da.startTime": "0000-05-01T15:00:00",
+            "x.com.samsung.da.period": "04:00:00",
+            "x.com.samsung.da.endTime": "0000-10-31T00:00:00"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Winter Season",
+            "x.com.samsung.da.startTime": "0000-11-01T06:00:00",
+            "x.com.samsung.da.period": "04:00:00",
+            "x.com.samsung.da.endTime": "0000-04-30T00:00:00"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/icemaker/status/0",
+      "rep": {
+        "status": "On"
+      }
+    },
+    {
+      "href": "/icemaker/status/vs/0",
+      "rep": {
+        "x.com.samsung.da.iceMaker": "On"
+      }
+    },
+    {
+      "href": "/refrigeration/0",
+      "rep": {
+        "defrost": false,
+        "rapidFreeze": false,
+        "rapidCool": false
+      }
+    },
+    {
+      "href": "/refrigeration/vs/0",
+      "rep": {
+        "x.com.samsung.da.rapidFridge": "Off",
+        "x.com.samsung.da.rapidFreezing": "Off"
+      }
+    },
+    {
+      "href": "/drlc/0",
+      "rep": {
+        "DRLevel": 0,
+        "override": false
+      }
+    },
+    {
+      "href": "/drlc/vs/0",
+      "rep": {
+        "x.com.samsung.da.drlcLevel": "0",
+        "x.com.samsung.da.override": "Off",
+        "x.com.samsung.da.durationminutes": "0"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "Micom",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/filter/waterfilter/vs/0",
+      "rep": {
+        "x.com.samsung.da.filterUsage": "0",
+        "x.com.samsung.da.filterUsageResolution": "1",
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.filterResetType": [
+          "replaceable"
+        ]
+      }
+    },
+    {
+      "href": "/icemaker/one/vs/0",
+      "rep": {
+        "x.com.samsung.da.iceMaker.name": "ICE_MAKER",
+        "x.com.samsung.da.iceMaker.state": "On",
+        "x.com.samsung.da.iceMaker.type": "toggle",
+        "x.com.samsung.da.iceMaker.iceMakingStatus": "ICESTATUS_STOP",
+        "x.com.samsung.da.iceType.desired": "NORMAL"
+      }
+    }
+  ]
+}

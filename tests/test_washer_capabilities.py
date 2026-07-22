@@ -40,6 +40,22 @@ class TestWasherSettings:
         assert body == {'x.com.samsung.da.rinseCycles': '3'}
 
 
+class TestDryLevel:
+    """Washer/dryer combo units carry a writable dryLevel field on
+    /washer/vs/0 itself, self-gated off on plain washers -- issue #22."""
+
+    def test_exists_only_when_supported_dry_level_present(self):
+        desc = next(e for e in washer.WASHER_SETTINGS.entities if e.key == 'dry_level')
+        assert desc.exists_fn({'x.com.samsung.da.supportedDryLevel': ['None', '30']}, {}) is True
+        assert desc.exists_fn({}, {}) is False
+
+    def test_write(self):
+        desc = next(e for e in washer.WASHER_SETTINGS.entities if e.key == 'dry_level')
+        path, body = desc.write_fn('Cupboard', {})
+        assert path == ['washer', 'vs', '0']
+        assert body == {'x.com.samsung.da.dryLevel': 'Cupboard'}
+
+
 class TestWasherCourse:
     def test_href(self):
         assert washer.WASHER_COURSE.href == '/course/vs/0'
@@ -233,3 +249,45 @@ class TestDetergentSoftenerDosing:
         assert self._desc('detergent_low').exists_fn({'x.com.samsung.da.options': []}, {}) is False
         rep = {'x.com.samsung.da.options': _DOSING_OPTIONS}
         assert self._desc('detergent_low').exists_fn(rep, {}) is True
+
+
+class TestFlexWashAndComboFixturesHaveCompleteCoverage:
+    """FlexWash (issue #19, previously unrecognized entirely) and
+    washer/dryer combo (issue #22, dry_level) dumps must both resolve to
+    zero unbound hrefs."""
+
+    def test_flexwash(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import washer as washer_registry
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('washer_flexwash')
+        unbound = []
+        bound = discover(
+            resources,
+            washer_registry.REGISTRY.capabilities,
+            washer_registry.REGISTRY.pattern_capabilities,
+            log=unbound.append,
+        )
+        assert unbound == []
+        flatten(bound, resources)  # doesn't raise
+
+    def test_dryer_combo(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import washer as washer_registry
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('washer_dryer_combo')
+        unbound = []
+        bound = discover(
+            resources,
+            washer_registry.REGISTRY.capabilities,
+            washer_registry.REGISTRY.pattern_capabilities,
+            log=unbound.append,
+        )
+        assert unbound == []
+        state = flatten(bound, resources)
+        # the device's own "off" sentinel is the literal string 'None', not absence
+        assert state['dry_level'] == 'None'

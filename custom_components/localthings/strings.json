@@ -30,13 +30,25 @@
           "sp_ttype_wine_dessert": "Wine and Dessert"
         }
       },
+      "pantry_zone_mode": {
+        "state": {
+          "fdr_wine": "Wine",
+          "fdr_deli": "Deli",
+          "fdr_drinks": "Drinks"
+        }
+      },
       "flex_zone_mode": {
         "state": {
           "cv_ttype_rf9000a_freeze": "Freeze",
           "cv_ttype_rf9000a_softfreeze": "Soft Freeze",
           "cv_ttype_rf9000a_meat_fish": "Meat/Fish",
           "cv_ttype_rf9000a_fruit_veggies": "Fruit & Veggies",
-          "cv_ttype_rf9000a_beverage": "Beverage"
+          "cv_ttype_rf9000a_beverage": "Beverage",
+          "cv_fdr_wine": "Wine",
+          "cv_fdr_deli": "Deli",
+          "cv_fdr_beverage": "Beverage",
+          "cv_fdr_meat": "Meat",
+          "cv_fdr_soft_freezer": "Soft Freezer"
         }
       },
       "dishwasher_cycle": {

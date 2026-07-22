@@ -503,16 +503,55 @@ BEVERAGE_ZONE = Capability(
 )
 
 # ---------------------------------------------------------------------------
+# Pantry / Cool Select Zone -- a convertible compartment toggled between
+# wine/deli/drinks temperature presets (issue #20). Same shape as
+# BEVERAGE_ZONE (a controllable named sub-zone with a mode + supported-modes
+# list) but a distinct resource/field set -- x.com.samsung.da.mode /
+# x.com.samsung.da.supportedOptions on /status/pantry/one/vs/0, rather than
+# roomDesiredMode/roomSupportedModes on /specialzone/one/vs/0. Only a "one"
+# instance has been seen; not generalized to a pattern cap until a second
+# instance turns up.
+# ---------------------------------------------------------------------------
+
+def _pantry_write(p, rep, href=None):
+    return ['status', 'pantry', 'one', 'vs', '0'], {'x.com.samsung.da.mode': p}
+
+
+PANTRY_ZONE = Capability(
+    href='/status/pantry/one/vs/0',
+    poll_tier='warm',
+    entities=(
+        SelectDesc(key='pantry_zone_mode', field='x.com.samsung.da.mode',
+                   name='Pantry zone mode', icon='mdi:glass-wine',
+                   translation_key='pantry_zone_mode',
+                   entity_category='config',
+                   options_field='x.com.samsung.da.supportedOptions',
+                   write_fn=_pantry_write),
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Flex zone (convertible drawer — /mode/vs/0 on RF9000-class fridges)
 #
-# x.com.samsung.da.modes holds multiple orthogonal flags in one list.
-# The flex zone entry is identified by the CV_TTYPE_RF9000A_ prefix.
+# x.com.samsung.da.modes holds multiple orthogonal flags in one list; the
+# flex-zone entry is whichever item is also a member of supportedOptions --
+# the other flags (WATERFILTER_*, DEFROST_BLOCK_*, the CVN_*_ZONE marker)
+# never appear there. The prefix on that item varies by fridge family
+# (CV_TTYPE_RF9000A_ on RF9000-class, CV_FDR_ on Bespoke-class -- issue #27 /
+# #26, where the old CV_TTYPE_RF9000A_-only match left this entity bound but
+# stuck on None), so match by list membership instead of a hardcoded prefix.
 # Write replaces only that item; other flags are preserved.
 # ---------------------------------------------------------------------------
 
+def _flex_zone_current(rep):
+    modes = rep.get('x.com.samsung.da.modes') or []
+    supported = set(rep.get('x.com.samsung.da.supportedOptions') or ())
+    return next((m for m in modes if m in supported), None)
+
+
 def _flex_zone_write(p, rep, href=None):
-    modes = list(rep.get('x.com.samsung.da.modes') or [])
-    modes = [m for m in modes if not m.startswith('CV_TTYPE_RF9000A_')]
+    supported = set(rep.get('x.com.samsung.da.supportedOptions') or ())
+    modes = [m for m in (rep.get('x.com.samsung.da.modes') or []) if m not in supported]
     modes.append(p)
     return ['mode', 'vs', '0'], {'x.com.samsung.da.modes': modes}
 
@@ -522,16 +561,13 @@ FLEX_ZONE = Capability(
     poll_tier='warm',
     entities=(
         SelectDesc(key='flex_zone_mode',
-                   field='x.com.samsung.da.modes',
                    name='Flex zone mode', icon='mdi:thermostat',
                    translation_key='flex_zone_mode',
                    entity_category='config',
                    options_field='x.com.samsung.da.supportedOptions',
                    exists_fn=lambda rep, resources: bool(
                        rep.get('x.com.samsung.da.supportedOptions')),
-                   value_fn=lambda modes: next(
-                       (m for m in (modes or [])
-                        if m.startswith('CV_TTYPE_RF9000A_')), None),
+                   rep_fn=_flex_zone_current,
                    write_fn=_flex_zone_write),
     ),
 )
