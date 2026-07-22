@@ -96,4 +96,9 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # a modelNum carrying the '_PRAC_' (Package Room Air Conditioner) token.
     if key is None and '_PRAC_' in (model_num or ''):
         key = 'airconditioner'
+    # Older/simpler RAC boards (e.g. TP2X_RAC_20K, issue #37) use the plain
+    # '_RAC_' token instead -- distinct from '_PRAC_' above (no overlap: the
+    # 'P' sits between the underscore and 'RAC' in that token).
+    if key is None and '_RAC_' in (model_num or ''):
+        key = 'airconditioner'
     return _REGISTRY_BY_KEY.get(key) if key else None
