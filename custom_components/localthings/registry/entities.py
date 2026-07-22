@@ -2,7 +2,9 @@
 
 Frozen dataclasses so the future native HA component can consume them as
 EntityDescription subclasses unchanged. Read transforms live in value_fn;
-presence gating in exists_fn; write logic in write_fn on command platforms.
+presence gating in exists_fn; write logic in write_fn on command platforms;
+pre-write rejection (surfaced to the user, not just logged) in validate_fn
+where a description declares one.
 """
 from __future__ import annotations
 
@@ -10,6 +12,11 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 WriteFn = Optional[Callable[[Any, dict], "tuple[list[str], dict] | None"]]
+# (payload, rep, resources) -> a human-readable rejection message, or None to
+# allow the write. resources is the coordinator's full href->rep snapshot, for
+# the same cross-resource lookups exists_fn needs (e.g. reading a sibling
+# href's live option list).
+ValidateFn = Optional[Callable[[Any, dict, dict], "str | None"]]
 
 
 def _identity(v: Any) -> Any:
@@ -61,6 +68,7 @@ class SelectDesc(SamsungEntityDescription):
 class SwitchDesc(SamsungEntityDescription):
     device_class: Optional[str] = None
     write_fn: WriteFn = None
+    validate_fn: ValidateFn = None
 
 
 @dataclass(frozen=True, kw_only=True)

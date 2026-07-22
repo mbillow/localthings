@@ -17,7 +17,10 @@ from datetime import datetime, timezone
 
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
-from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
+from .laundry import (
+    bool_option_exists, bool_option_switch, cycle_options, cycle_select, hex_pairs, option_value,
+    replace_in_options,
+)
 
 # ---------------------------------------------------------------------------
 # Course_XX hex codes. 23 of the codes named in strings.json/translations
@@ -233,9 +236,58 @@ def _dosing_low(prefix):
         rep.get('x.com.samsung.da.options'), prefix) not in (None, 'Off')
 
 
-def _dosing_alarm_exists(prefix):
-    return lambda rep, resources: option_value(
-        rep.get('x.com.samsung.da.options'), prefix) is not None
+# Bubble soak / pre-wash / intensive-wash toggles, from the same options[]
+# array (issue #22 follow-up on a WD90T654DBN/S1 combo). Each rides as a
+# plain '<Prefix>_On'/'<Prefix>_Off' token, confirmed by a dump taken with
+# Bubble Soak switched on in the app (BubbleSoak_On) -- the same On/Off shape
+# already used by AiOption and KidsLockBypass in this same array, so
+# PreWashSetting/IntensiveSetting are assumed to follow suit.
+#
+# Each also has a differently-named hex-pair availability field that lines up
+# positionally with editCourseList: BubbleSoakSet, PreWashAvailableSet,
+# IntensiveAvailableSet. On the reporter's dump (course '30' at position 1 of
+# 24), all three read 'F0' at that position and the toggle was writable --
+# and the same dump's earlier state (course '1C' at position 0, 'BubbleSoak
+# Off') decodes to '00' for that course, matching the app graying the
+# control out there. 'F0'/'00' is treated as available/unavailable on that
+# evidence. exists_fn (device-level presence) still only runs once, against
+# the setup-time snapshot, so it isn't a fit for this per-course check --
+# validate_fn runs on every write attempt instead (dispatched from
+# coordinator.async_send_command, ahead of write_fn), rejecting an on-write
+# for a course whose byte isn't 'F0' with a user-facing error rather than
+# silently no-opping against the device. The read/write/presence machinery
+# itself is laundry.bool_option_switch, shared with dishwasher's storm-wash/
+# auto-release-dry toggles -- only this per-course gating is washer-only, so
+# it stays here rather than in laundry.py (see laundry.bool_option_switch's
+# docstring: it takes a prebuilt validate_fn and has no opinion on it).
+def _bool_option_switch(key, name, icon, prefix, availability_field):
+    def validate(p, rep, resources):
+        """Reject turning on when the selected course's byte in
+        `availability_field` isn't 'F0'. Turning off is never blocked. Falls
+        back to allowing the write whenever the availability data can't be
+        resolved (unrecognized course, missing/mismatched-length bitmap)
+        rather than guessing -- a false rejection is worse than an
+        occasional no-op write."""
+        if p != 'On':
+            return None
+        opts = rep.get('x.com.samsung.da.options') or []
+        current = option_value(opts, 'Course')
+        courses = cycle_options(resources)
+        if not current or current not in courses:
+            return None
+        raw = option_value(opts, availability_field)
+        if raw is None:
+            return None
+        pairs = hex_pairs(raw)
+        if len(pairs) != len(courses):
+            return None
+        if pairs[courses.index(current)] != 'F0':
+            return f"{name} isn't available on the selected cycle."
+        return None
+
+    return bool_option_switch(
+        key, name, icon, prefix,
+        entity_category='config', gate_on_presence=True, validate_fn=validate)
 
 
 WASHER_COURSE = Capability(
@@ -288,11 +340,17 @@ WASHER_COURSE = Capability(
                    write_fn=_level_write('SoftenerLevel2Ctrl')),
         BinarySensorDesc(key='detergent_low', name='Detergent low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_dosing_alarm_exists('DetergentAlarm'),
+                         exists_fn=bool_option_exists('DetergentAlarm'),
                          rep_fn=_dosing_low('DetergentAlarm')),
         BinarySensorDesc(key='softener_low', name='Softener low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_dosing_alarm_exists('SoftenerAlarm'),
+                         exists_fn=bool_option_exists('SoftenerAlarm'),
                          rep_fn=_dosing_low('SoftenerAlarm')),
+        _bool_option_switch('bubble_soak', 'Bubble soak', 'mdi:chart-bubble',
+                             'BubbleSoak', 'BubbleSoakSet'),
+        _bool_option_switch('pre_wash', 'Pre wash', 'mdi:washing-machine',
+                             'PreWashSetting', 'PreWashAvailableSet'),
+        _bool_option_switch('intensive', 'Intensive', 'mdi:washing-machine',
+                             'IntensiveSetting', 'IntensiveAvailableSet'),
     ),
 )

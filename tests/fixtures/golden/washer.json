@@ -1,6 +1,7 @@
 {
   "state_keys": [
     "alarm_code",
+    "bubble_soak",
     "buzzer_sound",
     "child_lock",
     "cycle",
@@ -14,9 +15,11 @@
     "energy_saved_kwh",
     "finish_time",
     "firmware_update",
+    "intensive",
     "job_beginning_status",
     "machine_state",
     "power_switch",
+    "pre_wash",
     "progress",
     "progress_percentage",
     "remote_control",

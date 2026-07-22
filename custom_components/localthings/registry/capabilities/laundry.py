@@ -218,6 +218,59 @@ def cycle_select(*, translation_key, icon):
 
 
 # ---------------------------------------------------------------------------
+# Plain boolean toggles over /course/vs/0's options[] array: a
+# '<prefix>_On'/'<prefix>_Off' token, read-modify-written the same way as
+# the 'Course' token above. Shared by washer (bubble soak, pre-wash,
+# intensive -- issue #22) and dishwasher (storm wash, auto release dry) --
+# both families ride this exact contract, just with different prefixes and
+# different presence/validation needs on top.
+# ---------------------------------------------------------------------------
+
+
+def bool_option_write(prefix):
+    def write(p, rep, href=None):
+        if p not in ('On', 'Off'):
+            return None
+        opts = list(rep.get('x.com.samsung.da.options') or [])
+        if not opts:
+            return None
+        return ['course', 'vs', '0'], {
+            'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
+        }
+    return write
+
+
+def bool_option_value(prefix):
+    return lambda rep: option_value(rep.get('x.com.samsung.da.options'), prefix) == 'On'
+
+
+def bool_option_exists(prefix):
+    return lambda rep, resources: option_value(
+        rep.get('x.com.samsung.da.options'), prefix) is not None
+
+
+def bool_option_switch(key, name, icon, prefix, *, entity_category=None,
+                        gate_on_presence=False, validate_fn=None):
+    """A SwitchDesc over a '<prefix>_On'/'<prefix>_Off' options[] token.
+
+    gate_on_presence self-gates the entity off on models that never report
+    the token at all (washer's bubble soak/pre-wash/intensive); leave False
+    for a toggle every device in the family reports (dishwasher's storm
+    wash). validate_fn is passed straight through to SwitchDesc for callers
+    that need to reject a write against live device state (e.g. washer's
+    per-course availability check) -- this factory has no opinion on it and
+    building one, if needed, is the caller's job.
+    """
+    return SwitchDesc(
+        key=key, name=name, icon=icon, entity_category=entity_category,
+        exists_fn=bool_option_exists(prefix) if gate_on_presence else None,
+        rep_fn=bool_option_value(prefix),
+        write_fn=bool_option_write(prefix),
+        validate_fn=validate_fn,
+    )
+
+
+# ---------------------------------------------------------------------------
 # /wm/jobbeginingstatus/vs/0 -- the "why did the cycle not start" reason
 # (e.g. door open, no water). The vendor field is x.com.samsung.da.currentStatus
 # on every laundry dump that populates it (washer + DA_WM_TP1 dryer). An
