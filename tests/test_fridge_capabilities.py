@@ -102,3 +102,35 @@ class TestRefrigerationFallback:
         for key in ('rapid_fridge', 'rapid_freezing'):
             desc = next(e for e in fridge.REFRIGERATION_FALLBACK.entities if e.key == key)
             assert desc.exists_fn({}, {'/refrigeration/0': {}}) is True
+
+
+class TestTp1xNativeDuplicateResources:
+    """The US TP1X_REF_21K publishes two native mirrors in addition to the
+    richer vendor resources.  They must count as covered without producing
+    duplicate entities or guessing unverified write contracts."""
+
+    def test_duplicate_capabilities_have_no_entities(self):
+        assert fridge.DEFROST_DELAY_NATIVE_DUPLICATE.entities == ()
+        assert fridge.ICEMAKER_STATUS_NATIVE_DUPLICATE.entities == ()
+
+    def test_us_fixture_has_complete_coverage(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import refrigerator
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('refrigerator_tp1x_ref_21k_us')
+        unbound = []
+        bound = discover(
+            resources,
+            refrigerator.REGISTRY.capabilities,
+            refrigerator.REGISTRY.pattern_capabilities,
+            log=unbound.append,
+        )
+
+        assert unbound == []
+        state = flatten(bound, resources)
+        assert state['defrost_delay'] is False
+        assert 'ice_maker_enabled' not in state
+        assert state['icemaker_one_enabled'] is True
+        assert state['icemaker_two_enabled'] is True

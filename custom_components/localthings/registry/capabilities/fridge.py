@@ -209,6 +209,14 @@ DEFROST_DELAY = Capability(
     ),
 )
 
+# OCF-native boolean mirror of DEFROST_DELAY.  The captured TP1X_REF_21K
+# firmware publishes the same state on both hrefs, but only the vendor resource
+# above has a confirmed write contract.  Bind the native mirror without another
+# entity so discovery records it as an intentional duplicate.
+DEFROST_DELAY_NATIVE_DUPLICATE = Capability(
+    href='/defrost/delay/0',
+)
+
 DEFROST_BLOCK_STATUS = Capability(
     href='/defrost/block/vs/0',
     poll_tier='warm',
@@ -653,6 +661,14 @@ ICEMAKER_STATUS_FALLBACK = Capability(
                        ['icemaker', 'status', 'vs', '0'],
                        {'x.com.samsung.da.iceMaker': 'On' if p else 'Off'})),
     ),
+)
+
+# OCF-native aggregate mirror of ICEMAKER_STATUS_FALLBACK.  On the captured
+# TP1X_REF_21K it duplicates both the vendor aggregate and the richer per-unit
+# /icemaker/one|two/vs/0 resources.  Its write contract is not advertised, so
+# keep the proven per-unit/vendor controls and bind this as a duplicate only.
+ICEMAKER_STATUS_NATIVE_DUPLICATE = Capability(
+    href='/icemaker/status/0',
 )
 
 # OCF-native /refrigeration/0 (issue #7's unbound_hrefs) -- the odd one out
