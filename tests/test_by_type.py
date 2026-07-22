@@ -180,6 +180,16 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'airconditioner'
 
+    def test_washer_wf_prefix(self):
+        """US front-load washers use the WF consumer-model prefix."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'DA_WM_TP1_21_COMMON|20313741|20010001001611244AA3021700000000',
+            'DA_WM_TP1_21_COMMON_WF8900B/DC92-03129A_A0AE',
+        )
+        assert reg is not None
+        assert reg.name == 'washer'
+
     def test_unknown_model_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
         reg = for_device_by_model('SOME-UNKNOWN-BOARD', 'SOME-UNKNOWN-BOARD')

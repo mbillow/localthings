@@ -68,6 +68,7 @@ def for_device(one_ui_version: str) -> Optional[DeviceRegistry]:
 _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     'WW': 'washer',
     'WD': 'washer',
+    'WF': 'washer',
     'DV': 'dryer',
     'DW': 'dishwasher',
 }
