@@ -16,7 +16,7 @@ array.
 from datetime import datetime, timezone
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
 
 # ---------------------------------------------------------------------------
@@ -238,6 +238,45 @@ def _dosing_alarm_exists(prefix):
         rep.get('x.com.samsung.da.options'), prefix) is not None
 
 
+# Bubble soak / pre-wash / intensive-wash toggles, from the same options[]
+# array (issue #22 follow-up on a WD90T654DBN/S1 combo). Each rides as a
+# plain '<Prefix>_On'/'<Prefix>_Off' token, confirmed by a dump taken with
+# Bubble Soak switched on in the app (BubbleSoak_On) -- the same On/Off shape
+# already used by AiOption and KidsLockBypass in this same array, so
+# PreWashSetting/IntensiveSetting are assumed to follow suit.
+#
+# Each also has a same-shaped '<Prefix>Set'/'<Prefix>AvailableSet' hex-pair
+# string that lines up positionally with editCourseList -- e.g. on the combo
+# dump, BubbleSoakSet's byte for the active course (Course_1C, position 0)
+# is '00' while PreWashAvailableSet/IntensiveAvailableSet are both 'F0',
+# suggesting F0/00 is an available/unavailable flag per course. That's not
+# exposed here: exists_fn only runs once, against the setup-time snapshot
+# (see entity._is_included), so gating on the *current* course would just
+# make the entity's existence depend on whatever course happened to be
+# selected when Home Assistant started, not on the device's real, static
+# capability. Toggling one of these on a course the app would gray it out
+# for is untested; treat it like any other write this integration doesn't
+# validate against device-side state.
+def _bool_option_write(prefix):
+    def write(p, rep, href=None):
+        opts = list(rep.get('x.com.samsung.da.options') or [])
+        if not opts:
+            return None
+        return ['course', 'vs', '0'], {
+            'x.com.samsung.da.options': replace_in_options(opts, prefix, 'On' if p else 'Off'),
+        }
+    return write
+
+
+def _bool_option_value(prefix):
+    return lambda rep: option_value(rep.get('x.com.samsung.da.options'), prefix) == 'On'
+
+
+def _bool_option_exists(prefix):
+    return lambda rep, resources: option_value(
+        rep.get('x.com.samsung.da.options'), prefix) is not None
+
+
 WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
@@ -294,5 +333,20 @@ WASHER_COURSE = Capability(
                          icon='mdi:alert-circle-outline', device_class='problem',
                          exists_fn=_dosing_alarm_exists('SoftenerAlarm'),
                          rep_fn=_dosing_low('SoftenerAlarm')),
+        SwitchDesc(key='bubble_soak', name='Bubble soak', icon='mdi:chart-bubble',
+                   entity_category='config',
+                   exists_fn=_bool_option_exists('BubbleSoak'),
+                   rep_fn=_bool_option_value('BubbleSoak'),
+                   write_fn=_bool_option_write('BubbleSoak')),
+        SwitchDesc(key='pre_wash', name='Pre wash', icon='mdi:washing-machine',
+                   entity_category='config',
+                   exists_fn=_bool_option_exists('PreWashSetting'),
+                   rep_fn=_bool_option_value('PreWashSetting'),
+                   write_fn=_bool_option_write('PreWashSetting')),
+        SwitchDesc(key='intensive', name='Intensive', icon='mdi:washing-machine',
+                   entity_category='config',
+                   exists_fn=_bool_option_exists('IntensiveSetting'),
+                   rep_fn=_bool_option_value('IntensiveSetting'),
+                   write_fn=_bool_option_write('IntensiveSetting')),
     ),
 )

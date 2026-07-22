@@ -251,6 +251,59 @@ class TestDetergentSoftenerDosing:
         assert self._desc('detergent_low').exists_fn(rep, {}) is True
 
 
+class TestWashOptionToggles:
+    """Bubble soak / pre-wash / intensive-wash switches, from the same
+    options[] array as the cycle select (issue #22 follow-up). Confirmed
+    On/Off shape from a dump with Bubble Soak toggled on in the app."""
+
+    @staticmethod
+    def _desc(key):
+        return next(e for e in washer.WASHER_COURSE.entities if e.key == key)
+
+    @staticmethod
+    def _keys():
+        return ('bubble_soak', 'pre_wash', 'intensive')
+
+    @staticmethod
+    def _prefix(key):
+        return {'bubble_soak': 'BubbleSoak',
+                'pre_wash': 'PreWashSetting',
+                'intensive': 'IntensiveSetting'}[key]
+
+    def test_exists_only_when_field_present(self):
+        for key in self._keys():
+            desc = self._desc(key)
+            assert desc.exists_fn({'x.com.samsung.da.options': []}, {}) is False
+            prefix = self._prefix(key)
+            rep = {'x.com.samsung.da.options': [f'{prefix}_Off']}
+            assert desc.exists_fn(rep, {}) is True
+
+    def test_reads_off(self):
+        for key in self._keys():
+            prefix = self._prefix(key)
+            rep = {'x.com.samsung.da.options': [f'{prefix}_Off']}
+            assert self._desc(key).rep_fn(rep) is False
+
+    def test_reads_on(self):
+        for key in self._keys():
+            prefix = self._prefix(key)
+            rep = {'x.com.samsung.da.options': [f'{prefix}_On']}
+            assert self._desc(key).rep_fn(rep) is True
+
+    def test_write_on_and_off(self):
+        for key in self._keys():
+            prefix = self._prefix(key)
+            rep = {'x.com.samsung.da.options': [f'{prefix}_Off', 'GMT_02']}
+            path, body = self._desc(key).write_fn(True, rep)
+            assert path == ['course', 'vs', '0']
+            assert f'{prefix}_On' in body['x.com.samsung.da.options']
+            assert 'GMT_02' in body['x.com.samsung.da.options']
+
+            rep = {'x.com.samsung.da.options': [f'{prefix}_On']}
+            path, body = self._desc(key).write_fn(False, rep)
+            assert f'{prefix}_Off' in body['x.com.samsung.da.options']
+
+
 class TestFlexWashAndComboFixturesHaveCompleteCoverage:
     """FlexWash (issue #19, previously unrecognized entirely) and
     washer/dryer combo (issue #22, dry_level) dumps must both resolve to
