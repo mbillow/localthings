@@ -249,7 +249,7 @@ SELF_CHECK = Capability(
                    entity_category='diagnostic',
                    exists_fn=lambda rep, resources: (
                        not rep or 'x.com.samsung.da.error' in rep),
-                   value_fn=lambda v: ', '.join(v) if isinstance(v, list) else v),
+                   value_fn=lambda v: (', '.join(v) if v else None) if isinstance(v, list) else v),
         ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
                    payload='Start', icon='mdi:play-circle-outline',
                    entity_category='diagnostic',
@@ -599,6 +599,8 @@ AI_ENERGY_LEVEL = Capability(
     href='/energy/ailevel/vs/0',
     poll_tier='cold',
     entities=(
+        # Only levels '1'/'2' have translated labels in strings.json/translations;
+        # a higher supportedAiLevel entry renders as its raw value until added.
         SelectDesc(key='ai_energy_level', field='aiLevel',
                    name='AI energy level', icon='mdi:leaf',
                    translation_key='ai_energy_level',

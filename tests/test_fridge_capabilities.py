@@ -260,6 +260,12 @@ class TestSelfCheckError:
         desc = self._desc()
         assert desc.value_fn('DA_ERROR_NONE') == 'DA_ERROR_NONE'
 
+    def test_value_none_for_empty_list(self):
+        """An empty error list means no value to show -- None (unknown),
+        not an empty string."""
+        desc = self._desc()
+        assert desc.value_fn([]) is None
+
 
 class TestAiEnergyLevel:
     """AI energy-saving level select on /energy/ailevel/vs/0 -- only
