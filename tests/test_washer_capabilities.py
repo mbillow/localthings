@@ -291,17 +291,92 @@ class TestWashOptionToggles:
             assert self._desc(key).rep_fn(rep) is True
 
     def test_write_on_and_off(self):
+        """write_fn receives the same 'On'/'Off' string switch.py sends
+        (not a bool) -- covers a bug where an earlier `'On' if p else 'Off'`
+        implementation always wrote 'On', since any non-empty string
+        (including 'Off') is truthy."""
         for key in self._keys():
             prefix = self._prefix(key)
             rep = {'x.com.samsung.da.options': [f'{prefix}_Off', 'GMT_02']}
-            path, body = self._desc(key).write_fn(True, rep)
+            path, body = self._desc(key).write_fn('On', rep)
             assert path == ['course', 'vs', '0']
             assert f'{prefix}_On' in body['x.com.samsung.da.options']
             assert 'GMT_02' in body['x.com.samsung.da.options']
 
             rep = {'x.com.samsung.da.options': [f'{prefix}_On']}
-            path, body = self._desc(key).write_fn(False, rep)
+            path, body = self._desc(key).write_fn('Off', rep)
             assert f'{prefix}_Off' in body['x.com.samsung.da.options']
+            assert f'{prefix}_On' not in body['x.com.samsung.da.options']
+
+    def test_write_rejects_non_on_off_payload(self):
+        for key in self._keys():
+            prefix = self._prefix(key)
+            rep = {'x.com.samsung.da.options': [f'{prefix}_Off']}
+            assert self._desc(key).write_fn('bogus', rep) is None
+
+
+# editCourseList and availability bitmaps from the reporter's issue #22
+# follow-up dump (WD90T654DBN/S1, course '30' selected, Bubble Soak just
+# turned on in the app): 24 courses, course '30' at position 1 reads 'F0'
+# (available) on all three bitmaps; course '1C' at position 0 reads '00' on
+# BubbleSoakSet (matching the app graying that control out for Eco 40-60).
+_EDIT_COURSE_RESOURCES = {
+    '/wm/editcourse/vs/0': {
+        'x.com.samsung.da.editCourseList':
+            'EditCourseList_1C301E26361B1D1F253324322022232F212D272838393729',
+    },
+}
+_BUBBLE_SOAK_SET = 'BubbleSoakSet_00F000F000F000F0F0F0F00000F000F0F00000F000000000'
+_PRE_WASH_AVAILABLE_SET = 'PreWashAvailableSet_F0F000F0F0F000F0F0F0F00000F0F0F0F00000F000000000'
+_INTENSIVE_AVAILABLE_SET = 'IntensiveAvailableSet_F0F000F0F0F000F0F0F0F00000F0F0F0F00000F000000000'
+
+
+class TestWashOptionToggleValidation:
+    """validate_fn rejects turning a toggle on for a course whose byte in
+    its availability bitmap isn't 'F0', with a user-facing message switch.py
+    raises as ServiceValidationError -- distinct from write_fn's silent
+    no-op for a malformed payload."""
+
+    @staticmethod
+    def _desc(key):
+        return next(e for e in washer.WASHER_COURSE.entities if e.key == key)
+
+    def test_allowed_on_a_supported_course(self):
+        rep = {'x.com.samsung.da.options': ['Course_30', _BUBBLE_SOAK_SET]}
+        assert self._desc('bubble_soak').validate_fn(
+            'On', rep, _EDIT_COURSE_RESOURCES) is None
+
+    def test_rejected_on_an_unsupported_course(self):
+        rep = {'x.com.samsung.da.options': ['Course_1C', _BUBBLE_SOAK_SET]}
+        msg = self._desc('bubble_soak').validate_fn('On', rep, _EDIT_COURSE_RESOURCES)
+        assert msg == "Bubble soak isn't available on the selected cycle."
+
+    def test_pre_wash_and_intensive_use_their_own_availableset_field(self):
+        rep = {'x.com.samsung.da.options': ['Course_30', _PRE_WASH_AVAILABLE_SET]}
+        assert self._desc('pre_wash').validate_fn(
+            'On', rep, _EDIT_COURSE_RESOURCES) is None
+        rep = {'x.com.samsung.da.options': ['Course_30', _INTENSIVE_AVAILABLE_SET]}
+        assert self._desc('intensive').validate_fn(
+            'On', rep, _EDIT_COURSE_RESOURCES) is None
+
+    def test_turning_off_is_never_blocked(self):
+        rep = {'x.com.samsung.da.options': ['Course_1C', _BUBBLE_SOAK_SET]}
+        assert self._desc('bubble_soak').validate_fn(
+            'Off', rep, _EDIT_COURSE_RESOURCES) is None
+
+    def test_allows_write_when_course_unresolvable(self):
+        """No editCourseList, no Course_ token, or a bitmap whose length
+        doesn't match editCourseList -- in every case, fail open rather than
+        block a write we can't actually verify."""
+        desc = self._desc('bubble_soak')
+        rep = {'x.com.samsung.da.options': ['Course_1C', _BUBBLE_SOAK_SET]}
+        assert desc.validate_fn('On', rep, {}) is None
+
+        rep = {'x.com.samsung.da.options': [_BUBBLE_SOAK_SET]}
+        assert desc.validate_fn('On', rep, _EDIT_COURSE_RESOURCES) is None
+
+        rep = {'x.com.samsung.da.options': ['Course_1C', 'BubbleSoakSet_00F0']}
+        assert desc.validate_fn('On', rep, _EDIT_COURSE_RESOURCES) is None
 
 
 class TestFlexWashAndComboFixturesHaveCompleteCoverage:

@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .registry.entities import SwitchDesc
@@ -38,7 +39,16 @@ class LocalThingsSwitch(LocalThingsEntity, SwitchEntity):
         return (self.coordinator.data or {}).get(self._state_key)
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self.coordinator.async_send_command(self._bound, 'On')
+        await self._send('On')
 
     async def async_turn_off(self, **kwargs) -> None:
-        await self.coordinator.async_send_command(self._bound, 'Off')
+        await self._send('Off')
+
+    async def _send(self, payload: str) -> None:
+        desc: SwitchDesc = self._bound.desc
+        if desc.validate_fn is not None:
+            rep = self.coordinator.last_resources.get(self._bound.href) or {}
+            error = desc.validate_fn(payload, rep, self.coordinator.last_resources)
+            if error:
+                raise ServiceValidationError(error)
+        await self.coordinator.async_send_command(self._bound, payload)

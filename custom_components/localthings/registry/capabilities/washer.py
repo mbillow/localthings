@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
-from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
+from .laundry import cycle_options, cycle_select, hex_pairs, option_value, replace_in_options
 
 # ---------------------------------------------------------------------------
 # Course_XX hex codes. 23 of the codes named in strings.json/translations
@@ -245,25 +245,27 @@ def _dosing_alarm_exists(prefix):
 # already used by AiOption and KidsLockBypass in this same array, so
 # PreWashSetting/IntensiveSetting are assumed to follow suit.
 #
-# Each also has a same-shaped '<Prefix>Set'/'<Prefix>AvailableSet' hex-pair
-# string that lines up positionally with editCourseList -- e.g. on the combo
-# dump, BubbleSoakSet's byte for the active course (Course_1C, position 0)
-# is '00' while PreWashAvailableSet/IntensiveAvailableSet are both 'F0',
-# suggesting F0/00 is an available/unavailable flag per course. That's not
-# exposed here: exists_fn only runs once, against the setup-time snapshot
-# (see entity._is_included), so gating on the *current* course would just
-# make the entity's existence depend on whatever course happened to be
-# selected when Home Assistant started, not on the device's real, static
-# capability. Toggling one of these on a course the app would gray it out
-# for is untested; treat it like any other write this integration doesn't
-# validate against device-side state.
+# Each also has a differently-named hex-pair availability field that lines up
+# positionally with editCourseList: BubbleSoakSet, PreWashAvailableSet,
+# IntensiveAvailableSet. On the reporter's dump (course '30' at position 1 of
+# 24), all three read 'F0' at that position and the toggle was writable --
+# and the same dump's earlier state (course '1C' at position 0, 'BubbleSoak
+# Off') decodes to '00' for that course, matching the app graying the
+# control out there. 'F0'/'00' is treated as available/unavailable on that
+# evidence. exists_fn (device-level presence) still only runs once, against
+# the setup-time snapshot, so it isn't a fit for this per-course check --
+# validate_fn runs on every write attempt instead, rejecting an on-write for
+# a course whose byte isn't 'F0' with a user-facing error rather than
+# silently no-opping against the device.
 def _bool_option_write(prefix):
     def write(p, rep, href=None):
+        if p not in ('On', 'Off'):
+            return None
         opts = list(rep.get('x.com.samsung.da.options') or [])
         if not opts:
             return None
         return ['course', 'vs', '0'], {
-            'x.com.samsung.da.options': replace_in_options(opts, prefix, 'On' if p else 'Off'),
+            'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
         }
     return write
 
@@ -275,6 +277,41 @@ def _bool_option_value(prefix):
 def _bool_option_exists(prefix):
     return lambda rep, resources: option_value(
         rep.get('x.com.samsung.da.options'), prefix) is not None
+
+
+_AVAILABILITY_FIELD = {
+    'BubbleSoak': 'BubbleSoakSet',
+    'PreWashSetting': 'PreWashAvailableSet',
+    'IntensiveSetting': 'IntensiveAvailableSet',
+}
+
+
+def _bool_option_validate(prefix, human_name):
+    """Reject turning `prefix` on when the selected course's byte in its
+    availability bitmap isn't 'F0'. Turning off is never blocked. Falls back
+    to allowing the write whenever the availability data can't be resolved
+    (unrecognized course, missing/mismatched-length bitmap) rather than
+    guessing -- a false rejection is worse than an occasional no-op write."""
+    availability_field = _AVAILABILITY_FIELD[prefix]
+
+    def validate(p, rep, resources):
+        if p != 'On':
+            return None
+        opts = rep.get('x.com.samsung.da.options') or []
+        current = option_value(opts, 'Course')
+        courses = cycle_options(resources)
+        if not current or current not in courses:
+            return None
+        raw = option_value(opts, availability_field)
+        if raw is None:
+            return None
+        pairs = hex_pairs(raw)
+        if len(pairs) != len(courses):
+            return None
+        if pairs[courses.index(current)] != 'F0':
+            return f"{human_name} isn't available on the selected cycle."
+        return None
+    return validate
 
 
 WASHER_COURSE = Capability(
@@ -337,16 +374,19 @@ WASHER_COURSE = Capability(
                    entity_category='config',
                    exists_fn=_bool_option_exists('BubbleSoak'),
                    rep_fn=_bool_option_value('BubbleSoak'),
-                   write_fn=_bool_option_write('BubbleSoak')),
+                   write_fn=_bool_option_write('BubbleSoak'),
+                   validate_fn=_bool_option_validate('BubbleSoak', 'Bubble soak')),
         SwitchDesc(key='pre_wash', name='Pre wash', icon='mdi:washing-machine',
                    entity_category='config',
                    exists_fn=_bool_option_exists('PreWashSetting'),
                    rep_fn=_bool_option_value('PreWashSetting'),
-                   write_fn=_bool_option_write('PreWashSetting')),
+                   write_fn=_bool_option_write('PreWashSetting'),
+                   validate_fn=_bool_option_validate('PreWashSetting', 'Pre wash')),
         SwitchDesc(key='intensive', name='Intensive', icon='mdi:washing-machine',
                    entity_category='config',
                    exists_fn=_bool_option_exists('IntensiveSetting'),
                    rep_fn=_bool_option_value('IntensiveSetting'),
-                   write_fn=_bool_option_write('IntensiveSetting')),
+                   write_fn=_bool_option_write('IntensiveSetting'),
+                   validate_fn=_bool_option_validate('IntensiveSetting', 'Intensive')),
     ),
 )
