@@ -12,6 +12,7 @@ import cbor2
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -509,13 +510,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_send_command(self, bound_entity: BoundEntity,
                                  payload: Any) -> None:
-        """Write a value to the device. Fire-and-forget style."""
+        """Write a value to the device. Fire-and-forget style.
+
+        A description-level validate_fn (currently SwitchDesc only) runs
+        here rather than per-platform, so rejecting a write with a
+        user-facing message -- as opposed to write_fn's silent no-op below
+        -- is available to every platform for free."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
             return
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
+        validate_fn = getattr(desc, 'validate_fn', None)
+        if validate_fn is not None:
+            error = validate_fn(payload, rep, self._cache.snapshot())
+            if error:
+                raise ServiceValidationError(error)
         result = write_fn(payload, rep, href)
         if result is None:
             self._log.warning("write_fn rejected payload %r for %s", payload, href)

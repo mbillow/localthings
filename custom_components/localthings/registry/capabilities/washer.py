@@ -233,7 +233,7 @@ def _dosing_low(prefix):
         rep.get('x.com.samsung.da.options'), prefix) not in (None, 'Off')
 
 
-def _dosing_alarm_exists(prefix):
+def _option_exists(prefix):
     return lambda rep, resources: option_value(
         rep.get('x.com.samsung.da.options'), prefix) is not None
 
@@ -254,10 +254,11 @@ def _dosing_alarm_exists(prefix):
 # control out there. 'F0'/'00' is treated as available/unavailable on that
 # evidence. exists_fn (device-level presence) still only runs once, against
 # the setup-time snapshot, so it isn't a fit for this per-course check --
-# validate_fn runs on every write attempt instead, rejecting an on-write for
-# a course whose byte isn't 'F0' with a user-facing error rather than
+# validate_fn runs on every write attempt instead (dispatched from
+# coordinator.async_send_command, ahead of write_fn), rejecting an on-write
+# for a course whose byte isn't 'F0' with a user-facing error rather than
 # silently no-opping against the device.
-def _bool_option_write(prefix):
+def _bool_option_switch(key, name, icon, prefix, availability_field):
     def write(p, rep, href=None):
         if p not in ('On', 'Off'):
             return None
@@ -267,34 +268,14 @@ def _bool_option_write(prefix):
         return ['course', 'vs', '0'], {
             'x.com.samsung.da.options': replace_in_options(opts, prefix, p),
         }
-    return write
-
-
-def _bool_option_value(prefix):
-    return lambda rep: option_value(rep.get('x.com.samsung.da.options'), prefix) == 'On'
-
-
-def _bool_option_exists(prefix):
-    return lambda rep, resources: option_value(
-        rep.get('x.com.samsung.da.options'), prefix) is not None
-
-
-_AVAILABILITY_FIELD = {
-    'BubbleSoak': 'BubbleSoakSet',
-    'PreWashSetting': 'PreWashAvailableSet',
-    'IntensiveSetting': 'IntensiveAvailableSet',
-}
-
-
-def _bool_option_validate(prefix, human_name):
-    """Reject turning `prefix` on when the selected course's byte in its
-    availability bitmap isn't 'F0'. Turning off is never blocked. Falls back
-    to allowing the write whenever the availability data can't be resolved
-    (unrecognized course, missing/mismatched-length bitmap) rather than
-    guessing -- a false rejection is worse than an occasional no-op write."""
-    availability_field = _AVAILABILITY_FIELD[prefix]
 
     def validate(p, rep, resources):
+        """Reject turning on when the selected course's byte in
+        `availability_field` isn't 'F0'. Turning off is never blocked. Falls
+        back to allowing the write whenever the availability data can't be
+        resolved (unrecognized course, missing/mismatched-length bitmap)
+        rather than guessing -- a false rejection is worse than an
+        occasional no-op write."""
         if p != 'On':
             return None
         opts = rep.get('x.com.samsung.da.options') or []
@@ -309,9 +290,16 @@ def _bool_option_validate(prefix, human_name):
         if len(pairs) != len(courses):
             return None
         if pairs[courses.index(current)] != 'F0':
-            return f"{human_name} isn't available on the selected cycle."
+            return f"{name} isn't available on the selected cycle."
         return None
-    return validate
+
+    return SwitchDesc(
+        key=key, name=name, icon=icon, entity_category='config',
+        exists_fn=_option_exists(prefix),
+        rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), prefix) == 'On',
+        write_fn=write,
+        validate_fn=validate,
+    )
 
 
 WASHER_COURSE = Capability(
@@ -364,29 +352,17 @@ WASHER_COURSE = Capability(
                    write_fn=_level_write('SoftenerLevel2Ctrl')),
         BinarySensorDesc(key='detergent_low', name='Detergent low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_dosing_alarm_exists('DetergentAlarm'),
+                         exists_fn=_option_exists('DetergentAlarm'),
                          rep_fn=_dosing_low('DetergentAlarm')),
         BinarySensorDesc(key='softener_low', name='Softener low',
                          icon='mdi:alert-circle-outline', device_class='problem',
-                         exists_fn=_dosing_alarm_exists('SoftenerAlarm'),
+                         exists_fn=_option_exists('SoftenerAlarm'),
                          rep_fn=_dosing_low('SoftenerAlarm')),
-        SwitchDesc(key='bubble_soak', name='Bubble soak', icon='mdi:chart-bubble',
-                   entity_category='config',
-                   exists_fn=_bool_option_exists('BubbleSoak'),
-                   rep_fn=_bool_option_value('BubbleSoak'),
-                   write_fn=_bool_option_write('BubbleSoak'),
-                   validate_fn=_bool_option_validate('BubbleSoak', 'Bubble soak')),
-        SwitchDesc(key='pre_wash', name='Pre wash', icon='mdi:washing-machine',
-                   entity_category='config',
-                   exists_fn=_bool_option_exists('PreWashSetting'),
-                   rep_fn=_bool_option_value('PreWashSetting'),
-                   write_fn=_bool_option_write('PreWashSetting'),
-                   validate_fn=_bool_option_validate('PreWashSetting', 'Pre wash')),
-        SwitchDesc(key='intensive', name='Intensive', icon='mdi:washing-machine',
-                   entity_category='config',
-                   exists_fn=_bool_option_exists('IntensiveSetting'),
-                   rep_fn=_bool_option_value('IntensiveSetting'),
-                   write_fn=_bool_option_write('IntensiveSetting'),
-                   validate_fn=_bool_option_validate('IntensiveSetting', 'Intensive')),
+        _bool_option_switch('bubble_soak', 'Bubble soak', 'mdi:chart-bubble',
+                             'BubbleSoak', 'BubbleSoakSet'),
+        _bool_option_switch('pre_wash', 'Pre wash', 'mdi:washing-machine',
+                             'PreWashSetting', 'PreWashAvailableSet'),
+        _bool_option_switch('intensive', 'Intensive', 'mdi:washing-machine',
+                             'IntensiveSetting', 'IntensiveAvailableSet'),
     ),
 )
