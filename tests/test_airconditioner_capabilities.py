@@ -6,7 +6,7 @@ climate entity itself lives in climate.py (imports homeassistant) and is not
 importable here -- consistent with how the other HA platform files are untested.
 """
 from custom_components.localthings.registry.adapter import flatten
-from custom_components.localthings.registry.by_type import for_device_by_model
+from custom_components.localthings.registry.by_type import for_device, for_device_by_model
 from custom_components.localthings.registry.capabilities import airconditioner
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import ClimateDesc
@@ -106,3 +106,56 @@ def test_climate_consumed_hrefs_declared_as_coverage():
         caps = reg.capabilities.get(href)
         assert caps, href
         assert all(c.entities == () for c in caps), href
+
+
+# ---------------------------------------------------------------------------
+# TP1X_DA-AC-RAC-01011 (oneUiVersion "7.0 Air conditioner", Tizen Lite) -- a
+# newer model class than the ARTIK051_PRAC dump above. It has no OCF-standard
+# /temperature/current+desired pair (temperature lives on the vendor
+# /temperatures/vs/0 items[] resource), exposes a /light/vs/0 display light, and
+# carries 13 extra vendor housekeeping hrefs. Issue #17 for this class.
+# ---------------------------------------------------------------------------
+
+def _ac_tp1x():
+    resources = _load_device('airconditioner_tp1x_da_ac_rac_01011')
+    one_ui = resources['/otninformation/vs/0']['swVersionInfo']['oneUiVersion']
+    return for_device(one_ui), resources
+
+
+def test_tp1x_resolves_to_airconditioner_registry():
+    reg, _ = _ac_tp1x()
+    assert reg is not None and reg.name == 'airconditioner'
+
+
+def test_tp1x_no_unbound_hrefs():
+    """Every resource in the TP1X dump binds or is covered -- including
+    /temperatures/vs/0, /light/vs/0 and the 13 housekeeping hrefs absent from
+    the ARTIK051 dump. Clears the coverage-gap repair."""
+    reg, resources = _ac_tp1x()
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def test_tp1x_display_light_switch_present():
+    """/light/vs/0 (mode On/Off) surfaces as the display-light switch."""
+    reg, resources = _ac_tp1x()
+    state = flatten(
+        discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
+    assert state.get('display_light') is True  # device reports mode == 'On'
+
+
+def test_tp1x_vendor_temperature_and_light_covered():
+    """The vendor temperature resource (read by the climate entity) and the
+    display-light resource both resolve in the registry -- no gap."""
+    reg, _ = _ac_tp1x()
+    assert reg.capabilities.get('/temperatures/vs/0'), '/temperatures/vs/0'
+    assert reg.capabilities.get('/light/vs/0'), '/light/vs/0'
+
+
+def test_tp1x_climate_entity_is_bound():
+    """The composite climate entity still binds the primary /mode/vs/0."""
+    reg, resources = _ac_tp1x()
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    climate = [b for b in bound if isinstance(b.desc, ClimateDesc)]
+    assert len(climate) == 1 and climate[0].href == '/mode/vs/0'

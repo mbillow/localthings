@@ -41,6 +41,7 @@ from .registry.capabilities.airconditioner import (
     HREF_TEMP_CURRENT as TEMP_CURRENT_HREF,
     HREF_TEMP_DESIRED as TEMP_DESIRED_HREF,
     HREF_TEMP_CONTROL as TEMP_CONTROL_HREF,
+    HREF_TEMPS_VS as TEMPS_VS_HREF,
     HREF_WIND_STRENGTH as WIND_STRENGTH_HREF,
     HREF_WIND_DIRECTION as WIND_DIRECTION_HREF,
     HREF_CONVENIENT as CONVENIENT_HREF,
@@ -125,6 +126,22 @@ def _num(value):
         return None
 
 
+def _temps_vs_item(rep: dict) -> dict:
+    """First item of the vendor `/temperatures/vs/0` items[] array.
+
+    Newer AC firmware (Tizen Lite, oneUiVersion "7.0 Air conditioner", e.g.
+    model TP1X_DA-AC-RAC-01011) does NOT expose the OCF-standard
+    /temperature/current/0 + /temperature/desired/0 pair; it reports current
+    and target under a single `/temperatures/vs/0` resource whose
+    `x.com.samsung.da.items[0]` carries current/desired/minimum/maximum/
+    increment/unit. Returns {} when absent, so callers fall through cleanly.
+    """
+    items = rep.get('x.com.samsung.da.items')
+    if isinstance(items, (list, tuple)) and items and isinstance(items[0], dict):
+        return items[0]
+    return {}
+
+
 class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     """Composite climate entity for a Samsung air conditioner."""
 
@@ -172,24 +189,41 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     # -- temperature --------------------------------------------------------
 
+    def _temps_vs(self) -> dict:
+        """Vendor `/temperatures/vs/0` items[0] (empty {} when absent)."""
+        return _temps_vs_item(self._rep(TEMPS_VS_HREF))
+
     @property
     def temperature_unit(self) -> str:
         raw = self._rep(TEMP_DESIRED_HREF).get('units')
+        if raw is None:
+            raw = self._temps_vs().get('x.com.samsung.da.unit')
         return (UnitOfTemperature.FAHRENHEIT
                 if normalize_temp_unit(raw, '°C') == '°F'
                 else UnitOfTemperature.CELSIUS)
 
     @property
     def current_temperature(self):
-        return _num(self._rep(TEMP_CURRENT_HREF).get('temperature'))
+        v = _num(self._rep(TEMP_CURRENT_HREF).get('temperature'))
+        if v is None:
+            v = _num(self._temps_vs().get('x.com.samsung.da.current'))
+        return v
 
     @property
     def target_temperature(self):
-        return _num(self._rep(TEMP_DESIRED_HREF).get('temperature'))
+        v = _num(self._rep(TEMP_DESIRED_HREF).get('temperature'))
+        if v is None:
+            v = _num(self._temps_vs().get('x.com.samsung.da.desired'))
+        return v
 
     def _range(self) -> list | None:
         r = self._rep(TEMP_DESIRED_HREF).get('range')
-        return r if (isinstance(r, (list, tuple)) and len(r) == 2) else None
+        if isinstance(r, (list, tuple)) and len(r) == 2:
+            return r
+        item = self._temps_vs()
+        lo = _num(item.get('x.com.samsung.da.minimum'))
+        hi = _num(item.get('x.com.samsung.da.maximum'))
+        return [lo, hi] if (lo is not None and hi is not None) else None
 
     @property
     def min_temp(self) -> float:
@@ -203,7 +237,10 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def target_temperature_step(self) -> float:
-        return _num(self._rep(TEMP_CONTROL_HREF).get('increment')) or 1.0
+        return (_num(self._rep(TEMP_CONTROL_HREF).get('increment'))
+                or _num(self._rep(TEMP_CONTROL_HREF).get('x.com.samsung.da.increment'))
+                or _num(self._temps_vs().get('x.com.samsung.da.increment'))
+                or 1.0)
 
     # -- hvac mode ----------------------------------------------------------
 
