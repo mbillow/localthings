@@ -20,7 +20,7 @@ from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
 from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
 
 # ---------------------------------------------------------------------------
-# Course_XX hex codes. The 23 codes named in strings.json/translations
+# Course_XX hex codes. 23 of the codes named in strings.json/translations
 # under entity.select.washer_cycle.state.<id, lowercased> were captured
 # from a live WW90DG6U25LEU4's x.com.samsung.da.editCourseList
 # (EditCourseList_1C1D211B1E29243328262722202325322F2E30662D8F96), matched
@@ -34,6 +34,13 @@ from .laundry import cycle_select, hex_pairs, option_value, replace_in_options
 # app) maps to '1C'/'29' = Eco 40-60 and Drum Clean+, which matches what
 # you'd expect to be pinned (default cycle + maintenance cycle),
 # corroborating the positional match.
+#
+# A further 5 codes -- '36' Wash+Dry, '37' Air Wash, '38' Cotton Dry,
+# '39' Synthetics Dry, and a second, distinct '1F' Intense Cold (not the
+# same code as '8F' above) -- came from a WD90T654DBN/S1 washer/dryer
+# combo's editCourseList and were named from that user's app screenshot
+# (issue #22). Combo units carry their own course set, so these codes
+# don't imply anything about '1F' on a plain washer.
 #
 # No static fallback list of those codes is kept here, deliberately: other
 # washer models have a different actual course set (a second dump's active
