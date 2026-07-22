@@ -28,6 +28,7 @@
     "rapid_freezing",
     "rapid_fridge",
     "sabbath_mode",
+    "selfcheck_error",
     "selfcheck_result",
     "selfcheck_status"
   ]
