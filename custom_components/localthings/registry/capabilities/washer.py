@@ -82,6 +82,19 @@ WASHER_SETTINGS = Capability(
                    options_field='x.com.samsung.da.supportedRinseCycles',
                    write_fn=lambda p, rep, href=None: (
                        ['washer', 'vs', '0'], {'x.com.samsung.da.rinseCycles': p})),
+        # Washer/dryer combo units carry a dryLevel field on the wash
+        # resource itself (no separate dryer device/course) -- see issue
+        # #22. Self-gates off on plain washers, which never report
+        # supportedDryLevel.
+        SelectDesc(key='dry_level', field='x.com.samsung.da.dryLevel',
+                   name='Dry level', icon='mdi:tumble-dryer',
+                   entity_category='config',
+                   translation_key='washer_dry_level',
+                   options_field='x.com.samsung.da.supportedDryLevel',
+                   exists_fn=lambda rep, resources: bool(
+                       rep.get('x.com.samsung.da.supportedDryLevel')),
+                   write_fn=lambda p, rep, href=None: (
+                       ['washer', 'vs', '0'], {'x.com.samsung.da.dryLevel': p})),
     ),
 )
 
