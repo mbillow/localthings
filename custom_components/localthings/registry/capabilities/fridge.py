@@ -543,14 +543,22 @@ PANTRY_ZONE = Capability(
 # Write replaces only that item; other flags are preserved.
 # ---------------------------------------------------------------------------
 
+def _flex_zone_supported(rep):
+    return set(rep.get('x.com.samsung.da.supportedOptions') or ())
+
+
 def _flex_zone_current(rep):
+    # Every dump seen has at most one modes/supportedOptions overlap, so
+    # "first match" and "strip all matches" (in the write below) agree. If a
+    # future device ever reports two, this reads the first and the write
+    # would drop both -- revisit if that turns up.
     modes = rep.get('x.com.samsung.da.modes') or []
-    supported = set(rep.get('x.com.samsung.da.supportedOptions') or ())
+    supported = _flex_zone_supported(rep)
     return next((m for m in modes if m in supported), None)
 
 
 def _flex_zone_write(p, rep, href=None):
-    supported = set(rep.get('x.com.samsung.da.supportedOptions') or ())
+    supported = _flex_zone_supported(rep)
     modes = [m for m in (rep.get('x.com.samsung.da.modes') or []) if m not in supported]
     modes.append(p)
     return ['mode', 'vs', '0'], {'x.com.samsung.da.modes': modes}

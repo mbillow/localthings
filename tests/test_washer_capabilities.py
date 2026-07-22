@@ -271,7 +271,8 @@ class TestFlexWashAndComboFixturesHaveCompleteCoverage:
             log=unbound.append,
         )
         assert unbound == []
-        flatten(bound, resources)  # doesn't raise
+        state = flatten(bound, resources)
+        assert 'dry_level' not in state  # plain washer -- no supportedDryLevel field
 
     def test_dryer_combo(self):
         from custom_components.localthings.registry.adapter import flatten
