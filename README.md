@@ -19,6 +19,7 @@ Your state stays on your LAN: HA talks to the appliance over a direct DTLS sessi
 | Air conditioner | `by_type/airconditioner.py` |
 | Dryer | `by_type/dryer.py` |
 | Oven | `by_type/oven.py` |
+| Range / cooktop-oven combo | `by_type/range.py` |
 | Dishwasher | `by_type/dishwasher.py` |
 | Refrigerator | `by_type/refrigerator.py` |
 | Washer | `by_type/washer.py` |
