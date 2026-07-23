@@ -17,6 +17,7 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
+from .common import sensor_item_value
 
 
 def _int_or_none(value):
@@ -31,18 +32,6 @@ def _timestamp(value):
         return datetime.fromtimestamp(float(value), tz=timezone.utc)
     except (TypeError, ValueError, OSError):
         return None
-
-
-def _item_value(items, sensor_type, index=0):
-    for item in items or ():
-        if not isinstance(item, dict):
-            continue
-        if item.get('x.com.samsung.da.type') != sensor_type:
-            continue
-        values = item.get('x.com.samsung.da.value') or ()
-        if index < len(values):
-            return _int_or_none(values[index])
-    return None
 
 
 def _active_alarm_codes(items):
@@ -208,25 +197,25 @@ AIR_QUALITY = Capability(
             field='x.com.samsung.da.items',
             name='Clean level',
             icon='mdi:air-filter',
-            value_fn=lambda items: _item_value(items, 'CleanLevel'),
+            value_fn=lambda items: sensor_item_value(items, 'CleanLevel'),
         ),
         SensorDesc(
             key='dust',
             field='x.com.samsung.da.items',
             name='Dust',
-            value_fn=lambda items: _item_value(items, 'Dust'),
+            value_fn=lambda items: sensor_item_value(items, 'Dust'),
         ),
         SensorDesc(
             key='fine_dust',
             field='x.com.samsung.da.items',
             name='Fine dust',
-            value_fn=lambda items: _item_value(items, 'FineDust'),
+            value_fn=lambda items: sensor_item_value(items, 'FineDust'),
         ),
         SensorDesc(
             key='super_fine_dust',
             field='x.com.samsung.da.items',
             name='Super fine dust',
-            value_fn=lambda items: _item_value(items, 'SuperFineDust'),
+            value_fn=lambda items: sensor_item_value(items, 'SuperFineDust'),
         ),
     ),
 )

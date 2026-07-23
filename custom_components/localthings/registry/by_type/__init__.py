@@ -3,8 +3,8 @@ from typing import Optional
 
 from ._base import DeviceRegistry
 from . import (
-    airconditioner, cooktop, dishwasher, dryer, oven, range as _range,
-    range_hood, refrigerator, washer,
+    air_purifier, airconditioner, cooktop, dishwasher, dryer, oven,
+    range as _range, range_hood, refrigerator, washer,
 )
 
 __all__ = [
@@ -14,6 +14,8 @@ __all__ = [
 
 
 _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
+    'air_purifier': air_purifier.REGISTRY,
+    'airpurifier': air_purifier.REGISTRY,
     'airconditioner': airconditioner.REGISTRY,
     'air_conditioner': airconditioner.REGISTRY,
     'cooktop': cooktop.REGISTRY,
@@ -111,6 +113,10 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # 'P' sits between the underscore and 'RAC' in that token).
     if key is None and '_RAC_' in (model_num or ''):
         key = 'airconditioner'
+    # Air purifiers (e.g. ARTIK051_TVTL_18K, issue #56) report no
+    # oneUiVersion either, and carry the '_TVTL_' board-family token.
+    if key is None and '_TVTL_' in (model_num or ''):
+        key = 'air_purifier'
     model_identity = f'{model_num} {description}'.upper()
     if key is None and ('_COOKTOP' in model_identity or '_GB_CT_' in model_identity):
         key = 'cooktop'
