@@ -640,6 +640,44 @@ async def test_write_marks_href_pending_before_post(
     assert coordinator._observe._settle_until.get('/test/vs/0') is not None
 
 
+async def test_send_command_applies_write_optimistically_before_settling(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """The cache must reflect a write immediately, and stay put against a
+    stale echo for the rest of the settle window -- otherwise
+    mark_write_pending has nothing to protect and just delays the real
+    device confirmation instead, which reads to a user as the write being
+    silently reverted (issue #27)."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    # The optimistic value is visible right away, without waiting for a
+    # device response.
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+    # A stale update racing in behind the write (e.g. a poll/notify that
+    # was already in flight before the PUT) must not clobber it while the
+    # settle window is open.
+    applied = coordinator._observe.apply('/test/vs/0', {'value': 0}, source='observe')
+    assert applied is False
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+
 class TestRemoteControlEnabled:
     """remote_control_enabled (registry/capabilities/common.py) is the
     single source of truth for the /remotectrl on/off signal, shared by
