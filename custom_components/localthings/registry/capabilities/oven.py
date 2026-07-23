@@ -314,6 +314,13 @@ OVEN_CONNECTED = Capability(
     ),
 )
 
+# Static cavity capability metadata (count/type/supported features) -- no
+# per-cavity data varies at runtime on any dump seen so far (issue #44's
+# range: single cavity, no supportedFeatureList entries). Bound with no
+# entities purely for coverage; revisit if a multi-cavity dump surfaces
+# fields worth exposing.
+OVEN_SPEC = Capability(href='/oven/spec/vs/0')
+
 OVEN_MODE = Capability(
     href='/mode/vs/0',
     poll_tier='warm',
