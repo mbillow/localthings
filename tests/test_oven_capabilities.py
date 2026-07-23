@@ -54,6 +54,46 @@ def test_oven_setpoint_rejects_missing_items():
 
 
 # ---------------------------------------------------------------------------
+# OVEN_SETPOINT — Fahrenheit bounds (issue #44 range dump reports
+# unit="Fahrenheit"; bounds/step must track the live unit, not stay pinned
+# to the Celsius defaults)
+# ---------------------------------------------------------------------------
+
+def _fahrenheit_rep(desired='0'):
+    return {'x.com.samsung.da.items': [{
+        'x.com.samsung.da.desired': desired,
+        'x.com.samsung.da.unit': 'Fahrenheit',
+    }]}
+
+
+def test_oven_setpoint_write_uses_fahrenheit_bounds():
+    desc = oven.OVEN_SETPOINT.entities[0]
+    rep = _fahrenheit_rep()
+    # 350 is within F bounds (175-550) but above the C max (270) --
+    # confirms the write path isn't silently still clamping to Celsius.
+    _, body = desc.write_fn(350, rep)
+    assert body['x.com.samsung.da.items'][0]['x.com.samsung.da.desired'] == '350'
+
+
+def test_oven_setpoint_rejects_out_of_range_fahrenheit():
+    desc = oven.OVEN_SETPOINT.entities[0]
+    rep = _fahrenheit_rep()
+    assert desc.write_fn(100, rep) is None    # below F min (175)
+    assert desc.write_fn(600, rep) is None    # above F max (550)
+
+
+def test_oven_setpoint_native_bounds_track_live_unit():
+    desc = oven.OVEN_SETPOINT.entities[0]
+    celsius_rep = {'x.com.samsung.da.items': [{'x.com.samsung.da.unit': 'Celsius'}]}
+    assert desc.native_min_fn(celsius_rep) == 30.0
+    assert desc.native_max_fn(celsius_rep) == 270.0
+    fahrenheit_rep = _fahrenheit_rep()
+    assert desc.native_min_fn(fahrenheit_rep) == 175.0
+    assert desc.native_max_fn(fahrenheit_rep) == 550.0
+    assert desc.step_fn(fahrenheit_rep) == 5.0
+
+
+# ---------------------------------------------------------------------------
 # OVEN_MODE — SelectDesc with non-empty options
 # ---------------------------------------------------------------------------
 

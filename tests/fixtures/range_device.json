@@ -1,0 +1,466 @@
+{
+  "meta": {
+    "model": "TP1X_DA-KS-RANGE-0102X (NSI6DG9100SRAA)",
+    "device_type": "range",
+    "source": "issue #44 diagnostics (scrubbed)",
+    "note": "Range/cooktop-oven combo, first dump of this device type. 4 burners reported (numberOfBurners=4)."
+  },
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "flashingProgress": "",
+        "otnStatus": "None",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "AKS-WW-TP1-23-OVEN-3",
+            "versions": [
+              "40241114"
+            ],
+            "visVersion": "241114"
+          },
+          {
+            "type": "Micom",
+            "modelId": "07174047694140477041",
+            "versions": [
+              "24052400",
+              "24012300"
+            ],
+            "visVersion": "240524"
+          },
+          {
+            "type": "Micom",
+            "modelId": "071760141141FFFFFFFF",
+            "versions": [
+              "24010500",
+              "FFFFFFFF"
+            ],
+            "visVersion": "240105"
+          },
+          {
+            "type": "Micom",
+            "modelId": "071740476841FFFFFFFF",
+            "versions": [
+              "23121600",
+              "FFFFFFFF"
+            ],
+            "visVersion": "231216"
+          },
+          {
+            "type": "Micom",
+            "modelId": "07174047484140474941",
+            "versions": [
+              "24020500",
+              "24012600"
+            ],
+            "visVersion": "240205"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.doors"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close",
+            "x.com.samsung.da.lock": "Unlock"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP1X_DA-KS-RANGE-0102X|40476941|5001011E041811010A00000000000000",
+        "x.com.samsung.da.description": "NI9100D-/AA0",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "24111400",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "04769A24052400, 04770A24012300",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "01411A24010500",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "04768A23121600",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "4",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "04748A24020500, 04749A24012600",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "KR3",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagTsId": "DA01"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "Bake",
+          "Broil",
+          "KeepWarm",
+          "BreadProof",
+          "SelfClean",
+          "SteamClean"
+        ],
+        "x.com.samsung.da.modes": [
+          "NoOperation"
+        ],
+        "x.com.samsung.da.modeStateList": [
+          {
+            "mode": "Bake",
+            "state": "Fixed"
+          },
+          {
+            "mode": "Broil",
+            "state": "Show"
+          },
+          {
+            "mode": "KeepWarm",
+            "state": "Show"
+          },
+          {
+            "mode": "BreadProof",
+            "state": "Show"
+          },
+          {
+            "mode": "SelfClean",
+            "state": "Fixed"
+          },
+          {
+            "mode": "SteamClean",
+            "state": "Fixed"
+          }
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_NI9100D-/AA0",
+          "SettingPossible_5",
+          "TimeAutoSync_On",
+          "UpperLamp_On",
+          "TimeSystem_12",
+          "Sound_On",
+          "AdjustingTemp_0",
+          "Sabbath_Off",
+          "EnergySaving_On"
+        ],
+        "x.com.samsung.da.defaultMode": "Bake",
+        "x.com.samsung.da.modeSpec": "[{\"mode\":\"Bake\",\"version\":\"0101\",\"default\":\"Default\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"285\",\"tempDefaultC\":\"175\",\"tempListLengthC\":\"0\",\"tempMinF\":\"175\",\"tempMaxF\":\"550\",\"tempDefaultF\":\"350\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"40\",\"probeMaxC\":\"90\",\"probeDefaultC\":\"65\",\"probeMinF\":\"100\",\"probeMaxF\":\"200\",\"probeDefaultF\":\"150\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"5\",\"tempIntervalF\":\"5\",\"probeIntervalC\":\"1\",\"probeIntervalF\":\"1\"},{\"mode\":\"Broil\",\"version\":\"0101\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"61442\",\"tempMaxC\":\"61441\",\"tempDefaultC\":\"61441\",\"tempListLengthC\":\"2\",\"tempListDataC\":[\"61441\",\"61442\"],\"tempMinF\":\"61442\",\"tempMaxF\":\"61441\",\"tempDefaultF\":\"61441\",\"tempListLengthF\":\"2\",\"tempListDataF\":[\"61441\",\"61442\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"NotSupported\",\"tempIntervalF\":\"NotSupported\",\"probeIntervalC\":\"NotSupported\",\"probeIntervalF\":\"NotSupported\"},{\"mode\":\"KeepWarm\",\"version\":\"0101\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"80\",\"tempDefaultC\":\"80\",\"tempListLengthC\":\"1\",\"tempListDataC\":[\"80\"],\"tempMinF\":\"175\",\"tempMaxF\":\"175\",\"tempDefaultF\":\"175\",\"tempListLengthF\":\"1\",\"tempListDataF\":[\"175\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"NotSupported\",\"tempIntervalF\":\"NotSupported\",\"probeIntervalC\":\"NotSupported\",\"probeIntervalF\":\"NotSupported\"},{\"mode\":\"BreadProof\",\"version\":\"0101\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"35\",\"tempMaxC\":\"35\",\"tempDefaultC\":\"35\",\"tempListLengthC\":\"1\",\"tempListDataC\":[\"35\"],\"tempMinF\":\"95\",\"tempMaxF\":\"95\",\"tempDefaultF\":\"95\",\"tempListLengthF\":\"1\",\"tempListDataF\":[\"95\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"NotSupported\",\"tempIntervalF\":\"NotSupported\",\"probeIntervalC\":\"NotSupported\",\"probeIntervalF\":\"NotSupported\"},{\"mode\":\"SelfClean\",\"version\":\"0101\",\"default\":\"Normal\",\"control\":\"NotSupported\",\"cavity\":\"Single\",\"tempMinC\":\"NotSupported\",\"tempMaxC\":\"NotSupported\",\"tempDefaultC\":\"NotSupported\",\"tempListLengthC\":\"0\",\"tempMinF\":\"NotSupported\",\"tempMaxF\":\"NotSupported\",\"tempDefaultF\":\"NotSupported\",\"tempListLengthF\":\"0\",\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"NotSupported\",\"tempIntervalF\":\"NotSupported\",\"probeIntervalC\":\"NotSupported\",\"probeIntervalF\":\"NotSupported\"},{\"mode\":\"SteamClean\",\"version\":\"0101\",\"default\":\"Normal\",\"control\":\"NotSupported\",\"cavity\":\"Single\",\"tempMinC\":\"NotSupported\",\"tempMaxC\":\"NotSupported\",\"tempDefaultC\":\"NotSupported\",\"tempListLengthC\":\"0\",\"tempMinF\":\"NotSupported\",\"tempMaxF\":\"NotSupported\",\"tempDefaultF\":\"NotSupported\",\"tempListLengthF\":\"0\",\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"NotSupported\",\"tempIntervalF\":\"NotSupported\",\"probeIntervalC\":\"NotSupported\",\"probeIntervalF\":\"NotSupported\"}]"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.state": "Ready",
+        "causeSource.state": "SETB_Ready",
+        "x.com.samsung.da.operationTime": "00:00:00",
+        "x.com.samsung.da.remainingTime": "00:00:00",
+        "x.com.samsung.da.progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "OV_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-07-22T23:55:41"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "CT_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-07-22T23:55:41"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/oven/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.oven"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.state": "Ready"
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.temperatures"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "175",
+            "x.com.samsung.da.increment": "5",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "America/Chicago",
+        "offset": "-05:00",
+        "DST": "ON"
+      }
+    },
+    {
+      "href": "/oven/spec/vs/0",
+      "rep": {
+        "cavityInfo": {
+          "numberOfCavity": 1,
+          "type": "single",
+          "serviceMainCavity": "single",
+          "cavityList": [
+            {
+              "name": "single",
+              "flexSupport": false,
+              "single": {
+                "resourceId": 0,
+                "supportedFeatureList": [
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    },
+    {
+      "href": "/cooktop/settings/status/vs/0",
+      "rep": {
+        "safetyAlert": {
+          "state": "on",
+          "settingTime": 1200
+        }
+      }
+    },
+    {
+      "href": "/cooktop/spec/vs/0",
+      "rep": {
+        "supportedFeatureList": [
+          ""
+        ],
+        "numberOfBurners": 4,
+        "supportedBurnerList": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "supportedPowerLevelList": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "boost",
+          "0",
+          "simmer"
+        ],
+        "supportedRecipeProtocolVersion": 0
+      }
+    },
+    {
+      "href": "/cooktop/status/vs/0",
+      "rep": {
+        "power": "off",
+        "childLock": "off",
+        "operationState": "ready",
+        "additionalStateList": [
+          ""
+        ],
+        "burnerList": [
+          {
+            "burnerNumber": 0,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          },
+          {
+            "burnerNumber": 1,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          },
+          {
+            "burnerNumber": 2,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          },
+          {
+            "burnerNumber": 3,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "supportedVersion": "1.0"
+      }
+    }
+  ]
+}

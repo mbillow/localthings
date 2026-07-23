@@ -3,8 +3,8 @@ from typing import Optional
 
 from ._base import DeviceRegistry
 from . import (
-    airconditioner, cooktop, dishwasher, dryer, oven, range_hood, refrigerator,
-    washer,
+    airconditioner, cooktop, dishwasher, dryer, oven, range as _range,
+    range_hood, refrigerator, washer,
 )
 
 __all__ = [
@@ -21,6 +21,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     'dryer': dryer.REGISTRY,
     'oven': oven.REGISTRY,
     'hood': range_hood.REGISTRY,
+    'range': _range.REGISTRY,
     'range_hood': range_hood.REGISTRY,
     'refrigerator': refrigerator.REGISTRY,
     'washer': washer.REGISTRY,
@@ -115,6 +116,11 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
         key = 'cooktop'
     if key is None and model_identity.startswith('AHD-'):
         key = 'range_hood'
+    # Range/cooktop-oven combos (e.g. TP1X_DA-KS-RANGE-0102X, issue #44) --
+    # like the RAC/PRAC air conditioners above, these report no oneUiVersion
+    # and don't match the washer/dryer/dishwasher consumer-prefix map either.
+    if key is None and '-RANGE-' in (model_num or '').upper():
+        key = 'range'
     return _REGISTRY_BY_KEY.get(key) if key else None
 
 

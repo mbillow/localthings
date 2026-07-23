@@ -58,6 +58,9 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_min_value(self) -> float:
+        desc: NumberDesc = self._bound.desc
+        if desc.native_min_fn is not None:
+            return desc.native_min_fn(self.coordinator.resource(self._bound.href))
         r = self._range_from_resource()
         if r is not None:
             return float(r[0])
@@ -67,12 +70,24 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_max_value(self) -> float:
+        desc: NumberDesc = self._bound.desc
+        if desc.native_max_fn is not None:
+            return desc.native_max_fn(self.coordinator.resource(self._bound.href))
         r = self._range_from_resource()
         if r is not None:
             return float(r[1])
         if hasattr(self, '_attr_native_max_value'):
             return self._attr_native_max_value
         return super().native_max_value
+
+    @property
+    def native_step(self) -> float:
+        desc: NumberDesc = self._bound.desc
+        if desc.step_fn is not None:
+            return desc.step_fn(self.coordinator.resource(self._bound.href))
+        if hasattr(self, '_attr_native_step'):
+            return self._attr_native_step
+        return super().native_step
 
     @property
     def native_value(self):

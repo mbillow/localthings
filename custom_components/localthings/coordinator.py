@@ -22,6 +22,7 @@ from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
 from .registry.by_type import for_device, for_device_by_model, for_device_by_resources
+from .registry.capabilities.common import remote_control_enabled
 from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
@@ -36,6 +37,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _SEED_PATH = ['device', '0']
+
+_REMOTE_CONTROL_DISABLED_MESSAGE = (
+    "Remote control is turned off on this device. Check your appliance's "
+    "manual for how to enable remote control before Home Assistant can "
+    "control it."
+)
 
 
 class _NoOpDescriptor:
@@ -517,16 +524,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         A description-level validate_fn (currently SwitchDesc only) runs
         here rather than per-platform, so rejecting a write with a
         user-facing message -- as opposed to write_fn's silent no-op below
-        -- is available to every platform for free."""
+        -- is available to every platform for free. The remote-control
+        check runs first and applies to every platform unconditionally,
+        ahead of any description-specific validate_fn."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
             return
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
+        resources = self._cache.snapshot()
+        if not remote_control_enabled(resources):
+            raise ServiceValidationError(_REMOTE_CONTROL_DISABLED_MESSAGE)
         validate_fn = getattr(desc, 'validate_fn', None)
         if validate_fn is not None:
-            error = validate_fn(payload, rep, self._cache.snapshot())
+            error = validate_fn(payload, rep, resources)
             if error:
                 raise ServiceValidationError(error)
         result = write_fn(payload, rep, href)

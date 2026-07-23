@@ -7,12 +7,16 @@ from unittest.mock import AsyncMock, patch
 import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 
 from custom_components.localthings.const import (
     CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.registry.capabilities.common import (
+    remote_control_enabled,
+)
 from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL, PUSH_HEALTH_WINDOW_S
 
 from .conftest import ENTRY_DATA, MOCK_SERIAL
@@ -659,3 +663,137 @@ async def test_write_marks_href_pending_before_post(
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+
+
+class TestRemoteControlEnabled:
+    """remote_control_enabled (registry/capabilities/common.py) is the
+    single source of truth for the /remotectrl on/off signal, shared by
+    the Smart Control binary_sensor descriptors and the coordinator's
+    write guard alike."""
+
+    def test_vs_fallback_href_true_is_enabled(self):
+        resources = {'/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'true'}}
+        assert remote_control_enabled(resources) is True
+
+    def test_vs_fallback_href_false_is_disabled(self):
+        resources = {'/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'false'}}
+        assert remote_control_enabled(resources) is False
+
+    def test_generic_href_true_is_enabled(self):
+        resources = {'/remotectrl/0': {'value': True}}
+        assert remote_control_enabled(resources) is True
+
+    def test_generic_href_false_is_disabled(self):
+        resources = {'/remotectrl/0': {'value': False}}
+        assert remote_control_enabled(resources) is False
+
+    def test_generic_href_wins_when_both_present(self):
+        resources = {
+            '/remotectrl/0': {'value': True},
+            '/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        }
+        assert remote_control_enabled(resources) is True
+
+    def test_assumes_enabled_when_capability_absent(self):
+        assert remote_control_enabled({}) is True
+
+
+async def test_send_command_blocked_when_remote_control_disabled(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """A device reporting remote control off must reject every write with
+    a user-facing message, ahead of write_fn's silent-no-op path and any
+    description-level validate_fn."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    posted = False
+
+    def _post(*a, **k):
+        nonlocal posted
+        posted = True
+        return (0x44, b'')
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = _post
+        with pytest.raises(ServiceValidationError, match="Remote control is turned off"):
+            await coordinator.async_send_command(bound, 5)
+
+    assert posted is False
+
+
+async def test_send_command_allowed_when_remote_control_enabled(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """The same write goes through once remote control reports enabled."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'true'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+
+
+async def test_send_command_remote_control_check_precedes_validate_fn(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """When both a disabled remote-control state and a failing validate_fn
+    apply to the same write, the remote-control message wins -- it's the
+    more actionable of the two and is checked first."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import SwitchDesc
+
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (['some', 'path'], {'value': payload})
+
+    def _validate_fn(payload, rep, resources):
+        return "always rejected"
+
+    desc = SwitchDesc(key='test', field='value', write_fn=_write_fn, validate_fn=_validate_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with pytest.raises(ServiceValidationError, match="Remote control is turned off"):
+        await coordinator.async_send_command(bound, 'On')
