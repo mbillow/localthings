@@ -643,7 +643,11 @@ async def test_write_marks_href_pending_before_post(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
     """async_send_command must call mark_write_pending before POSTing so a
-    slow-to-settle device can't immediately revert the optimistic write."""
+    slow-to-settle device can't immediately revert the optimistic write --
+    and the window must still be open through the POST itself (checked from
+    inside the fake POST, since the guard is released once the write's own
+    confirming refresh completes -- see
+    test_send_command_applies_write_optimistically_before_settling)."""
     from custom_components.localthings.registry.discovery import BoundEntity
     from custom_components.localthings.registry.entities import NumberDesc
 
@@ -658,21 +662,39 @@ async def test_write_marks_href_pending_before_post(
     desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
     bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
 
+    settling_during_post = None
+
+    def _post(*a, **k):
+        nonlocal settling_during_post
+        settling_during_post = coordinator._observe._settle_until.get('/test/vs/0') is not None
+        return (0x44, b'')
+
     with patch.object(fake, 'subscribe'):
-        fake.post = lambda *a, **k: (0x44, b'')
+        fake.post = _post
         await coordinator.async_send_command(bound, 5)
 
-    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+    assert settling_during_post is True
+    # Released once the write's own confirming refresh has completed, not
+    # left open for the rest of what is now a much longer settle window.
+    assert coordinator._observe._settle_until.get('/test/vs/0') is None
 
 
 async def test_send_command_applies_write_optimistically_before_settling(
-    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources,
 ) -> None:
     """The cache must reflect a write immediately, and stay put against a
     stale echo for the rest of the settle window -- otherwise
     mark_write_pending has nothing to protect and just delays the real
     device confirmation instead, which reads to a user as the write being
-    silently reverted (issue #27)."""
+    silently reverted (issue #27).
+
+    The settle window now spans the whole POST + confirming-refresh round
+    trip async_send_command awaits (see coordinator._POST_TIMEOUT_S /
+    _POLL_TIMEOUT_S), not a fixed few seconds -- so this drives the stale
+    echo through _poll_once itself, racing in while that confirming refresh
+    is still in flight (issues #17/#53: a full summary poll on these
+    devices can legitimately take far longer than a short fixed window,
+    which let a stale read land unprotected and revert the write)."""
     from custom_components.localthings.registry.discovery import BoundEntity
     from custom_components.localthings.registry.entities import NumberDesc
 
@@ -687,20 +709,29 @@ async def test_send_command_applies_write_optimistically_before_settling(
     desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
     bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
 
-    with patch.object(fake, 'subscribe'):
+    def _stale_confirm_poll():
+        # Stand-in for the write's own confirming /device/0 poll racing
+        # against an independent stale update for the same href (e.g. the
+        # device's resource tree hadn't caught up internally yet, even
+        # though the physical change was instant).
+        coordinator._observe.apply('/test/vs/0', {'value': 0}, source='poll')
+        return fridge_resources
+
+    with (
+        patch.object(fake, 'subscribe'),
+        patch.object(LocalThingsCoordinator, '_poll_once', side_effect=_stale_confirm_poll),
+    ):
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, 5)
 
     # The optimistic value is visible right away, without waiting for a
-    # device response.
+    # device response, and survived the stale confirm-poll race above.
     assert coordinator._cache.get('/test/vs/0') == {'value': 5}
 
-    # A stale update racing in behind the write (e.g. a poll/notify that
-    # was already in flight before the PUT) must not clobber it while the
-    # settle window is open.
+    # The write's own round trip is done, so the guard has been released --
+    # a later, genuinely new update is no longer held back.
     applied = coordinator._observe.apply('/test/vs/0', {'value': 0}, source='observe')
-    assert applied is False
-    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+    assert applied is True
 
 
 class TestRemoteControlEnabled:
@@ -803,7 +834,7 @@ async def test_send_command_allowed_when_remote_control_enabled(
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, 5)
 
-    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
 
 
 async def test_send_command_remote_control_check_precedes_validate_fn(

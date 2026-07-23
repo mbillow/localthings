@@ -77,6 +77,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # fine session shouldn't tear down a working OBSERVE subscription.
     _POLL_TIMEOUT_LIMIT: int = 3
 
+    # Timeouts for the two network round trips a write triggers: the PUT
+    # itself (_do_put), then the confirming full /device/0 summary poll
+    # async_send_command requests right after (_poll_once). Named here
+    # (rather than left as inline literals) so the write-settle window
+    # below can be sized to always outlast both — see async_send_command.
+    _POST_TIMEOUT_S: float = 8.0
+    _POLL_TIMEOUT_S: float = 35.0
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         # Per-device logger (module logger scoped to this device's host) so
         # every log line — including the base DataUpdateCoordinator's own
@@ -211,7 +219,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # would have succeeded, not a dead session. 35s gives a slow
             # blockwise transfer room to actually finish instead of
             # generating a TimeoutError every cycle.
-            code, payload = sess.get(_SEED_PATH, timeout=35.0)
+            code, payload = sess.get(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
         except TimeoutError:
             raise
         except Exception as e:
@@ -555,19 +563,43 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # onto, the settle window was just delaying the real device
         # confirmation for a few seconds on every write, which read exactly
         # like the write being silently reverted (issue #27).
+        #
+        # settle_s must outlast the PUT and the async_request_refresh()
+        # below combined, not just a fixed few seconds -- that refresh is a
+        # full /device/0 summary poll, which _POLL_TIMEOUT_S itself admits
+        # can legitimately take tens of seconds on these devices (see
+        # _poll_once). A shorter window expires while that confirm poll is
+        # still in flight, so its result -- stale, if the device's own
+        # resource tree hadn't caught up to the instant physical change
+        # yet -- lands unprotected and reverts the optimistic value, with
+        # nothing to correct it again until the next scheduled summary poll
+        # up to SUMMARY_INTERVAL_S later. That's the 20-60s lag reported in
+        # issues #17/#53 even after the optimistic-apply fix above.
         self._observe.apply(href, body, source='optimistic')
-        self._observe.mark_write_pending(href)
+        self._observe.mark_write_pending(
+            href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+        )
 
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
+            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", href, code)
 
         try:
             await self.hass.async_add_executor_job(_do_put)
         except Exception as e:
             self._log.error("command failed for %s: %s", href, e)
+            # The write's own confirmation never happened, so don't hold
+            # the (possibly wrong) optimistic value hostage against real
+            # updates for the rest of the long settle window above.
+            self._observe.clear_write_pending(href)
         else:
             await self.async_request_refresh()
+            # The confirming refresh has now run and applied its result
+            # (subject to the settle guard above), so this write's own
+            # round trip is done -- release the guard rather than leaving
+            # real subsequent updates (another automation, the physical
+            # remote) shut out for whatever's left of settle_s.
+            self._observe.clear_write_pending(href)
