@@ -84,6 +84,14 @@ class TestRemoteControlFallback:
         assert common.REMOTE_CONTROL_VS_FALLBACK.match_fn(
             {}, {'/remotectrl/0': {}, '/remotectrl/vs/0': {}}) is False
 
+    def test_polled_warm_so_write_gating_stays_fresh(self):
+        """coordinator.async_send_command blocks writes on this signal, so
+        it can't sit in the default 'cold' tier (refreshed only once per
+        30s summary poll) -- it needs the subscribe/subpoll cadence 'warm'
+        and 'hot' hrefs get instead."""
+        assert common.REMOTE_CONTROL_GENERIC.poll_tier == 'warm'
+        assert common.REMOTE_CONTROL_VS_FALLBACK.poll_tier == 'warm'
+
 
 # ---------------------------------------------------------------------------
 # Energy meter. instantaneousPower clamps negatives to 0, but the constant

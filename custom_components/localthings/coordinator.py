@@ -22,6 +22,7 @@ from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
 from .registry.by_type import for_device, for_device_by_model
+from .registry.capabilities.common import remote_control_enabled
 from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
@@ -42,20 +43,6 @@ _REMOTE_CONTROL_DISABLED_MESSAGE = (
     "manual for how to enable remote control before Home Assistant can "
     "control it."
 )
-
-
-def _remote_control_disabled(resources: dict) -> bool:
-    """True only when the device explicitly reports remote control off.
-    Mirrors REMOTE_CONTROL_GENERIC/_VS_FALLBACK's href/field pair in
-    registry/capabilities/common.py. Fails open (False) when neither href
-    is present -- most device types don't report this capability at all."""
-    generic = resources.get('/remotectrl/0')
-    if generic is not None:
-        return not bool(generic.get('value'))
-    fallback = resources.get('/remotectrl/vs/0')
-    if fallback is not None:
-        return str(fallback.get('x.com.samsung.da.remoteControlEnabled')).lower() != 'true'
-    return False
 
 
 class _NoOpDescriptor:
@@ -545,7 +532,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
         resources = self._cache.snapshot()
-        if _remote_control_disabled(resources):
+        if not remote_control_enabled(resources):
             raise ServiceValidationError(_REMOTE_CONTROL_DISABLED_MESSAGE)
         validate_fn = getattr(desc, 'validate_fn', None)
         if validate_fn is not None:

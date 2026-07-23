@@ -13,8 +13,9 @@ from homeassistant.helpers import issue_registry as ir
 from custom_components.localthings.const import (
     CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
 )
-from custom_components.localthings.coordinator import (
-    LocalThingsCoordinator, _remote_control_disabled,
+from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.registry.capabilities.common import (
+    remote_control_enabled,
 )
 from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL, PUSH_HEALTH_WINDOW_S
 
@@ -639,36 +640,37 @@ async def test_write_marks_href_pending_before_post(
     assert coordinator._observe._settle_until.get('/test/vs/0') is not None
 
 
-class TestRemoteControlDisabled:
-    """_remote_control_disabled mirrors REMOTE_CONTROL_GENERIC/_VS_FALLBACK's
-    OCF-standard-preferred read (registry/capabilities/common.py) directly
-    on a raw resources snapshot."""
+class TestRemoteControlEnabled:
+    """remote_control_enabled (registry/capabilities/common.py) is the
+    single source of truth for the /remotectrl on/off signal, shared by
+    the Smart Control binary_sensor descriptors and the coordinator's
+    write guard alike."""
 
     def test_vs_fallback_href_true_is_enabled(self):
         resources = {'/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'true'}}
-        assert _remote_control_disabled(resources) is False
+        assert remote_control_enabled(resources) is True
 
     def test_vs_fallback_href_false_is_disabled(self):
         resources = {'/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'false'}}
-        assert _remote_control_disabled(resources) is True
+        assert remote_control_enabled(resources) is False
 
     def test_generic_href_true_is_enabled(self):
         resources = {'/remotectrl/0': {'value': True}}
-        assert _remote_control_disabled(resources) is False
+        assert remote_control_enabled(resources) is True
 
     def test_generic_href_false_is_disabled(self):
         resources = {'/remotectrl/0': {'value': False}}
-        assert _remote_control_disabled(resources) is True
+        assert remote_control_enabled(resources) is False
 
     def test_generic_href_wins_when_both_present(self):
         resources = {
             '/remotectrl/0': {'value': True},
             '/remotectrl/vs/0': {'x.com.samsung.da.remoteControlEnabled': 'false'},
         }
-        assert _remote_control_disabled(resources) is False
+        assert remote_control_enabled(resources) is True
 
-    def test_fails_open_when_capability_absent(self):
-        assert _remote_control_disabled({}) is False
+    def test_assumes_enabled_when_capability_absent(self):
+        assert remote_control_enabled({}) is True
 
 
 async def test_send_command_blocked_when_remote_control_disabled(
