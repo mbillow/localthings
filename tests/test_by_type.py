@@ -229,6 +229,18 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'washer'
 
+    def test_oven_via_oven_token(self):
+        """Issue #55: a wall oven (NV7000BS/ET5) reports no oneUiVersion and
+        an unrecognized consumer token ('NV'); it falls back to the '-OVEN-'
+        token in modelNum, mirroring the '-RANGE-' fallback for issue #44."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA-KS-OVEN-0107X|40460041|50030018001611020A00000000000000',
+            'NV7000BS/ET5',
+        )
+        assert reg is not None
+        assert reg.name == 'oven'
+
     def test_unknown_model_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
         reg = for_device_by_model('SOME-UNKNOWN-BOARD', 'SOME-UNKNOWN-BOARD')

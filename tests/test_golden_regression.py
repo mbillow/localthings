@@ -244,6 +244,24 @@ def test_registry_reproduces_golden_state_keys_for_range():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_oven():
+    """Wall oven (model TP1X_DA-KS-OVEN-0107X, issue #55) -- reports no
+    oneUiVersion; resolved via the '-OVEN-' modelNum token fallback in
+    for_device_by_model, mirroring the '-RANGE-' fallback added for
+    issue #44. Before that fallback existed the device type came back
+    'unknown' and every href fell through to the global CAPABILITIES
+    registry instead of the oven family's own."""
+    from tests.conftest import _load_device
+    resources = _load_device('oven')
+    golden = json.loads((GOLDEN / 'oven.json').read_text())
+    state_keys = _new_state_keys('oven', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_resources_from_batch_preferred_over_flat():
     from tests.conftest import _resources_from_dump
     dump = {

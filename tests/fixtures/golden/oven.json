@@ -1,0 +1,25 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "child_lock",
+    "cloud_connected",
+    "cook_time",
+    "current_temp_c",
+    "cycle_active",
+    "door_open",
+    "fast_preheat",
+    "finish_time",
+    "firmware_update",
+    "lamp",
+    "machine_state",
+    "natural_steam",
+    "operation_time_minutes",
+    "oven_mode",
+    "oven_setpoint",
+    "oven_state",
+    "power_switch",
+    "progress_percentage",
+    "remote_control",
+    "sound"
+  ]
+}
