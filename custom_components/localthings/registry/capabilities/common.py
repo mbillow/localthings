@@ -119,8 +119,30 @@ KIDS_LOCK_VS_FALLBACK = Capability(
     ),
 )
 
+
+def remote_control_enabled(resources: dict) -> bool:
+    """Single source of truth for the /remotectrl on/off signal, mirroring
+    REMOTE_CONTROL_GENERIC/_VS_FALLBACK's href/field pair and precedence
+    below. Used both to render the read-only Smart Control binary_sensor
+    (via those two descriptors) and, from coordinator.async_send_command,
+    to block writes outright when remote control is off. Both hrefs are
+    poll_tier='warm' below so that gate reads recent state (subscribed
+    when observe is live, subpolled every ~6s otherwise) rather than a
+    once-per-30s cold summary poll. True (assume enabled) when neither
+    href is present -- most device types don't report this capability
+    at all."""
+    generic = resources.get('/remotectrl/0')
+    if generic is not None:
+        return bool(generic.get('value'))
+    fallback = resources.get('/remotectrl/vs/0')
+    if fallback is not None:
+        return str(fallback.get('x.com.samsung.da.remoteControlEnabled')).lower() == 'true'
+    return True
+
+
 REMOTE_CONTROL_GENERIC = Capability(
     href='/remotectrl/0',
+    poll_tier='warm',
     entities=(
         BinarySensorDesc(key='remote_control', field='value',
                          name='Smart Control', device_class='connectivity',
@@ -131,6 +153,7 @@ REMOTE_CONTROL_GENERIC = Capability(
 REMOTE_CONTROL_VS_FALLBACK = Capability(
     href='/remotectrl/vs/0',
     match_fn=lambda rep, resources: '/remotectrl/0' not in resources,
+    poll_tier='warm',
     entities=(
         BinarySensorDesc(key='remote_control',
                          field='x.com.samsung.da.remoteControlEnabled',
