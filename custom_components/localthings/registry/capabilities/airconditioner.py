@@ -206,6 +206,16 @@ CURRENT_LIMIT = Capability(
 # (/mode/vs/0 handled above, /temperatures/vs/0, /humidity/*) collide with
 # other families' schemas. A no-entity Capability still marks the href as
 # bound so discover() reports no coverage gap.
+#
+# CLIMATE_CONSUMED_HREFS carry the climate card's actual displayed state
+# (power, current/target temp, fan, swing, preset) -- the coordinator only
+# OBSERVE-subscribes and sub-polls 'hot'/'warm' hrefs (see coordinator.py),
+# so leaving these at the Capability default of 'cold' meant every state
+# change was invisible until the next full /device/0 summary sweep
+# (~30s -- issue #17: instant device response, 20-30s HA lag). Pin them to
+# 'warm' -- same tier as CLIMATE's own primary href -- so they get push
+# notifications (or, in poll-only mode, the warm sub-poll cadence) instead
+# of waiting on the summary sweep.
 # ---------------------------------------------------------------------------
 _AC_IGNORED = [
     # All-zero and ambiguously encoded on this model (2-value arrays); the
@@ -236,4 +246,8 @@ _AC_IGNORED = [
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).
-COVERAGE = [Capability(href=h) for h in (CLIMATE_CONSUMED_HREFS + _AC_IGNORED)]
+COVERAGE = [
+    Capability(href=h, poll_tier='warm') for h in CLIMATE_CONSUMED_HREFS
+] + [
+    Capability(href=h) for h in _AC_IGNORED
+]
