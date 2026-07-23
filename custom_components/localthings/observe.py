@@ -69,6 +69,7 @@ class ObserveManager:
         self.last_mode_change_wall = time.time()
         self._settle_until: dict[str, float] = {}
         self._settle_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
         self.subscribed_hrefs: set[str] = set()
         self._notified: set[str] = set()
         self._last_notify_ts: float | None = None
@@ -105,13 +106,22 @@ class ObserveManager:
         exists_fn/options_field gates on the moment one partial update
         comes through, even though nothing about the device's actual
         supported options changed.
+
+        `apply()` is the sole path StateCache mutations flow through in
+        this component (poll, sweep, and OBSERVE notify all funnel here),
+        so `_cache_lock` serializes the read-then-write across those
+        threads (DTLS reader for notifies, executor threads for poll/
+        sweep) -- without it, two concurrent updates for the same href
+        could each read the same prior rep and the second writer would
+        silently lose the first's fields, reintroducing the exact bug
+        this merge fixes.
         """
         if self._is_settling(href):
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
-        prior = self.cache.get(href)
-        merged = {**prior, **rep} if prior else rep
-        return self.cache.apply_rep(href, merged, source=source)
+        with self._cache_lock:
+            merged = {**(self.cache.get(href) or {}), **rep}
+            return self.cache.apply_rep(href, merged, source=source)
 
     def on_notification(self, href: str, payload: bytes) -> None:
         """Wired as DtlsCoapSession.on_notification. Runs on the DTLS

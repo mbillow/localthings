@@ -8,7 +8,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.const import EntityCategory
 
 from .registry.adapter import _key
-from .registry.discovery import BoundEntity
+from .registry.discovery import BoundEntity, _snake_to_title
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
@@ -44,7 +44,7 @@ def _derive_name(state_key: str) -> str:
     instance number with a space: "door_cooler_open1" → "Door Cooler Open 1".
     """
     name = re.sub(r'(\d+)$', lambda m: f' {m.group()}' if int(m.group()) > 0 else '', state_key)
-    return name.replace('_', ' ').title().strip()
+    return _snake_to_title(name).strip()
 
 
 class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
