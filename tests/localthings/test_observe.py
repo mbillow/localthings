@@ -34,6 +34,28 @@ def test_apply_writes_through_when_not_settling():
     assert mgr.cache.get('/oven/vs/0') == {'a': 1}
 
 
+def test_apply_merges_partial_update_onto_prior_rep():
+    """Regression test for issue #27: a Bespoke fridge's /mode/vs/0 notify
+    (and even a later sweep entry for that href) can carry only `modes`,
+    omitting `supportedOptions` entirely. A full replace would wipe
+    `supportedOptions` from the cache the moment that partial update
+    arrives, even though the device's supported options didn't change --
+    which is exactly what made the flex-zone select disappear."""
+    mgr = _manager()
+    full = {
+        'x.com.samsung.da.modes': ['CVN_CONVERTIBLE_ZONE', 'CV_FDR_MEAT'],
+        'x.com.samsung.da.supportedOptions': ['CV_FDR_WINE', 'CV_FDR_MEAT'],
+    }
+    mgr.apply('/mode/vs/0', full, source='poll')
+
+    partial = {'x.com.samsung.da.modes': ['CVN_CONVERTIBLE_ZONE', 'WATERFILTER_ENABLE']}
+    mgr.apply('/mode/vs/0', partial, source='observe')
+
+    cached = mgr.cache.get('/mode/vs/0')
+    assert cached['x.com.samsung.da.modes'] == ['CVN_CONVERTIBLE_ZONE', 'WATERFILTER_ENABLE']
+    assert cached['x.com.samsung.da.supportedOptions'] == ['CV_FDR_WINE', 'CV_FDR_MEAT']
+
+
 def test_apply_drops_update_during_settle_window():
     mgr = _manager()
     mgr.cache.apply_rep('/oven/vs/0', {'a': 1}, source='seed')
