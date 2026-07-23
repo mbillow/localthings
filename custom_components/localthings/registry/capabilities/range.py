@@ -1,6 +1,12 @@
 """Capabilities for the cooktop half of range/combo appliances (issue #44,
 model TP1X_DA-KS-RANGE-0102X).
 
+Not to be confused with PR #23's registry/capabilities/cooktop.py, which
+covers an unrelated standalone-cooktop product (NA9300K-class) that encodes
+burner state as strings inside /mode/vs/0's options array instead of the
+structured /cooktop/status/vs/0 resource this module reads -- two different
+OCF surfaces that happen to share the English word "cooktop".
+
 Unlike the rest of the OCF surface, these hrefs use plain camelCase field
 names (no `x.com.samsung.da.` prefix) -- `/cooktop/status/vs/0` already
 looks like a vendor resource migrated onto OCF-standard-shaped field naming.

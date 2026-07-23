@@ -5,7 +5,8 @@ connected capabilities wholesale (a range's oven half is the same OCF
 surface as a standalone oven) and adds the cooktop-specific capabilities
 for the burner half.
 """
-from ..capabilities import common, cooktop, ignored, oven
+from ..capabilities import common, ignored, oven
+from ..capabilities import range as range_caps
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -21,8 +22,8 @@ REGISTRY = DeviceRegistry(
         oven.OVEN_DOOR,
         oven.OVEN_CONNECTED,
         oven.OVEN_SPEC,
-        cooktop.COOKTOP_STATUS,
-        cooktop.COOKTOP_SPEC,
-        cooktop.COOKTOP_SAFETY,
+        range_caps.COOKTOP_STATUS,
+        range_caps.COOKTOP_SPEC,
+        range_caps.COOKTOP_SAFETY,
     ]),
 )

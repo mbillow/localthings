@@ -1,7 +1,7 @@
 """Tests for range/cooktop-oven combo support (issue #44)."""
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model
-from custom_components.localthings.registry.capabilities import cooktop
+from custom_components.localthings.registry.capabilities import range as range_caps
 from custom_components.localthings.registry.discovery import discover
 
 from tests.conftest import _load_device
@@ -57,7 +57,7 @@ def test_unreported_burners_gated_out():
 
 
 def test_burner_power_level_write_is_read_modify_write():
-    desc = next(e for e in cooktop.COOKTOP_STATUS.entities
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities
                 if e.key == 'burner_1_power_level')
     rep = {'burnerList': [
         {'burnerNumber': 0, 'powerLevel': '3'},
@@ -71,14 +71,14 @@ def test_burner_power_level_write_is_read_modify_write():
 
 
 def test_burner_power_level_write_rejects_missing_burner():
-    desc = next(e for e in cooktop.COOKTOP_STATUS.entities
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities
                 if e.key == 'burner_2_power_level')
     rep = {'burnerList': [{'burnerNumber': 0, 'powerLevel': '0'}]}
     assert desc.write_fn('5', rep) is None
 
 
 def test_burner_hot_surface_true_when_not_normal():
-    desc = next(e for e in cooktop.COOKTOP_STATUS.entities
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities
                 if e.key == 'burner_0_hot_surface')
     assert desc.value_fn([{'burnerNumber': 0, 'hotSurfaceState': 'hot'}]) is True
     assert desc.value_fn([{'burnerNumber': 0, 'hotSurfaceState': 'normal'}]) is False
