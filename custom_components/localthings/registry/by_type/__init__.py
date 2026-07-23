@@ -121,6 +121,11 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # and don't match the washer/dryer/dishwasher consumer-prefix map either.
     if key is None and '-RANGE-' in (model_num or '').upper():
         key = 'range'
+    # Wall ovens (e.g. TP1X_DA-KS-OVEN-0107X, issue #55) -- same board-family
+    # naming as the range combo above, minus the burners; also reports no
+    # oneUiVersion and doesn't match the washer/dryer/dishwasher prefix map.
+    if key is None and '-OVEN-' in (model_num or '').upper():
+        key = 'oven'
     return _REGISTRY_BY_KEY.get(key) if key else None
 
 

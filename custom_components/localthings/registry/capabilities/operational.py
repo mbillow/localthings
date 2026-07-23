@@ -70,6 +70,15 @@ def _finish_time(remaining_str):
         return None
 
 
+# Shared by dryer/dishwasher/oven/washer -- oven.py imports this directly
+# rather than keeping its own copy, since both wrote the identical
+# state='Ready' RMW.
+STOP_BUTTON = ButtonDesc(key='stop', field='', name='Stop', payload='Ready',
+                         icon='mdi:stop',
+                         write_fn=lambda p, rep, href=None: (
+                             ['operational', 'state', 'vs', '0'],
+                             {'x.com.samsung.da.state': p}))
+
 OPERATIONAL_STATE = Capability(
     href='/operational/state/vs/0',
     poll_tier='hot',
@@ -83,8 +92,12 @@ OPERATIONAL_STATE = Capability(
         # Harmless for non-oven appliances — just an extra bool in state.
         # Samsung firmware keeps state='Run' after progress reaches 'Finish',
         # so we also gate on progress to avoid a stuck 'Running' indication.
+        # Named 'Running' rather than 'Cycle active' -- this href (and the
+        # start/pause/stop buttons below) is shared across the dryer/
+        # dishwasher/oven/washer families, and 'cycle' is laundry-specific
+        # vocabulary that doesn't fit an oven's bake/roast/etc.
         BinarySensorDesc(key='cycle_active', device_class='running',
-                         name='Cycle active',
+                         name='Running',
                          rep_fn=lambda rep: (
                              _SAMSUNG_STATE_TO_OCF.get(rep.get('x.com.samsung.da.state')) == 'active'
                              and rep.get('x.com.samsung.da.progress') != 'Finish'
@@ -119,20 +132,16 @@ OPERATIONAL_STATE = Capability(
                    write_fn=lambda p, rep, href=None: (
                        ['operational', 'state', 'vs', '0'],
                        {_delay_field(rep): _format_delay(p)})),
-        ButtonDesc(key='start', field='', name='Start cycle', payload='Run',
+        ButtonDesc(key='start', field='', name='Start', payload='Run',
                    icon='mdi:play',
                    write_fn=lambda p, rep, href=None: (
                        ['operational', 'state', 'vs', '0'],
                        {'x.com.samsung.da.state': p})),
-        ButtonDesc(key='pause', field='', name='Pause cycle', payload='Pause',
+        ButtonDesc(key='pause', field='', name='Pause', payload='Pause',
                    icon='mdi:pause',
                    write_fn=lambda p, rep, href=None: (
                        ['operational', 'state', 'vs', '0'],
                        {'x.com.samsung.da.state': p})),
-        ButtonDesc(key='stop', field='', name='Stop cycle', payload='Ready',
-                   icon='mdi:stop',
-                   write_fn=lambda p, rep, href=None: (
-                       ['operational', 'state', 'vs', '0'],
-                       {'x.com.samsung.da.state': p})),
+        STOP_BUTTON,
     ),
 )
