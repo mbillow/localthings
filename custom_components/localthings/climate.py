@@ -13,9 +13,10 @@ snapshot via `coordinator.resource(href)` -- the same cross-resource read that
 
 Writes go through `coordinator.async_send_command(bound, (kind, value))`: the
 CLIMATE capability's `write_fn` maps each `(kind, value)` payload to the right
-`(path_segs, body)`, and `async_send_command` POSTs to those path_segs (the
-bound href is only used for logging), so one descriptor drives writes to power,
-mode, temperature and wind resources.
+`(path_segs, body)`, and `async_send_command` POSTs to those path_segs and
+applies the optimistic value/settle guard to that same href -- not the bound
+`/mode/vs/0` href -- so one descriptor drives writes to, and gets fresh state
+back for, power, mode, temperature and wind resources alike.
 """
 from __future__ import annotations
 

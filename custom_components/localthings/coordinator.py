@@ -77,14 +77,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # fine session shouldn't tear down a working OBSERVE subscription.
     _POLL_TIMEOUT_LIMIT: int = 3
 
-    # Timeouts for the two network round trips a write triggers: the PUT
-    # itself (_do_put), then the confirming full /device/0 summary poll
-    # async_send_command requests right after (_poll_once). Named here
-    # (rather than left as inline literals) so the write-settle window
-    # below can be sized to always outlast both — see async_send_command.
-    _POST_TIMEOUT_S: float = 8.0
-    _POLL_TIMEOUT_S: float = 35.0
-
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         # Per-device logger (module logger scoped to this device's host) so
         # every log line — including the base DataUpdateCoordinator's own
@@ -219,7 +211,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # would have succeeded, not a dead session. 35s gives a slow
             # blockwise transfer room to actually finish instead of
             # generating a TimeoutError every cycle.
-            code, payload = sess.get(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
+            code, payload = sess.get(_SEED_PATH, timeout=35.0)
         except TimeoutError:
             raise
         except Exception as e:
@@ -555,6 +547,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         path_segs, body = result
 
+        # The write's actual target, not necessarily bound_entity.href. Most
+        # descriptors write to the same resource they're bound to, but a
+        # composite entity -- the AC's ClimateDesc, bound to /mode/vs/0 --
+        # drives writes to several sibling resources via path_segs
+        # (/power/0, /temperature/desired/0, /wind/strength/vs/0, ...) that
+        # write_fn picks per payload (see airconditioner._climate_write).
+        # Applying the optimistic value and settle guard below to
+        # bound_entity.href instead of this target protected the wrong
+        # resource: /mode/vs/0 got the (nonsensical, wrong-shaped) optimistic
+        # merge while the resource the climate entity actually displays from
+        # (e.g. /power/0) never got one, so HA kept showing the pre-write
+        # state until the next real read of that resource -- the 20-60s lag
+        # in issues #17/#53, which survived the earlier optimistic-apply fix
+        # (issue #27) because that fix applied to the wrong href too.
+        write_href = '/' + '/'.join(path_segs)
+
         # Apply the write optimistically before starting the settle guard,
         # not after -- mark_write_pending gates every source (poll, sweep,
         # observe) through the same apply(), itself included, so flipping
@@ -563,43 +571,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # onto, the settle window was just delaying the real device
         # confirmation for a few seconds on every write, which read exactly
         # like the write being silently reverted (issue #27).
-        #
-        # settle_s must outlast the PUT and the async_request_refresh()
-        # below combined, not just a fixed few seconds -- that refresh is a
-        # full /device/0 summary poll, which _POLL_TIMEOUT_S itself admits
-        # can legitimately take tens of seconds on these devices (see
-        # _poll_once). A shorter window expires while that confirm poll is
-        # still in flight, so its result -- stale, if the device's own
-        # resource tree hadn't caught up to the instant physical change
-        # yet -- lands unprotected and reverts the optimistic value, with
-        # nothing to correct it again until the next scheduled summary poll
-        # up to SUMMARY_INTERVAL_S later. That's the 20-60s lag reported in
-        # issues #17/#53 even after the optimistic-apply fix above.
-        self._observe.apply(href, body, source='optimistic')
-        self._observe.mark_write_pending(
-            href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
-        )
+        self._observe.apply(write_href, body, source='optimistic')
+        self._observe.mark_write_pending(write_href)
 
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
-            self._log.info("PUT %s → code %#04x", href, code)
+            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
+            self._log.info("PUT %s → code %#04x", write_href, code)
 
         try:
             await self.hass.async_add_executor_job(_do_put)
         except Exception as e:
-            self._log.error("command failed for %s: %s", href, e)
-            # The write's own confirmation never happened, so don't hold
-            # the (possibly wrong) optimistic value hostage against real
-            # updates for the rest of the long settle window above.
-            self._observe.clear_write_pending(href)
+            self._log.error("command failed for %s: %s", write_href, e)
         else:
             await self.async_request_refresh()
-            # The confirming refresh has now run and applied its result
-            # (subject to the settle guard above), so this write's own
-            # round trip is done -- release the guard rather than leaving
-            # real subsequent updates (another automation, the physical
-            # remote) shut out for whatever's left of settle_s.
-            self._observe.clear_write_pending(href)

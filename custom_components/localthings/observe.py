@@ -82,22 +82,6 @@ class ObserveManager:
         with self._settle_lock:
             self._settle_until[href] = time.monotonic() + settle_s
 
-    def clear_write_pending(self, href: str) -> None:
-        """End a write's settle window early, once its own confirming
-        refresh has actually completed (see coordinator.async_send_command).
-
-        mark_write_pending's caller sizes settle_s to safely outlast that
-        confirm round trip so the guard can't lapse mid-flight (see issues
-        #17/#53) -- but that same generous duration would needlessly hold
-        the cache hostage against real, unrelated updates (another
-        automation, the physical remote) for the rest of the window once
-        the round trip is already done. Called from both the success and
-        failure paths of a write, so a failed write doesn't leave a wrong
-        optimistic value shielded from correction for the full window either.
-        """
-        with self._settle_lock:
-            self._settle_until.pop(href, None)
-
     def _is_settling(self, href: str) -> bool:
         with self._settle_lock:
             until = self._settle_until.get(href)
