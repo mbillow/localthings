@@ -18,11 +18,12 @@ than modeled as real controls, per the "don't guess" rule:
     build yet -- see the issue #56 request for a running-state dump.
 
   /mode/vs/0's x.com.samsung.da.options array packs multiple independent
-    flags into one list (same shape as fridge.FLEX_ZONE's `modes` field, but
-    keyed `options` here and, unlike FLEX_ZONE, with no `supportedOptions`
-    list to check membership against). Of the tokens seen:
-      Light_On / Light_Off       -- read as a plain on/off flag; MODE_LIGHT
-                                     below models it as a real switch, RMW-
+    '<Prefix>_<value>' flags into one list -- the same packed-list/RMW
+    contract laundry.py's option_value/replace_in_options already model for
+    /course/vs/0's options[] (reused directly below, just against this
+    family's own href). Of the tokens seen:
+      Light_On / Light_Off       -- read as a plain on/off flag; MODE below
+                                     models it as a real switch, RMW-
                                      replacing just that one list entry.
       Comode_Off                 -- never seen non-'Off' on these dumps;
                                      likely the fan operating mode the issue
@@ -36,44 +37,41 @@ than modeled as real controls, per the "don't guess" rule:
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
-from .common import sensor_item_value
+from .common import int_or_none, sensor_item_value
+from .laundry import bool_option_exists, bool_option_value, option_value, replace_in_options
 
-
-def _int_or_none(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
+_AIR_QUALITY_SENSORS = (
+    ('dust', 'Dust', 'mdi:blur', 'Dust'),
+    ('fine_dust', 'Fine dust', 'mdi:blur', 'FineDust'),
+    ('super_fine_dust', 'Super fine dust', 'mdi:blur', 'SuperFineDust'),
+    ('odor', 'Odor', 'mdi:scent', 'Odor'),
+    ('clean_level', 'Clean level', 'mdi:air-filter', 'CleanLevel'),
+)
 
 AIR_QUALITY = Capability(
     href='/sensors/vs/0',
     poll_tier='warm',
-    entities=(
-        SensorDesc(key='dust', field='x.com.samsung.da.items',
-                   name='Dust', icon='mdi:blur',
-                   value_fn=lambda items: sensor_item_value(items, 'Dust')),
-        SensorDesc(key='fine_dust', field='x.com.samsung.da.items',
-                   name='Fine dust', icon='mdi:blur',
-                   value_fn=lambda items: sensor_item_value(items, 'FineDust')),
-        SensorDesc(key='super_fine_dust', field='x.com.samsung.da.items',
-                   name='Super fine dust', icon='mdi:blur',
-                   value_fn=lambda items: sensor_item_value(items, 'SuperFineDust')),
-        SensorDesc(key='odor', field='x.com.samsung.da.items',
-                   name='Odor', icon='mdi:scent',
-                   value_fn=lambda items: sensor_item_value(items, 'Odor')),
-        SensorDesc(key='clean_level', field='x.com.samsung.da.items',
-                   name='Clean level', icon='mdi:air-filter',
-                   value_fn=lambda items: sensor_item_value(items, 'CleanLevel')),
+    entities=tuple(
+        SensorDesc(key=key, field='x.com.samsung.da.items', name=name, icon=icon,
+                   value_fn=lambda items, t=sensor_type: sensor_item_value(items, t))
+        for key, name, icon, sensor_type in _AIR_QUALITY_SENSORS
     ),
 )
 
-# x.com.samsung.da.items here is a single-entry {name, state} pair rather than
-# the {type, value} shape AIR_QUALITY reads above -- a different schema on the
-# same 'items' field name. FilterProgress is a raw 0-100 percentage in both
-# dumps (100 and 62); which end of that scale means "replace me" isn't
-# confirmed from the dump alone, so the entity is named after the raw field
-# rather than asserting a direction (see issue #56 follow-up questions).
+
+def _consumable_state(items, name):
+    """Read a `/consumable/vs/0`-style items[] entry -- {name, state} pairs,
+    unlike AIR_QUALITY's {type, value} shape above."""
+    for item in items or ():
+        if isinstance(item, dict) and item.get('x.com.samsung.da.name') == name:
+            return item.get('x.com.samsung.da.state')
+    return None
+
+
+# FilterProgress is a raw 0-100 percentage in both dumps (100 and 62); which
+# end of that scale means "replace me" isn't confirmed from the dump alone,
+# so the entity is named after the raw field rather than asserting a
+# direction (see issue #56 follow-up questions).
 FILTER = Capability(
     href='/consumable/vs/0',
     poll_tier='cold',
@@ -81,11 +79,8 @@ FILTER = Capability(
         SensorDesc(key='filter_progress', field='x.com.samsung.da.items',
                    name='Filter progress', unit='%', state_class='measurement',
                    icon='mdi:air-filter', entity_category='diagnostic',
-                   value_fn=lambda items: _int_or_none(next(
-                       (i.get('x.com.samsung.da.state') for i in (items or ())
-                        if isinstance(i, dict)
-                        and i.get('x.com.samsung.da.name') == 'FilterProgress'),
-                       None))),
+                   value_fn=lambda items: int_or_none(
+                       _consumable_state(items, 'FilterProgress'))),
     ),
 )
 
@@ -123,7 +118,7 @@ AIRFLOW_VS_FALLBACK = Capability(
         SensorDesc(key='fan_speed_level', field='x.com.samsung.da.speedLevel',
                    name='Fan speed level', icon='mdi:fan',
                    state_class='measurement', entity_category='diagnostic',
-                   value_fn=_int_or_none),
+                   value_fn=int_or_none),
         SensorDesc(key='fan_direction', field='x.com.samsung.da.direction',
                    name='Fan direction', icon='mdi:rotate-3d-variant',
                    entity_category='diagnostic'),
@@ -131,30 +126,11 @@ AIRFLOW_VS_FALLBACK = Capability(
 )
 
 
-def _mode_options(rep):
-    opts = rep.get('x.com.samsung.da.options')
-    return list(opts) if isinstance(opts, (list, tuple)) else []
-
-
-def _mode_token(rep, prefix):
-    """Value after `prefix` from the first matching entry in the packed
-    options list, or None if no entry carries that prefix."""
-    for opt in _mode_options(rep):
-        if isinstance(opt, str) and opt.startswith(prefix):
-            return opt[len(prefix):]
-    return None
-
-
-def _mode_has_prefix(prefix):
-    return lambda rep, resources: _mode_token(rep, prefix) is not None
-
-
 def _light_write(payload, rep, href=None):
-    new_token = f"Light_{'On' if payload == 'On' else 'Off'}"
-    opts = [o for o in _mode_options(rep)
-            if not (isinstance(o, str) and o.startswith('Light_'))]
-    opts.append(new_token)
-    return ['mode', 'vs', '0'], {'x.com.samsung.da.options': opts}
+    opts = list(rep.get('x.com.samsung.da.options') or [])
+    return ['mode', 'vs', '0'], {
+        'x.com.samsung.da.options': replace_in_options(opts, 'Light', payload),
+    }
 
 
 MODE = Capability(
@@ -163,17 +139,26 @@ MODE = Capability(
     entities=(
         SwitchDesc(key='display_light', name='Display light', icon='mdi:led-on',
                    entity_category='config',
-                   rep_fn=lambda rep: _mode_token(rep, 'Light_') == 'On',
-                   exists_fn=_mode_has_prefix('Light_'),
+                   rep_fn=bool_option_value('Light'),
+                   exists_fn=bool_option_exists('Light'),
                    write_fn=_light_write),
         # Read-only pending issue #56 follow-up -- see module docstring.
         SensorDesc(key='operating_mode', name='Operating mode', icon='mdi:fan',
                    entity_category='diagnostic',
-                   rep_fn=lambda rep: _mode_token(rep, 'Comode_'),
-                   exists_fn=_mode_has_prefix('Comode_')),
+                   rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Comode'),
+                   exists_fn=bool_option_exists('Comode')),
         SensorDesc(key='blooming_level', name='Blooming level', icon='mdi:flower',
                    entity_category='diagnostic',
-                   rep_fn=lambda rep: _mode_token(rep, 'Blooming_'),
-                   exists_fn=_mode_has_prefix('Blooming_')),
+                   rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Blooming'),
+                   exists_fn=bool_option_exists('Blooming')),
     ),
 )
+
+# /humidity/0 and /humidity/vs/0 are empty {} on both dumps this family has
+# been verified against -- covered here (not globally, per ignored.py's
+# module docstring) since those hrefs collide with fridge/AC schemas
+# elsewhere. Same two hrefs and reasoning as airconditioner.py's _AC_IGNORED.
+COVERAGE = [
+    Capability(href='/humidity/0'),
+    Capability(href='/humidity/vs/0'),
+]

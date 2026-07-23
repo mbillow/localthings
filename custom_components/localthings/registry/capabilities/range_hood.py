@@ -17,14 +17,7 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
-from .common import sensor_item_value
-
-
-def _int_or_none(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+from .common import int_or_none, sensor_item_value
 
 
 def _timestamp(value):
@@ -165,7 +158,7 @@ HOOD_FILTER = Capability(
             state_class='measurement',
             icon='mdi:air-filter',
             entity_category='diagnostic',
-            value_fn=_int_or_none,
+            value_fn=int_or_none,
         ),
         SensorDesc(
             key='hood_filter_status',
@@ -182,7 +175,7 @@ HOOD_FILTER = Capability(
             icon='mdi:timer-outline',
             entity_category='diagnostic',
             enabled_default=False,
-            value_fn=_int_or_none,
+            value_fn=int_or_none,
         ),
     ),
 )

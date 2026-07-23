@@ -72,7 +72,8 @@ def test_diagnosis_reuses_dishwasher_capability():
 
 def test_light_switch_write_contract():
     """The display-light switch RMW-replaces only the 'Light_*' entry in the
-    packed /mode/vs/0 options list, preserving the other flags."""
+    packed /mode/vs/0 options list (via laundry.replace_in_options), leaving
+    the other flags and the list order untouched."""
     desc = next(e for e in air_purifier.MODE.entities if e.key == 'display_light')
     rep = {'x.com.samsung.da.options': [
         'Comode_Off', 'Blooming_0', 'Light_On', 'OptionCode_60282',
@@ -81,7 +82,7 @@ def test_light_switch_write_contract():
     assert desc.write_fn('Off', rep) == (
         ['mode', 'vs', '0'],
         {'x.com.samsung.da.options': [
-            'Comode_Off', 'Blooming_0', 'OptionCode_60282', 'Light_Off',
+            'Comode_Off', 'Blooming_0', 'Light_Off', 'OptionCode_60282',
         ]},
     )
 

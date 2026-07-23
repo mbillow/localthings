@@ -23,6 +23,13 @@ def _num(v):
         return None
 
 
+def int_or_none(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def clamp_power(v):
     n = _num(v)
     return 0.0 if (n is not None and n < 0) else n
