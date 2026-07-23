@@ -1,0 +1,25 @@
+{
+  "state_keys": [
+    "air_sensing_state",
+    "alarm_code",
+    "auto_ventilation_action",
+    "automatic_operation",
+    "automatic_ventilation_state",
+    "clean_level",
+    "energy_kwh",
+    "energy_saved_kwh",
+    "fan",
+    "firmware_update",
+    "hood_filter_capacity",
+    "hood_filter_status",
+    "hood_filter_usage",
+    "lamp",
+    "lamp_brightness",
+    "last_air_sensing_level",
+    "last_air_sensing_time",
+    "periodic_air_sensing",
+    "dust",
+    "fine_dust",
+    "super_fine_dust"
+  ]
+}

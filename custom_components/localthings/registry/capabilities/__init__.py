@@ -1,4 +1,7 @@
-from . import common, dishwasher, fridge, ignored, laundry, operational, oven
+from . import (
+    common, cooktop, dishwasher, fridge, ignored, laundry, operational, oven,
+    range_hood,
+)
 from ..capability import Capability
 
 

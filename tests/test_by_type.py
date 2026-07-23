@@ -41,6 +41,16 @@ class TestForDevice:
         assert isinstance(registry, DeviceRegistry)
         assert registry.name == 'refrigerator'
 
+    def test_for_device_returns_cooktop_registry(self):
+        registry = for_device('7.0 Cooktop')
+        assert registry is not None
+        assert registry.name == 'cooktop'
+
+    def test_for_device_returns_range_hood_registry(self):
+        registry = for_device('7.0 Range Hood')
+        assert registry is not None
+        assert registry.name == 'range_hood'
+
 
 class TestDeviceRegistries:
     """Tests for device registries themselves."""
@@ -180,6 +190,25 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'airconditioner'
 
+    def test_cooktop_via_legacy_model_description(self):
+        """Older cooktops identify themselves as ARTIK051_GLOBAL_COOKTOP."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'ARTIK051_GB_CT_001|40424141|50000204001211000200000000000000',
+            'ARTIK051_GLOBAL_COOKTOP',
+        )
+        assert reg is not None
+        assert reg.name == 'cooktop'
+
+    def test_range_hood_via_ahd_model(self):
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'AHD-WW-TP1-22-COMMON|20136141|7800006B001713C44D00090001030000',
+            'AHD-WW-TP1-22-COMMON',
+        )
+        assert reg is not None
+        assert reg.name == 'range_hood'
+
     def test_washer_wf_prefix(self):
         """US front-load washers use the WF consumer-model prefix."""
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -208,3 +237,38 @@ class TestForDeviceByModel:
     def test_empty_inputs_return_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
         assert for_device_by_model('', '') is None
+
+
+class TestForDeviceByResources:
+    def test_na9300k_without_one_ui_or_information_is_cooktop(self):
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+        from tests.conftest import _load_device
+
+        reg = for_device_by_resources(_load_device('cooktop'))
+
+        assert reg is not None
+        assert reg.name == 'cooktop'
+
+    def test_unrelated_mode_options_are_not_cooktop(self):
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+
+        resources = {
+            '/mode/vs/0': {
+                'x.com.samsung.da.options': [
+                    'DeviceType_SOME_OVEN',
+                    'UpperLamp_Off',
+                ],
+            },
+        }
+
+        assert for_device_by_resources(resources) is None
+
+    def test_hood_resource_signature(self):
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+        resources = {
+            '/hood/fanspeed/vs/0': {},
+            '/hood/lamp/vs/0': {},
+        }
+        reg = for_device_by_resources(resources)
+        assert reg is not None
+        assert reg.name == 'range_hood'

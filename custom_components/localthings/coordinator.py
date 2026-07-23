@@ -21,7 +21,7 @@ from smartthings_local.protocol.dtls_session import DtlsCoapSession
 from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
-from .registry.by_type import for_device, for_device_by_model
+from .registry.by_type import for_device, for_device_by_model, for_device_by_resources
 from .registry.capabilities.common import remote_control_enabled
 from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
@@ -295,6 +295,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 info.get('x.com.samsung.da.modelNum', ''),
                 info.get('x.com.samsung.da.description', ''),
             )
+        if reg is None:
+            reg = for_device_by_resources(resources)
         unbound: list[str] = []
         if reg is not None:
             self._log.debug("device type: %s (oneUiVersion=%r)", reg.name, one_ui)
@@ -314,7 +316,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device_serial = serial
 
         ident = self._identity
-        device_type = reg.name.title() if reg else 'Appliance'
+        device_type = reg.name.replace('_', ' ').title() if reg else 'Appliance'
         model_num = info.get('x.com.samsung.da.modelNum', '')
         model = model_num.split('|', 1)[0] if model_num else (ident.model if ident else '')
         name  = f"Samsung {device_type} ({model})" if model else f"Samsung {device_type}"

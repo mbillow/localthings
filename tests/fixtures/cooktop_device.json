@@ -1,0 +1,73 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_NA9300K-/AA1",
+          "MainTimerCurrent_0",
+          "MainTimerSet_0",
+          "MainTimerState_Ready",
+          "OperationState0_Ready",
+          "OperationState1_Ready",
+          "OperationState3_Ready",
+          "OperationState4_Ready",
+          "OperationState5_Ready"
+        ]
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/bluetooth/hood/status/vs/0",
+      "rep": {
+        "connectionState": "disconnected",
+        "micomModelId": "",
+        "firmwareVersion": "",
+        "power": "off",
+        "fanSpeed": 0,
+        "lampState": "off",
+        "timer": {}
+      }
+    }
+  ]
+}

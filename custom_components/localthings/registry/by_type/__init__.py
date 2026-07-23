@@ -2,18 +2,27 @@
 from typing import Optional
 
 from ._base import DeviceRegistry
-from . import airconditioner, dishwasher, dryer, oven, range as _range, refrigerator, washer
+from . import (
+    airconditioner, cooktop, dishwasher, dryer, oven, range as _range,
+    range_hood, refrigerator, washer,
+)
 
-__all__ = ['DeviceRegistry', '_type_key', 'for_device', 'for_device_by_model']
+__all__ = [
+    'DeviceRegistry', '_type_key', 'for_device', 'for_device_by_model',
+    'for_device_by_resources',
+]
 
 
 _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     'airconditioner': airconditioner.REGISTRY,
     'air_conditioner': airconditioner.REGISTRY,
+    'cooktop': cooktop.REGISTRY,
     'dishwasher': dishwasher.REGISTRY,
     'dryer': dryer.REGISTRY,
     'oven': oven.REGISTRY,
+    'hood': range_hood.REGISTRY,
     'range': _range.REGISTRY,
+    'range_hood': range_hood.REGISTRY,
     'refrigerator': refrigerator.REGISTRY,
     'washer': washer.REGISTRY,
 }
@@ -102,9 +111,43 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # 'P' sits between the underscore and 'RAC' in that token).
     if key is None and '_RAC_' in (model_num or ''):
         key = 'airconditioner'
+    model_identity = f'{model_num} {description}'.upper()
+    if key is None and ('_COOKTOP' in model_identity or '_GB_CT_' in model_identity):
+        key = 'cooktop'
+    if key is None and model_identity.startswith('AHD-'):
+        key = 'range_hood'
     # Range/cooktop-oven combos (e.g. TP1X_DA-KS-RANGE-0102X, issue #44) --
     # like the RAC/PRAC air conditioners above, these report no oneUiVersion
     # and don't match the washer/dryer/dishwasher consumer-prefix map either.
     if key is None and '-RANGE-' in (model_num or '').upper():
         key = 'range'
     return _REGISTRY_BY_KEY.get(key) if key else None
+
+
+def for_device_by_resources(resources: dict[str, dict]) -> Optional[DeviceRegistry]:
+    """Detect a device family from a distinctive local-resource signature.
+
+    Some newer cooktops omit both ``oneUiVersion`` and
+    ``/information/vs/0``.  Their mode resource still identifies them: it
+    contains a DeviceType option and multiple per-burner OperationState
+    options.  Require both shapes so an oven's unrelated ``/mode/vs/0`` is
+    not misclassified.
+    """
+    mode = resources.get('/mode/vs/0', {})
+    options = mode.get('x.com.samsung.da.options') or ()
+    has_device_type = any(
+        isinstance(option, str) and option.startswith('DeviceType_')
+        for option in options
+    )
+    operation_states = sum(
+        1 for option in options
+        if isinstance(option, str) and option.startswith('OperationState')
+    )
+    if has_device_type and operation_states >= 2:
+        return _REGISTRY_BY_KEY['cooktop']
+    if (
+        '/hood/fanspeed/vs/0' in resources
+        and '/hood/lamp/vs/0' in resources
+    ):
+        return _REGISTRY_BY_KEY['range_hood']
+    return None
