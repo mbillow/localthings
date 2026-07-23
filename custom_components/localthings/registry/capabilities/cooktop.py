@@ -58,20 +58,23 @@ COOKTOP_POWER = Capability(
     href='/power/vs/0',
     poll_tier='hot',
     entities=(
-        SensorDesc(
+        BinarySensorDesc(
             key='power_state',
             field='x.com.samsung.da.power',
             name='Power state',
+            device_class='power',
             icon='mdi:stove',
+            value_fn=lambda value: str(value).lower() == 'on',
         ),
     ),
 )
 
 
-# NA9300K exposes physical slots 0, 1, 3, 4, and 5.  Preserve Samsung's slot
-# numbers instead of guessing at front/back/left/right placement.  A user can
-# safely identify and rename each entity by briefly lighting one burner.
-_NA9300K_OPERATION_SLOTS = (0, 1, 3, 4, 5)
+# The verified NA9300K exposes physical slots 0, 1, 3, 4, and 5.  Declare a
+# generous static superset so variants with other layouts are not silently
+# omitted; exists_fn hides every slot the live options array does not report.
+# Replace this bound with data-driven entity generation when #31 lands.
+_SUPPORTED_OPERATION_SLOTS = tuple(range(8))
 
 COOKTOP_MODE = Capability(
     href='/mode/vs/0',
@@ -101,7 +104,7 @@ COOKTOP_MODE = Capability(
                     ) is not None
                 ),
             )
-            for slot in _NA9300K_OPERATION_SLOTS
+            for slot in _SUPPORTED_OPERATION_SLOTS
         ),
         SensorDesc(
             key='main_timer_state',

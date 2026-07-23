@@ -84,6 +84,13 @@ def test_fan_write_contract():
     assert desc.write_fn(('power', False), rep) == (
         ['power', '0'], {'value': False},
     )
+    assert desc.write_fn(('power', True, '/power/vs/0'), rep) == (
+        ['power', 'vs', '0'], {'x.com.samsung.da.power': 'On'},
+    )
+    assert desc.write_fn(('power', False, '/power/vs/0'), rep) == (
+        ['power', 'vs', '0'], {'x.com.samsung.da.power': 'Off'},
+    )
+    assert desc.write_fn(('power', True, '/not-a-power-resource'), rep) is None
     assert desc.write_fn(('speed', '16'), rep) == (
         ['hood', 'fanspeed', 'vs', '0'],
         {'x.com.samsung.da.hood.fanSpeed': '16'},

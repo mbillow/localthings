@@ -63,6 +63,12 @@ class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
         # field does), so every advertised code is an active ordered speed.
         return self._all_speed_codes()
 
+    def _power_payload(self, enabled: bool) -> tuple[str, bool, str]:
+        """Target whichever power resource this hood actually exposes."""
+        resources = self.coordinator.last_resources
+        target = POWER_HREF if POWER_HREF in resources else POWER_VS_HREF
+        return 'power', enabled, target
+
     @property
     def is_on(self) -> bool:
         rep = self._rep(POWER_HREF)
@@ -90,12 +96,16 @@ class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
         self, percentage: int | None = None, preset_mode: str | None = None,
         **kwargs,
     ) -> None:
-        await self.coordinator.async_send_command(self._bound, ('power', True))
+        await self.coordinator.async_send_command(
+            self._bound, self._power_payload(True),
+        )
         if percentage is not None:
             await self.async_set_percentage(percentage)
 
     async def async_turn_off(self, **kwargs) -> None:
-        await self.coordinator.async_send_command(self._bound, ('power', False))
+        await self.coordinator.async_send_command(
+            self._bound, self._power_payload(False),
+        )
 
     async def async_set_percentage(self, percentage: int) -> None:
         if percentage <= 0:
@@ -105,6 +115,8 @@ class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
         if not codes:
             return
         if not self.is_on:
-            await self.coordinator.async_send_command(self._bound, ('power', True))
+            await self.coordinator.async_send_command(
+                self._bound, self._power_payload(True),
+            )
         code = percentage_to_ordered_list_item(codes, percentage)
         await self.coordinator.async_send_command(self._bound, ('speed', code))

@@ -46,7 +46,11 @@ def _item_value(items, sensor_type, index=0):
 
 
 def _active_alarm_codes(items):
-    """Discard the hood firmware's retained/deleted ``ErrorCode_OFF`` row."""
+    """Discard the hood firmware's retained/deleted ``ErrorCode_OFF`` row.
+
+    Unlike ``common._alarm_codes``, the hood retains a deleted alarm row in
+    its live representation, so this family-specific helper also checks state.
+    """
     codes = []
     for item in items or ():
         if not isinstance(item, dict):
@@ -76,9 +80,16 @@ HOOD_ALARMS = Capability(
 
 
 def _hood_fan_write(payload, rep, href=None):
-    kind, value = payload
+    kind, value, *args = payload
     if kind == 'power':
-        return ['power', '0'], {'value': bool(value)}
+        power_href = args[0] if args else '/power/0'
+        if power_href == '/power/0':
+            return ['power', '0'], {'value': bool(value)}
+        if power_href == '/power/vs/0':
+            return ['power', 'vs', '0'], {
+                'x.com.samsung.da.power': 'On' if value else 'Off',
+            }
+        return None
     if kind == 'speed':
         value = str(value)
         supported = [
