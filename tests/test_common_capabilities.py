@@ -130,3 +130,202 @@ class TestEnergyMeter:
         phantom power sensor (the exists_fn replaces the field-presence gate)."""
         pw = next(e for e in common.ENERGY_METER.entities if e.key == 'power_watts')
         assert pw.exists_fn({'x.com.samsung.da.cumulativePower': '5'}, {}) is False
+
+
+# ---------------------------------------------------------------------------
+# AI energy-saving level. '0' is off; supportedAiLevel lists the additional
+# level(s) on offer. A single-entry list (issue #21 fridge, issue #40 washer)
+# is really a binary toggle, so it's exposed as a switch instead of a
+# one-choice select; multiple entries get a select with '0' synthesized back
+# in as the explicit off option (supportedAiLevel never lists '0' itself, but
+# it's a real, observed value of aiLevel).
+# ---------------------------------------------------------------------------
+
+
+def _ai_energy_level_desc(cls_name):
+    return next(e for e in common.AI_ENERGY_LEVEL.entities
+                if e.__class__.__name__ == cls_name)
+
+
+class TestAiEnergyLevelSwitch:
+    def _desc(self):
+        return _ai_energy_level_desc('SwitchDesc')
+
+    def test_href(self):
+        assert common.AI_ENERGY_LEVEL.href == '/energy/ailevel/vs/0'
+
+    def test_shown_only_with_single_supported_level(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is True
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is False
+
+    def test_hidden_when_supported_level_is_non_list_scalar(self):
+        """A stray scalar (e.g. a string) must not be len()-checked as if it
+        were a list -- a 2-char string would otherwise wrongly pass `== 1`
+        style checks."""
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': '1'}, {}) is False
+
+    def test_hidden_when_supported_level_missing(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1'}, {}) is False
+
+    def test_hidden_when_supported_level_empty_list(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '0', 'supportedAiLevel': []}, {}) is False
+
+    def test_hidden_on_empty_stub_rep(self):
+        desc = self._desc()
+        assert desc.exists_fn({}, {}) is False
+
+    def test_value_fn(self):
+        desc = self._desc()
+        assert desc.value_fn('0') is False
+        assert desc.value_fn('1') is True
+
+    def test_write_on_uses_the_single_supported_level(self):
+        """The on-value is whatever the device calls its one level, not a
+        hardcoded '1'."""
+        desc = self._desc()
+        path, body = desc.write_fn('On', {'supportedAiLevel': ['2']})
+        assert path == ['energy', 'ailevel', 'vs', '0']
+        assert body == {'aiLevel': '2'}
+
+    def test_write_off(self):
+        desc = self._desc()
+        path, body = desc.write_fn('Off', {'supportedAiLevel': ['1']})
+        assert body == {'aiLevel': '0'}
+
+
+class TestAiEnergyLevelSelect:
+    def _desc(self):
+        return _ai_energy_level_desc('SelectDesc')
+
+    def test_shown_only_with_multiple_supported_levels(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is True
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is False
+
+    def test_hidden_when_supported_level_is_non_list_scalar(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': '12'}, {}) is False
+
+    def test_hidden_when_supported_level_missing(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '1'}, {}) is False
+
+    def test_hidden_when_supported_level_empty_list(self):
+        desc = self._desc()
+        assert desc.exists_fn({'aiLevel': '0', 'supportedAiLevel': []}, {}) is False
+
+    def test_no_translation_key(self):
+        """aiLevel's values are plain digits that render fine untranslated
+        (select.py's _display()) -- no strings.json entry to maintain
+        against an unknown number of future levels."""
+        desc = self._desc()
+        assert desc.translation_key is None
+
+    def test_options_synthesize_off(self):
+        """'0' is never in supportedAiLevel but is a real, observed aiLevel
+        value -- synthesized back in as the explicit off option."""
+        desc = self._desc()
+        resources = {'/energy/ailevel/vs/0': {'supportedAiLevel': ['1', '2']}}
+        assert desc.options(resources) == ['0', '1', '2']
+
+    def test_options_empty_when_resource_missing(self):
+        desc = self._desc()
+        assert desc.options({}) == ['0']
+
+    def test_write(self):
+        desc = self._desc()
+        path, body = desc.write_fn('2', {})
+        assert path == ['energy', 'ailevel', 'vs', '0']
+        assert body == {'aiLevel': '2'}
+
+
+class TestAiEnergyLevelStubDoesNotDecideThePlatform:
+    """Issue found in review: entity *creation* runs once, against whatever
+    snapshot is current when platforms are set up (see
+    __init__.py's async_config_entry_first_refresh-before-forward-entry-setups
+    ordering), while flatten() re-evaluates exists_fn every poll against live
+    data. Both descriptors share key='ai_energy_level' (see adapter._key), so
+    if a stub carve-out let one of them win at setup time while the other
+    wins once real data lands, flatten() would feed the already-instantiated
+    entity a value shaped for the other platform (e.g. a bool into a Select
+    expecting a string option). Neither side gets a `not rep` carve-out, so
+    an unfetched stub can never win entity creation for either platform --
+    the entity simply doesn't appear until a reload happens with real data,
+    same as any other exists_fn-gated entity in this codebase that's unlucky
+    on first-poll timing, instead of appearing as the wrong widget type."""
+
+    def test_neither_widget_exists_on_empty_stub_rep(self):
+        switch = _ai_energy_level_desc('SwitchDesc')
+        select = _ai_energy_level_desc('SelectDesc')
+        assert switch.exists_fn({}, {}) is False
+        assert select.exists_fn({}, {}) is False
+
+
+class TestSelfCheckError:
+    """Self-check diagnostic error list -- surfaced on hardware that reports
+    x.com.samsung.da.error, joined into a single display string."""
+
+    def _desc(self):
+        return next(e for e in common.SELF_CHECK.entities if e.key == 'selfcheck_error')
+
+    def test_exists_when_field_present(self):
+        desc = self._desc()
+        assert desc.exists_fn({'x.com.samsung.da.error': ['DA_ERROR_NONE']}, {}) is True
+
+    def test_does_not_exist_when_field_absent(self):
+        desc = self._desc()
+        assert desc.exists_fn({'x.com.samsung.da.status': 'Ready'}, {}) is False
+
+    def test_exists_for_empty_stub_rep(self):
+        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
+        must be included-for-now, same as ENERGY_METER's fields."""
+        desc = self._desc()
+        assert desc.exists_fn({}, {}) is True
+
+    def test_value_joins_list(self):
+        desc = self._desc()
+        assert desc.value_fn(['E1', 'E2']) == 'E1, E2'
+
+    def test_value_passes_through_scalar(self):
+        desc = self._desc()
+        assert desc.value_fn('DA_ERROR_NONE') == 'DA_ERROR_NONE'
+
+    def test_value_none_for_empty_list(self):
+        """An empty error list means no value to show -- None (unknown),
+        not an empty string."""
+        desc = self._desc()
+        assert desc.value_fn([]) is None
+
+
+# ---------------------------------------------------------------------------
+# Cross-family bundles (UNIVERSAL / POWER) -- unpacked into every by_type
+# registry's _build([...]) call in place of the hand-duplicated capability
+# lists that used to live there.
+# ---------------------------------------------------------------------------
+
+
+class TestUniversalAndPowerBundles:
+    def test_universal_contains_the_no_conflict_capabilities(self):
+        assert set(common.UNIVERSAL) == {
+            common.ALARMS, common.ENERGY_METER, common.FIRMWARE_UPDATE,
+            common.SELF_CHECK, common.AI_ENERGY_LEVEL,
+            common.KIDS_LOCK_GENERIC, common.KIDS_LOCK_VS_FALLBACK,
+            common.REMOTE_CONTROL_GENERIC, common.REMOTE_CONTROL_VS_FALLBACK,
+        }
+
+    def test_power_kept_separate_for_airconditioners_sake(self):
+        """See common.POWER's own comment for why airconditioner opts out."""
+        assert set(common.POWER) == {common.POWER_GENERIC, common.POWER_VS_FALLBACK}
+
+    def test_no_overlap_between_the_two_bundles(self):
+        assert not (set(common.UNIVERSAL) & set(common.POWER))
+
+    def test_airconditioner_registry_does_not_include_power(self):
+        from custom_components.localthings.registry.by_type import airconditioner
+        bound_caps = {c for caps in airconditioner.REGISTRY.capabilities.values() for c in caps}
+        assert common.POWER_GENERIC not in bound_caps
+        assert common.POWER_VS_FALLBACK not in bound_caps

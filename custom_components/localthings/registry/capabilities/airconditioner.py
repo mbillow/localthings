@@ -219,8 +219,9 @@ _AC_IGNORED = [
     # user-actionable state or no documented write contract, so per the
     # 'don't guess' rule they are ignored rather than modeled.
     # /option/muteonce/vs/0 and /selfcheck/vs/0 are deliberately NOT here --
-    # see MUTE_ONCE and fridge.SELF_CHECK above/in the by_type registry,
-    # both of which have a confirmed, cleanly modelable contract.
+    # see MUTE_ONCE above and common.SELF_CHECK (via common.UNIVERSAL) in
+    # the by_type registry, both of which have a confirmed, cleanly
+    # modelable contract.
     '/airlevelcheck/vs/0',         # periodic air-quality sensing scheduler plumbing
     '/aisleep/vs/0',               # AI-sleep feedback state (no actionable control)
     '/availablecontrolsets/vs/0',  # opaque hex-encoded control-set bitmap

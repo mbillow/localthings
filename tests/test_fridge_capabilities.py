@@ -231,84 +231,17 @@ class TestArtik051AndTp2xFixturesHaveCompleteCoverage:
         assert state['flex_zone_mode'] == 'CV_FDR_BEVERAGE'
 
 
-class TestSelfCheckError:
-    """Self-check diagnostic error list -- surfaced on hardware that reports
-    x.com.samsung.da.error, joined into a single display string."""
+class TestRefrigeratorAiEnergyLevelFixtureCoverage:
+    """AI energy-saving level (common.AI_ENERGY_LEVEL, see
+    test_common_capabilities.py) is exercised end-to-end here against the
+    refrigerator fixture/registry.
 
-    def _desc(self):
-        return next(e for e in fridge.SELF_CHECK.entities if e.key == 'selfcheck_error')
-
-    def test_exists_when_field_present(self):
-        desc = self._desc()
-        assert desc.exists_fn({'x.com.samsung.da.error': ['DA_ERROR_NONE']}, {}) is True
-
-    def test_does_not_exist_when_field_absent(self):
-        desc = self._desc()
-        assert desc.exists_fn({'x.com.samsung.da.status': 'Ready'}, {}) is False
-
-    def test_exists_for_empty_stub_rep(self):
-        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
-        must be included-for-now, same as ENERGY_METER's fields."""
-        desc = self._desc()
-        assert desc.exists_fn({}, {}) is True
-
-    def test_value_joins_list(self):
-        desc = self._desc()
-        assert desc.value_fn(['E1', 'E2']) == 'E1, E2'
-
-    def test_value_passes_through_scalar(self):
-        desc = self._desc()
-        assert desc.value_fn('DA_ERROR_NONE') == 'DA_ERROR_NONE'
-
-    def test_value_none_for_empty_list(self):
-        """An empty error list means no value to show -- None (unknown),
-        not an empty string."""
-        desc = self._desc()
-        assert desc.value_fn([]) is None
-
-
-class TestAiEnergyLevel:
-    """AI energy-saving level select on /energy/ailevel/vs/0 -- only
-    exposed when the device actually offers more than one level; hardware
-    that only ever reports a single supported level keeps this ignored
-    (see capabilities/ignored.py)."""
-
-    def test_href(self):
-        assert fridge.AI_ENERGY_LEVEL.href == '/energy/ailevel/vs/0'
-
-    def test_hidden_with_single_supported_level(self):
-        desc = fridge.AI_ENERGY_LEVEL.entities[0]
-        assert desc.exists_fn({'aiLevel': '1', 'supportedAiLevel': ['1']}, {}) is False
-
-    def test_shown_with_multiple_supported_levels(self):
-        desc = fridge.AI_ENERGY_LEVEL.entities[0]
-        assert desc.exists_fn(
-            {'aiLevel': '1', 'supportedAiLevel': ['1', '2']}, {}) is True
-
-    def test_exists_for_empty_stub_rep(self):
-        """An empty {} rep is /device/0's not-yet-fetched-stub carve-out --
-        must be included-for-now, same as ENERGY_METER's fields."""
-        desc = fridge.AI_ENERGY_LEVEL.entities[0]
-        assert desc.exists_fn({}, {}) is True
-
-    def test_hidden_when_supported_level_is_non_list_scalar(self):
-        """A stray scalar (e.g. a string) must not be len()-checked as if it
-        were a list -- a 5-char string would otherwise wrongly pass `> 1`."""
-        desc = fridge.AI_ENERGY_LEVEL.entities[0]
-        assert desc.exists_fn(
-            {'aiLevel': '1', 'supportedAiLevel': '12'}, {}) is False
-
-    def test_write(self):
-        desc = fridge.AI_ENERGY_LEVEL.entities[0]
-        path, body = desc.write_fn('2', {})
-        assert path == ['energy', 'ailevel', 'vs', '0']
-        assert body == {'aiLevel': '2'}
+    refrigerator_device.json's supportedAiLevel was extended to two entries
+    (['1', '2']) specifically to exercise the select branch -- the real
+    captured TP1X_REF_21K_US dump only ever reports one entry (switch
+    branch), so the select is synthetic-fixture-only for now."""
 
     def test_synthetic_fixture_has_complete_coverage(self):
-        """refrigerator_device.json's supportedAiLevel was extended to two
-        entries (['1', '2']) specifically to exercise this select -- the
-        real captured TP1X_REF_21K_US dump only ever reports one entry, so
-        this capability is synthetic-fixture-only for now."""
         from custom_components.localthings.registry.adapter import flatten
         from custom_components.localthings.registry.by_type import refrigerator
         from custom_components.localthings.registry.discovery import discover

@@ -1,5 +1,6 @@
 {
   "state_keys": [
+    "ai_energy_level",
     "alarm_code",
     "bubble_soak",
     "buzzer_sound",

@@ -3,23 +3,20 @@
 The first device whose core controls surface as a single composite HA `climate`
 entity (see capabilities/airconditioner.py and climate.py). Power/mode/temp/wind
 are consumed by that entity rather than exposed as separate switches/selects, so
-this registry deliberately does NOT include the common POWER caps -- on/off is
-the climate entity's HVACMode.OFF / TURN_ON/OFF.
+this registry includes *common.UNIVERSAL but deliberately NOT common.POWER --
+on/off is the climate entity's HVACMode.OFF / TURN_ON/OFF. See common.POWER's
+own comment in capabilities/common.py for why it's excluded.
 
-Reuses common.ALARMS + common.ENERGY_METER, fridge.FIRMWARE_UPDATE (as every
-registry does), and dishwasher.DIAGNOSIS for /diagnosis/vs/0.
+Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0.
 """
-from ..capabilities import airconditioner, common, dishwasher, fridge, ignored
+from ..capabilities import airconditioner, common, dishwasher, ignored
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name='airconditioner',
     capabilities=_build([
         *ignored.IGNORED,
-        common.ALARMS,
-        common.ENERGY_METER,
-        fridge.FIRMWARE_UPDATE,
-        fridge.SELF_CHECK,
+        *common.UNIVERSAL,
         dishwasher.DIAGNOSIS,
         airconditioner.CLIMATE,
         airconditioner.AIR_PURIFY,

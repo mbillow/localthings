@@ -148,12 +148,6 @@
           "180": "3 hr",
           "240": "4 hr"
         }
-      },
-      "ai_energy_level": {
-        "state": {
-          "1": "Level 1",
-          "2": "Level 2"
-        }
       }
     },
     "sensor": {

@@ -11,7 +11,9 @@ against live device dumps:
   /filter/waterfilter/vs/0  -> x.com.samsung.da.filterUsage / filterStatus
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
+from ..entities import (
+    BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc,
+)
 
 
 def _num(v):
@@ -230,4 +232,163 @@ WATER_FILTER = Capability(
         SensorDesc(key='filter_status', field='x.com.samsung.da.filterStatus',
                    name='Filter status', icon='mdi:filter-check'),
     ),
+)
+
+# AI energy-saving level -- '0' is off, and supportedAiLevel lists the
+# additional level(s) the device offers ('1' meaning just "on" on most
+# hardware, but multi-level boards have been reported). Verified cross-family:
+# fridge (issue #21) and washer (issue #40) both expose this href.
+#
+# supportedAiLevel is a single-entry list on most captured hardware, where a
+# select would offer only one real choice against an implicit "off" -- shown
+# as a switch instead. '0' itself is never in supportedAiLevel but has been
+# observed live as the off value of aiLevel, so the select synthesizes it
+# back in as an explicit option rather than leaving no way to turn off.
+#
+# No translation_key: aiLevel's values are plain digit strings, and
+# select.py's _display() already renders an untranslated numeric string
+# as-is -- there's nothing a strings.json entry adds that's worth maintaining
+# against an unknown, growing number of future levels.
+
+
+def _ai_energy_supported_levels(rep):
+    """supportedAiLevel as a list -- a stray scalar (e.g. a string) must not
+    be len()-checked as if it were a list."""
+    sl = rep.get('supportedAiLevel')
+    return list(sl) if isinstance(sl, (list, tuple)) else []
+
+
+def _ai_energy_level_options(resources):
+    rep = resources.get('/energy/ailevel/vs/0') or {}
+    return ['0', *_ai_energy_supported_levels(rep)]
+
+
+def _ai_energy_level_write(p, rep, href=None):
+    return ['energy', 'ailevel', 'vs', '0'], {'aiLevel': p}
+
+
+def _ai_energy_level_switch_write(p, rep, href=None):
+    levels = _ai_energy_supported_levels(rep)
+    on_level = levels[0] if levels else '1'
+    return ['energy', 'ailevel', 'vs', '0'], {'aiLevel': on_level if p == 'On' else '0'}
+
+
+AI_ENERGY_LEVEL = Capability(
+    href='/energy/ailevel/vs/0',
+    poll_tier='cold',
+    entities=(
+        # No `not rep` stub carve-out on either side, unlike most exists_fn
+        # gates in this file -- entity creation only ever runs once, against
+        # whichever snapshot happens to be current the moment platforms are
+        # set up (see entity._is_included / __init__.py's
+        # async_config_entry_first_refresh-before-forward-entry-setups
+        # ordering), while flatten() re-evaluates exists_fn every poll
+        # against live data. Both descriptors share key='ai_energy_level',
+        # so if a stub carve-out let one of them win at setup time while the
+        # other wins once real data lands, flatten() would feed the
+        # instantiated entity a value shaped for the other platform (e.g. a
+        # bool into a Select). Requiring real, populated data on both sides
+        # keeps the entity-creation decision and the live-value decision in
+        # permanent agreement -- the cost is this entity doesn't appear
+        # until a reload if the device's very first poll stubs this
+        # cold-tier href, the same reload already required to fix which
+        # platform got picked in that case.
+        SwitchDesc(key='ai_energy_level', field='aiLevel',
+                   name='AI energy level', icon='mdi:leaf',
+                   entity_category='config',
+                   value_fn=lambda v: v != '0',
+                   exists_fn=lambda rep, resources: (
+                       len(_ai_energy_supported_levels(rep)) == 1),
+                   write_fn=_ai_energy_level_switch_write),
+        SelectDesc(key='ai_energy_level', field='aiLevel',
+                   name='AI energy level', icon='mdi:leaf',
+                   entity_category='config',
+                   options=_ai_energy_level_options,
+                   exists_fn=lambda rep, resources: (
+                       len(_ai_energy_supported_levels(rep)) > 1),
+                   write_fn=_ai_energy_level_write),
+    ),
+)
+
+FIRMWARE_UPDATE = Capability(
+    href='/otninformation/vs/0',
+    poll_tier='cold',
+    entities=(
+        BinarySensorDesc(
+            key='firmware_update',
+            field='x.com.samsung.da.newVersionAvailable',
+            name='Firmware update available',
+            device_class='update',
+            entity_category='diagnostic',
+            value_fn=lambda v: str(v).lower() == 'true' if v is not None else None,
+        ),
+    ),
+)
+
+SELF_CHECK = Capability(
+    href='/selfcheck/vs/0',
+    poll_tier='cold',
+    entities=(
+        SensorDesc(key='selfcheck_status', field='x.com.samsung.da.status',
+                   name='Self-check status', icon='mdi:stethoscope',
+                   entity_category='diagnostic'),
+        SensorDesc(key='selfcheck_result', field='x.com.samsung.da.result',
+                   name='Self-check result', icon='mdi:clipboard-check-outline',
+                   entity_category='diagnostic'),
+        # List of error codes from the last self-check; joined for display.
+        # Not every fridge reports the field, hence the exists_fn.
+        SensorDesc(key='selfcheck_error', field='x.com.samsung.da.error',
+                   name='Self-check error', icon='mdi:alert-circle-outline',
+                   entity_category='diagnostic',
+                   exists_fn=lambda rep, resources: (
+                       not rep or 'x.com.samsung.da.error' in rep),
+                   value_fn=lambda v: (', '.join(v) if v else None) if isinstance(v, list) else v),
+        ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
+                   payload='Start', icon='mdi:play-circle-outline',
+                   entity_category='diagnostic',
+                   write_fn=lambda p, rep, href=None: (
+                       ['selfcheck', 'vs', '0'], {'x.com.samsung.da.status': p})),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# Cross-family bundles, unpacked into every by_type registry's _build([...])
+# call the same way ignored.IGNORED is (*common.UNIVERSAL / *common.POWER).
+# discover() only binds a capability whose href is actually present in a
+# given device's resource dump, so listing one here for a family that
+# doesn't expose the href is a no-op, not a phantom entity -- see the
+# adding-device-support skill's coverage-discipline section.
+#
+# UNIVERSAL holds every capability with no known family that both (a) has
+# the href and (b) needs to model it some other way -- broadening one of
+# these to a new family is a safe, harmless guess (issue #40's AI energy
+# level: 2 of 6 families confirmed, blanket-added everywhere else).
+#
+# POWER is kept separate -- airconditioner is the one family that opts out
+# of it. Canonical reason (see by_type/airconditioner.py and its test for
+# pointers back here, not restatements): AC's climate entity already owns
+# /power/0 and /power/vs/0 via bare, no-entity Capability objects
+# (airconditioner.COVERAGE), and a second, real POWER_GENERIC/
+# POWER_VS_FALLBACK cap on the same href would make _build() raise (a href
+# with >1 cap must have every cap discriminated by rt_filter/match_fn, and
+# the bare COVERAGE cap has neither). Kids-lock/remote-control don't have
+# this conflict -- no AC dump has ever reported those hrefs -- so they stay
+# in UNIVERSAL.
+# ---------------------------------------------------------------------------
+
+UNIVERSAL = (
+    ALARMS,
+    ENERGY_METER,
+    FIRMWARE_UPDATE,
+    SELF_CHECK,
+    AI_ENERGY_LEVEL,
+    KIDS_LOCK_GENERIC,
+    KIDS_LOCK_VS_FALLBACK,
+    REMOTE_CONTROL_GENERIC,
+    REMOTE_CONTROL_VS_FALLBACK,
+)
+
+POWER = (
+    POWER_GENERIC,
+    POWER_VS_FALLBACK,
 )
