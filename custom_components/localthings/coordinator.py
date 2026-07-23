@@ -547,11 +547,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         path_segs, body = result
 
+        # Apply the write optimistically before starting the settle guard,
+        # not after -- mark_write_pending gates every source (poll, sweep,
+        # observe) through the same apply(), itself included, so flipping
+        # this order would have the guard drop the one update it exists to
+        # protect. Without an optimistic value in the cache for it to hold
+        # onto, the settle window was just delaying the real device
+        # confirmation for a few seconds on every write, which read exactly
+        # like the write being silently reverted (issue #27).
+        self._observe.apply(href, body, source='optimistic')
+        self._observe.mark_write_pending(href)
+
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            self._observe.mark_write_pending(href)
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
             self._log.info("PUT %s → code %#04x", href, code)
 
