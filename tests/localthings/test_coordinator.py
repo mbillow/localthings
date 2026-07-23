@@ -643,7 +643,13 @@ async def test_write_marks_href_pending_before_post(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
     """async_send_command must call mark_write_pending before POSTing so a
-    slow-to-settle device can't immediately revert the optimistic write."""
+    slow-to-settle device can't immediately revert the optimistic write --
+    and it must guard the write's actual target href (write_fn's own
+    path_segs), not bound_entity.href. Those differ for a composite entity
+    like the AC's ClimateDesc (bound to /mode/vs/0, but writing power/temp/
+    fan/swing/preset to their own sibling hrefs) -- guarding the bound href
+    protected the wrong resource and left the one the entity actually
+    displays from unprotected (issues #17/#53)."""
     from custom_components.localthings.registry.discovery import BoundEntity
     from custom_components.localthings.registry.entities import NumberDesc
 
@@ -662,17 +668,23 @@ async def test_write_marks_href_pending_before_post(
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, 5)
 
-    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+    assert coordinator._observe._settle_until.get('/some/path') is not None
+    assert coordinator._observe._settle_until.get('/test/vs/0') is None
 
 
 async def test_send_command_applies_write_optimistically_before_settling(
-    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session,
 ) -> None:
-    """The cache must reflect a write immediately, and stay put against a
-    stale echo for the rest of the settle window -- otherwise
-    mark_write_pending has nothing to protect and just delays the real
-    device confirmation instead, which reads to a user as the write being
-    silently reverted (issue #27)."""
+    """The cache must reflect a write immediately at the write's actual
+    target href (write_fn's path_segs) -- not bound_entity.href, which
+    differs for a composite entity like the AC's ClimateDesc -- and stay put
+    against a stale echo for the rest of the settle window there.
+
+    Applying the optimistic value to bound_entity.href instead is exactly
+    how issues #17/#53 survived the original optimistic-apply fix (issue
+    #27): the bound href got a harmless (if nonsensical) optimistic merge,
+    while the resource the entity actually reads from for its displayed
+    state never got one and stayed stale until the next real read of it."""
     from custom_components.localthings.registry.discovery import BoundEntity
     from custom_components.localthings.registry.entities import NumberDesc
 
@@ -691,16 +703,50 @@ async def test_send_command_applies_write_optimistically_before_settling(
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, 5)
 
-    # The optimistic value is visible right away, without waiting for a
-    # device response.
-    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+    # The optimistic value is visible right away at the write's real
+    # target, not the bound href.
+    assert coordinator._cache.get('/some/path') == {'value': 5}
+    assert coordinator._cache.get('/test/vs/0') != {'value': 5}
 
     # A stale update racing in behind the write (e.g. a poll/notify that
     # was already in flight before the PUT) must not clobber it while the
     # settle window is open.
-    applied = coordinator._observe.apply('/test/vs/0', {'value': 0}, source='observe')
+    applied = coordinator._observe.apply('/some/path', {'value': 0}, source='observe')
     assert applied is False
-    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+    assert coordinator._cache.get('/some/path') == {'value': 5}
+
+
+async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """Regression for issues #17/#53, using the real AC capability. The
+    composite climate entity binds /mode/vs/0 (airconditioner.CLIMATE.href),
+    but a power command's write_fn (airconditioner._climate_write) targets
+    the sibling /power/0 -- the href climate.py's `_is_on()` actually reads.
+    The optimistic value and settle guard must land there, not on the bound
+    /mode/vs/0, or the entity never sees the write and shows stale state
+    until the next unrelated read of /power/0."""
+    from custom_components.localthings.registry.capabilities import airconditioner
+    from custom_components.localthings.registry.discovery import BoundEntity
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    bound = BoundEntity(
+        href=airconditioner.CLIMATE.href,
+        capability=coordinator.bound[0].capability,
+        desc=airconditioner.CLIMATE.entities[0],
+    )
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, ('power', True))
+
+    assert coordinator._cache.get('/power/0') == {'value': True}
+    assert coordinator._cache.get(airconditioner.CLIMATE.href) != {'value': True}
+    assert coordinator._observe._settle_until.get('/power/0') is not None
 
 
 class TestRemoteControlEnabled:
@@ -803,7 +849,7 @@ async def test_send_command_allowed_when_remote_control_enabled(
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, 5)
 
-    assert coordinator._observe._settle_until.get('/test/vs/0') is not None
+    assert coordinator._cache.get('/some/path') == {'value': 5}
 
 
 async def test_send_command_remote_control_check_precedes_validate_fn(

@@ -547,6 +547,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         path_segs, body = result
 
+        # The write's actual target, not necessarily bound_entity.href. Most
+        # descriptors write to the same resource they're bound to, but a
+        # composite entity -- the AC's ClimateDesc, bound to /mode/vs/0 --
+        # drives writes to several sibling resources via path_segs
+        # (/power/0, /temperature/desired/0, /wind/strength/vs/0, ...) that
+        # write_fn picks per payload (see airconditioner._climate_write).
+        # Applying the optimistic value and settle guard below to
+        # bound_entity.href instead of this target protected the wrong
+        # resource: /mode/vs/0 got the (nonsensical, wrong-shaped) optimistic
+        # merge while the resource the climate entity actually displays from
+        # (e.g. /power/0) never got one, so HA kept showing the pre-write
+        # state until the next real read of that resource -- the 20-60s lag
+        # in issues #17/#53, which survived the earlier optimistic-apply fix
+        # (issue #27) because that fix applied to the wrong href too.
+        write_href = '/' + '/'.join(path_segs)
+
         # Apply the write optimistically before starting the settle guard,
         # not after -- mark_write_pending gates every source (poll, sweep,
         # observe) through the same apply(), itself included, so flipping
@@ -555,19 +571,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # onto, the settle window was just delaying the real device
         # confirmation for a few seconds on every write, which read exactly
         # like the write being silently reverted (issue #27).
-        self._observe.apply(href, body, source='optimistic')
-        self._observe.mark_write_pending(href)
+        self._observe.apply(write_href, body, source='optimistic')
+        self._observe.mark_write_pending(write_href)
 
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
-            self._log.info("PUT %s → code %#04x", href, code)
+            self._log.info("PUT %s → code %#04x", write_href, code)
 
         try:
             await self.hass.async_add_executor_job(_do_put)
         except Exception as e:
-            self._log.error("command failed for %s: %s", href, e)
+            self._log.error("command failed for %s: %s", write_href, e)
         else:
             await self.async_request_refresh()
