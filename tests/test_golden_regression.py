@@ -203,7 +203,7 @@ def test_registry_reproduces_golden_state_keys_for_range():
     """Range/cooktop-oven combo (model TP1X_DA-KS-RANGE-0102X, issue #44) --
     reports no oneUiVersion; resolved via the '-RANGE-' modelNum token
     fallback in for_device_by_model. Reuses the oven family's cavity/
-    setpoint/mode/operational-state capabilities and adds cooktop.py's
+    setpoint/mode/operational-state capabilities and adds range.py's
     per-burner capabilities for the 4 burners this dump reports."""
     from tests.conftest import _load_device
     resources = _load_device('range')

@@ -85,6 +85,13 @@ class NumberDesc(SamsungEntityDescription):
     native_min: Optional[float] = None
     native_max: Optional[float] = None
     step: Optional[float] = None
+    # Override native_min/native_max/step from the live rep, when set --
+    # same "static default, live override" shape as unit_fn, for resources
+    # whose sane bounds depend on a per-device value (e.g. a temperature
+    # setpoint reported in Celsius on one device, Fahrenheit on another).
+    native_min_fn: Optional[Callable[[dict], float]] = None
+    native_max_fn: Optional[Callable[[dict], float]] = None
+    step_fn: Optional[Callable[[dict], float]] = None
     range_field: Optional[str] = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
 

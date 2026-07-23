@@ -39,6 +39,15 @@ SETPOINT_MIN_C = 30
 SETPOINT_MAX_C = 270
 SETPOINT_STEP_C = 5
 
+# Verified against issue #44's range dump (NSI6DG9100SRAA, unit reported as
+# "Fahrenheit" on /temperatures/vs/0): Bake mode's modeSpec on /mode/vs/0
+# reports tempMinF/tempMaxF/tempIntervalF = 175/550/5. Kept as a separate
+# constant set rather than converted from the Celsius bounds above, which
+# are themselves unverified (no live dump; see module docstring).
+SETPOINT_MIN_F = 175
+SETPOINT_MAX_F = 550
+SETPOINT_STEP_F = 5
+
 # Mode options seen on NV7000BS-class. No dump exists so this list is inferred
 # from Samsung documentation and firmware observations. The firmware will
 # reject unknown modes; missing entries here are a coverage gap, not a bug.
@@ -129,8 +138,9 @@ def _oven_setpoint_write(p, rep, href=None):
         temp = float(p)
     except (TypeError, ValueError):
         return None
-    temp_i = int(round(temp / SETPOINT_STEP_C) * SETPOINT_STEP_C)
-    if not (SETPOINT_MIN_C <= temp_i <= SETPOINT_MAX_C):
+    min_v, max_v, step_v = _setpoint_bounds(rep)
+    temp_i = int(round(temp / step_v) * step_v)
+    if not (min_v <= temp_i <= max_v):
         return None
     items = rep.get('x.com.samsung.da.items')
     if not items:
@@ -263,12 +273,22 @@ def _oven_temp_unit(rep):
     same aggregate `/temperatures/vs/0` items[] resource type, which on
     fridge hardware carries a per-item `x.com.samsung.da.unit` field
     ('Celsius'/'Fahrenheit') that was previously hardcoded away (issue #7).
-    No live oven dump has surfaced a non-Celsius reading yet, so this keeps
-    the verified '°C' default when the field is absent, but reads it live
-    if a device ever reports otherwise."""
+    Keeps the verified '°C' default when the field is absent (the original
+    NV7000BS-class dump this module was written against), but reads it live
+    -- issue #44's range dump is the first to report 'Fahrenheit' here."""
     items = rep.get('x.com.samsung.da.items') or []
     unit = items[0].get('x.com.samsung.da.unit') if items else None
     return normalize_temp_unit(unit, default='°C')
+
+
+def _setpoint_bounds(rep):
+    """(min, max, step) for the live unit -- see the SETPOINT_*_C/_F
+    constants above for provenance. Bounds must track the unit shown by
+    unit_fn (both read the same live rep), or the HA slider's range would
+    silently mismatch its own displayed unit."""
+    if _oven_temp_unit(rep) == '°F':
+        return SETPOINT_MIN_F, SETPOINT_MAX_F, SETPOINT_STEP_F
+    return SETPOINT_MIN_C, SETPOINT_MAX_C, SETPOINT_STEP_C
 
 
 OVEN_SETPOINT = Capability(
@@ -280,6 +300,9 @@ OVEN_SETPOINT = Capability(
                    name='Setpoint', device_class='temperature', unit_fn=_oven_temp_unit,
                    native_min=float(SETPOINT_MIN_C), native_max=float(SETPOINT_MAX_C),
                    step=float(SETPOINT_STEP_C), icon='mdi:thermometer-chevron-up',
+                   native_min_fn=lambda rep: float(_setpoint_bounds(rep)[0]),
+                   native_max_fn=lambda rep: float(_setpoint_bounds(rep)[1]),
+                   step_fn=lambda rep: float(_setpoint_bounds(rep)[2]),
                    value_fn=lambda items: _int(
                        (items[0].get('x.com.samsung.da.desired') if items else None)),
                    write_fn=_oven_setpoint_write),
