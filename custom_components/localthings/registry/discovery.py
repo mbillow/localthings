@@ -27,6 +27,19 @@ class BoundEntity:
     desc: SamsungEntityDescription
     instance: str = ''
     key_override: Optional[str] = None
+    instance_name: Optional[str] = None
+
+
+def _instance_name(cap: Capability, rep: dict) -> Optional[str]:
+    """Normalize `cap.name_field`'s raw value ("CUBED_ICE" -> "Cubed Ice")
+    for use as a display-name prefix, or None if the cap doesn't declare
+    one or the device didn't report it."""
+    if not cap.name_field:
+        return None
+    raw = rep.get(cap.name_field)
+    if not isinstance(raw, str) or not raw:
+        return None
+    return raw.replace('_', ' ').title()
 
 
 def instance_suffix(href: str) -> str:
@@ -58,9 +71,11 @@ def discover(
             if cap.match_fn is not None and not cap.match_fn(rep, resources):
                 continue
             inst = instance_suffix(href)
+            inst_name = _instance_name(cap, rep)
             for desc in cap.entities:
                 out.append(BoundEntity(href=href, capability=cap,
-                                       desc=desc, instance=inst))
+                                       desc=desc, instance=inst,
+                                       instance_name=inst_name))
             matched = True
 
         if matched:
@@ -75,13 +90,15 @@ def discover(
             if cap.match_fn is not None and not cap.match_fn(rep, resources):
                 continue
             inst = instance_suffix(href)
+            inst_name = _instance_name(cap, rep)
             # Auto-derive key prefix from href segments (skip digits and 'vs')
             src = href[len(cap.href_prefix):] if (cap.strip_prefix_in_key and cap.href_prefix) else href
             segs = [s for s in src.strip('/').split('/') if s and not s.isdigit() and s != 'vs']
             for desc in cap.entities:
                 key_override = '_'.join(segs) + '_' + desc.key
                 out.append(BoundEntity(href=href, capability=cap, desc=desc,
-                                       instance=inst, key_override=key_override))
+                                       instance=inst, key_override=key_override,
+                                       instance_name=inst_name))
             matched = True
             break
 

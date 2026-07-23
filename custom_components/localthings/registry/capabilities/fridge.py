@@ -100,6 +100,12 @@ ICEMAKER_NIGHTTIME = Capability(
 # Icemaker (generic — covers /icemaker/one/vs/0, /icemaker/two/vs/0)
 # /icemaker/status/vs/0 is kept as exact-href cap and binds first.
 # /icemaker/nighttime/vs/0 is excluded by match_fn (lacks iceMaker.state).
+#
+# Entity names are derived from x.com.samsung.da.iceMaker.name ("CUBED_ICE",
+# "ICE_BITES") via name_field, not the href's "one"/"two" segment -- these two
+# ice makers are independent on/off toggles that can both be enabled at once
+# (issue #27), so they stay separate entities rather than a single ice-type
+# select, but users still want them labeled with the device's own names.
 # ---------------------------------------------------------------------------
 
 def _icemaker_write(field):
@@ -112,6 +118,7 @@ ICEMAKER_GENERIC = Capability(
     href=None,
     href_prefix='/icemaker/',
     match_fn=lambda rep, resources: 'x.com.samsung.da.iceMaker.state' in rep,
+    name_field='x.com.samsung.da.iceMaker.name',
     poll_tier='warm',
     entities=(
         SensorDesc(key='making_status',

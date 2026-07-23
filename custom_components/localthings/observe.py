@@ -92,11 +92,26 @@ class ObserveManager:
             return True
 
     def apply(self, href: str, rep: dict, source: str) -> bool:
-        """Gate a StateCache.apply_rep call through the write-settle guard."""
+        """Gate a StateCache.apply_rep call through the write-settle guard.
+
+        Merges the incoming rep onto whatever's already cached for this
+        href rather than handing it to StateCache.apply_rep verbatim --
+        apply_rep does a full replace, and Samsung devices don't always
+        repeat every field on every update (issue #27: a /mode/vs/0
+        OBSERVE notify -- and, on at least one Bespoke fridge, even the
+        /device/0 sweep entry for that href -- can carry just `modes`,
+        omitting `supportedOptions`/`supportedModes` entirely). A full
+        replace would silently wipe fields a select entity's
+        exists_fn/options_field gates on the moment one partial update
+        comes through, even though nothing about the device's actual
+        supported options changed.
+        """
         if self._is_settling(href):
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
-        return self.cache.apply_rep(href, rep, source=source)
+        prior = self.cache.get(href)
+        merged = {**prior, **rep} if prior else rep
+        return self.cache.apply_rep(href, merged, source=source)
 
     def on_notification(self, href: str, payload: bytes) -> None:
         """Wired as DtlsCoapSession.on_notification. Runs on the DTLS
