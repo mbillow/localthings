@@ -199,6 +199,23 @@ def test_registry_reproduces_golden_state_keys_for_tp1x_rac():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_range():
+    """Range/cooktop-oven combo (model TP1X_DA-KS-RANGE-0102X, issue #44) --
+    reports no oneUiVersion; resolved via the '-RANGE-' modelNum token
+    fallback in for_device_by_model. Reuses the oven family's cavity/
+    setpoint/mode/operational-state capabilities and adds range.py's
+    per-burner capabilities for the 4 burners this dump reports."""
+    from tests.conftest import _load_device
+    resources = _load_device('range')
+    golden = json.loads((GOLDEN / 'range.json').read_text())
+    state_keys = _new_state_keys('range', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_resources_from_batch_preferred_over_flat():
     from tests.conftest import _resources_from_dump
     dump = {
