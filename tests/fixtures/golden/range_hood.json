@@ -7,6 +7,7 @@
     "automatic_ventilation_state",
     "clean_level",
     "energy_kwh",
+    "energy_saved_kwh",
     "fan",
     "firmware_update",
     "hood_filter_capacity",

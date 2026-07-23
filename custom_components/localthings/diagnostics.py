@@ -26,13 +26,18 @@ async def async_get_config_entry_diagnostics(
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
     integration = await async_get_integration(hass, DOMAIN)
 
+    # importlib.metadata.version() reads the installed package's metadata off
+    # disk (listdir + open + read_text), which trips HA's event-loop blocking
+    # detector when called inline here. Offload it to the executor.
+    stl_version = await hass.async_add_executor_job(pkg_version, "smartthings-local")
+
     return {
         "device_type": coordinator.device_type_name or "unknown",
         "one_ui_version": coordinator.one_ui_version,
         "unbound_hrefs": sorted(coordinator._unbound_hrefs),
         "resources": redact_resources(coordinator.last_resources),
         "integration_version": integration.version,
-        "smartthings_local_version": pkg_version("smartthings-local"),
+        "smartthings_local_version": stl_version,
         "observe_mode": coordinator.observe_mode,
         "observe_subscribed_hrefs": sorted(coordinator._observe.subscribed_hrefs),
         "observe_fallback_hrefs": sorted(coordinator._observe.fallback_hrefs),

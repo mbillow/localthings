@@ -27,6 +27,25 @@ class BoundEntity:
     desc: SamsungEntityDescription
     instance: str = ''
     key_override: Optional[str] = None
+    instance_name: Optional[str] = None
+
+
+def _snake_to_title(s: str) -> str:
+    """'CUBED_ICE'/'cubed_ice' -> 'Cubed Ice'. Shared with entity.py's
+    _derive_name, which applies the same transform to a state key."""
+    return s.replace('_', ' ').title()
+
+
+def _instance_name(cap: Capability, rep: dict) -> Optional[str]:
+    """Normalize `cap.name_field`'s raw value ("CUBED_ICE" -> "Cubed Ice")
+    for use as a display-name prefix, or None if the cap doesn't declare
+    one or the device didn't report it."""
+    if not cap.name_field:
+        return None
+    raw = rep.get(cap.name_field)
+    if not isinstance(raw, str) or not raw:
+        return None
+    return _snake_to_title(raw)
 
 
 def instance_suffix(href: str) -> str:
@@ -35,6 +54,18 @@ def instance_suffix(href: str) -> str:
     if tail.isdigit() and tail != '0':
         return f'_{tail}'
     return ''
+
+
+def _bind(cap: Capability, href: str, inst: str, inst_name: Optional[str],
+          key_prefix: Optional[str] = None) -> list[BoundEntity]:
+    """Build one BoundEntity per entity on `cap`, sharing the instance/
+    key-prefix/instance-name computed once by the caller."""
+    return [
+        BoundEntity(href=href, capability=cap, desc=desc, instance=inst,
+                    key_override=f'{key_prefix}_{desc.key}' if key_prefix else None,
+                    instance_name=inst_name)
+        for desc in cap.entities
+    ]
 
 
 def discover(
@@ -58,9 +89,7 @@ def discover(
             if cap.match_fn is not None and not cap.match_fn(rep, resources):
                 continue
             inst = instance_suffix(href)
-            for desc in cap.entities:
-                out.append(BoundEntity(href=href, capability=cap,
-                                       desc=desc, instance=inst))
+            out.extend(_bind(cap, href, inst, _instance_name(cap, rep)))
             matched = True
 
         if matched:
@@ -78,10 +107,7 @@ def discover(
             # Auto-derive key prefix from href segments (skip digits and 'vs')
             src = href[len(cap.href_prefix):] if (cap.strip_prefix_in_key and cap.href_prefix) else href
             segs = [s for s in src.strip('/').split('/') if s and not s.isdigit() and s != 'vs']
-            for desc in cap.entities:
-                key_override = '_'.join(segs) + '_' + desc.key
-                out.append(BoundEntity(href=href, capability=cap, desc=desc,
-                                       instance=inst, key_override=key_override))
+            out.extend(_bind(cap, href, inst, _instance_name(cap, rep), '_'.join(segs)))
             matched = True
             break
 

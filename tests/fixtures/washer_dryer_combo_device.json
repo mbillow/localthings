@@ -1,0 +1,325 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.cumulativePower": "1210200",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativeDate": "1784671200",
+        "x.com.samsung.da.cumulativeDateUTC": "1784667600"
+      }
+    },
+    {
+      "href": "/energy/consumption/0",
+      "rep": {}
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_0167",
+          "UpdateAllow_NotAllowed",
+          "Course_1C",
+          "AiOption_On",
+          "LaundryOutTime_0",
+          "AddWashSet_0",
+          "AddWashAvailable_7",
+          "AddWashIndicator_On",
+          "SeamlessControl_Enable",
+          "KidsLockBypass_On",
+          "WashingTimes_25",
+          "DrumCleanProposal_40",
+          "DrumCleanLog_2024-07-10T22:36:33|2024-09-12T21:37:17|2024-12-06T02:13:28|2025-03-04T20:40:47|2025-05-25T11:02:07|2025-08-17T19:48:10|2025-10-30T20:20:13|2026-01-08T21:44:02|2026-04-02T21:17:40|2026-06-08T19:51:07",
+          "DetergentOnce_1",
+          "DetergentLeft_0",
+          "DetergentBase_5",
+          "DetergentAlarm_Off",
+          "DetergentType_2",
+          "DetergentTotal_49",
+          "SoftenerOnce_0",
+          "SoftenerLeft_0",
+          "SoftenerBase_0",
+          "SoftenerAlarm_Off",
+          "SoftenerType_0",
+          "SoftenerTotal_0",
+          "SpecialFunction_4",
+          "AvailableDelayTime_159",
+          "BubbleSoak_Off",
+          "LaundryPlannerUserSetTime_0",
+          "ProgressTimeSet_420BF48204D4A204F5",
+          "SendToDevice_Off",
+          "GMT_02",
+          "LaundryPlannerMicomSetTime_1704",
+          "PreWashSetting_Off",
+          "IntensiveSetting_Off",
+          "BubbleSoakSet_00F000F000F000F0F0F0F00000F000F0F00000F000000000",
+          "EnergyLevelSet_05030401040104020404020503020202030301010505050405",
+          "MostUsed_1C8410923FA67FB01F0000000000",
+          "PreWashAvailableSet_F0F000F0F0F000F0F0F0F00000F0F0F0F00000F000000000",
+          "IntensiveAvailableSet_F0F000F0F0F000F0F0F0F00000F0F0F0F00000F000000000",
+          "GeoFenceAlarm",
+          "UsagesDB_ok",
+          "EnergyKW_396",
+          "DrumCleanLog_2024-07-10T22:36:33|2024-09-12T21:37:17|2024-12-06T02:13:28|2025-03-04T20:40:47|2025-05-25T11:02:07|2025-08-17T19:48:10|2025-10-30T20:20:13|2026-01-08T21:44:02|2026-04-02T21:17:40|2026-06-08T19:51:07",
+          "TimeSync_NotSupported"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "41C8410923FA67FB01F1B847E923FA67FB01F1E811E933FA53FB01F1D841E923FA67FB01F1F8102923FA57FB01F25843E923FA57FB01F26841E920FA207B01F33857E933FA67FB00024841E930FA30FB00032833E923FA37FB00020857E943FA67FB01F22841E920FA30FB00023831E930FA57FB01F2F831E933FA30FB00021831E943FA57FB0002D841E923FA30FB00030843E923FA67FB000278000913FA67FB01F2880009000A67EB01F368410923FA640B11E3880009000A000B11E3980009000A000B11E3780009000A000B0002985209204A520B000"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/cycleinterface/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.remainingTime": "02:39:00",
+        "x.com.samsung.da.progressPercentage": "1",
+        "x.com.samsung.da.progress": "None",
+        "x.com.samsung.da.delayEndTime": "00:00:00",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Weightsensing",
+          "Wash",
+          "Rinse",
+          "Spin",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "jobStates": [
+          "None",
+          "Weightsensing",
+          "Wash",
+          "Rinse",
+          "Spin",
+          "Finish"
+        ],
+        "currentJobState": "None",
+        "remainingTime": "02:39:00",
+        "progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "DA_WM_TP2_20_COMMON|20260041|20010102011411B402A3020700000000",
+        "x.com.samsung.da.description": "DA_WM_TP2_20_COMMON_WW6600R/DC92-02617A_5049",
+        "x.com.samsung.da.serialNum": "REDACTED",
+        "x.com.samsung.da.otnDUID": "REDACTED",
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "210",
+        "x.com.samsung.da.diagMinVersion": "1.0",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "DA_WM_TP2_20_COMMON|20260041|20010102011411B402A3020700000000",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02674A250414(F546)",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Firmware_1_DB_20260041200911390FFFFF202617412101203104FFFF(01672026004120261741_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "20091139,21012031",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Firmware_2_DB_2025984120072205042FFFFFFFFFFFFFFFFFFFFFFFFE(016720259841FFFFFFFF_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "20072205,FFFFFFFF"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+01:00"
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.waterTemperature": "40",
+        "x.com.samsung.da.supportedWaterTemperature": [
+          "None",
+          "Cold",
+          "20",
+          "30",
+          "40",
+          "60",
+          "90"
+        ],
+        "x.com.samsung.da.spinLevel": "1400",
+        "x.com.samsung.da.supportedSpinLevel": [
+          "RinseHold",
+          "NoSpin",
+          "400",
+          "800",
+          "1000",
+          "1200",
+          "1400"
+        ],
+        "x.com.samsung.da.dryLevel": "None",
+        "x.com.samsung.da.supportedDryLevel": [
+          "None",
+          "Cupboard",
+          "30",
+          "60",
+          "90",
+          "120",
+          "180",
+          "240"
+        ],
+        "x.com.samsung.da.rinseCycles": "2",
+        "x.com.samsung.da.supportedRinseCycles": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ]
+      }
+    },
+    {
+      "href": "/st/washercourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.st.washerMode": "Table_02_Course_1C",
+        "x.com.samsung.da.st.courseTable": "Table_02"
+      }
+    },
+    {
+      "href": "/setting/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedSetLanguage": [
+          "ko_KR",
+          "en_US"
+        ],
+        "x.com.samsung.da.setLanguage": "en_GB"
+      }
+    },
+    {
+      "href": "/wm/editcourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.editCourseList": "EditCourseList_1C3026241E293633281D27211B202F2223323825392D1F37",
+        "x.com.samsung.da.fixedCourseList": "FixedCourseList_1C353A29"
+      }
+    },
+    {
+      "href": "/wm/setinfo/vs/0",
+      "rep": {
+        "x.com.samsung.da.isModelSettingWithoutSC": "true",
+        "x.com.samsung.da.aiCourse": "true_formobile",
+        "x.com.samsung.da.isModelSettingPowerOnOff": "false"
+      }
+    },
+    {
+      "href": "/wm/jobbeginingstatus/vs/0",
+      "rep": {
+        "x.com.samsung.da.currentStatus": "None"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "Micom",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "0000000000",
+        "x.com.samsung.da.countryCode": "GB"
+      }
+    }
+  ]
+}

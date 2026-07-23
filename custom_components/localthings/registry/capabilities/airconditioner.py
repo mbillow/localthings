@@ -15,7 +15,32 @@ different schema (see capabilities/__init__.py). They live only in the AC
 by_type registry.
 """
 from ..capability import Capability
-from ..entities import ClimateDesc, SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, ClimateDesc, SensorDesc, SwitchDesc
+
+# ---------------------------------------------------------------------------
+# Canonical AC resource hrefs. The climate entity (climate.py) binds the
+# primary HREF_MODE via CLIMATE below and reads the CLIMATE_CONSUMED_HREFS
+# siblings off the coordinator snapshot; those siblings are marked covered
+# (no-entity caps) so discover() reports no gap. Declared once here and
+# imported by climate.py, so a new sibling read can't drift out of sync with
+# its coverage entry.
+# ---------------------------------------------------------------------------
+HREF_MODE = '/mode/vs/0'                          # primary (bound by CLIMATE)
+HREF_POWER = '/power/0'                           # on/off -> HVACMode.OFF / TURN_ON/OFF
+HREF_POWER_VS = '/power/vs/0'                     # vendor fallback for on/off
+HREF_TEMP_CURRENT = '/temperature/current/0'      # current_temperature
+HREF_TEMP_DESIRED = '/temperature/desired/0'      # target_temperature (write target)
+HREF_TEMP_CONTROL = '/temperature/control/vs/0'   # target_temperature_step
+HREF_WIND_STRENGTH = '/wind/strength/vs/0'        # fan_mode
+HREF_WIND_DIRECTION = '/wind/direction/vs/0'      # swing_mode
+HREF_CONVENIENT = '/mode/convenient/vs/0'         # preset_mode
+HREF_TEMPS_VS = '/temperatures/vs/0'              # vendor temp fallback (items[] array)
+
+CLIMATE_CONSUMED_HREFS = [
+    HREF_POWER, HREF_POWER_VS, HREF_TEMP_CURRENT, HREF_TEMP_DESIRED,
+    HREF_TEMP_CONTROL, HREF_TEMPS_VS, HREF_WIND_STRENGTH, HREF_WIND_DIRECTION,
+    HREF_CONVENIENT,
+]
 
 
 def _num(v):
@@ -71,7 +96,7 @@ def _climate_write(payload, rep, href=None):
 
 
 CLIMATE = Capability(
-    href='/mode/vs/0',
+    href=HREF_MODE,
     poll_tier='warm',
     entities=(
         ClimateDesc(key='climate', translation_key='airconditioner',
@@ -123,28 +148,76 @@ AIR_FILTER = Capability(
     ),
 )
 
-# ---------------------------------------------------------------------------
-# AC-scoped coverage: hrefs consumed by the composite climate entity, and
-# vendor duplicates / all-zero-ambiguous / plumbing resources. These are NOT in
-# the global ignored.IGNORED because several of them (/mode/vs/0 handled above,
-# /temperatures/vs/0, /humidity/*) collide with other families' schemas. A
-# no-entity Capability still marks the href as bound so discover() reports no
-# coverage gap.
-# ---------------------------------------------------------------------------
-_CONSUMED_BY_CLIMATE = [
-    '/power/0',                  # on/off -> climate HVACMode.OFF / TURN_ON/OFF
-    '/power/vs/0',               # vendor fallback for on/off
-    '/temperature/current/0',    # climate current_temperature
-    '/temperature/desired/0',    # climate target_temperature (write target)
-    '/temperature/control/vs/0', # climate target_temperature_step
-    '/wind/strength/vs/0',       # climate fan_mode
-    '/wind/direction/vs/0',      # climate swing_mode
-    '/mode/convenient/vs/0',     # climate preset_mode
-]
+DISPLAY_LIGHT = Capability(
+    href='/light/vs/0',
+    poll_tier='cold',
+    entities=(
+        SwitchDesc(key='display_light', field='mode',
+                   name='Display light', icon='mdi:led-on',
+                   entity_category='config',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['light', 'vs', '0'],
+                       {'mode': 'On' if p == 'On' else 'Off'})),
+    ),
+)
 
+# Confirmed against issue #38's dump (TP1X_DA-AC-RAC-01001_0000): a single
+# boolean field, no vendor prefix, mirroring the On/Off convention used
+# throughout the rest of this API.
+MUTE_ONCE = Capability(
+    href='/option/muteonce/vs/0',
+    poll_tier='warm',
+    entities=(
+        SwitchDesc(key='mute_once', field='muteonce',
+                   name='Mute once', icon='mdi:volume-mute',
+                   entity_category='config',
+                   value_fn=lambda v: v == 'On',
+                   write_fn=lambda p, rep, href=None: (
+                       ['option', 'muteonce', 'vs', '0'],
+                       {'muteonce': 'On' if p == 'On' else 'Off'})),
+    ),
+)
+
+# Circuit-breaker current-limit setting (issue #38, TP1X board): `operation`
+# toggles the limiter and `modes` picks a level out of `supportedModes`
+# (seen as '3'..'9'). No vendor field-name prefix and no unit/label in the
+# dump to confirm what the levels mean (amps vs. an abstract tier) --
+# exposed read-only per the 'don't guess' rule rather than risking an
+# unverified write to live HVAC hardware.
+CURRENT_LIMIT = Capability(
+    href='/electriccurrent/vs/0',
+    poll_tier='cold',
+    entities=(
+        BinarySensorDesc(key='current_limit_enabled', field='operation',
+                          name='Current limit enabled', icon='mdi:current-ac',
+                          entity_category='diagnostic',
+                          value_fn=lambda v: v == 'On'),
+        SensorDesc(key='current_limit_level', field='modes',
+                   name='Current limit level', icon='mdi:current-ac',
+                   entity_category='diagnostic'),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# AC-scoped coverage: the CLIMATE_CONSUMED_HREFS above (read by the climate
+# entity) plus vendor duplicates / all-zero-ambiguous / plumbing resources.
+# These are NOT in the global ignored.IGNORED because several of them
+# (/mode/vs/0 handled above, /temperatures/vs/0, /humidity/*) collide with
+# other families' schemas. A no-entity Capability still marks the href as
+# bound so discover() reports no coverage gap.
+#
+# CLIMATE_CONSUMED_HREFS carry the climate card's actual displayed state
+# (power, current/target temp, fan, swing, preset) -- the coordinator only
+# OBSERVE-subscribes and sub-polls 'hot'/'warm' hrefs (see coordinator.py),
+# so leaving these at the Capability default of 'cold' meant every state
+# change was invisible until the next full /device/0 summary sweep
+# (~30s -- issue #17: instant device response, 20-30s HA lag). Pin them to
+# 'warm' -- same tier as CLIMATE's own primary href -- so they get push
+# notifications (or, in poll-only mode, the warm sub-poll cadence) instead
+# of waiting on the summary sweep.
+# ---------------------------------------------------------------------------
 _AC_IGNORED = [
-    # Vendor superset that duplicates the OCF /temperature/current+desired pair.
-    '/temperatures/vs/0',
     # All-zero and ambiguously encoded on this model (2-value arrays); the
     # 'don't guess' rule -- leave unmodeled rather than invent entities.
     '/sensors/vs/0',
@@ -152,7 +225,29 @@ _AC_IGNORED = [
     '/humidity/vs/0',
     # Presence-personalization plumbing (empty item list here).
     '/personality/presence/vs/0',
+    # --- TP1X/TP2X-class housekeeping / opaque blobs. These carry no
+    # user-actionable state or no documented write contract, so per the
+    # 'don't guess' rule they are ignored rather than modeled.
+    # /option/muteonce/vs/0 and /selfcheck/vs/0 are deliberately NOT here --
+    # see MUTE_ONCE above and common.SELF_CHECK (via common.UNIVERSAL) in
+    # the by_type registry, both of which have a confirmed, cleanly
+    # modelable contract.
+    '/airlevelcheck/vs/0',         # periodic air-quality sensing scheduler plumbing
+    '/aisleep/vs/0',               # AI-sleep feedback state (no actionable control)
+    '/availablecontrolsets/vs/0',  # opaque hex-encoded control-set bitmap
+    '/da/softreset/vs/0',          # soft-reset trigger plumbing
+    '/keepnormalstate/vs/0',       # internal keep-normal flag
+    '/mds/absencemonitoring/vs/0', # motion-detection sensor plumbing (empty here)
+    '/mds/absencestate/vs/0',      # motion-detection state (empty here)
+    '/remotedatacontrol/vs/0',     # remote data-control session status
+    '/remotetemperature/vs/0',     # external temp-sensor feed (unset on this unit)
+    '/reserverulesets/vs/0',       # opaque hex-encoded schedule reservation blob
+    '/welcome/temperature/vs/0',   # welcome-cooling plumbing
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).
-COVERAGE = [Capability(href=h) for h in (_CONSUMED_BY_CLIMATE + _AC_IGNORED)]
+COVERAGE = [
+    Capability(href=h, poll_tier='warm') for h in CLIMATE_CONSUMED_HREFS
+] + [
+    Capability(href=h) for h in _AC_IGNORED
+]

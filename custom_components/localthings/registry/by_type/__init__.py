@@ -77,6 +77,8 @@ def for_device(one_ui_version: str) -> Optional[DeviceRegistry]:
 _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     'WW': 'washer',
     'WD': 'washer',
+    'WF': 'washer',
+    'WV': 'washer',  # FlexWash twin units (e.g. WV55M9600AW) -- issue #19
     'DV': 'dryer',
     'DW': 'dishwasher',
 }
@@ -102,6 +104,11 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # Room air conditioners (e.g. ARTIK051_PRAC_20K) report no oneUiVersion and
     # a modelNum carrying the '_PRAC_' (Package Room Air Conditioner) token.
     if key is None and '_PRAC_' in (model_num or ''):
+        key = 'airconditioner'
+    # Older/simpler RAC boards (e.g. TP2X_RAC_20K, issue #37) use the plain
+    # '_RAC_' token instead -- distinct from '_PRAC_' above (no overlap: the
+    # 'P' sits between the underscore and 'RAC' in that token).
+    if key is None and '_RAC_' in (model_num or ''):
         key = 'airconditioner'
     model_identity = f'{model_num} {description}'.upper()
     if key is None and ('_COOKTOP' in model_identity or '_GB_CT_' in model_identity):

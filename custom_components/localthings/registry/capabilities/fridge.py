@@ -19,7 +19,7 @@ import datetime
 
 from ..capability import Capability
 from ..entities import (
-    BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
+    BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc,
     SwitchDesc, TimeDesc,
 )
 from .common import normalize_temp_unit
@@ -100,6 +100,12 @@ ICEMAKER_NIGHTTIME = Capability(
 # Icemaker (generic — covers /icemaker/one/vs/0, /icemaker/two/vs/0)
 # /icemaker/status/vs/0 is kept as exact-href cap and binds first.
 # /icemaker/nighttime/vs/0 is excluded by match_fn (lacks iceMaker.state).
+#
+# Entity names are derived from x.com.samsung.da.iceMaker.name ("CUBED_ICE",
+# "ICE_BITES") via name_field, not the href's "one"/"two" segment -- these two
+# ice makers are independent on/off toggles that can both be enabled at once
+# (issue #27), so they stay separate entities rather than a single ice-type
+# select, but users still want them labeled with the device's own names.
 # ---------------------------------------------------------------------------
 
 def _icemaker_write(field):
@@ -112,6 +118,7 @@ ICEMAKER_GENERIC = Capability(
     href=None,
     href_prefix='/icemaker/',
     match_fn=lambda rep, resources: 'x.com.samsung.da.iceMaker.state' in rep,
+    name_field='x.com.samsung.da.iceMaker.name',
     poll_tier='warm',
     entities=(
         SensorDesc(key='making_status',
@@ -209,6 +216,14 @@ DEFROST_DELAY = Capability(
     ),
 )
 
+# OCF-native boolean mirror of DEFROST_DELAY.  The captured TP1X_REF_21K
+# firmware publishes the same state on both hrefs, but only the vendor resource
+# above has a confirmed write contract.  Bind the native mirror without another
+# entity so discovery records it as an intentional duplicate.
+DEFROST_DELAY_NATIVE_DUPLICATE = Capability(
+    href='/defrost/delay/0',
+)
+
 DEFROST_BLOCK_STATUS = Capability(
     href='/defrost/block/vs/0',
     poll_tier='warm',
@@ -217,28 +232,6 @@ DEFROST_BLOCK_STATUS = Capability(
                          name='Defrost active', icon='mdi:snowflake-melt',
                          entity_category='diagnostic',
                          value_fn=lambda modes: bool(modes) and modes[0] == 'DEFROST_BLOCK_ON'),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Self-check diagnostic
-# ---------------------------------------------------------------------------
-
-SELF_CHECK = Capability(
-    href='/selfcheck/vs/0',
-    poll_tier='cold',
-    entities=(
-        SensorDesc(key='selfcheck_status', field='x.com.samsung.da.status',
-                   name='Self-check status', icon='mdi:stethoscope',
-                   entity_category='diagnostic'),
-        SensorDesc(key='selfcheck_result', field='x.com.samsung.da.result',
-                   name='Self-check result', icon='mdi:clipboard-check-outline',
-                   entity_category='diagnostic'),
-        ButtonDesc(key='selfcheck_start', field='', name='Start self-check',
-                   payload='Start', icon='mdi:play-circle-outline',
-                   entity_category='diagnostic',
-                   write_fn=lambda p, rep, href=None: (
-                       ['selfcheck', 'vs', '0'], {'x.com.samsung.da.status': p})),
     ),
 )
 
@@ -495,16 +488,63 @@ BEVERAGE_ZONE = Capability(
 )
 
 # ---------------------------------------------------------------------------
+# Pantry / Cool Select Zone -- a convertible compartment toggled between
+# wine/deli/drinks temperature presets (issue #20). Same shape as
+# BEVERAGE_ZONE (a controllable named sub-zone with a mode + supported-modes
+# list) but a distinct resource/field set -- x.com.samsung.da.mode /
+# x.com.samsung.da.supportedOptions on /status/pantry/one/vs/0, rather than
+# roomDesiredMode/roomSupportedModes on /specialzone/one/vs/0. Only a "one"
+# instance has been seen; not generalized to a pattern cap until a second
+# instance turns up.
+# ---------------------------------------------------------------------------
+
+def _pantry_write(p, rep, href=None):
+    return ['status', 'pantry', 'one', 'vs', '0'], {'x.com.samsung.da.mode': p}
+
+
+PANTRY_ZONE = Capability(
+    href='/status/pantry/one/vs/0',
+    poll_tier='warm',
+    entities=(
+        SelectDesc(key='pantry_zone_mode', field='x.com.samsung.da.mode',
+                   name='Pantry zone mode', icon='mdi:glass-wine',
+                   translation_key='pantry_zone_mode',
+                   entity_category='config',
+                   options_field='x.com.samsung.da.supportedOptions',
+                   write_fn=_pantry_write),
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Flex zone (convertible drawer — /mode/vs/0 on RF9000-class fridges)
 #
-# x.com.samsung.da.modes holds multiple orthogonal flags in one list.
-# The flex zone entry is identified by the CV_TTYPE_RF9000A_ prefix.
+# x.com.samsung.da.modes holds multiple orthogonal flags in one list; the
+# flex-zone entry is whichever item is also a member of supportedOptions --
+# the other flags (WATERFILTER_*, DEFROST_BLOCK_*, the CVN_*_ZONE marker)
+# never appear there. The prefix on that item varies by fridge family
+# (CV_TTYPE_RF9000A_ on RF9000-class, CV_FDR_ on Bespoke-class -- issue #27 /
+# #26, where the old CV_TTYPE_RF9000A_-only match left this entity bound but
+# stuck on None), so match by list membership instead of a hardcoded prefix.
 # Write replaces only that item; other flags are preserved.
 # ---------------------------------------------------------------------------
 
+def _flex_zone_supported(rep):
+    return set(rep.get('x.com.samsung.da.supportedOptions') or ())
+
+
+def _flex_zone_current(rep):
+    # Every dump seen has at most one modes/supportedOptions overlap, so
+    # "first match" and "strip all matches" (in the write below) agree. If a
+    # future device ever reports two, this reads the first and the write
+    # would drop both -- revisit if that turns up.
+    modes = rep.get('x.com.samsung.da.modes') or []
+    supported = _flex_zone_supported(rep)
+    return next((m for m in modes if m in supported), None)
+
+
 def _flex_zone_write(p, rep, href=None):
-    modes = list(rep.get('x.com.samsung.da.modes') or [])
-    modes = [m for m in modes if not m.startswith('CV_TTYPE_RF9000A_')]
+    supported = _flex_zone_supported(rep)
+    modes = [m for m in (rep.get('x.com.samsung.da.modes') or []) if m not in supported]
     modes.append(p)
     return ['mode', 'vs', '0'], {'x.com.samsung.da.modes': modes}
 
@@ -514,36 +554,14 @@ FLEX_ZONE = Capability(
     poll_tier='warm',
     entities=(
         SelectDesc(key='flex_zone_mode',
-                   field='x.com.samsung.da.modes',
                    name='Flex zone mode', icon='mdi:thermostat',
                    translation_key='flex_zone_mode',
                    entity_category='config',
                    options_field='x.com.samsung.da.supportedOptions',
                    exists_fn=lambda rep, resources: bool(
                        rep.get('x.com.samsung.da.supportedOptions')),
-                   value_fn=lambda modes: next(
-                       (m for m in (modes or [])
-                        if m.startswith('CV_TTYPE_RF9000A_')), None),
+                   rep_fn=_flex_zone_current,
                    write_fn=_flex_zone_write),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# Firmware update
-# ---------------------------------------------------------------------------
-
-FIRMWARE_UPDATE = Capability(
-    href='/otninformation/vs/0',
-    poll_tier='cold',
-    entities=(
-        BinarySensorDesc(
-            key='firmware_update',
-            field='x.com.samsung.da.newVersionAvailable',
-            name='Firmware update available',
-            device_class='update',
-            entity_category='diagnostic',
-            value_fn=lambda v: str(v).lower() == 'true' if v is not None else None,
-        ),
     ),
 )
 
@@ -653,6 +671,14 @@ ICEMAKER_STATUS_FALLBACK = Capability(
                        ['icemaker', 'status', 'vs', '0'],
                        {'x.com.samsung.da.iceMaker': 'On' if p else 'Off'})),
     ),
+)
+
+# OCF-native aggregate mirror of ICEMAKER_STATUS_FALLBACK.  On the captured
+# TP1X_REF_21K it duplicates both the vendor aggregate and the richer per-unit
+# /icemaker/one|two/vs/0 resources.  Its write contract is not advertised, so
+# keep the proven per-unit/vendor controls and bind this as a duplicate only.
+ICEMAKER_STATUS_NATIVE_DUPLICATE = Capability(
+    href='/icemaker/status/0',
 )
 
 # OCF-native /refrigeration/0 (issue #7's unbound_hrefs) -- the odd one out

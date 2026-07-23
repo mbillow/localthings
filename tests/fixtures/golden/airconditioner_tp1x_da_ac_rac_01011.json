@@ -6,9 +6,13 @@
     "alarm_code",
     "auto_clean",
     "climate",
-    "diagnosis_status",
+    "display_light",
     "energy_kwh",
     "energy_saved_kwh",
-    "power_watts"
+    "firmware_update",
+    "mute_once",
+    "selfcheck_error",
+    "selfcheck_result",
+    "selfcheck_status"
   ]
 }

@@ -158,6 +158,46 @@ def test_discover_match_fn_decline_is_not_logged_as_gap():
     assert seen == []
 
 
+def test_discover_pattern_cap_reads_name_field():
+    """A pattern cap's name_field normalizes a device-given instance name
+    (e.g. an ice maker's "CUBED_ICE") for use in the entity's display name,
+    independent of the href-derived key (issue #27)."""
+    cap = Capability(
+        href=None,
+        href_prefix='/icemaker/',
+        name_field='x.com.samsung.da.iceMaker.name',
+        entities=(BinarySensorDesc(key='enabled', field='x.com.samsung.da.iceMaker.state'),),
+    )
+    resources = {
+        '/icemaker/one/vs/0': {
+            'x.com.samsung.da.iceMaker.state': 'On',
+            'x.com.samsung.da.iceMaker.name': 'CUBED_ICE',
+        },
+        '/icemaker/two/vs/0': {
+            'x.com.samsung.da.iceMaker.state': 'On',
+            'x.com.samsung.da.iceMaker.name': 'ICE_BITES',
+        },
+    }
+    bound = discover(resources, {}, pattern_caps=[cap])
+    names = {b.href: b.instance_name for b in bound}
+    assert names == {
+        '/icemaker/one/vs/0': 'Cubed Ice',
+        '/icemaker/two/vs/0': 'Ice Bites',
+    }
+
+
+def test_discover_pattern_cap_name_field_absent_leaves_instance_name_none():
+    cap = Capability(
+        href=None,
+        href_prefix='/icemaker/',
+        name_field='x.com.samsung.da.iceMaker.name',
+        entities=(BinarySensorDesc(key='enabled', field='x.com.samsung.da.iceMaker.state'),),
+    )
+    resources = {'/icemaker/one/vs/0': {'x.com.samsung.da.iceMaker.state': 'On'}}
+    bound = discover(resources, {}, pattern_caps=[cap])
+    assert bound[0].instance_name is None
+
+
 def test_discover_rt_filter_gates_binding():
     """Cap with rt_filter must not bind a rep whose rt list does not match."""
     oven_mode_cap = Capability(

@@ -1,6 +1,6 @@
 """Range-hood device registry."""
 
-from ..capabilities import common, fridge, ignored, range_hood
+from ..capabilities import common, ignored, range_hood
 from ._base import DeviceRegistry, _build
 
 
@@ -10,7 +10,7 @@ REGISTRY = DeviceRegistry(
         *ignored.IGNORED,
         range_hood.HOOD_ALARMS,
         common.ENERGY_METER,
-        fridge.FIRMWARE_UPDATE,
+        common.FIRMWARE_UPDATE,
         range_hood.HOOD_FAN,
         range_hood.HOOD_LAMP,
         range_hood.HOOD_FILTER,
