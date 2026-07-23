@@ -37,6 +37,26 @@ _LOGGER = logging.getLogger(__name__)
 
 _SEED_PATH = ['device', '0']
 
+_REMOTE_CONTROL_DISABLED_MESSAGE = (
+    "Remote control is turned off on this device. Check your appliance's "
+    "manual for how to enable remote control before Home Assistant can "
+    "control it."
+)
+
+
+def _remote_control_disabled(resources: dict) -> bool:
+    """True only when the device explicitly reports remote control off.
+    Mirrors REMOTE_CONTROL_GENERIC/_VS_FALLBACK's href/field pair in
+    registry/capabilities/common.py. Fails open (False) when neither href
+    is present -- most device types don't report this capability at all."""
+    generic = resources.get('/remotectrl/0')
+    if generic is not None:
+        return not bool(generic.get('value'))
+    fallback = resources.get('/remotectrl/vs/0')
+    if fallback is not None:
+        return str(fallback.get('x.com.samsung.da.remoteControlEnabled')).lower() != 'true'
+    return False
+
 
 class _NoOpDescriptor:
     """StateCache requires a descriptor with an on_observation hook. This
@@ -515,16 +535,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         A description-level validate_fn (currently SwitchDesc only) runs
         here rather than per-platform, so rejecting a write with a
         user-facing message -- as opposed to write_fn's silent no-op below
-        -- is available to every platform for free."""
+        -- is available to every platform for free. The remote-control
+        check runs first and applies to every platform unconditionally,
+        ahead of any description-specific validate_fn."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
             return
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
+        resources = self._cache.snapshot()
+        if _remote_control_disabled(resources):
+            raise ServiceValidationError(_REMOTE_CONTROL_DISABLED_MESSAGE)
         validate_fn = getattr(desc, 'validate_fn', None)
         if validate_fn is not None:
-            error = validate_fn(payload, rep, self._cache.snapshot())
+            error = validate_fn(payload, rep, resources)
             if error:
                 raise ServiceValidationError(error)
         result = write_fn(payload, rep, href)
