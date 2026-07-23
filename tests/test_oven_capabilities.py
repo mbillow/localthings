@@ -1,6 +1,28 @@
 """Unit tests for oven-family capabilities."""
+from custom_components.localthings.registry.by_type import for_device_by_model
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import discover
+
+
+# ---------------------------------------------------------------------------
+# Device-type detection + full-dump coverage (issue #55)
+# ---------------------------------------------------------------------------
+
+def test_oven_fixture_resolves_and_has_no_unbound_hrefs():
+    """The issue #55 dump previously came back device_type='unknown' with
+    /connected/vs/0 unbound -- resolving via the '-OVEN-' modelNum token
+    fallback must leave every href in the oven registry bound or ignored."""
+    from tests.conftest import _load_device
+    resources = _load_device('oven')
+    info = resources['/information/vs/0']
+    reg = for_device_by_model(
+        info['x.com.samsung.da.modelNum'], info['x.com.samsung.da.description'])
+    assert reg is not None
+    assert reg.name == 'oven'
+
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
 
 
 # ---------------------------------------------------------------------------

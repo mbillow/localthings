@@ -26,10 +26,10 @@ from datetime import datetime, timezone, timedelta
 
 from ..capability import Capability
 from ..entities import (
-    BinarySensorDesc, ButtonDesc, NumberDesc, SelectDesc, SensorDesc,
-    SwitchDesc,
+    BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc,
 )
 from .common import normalize_temp_unit
+from .operational import STOP_BUTTON
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -166,12 +166,6 @@ def _cook_time_write(p, rep, href=None):
     }
 
 
-def _stop_write(p, rep, href=None):
-    return ['operational', 'state', 'vs', '0'], {
-        'x.com.samsung.da.state': 'Ready',
-    }
-
-
 def _oven_mode_write(p, rep, href=None):
     if p not in _OVEN_MODES:
         return None
@@ -237,7 +231,7 @@ OVEN_OPERATIONAL_STATE = Capability(
                    device_class='enum', options=('idle', 'active', 'pause'),
                    translation_key='machine_state', value_fn=_to_ocf),
         BinarySensorDesc(key='cycle_active', field='x.com.samsung.da.state',
-                         name='Cycle active', device_class='running',
+                         name='Running', device_class='running',
                          value_fn=lambda v: _SAMSUNG_STATE_TO_OCF.get(v) == 'active'),
         SensorDesc(key='progress_percentage',
                    field='x.com.samsung.da.progressPercentage',
@@ -254,8 +248,7 @@ OVEN_OPERATIONAL_STATE = Capability(
                    name='Cook time', unit='min', native_min=0, native_max=1439,
                    step=1.0, icon='mdi:timer', value_fn=_op_minutes,
                    write_fn=_cook_time_write),
-        ButtonDesc(key='stop', field='', name='Stop cycle', icon='mdi:stop',
-                   payload='Stop', write_fn=_stop_write),
+        STOP_BUTTON,
     ),
 )
 
