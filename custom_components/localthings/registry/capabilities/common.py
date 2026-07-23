@@ -23,6 +23,13 @@ def _num(v):
         return None
 
 
+def int_or_none(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def clamp_power(v):
     n = _num(v)
     return 0.0 if (n is not None and n < 0) else n
@@ -56,6 +63,26 @@ def _active_alarm_codes(items):
         return 'none'
     codes = [i.get('x.com.samsung.da.code') for i in items if i.get('x.com.samsung.da.code')]
     return ', '.join(codes) if codes else 'none'
+
+
+def sensor_item_value(items, sensor_type, index=0):
+    """Pull one reading out of a `/sensors/vs/0`-style items[] list -- each
+    item is `{type, value: [...]}`; `index` picks which slot of a possibly
+    multi-value reading to read (index 0 is the raw measurement on every
+    family seen so far). Shared by range_hood.AIR_QUALITY and
+    air_purifier.AIR_QUALITY, which read the same resource shape."""
+    for item in items or ():
+        if not isinstance(item, dict):
+            continue
+        if item.get('x.com.samsung.da.type') != sensor_type:
+            continue
+        values = item.get('x.com.samsung.da.value') or ()
+        if index < len(values):
+            try:
+                return int(values[index])
+            except (TypeError, ValueError):
+                return None
+    return None
 
 
 # OCF-native / vendor '-vs' fallback pairs for power, kids-lock, remote control.

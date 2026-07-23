@@ -17,13 +17,7 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
-
-
-def _int_or_none(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+from .common import int_or_none, sensor_item_value
 
 
 def _timestamp(value):
@@ -31,18 +25,6 @@ def _timestamp(value):
         return datetime.fromtimestamp(float(value), tz=timezone.utc)
     except (TypeError, ValueError, OSError):
         return None
-
-
-def _item_value(items, sensor_type, index=0):
-    for item in items or ():
-        if not isinstance(item, dict):
-            continue
-        if item.get('x.com.samsung.da.type') != sensor_type:
-            continue
-        values = item.get('x.com.samsung.da.value') or ()
-        if index < len(values):
-            return _int_or_none(values[index])
-    return None
 
 
 def _active_alarm_codes(items):
@@ -176,7 +158,7 @@ HOOD_FILTER = Capability(
             state_class='measurement',
             icon='mdi:air-filter',
             entity_category='diagnostic',
-            value_fn=_int_or_none,
+            value_fn=int_or_none,
         ),
         SensorDesc(
             key='hood_filter_status',
@@ -193,7 +175,7 @@ HOOD_FILTER = Capability(
             icon='mdi:timer-outline',
             entity_category='diagnostic',
             enabled_default=False,
-            value_fn=_int_or_none,
+            value_fn=int_or_none,
         ),
     ),
 )
@@ -208,25 +190,25 @@ AIR_QUALITY = Capability(
             field='x.com.samsung.da.items',
             name='Clean level',
             icon='mdi:air-filter',
-            value_fn=lambda items: _item_value(items, 'CleanLevel'),
+            value_fn=lambda items: sensor_item_value(items, 'CleanLevel'),
         ),
         SensorDesc(
             key='dust',
             field='x.com.samsung.da.items',
             name='Dust',
-            value_fn=lambda items: _item_value(items, 'Dust'),
+            value_fn=lambda items: sensor_item_value(items, 'Dust'),
         ),
         SensorDesc(
             key='fine_dust',
             field='x.com.samsung.da.items',
             name='Fine dust',
-            value_fn=lambda items: _item_value(items, 'FineDust'),
+            value_fn=lambda items: sensor_item_value(items, 'FineDust'),
         ),
         SensorDesc(
             key='super_fine_dust',
             field='x.com.samsung.da.items',
             name='Super fine dust',
-            value_fn=lambda items: _item_value(items, 'SuperFineDust'),
+            value_fn=lambda items: sensor_item_value(items, 'SuperFineDust'),
         ),
     ),
 )

@@ -1,0 +1,25 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "blooming_level",
+    "clean_level",
+    "device_active",
+    "diagnosis_status",
+    "display_light",
+    "dust",
+    "energy_kwh",
+    "energy_last_month_kwh",
+    "energy_saved_kwh",
+    "energy_this_month_kwh",
+    "fan_direction",
+    "fan_speed_level",
+    "filter_progress",
+    "fine_dust",
+    "odor",
+    "operating_mode",
+    "power_energy_kwh",
+    "power_switch",
+    "power_watts",
+    "super_fine_dust"
+  ]
+}
