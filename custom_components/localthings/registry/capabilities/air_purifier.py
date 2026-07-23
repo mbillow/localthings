@@ -1,6 +1,5 @@
 """Capabilities for the Samsung ARTIK051_TVTL-class air purifier family
-(model AX60R5080WD/SE, issue #56 -- verified against two independent
-diagnostics dumps of the same internal model).
+(model AX60R5080WD/SE, issue #56).
 
 Power, kids-lock, remote-control, alarms, and the energy meter are the shared
 common.py capabilities (this family exposes the standard /power/0+/power/vs/0
@@ -8,32 +7,39 @@ pair and /alarms/vs/0, /energy/consumption/vs/0). /diagnosis/vs/0 reuses
 dishwasher.DIAGNOSIS -- identical field/write contract
 (x.com.samsung.da.diagnosisStart, 'Ready' on both dumps).
 
-Two things are deliberately left as raw, unwritable diagnostic sensors rather
-than modeled as real controls, per the "don't guess" rule:
+/mode/vs/0's x.com.samsung.da.options array packs multiple independent
+'<Prefix>_<value>' flags into one list -- the same packed-list/RMW contract
+laundry.py's option_value/replace_in_options already model for
+/course/vs/0's options[] (reused directly below, just against this family's
+own href). Per issue #56's follow-up (five diagnostics dumps captured with
+the physical unit set to Auto/Sleep/Low/Medium/High):
+  Light_On / Light_Off  -- a plain on/off flag; MODE below models it as a
+                            real switch, RMW-replacing just that one entry.
+  Comode_Off            -- read 'Off' on *every* one of the five dumps,
+                            including High/Low/Medium/Auto -- confirms this
+                            is NOT the fan-speed selector (ruling out the
+                            original guess); exposed read-only since its
+                            actual purpose is still unconfirmed.
+  OptionCode_60282       -- confirmed opaque/not user-facing in the
+                            SmartThings app; not modeled (same treatment as
+                            range_hood's OptionCode_* token on the same
+                            href).
+  Blooming_*             -- confirmed to have no corresponding SmartThings
+                            app setting; dropped entirely rather than kept
+                            as an unexplained diagnostic (it did track 1:1
+                            with Sleep mode across the five dumps -- 0 in
+                            Sleep, 6 otherwise -- so it's plausibly an
+                            automatic side effect of sleep mode, e.g. a
+                            display-dimming level, but that's still a guess).
 
-  /airflow/0, /airflow/vs/0 -- OCF-standard + vendor pair for fan speed/
-    direction, both zeroed/'Off' on every dump seen (device was off in both).
-    No supportedSpeed/supportedModes list is present anywhere in either dump
-    to confirm the valid range, so a write-capable fan/select isn't safe to
-    build yet -- see the issue #56 request for a running-state dump.
-
-  /mode/vs/0's x.com.samsung.da.options array packs multiple independent
-    '<Prefix>_<value>' flags into one list -- the same packed-list/RMW
-    contract laundry.py's option_value/replace_in_options already model for
-    /course/vs/0's options[] (reused directly below, just against this
-    family's own href). Of the tokens seen:
-      Light_On / Light_Off       -- read as a plain on/off flag; MODE below
-                                     models it as a real switch, RMW-
-                                     replacing just that one list entry.
-      Comode_Off                 -- never seen non-'Off' on these dumps;
-                                     likely the fan operating mode the issue
-                                     describes (Auto/Sleep/1/2/3), but
-                                     unconfirmed -- exposed read-only.
-      Blooming_0 / Blooming_6     -- meaning unconfirmed; exposed read-only.
-      OptionCode_60282            -- opaque, unchanged across both dumps;
-                                     not modeled (same treatment as
-                                     range_hood's OptionCode_* token on the
-                                     same href).
+/airflow/0 and /airflow/vs/0's `speed` still isn't modeled as a real
+fan-speed control: across the same five dumps it read 0 for both Auto *and*
+High, and 3 for Low/Medium/*and* Sleep -- not a monotonic mapping to any
+selectable level, and the dumps were all captured within about three minutes
+of each other (only one poll cycle apart at this integration's 30s summary
+interval), so the values may not have settled after each change before the
+diagnostics snapshot was taken. Exposed read-only pending a confirmed,
+stable capture -- see the issue #56 discussion for what's needed.
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc
@@ -68,16 +74,18 @@ def _consumable_state(items, name):
     return None
 
 
-# FilterProgress is a raw 0-100 percentage in both dumps (100 and 62); which
-# end of that scale means "replace me" isn't confirmed from the dump alone,
-# so the entity is named after the raw field rather than asserting a
-# direction (see issue #56 follow-up questions).
+# FilterProgress is a 0-100 percentage counting down as the filter wears --
+# confirmed via issue #56: the SmartThings app shows "Filter needs changing"
+# once this reaches the low end, so 100 means a fresh filter, not "100% worn".
+# Named 'Filter life' (matching the direction) rather than the 'Filter usage'
+# convention used elsewhere in this codebase (AC/range_hood's filterUsage
+# counts up instead), so the two aren't confused.
 FILTER = Capability(
     href='/consumable/vs/0',
     poll_tier='cold',
     entities=(
-        SensorDesc(key='filter_progress', field='x.com.samsung.da.items',
-                   name='Filter progress', unit='%', state_class='measurement',
+        SensorDesc(key='filter_life', field='x.com.samsung.da.items',
+                   name='Filter life', unit='%', state_class='measurement',
                    icon='mdi:air-filter', entity_category='diagnostic',
                    value_fn=lambda items: int_or_none(
                        _consumable_state(items, 'FilterProgress'))),
@@ -142,22 +150,20 @@ MODE = Capability(
                    rep_fn=bool_option_value('Light'),
                    exists_fn=bool_option_exists('Light'),
                    write_fn=_light_write),
-        # Read-only pending issue #56 follow-up -- see module docstring.
+        # Read-only -- confirmed NOT the fan-speed selector (see module
+        # docstring), actual purpose still unconfirmed.
         SensorDesc(key='operating_mode', name='Operating mode', icon='mdi:fan',
                    entity_category='diagnostic',
                    rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Comode'),
                    exists_fn=bool_option_exists('Comode')),
-        SensorDesc(key='blooming_level', name='Blooming level', icon='mdi:flower',
-                   entity_category='diagnostic',
-                   rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Blooming'),
-                   exists_fn=bool_option_exists('Blooming')),
     ),
 )
 
-# /humidity/0 and /humidity/vs/0 are empty {} on both dumps this family has
-# been verified against -- covered here (not globally, per ignored.py's
-# module docstring) since those hrefs collide with fridge/AC schemas
-# elsewhere. Same two hrefs and reasoning as airconditioner.py's _AC_IGNORED.
+# /humidity/0 and /humidity/vs/0 are empty {} on every dump seen, and issue
+# #56 confirms this model has no humidity sensor at all (dust/odor only) --
+# covered here (not globally, per ignored.py's module docstring) since those
+# hrefs collide with fridge/AC schemas elsewhere. Same two hrefs and
+# reasoning as airconditioner.py's _AC_IGNORED.
 COVERAGE = [
     Capability(href='/humidity/0'),
     Capability(href='/humidity/vs/0'),

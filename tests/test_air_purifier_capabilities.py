@@ -40,9 +40,9 @@ def test_expected_entities_present():
     state = _state()
     for key in (
         'power_switch', 'alarm_code', 'dust', 'fine_dust', 'super_fine_dust',
-        'odor', 'clean_level', 'filter_progress', 'device_active',
+        'odor', 'clean_level', 'filter_life', 'device_active',
         'diagnosis_status', 'fan_speed_level', 'fan_direction',
-        'display_light', 'operating_mode', 'blooming_level',
+        'display_light', 'operating_mode',
     ):
         assert key in state, key
 
@@ -58,8 +58,10 @@ def test_air_quality_sensor_values():
     assert state['clean_level'] == 0
 
 
-def test_filter_progress_reads_named_consumable_item():
-    assert _state()['filter_progress'] == 100
+def test_filter_life_reads_named_consumable_item():
+    """FilterProgress is confirmed (issue #56) to count down as the filter
+    wears -- 100 means fresh, not "100% used"."""
+    assert _state()['filter_life'] == 100
 
 
 def test_diagnosis_reuses_dishwasher_capability():
@@ -76,27 +78,34 @@ def test_light_switch_write_contract():
     the other flags and the list order untouched."""
     desc = next(e for e in air_purifier.MODE.entities if e.key == 'display_light')
     rep = {'x.com.samsung.da.options': [
-        'Comode_Off', 'Blooming_0', 'Light_On', 'OptionCode_60282',
+        'Comode_Off', 'Light_On', 'OptionCode_60282',
     ]}
     assert desc.rep_fn(rep) is True
     assert desc.write_fn('Off', rep) == (
         ['mode', 'vs', '0'],
         {'x.com.samsung.da.options': [
-            'Comode_Off', 'Blooming_0', 'Light_Off', 'OptionCode_60282',
+            'Comode_Off', 'Light_Off', 'OptionCode_60282',
         ]},
     )
 
 
-def test_mode_tokens_are_read_only_diagnostics():
-    """Comode_/Blooming_ tokens surface as raw diagnostic sensors rather than
-    a select/control -- their valid value ranges aren't confirmed yet (see
-    the air_purifier.py module docstring and the issue #56 follow-up)."""
+def test_operating_mode_is_a_read_only_diagnostic():
+    """Comode_* surfaces as a raw diagnostic sensor rather than a select/
+    control -- issue #56's five running-state dumps confirmed it reads 'Off'
+    regardless of the device's actual fan setting, ruling out the original
+    guess that it was the fan-speed selector; its real purpose is still
+    unconfirmed (see the air_purifier.py module docstring)."""
     operating_mode = next(e for e in air_purifier.MODE.entities if e.key == 'operating_mode')
-    blooming = next(e for e in air_purifier.MODE.entities if e.key == 'blooming_level')
-    rep = {'x.com.samsung.da.options': ['Comode_Off', 'Blooming_6']}
+    rep = {'x.com.samsung.da.options': ['Comode_Off']}
     assert operating_mode.rep_fn(rep) == 'Off'
-    assert blooming.rep_fn(rep) == '6'
     assert not hasattr(operating_mode, 'write_fn')
+
+
+def test_blooming_not_modeled():
+    """Confirmed (issue #56) to have no corresponding SmartThings app
+    setting -- dropped entirely rather than kept as an unexplained
+    diagnostic."""
+    assert not any(e.key == 'blooming_level' for e in air_purifier.MODE.entities)
 
 
 def test_airflow_vs_fallback_only_binds_without_generic():

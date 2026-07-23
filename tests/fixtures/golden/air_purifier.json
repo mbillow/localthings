@@ -1,7 +1,6 @@
 {
   "state_keys": [
     "alarm_code",
-    "blooming_level",
     "clean_level",
     "device_active",
     "diagnosis_status",
@@ -13,7 +12,7 @@
     "energy_this_month_kwh",
     "fan_direction",
     "fan_speed_level",
-    "filter_progress",
+    "filter_life",
     "fine_dust",
     "odor",
     "operating_mode",
