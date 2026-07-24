@@ -48,8 +48,8 @@ DRYER_SETTINGS = Capability(
 DRYER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
-        cycle_select(translation_key='dryer_cycle_table_03', icon='mdi:tumble-dryer',
-                     table_href='/st/dryercourse/vs/0', validated_table='Table_03'),
+        cycle_select(translation_key='dryer_cycle', icon='mdi:tumble-dryer',
+                     table_href='/st/dryercourse/vs/0'),
     ),
 )
 

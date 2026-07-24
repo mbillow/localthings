@@ -66,12 +66,29 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
             self._attr_name = f"{bound.instance_name} {_derive_name(bound.desc.key)}".strip()
         else:
             self._attr_name = _derive_name(self._state_key)
-        tk = bound.desc.translation_key
-        self._attr_translation_key = tk(coordinator.last_resources) if callable(tk) else tk
         self._attr_icon = bound.desc.icon
         raw_cat = bound.desc.entity_category
         self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None
         self._attr_entity_registry_enabled_default = bound.desc.enabled_default
+
+    @property
+    def translation_key(self) -> str | None:
+        """Override Entity.translation_key (a property upstream, not a
+        plain attribute) so a callable descriptor -- e.g.
+        laundry.cycle_select's table-id-gated resolver -- is re-evaluated
+        against live coordinator data on every access, not resolved once
+        at construction time.
+
+        Discovery runs on the first /device/0 poll, which the entity
+        registry already documents can hand a sibling resource an empty
+        stub rep before it's actually been fetched (see _is_included's
+        docstring) -- a static one-time resolution here would risk baking
+        in a permanent None (no translation) for the entity's whole
+        lifetime if that stub hadn't populated yet, even once the real
+        value arrives on a later poll.
+        """
+        tk = self._bound.desc.translation_key
+        return tk(self.coordinator.last_resources) if callable(tk) else tk
 
     @property
     def device_info(self) -> DeviceInfo:

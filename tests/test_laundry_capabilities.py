@@ -109,6 +109,28 @@ class TestCourseCodesFromSupportedOptions:
         assert laundry.cycle_options({}) == []
         assert laundry.cycle_options({'/course/vs/0': {}}) == []
 
+    def test_smallest_wins_even_when_a_larger_pass_is_not_a_multiple(self):
+        """Real dishwasher dump (K=7, 10 courses): K=10, 14, and 35 also
+        pass both checks here, and none of them are multiples of 7 --
+        position 0 lands on the same real course code ('0e') regardless of
+        K, which alone satisfies the current-course guard for several
+        unrelated splits. Smallest-K-wins is a heuristic that matches every
+        real dump checked so far, not a proven guarantee -- see
+        _course_codes_from_supported_options's docstring."""
+        resources = {
+            '/course/vs/0': {
+                'x.com.samsung.da.options': ['Course_0E'],
+                'x.com.samsung.da.supportedOptions': [
+                    '30E5434B102D102835034B002D002845034B002D002805034B000D000'
+                    '865034B002D002075000B000D000905000B000D0008D5034B002D0028'
+                    'E5034B000D0008F5034B000D000'
+                ],
+            },
+        }
+        assert laundry.cycle_options(resources) == [
+            '0E', '83', '84', '80', '86', '07', '90', '8D', '8E', '8F',
+        ]
+
 
 class TestCycleSelect:
     def test_builds_labelled_cycle_select(self):
@@ -147,39 +169,46 @@ class TestCycleSelect:
 
 class TestCycleSelectTableGating:
     """translation_key becomes a resolver, not a plain string, once
-    table_href/validated_table are given -- washer/dryer's real call sites
-    (issue: course codes aren't guaranteed consistent across board
-    generations sharing the same /course/vs/0 contract; FlexWash's older
-    board reports a different course table than every device the shipped
-    translations were confirmed against)."""
+    table_href is given -- washer/dryer's real call sites (issue: course
+    codes aren't guaranteed consistent across board generations sharing
+    the same /course/vs/0 contract; FlexWash's older board reports a
+    different course table than every device the shipped translations
+    were confirmed against). The resolved key is built from whatever table
+    the device actually reports -- a table with no strings.json entries
+    yet just falls through Home Assistant's own missing-translation
+    handling to raw-code display, the same as any individual untranslated
+    code within an existing table."""
 
     def _desc(self):
         return laundry.cycle_select(
-            translation_key='washer_cycle_table_02', icon='x',
-            table_href='/st/washercourse/vs/0', validated_table='Table_02',
+            translation_key='washer_cycle', icon='x',
+            table_href='/st/washercourse/vs/0',
         )
 
-    def test_static_string_when_no_table_params_given(self):
+    def test_static_string_when_no_table_href_given(self):
         """dishwasher's call site -- no equivalent table-id resource in any
         dump seen, no evidence of the same cross-board risk -- keeps the
         plain static key unconditionally."""
         desc = laundry.cycle_select(translation_key='dishwasher_cycle', icon='x')
         assert desc.translation_key == 'dishwasher_cycle'
 
-    def test_resolves_to_the_key_when_table_matches(self):
+    def test_resolved_key_is_built_from_the_reported_table(self):
         desc = self._desc()
         resources = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_02'}}
         assert callable(desc.translation_key)
         assert desc.translation_key(resources) == 'washer_cycle_table_02'
 
-    def test_resolves_to_none_for_a_different_table(self):
+    def test_resolved_key_reflects_an_unbuilt_table_too(self):
+        """No gating against a hardcoded 'known good' table -- a table we
+        haven't shipped translations for yet still gets a key built for
+        it, just one strings.json has nothing under (raw-code display)."""
         desc = self._desc()
         resources = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_00'}}
-        assert desc.translation_key(resources) is None
+        assert desc.translation_key(resources) == 'washer_cycle_table_00'
 
     def test_resolves_to_none_when_table_id_is_unknown(self):
-        """Absence isn't evidence of a match -- no href, or an empty rep,
-        gets no translation_key either, not the family default."""
+        """No href, or an empty rep, gets no translation_key at all --
+        there's nothing to build a key from."""
         desc = self._desc()
         assert desc.translation_key({}) is None
         assert desc.translation_key({'/st/washercourse/vs/0': {}}) is None

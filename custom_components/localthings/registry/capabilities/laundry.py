@@ -218,13 +218,20 @@ def _course_codes_from_supported_options(course_rep):
     member of its own device's valid list. If no split satisfies both, this
     returns [] rather than guess.
 
-    Among splits that satisfy both, the *smallest* passing K wins rather
-    than requiring a single unambiguous one: any exact multiple of the true
-    K (e.g. 2x or 7x its byte width) trivially re-passes both checks too --
-    it's just a sparser sampling of the same valid table, every entry of
-    which is still a real course code carried over from the finer split --
-    so a larger match is never independent evidence of a different table,
-    only redundant confirmation of the smaller one.
+    Among splits that satisfy both, the *smallest* passing K wins, rather
+    than requiring a single unambiguous one -- more than one K reliably
+    does pass on real data (e.g. the shipped dishwasher fixture: true
+    K=7 passes, but so do 10, 14, and 35, none of which are multiples of
+    7 -- position 0 always lands on the same real course code regardless
+    of K, which is enough on its own to satisfy the current-course guard
+    for several unrelated splits). Smallest-K-wins is a heuristic, not a
+    proof: it matches the confirmed answer on every one of six independent
+    real-world dumps this was checked against, but a coincidentally
+    unique, current-course-inclusive *smaller* K is not mathematically
+    impossible on some future device, and would be picked silently. Not
+    guarded against further here, since course tables are typically large
+    enough (double digits) that colliding by chance on both checks is
+    unlikely, and no device seen so far actually needs it.
     """
     raw = course_rep.get('x.com.samsung.da.supportedOptions')
     hexstr = raw[0] if isinstance(raw, list) and raw else raw
@@ -269,37 +276,45 @@ def _table_id(resources, table_href):
     return rep.get('x.com.samsung.da.st.courseTable')
 
 
-def cycle_select(*, translation_key, icon, table_href=None, validated_table=None):
+def cycle_select(*, translation_key, icon, table_href=None):
     """A 'Cycle' select over /course/vs/0, labelled from `translation_key`.
 
     The option list, current value, and write path are all shared across
     washer/dryer/dishwasher; only the translation is family- (and, for
     washer/dryer, board-) specific.
 
-    table_href/validated_table (washer/dryer only -- see washer.py/dryer.py's
-    call sites) gate translation_key on the device's own course-table id,
-    read from /st/washercourse/vs/0 or /st/dryercourse/vs/0's
-    x.com.samsung.da.st.courseTable: translation_key only applies when that
-    matches validated_table exactly; anything else -- a different table, or
-    no table id available at all -- gets no translation_key, i.e. the raw
-    course code displayed as-is, rather than risk a wrong name.
+    table_href (washer/dryer only -- see washer.py/dryer.py's call sites)
+    suffixes translation_key with the device's own course-table id, read
+    from /st/washercourse/vs/0 or /st/dryercourse/vs/0's
+    x.com.samsung.da.st.courseTable (e.g. 'washer_cycle' + 'Table_02' ->
+    'washer_cycle_table_02'). No table id available at all -- the href
+    absent or empty -- gets no translation_key, i.e. the raw course code
+    displayed as-is.
 
     This matters because course codes are NOT guaranteed consistent across
     board generations sharing the same /course/vs/0 contract: every code in
     washer_cycle_table_02 was confirmed against Table_02-reporting devices
     (DA_WM_TP1/TP2 boards); FlexWash's older DA_WM_A51 board reports
     Table_00 instead, so the same hex code could mean a different course
-    there for all we've verified.
+    there for all we've verified. Building the key from whatever table the
+    device actually reports, rather than gating a single hardcoded key on
+    an exact match, means a table we haven't built translations for yet
+    (like Table_00) just falls through Home Assistant's own missing-
+    translation handling to the same raw-code display -- exactly what
+    happens today for any individual code within a table's translations
+    that isn't populated yet -- and adding one later needs new strings.json
+    entries, not a code change here.
 
-    Left at their defaults for dishwasher, which has no equivalent
-    table-id resource in any dump seen and no evidence its course codes
-    vary by table the way washer/dryer's do -- there's nothing to gate on,
-    and no observed problem to gate against.
+    Left at its default for dishwasher, which has no equivalent table-id
+    resource in any dump seen and no evidence its course codes vary by
+    table the way washer/dryer's do -- there's nothing to build a
+    table-specific key from.
     """
     key = translation_key
     if table_href is not None:
         def key(resources):
-            return translation_key if _table_id(resources, table_href) == validated_table else None
+            table = _table_id(resources, table_href)
+            return f'{translation_key}_{table.lower()}' if table else None
 
     return SelectDesc(
         key='cycle', name='Cycle', icon=icon, translation_key=key,

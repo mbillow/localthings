@@ -37,7 +37,7 @@ def _display(value, translation_key: Optional[str]):
 
     `translation_key` is the entity's already-resolved key (SelectDesc.
     translation_key can itself be a callable -- see entities.py -- so
-    callers pass the resolved value, e.g. self._attr_translation_key, not
+    callers pass the resolved value, e.g. self.translation_key, not
     the raw descriptor field).
 
     An entity with a translation_key looks its state up in strings.json,
@@ -69,7 +69,7 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
         if not desc.options_field and not callable(desc.options):
-            self._attr_options = [_display(o, self._attr_translation_key) for o in desc.options]
+            self._attr_options = [_display(o, self.translation_key) for o in desc.options]
 
     def _raw_options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
@@ -89,17 +89,17 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
         if desc.options_field or callable(desc.options):
-            return [_display(o, self._attr_translation_key) for o in self._raw_options()]
+            return [_display(o, self.translation_key) for o in self._raw_options()]
         return self._attr_options
 
     @property
     def current_option(self):
         raw = (self.coordinator.data or {}).get(self._state_key)
-        return _display(raw, self._attr_translation_key)
+        return _display(raw, self.translation_key)
 
     async def async_select_option(self, option: str) -> None:
         raw = next(
-            (o for o in self._raw_options() if _display(o, self._attr_translation_key) == option),
+            (o for o in self._raw_options() if _display(o, self.translation_key) == option),
             option,
         )
         await self.coordinator.async_send_command(self._bound, raw)
