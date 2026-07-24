@@ -2,6 +2,7 @@
   "state_keys": [
     "alarm_code",
     "child_lock",
+    "cycle",
     "cycle_active",
     "delay_start_hours",
     "detergent_low",

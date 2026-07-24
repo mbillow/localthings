@@ -57,3 +57,20 @@ def test_callable_options_empty_result():
     desc = SelectDesc(key='cycle', options=lambda resources: [])
     entity = _make_select(desc, '/x/vs/0', {})
     assert entity.options == []
+
+
+def test_callable_translation_key_reresolves_live_not_once_at_construction():
+    """A callable translation_key (laundry.cycle_select's table-id-gated
+    resolver) must be re-evaluated against current coordinator data on
+    every access, not baked in once at __init__ -- discovery can run while
+    a sibling resource (e.g. /st/washercourse/vs/0) is still an empty stub
+    (see entity.py's _is_included docstring), and a one-time resolution
+    would permanently show untranslated codes even after a later poll
+    populates the real value."""
+    desc = SelectDesc(key='cycle', translation_key=lambda resources: resources.get('key'))
+    resources = {'key': None}
+    entity = _make_select(desc, '/x/vs/0', resources)
+    assert entity.translation_key is None
+
+    resources['key'] = 'washer_cycle_table_02'
+    assert entity.translation_key == 'washer_cycle_table_02'

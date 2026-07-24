@@ -61,8 +61,19 @@ class TestWasherCourse:
         assert washer.WASHER_COURSE.href == '/course/vs/0'
 
     def test_translation_key(self):
+        """Table-scoped (issue: course codes aren't guaranteed consistent
+        across board generations sharing /course/vs/0 -- FlexWash's older
+        board reports Table_00, not the Table_02 every washer_cycle_table_02
+        name was confirmed against) -- see laundry.cycle_select. The key is
+        built from whatever table the device reports, not gated against a
+        hardcoded 'known good' value."""
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
-        assert desc.translation_key == 'washer_cycle'
+        assert callable(desc.translation_key)
+        table_02 = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_02'}}
+        assert desc.translation_key(table_02) == 'washer_cycle_table_02'
+        table_00 = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_00'}}
+        assert desc.translation_key(table_00) == 'washer_cycle_table_00'
+        assert desc.translation_key({}) is None
 
     def test_reads_raw_course_code_from_options_array(self):
         """rep_fn returns the raw device code; display names come from
