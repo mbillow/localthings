@@ -4,10 +4,11 @@ from custom_components.localthings.registry.capabilities import laundry
 
 class TestCourseHelpers:
     def test_parses_edit_course_list(self):
-        raw = 'EditCourseList_1C1D211B1E29243328262722202325322F2E30662D8F96'
+        raw = 'EditCourseList_1C1D211B1E29243328262722202325322F2E30662D8F962b2a'
         assert laundry.parse_edit_course_list(raw) == [
             '1C', '1D', '21', '1B', '1E', '29', '24', '33', '28', '26', '27',
-            '22', '20', '23', '25', '32', '2F', '2E', '30', '66', '2D', '8F', '96'
+            '22', '20', '23', '25', '32', '2F', '2E', '30', '66', '2D', '8F', '96',
+            '2b', '2a'
         ]
 
     def test_parse_edit_course_list_handles_missing_or_malformed(self):
