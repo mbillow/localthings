@@ -31,7 +31,7 @@ from .observe import ObserveManager, MODE_OBSERVE, MODE_POLL, GRACE_PERIOD_S
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
-    DEVICE_SUPPORT_ISSUE_URL, SUMMARY_INTERVAL_S,
+    CONF_BYPASS_REMOTE_CONTROL, DEVICE_SUPPORT_ISSUE_URL, SUMMARY_INTERVAL_S,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +76,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # before treating it as one. A single slow transfer on an otherwise
     # fine session shouldn't tear down a working OBSERVE subscription.
     _POLL_TIMEOUT_LIMIT: int = 3
+
+    # Timeouts for the two network round trips a write triggers: the PUT
+    # itself (_do_put), then the confirming full /device/0 summary poll
+    # async_send_command requests right after (_poll_once). Named here
+    # (rather than left as inline literals) so the write-settle window
+    # below can be sized to always outlast both — see async_send_command.
+    _POST_TIMEOUT_S: float = 8.0
+    _POLL_TIMEOUT_S: float = 35.0
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         # Per-device logger (module logger scoped to this device's host) so
@@ -211,7 +219,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # would have succeeded, not a dead session. 35s gives a slow
             # blockwise transfer room to actually finish instead of
             # generating a TimeoutError every cycle.
-            code, payload = sess.get(_SEED_PATH, timeout=35.0)
+            code, payload = sess.get(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
         except TimeoutError:
             raise
         except Exception as e:
@@ -526,7 +534,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         user-facing message -- as opposed to write_fn's silent no-op below
         -- is available to every platform for free. The remote-control
         check runs first and applies to every platform unconditionally,
-        ahead of any description-specific validate_fn."""
+        ahead of any description-specific validate_fn -- unless the user has
+        opted this device out of it via CONF_BYPASS_REMOTE_CONTROL (issue
+        #54: some devices accept certain writes, e.g. a washer's default
+        dosing levels, even while reporting remote control off, so the
+        block's assumption doesn't hold for every model)."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
@@ -534,7 +546,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
         resources = self._cache.snapshot()
-        if not remote_control_enabled(resources):
+        bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
+        if not bypass_remote_control and not remote_control_enabled(resources):
             raise ServiceValidationError(_REMOTE_CONTROL_DISABLED_MESSAGE)
         validate_fn = getattr(desc, 'validate_fn', None)
         if validate_fn is not None:
@@ -571,14 +584,44 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # onto, the settle window was just delaying the real device
         # confirmation for a few seconds on every write, which read exactly
         # like the write being silently reverted (issue #27).
+        #
+        # settle_s must outlast the PUT and the async_request_refresh()
+        # below combined, not just DEFAULT_SETTLE_S's fixed few seconds --
+        # that refresh is a full /device/0 summary poll, which
+        # _POLL_TIMEOUT_S itself admits can legitimately take tens of
+        # seconds on these devices (see _poll_once), and some writes settle
+        # on the device itself well after that: issue #9's washer packs
+        # cycle/detergent/softener selection into the same /course/vs/0
+        # options[] array, and picking a new value there visibly needs a
+        # few seconds of internal validation/dispenser movement before the
+        # device's own state agrees -- while /washer/vs/0's temperature/
+        # spin fields (plain flags, no device-side settling) confirm
+        # instantly on the same device. A short fixed window expired while
+        # the confirm poll was still in flight (or before the device had
+        # caught up internally), so that stale read landed unprotected and
+        # reverted the optimistic value, self-correcting again only once a
+        # later poll finally saw the real change -- read by the user as the
+        # write "reverting, then re-applying itself" a few seconds later.
+        #
+        # An earlier attempt at this also released the guard early, right
+        # after the confirming refresh completed, to avoid shutting out
+        # unrelated real updates (another automation, the physical remote)
+        # for the rest of settle_s. That was reverted: releasing the guard
+        # the moment one round trip finishes doesn't mean the device has
+        # actually caught up (exactly the slow-settling case above), and it
+        # introduced its own races around overlapping writes to the same
+        # href. Simpler and safer to just hold the guard for the full,
+        # generously-sized window and let it expire on its own.
         self._observe.apply(write_href, body, source='optimistic')
-        self._observe.mark_write_pending(write_href)
+        self._observe.mark_write_pending(
+            write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+        )
 
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
+            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
 
         try:

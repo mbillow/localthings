@@ -243,6 +243,11 @@ _AC_IGNORED = [
     '/remotetemperature/vs/0',     # external temp-sensor feed (unset on this unit)
     '/reserverulesets/vs/0',       # opaque hex-encoded schedule reservation blob
     '/welcome/temperature/vs/0',   # welcome-cooling plumbing
+    # System-AC-only (multi-indoor-unit commercial installs, e.g.
+    # A-CAWW-TP2-20-COMMON, issue #52): opaque hex-encoded installation
+    # topology -- indoor/outdoor unit pairing, per-unit serials, MCU info.
+    # Commissioning-time plumbing, not user-actionable appliance state.
+    '/sac/installationinfo/vs/0',
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

@@ -67,6 +67,30 @@ def test_apply_drops_update_during_settle_window():
     assert mgr.cache.get('/oven/vs/0') == {'a': 1}
 
 
+def test_apply_optimistic_bypasses_an_in_progress_settle_window():
+    """Regression for issue #9: /course/vs/0 backs several independent
+    washer selects (cycle, detergent quantity, softener quantity, ...).
+    Picking a second one while the first's settle window is still open
+    (now sized to tens of seconds -- see coordinator._POST_TIMEOUT_S/
+    _POLL_TIMEOUT_S) is a normal sequence, not a stale echo of the first
+    write, and must land in the cache immediately -- not get silently
+    dropped by a guard that exists to protect optimistic writes, not
+    suppress them."""
+    mgr = _manager()
+    mgr.cache.apply_rep('/course/vs/0', {'Course': '1C', 'Detergent': '1'}, source='seed')
+    mgr.mark_write_pending('/course/vs/0', settle_s=30.0)
+
+    result = mgr.apply('/course/vs/0', {'Detergent': '2'}, source='optimistic')
+
+    assert result is True
+    assert mgr.cache.get('/course/vs/0') == {'Course': '1C', 'Detergent': '2'}
+
+    # A poll/sweep/observe update racing in right behind it is still
+    # gated -- the second write's own guard (re-armed by mark_write_pending,
+    # not exercised directly here) is what protects it going forward.
+    assert mgr.apply('/course/vs/0', {'Detergent': '1'}, source='poll') is False
+
+
 def test_apply_accepts_update_after_settle_window_elapses():
     mgr = _manager()
     mgr.mark_write_pending('/oven/vs/0', settle_s=0.05)

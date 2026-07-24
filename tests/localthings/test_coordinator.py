@@ -11,7 +11,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 
 from custom_components.localthings.const import (
-    CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
+    CONF_BYPASS_REMOTE_CONTROL, CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities.common import (
@@ -749,6 +749,104 @@ async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
     assert coordinator._observe._settle_until.get('/power/0') is not None
 
 
+async def test_send_command_survives_stale_confirm_poll(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources,
+) -> None:
+    """The settle window must outlast the confirm poll async_send_command
+    triggers via async_request_refresh(), not just DEFAULT_SETTLE_S's fixed
+    few seconds (issue #9). Some devices settle a write internally slower
+    than that refresh's own round trip -- issue #9's washer packs cycle/
+    detergent/softener selection into /course/vs/0's shared options[]
+    array, which visibly takes a few seconds of validation/dispenser
+    movement to catch up, unlike /washer/vs/0's plain temperature/spin
+    fields on the same device, which confirm instantly. A confirm poll that
+    lands before the device has caught up is stale, and a settle window
+    sized only to the fixed default (rather than the PUT+poll round trip)
+    expires before that poll even returns, so the stale read lands
+    unprotected and reverts the optimistic value -- self-correcting again
+    only once a later poll finally sees the real change. That reads to a
+    user as the write reverting, then reapplying itself, a few seconds
+    later."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href):
+        return (['test', 'vs', '0'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    def _stale_confirm_poll():
+        # Stand-in for the write's own confirming /device/0 poll racing
+        # against a stale read for the same href -- the device's internal
+        # state hasn't caught up to the write yet, even though it will a
+        # little later.
+        coordinator._observe.apply('/test/vs/0', {'value': 0}, source='poll')
+        return fridge_resources
+
+    with (
+        patch.object(fake, 'subscribe'),
+        patch.object(LocalThingsCoordinator, '_poll_once', side_effect=_stale_confirm_poll),
+    ):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    # The optimistic value is visible right away and survived the stale
+    # confirm-poll race triggered by the refresh above.
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+    # The settle window is still open afterward -- sized to outlast the
+    # whole PUT + confirm-poll round trip, not released the moment that
+    # round trip happens to finish.
+    applied = coordinator._observe.apply('/test/vs/0', {'value': 0}, source='observe')
+    assert applied is False
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+
+async def test_second_write_to_same_href_lands_during_first_writes_settle_window(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session,
+) -> None:
+    """Regression for issue #9: /course/vs/0 backs several independent
+    washer selects (cycle, detergent quantity, softener quantity, ...)
+    sharing one href. The settle window is now sized to tens of seconds
+    (see test_send_command_survives_stale_confirm_poll), which makes a
+    second, different write to that href landing while the first write's
+    window is still open a routine occurrence -- e.g. a user picking a
+    cycle and then adjusting detergent quantity within the same minute --
+    not a rare edge case. The second write's own optimistic value must
+    still show up immediately; a guard meant to protect optimistic writes
+    from stale device echoes must not itself suppress a later one."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    desc_a = NumberDesc(key='cycle', field='cycle',
+                        write_fn=lambda p, rep, href: (['test', 'vs', '0'], {'cycle': p}))
+    desc_b = NumberDesc(key='detergent', field='detergent',
+                        write_fn=lambda p, rep, href: (['test', 'vs', '0'], {'detergent': p}))
+    bound_a = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc_a)
+    bound_b = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc_b)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound_a, 'Eco')
+        assert coordinator._cache.get('/test/vs/0') == {'cycle': 'Eco'}
+
+        # Still well within the first write's settle window.
+        await coordinator.async_send_command(bound_b, 'High')
+
+    assert coordinator._cache.get('/test/vs/0') == {'cycle': 'Eco', 'detergent': 'High'}
+
+
 class TestRemoteControlEnabled:
     """remote_control_enabled (registry/capabilities/common.py) is the
     single source of truth for the /remotectrl on/off signal, shared by
@@ -881,3 +979,44 @@ async def test_send_command_remote_control_check_precedes_validate_fn(
 
     with pytest.raises(ServiceValidationError, match="Remote control is turned off"):
         await coordinator.async_send_command(bound, 'On')
+
+
+async def test_send_command_bypasses_remote_control_when_option_enabled(
+    hass: HomeAssistant, mock_coordinator_observe_session
+) -> None:
+    """Issue #54: some devices accept certain writes even while reporting
+    remote control off, so a user who's confirmed that for their device can
+    opt it out of the block entirely via the options flow
+    (CONF_BYPASS_REMOTE_CONTROL, entry.options -- not entry.data)."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, unique_id=f'localthings_{MOCK_SERIAL}',
+        options={CONF_BYPASS_REMOTE_CONTROL: True},
+    )
+    entry.add_to_hass(hass)
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    assert coordinator._cache.get('/some/path') == {'value': 5}

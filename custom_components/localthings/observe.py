@@ -115,8 +115,22 @@ class ObserveManager:
         could each read the same prior rep and the second writer would
         silently lose the first's fields, reintroducing the exact bug
         this merge fixes.
+
+        `source == 'optimistic'` always bypasses the settle gate below,
+        even while this href is already settling from an earlier write.
+        Several independent selects can share one href -- issue #9's washer
+        packs cycle, detergent, and softener settings onto the same
+        /course/vs/0 -- so a second, different write to the same href
+        while the first's settle window is still open (up to
+        _POST_TIMEOUT_S + _POLL_TIMEOUT_S, tens of seconds -- see
+        coordinator.async_send_command) is an expected, normal sequence,
+        not a stale echo of the first write. Gating it the same as a
+        poll/sweep/observe update would silently drop the user's own
+        second selection from the cache until the first write's guard
+        happened to expire, i.e. the exact symptom this guard exists to
+        prevent, just relocated to whichever write loses the race.
         """
-        if self._is_settling(href):
+        if source != 'optimistic' and self._is_settling(href):
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
         with self._cache_lock:
