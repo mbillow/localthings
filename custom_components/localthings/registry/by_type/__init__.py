@@ -113,6 +113,15 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # 'P' sits between the underscore and 'RAC' in that token).
     if key is None and '_RAC_' in (model_num or ''):
         key = 'airconditioner'
+    # System air conditioners (multi-indoor-unit commercial installs, e.g.
+    # A-CAWW-TP2-20-COMMON, issue #52) report no oneUiVersion either and
+    # carry the '-CAWW-' board-family token instead of '_RAC_'/'_PRAC_'.
+    # Same TP1X/TP2X-class resource surface as the room-AC models above
+    # (confirmed by the issue #52 dump binding cleanly against the existing
+    # airconditioner registry once routed here), plus one new SAC-specific
+    # resource (see airconditioner.py's _AC_IGNORED).
+    if key is None and '-CAWW-' in (model_num or '').upper():
+        key = 'airconditioner'
     # Air purifiers (e.g. ARTIK051_TVTL_18K, issue #56) report no
     # oneUiVersion either, and carry the '_TVTL_' board-family token.
     if key is None and '_TVTL_' in (model_num or ''):
