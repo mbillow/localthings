@@ -31,7 +31,7 @@ from .observe import ObserveManager, MODE_OBSERVE, MODE_POLL, GRACE_PERIOD_S
 
 from .const import (
     DOMAIN, CONF_HOST, CONF_PORT, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
-    DEVICE_SUPPORT_ISSUE_URL, SUMMARY_INTERVAL_S,
+    CONF_BYPASS_REMOTE_CONTROL, DEVICE_SUPPORT_ISSUE_URL, SUMMARY_INTERVAL_S,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -534,7 +534,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         user-facing message -- as opposed to write_fn's silent no-op below
         -- is available to every platform for free. The remote-control
         check runs first and applies to every platform unconditionally,
-        ahead of any description-specific validate_fn."""
+        ahead of any description-specific validate_fn -- unless the user has
+        opted this device out of it via CONF_BYPASS_REMOTE_CONTROL (issue
+        #54: some devices accept certain writes, e.g. a washer's default
+        dosing levels, even while reporting remote control off, so the
+        block's assumption doesn't hold for every model)."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
@@ -542,7 +546,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         href = bound_entity.href
         rep = self._cache.get(href or '') or {}
         resources = self._cache.snapshot()
-        if not remote_control_enabled(resources):
+        bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
+        if not bypass_remote_control and not remote_control_enabled(resources):
             raise ServiceValidationError(_REMOTE_CONTROL_DISABLED_MESSAGE)
         validate_fn = getattr(desc, 'validate_fn', None)
         if validate_fn is not None:

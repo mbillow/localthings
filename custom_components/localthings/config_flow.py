@@ -12,6 +12,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     TextSelector,
@@ -24,6 +25,7 @@ from .const import (
     CONF_HOST, CONF_PORT,
     CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
     CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
+    CONF_BYPASS_REMOTE_CONTROL,
     PROBE_PORT_RANGE, PREFERRED_PROBE_PORTS, LIVENESS_PROBE_TIMEOUT_S,
     PROBE_GET_TIMEOUT_S,
 )
@@ -300,6 +302,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._ca_key_pem: str = ""
         self._pending_info: dict | None = None
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> LocalThingsOptionsFlow:
+        return LocalThingsOptionsFlow()
+
     def _create_entry(self, info: dict) -> FlowResult:
         return self.async_create_entry(
             title=f"Samsung Appliance ({self._host})",
@@ -383,4 +392,32 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "one_ui_version": self._pending_info["one_ui_version"] or "(none reported)",
             },
+        )
+
+
+class LocalThingsOptionsFlow(config_entries.OptionsFlow):
+    """Per-device override of the remote-control-off write block (issue
+    #54). The block exists because most devices reject writes outright
+    while remote control is off and a clear error beats a silent
+    device-side rejection -- but not every model actually enforces that,
+    so this lets a user who's confirmed their device accepts writes anyway
+    turn the block off for just that device rather than it being
+    hardcoded on for everyone."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(
+                    CONF_BYPASS_REMOTE_CONTROL,
+                    default=self.config_entry.options.get(
+                        CONF_BYPASS_REMOTE_CONTROL, False
+                    ),
+                ): bool,
+            }),
         )

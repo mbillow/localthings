@@ -246,6 +246,17 @@
       "already_configured": "This device is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Local Things Options",
+        "description": "Some devices accept certain writes (e.g. default detergent/softener dosing on a washer) even while reporting remote control off. By default, LocalThings blocks every write with a clear error whenever a device reports remote control off, rather than letting the device silently reject it. Only enable this if you've confirmed writes actually work on this device with remote control off -- otherwise you'll trade that clear error for a silent failure.",
+        "data": {
+          "bypass_remote_control_lock": "Allow writes even when remote control is reported off"
+        }
+      }
+    }
+  },
   "issues": {
     "device_gap": {
       "title": "Incomplete capability coverage for {device_name}",

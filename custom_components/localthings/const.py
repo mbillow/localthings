@@ -12,6 +12,16 @@ CONF_CA_KEY_PEM   = "ca_key_pem"
 CONF_LEAF_CERT_PEM = "leaf_cert_pem"
 CONF_LEAF_KEY_PEM  = "leaf_key_pem"
 
+# Options-flow key (entry.options, not entry.data): lets a user override the
+# device-wide remote-control-off write block for a specific device (issue
+# #54). Some devices report remote control off yet still accept certain
+# writes (e.g. default detergent/softener dosing on a washer, applied even
+# to the built-in programs) -- the block exists to give a clear error
+# instead of a silent device-side rejection, but that assumption doesn't
+# hold for every model. Defaults to False (block stays on) everywhere it's
+# read, so devices this doesn't apply to see no behavior change.
+CONF_BYPASS_REMOTE_CONTROL = "bypass_remote_control_lock"
+
 # The DTLS/CoAP local API binds somewhere in this ephemeral range; which port
 # depends on firmware. Newer builds answer on 49154/49155, but older ones have
 # been seen as low as 49153, so we sweep the whole range for a live UDP port

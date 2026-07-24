@@ -11,7 +11,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
 
 from custom_components.localthings.const import (
-    CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
+    CONF_BYPASS_REMOTE_CONTROL, CONF_HOST, DOMAIN, SUMMARY_INTERVAL_S,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities.common import (
@@ -979,3 +979,44 @@ async def test_send_command_remote_control_check_precedes_validate_fn(
 
     with pytest.raises(ServiceValidationError, match="Remote control is turned off"):
         await coordinator.async_send_command(bound, 'On')
+
+
+async def test_send_command_bypasses_remote_control_when_option_enabled(
+    hass: HomeAssistant, mock_coordinator_observe_session
+) -> None:
+    """Issue #54: some devices accept certain writes even while reporting
+    remote control off, so a user who's confirmed that for their device can
+    opt it out of the block entirely via the options flow
+    (CONF_BYPASS_REMOTE_CONTROL, entry.options -- not entry.data)."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, unique_id=f'localthings_{MOCK_SERIAL}',
+        options={CONF_BYPASS_REMOTE_CONTROL: True},
+    )
+    entry.add_to_hass(hass)
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href):
+        return (['some', 'path'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    assert coordinator._cache.get('/some/path') == {'value': 5}
