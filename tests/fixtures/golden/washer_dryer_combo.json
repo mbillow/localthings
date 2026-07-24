@@ -3,6 +3,8 @@
     "alarm_code",
     "bubble_soak",
     "child_lock",
+    "completion_minutes",
+    "completion_time",
     "cycle",
     "cycle_active",
     "delay_start_hours",

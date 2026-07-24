@@ -24,6 +24,39 @@ class TestProgressPercentage:
         assert desc.rep_fn(rep) == 42
 
 
+class TestCompletionTime:
+    """Unit tests for completion_time and completion_minutes entities."""
+
+    def test_completion_time_string(self):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == 'completion_time')
+        rep = {'x.com.samsung.da.remainingTime': '01:25:30'}
+        assert desc.rep_fn(rep) == '01:25:30'
+
+    def test_completion_time_fallback(self):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == 'completion_time')
+        rep = {'remainingTime': '00:45:00'}
+        assert desc.rep_fn(rep) == '00:45:00'
+
+    def test_completion_minutes_parsing(self):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == 'completion_minutes')
+        
+        # 1 hour 25 mins 30 secs -> 85 mins + 1 sec ceiling = 86 mins
+        rep = {'x.com.samsung.da.remainingTime': '01:25:30'}
+        assert desc.rep_fn(rep) == 86
+
+        # Exact minutes: 1 hour 30 mins 00 secs -> 90 mins
+        rep_exact = {'x.com.samsung.da.remainingTime': '01:30:00'}
+        assert desc.rep_fn(rep_exact) == 90
+
+    def test_completion_time_missing_or_invalid(self):
+        desc_time = next(e for e in OPERATIONAL_STATE.entities if e.key == 'completion_time')
+        desc_min = next(e for e in OPERATIONAL_STATE.entities if e.key == 'completion_minutes')
+        
+        rep = {}
+        assert desc_time.rep_fn(rep) is None
+        assert desc_min.rep_fn(rep) is None
+
+
 class TestDelayFieldFallback:
     def test_reads_delay_end_time_when_delay_start_time_absent(self):
         from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE

@@ -100,7 +100,9 @@
           "37": "Air Wash",
           "38": "Cotton Dry",
           "39": "Synthetics Dry",
-          "1f": "Intense Cold"
+          "1f": "Intense Cold",
+          "2b": "AI Wash",
+          "2a": "Jeans"
         }
       },
       "dryer_cycle_table_03": {
