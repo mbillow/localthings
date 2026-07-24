@@ -215,6 +215,30 @@ def test_tp1x_rac_expected_state_keys_present():
         assert key in state, key
 
 
+def test_caww_tp2_model_resolves_via_model_fallback():
+    """A-CAWW-TP2-20-COMMON (issue #52, System AC) reports no oneUiVersion
+    and no '_RAC_'/'_PRAC_' token -- resolved via the '-CAWW-' modelNum
+    fallback added for this device."""
+    reg, _ = _resolve('airconditioner_caww_tp2')
+    assert reg is not None and reg.name == 'airconditioner'
+
+
+def test_caww_tp2_no_unbound_hrefs():
+    """Every resource in the issue #52 dump binds or is ignored -- clears
+    the coverage-gap repair. Only new href beyond the existing RAC/PRAC
+    surface is /sac/installationinfo/vs/0 (opaque SAC installation topology,
+    ignored)."""
+    reg, resources = _resolve('airconditioner_caww_tp2')
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def test_caww_tp2_sac_installationinfo_is_ignored():
+    ignored_hrefs = {cap.href for cap in airconditioner.COVERAGE}
+    assert '/sac/installationinfo/vs/0' in ignored_hrefs
+
+
 def test_mute_once_write_target():
     write = airconditioner.MUTE_ONCE.entities[0].write_fn
     assert write('On', {}) == (['option', 'muteonce', 'vs', '0'], {'muteonce': 'On'})
