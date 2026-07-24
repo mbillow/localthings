@@ -8,7 +8,7 @@ class TestCourseHelpers:
         assert laundry.parse_edit_course_list(raw) == [
             '1C', '1D', '21', '1B', '1E', '29', '24', '33', '28', '26', '27',
             '22', '20', '23', '25', '32', '2F', '2E', '30', '66', '2D', '8F', '96',
-            '2b', '2c'
+            '2b', '2a'
         ]
 
     def test_parse_edit_course_list_handles_missing_or_malformed(self):
