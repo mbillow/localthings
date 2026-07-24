@@ -293,7 +293,8 @@ def _bool_option_switch(key, name, icon, prefix, availability_field):
 WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
-        cycle_select(translation_key='washer_cycle', icon='mdi:washing-machine'),
+        cycle_select(translation_key='washer_cycle_table_02', icon='mdi:washing-machine',
+                     table_href='/st/washercourse/vs/0', validated_table='Table_02'),
         SensorDesc(key='drum_clean_cycles_remaining', name='Drum clean due in',
                    icon='mdi:washing-machine-alert', unit='cycles',
                    state_class='measurement',

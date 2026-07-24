@@ -28,7 +28,12 @@ class SamsungEntityDescription:
     key: str
     field: str = ''
     name: Optional[str] = None
-    translation_key: Optional[str] = None
+    translation_key: Any = None  # str | Callable[[dict[str, dict]], Optional[str]]
+    # callable form receives the coordinator's full href->rep resource
+    # snapshot and returns the key to use (or None for no translation this
+    # device) -- for a descriptor shared across board generations whose
+    # state-code meaning isn't guaranteed consistent between them; see
+    # laundry.cycle_select's table-id-gated resolver.
     icon: Optional[str] = None
     entity_category: Optional[str] = None      # 'diagnostic' | 'config' | None
     enabled_default: bool = True

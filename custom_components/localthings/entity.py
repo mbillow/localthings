@@ -66,7 +66,8 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
             self._attr_name = f"{bound.instance_name} {_derive_name(bound.desc.key)}".strip()
         else:
             self._attr_name = _derive_name(self._state_key)
-        self._attr_translation_key = bound.desc.translation_key
+        tk = bound.desc.translation_key
+        self._attr_translation_key = tk(coordinator.last_resources) if callable(tk) else tk
         self._attr_icon = bound.desc.icon
         raw_cat = bound.desc.entity_category
         self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None

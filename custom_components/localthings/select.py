@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -31,8 +32,13 @@ async def async_setup_entry(
 _CAMEL_BOUNDARY_RE = re.compile(r'(?<=[a-z0-9])(?=[A-Z])')
 
 
-def _display(value, desc: SelectDesc):
+def _display(value, translation_key: Optional[str]):
     """Turn a raw device option/state value into what's shown in the UI.
+
+    `translation_key` is the entity's already-resolved key (SelectDesc.
+    translation_key can itself be a callable -- see entities.py -- so
+    callers pass the resolved value, e.g. self._attr_translation_key, not
+    the raw descriptor field).
 
     An entity with a translation_key looks its state up in strings.json,
     and hassfest requires those keys to be lowercase -- so those values
@@ -50,7 +56,7 @@ def _display(value, desc: SelectDesc):
     """
     if not isinstance(value, str):
         return value
-    if desc.translation_key:
+    if translation_key:
         return value.lower()
     if value.islower():
         return value.replace('_', ' ').title()
@@ -63,7 +69,7 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
         if not desc.options_field and not callable(desc.options):
-            self._attr_options = [_display(o, desc) for o in desc.options]
+            self._attr_options = [_display(o, self._attr_translation_key) for o in desc.options]
 
     def _raw_options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
@@ -83,17 +89,17 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
         if desc.options_field or callable(desc.options):
-            return [_display(o, desc) for o in self._raw_options()]
+            return [_display(o, self._attr_translation_key) for o in self._raw_options()]
         return self._attr_options
 
     @property
     def current_option(self):
         raw = (self.coordinator.data or {}).get(self._state_key)
-        return _display(raw, self._bound.desc)
+        return _display(raw, self._attr_translation_key)
 
     async def async_select_option(self, option: str) -> None:
-        desc: SelectDesc = self._bound.desc
         raw = next(
-            (o for o in self._raw_options() if _display(o, desc) == option), option
+            (o for o in self._raw_options() if _display(o, self._attr_translation_key) == option),
+            option,
         )
         await self.coordinator.async_send_command(self._bound, raw)

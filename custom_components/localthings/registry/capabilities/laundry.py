@@ -264,15 +264,45 @@ def cycle_write(p, rep, href=None):
     }
 
 
-def cycle_select(*, translation_key, icon):
+def _table_id(resources, table_href):
+    rep = resources.get(table_href) or {}
+    return rep.get('x.com.samsung.da.st.courseTable')
+
+
+def cycle_select(*, translation_key, icon, table_href=None, validated_table=None):
     """A 'Cycle' select over /course/vs/0, labelled from `translation_key`.
 
-    The caller supplies the family's translation key (washer_cycle /
-    dishwasher_cycle / dryer_cycle) and icon; the option list, current value,
-    and write path are all shared.
+    The option list, current value, and write path are all shared across
+    washer/dryer/dishwasher; only the translation is family- (and, for
+    washer/dryer, board-) specific.
+
+    table_href/validated_table (washer/dryer only -- see washer.py/dryer.py's
+    call sites) gate translation_key on the device's own course-table id,
+    read from /st/washercourse/vs/0 or /st/dryercourse/vs/0's
+    x.com.samsung.da.st.courseTable: translation_key only applies when that
+    matches validated_table exactly; anything else -- a different table, or
+    no table id available at all -- gets no translation_key, i.e. the raw
+    course code displayed as-is, rather than risk a wrong name.
+
+    This matters because course codes are NOT guaranteed consistent across
+    board generations sharing the same /course/vs/0 contract: every code in
+    washer_cycle_table_02 was confirmed against Table_02-reporting devices
+    (DA_WM_TP1/TP2 boards); FlexWash's older DA_WM_A51 board reports
+    Table_00 instead, so the same hex code could mean a different course
+    there for all we've verified.
+
+    Left at their defaults for dishwasher, which has no equivalent
+    table-id resource in any dump seen and no evidence its course codes
+    vary by table the way washer/dryer's do -- there's nothing to gate on,
+    and no observed problem to gate against.
     """
+    key = translation_key
+    if table_href is not None:
+        def key(resources):
+            return translation_key if _table_id(resources, table_href) == validated_table else None
+
     return SelectDesc(
-        key='cycle', name='Cycle', icon=icon, translation_key=translation_key,
+        key='cycle', name='Cycle', icon=icon, translation_key=key,
         options=cycle_options,
         exists_fn=lambda rep, resources: bool(cycle_options(resources)),
         rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Course'),

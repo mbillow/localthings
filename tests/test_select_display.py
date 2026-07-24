@@ -1,9 +1,8 @@
 """Tests for select-option display casing (custom_components/localthings/select.py)."""
-from custom_components.localthings.registry.entities import SelectDesc
 from custom_components.localthings.select import _display
 
-_UNTRANSLATED = SelectDesc(key='x', options=())
-_TRANSLATED = SelectDesc(key='y', options=(), translation_key='door_alert')
+_UNTRANSLATED = None
+_TRANSLATED = 'door_alert'
 
 
 def test_display_titlecases_a_fully_lowercase_device_native_token():

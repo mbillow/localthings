@@ -145,6 +145,46 @@ class TestCycleSelect:
         assert desc.write_fn('1D', {}) is None
 
 
+class TestCycleSelectTableGating:
+    """translation_key becomes a resolver, not a plain string, once
+    table_href/validated_table are given -- washer/dryer's real call sites
+    (issue: course codes aren't guaranteed consistent across board
+    generations sharing the same /course/vs/0 contract; FlexWash's older
+    board reports a different course table than every device the shipped
+    translations were confirmed against)."""
+
+    def _desc(self):
+        return laundry.cycle_select(
+            translation_key='washer_cycle_table_02', icon='x',
+            table_href='/st/washercourse/vs/0', validated_table='Table_02',
+        )
+
+    def test_static_string_when_no_table_params_given(self):
+        """dishwasher's call site -- no equivalent table-id resource in any
+        dump seen, no evidence of the same cross-board risk -- keeps the
+        plain static key unconditionally."""
+        desc = laundry.cycle_select(translation_key='dishwasher_cycle', icon='x')
+        assert desc.translation_key == 'dishwasher_cycle'
+
+    def test_resolves_to_the_key_when_table_matches(self):
+        desc = self._desc()
+        resources = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_02'}}
+        assert callable(desc.translation_key)
+        assert desc.translation_key(resources) == 'washer_cycle_table_02'
+
+    def test_resolves_to_none_for_a_different_table(self):
+        desc = self._desc()
+        resources = {'/st/washercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_00'}}
+        assert desc.translation_key(resources) is None
+
+    def test_resolves_to_none_when_table_id_is_unknown(self):
+        """Absence isn't evidence of a match -- no href, or an empty rep,
+        gets no translation_key either, not the family default."""
+        desc = self._desc()
+        assert desc.translation_key({}) is None
+        assert desc.translation_key({'/st/washercourse/vs/0': {}}) is None
+
+
 class TestBuzzerSound:
     def test_href(self):
         assert laundry.BUZZER_SOUND.href == '/buzzersound/vs/0'

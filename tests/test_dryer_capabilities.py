@@ -59,11 +59,17 @@ def test_power_watts_gated_for_dead_sentinel():
 
 
 def test_course_bound_to_shared_course_vs_0():
-    """Dryer course uses the shared /course/vs/0 cycle select with dryer_cycle
-    translations, consistent with washer/dishwasher."""
+    """Dryer course uses the shared /course/vs/0 cycle select with
+    dryer_cycle_table_03 translations, consistent with washer/dishwasher --
+    gated on the device's own course table matching Table_03, the only one
+    dryer_cycle_table_03's names were confirmed against (see
+    laundry.cycle_select)."""
     assert dryer.DRYER_COURSE.href == '/course/vs/0'
     desc = next(e for e in dryer.DRYER_COURSE.entities if e.key == 'cycle')
-    assert desc.translation_key == 'dryer_cycle'
+    assert callable(desc.translation_key)
+    validated = {'/st/dryercourse/vs/0': {'x.com.samsung.da.st.courseTable': 'Table_03'}}
+    assert desc.translation_key(validated) == 'dryer_cycle_table_03'
+    assert desc.translation_key({}) is None
     assert desc.options is laundry.cycle_options
     rep = {'x.com.samsung.da.options': ['Course_16', 'GMT_02']}
     assert desc.rep_fn(rep) == '16'
