@@ -1,7 +1,6 @@
 {
   "state_keys": [
     "alarm_code",
-    "blooming_level",
     "clean_level",
     "device_active",
     "diagnosis_status",
