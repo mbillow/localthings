@@ -749,6 +749,65 @@ async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
     assert coordinator._observe._settle_until.get('/power/0') is not None
 
 
+async def test_send_command_survives_stale_confirm_poll(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources,
+) -> None:
+    """The settle window must outlast the confirm poll async_send_command
+    triggers via async_request_refresh(), not just DEFAULT_SETTLE_S's fixed
+    few seconds (issue #9). Some devices settle a write internally slower
+    than that refresh's own round trip -- issue #9's washer packs cycle/
+    detergent/softener selection into /course/vs/0's shared options[]
+    array, which visibly takes a few seconds of validation/dispenser
+    movement to catch up, unlike /washer/vs/0's plain temperature/spin
+    fields on the same device, which confirm instantly. A confirm poll that
+    lands before the device has caught up is stale, and a settle window
+    sized only to the fixed default (rather than the PUT+poll round trip)
+    expires before that poll even returns, so the stale read lands
+    unprotected and reverts the optimistic value -- self-correcting again
+    only once a later poll finally sees the real change. That reads to a
+    user as the write reverting, then reapplying itself, a few seconds
+    later."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href):
+        return (['test', 'vs', '0'], {'value': payload})
+
+    desc = NumberDesc(key='test', field='value', write_fn=_write_fn)
+    bound = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc)
+
+    def _stale_confirm_poll():
+        # Stand-in for the write's own confirming /device/0 poll racing
+        # against a stale read for the same href -- the device's internal
+        # state hasn't caught up to the write yet, even though it will a
+        # little later.
+        coordinator._observe.apply('/test/vs/0', {'value': 0}, source='poll')
+        return fridge_resources
+
+    with (
+        patch.object(fake, 'subscribe'),
+        patch.object(LocalThingsCoordinator, '_poll_once', side_effect=_stale_confirm_poll),
+    ):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, 5)
+
+    # The optimistic value is visible right away and survived the stale
+    # confirm-poll race triggered by the refresh above.
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+    # The settle window is still open afterward -- sized to outlast the
+    # whole PUT + confirm-poll round trip, not released the moment that
+    # round trip happens to finish.
+    applied = coordinator._observe.apply('/test/vs/0', {'value': 0}, source='observe')
+    assert applied is False
+    assert coordinator._cache.get('/test/vs/0') == {'value': 5}
+
+
 class TestRemoteControlEnabled:
     """remote_control_enabled (registry/capabilities/common.py) is the
     single source of truth for the /remotectrl on/off signal, shared by
