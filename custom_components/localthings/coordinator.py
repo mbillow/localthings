@@ -77,6 +77,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # fine session shouldn't tear down a working OBSERVE subscription.
     _POLL_TIMEOUT_LIMIT: int = 3
 
+    # Timeouts for the two network round trips a write triggers: the PUT
+    # itself (_do_put), then the confirming full /device/0 summary poll
+    # async_send_command requests right after (_poll_once). Named here
+    # (rather than left as inline literals) so the write-settle window
+    # below can be sized to always outlast both — see async_send_command.
+    _POST_TIMEOUT_S: float = 8.0
+    _POLL_TIMEOUT_S: float = 35.0
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         # Per-device logger (module logger scoped to this device's host) so
         # every log line — including the base DataUpdateCoordinator's own
@@ -211,7 +219,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # would have succeeded, not a dead session. 35s gives a slow
             # blockwise transfer room to actually finish instead of
             # generating a TimeoutError every cycle.
-            code, payload = sess.get(_SEED_PATH, timeout=35.0)
+            code, payload = sess.get(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
         except TimeoutError:
             raise
         except Exception as e:
@@ -571,14 +579,44 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # onto, the settle window was just delaying the real device
         # confirmation for a few seconds on every write, which read exactly
         # like the write being silently reverted (issue #27).
+        #
+        # settle_s must outlast the PUT and the async_request_refresh()
+        # below combined, not just DEFAULT_SETTLE_S's fixed few seconds --
+        # that refresh is a full /device/0 summary poll, which
+        # _POLL_TIMEOUT_S itself admits can legitimately take tens of
+        # seconds on these devices (see _poll_once), and some writes settle
+        # on the device itself well after that: issue #9's washer packs
+        # cycle/detergent/softener selection into the same /course/vs/0
+        # options[] array, and picking a new value there visibly needs a
+        # few seconds of internal validation/dispenser movement before the
+        # device's own state agrees -- while /washer/vs/0's temperature/
+        # spin fields (plain flags, no device-side settling) confirm
+        # instantly on the same device. A short fixed window expired while
+        # the confirm poll was still in flight (or before the device had
+        # caught up internally), so that stale read landed unprotected and
+        # reverted the optimistic value, self-correcting again only once a
+        # later poll finally saw the real change -- read by the user as the
+        # write "reverting, then re-applying itself" a few seconds later.
+        #
+        # An earlier attempt at this also released the guard early, right
+        # after the confirming refresh completed, to avoid shutting out
+        # unrelated real updates (another automation, the physical remote)
+        # for the rest of settle_s. That was reverted: releasing the guard
+        # the moment one round trip finishes doesn't mean the device has
+        # actually caught up (exactly the slow-settling case above), and it
+        # introduced its own races around overlapping writes to the same
+        # href. Simpler and safer to just hold the guard for the full,
+        # generously-sized window and let it expire on its own.
         self._observe.apply(write_href, body, source='optimistic')
-        self._observe.mark_write_pending(write_href)
+        self._observe.mark_write_pending(
+            write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+        )
 
         def _do_put():
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=8.0)
+            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
 
         try:
