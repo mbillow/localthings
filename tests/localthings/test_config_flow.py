@@ -9,7 +9,8 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
-    CONF_CA_CERT_PEM, CONF_CA_KEY_PEM, CONF_HOST, CONF_PORT, DOMAIN,
+    CONF_BYPASS_REMOTE_CONTROL, CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
+    CONF_HOST, CONF_PORT, DOMAIN,
 )
 
 from .conftest import (
@@ -276,3 +277,45 @@ def test_probe_marks_washer_as_recognized(monkeypatch):
         ) is not None
     )
     assert recognized is True
+
+
+async def test_options_flow_default_is_off(hass: HomeAssistant) -> None:
+    """The bypass defaults to False, so devices that never touch this
+    option see no change in the remote-control write block."""
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id=f'localthings_{MOCK_SERIAL}')
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result['type'] == FlowResultType.FORM
+    assert result['step_id'] == 'init'
+    assert result['data_schema']({})[CONF_BYPASS_REMOTE_CONTROL] is False
+
+
+async def test_options_flow_can_enable_bypass(hass: HomeAssistant) -> None:
+    """Submitting the form with the toggle on stores it in entry.options,
+    where coordinator.async_send_command reads it (issue #54)."""
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id=f'localthings_{MOCK_SERIAL}')
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result['flow_id'], user_input={CONF_BYPASS_REMOTE_CONTROL: True}
+    )
+
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_BYPASS_REMOTE_CONTROL] is True
+
+
+async def test_options_flow_reflects_previously_saved_value(hass: HomeAssistant) -> None:
+    """Reopening the form shows the currently-saved choice as the default,
+    not always False."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, unique_id=f'localthings_{MOCK_SERIAL}',
+        options={CONF_BYPASS_REMOTE_CONTROL: True},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result['data_schema']({})[CONF_BYPASS_REMOTE_CONTROL] is True
