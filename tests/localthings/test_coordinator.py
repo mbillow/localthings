@@ -808,6 +808,45 @@ async def test_send_command_survives_stale_confirm_poll(
     assert coordinator._cache.get('/test/vs/0') == {'value': 5}
 
 
+async def test_second_write_to_same_href_lands_during_first_writes_settle_window(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session,
+) -> None:
+    """Regression for issue #9: /course/vs/0 backs several independent
+    washer selects (cycle, detergent quantity, softener quantity, ...)
+    sharing one href. The settle window is now sized to tens of seconds
+    (see test_send_command_survives_stale_confirm_poll), which makes a
+    second, different write to that href landing while the first write's
+    window is still open a routine occurrence -- e.g. a user picking a
+    cycle and then adjusting detergent quantity within the same minute --
+    not a rare edge case. The second write's own optimistic value must
+    still show up immediately; a guard meant to protect optimistic writes
+    from stale device echoes must not itself suppress a later one."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    desc_a = NumberDesc(key='cycle', field='cycle',
+                        write_fn=lambda p, rep, href: (['test', 'vs', '0'], {'cycle': p}))
+    desc_b = NumberDesc(key='detergent', field='detergent',
+                        write_fn=lambda p, rep, href: (['test', 'vs', '0'], {'detergent': p}))
+    bound_a = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc_a)
+    bound_b = BoundEntity(href='/test/vs/0', capability=coordinator.bound[0].capability, desc=desc_b)
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound_a, 'Eco')
+        assert coordinator._cache.get('/test/vs/0') == {'cycle': 'Eco'}
+
+        # Still well within the first write's settle window.
+        await coordinator.async_send_command(bound_b, 'High')
+
+    assert coordinator._cache.get('/test/vs/0') == {'cycle': 'Eco', 'detergent': 'High'}
+
+
 class TestRemoteControlEnabled:
     """remote_control_enabled (registry/capabilities/common.py) is the
     single source of truth for the /remotectrl on/off signal, shared by
