@@ -157,6 +157,11 @@ BUZZER_SOUND = Capability(
 # washer.py's course comment has the byte-level evidence for why the options[]
 # MostUsed_* entry is *not* a trustworthy second source.
 #
+# Some boards populate /wm/editcourse/vs/0 without ever filling in
+# editCourseList itself (issue #1) -- cycle_options() falls back to deriving
+# the same list from /course/vs/0's own supportedOptions in that case; see
+# _course_codes_from_supported_options for the byte-level evidence.
+#
 # Shared verbatim by washer, dishwasher, and dryer -- all DA_WM_-family boards
 # expose the same /course/vs/0 options contract.
 # ---------------------------------------------------------------------------
@@ -176,7 +181,10 @@ def parse_edit_course_list(raw):
 
 def cycle_options(resources):
     rep = resources.get('/wm/editcourse/vs/0') or {}
-    return parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
+    codes = parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
+    if codes:
+        return codes
+    return _course_codes_from_supported_options(resources.get('/course/vs/0') or {})
 
 
 def option_value(options, prefix):
@@ -185,6 +193,61 @@ def option_value(options, prefix):
         if isinstance(o, str) and o.startswith(prefix + '_'):
             return o.split('_', 1)[1]
     return None
+
+
+def _course_codes_from_supported_options(course_rep):
+    """Fallback for an empty/missing editCourseList: derive the selectable
+    course list from /course/vs/0's own x.com.samsung.da.supportedOptions
+    instead (issue #1: some DA_WM_TP1/TP2-class boards populate the
+    /wm/editcourse/vs/0 href but never fill in editCourseList itself).
+
+    supportedOptions is a 1-hex-nibble header followed by one fixed-width
+    record per selectable course, self-indexed rather than positional --
+    the first byte of every record is that course's own hex code, just in
+    the firmware's own internal order, not editCourseList's. Confirmed
+    against six independent real-world washer/dryer/dishwasher dumps: every
+    one divides evenly into `header + N * K bytes` with fully unique first
+    bytes across all N records, at the record's true byte width. (What the
+    rest of each record encodes is still unconfirmed -- this only uses the
+    course-code byte.)
+
+    Two guards, deliberately conservative rather than guessing further: the
+    derived codes must (a) all be distinct -- a real course table, not
+    noise -- and (b) include whatever course is currently selected
+    (x.com.samsung.da.options' Course_<code> token), which must always be a
+    member of its own device's valid list. If no split satisfies both, this
+    returns [] rather than guess.
+
+    Among splits that satisfy both, the *smallest* passing K wins rather
+    than requiring a single unambiguous one: any exact multiple of the true
+    K (e.g. 2x or 7x its byte width) trivially re-passes both checks too --
+    it's just a sparser sampling of the same valid table, every entry of
+    which is still a real course code carried over from the finer split --
+    so a larger match is never independent evidence of a different table,
+    only redundant confirmation of the smaller one.
+    """
+    raw = course_rep.get('x.com.samsung.da.supportedOptions')
+    hexstr = raw[0] if isinstance(raw, list) and raw else raw
+    if not isinstance(hexstr, str) or len(hexstr) < 3:
+        return []
+    body = hexstr[1:]
+    if len(body) % 2:
+        return []
+    total_bytes = len(body) // 2
+    current = option_value(course_rep.get('x.com.samsung.da.options'), 'Course')
+    for k in range(1, total_bytes + 1):
+        if total_bytes % k:
+            continue
+        n = total_bytes // k
+        if n < 2:
+            continue
+        firsts = [body[i * k * 2:i * k * 2 + 2] for i in range(n)]
+        if len(set(firsts)) != n:
+            continue
+        if current is not None and current not in firsts:
+            continue
+        return firsts
+    return []
 
 
 def replace_in_options(options, prefix, new_value):

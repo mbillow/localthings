@@ -35,6 +35,81 @@ class TestCourseHelpers:
         assert laundry.option_value(opts, 'Missing') is None
 
 
+class TestCourseCodesFromSupportedOptions:
+    """cycle_options()'s fallback for boards that populate
+    /wm/editcourse/vs/0 without ever filling in editCourseList itself
+    (issue #1) -- derives the course list from /course/vs/0's own
+    supportedOptions instead."""
+
+    # Real dump from issue #1 (DA_WM_TP1_21_COMMON, WW5000C): a 1-hex-nibble
+    # header followed by 14 self-indexed 7-byte-per-course records. '1C' (the
+    # first record) is confirmed as "Eco 40-60" both by this device's own
+    # currently-selected course matching the SmartThings app screenshot's
+    # checked item, and by six other independent devices' already-shipped
+    # translations agreeing on the same code -> name mapping.
+    _REAL_SUPPORTED_OPTIONS = (
+        '31C8410923FA67F1B847E923FA67F25843E933FA57F20857E943FA67F'
+        '088000913FA67F7485209204A5208780009000A00006841E930FA30F'
+        '7F841E920FA30F65841E943FA57F8F8102923FA57F96841E920FA37F'
+        '34841E923FA67FA0811E933FA33F'
+    )
+
+    def test_derives_codes_when_edit_course_list_is_empty(self):
+        resources = {
+            '/wm/editcourse/vs/0': {'x.com.samsung.da.editCourseList': ''},
+            '/course/vs/0': {
+                'x.com.samsung.da.options': ['Course_1C'],
+                'x.com.samsung.da.supportedOptions': [self._REAL_SUPPORTED_OPTIONS],
+            },
+        }
+        assert laundry.cycle_options(resources) == [
+            '1C', '1B', '25', '20', '08', '74', '87', '06',
+            '7F', '65', '8F', '96', '34', 'A0',
+        ]
+
+    def test_edit_course_list_still_takes_priority(self):
+        """A live editCourseList wins even with supportedOptions present --
+        no reason to prefer a derived list over the authoritative one."""
+        resources = {
+            '/wm/editcourse/vs/0': {'x.com.samsung.da.editCourseList': 'EditCourseList_651C'},
+            '/course/vs/0': {
+                'x.com.samsung.da.options': ['Course_1C'],
+                'x.com.samsung.da.supportedOptions': [self._REAL_SUPPORTED_OPTIONS],
+            },
+        }
+        assert laundry.cycle_options(resources) == ['65', '1C']
+
+    def test_rejects_a_table_missing_the_current_course(self):
+        """The device's own currently-selected course must be a member of
+        its derived list -- a mismatch means the guess is wrong, not that
+        the device selected something outside its own supported set."""
+        resources = {
+            '/course/vs/0': {
+                'x.com.samsung.da.options': ['Course_FF'],
+                'x.com.samsung.da.supportedOptions': [self._REAL_SUPPORTED_OPTIONS],
+            },
+        }
+        assert laundry.cycle_options(resources) == []
+
+    def test_smallest_passing_split_wins_over_its_own_multiples(self):
+        """K=2 and K=4 both trivially re-pass the same two checks here --
+        each is just a sparser sampling of the true, smaller K=1 table (its
+        first bytes are a subset of K=1's, so uniqueness and "contains the
+        current course" carry over for free) -- but K=1 is the real, most
+        specific table and must be the one returned."""
+        resources = {
+            '/course/vs/0': {
+                'x.com.samsung.da.options': ['Course_AA'],
+                'x.com.samsung.da.supportedOptions': ['0AABBCCDD'],
+            },
+        }
+        assert laundry.cycle_options(resources) == ['AA', 'BB', 'CC', 'DD']
+
+    def test_empty_without_supported_options_or_course_href(self):
+        assert laundry.cycle_options({}) == []
+        assert laundry.cycle_options({'/course/vs/0': {}}) == []
+
+
 class TestCycleSelect:
     def test_builds_labelled_cycle_select(self):
         desc = laundry.cycle_select(translation_key='dryer_cycle', icon='mdi:tumble-dryer')
