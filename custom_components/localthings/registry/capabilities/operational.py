@@ -70,6 +70,34 @@ def _finish_time(remaining_str):
         return None
 
 
+def _parse_remaining_time(rep):
+    return (
+        rep.get('x.com.samsung.da.remainingTime')
+        or rep.get('remainingTime')
+    )
+
+
+def _completion_time(rep):
+    return _parse_remaining_time(rep)
+
+
+def _completion_minutes(rep):
+    raw = _parse_remaining_time(rep)
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        parts = [int(p) for p in raw.split(':')]
+        if len(parts) == 3:
+            h, m, s = parts
+            return h * 60 + m + (1 if s > 0 else 0)
+        elif len(parts) == 2:
+            m, s = parts
+            return m + (1 if s > 0 else 0)
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 # Shared by dryer/dishwasher/oven/washer -- oven.py imports this directly
 # rather than keeping its own copy, since both wrote the identical
 # state='Ready' RMW.
@@ -123,6 +151,15 @@ OPERATIONAL_STATE = Capability(
                             or rep.get('x.com.samsung.da.progress') == 'Finish'
                        else _finish_time(rep.get('x.com.samsung.da.remainingTime'))
                    )),
+        SensorDesc(key='completion_time', name='Completion time',
+                   icon='mdi:timer-sand',
+                   exists_fn=lambda rep, resources: _completion_time(rep) is not None,
+                   rep_fn=_completion_time),
+        SensorDesc(key='completion_minutes', name='Remaining minutes',
+                   icon='mdi:clock-outline', unit='min',
+                   device_class='duration', state_class='measurement',
+                   exists_fn=lambda rep, resources: _completion_minutes(rep) is not None,
+                   rep_fn=_completion_minutes),
         NumberDesc(key='delay_start_hours', name='Delay start', icon='mdi:timer-plus-outline',
                    device_class='duration', unit='h',
                    native_min=0, native_max=24, step=1,
