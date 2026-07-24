@@ -71,7 +71,7 @@
           "8f": "Baby Care"
         }
       },
-      "washer_cycle": {
+      "washer_cycle_table_02": {
         "state": {
           "1c": "Eco 40-60",
           "1d": "Super Speed",
@@ -105,7 +105,7 @@
           "2a": "Jeans"
         }
       },
-      "dryer_cycle": {
+      "dryer_cycle_table_03": {
         "state": {
           "16": "Cotton",
           "18": "Synthetics",

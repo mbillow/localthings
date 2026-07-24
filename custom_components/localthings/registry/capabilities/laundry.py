@@ -157,6 +157,11 @@ BUZZER_SOUND = Capability(
 # washer.py's course comment has the byte-level evidence for why the options[]
 # MostUsed_* entry is *not* a trustworthy second source.
 #
+# Some boards populate /wm/editcourse/vs/0 without ever filling in
+# editCourseList itself (issue #1) -- cycle_options() falls back to deriving
+# the same list from /course/vs/0's own supportedOptions in that case; see
+# _course_codes_from_supported_options for the byte-level evidence.
+#
 # Shared verbatim by washer, dishwasher, and dryer -- all DA_WM_-family boards
 # expose the same /course/vs/0 options contract.
 # ---------------------------------------------------------------------------
@@ -176,7 +181,10 @@ def parse_edit_course_list(raw):
 
 def cycle_options(resources):
     rep = resources.get('/wm/editcourse/vs/0') or {}
-    return parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
+    codes = parse_edit_course_list(rep.get('x.com.samsung.da.editCourseList'))
+    if codes:
+        return codes
+    return _course_codes_from_supported_options(resources.get('/course/vs/0') or {})
 
 
 def option_value(options, prefix):
@@ -185,6 +193,68 @@ def option_value(options, prefix):
         if isinstance(o, str) and o.startswith(prefix + '_'):
             return o.split('_', 1)[1]
     return None
+
+
+def _course_codes_from_supported_options(course_rep):
+    """Fallback for an empty/missing editCourseList: derive the selectable
+    course list from /course/vs/0's own x.com.samsung.da.supportedOptions
+    instead (issue #1: some DA_WM_TP1/TP2-class boards populate the
+    /wm/editcourse/vs/0 href but never fill in editCourseList itself).
+
+    supportedOptions is a 1-hex-nibble header followed by one fixed-width
+    record per selectable course, self-indexed rather than positional --
+    the first byte of every record is that course's own hex code, just in
+    the firmware's own internal order, not editCourseList's. Confirmed
+    against six independent real-world washer/dryer/dishwasher dumps: every
+    one divides evenly into `header + N * K bytes` with fully unique first
+    bytes across all N records, at the record's true byte width. (What the
+    rest of each record encodes is still unconfirmed -- this only uses the
+    course-code byte.)
+
+    Two guards, deliberately conservative rather than guessing further: the
+    derived codes must (a) all be distinct -- a real course table, not
+    noise -- and (b) include whatever course is currently selected
+    (x.com.samsung.da.options' Course_<code> token), which must always be a
+    member of its own device's valid list. If no split satisfies both, this
+    returns [] rather than guess.
+
+    Among splits that satisfy both, the *smallest* passing K wins, rather
+    than requiring a single unambiguous one -- more than one K reliably
+    does pass on real data (e.g. the shipped dishwasher fixture: true
+    K=7 passes, but so do 10, 14, and 35, none of which are multiples of
+    7 -- position 0 always lands on the same real course code regardless
+    of K, which is enough on its own to satisfy the current-course guard
+    for several unrelated splits). Smallest-K-wins is a heuristic, not a
+    proof: it matches the confirmed answer on every one of six independent
+    real-world dumps this was checked against, but a coincidentally
+    unique, current-course-inclusive *smaller* K is not mathematically
+    impossible on some future device, and would be picked silently. Not
+    guarded against further here, since course tables are typically large
+    enough (double digits) that colliding by chance on both checks is
+    unlikely, and no device seen so far actually needs it.
+    """
+    raw = course_rep.get('x.com.samsung.da.supportedOptions')
+    hexstr = raw[0] if isinstance(raw, list) and raw else raw
+    if not isinstance(hexstr, str) or len(hexstr) < 3:
+        return []
+    body = hexstr[1:]
+    if len(body) % 2:
+        return []
+    total_bytes = len(body) // 2
+    current = option_value(course_rep.get('x.com.samsung.da.options'), 'Course')
+    for k in range(1, total_bytes + 1):
+        if total_bytes % k:
+            continue
+        n = total_bytes // k
+        if n < 2:
+            continue
+        firsts = [body[i * k * 2:i * k * 2 + 2] for i in range(n)]
+        if len(set(firsts)) != n:
+            continue
+        if current is not None and current not in firsts:
+            continue
+        return firsts
+    return []
 
 
 def replace_in_options(options, prefix, new_value):
@@ -201,15 +271,53 @@ def cycle_write(p, rep, href=None):
     }
 
 
-def cycle_select(*, translation_key, icon):
+def _table_id(resources, table_href):
+    rep = resources.get(table_href) or {}
+    return rep.get('x.com.samsung.da.st.courseTable')
+
+
+def cycle_select(*, translation_key, icon, table_href=None):
     """A 'Cycle' select over /course/vs/0, labelled from `translation_key`.
 
-    The caller supplies the family's translation key (washer_cycle /
-    dishwasher_cycle / dryer_cycle) and icon; the option list, current value,
-    and write path are all shared.
+    The option list, current value, and write path are all shared across
+    washer/dryer/dishwasher; only the translation is family- (and, for
+    washer/dryer, board-) specific.
+
+    table_href (washer/dryer only -- see washer.py/dryer.py's call sites)
+    suffixes translation_key with the device's own course-table id, read
+    from /st/washercourse/vs/0 or /st/dryercourse/vs/0's
+    x.com.samsung.da.st.courseTable (e.g. 'washer_cycle' + 'Table_02' ->
+    'washer_cycle_table_02'). No table id available at all -- the href
+    absent or empty -- gets no translation_key, i.e. the raw course code
+    displayed as-is.
+
+    This matters because course codes are NOT guaranteed consistent across
+    board generations sharing the same /course/vs/0 contract: every code in
+    washer_cycle_table_02 was confirmed against Table_02-reporting devices
+    (DA_WM_TP1/TP2 boards); FlexWash's older DA_WM_A51 board reports
+    Table_00 instead, so the same hex code could mean a different course
+    there for all we've verified. Building the key from whatever table the
+    device actually reports, rather than gating a single hardcoded key on
+    an exact match, means a table we haven't built translations for yet
+    (like Table_00) just falls through Home Assistant's own missing-
+    translation handling to the same raw-code display -- exactly what
+    happens today for any individual code within a table's translations
+    that isn't populated yet -- and adding one later needs new strings.json
+    entries, not a code change here.
+
+    Left at its default for dishwasher, which has no equivalent table-id
+    resource in any dump seen and no evidence its course codes vary by
+    table the way washer/dryer's do -- there's nothing to build a
+    table-specific key from.
     """
+    key = translation_key
+    if table_href is not None:
+        def key(resources):
+            table = _table_id(resources, table_href)
+            return f'{translation_key}_{table.lower()}' if table else None
+
     return SelectDesc(
-        key='cycle', name='Cycle', icon=icon, translation_key=translation_key,
+        key='cycle', name='Cycle', icon=icon, translation_key=key,
         options=cycle_options,
         exists_fn=lambda rep, resources: bool(cycle_options(resources)),
         rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Course'),
