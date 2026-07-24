@@ -26,5 +26,6 @@ REGISTRY = DeviceRegistry(
         dryer.DRYER_SETTINGS,
         dryer.DRYER_COURSE,
         dryer.DRYER_DIAGNOSIS,
+        dryer.AUTO_CYCLE_LINK,
     ]),
 )

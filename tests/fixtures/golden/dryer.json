@@ -1,6 +1,8 @@
 {
   "state_keys": [
+    "ai_pattern",
     "alarm_code",
+    "auto_cycle_link",
     "buzzer_sound",
     "child_lock",
     "cycle",

@@ -68,8 +68,18 @@ class TestWasherIgnoredHrefs:
             '/wm/welcomemsg/vs/0',
             '/wm/personalcourse/vs/0',
             '/energy/consumption/0',
-            '/cycleinterface/vs/0',
             '/drlc/0',
             '/operational/state/0',
         ):
             assert href in ignored_hrefs, f"{href} should be in ignored.IGNORED"
+
+    def test_cycleinterface_is_scoped_to_washer_registry(self):
+        """/cycleinterface/vs/0 is empty on every washer dump but real on the
+        dryer (issue #14's AUTO_CYCLE_LINK), so it's a washer-scoped ignore
+        (washer.CYCLE_INTERFACE_IGNORED) rather than a global one -- a global
+        entry would collide with the dryer's real capability."""
+        from custom_components.localthings.registry.by_type import washer as washer_registry
+        from custom_components.localthings.registry.capabilities.ignored import IGNORED
+
+        assert '/cycleinterface/vs/0' not in {cap.href for cap in IGNORED}
+        assert '/cycleinterface/vs/0' in washer_registry.REGISTRY.capabilities

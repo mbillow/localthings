@@ -39,8 +39,44 @@ def test_no_unbound_hrefs():
 def test_expected_entities_present():
     state = _state()
     for key in ('buzzer_sound', 'cycle', 'power_switch', 'child_lock',
-                'remote_control', 'dry_level', 'wrinkle_prevent', 'energy_kwh'):
+                'remote_control', 'dry_level', 'wrinkle_prevent', 'energy_kwh',
+                'ai_pattern', 'auto_cycle_link'):
         assert key in state, key
+
+
+def test_dry_level_is_a_writable_select():
+    """dryLevel used to be a read-only sensor, but the app's "Dryness"
+    control (issue #14 screenshots) is a Level 1/2/3 picker, and the dump's
+    supportedDryLevel list confirms the device accepts writes -- it should
+    be a select, not a sensor."""
+    desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == 'dry_level')
+    assert desc.options_field == 'x.com.samsung.da.supportedDryLevel'
+    assert desc.write_fn is not None
+    assert desc.write_fn('Less', {}) == (
+        ['washer', 'vs', '0'], {'x.com.samsung.da.dryLevel': 'Less'})
+    assert _state()['dry_level'] == 'Normal'
+
+
+def test_ai_pattern_reads_and_writes_options_token():
+    """AiOption_On/Off on /course/vs/0's options[] array is the app's "AI
+    pattern" toggle (issue #14 screenshot: on)."""
+    assert _state()['ai_pattern'] is True
+    desc = next(e for e in dryer.DRYER_COURSE.entities if e.key == 'ai_pattern')
+    opts = ['Course_16', 'AiOption_On']
+    href, payload = desc.write_fn('Off', {'x.com.samsung.da.options': opts})
+    assert href == ['course', 'vs', '0']
+    assert 'AiOption_Off' in payload['x.com.samsung.da.options']
+
+
+def test_auto_cycle_link_bound_to_cycleinterface():
+    """cycleInterfaceEnabled on /cycleinterface/vs/0 is the app's "Auto cycle
+    link" toggle (issue #14 screenshot: off) -- previously globally ignored
+    as always-empty until this dump showed it populated on a dryer."""
+    assert dryer.AUTO_CYCLE_LINK.href == '/cycleinterface/vs/0'
+    assert _state()['auto_cycle_link'] is False
+    desc = next(e for e in dryer.AUTO_CYCLE_LINK.entities if e.key == 'auto_cycle_link')
+    assert desc.write_fn('On', {}) == (
+        ['cycleinterface', 'vs', '0'], {'x.com.samsung.da.cycleInterfaceEnabled': 'On'})
 
 
 def test_job_beginning_status_reads_current_status():

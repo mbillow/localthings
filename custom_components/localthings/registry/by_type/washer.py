@@ -15,5 +15,6 @@ REGISTRY = DeviceRegistry(
         common.WATER_METER,
         operational.OPERATIONAL_STATE,
         dishwasher.DIAGNOSIS,
+        washer.CYCLE_INTERFACE_IGNORED,
     ]),
 )

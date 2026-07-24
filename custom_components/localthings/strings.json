@@ -115,10 +115,12 @@
           "1e": "Outdoor",
           "1f": "Mixed Load",
           "20": "Iron Dry",
+          "21": "Hygiene Care",
           "23": "Quick Dry 35",
           "24": "Cool Air",
           "25": "Warm Air",
-          "27": "Time Dry"
+          "27": "Time Dry",
+          "4c": "Air Refresh"
         }
       },
       "washer_dosing_quantity": {

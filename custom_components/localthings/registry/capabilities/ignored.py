@@ -117,11 +117,15 @@ IGNORED: list[Capability] = [
     # data -- common.ENERGY_METER on /energy/consumption/vs/0 is the only
     # real source for this control.
     Capability(href='/energy/consumption/0'),
-    # Empty ({}) on every washer dump seen so far -- nothing to expose.
-    Capability(href='/cycleinterface/vs/0'),
     # OCF-native duplicate of /drlc/vs/0 above -- same utility-program
     # dependency this integration doesn't support locally.
     Capability(href='/drlc/0'),
+    # NOTE: /cycleinterface/vs/0 used to be listed here as empty ({}) on
+    # every washer dump seen so far. The issue #14 dryer dump populates it
+    # (cycleInterfaceEnabled) as the app's "Auto cycle link" toggle, so it's
+    # now a real capability there (dryer.AUTO_CYCLE_LINK) -- washer.py scopes
+    # its own ignore locally (washer.CYCLE_INTERFACE_IGNORED) to avoid a
+    # global-ignore/real-capability href collision.
     # OCF-native duplicate of /operational/state/vs/0, which is already
     # modeled by operational.OPERATIONAL_STATE (a richer, write-capable
     # capability with start/pause/stop buttons and a delay-start control)

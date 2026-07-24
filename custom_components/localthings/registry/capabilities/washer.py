@@ -354,3 +354,10 @@ WASHER_COURSE = Capability(
                              'IntensiveSetting', 'IntensiveAvailableSet'),
     ),
 )
+
+# /cycleinterface/vs/0 -- washer-to-dryer "Auto cycle link" pairing signal
+# (dryer.AUTO_CYCLE_LINK). Empty ({}) on every washer/combo dump seen so far
+# (plain washers, FlexWash, and washer/dryer combos alike), so it's scoped
+# out here rather than left in the global ignored.IGNORED list, which would
+# collide with the real dryer-side capability.
+CYCLE_INTERFACE_IGNORED = Capability(href='/cycleinterface/vs/0')
