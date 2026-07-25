@@ -15,7 +15,7 @@ different schema (see capabilities/__init__.py). They live only in the AC
 by_type registry.
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, ClimateDesc, SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, ClimateDesc, NumberDesc, SensorDesc, SwitchDesc
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -48,6 +48,34 @@ def _num(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+# --- /mode/vs/0 options blob ('Light_On', 'Volume_100'/'Volume_Mute', ...) ---
+# Some settings (display light, beep volume) have no dedicated resource on
+# models like TP2X_RAC_20K; they live only in /mode/vs/0's `options` array and
+# are written back one token at a time (the device merges by prefix — see
+# common.merge_options_field). These read/write that array.
+def _opt(rep, key):
+    for o in (rep.get('x.com.samsung.da.options') or ()):
+        if isinstance(o, str) and o.startswith(key + '_'):
+            return o[len(key) + 1:]
+    return None
+
+
+def _has_opt(rep, key):
+    return _opt(rep, key) is not None
+
+
+def _vol_read(rep):
+    v = _opt(rep, 'Volume')
+    if v is None:
+        return None
+    return 0 if v == 'Mute' else _num(v)
+
+
+def _vol_token(p):
+    p = int(round(float(p)))
+    return 'Volume_Mute' if p <= 0 else f'Volume_{p}'
 
 
 def _filter_usage_percent(rep):
@@ -113,6 +141,35 @@ CLIMATE = Capability(
     entities=(
         ClimateDesc(key='climate', translation_key='airconditioner',
                     rep_fn=_first_mode, write_fn=_climate_write),
+        # Display light + beep volume: on models like TP2X_RAC_20K these are
+        # options on /mode/vs/0 (no /light/vs/0 or /audioVolume/vs/0 resource),
+        # so bind them here and gate on the option being present.
+        SwitchDesc(key='display_light', icon='mdi:led-on',
+                   entity_category='config',
+                   rep_fn=lambda rep: _opt(rep, 'Light') == 'On',
+                   exists_fn=lambda rep, res: _has_opt(rep, 'Light'),
+                   write_fn=lambda p, rep, href=None: (
+                       ['mode', 'vs', '0'],
+                       {'x.com.samsung.da.options': [
+                           'Light_On' if p else 'Light_Off']})),
+        NumberDesc(key='sound_volume', icon='mdi:volume-high',
+                   entity_category='config',
+                   native_min=0, native_max=100, step=1,
+                   rep_fn=_vol_read,
+                   exists_fn=lambda rep, res: _has_opt(rep, 'Volume'),
+                   write_fn=lambda p, rep, href=None: (
+                       ['mode', 'vs', '0'],
+                       {'x.com.samsung.da.options': [_vol_token(p)]})),
+    ),
+)
+
+HUMIDITY = Capability(
+    href='/humidity/vs/0',
+    poll_tier='warm',
+    entities=(
+        SensorDesc(key='humidity', field='x.com.samsung.da.humidity',
+                   device_class='humidity', unit='%', state_class='measurement',
+                   value_fn=_num),
     ),
 )
 

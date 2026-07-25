@@ -19,6 +19,7 @@ REGISTRY = DeviceRegistry(
         *common.UNIVERSAL,
         dishwasher.DIAGNOSIS,
         airconditioner.CLIMATE,
+        airconditioner.HUMIDITY,
         airconditioner.AIR_PURIFY,
         airconditioner.AUTO_CLEAN,
         airconditioner.AIR_FILTER,
