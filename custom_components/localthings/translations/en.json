@@ -83,6 +83,9 @@
       },
       "stop": {
         "name": "Stop"
+      },
+      "filter_reset": {
+        "name": "Reset HEPA filter"
       }
     },
     "climate": {
@@ -118,6 +121,9 @@
       },
       "sound_volume": {
         "name": "Sound volume"
+      },
+      "sensing_interval": {
+        "name": "Sensing interval"
       }
     },
     "select": {
@@ -417,6 +423,15 @@
           "none": "Off",
           "cupboard": "Cupboard"
         }
+      },
+      "sensing_mode": {
+        "name": "AI Purify (Mode)",
+        "state": {
+          "off": "Off",
+          "sensing_only": "Sensing only",
+          "auto_purify": "Auto purify",
+          "st_alarm": "ST Alarm"
+        }
       }
     },
     "sensor": {
@@ -479,7 +494,7 @@
         "name": "Dryer type"
       },
       "dust": {
-        "name": "Dust"
+        "name": "Dust PM10"
       },
       "energy_kwh": {
         "name": "Energy"
@@ -506,7 +521,7 @@
         "name": "Filter usage"
       },
       "fine_dust": {
-        "name": "Fine dust"
+        "name": "Dust PM2.5"
       },
       "finish_time": {
         "name": "Estimated finish"
@@ -590,7 +605,7 @@
         "name": "Self-check status"
       },
       "super_fine_dust": {
-        "name": "Super fine dust"
+        "name": "Dust PM1.0"
       },
       "water_liters": {
         "name": "Water consumption"
@@ -617,6 +632,24 @@
           "icestatus_stop": "Idle",
           "icestatus_run": "Making ice"
         }
+      },
+      "hepa_filter_usage": {
+        "name": "Filter usage"
+      },
+      "hepa_filter_usage_hours": {
+        "name": "Filter usage (hours)"
+      },
+      "hepa_filter_life_remaining": {
+        "name": "Filter life remaining"
+      },
+      "hepa_filter_capacity": {
+        "name": "Filter capacity"
+      },
+      "wifi_ssid": {
+        "name": "Wi-Fi network"
+      },
+      "air_quality": {
+        "name": "Air quality"
       }
     },
     "switch": {
@@ -715,6 +748,15 @@
       },
       "wrinkle_prevent": {
         "name": "Wrinkle prevent"
+      },
+      "pollution_light": {
+        "name": "Pollution indicator"
+      },
+      "periodic_air_sensing": {
+        "name": "AI Purify (Sensing)"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Do not disturb"
       }
     },
     "time": {
@@ -729,6 +771,27 @@
       },
       "night_start": {
         "name": "Night light start"
+      },
+      "sensing_skip_start": {
+        "name": "Do not disturb start"
+      },
+      "sensing_skip_end": {
+        "name": "Do not disturb end"
+      }
+    },
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "auto": "Auto",
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "sleep": "Sleep"
+            }
+          }
+        }
       }
     }
   },

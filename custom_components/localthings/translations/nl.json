@@ -83,6 +83,9 @@
       },
       "stop": {
         "name": "Stoppen"
+      },
+      "filter_reset": {
+        "name": "HEPA-filter resetten"
       }
     },
     "climate": {
@@ -118,6 +121,9 @@
       },
       "sound_volume": {
         "name": "Geluidsvolume"
+      },
+      "sensing_interval": {
+        "name": "Meetinterval"
       }
     },
     "select": {
@@ -417,6 +423,15 @@
           "none": "Uit",
           "cupboard": "Kastdroog"
         }
+      },
+      "sensing_mode": {
+        "name": "AI-zuivering (modus)",
+        "state": {
+          "off": "Uit",
+          "sensing_only": "Alleen meten",
+          "auto_purify": "Automatisch zuiveren",
+          "st_alarm": "ST-melding"
+        }
       }
     },
     "sensor": {
@@ -479,7 +494,7 @@
         "name": "Type droger"
       },
       "dust": {
-        "name": "Stof"
+        "name": "Stof PM10"
       },
       "energy_kwh": {
         "name": "Energie"
@@ -506,7 +521,7 @@
         "name": "Filtergebruik"
       },
       "fine_dust": {
-        "name": "Fijnstof"
+        "name": "Stof PM2.5"
       },
       "finish_time": {
         "name": "Geschatte eindtijd"
@@ -590,7 +605,7 @@
         "name": "Status zelfcontrole"
       },
       "super_fine_dust": {
-        "name": "Ultrafijnstof"
+        "name": "Stof PM1.0"
       },
       "water_liters": {
         "name": "Waterverbruik"
@@ -617,6 +632,24 @@
           "icestatus_stop": "Inactief",
           "icestatus_run": "IJs maken"
         }
+      },
+      "hepa_filter_usage": {
+        "name": "Filtergebruik"
+      },
+      "hepa_filter_usage_hours": {
+        "name": "Filtergebruik (uren)"
+      },
+      "hepa_filter_life_remaining": {
+        "name": "Resterende filterlevensduur"
+      },
+      "hepa_filter_capacity": {
+        "name": "Filtercapaciteit"
+      },
+      "wifi_ssid": {
+        "name": "Wifi-netwerk"
+      },
+      "air_quality": {
+        "name": "Luchtkwaliteit"
       }
     },
     "switch": {
@@ -715,6 +748,15 @@
       },
       "wrinkle_prevent": {
         "name": "Kreukpreventie"
+      },
+      "pollution_light": {
+        "name": "Vervuilingsindicator"
+      },
+      "periodic_air_sensing": {
+        "name": "AI-zuivering (meting)"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Niet storen"
       }
     },
     "time": {
@@ -729,6 +771,27 @@
       },
       "night_start": {
         "name": "Start nachtverlichting"
+      },
+      "sensing_skip_start": {
+        "name": "Niet storen begin"
+      },
+      "sensing_skip_end": {
+        "name": "Niet storen einde"
+      }
+    },
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "auto": "Automatisch",
+              "low": "Laag",
+              "medium": "Gemiddeld",
+              "high": "Hoog",
+              "sleep": "Slaap"
+            }
+          }
+        }
       }
     }
   },

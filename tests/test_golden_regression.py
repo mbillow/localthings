@@ -276,6 +276,22 @@ def test_registry_reproduces_golden_state_keys_for_air_purifier():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_air_purifier_avt():
+    """AVT-WW-TP1-23-AXX500 -- reports no oneUiVersion and carries no '_TVTL_'
+    token; resolved via the 'AVT-' modelNum prefix fallback in
+    for_device_by_model. Shares the air_purifier registry with the TVTL family
+    but binds fan speed on /wind/strength and filter on /filter/hepafilter."""
+    from tests.conftest import _load_device
+    resources = _load_device('air_purifier_avt')
+    golden = json.loads((GOLDEN / 'air_purifier_avt.json').read_text())
+    state_keys = _new_state_keys('air_purifier_avt', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_oven():
     """Wall oven (model TP1X_DA-KS-OVEN-0107X, issue #55) -- reports no
     oneUiVersion; resolved via the '-OVEN-' modelNum token fallback in

@@ -1,0 +1,33 @@
+{
+  "state_keys": [
+    "air_sensing_state",
+    "alarm_code",
+    "clean_level",
+    "device_active",
+    "display_light",
+    "dust",
+    "energy_kwh",
+    "energy_saved_kwh",
+    "fan",
+    "fine_dust",
+    "firmware_update",
+    "hepa_filter_capacity",
+    "hepa_filter_life_remaining",
+    "hepa_filter_status",
+    "hepa_filter_usage",
+    "hepa_filter_usage_hours",
+    "last_air_sensing_level",
+    "last_air_sensing_time",
+    "mute_once",
+    "odor",
+    "periodic_air_sensing",
+    "periodic_sensing_skip_status",
+    "pollution_light",
+    "sensing_interval",
+    "sensing_mode",
+    "sensing_skip_end",
+    "sensing_skip_start",
+    "super_fine_dust",
+    "wifi_ssid"
+  ]
+}

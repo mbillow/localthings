@@ -22,6 +22,19 @@ POWER_VS_HREF = '/power/vs/0'
 _FAN_SPEED_FIELD = 'x.com.samsung.da.hood.fanSpeed'
 _SUPPORTED_FAN_SPEED_FIELD = 'x.com.samsung.da.hood.supportedFanSpeed'
 
+# Air-purifier wind-strength fan (matches air_purifier.WIND_STRENGTH.href).
+_WIND_STRENGTH_HREF = '/wind/strength/vs/0'
+_WIND_MODES_FIELD = 'x.com.samsung.da.modes'
+_WIND_SUPPORTED_FIELD = 'x.com.samsung.da.supportedModes'
+_WIND_NAMES_FIELD = 'x.com.samsung.da.modesName'
+# The wind-strength codes are one flat set of user-selectable fan modes -- Auto
+# sits alongside the manual speeds, not as a separate preset -- so all of them
+# surface as fan preset_modes. Values are lowercase HA-style (auto/low/medium/
+# high/sleep); the catalog (entity.fan.fan.state_attributes.preset_mode.state)
+# title-cases them for display. low/medium/high replace the device's raw
+# Mid/High/Turbo for the manual codes (2/3/4).
+_WIND_MODE_LABELS = {'0': 'auto', '2': 'low', '3': 'medium', '4': 'high', '91': 'sleep'}
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -29,11 +42,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsRangeHoodFan(coordinator, bound)
-        for bound in coordinator.bound
-        if isinstance(bound.desc, FanDesc) and _is_included(bound, coordinator)
-    )
+    entities: list[FanEntity] = []
+    for bound in coordinator.bound:
+        if not isinstance(bound.desc, FanDesc) or not _is_included(bound, coordinator):
+            continue
+        if bound.href == _WIND_STRENGTH_HREF:
+            entities.append(LocalThingsAirPurifierFan(coordinator, bound))
+        else:
+            entities.append(LocalThingsRangeHoodFan(coordinator, bound))
+    async_add_entities(entities)
 
 
 class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
@@ -120,3 +137,97 @@ class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
             )
         code = percentage_to_ordered_list_item(codes, percentage)
         await self.coordinator.async_send_command(self._bound, ('speed', code))
+
+
+class LocalThingsAirPurifierFan(LocalThingsEntity, FanEntity):
+    """A Samsung air-purifier fan over /wind/strength/vs/0.
+
+    The board's wind-strength codes are one flat set of user-selectable modes
+    (Auto/Low/Medium/High/Sleep) -- Auto is a fan setting alongside the manual
+    speeds, not a separate preset -- so all of them surface as fan preset_modes.
+    Power is carried by the separate /power resource (the wind-strength code is
+    retained while off), so is_on comes from there, not from the code.
+    """
+
+    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = (
+        FanEntityFeature.PRESET_MODE
+        | FanEntityFeature.TURN_ON
+        | FanEntityFeature.TURN_OFF
+    )
+
+    def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
+        super().__init__(coordinator, bound)
+        self._attr_name = None
+
+    def _rep(self, href: str) -> dict:
+        return self.coordinator.resource(href) or {}
+
+    def _labels(self) -> dict[str, str]:
+        """Advertised code -> display label, in the device's own order. Uses the
+        friendly Auto/Low/Medium/High/Sleep names, falling back to the device's
+        own modesName (then the raw code) for any code not in the fixed map."""
+        rep = self._rep(self._bound.href)
+        codes = [str(code) for code in rep.get(_WIND_SUPPORTED_FIELD, ())]
+        names = [str(name) for name in rep.get(_WIND_NAMES_FIELD, ())]
+        device = dict(zip(codes, names))
+        return {c: _WIND_MODE_LABELS.get(c) or str(device.get(c) or c).lower()
+                for c in codes}
+
+    def _current_code(self) -> str | None:
+        value = self._rep(self._bound.href).get(_WIND_MODES_FIELD)
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else None
+        return None if value is None else str(value)
+
+    def _power_payload(self, enabled: bool) -> tuple[str, bool, str]:
+        resources = self.coordinator.last_resources
+        target = POWER_HREF if POWER_HREF in resources else POWER_VS_HREF
+        return 'power', enabled, target
+
+    @property
+    def is_on(self) -> bool:
+        rep = self._rep(POWER_HREF)
+        if 'value' in rep:
+            return bool(rep.get('value'))
+        return str(
+            self._rep(POWER_VS_HREF).get('x.com.samsung.da.power', '')
+        ).lower() == 'on'
+
+    @property
+    def preset_modes(self) -> list[str]:
+        return list(self._labels().values())
+
+    @property
+    def preset_mode(self) -> str | None:
+        if not self.is_on:
+            return None
+        return self._labels().get(self._current_code())
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        code = next(
+            (c for c, label in self._labels().items() if label == preset_mode),
+            None,
+        )
+        if code is None:
+            return
+        if not self.is_on:
+            await self.coordinator.async_send_command(
+                self._bound, self._power_payload(True),
+            )
+        await self.coordinator.async_send_command(self._bound, ('mode', code))
+
+    async def async_turn_on(
+        self, percentage: int | None = None, preset_mode: str | None = None,
+        **kwargs,
+    ) -> None:
+        await self.coordinator.async_send_command(
+            self._bound, self._power_payload(True),
+        )
+        if preset_mode is not None:
+            await self.async_set_preset_mode(preset_mode)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self.coordinator.async_send_command(
+            self._bound, self._power_payload(False),
+        )

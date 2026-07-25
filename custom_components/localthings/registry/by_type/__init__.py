@@ -131,6 +131,16 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
         key = 'cooktop'
     if key is None and model_identity.startswith('AHD-'):
         key = 'range_hood'
+    # Air purifiers on the newer AVT-WW-TP1 board (e.g. AVT-WW-TP1-23-AXX500)
+    # report no oneUiVersion and carry no '_TVTL_' token -- their modelNum/
+    # description starts with the 'AVT-' board-family prefix instead. Matched
+    # via startswith (like the 'AHD-' hood rule above), so the '-WW-' colour/
+    # variant code further in cannot be confused with the washer consumer prefix
+    # (read from `description`'s first token, never scanned out of modelNum).
+    # Same air_purifier registry as the TVTL family; they diverge only on the
+    # fan-speed and filter hrefs (see capabilities/air_purifier.py).
+    if key is None and model_identity.startswith('AVT-'):
+        key = 'air_purifier'
     # Range/cooktop-oven combos (e.g. TP1X_DA-KS-RANGE-0102X, issue #44) --
     # like the RAC/PRAC air conditioners above, these report no oneUiVersion
     # and don't match the washer/dryer/dishwasher consumer-prefix map either.
