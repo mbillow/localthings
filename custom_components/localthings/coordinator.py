@@ -142,17 +142,40 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
         key_pem  = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem,
-                               on_notification=self._observe.on_notification)
-        sess.connect()
-        sess.start_reader()
-        self._session = sess
-        self._log.debug("DTLS connected to %s:%d", host, port)
-        try:
-            self._identity = read_identity(sess, None)
-        except Exception as e:
-            self._log.debug("read_identity failed: %s", e)
-            self._identity = None
+        # Some Samsung RAC modules expose very few DTLS session slots and WiFi
+        # latency stresses the multi-flight handshake, so a single 12s attempt
+        # frequently times out (especially on reconnect, before the old slot
+        # has aged out). Give the handshake a longer budget and a few
+        # backed-off retries. Runs in an executor thread, so time.sleep is fine.
+        DtlsCoapSession.HANDSHAKE_TIMEOUT_S = 25.0
+        attempts, backoff_s = 3, 8.0
+        last_exc = None
+        for attempt in range(attempts):
+            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem,
+                                   on_notification=self._observe.on_notification)
+            try:
+                sess.connect()
+            except Exception as e:
+                last_exc = e
+                try:
+                    sess.close()
+                except Exception:
+                    pass
+                if attempt < attempts - 1:
+                    self._log.debug("DTLS connect %d/%d to %s:%d failed: %s",
+                                    attempt + 1, attempts, host, port, e)
+                    time.sleep(backoff_s)
+                continue
+            sess.start_reader()
+            self._session = sess
+            self._log.debug("DTLS connected to %s:%d", host, port)
+            try:
+                self._identity = read_identity(sess, None)
+            except Exception as e:
+                self._log.debug("read_identity failed: %s", e)
+                self._identity = None
+            return
+        raise last_exc if last_exc is not None else RuntimeError("DTLS connect failed")
 
     def _close_session(self) -> None:
         sess = self._session
