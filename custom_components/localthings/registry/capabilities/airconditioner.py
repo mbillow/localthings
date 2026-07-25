@@ -71,7 +71,7 @@ def _first_mode(rep):
     return modes
 
 
-def _climate_write(payload, rep, href=None):
+def _climate_write(payload, rep, href=None, resources=None):
     """Map a (kind, value) command from the climate platform to the
     (path_segs, body) for that one sub-write. `value` is already the raw device
     code (the platform maps HA<->device). async_send_command POSTs to path_segs,
@@ -85,6 +85,18 @@ def _climate_write(payload, rep, href=None):
     if kind == 'mode':
         return (['mode', 'vs', '0'], {'x.com.samsung.da.modes': [value]})
     if kind == 'temperature':
+        # Two setpoint layouts exist across models: the scalar
+        # /temperature/desired/0, and the vendor /temperatures/vs/0 items
+        # array (e.g. TP2X_RAC_20K, which returns 4.04 Not Found on
+        # /temperature/desired/0 — see current_/target_temperature's read
+        # fallback above). Prefer the scalar when the device exposes it; else
+        # write the vendor items array. `resources` is the device snapshot
+        # (keyed by href); when absent (legacy caller) keep the scalar path.
+        if resources is not None and '/temperature/desired/0' not in resources:
+            return (['temperatures', 'vs', '0'],
+                    {'x.com.samsung.da.items': [
+                        {'x.com.samsung.da.id': '0',
+                         'x.com.samsung.da.desired': f"{float(value):.1f}"}]})
         return (['temperature', 'desired', '0'], {'temperature': int(round(float(value)))})
     if kind == 'fan':
         return (['wind', 'strength', 'vs', '0'], {'x.com.samsung.da.modes': value})

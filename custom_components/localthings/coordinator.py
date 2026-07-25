@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import threading
 import time
@@ -553,7 +554,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     translation_domain=DOMAIN,
                     translation_key=error,
                 )
-        result = write_fn(payload, rep, href)
+        # Pass the full resource snapshot to write_fns that opt in (accept a
+        # `resources` param) so they can pick a model-specific target — e.g.
+        # the AC setpoint, which lives on /temperature/desired/0 on some models
+        # and the vendor /temperatures/vs/0 items array on others.
+        if 'resources' in inspect.signature(write_fn).parameters:
+            result = write_fn(payload, rep, href, resources=resources)
+        else:
+            result = write_fn(payload, rep, href)
         if result is None:
             self._log.warning("write_fn rejected payload %r for %s", payload, href)
             return
