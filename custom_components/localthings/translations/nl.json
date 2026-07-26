@@ -97,7 +97,9 @@
             "state": {
               "quiet": "Stil",
               "smart": "Slim",
-              "speed": "Snel"
+              "speed": "Snel",
+              "windfree": "WindFree",
+              "windfree_sleep": "WindFree-slaap"
             }
           }
         }

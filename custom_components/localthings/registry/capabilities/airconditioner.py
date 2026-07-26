@@ -16,6 +16,7 @@ by_type registry.
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ClimateDesc, SensorDesc, SwitchDesc
+from .laundry import option_write
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -71,6 +72,48 @@ def _first_mode(rep):
     return modes
 
 
+def _mode_options(rep):
+    opts = rep.get('x.com.samsung.da.options')
+    return opts if isinstance(opts, (list, tuple)) else ()
+
+
+def _has_display_light_option(rep, resources):
+    """True when the panel light state is carried inside /mode/vs/0's options
+    blob (a `Light_On`/`Light_Off` token) rather than a dedicated /light/vs/0
+    switch. The two encodings are mutually exclusive across observed boards:
+    models exposing the /light/vs/0 switch (bound by DISPLAY_LIGHT) carry no
+    Light_* option, so this sensor only materialises on the boards that would
+    otherwise have no display-light entity at all."""
+    return any(isinstance(o, str) and o.startswith('Light_')
+               for o in _mode_options(rep))
+
+
+def _display_light_on(rep):
+    """Panel display light state from /mode/vs/0's options blob. The token is
+    INVERTED relative to its name -- confirmed by a live toggle test: with the
+    panel lit the option reads `Light_Off`, and with it dark it reads
+    `Light_On` (the flag really encodes "night/display-off mode active"). So
+    `Light_Off` -> light on, `Light_On` -> light off. Read-only: the light is
+    buried in the opaque options array of the primary climate resource; the
+    write below uses the device's own SingleCommand single-token merge."""
+    for o in _mode_options(rep):
+        if isinstance(o, str) and o.startswith('Light_'):
+            return o == 'Light_Off'
+    return None
+
+
+def _display_light_write(payload, rep, href=None):
+    """Toggle the panel light via a single-token /mode/vs/0 options write
+    (SingleCommand -- 'SingleCommand_1' is advertised in this family's
+    /configuration/vs/0 airconOptionList, and option_write's one-token merge
+    is the same mechanism air_purifier.py uses for its own Light switch).
+    Polarity is inverted (see _display_light_on): switching the lamp ON writes
+    the 'Light_Off' token, OFF writes 'Light_On'."""
+    token = 'Off' if payload == 'On' else 'On'
+    return (['mode', 'vs', '0'],
+            {'x.com.samsung.da.options': option_write('Light', token)})
+
+
 def _climate_write(payload, rep, href=None):
     """Map a (kind, value) command from the climate platform to the
     (path_segs, body) for that one sub-write. `value` is already the raw device
@@ -101,6 +144,18 @@ CLIMATE = Capability(
     entities=(
         ClimateDesc(key='climate', translation_key='airconditioner',
                     rep_fn=_first_mode, write_fn=_climate_write),
+        # Display (panel) light switch, only on boards that encode it in
+        # /mode/vs/0's options instead of a /light/vs/0 switch (see
+        # _has_display_light_option). Shares the /mode/vs/0 href with the
+        # climate entity above -- same Capability, so no multi-cap discriminator
+        # is needed. /mode/vs/0 is OBSERVE-subscribed, so state updates on push;
+        # writes go through the SingleCommand merge in _display_light_write.
+        # Shares the switch.display_light translation with DISPLAY_LIGHT (the
+        # /light/vs/0 switch on other boards) -- mutually exclusive per href.
+        SwitchDesc(key='display_light', rep_fn=_display_light_on,
+                   exists_fn=_has_display_light_option,
+                   write_fn=_display_light_write,
+                   icon='mdi:led-on', entity_category='config'),
     ),
 )
 
@@ -240,7 +295,14 @@ _AC_IGNORED = [
     '/mds/absencemonitoring/vs/0', # motion-detection sensor plumbing (empty here)
     '/mds/absencestate/vs/0',      # motion-detection state (empty here)
     '/remotedatacontrol/vs/0',     # remote data-control session status
+    '/remotedeviceinfo/vs/0',      # remote paired-device id list (empty didList here)
     '/remotetemperature/vs/0',     # external temp-sensor feed (unset on this unit)
+    # Manual airflow-step position (supportedModes Off/80/60/40/Power). Overlaps
+    # the /wind/direction swing control already on the climate card, and the
+    # meaning of the numeric steps vs. 'Power' isn't documented in the dump --
+    # ignored per the 'don't guess' rule rather than modeled as a select whose
+    # write could confuse live HVAC hardware.
+    '/stepcontrol/vs/0',
     '/reserverulesets/vs/0',       # opaque hex-encoded schedule reservation blob
     '/welcome/temperature/vs/0',   # welcome-cooling plumbing
     # System-AC-only (multi-indoor-unit commercial installs, e.g.

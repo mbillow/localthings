@@ -63,7 +63,11 @@ _DEVICE_TO_HVAC: dict[str, HVACMode] = {
     'Cool': HVACMode.COOL,
     'Dry': HVACMode.DRY,
     'Wind': HVACMode.FAN_ONLY,
-    'Auto': HVACMode.HEAT_COOL,
+    # The device's 'Auto' is a single-setpoint "device decides" mode -> HA
+    # HVACMode.AUTO (renders "Auto"). Not HEAT_COOL: that renders "Heat/cool"
+    # and implies a two-setpoint heat+cool range these single-setpoint units
+    # (including cool-only models) don't have.
+    'Auto': HVACMode.AUTO,
     'Heat': HVACMode.HEAT,
 }
 _HVAC_TO_DEVICE = {v: k for k, v in _DEVICE_TO_HVAC.items()}
@@ -88,13 +92,22 @@ _DEVICE_TO_SWING: dict[str, str] = {
 _SWING_TO_DEVICE = {v: k for k, v in _DEVICE_TO_SWING.items()}
 
 # Preset (convenient mode): Off/Sleep map onto HA standard presets; Quiet/Smart/
-# Speed are custom (translated).
+# Speed and WindFree are custom (translated). On cool-only global RAC variants
+# (e.g. TP1X_DA-AC-RAC-01001) Samsung's WindFree still-air cooling is exposed
+# through this convenient-mode resource under the device code 'Nano' (and
+# 'NanoSleep' for WindFree + sleep) in place of the 'Smart' code seen on other
+# boards -- confirmed empirically by diffing a dump with WindFree off (code
+# 'Off') against one with it on (code 'Nano'). Codes absent from this map are
+# dropped from preset_modes (see _read_modes), so a board that lists neither
+# Smart nor Nano simply won't offer them.
 _DEVICE_TO_PRESET: dict[str, str] = {
     'Off': 'none',
     'Sleep': 'sleep',
     'Quiet': 'quiet',
     'Smart': 'smart',
     'Speed': 'speed',
+    'Nano': 'windfree',
+    'NanoSleep': 'windfree_sleep',
 }
 _PRESET_TO_DEVICE = {v: k for k, v in _DEVICE_TO_PRESET.items()}
 

@@ -245,6 +245,20 @@ def test_registry_reproduces_golden_state_keys_for_tp1x_rac():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_tp1x_rac_coolonly():
+    """TP1X_DA-AC-RAC-01001 cool-only global variant that reports no
+    oneUiVersion -- resolves via the hyphenated '-RAC-' modelNum fallback."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_tp1x_rac_coolonly')
+    golden = json.loads((GOLDEN / 'airconditioner_tp1x_rac_coolonly.json').read_text())
+    state_keys = _new_state_keys('airconditioner_tp1x_rac_coolonly', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_range():
     """Range/cooktop-oven combo (model TP1X_DA-KS-RANGE-0102X, issue #44) --
     reports no oneUiVersion; resolved via the '-RANGE-' modelNum token

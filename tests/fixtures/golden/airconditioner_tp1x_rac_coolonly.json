@@ -7,6 +7,7 @@
     "climate",
     "display_light",
     "energy_kwh",
+    "energy_saved_kwh",
     "firmware_update",
     "mute_once",
     "power_watts"

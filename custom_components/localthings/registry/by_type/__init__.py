@@ -108,10 +108,17 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # a modelNum carrying the '_PRAC_' (Package Room Air Conditioner) token.
     if key is None and '_PRAC_' in (model_num or ''):
         key = 'airconditioner'
-    # Older/simpler RAC boards (e.g. TP2X_RAC_20K, issue #37) use the plain
-    # '_RAC_' token instead -- distinct from '_PRAC_' above (no overlap: the
-    # 'P' sits between the underscore and 'RAC' in that token).
-    if key is None and '_RAC_' in (model_num or ''):
+    # Other RAC boards carry a bare 'RAC' (Room Air Conditioner) token in the
+    # modelNum, in one of two spellings: the underscore form '_RAC_' (e.g.
+    # TP2X_RAC_20K, issue #37) or the hyphenated form '-RAC-' (e.g.
+    # TP1X_DA-AC-RAC-01001, a cool-only global variant). Both are distinct from
+    # '_PRAC_' above ('P' sits before 'RAC' with no delimiter) and from range
+    # ('-RANGE-') / oven ('-OVEN-') tokens. Most TP1X boards self-report
+    # oneUiVersion and resolve via for_device() upstream of this fallback; the
+    # hyphenated match is what rescues variants whose /otninformation/vs/0 ships
+    # no swVersionInfo block at all, so oneUiVersion is empty.
+    if key is None and ('_RAC_' in (model_num or '')
+                        or '-RAC-' in (model_num or '').upper()):
         key = 'airconditioner'
     # System air conditioners (multi-indoor-unit commercial installs, e.g.
     # A-CAWW-TP2-20-COMMON, issue #52) report no oneUiVersion either and
