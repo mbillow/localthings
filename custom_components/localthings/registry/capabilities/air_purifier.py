@@ -272,10 +272,17 @@ def _filter_remaining_hours(rep):
 
 def _filter_reset_write(payload, rep, href=None):
     # filterResetType advertises ['replaceable']; writing it back is the
-    # hypothesised reset action (should zero filterUsage). NOT yet confirmed on
-    # hardware -- pressing the button is the test (it resets the filter counter).
+    # hypothesised reset action (should zero filterUsage).
+    #
+    # Sent as a LIST, matching the shape the device reports. A scalar
+    # 'replaceable' was tried first on AVT-WW-TP1-23-AXX500 hardware and the
+    # device accepted the PUT without error but left filterUsage unchanged --
+    # i.e. it silently ignored the wrong-shaped value. laundry.option_write
+    # already establishes the convention for this codebase: a field that reads
+    # as a list is written back as a list (x.com.samsung.da.options), so the
+    # scalar was the anomaly.
     return ['filter', 'hepafilter', 'vs', '0'], {
-        'x.com.samsung.da.filterResetType': payload}
+        'x.com.samsung.da.filterResetType': [payload]}
 
 
 # Reuses airconditioner._filter_usage_percent (used/capacity -> %) and the

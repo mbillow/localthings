@@ -255,7 +255,7 @@
     {
       "href": "/configuration/vs/0",
       "rep": {
-        "x.com.samsung.da.region": "1126000000",
+        "x.com.samsung.da.region": "0000000000",
         "x.com.samsung.da.airconOptionList": [
           "WELCOMECARE",
           "AI_PURIFY"

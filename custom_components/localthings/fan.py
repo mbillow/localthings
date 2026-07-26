@@ -1,4 +1,10 @@
-"""Fan platform for Samsung range hoods."""
+"""Fan platform for Samsung range hoods and air purifiers.
+
+Two shapes share this platform, dispatched on the bound href in
+async_setup_entry: range hoods combine sibling power + fan-speed resources
+(/hood/*), while AVT-WW-TP1 air purifiers drive /wind/strength/vs/0 as a
+preset-only fan that also owns the appliance's on/off.
+"""
 
 from __future__ import annotations
 

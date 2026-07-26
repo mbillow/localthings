@@ -202,13 +202,17 @@ def test_sensing_mode_folds_toggle_and_action():
 
 
 def test_filter_reset_and_wifi_ssid_present():
-    """Filter reset button (hypothesised write, verified via the physical button)
-    and the Wi-Fi SSID sensor bind on this board."""
+    """Filter reset button and the Wi-Fi SSID sensor bind on this board.
+
+    The reset type is written back as a LIST, matching how the device reports
+    it -- a scalar was tried on hardware first and was silently ignored.
+    """
     from custom_components.localthings.registry.entities import ButtonDesc
     fr = next(e for e in air_purifier.HEPA_FILTER.entities if e.key == 'filter_reset')
     assert isinstance(fr, ButtonDesc)
     assert fr.write_fn('replaceable', {}) == (
-        ['filter', 'hepafilter', 'vs', '0'], {'x.com.samsung.da.filterResetType': 'replaceable'})
+        ['filter', 'hepafilter', 'vs', '0'],
+        {'x.com.samsung.da.filterResetType': ['replaceable']})
     assert 'wifi_ssid' in _state()
 
 
