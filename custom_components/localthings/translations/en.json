@@ -494,7 +494,7 @@
         "name": "Dryer type"
       },
       "dust": {
-        "name": "Dust PM10"
+        "name": "Dust"
       },
       "energy_kwh": {
         "name": "Energy"
@@ -521,7 +521,7 @@
         "name": "Filter usage"
       },
       "fine_dust": {
-        "name": "Dust PM2.5"
+        "name": "Fine dust"
       },
       "finish_time": {
         "name": "Estimated finish"
@@ -605,7 +605,7 @@
         "name": "Self-check status"
       },
       "super_fine_dust": {
-        "name": "Dust PM1.0"
+        "name": "Super fine dust"
       },
       "water_liters": {
         "name": "Water consumption"
@@ -647,9 +647,6 @@
       },
       "wifi_ssid": {
         "name": "Wi-Fi network"
-      },
-      "air_quality": {
-        "name": "Air quality"
       }
     },
     "switch": {

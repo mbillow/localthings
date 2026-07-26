@@ -73,9 +73,20 @@ def _quality(sensor_type):
     return lambda items: sensor_item_value(items, sensor_type)
 
 
+# Shared by both board families -- edits here land on TVTL and AVT alike.
+#
 # The particulate readings (index 0 of each items[] entry) are numeric µg/m³
 # measurements, surfaced as HA's pm10/pm2.5/pm1.0 device classes so they graph
-# and carry a unit; odour and clean-level are unitless indices (measurement).
+# and carry a unit. Both families' dumps back this up: index 0 falls
+# monotonically with particle size on each (TVTL 11/9/5, AVT 11/9/5), which is
+# what concentrations do and what a 1-N grade would not. Index 1 is a separate
+# coarse level, not surfaced.
+#
+# Entity NAMES are deliberately left as the TVTL family already shipped them
+# ("Dust" / "Fine dust" / "Super fine dust", not "Dust PM10" etc.): the
+# device_class already tells HA and the user which fraction each one is, and
+# renaming them would rename existing entities on every TVTL install for a
+# cosmetic gain.
 AIR_QUALITY = Capability(
     href='/sensors/vs/0',
     poll_tier='warm',
@@ -92,13 +103,16 @@ AIR_QUALITY = Capability(
         SensorDesc(key='odor', field='x.com.samsung.da.items',
                    state_class='measurement', icon='mdi:scent',
                    value_fn=_quality('Odor')),
-        # CleanLevel is the device's overall air-quality index (CAQI). Named
-        # 'Air quality' via translation_key (leaving range_hood's shared
-        # 'clean_level' catalog entry alone).
+        # CleanLevel is left exactly as the TVTL family already had it -- no
+        # unit, no state_class, original name and icon. It is an overall
+        # air-quality grade, and on the AVT board it looks like a 1-4 national
+        # scale rather than a 0-100 index (lastSensingLevel reads 'Kr1'
+        # alongside CleanLevel 1 at PM10 11 ug/m3), so the obvious candidates
+        # (CAQI, AQI) are all probably wrong. Guessing here would rename and
+        # re-unit an entity the TVTL family has been shipping since issue #56,
+        # for no confirmed gain -- see issue #84 for the open question.
         SensorDesc(key='clean_level', field='x.com.samsung.da.items',
-                   translation_key='air_quality', unit='CAQI',
-                   state_class='measurement', icon='mdi:weather-hazy',
-                   value_fn=_quality('CleanLevel')),
+                   icon='mdi:air-filter', value_fn=_quality('CleanLevel')),
     ),
 )
 

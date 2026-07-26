@@ -494,7 +494,7 @@
         "name": "Type droger"
       },
       "dust": {
-        "name": "Stof PM10"
+        "name": "Stof"
       },
       "energy_kwh": {
         "name": "Energie"
@@ -521,7 +521,7 @@
         "name": "Filtergebruik"
       },
       "fine_dust": {
-        "name": "Stof PM2.5"
+        "name": "Fijnstof"
       },
       "finish_time": {
         "name": "Geschatte eindtijd"
@@ -605,7 +605,7 @@
         "name": "Status zelfcontrole"
       },
       "super_fine_dust": {
-        "name": "Stof PM1.0"
+        "name": "Ultrafijnstof"
       },
       "water_liters": {
         "name": "Waterverbruik"
@@ -647,9 +647,6 @@
       },
       "wifi_ssid": {
         "name": "Wifi-netwerk"
-      },
-      "air_quality": {
-        "name": "Luchtkwaliteit"
       }
     },
     "switch": {
