@@ -1,5 +1,20 @@
-"""Capabilities for the Samsung ARTIK051_TVTL-class air purifier family
-(model AX60R5080WD/SE, issue #56).
+"""Capabilities for the Samsung air purifiers -- two board families.
+
+This module is split in two halves, and the boundary is the '=====' banner
+partway down:
+
+  ARTIK051_TVTL-class (model AX60R5080WD/SE, issue #56) -- everything above
+      the banner. Fan speed on /airflow, filter on /consumable.
+  AVT-WW-TP1-class (model AVT-WW-TP1-23-AXX500, issue #84) -- everything below
+      it. Fan speed on /wind/strength, filter on /filter/hepafilter, plus the
+      /airlevelcheck "AI Purify" engine that has no TVTL equivalent.
+
+AIR_QUALITY, DEVICE_ACTIVE, MODE's display-light switch and the /humidity
+coverage entries are shared by both; the rest bind per-href, so a board only
+picks up what it actually exposes. Anything edited above the banner therefore
+affects the AVT family too -- re-run both golden fixtures.
+
+The docstring below covers the TVTL half.
 
 Power, kids-lock, remote-control, alarms, and the energy meter are the shared
 common.py capabilities (this family exposes the standard /power/0+/power/vs/0

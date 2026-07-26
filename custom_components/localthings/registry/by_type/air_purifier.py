@@ -1,8 +1,18 @@
-"""Air-purifier device registry (Samsung ARTIK051_TVTL-class, issue #56).
+"""Air-purifier device registry -- two board families share it.
 
-Reports no oneUiVersion; resolved via for_device_by_model's '_TVTL_' modelNum
-token (see registry.py). Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0
-(identical field/write contract).
+Neither reports a oneUiVersion, so both resolve through for_device_by_model
+(see registry.py):
+  ARTIK051_TVTL-class (issue #56)  -- matched on the '_TVTL_' modelNum token.
+  AVT-WW-TP1-class    (issue #84)  -- matched on the 'AVT-' prefix.
+
+They overlap on the sensors/humidity/device-active/display-light capabilities
+and diverge on fan speed, filter, and the AI Purify engine. Every capability
+below binds only when its own href is present in the dump, so listing both
+families' capabilities in one registry is safe -- see capabilities/
+air_purifier.py for which href belongs to which family.
+
+Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0 (identical field/write
+contract; TVTL only -- AVT doesn't expose that href).
 """
 from ..capabilities import air_purifier, airconditioner, common, dishwasher, ignored
 from ._base import DeviceRegistry, _build

@@ -38,7 +38,13 @@ _WIND_NAMES_FIELD = 'x.com.samsung.da.modesName'
 # surface as fan preset_modes. Values are lowercase HA-style (auto/low/medium/
 # high/sleep); the catalog (entity.fan.fan.state_attributes.preset_mode.state)
 # title-cases them for display. low/medium/high replace the device's raw
-# Mid/High/Turbo for the manual codes (2/3/4).
+# Mid/High/Turbo for the manual codes (2/3/4) -- HA's own vocabulary for a
+# three-step fan, so the entity reads the same as every other fan in HA and
+# matches what voice assistants and fan blueprints expect. It does mean the
+# labels no longer match the SmartThings app word-for-word (the device's "High"
+# is HA's "Medium"); the ordering is identical, and _labels() falls back to the
+# device's own modesName for any code not in this map, so a board reporting an
+# extra speed still gets a sensible label instead of a bare code.
 _WIND_MODE_LABELS = {'0': 'auto', '2': 'low', '3': 'medium', '4': 'high', '91': 'sleep'}
 
 
@@ -153,6 +159,17 @@ class LocalThingsAirPurifierFan(LocalThingsEntity, FanEntity):
     speeds, not a separate preset -- so all of them surface as fan preset_modes.
     Power is carried by the separate /power resource (the wind-strength code is
     retained while off), so is_on comes from there, not from the code.
+
+    PRESET_MODE only, deliberately -- unlike LocalThingsRangeHoodFan above,
+    which exposes SET_SPEED. The usual HA split (percentage for the ordered
+    speeds, presets for named modes) would mean splitting supportedModes into
+    two halves and presenting the manual codes as 33/66/100%. That reads as a
+    continuous range the device doesn't have, and it hides Auto and Sleep behind
+    a second control even though the device treats all five as one mutually
+    exclusive selection on a single field -- picking Auto is the same kind of
+    act as picking Turbo, and only one can be active. The hood differs because
+    its fanSpeed genuinely is an ordered-only ladder with no named modes mixed
+    in. Revisit if a board turns up that reports a real percentage range.
     """
 
     _enable_turn_on_off_backwards_compatibility = False
