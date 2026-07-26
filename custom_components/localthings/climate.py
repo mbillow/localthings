@@ -24,6 +24,7 @@ from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
+    PRESET_NONE,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
@@ -96,25 +97,17 @@ _DEVICE_TO_SWING: dict[str, str] = {
 }
 _SWING_TO_DEVICE = {v: k for k, v in _DEVICE_TO_SWING.items()}
 
-# Preset (convenient mode): Off/Sleep map onto HA standard presets; Quiet/Smart/
-# Speed and WindFree are custom (translated). On cool-only global RAC variants
-# (e.g. TP1X_DA-AC-RAC-01001) Samsung's WindFree still-air cooling is exposed
-# through this convenient-mode resource under the device code 'Nano' (and
-# 'NanoSleep' for WindFree + sleep) in place of the 'Smart' code seen on other
-# boards -- confirmed empirically by diffing a dump with WindFree off (code
-# 'Off') against one with it on (code 'Nano'). Codes absent from this map are
-# dropped from preset_modes (see _read_modes), so a board that lists neither
-# Smart nor Nano simply won't offer them.
-_DEVICE_TO_PRESET: dict[str, str] = {
-    'Off': 'none',
-    'Sleep': 'sleep',
-    'Quiet': 'quiet',
-    'Smart': 'smart',
-    'Speed': 'speed',
-    'Nano': 'windfree',
-    'NanoSleep': 'windfree_sleep',
-}
-_PRESET_TO_DEVICE = {v: k for k, v in _DEVICE_TO_PRESET.items()}
+# Preset (convenient mode): resolved dynamically from the device's own
+# /mode/convenient/vs/0 supportedModes -- no per-model table. The device 'Off'
+# code maps to HA's PRESET_NONE ("no preset active"); every other code is exposed
+# as its lowercased self and labelled in translations
+# (entity.climate.airconditioner.state_attributes.preset_mode.state.<code>), so
+# any board's convenient modes surface without code changes and an unlabelled
+# code renders as its raw value until a label is added. (Samsung's WindFree
+# still-air cooling shows up here as the 'Nano'/'NanoSleep' codes on cool-only
+# global RAC boards -- that's just a translation label, not a hard-coded mode.)
+def _preset_to_ha(code) -> str:
+    return PRESET_NONE if code == 'Off' else str(code).lower()
 
 
 async def async_setup_entry(
@@ -316,11 +309,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def preset_mode(self):
-        return self._read_mode(CONVENIENT_HREF, _DEVICE_TO_PRESET)
+        code = _first(self._rep(CONVENIENT_HREF).get(_MODES_FIELD))
+        return _preset_to_ha(code) if code is not None else None
 
     @property
     def preset_modes(self) -> list[str]:
-        return self._read_modes(CONVENIENT_HREF, _DEVICE_TO_PRESET)
+        return [_preset_to_ha(c) for c in self._supported(CONVENIENT_HREF)]
 
     # -- writes -------------------------------------------------------------
 
@@ -378,4 +372,9 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         await self._set_mapped('swing', _SWING_TO_DEVICE, swing_mode)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        await self._set_mapped('preset', _PRESET_TO_DEVICE, preset_mode)
+        # Reverse-resolve against the unit's own supportedModes (codes aren't a
+        # fixed transform of the HA value -- e.g. 'NanoSleep' -> 'nanosleep').
+        for code in self._supported(CONVENIENT_HREF):
+            if _preset_to_ha(code) == preset_mode:
+                await self.coordinator.async_send_command(self._bound, ('preset', code))
+                return

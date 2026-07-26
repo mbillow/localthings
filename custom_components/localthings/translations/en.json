@@ -98,8 +98,8 @@
               "quiet": "Quiet",
               "smart": "Smart",
               "speed": "Speed",
-              "windfree": "WindFree",
-              "windfree_sleep": "WindFree sleep"
+              "nano": "WindFree",
+              "nanosleep": "WindFree sleep"
             }
           }
         }
