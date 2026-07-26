@@ -16,6 +16,7 @@ by_type registry.
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ClimateDesc, NumberDesc, SensorDesc, SwitchDesc
+from .laundry import bool_option_exists, bool_option_value, option_value, option_write
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -35,6 +36,7 @@ HREF_WIND_STRENGTH = '/wind/strength/vs/0'        # fan_mode
 HREF_WIND_DIRECTION = '/wind/direction/vs/0'      # swing_mode
 HREF_CONVENIENT = '/mode/convenient/vs/0'         # preset_mode
 HREF_TEMPS_VS = '/temperatures/vs/0'              # vendor temp fallback (items[] array)
+HREF_LIGHT = '/light/vs/0'                        # display light (absent on TP2X)
 
 CLIMATE_CONSUMED_HREFS = [
     HREF_POWER, HREF_POWER_VS, HREF_TEMP_CURRENT, HREF_TEMP_DESIRED,
@@ -53,29 +55,54 @@ def _num(v):
 # --- /mode/vs/0 options blob ('Light_On', 'Volume_100'/'Volume_Mute', ...) ---
 # Some settings (display light, beep volume) have no dedicated resource on
 # models like TP2X_RAC_20K; they live only in /mode/vs/0's `options` array and
-# are written back one token at a time (the device merges by prefix — see
-# common.merge_options_field). These read/write that array.
-def _opt(rep, key):
-    for o in (rep.get('x.com.samsung.da.options') or ()):
-        if isinstance(o, str) and o.startswith(key + '_'):
-            return o[len(key) + 1:]
-    return None
-
-
-def _has_opt(rep, key):
-    return _opt(rep, key) is not None
-
-
-def _vol_read(rep):
-    v = _opt(rep, 'Volume')
+# are written back one token at a time (the device merges by prefix -- see
+# common.merge_options_field), exactly as air_purifier.MODE does for its own
+# Light token. Reuses laundry's option helpers rather than re-deriving them.
+def _volume_percent(rep):
+    """Beep volume as 0-100, with the 'Mute' token folded in as 0."""
+    v = option_value(rep.get('x.com.samsung.da.options'), 'Volume')
     if v is None:
         return None
     return 0 if v == 'Mute' else _num(v)
 
 
-def _vol_token(p):
-    p = int(round(float(p)))
-    return 'Volume_Mute' if p <= 0 else f'Volume_{p}'
+def _volume_write(payload, rep, href=None):
+    pct = int(round(float(payload)))
+    return ['mode', 'vs', '0'], {
+        'x.com.samsung.da.options': option_write(
+            'Volume', 'Mute' if pct <= 0 else pct),
+    }
+
+
+def _light_write(payload, rep, href=None):
+    return ['mode', 'vs', '0'], {
+        'x.com.samsung.da.options': option_write(
+            'Light', 'On' if payload else 'Off'),
+    }
+
+
+def _humidity_percent(rep):
+    """Relative humidity, or None where neither field carries a real reading.
+
+    /humidity/vs/0 exposes two fields and which one is live varies by board.
+    A TP2X_RAC_20K measured in the field reports both x.com.samsung.da.humidity
+    and .fivepercentHumidity as the same percentage ('51'), which is what
+    establishes they are one quantity; every dump this family has been
+    verified against instead pins .humidity to a dead '0'/'0.000000' sentinel
+    and carries the reading only in .fivepercentHumidity (43, 83, 53). So:
+    prefer the primary field, fall back to the five-percent one, and gate the
+    sensor off when neither is plausible -- 0 % RH is the sentinel, never a
+    real room. That last part is why this href had sat in _AC_IGNORED.
+    """
+    for field in ('x.com.samsung.da.humidity',
+                  'x.com.samsung.da.fivepercentHumidity'):
+        v = rep.get(field)
+        if isinstance(v, (list, tuple)):
+            continue
+        n = _num(v)
+        if n is not None and 0 < n <= 100:
+            return n
+    return None
 
 
 def _filter_usage_percent(rep):
@@ -142,34 +169,41 @@ CLIMATE = Capability(
         ClimateDesc(key='climate', translation_key='airconditioner',
                     rep_fn=_first_mode, write_fn=_climate_write),
         # Display light + beep volume: on models like TP2X_RAC_20K these are
-        # options on /mode/vs/0 (no /light/vs/0 or /audioVolume/vs/0 resource),
-        # so bind them here and gate on the option being present.
+        # options on /mode/vs/0 -- there is no /light/vs/0 (4.04 there) and no
+        # dedicated volume resource at all -- so bind them here and gate on the
+        # token actually being reported. display_light additionally stands down
+        # where DISPLAY_LIGHT's own /light/vs/0 exists, so a model carrying both
+        # gets one switch from the dedicated resource rather than two under the
+        # same key.
         SwitchDesc(key='display_light', icon='mdi:led-on',
                    entity_category='config',
-                   rep_fn=lambda rep: _opt(rep, 'Light') == 'On',
-                   exists_fn=lambda rep, res: _has_opt(rep, 'Light'),
-                   write_fn=lambda p, rep, href=None: (
-                       ['mode', 'vs', '0'],
-                       {'x.com.samsung.da.options': [
-                           'Light_On' if p else 'Light_Off']})),
+                   rep_fn=bool_option_value('Light'),
+                   exists_fn=lambda rep, resources: (
+                       HREF_LIGHT not in resources
+                       and bool_option_exists('Light')(rep, resources)),
+                   write_fn=_light_write),
         NumberDesc(key='sound_volume', icon='mdi:volume-high',
                    entity_category='config',
                    native_min=0, native_max=100, step=1,
-                   rep_fn=_vol_read,
-                   exists_fn=lambda rep, res: _has_opt(rep, 'Volume'),
-                   write_fn=lambda p, rep, href=None: (
-                       ['mode', 'vs', '0'],
-                       {'x.com.samsung.da.options': [_vol_token(p)]})),
+                   rep_fn=_volume_percent,
+                   exists_fn=lambda rep, resources: (
+                       option_value(rep.get('x.com.samsung.da.options'),
+                                    'Volume') is not None),
+                   write_fn=_volume_write),
     ),
 )
 
+# 'warm' rather than the default 'cold': a cold href is only refreshed by the
+# ~30s /device/0 summary sweep, and this resource comes back as a stub there on
+# TP2X -- so a cold humidity sensor would sit at unknown indefinitely.
 HUMIDITY = Capability(
     href='/humidity/vs/0',
     poll_tier='warm',
     entities=(
-        SensorDesc(key='humidity', field='x.com.samsung.da.humidity',
-                   device_class='humidity', unit='%', state_class='measurement',
-                   value_fn=_num),
+        SensorDesc(key='humidity', device_class='humidity', unit='%',
+                   state_class='measurement', rep_fn=_humidity_percent,
+                   exists_fn=lambda rep, resources: (
+                       not rep or _humidity_percent(rep) is not None)),
     ),
 )
 
@@ -218,7 +252,7 @@ AIR_FILTER = Capability(
 )
 
 DISPLAY_LIGHT = Capability(
-    href='/light/vs/0',
+    href=HREF_LIGHT,
     poll_tier='cold',
     entities=(
         SwitchDesc(key='display_light', field='mode',
@@ -289,9 +323,12 @@ CURRENT_LIMIT = Capability(
 _AC_IGNORED = [
     # All-zero and ambiguously encoded on this model (2-value arrays); the
     # 'don't guess' rule -- leave unmodeled rather than invent entities.
+    # /humidity/vs/0 used to sit here for the same reason; it is now modeled by
+    # HUMIDITY above, which self-gates back off on exactly that encoding, so it
+    # must NOT be listed here as well (two undiscriminated caps on one href is
+    # a _build error). /humidity/0 stays -- 4.04 on TP2X, empty elsewhere.
     '/sensors/vs/0',
     '/humidity/0',
-    '/humidity/vs/0',
     # Presence-personalization plumbing (empty item list here).
     '/personality/presence/vs/0',
     # --- TP1X/TP2X-class housekeeping / opaque blobs. These carry no

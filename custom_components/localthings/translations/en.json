@@ -523,6 +523,9 @@
       "hood_filter_capacity": {
         "name": "Filter capacity"
       },
+      "humidity": {
+        "name": "Humidity"
+      },
       "hood_filter_usage": {
         "name": "Filter usage"
       },

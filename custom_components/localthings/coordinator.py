@@ -122,6 +122,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ------------------------------------------------------------------
 
     @property
+    def discovered(self) -> bool:
+        """True once a poll has identified the device and bound its entities.
+
+        Until then device_serial/device_info hold host-derived placeholders, so
+        setup must not register entities against them (see async_setup_entry).
+        """
+        return self._discovered
+
+    @property
     def last_resources(self) -> dict:
         return self._cache.snapshot()
 

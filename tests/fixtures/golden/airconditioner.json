@@ -7,8 +7,10 @@
     "auto_clean",
     "climate",
     "diagnosis_status",
+    "display_light",
     "energy_kwh",
     "energy_saved_kwh",
-    "power_watts"
+    "power_watts",
+    "sound_volume"
   ]
 }

@@ -10,6 +10,7 @@
     "energy_kwh",
     "energy_saved_kwh",
     "firmware_update",
+    "humidity",
     "mute_once",
     "selfcheck_error",
     "selfcheck_result",

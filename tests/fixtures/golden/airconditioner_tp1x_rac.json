@@ -15,6 +15,7 @@
     "mute_once",
     "selfcheck_error",
     "selfcheck_result",
-    "selfcheck_status"
+    "selfcheck_status",
+    "sound_volume"
   ]
 }
