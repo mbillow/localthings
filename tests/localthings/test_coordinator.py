@@ -722,10 +722,10 @@ async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
     """Regression for issues #17/#53, using the real AC capability. The
     composite climate entity binds /mode/vs/0 (airconditioner.CLIMATE.href),
     but a power command's write_fn (airconditioner._climate_write) targets
-    the sibling /power/0 -- the href climate.py's `_is_on()` actually reads.
+    the sibling /power/vs/0 -- the href climate.py's `_is_on()` actually reads.
     The optimistic value and settle guard must land there, not on the bound
     /mode/vs/0, or the entity never sees the write and shows stale state
-    until the next unrelated read of /power/0."""
+    until the next unrelated read of /power/vs/0."""
     from custom_components.localthings.registry.capabilities import airconditioner
     from custom_components.localthings.registry.discovery import BoundEntity
 
@@ -744,9 +744,10 @@ async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
         fake.post = lambda *a, **k: (0x44, b'')
         await coordinator.async_send_command(bound, ('power', True))
 
-    assert coordinator._cache.get('/power/0') == {'value': True}
-    assert coordinator._cache.get(airconditioner.CLIMATE.href) != {'value': True}
-    assert coordinator._observe._settle_until.get('/power/0') is not None
+    assert coordinator._cache.get('/power/vs/0', {}).get('x.com.samsung.da.power') == 'On'
+    assert 'x.com.samsung.da.power' not in coordinator._cache.get(
+        airconditioner.CLIMATE.href, {})
+    assert coordinator._observe._settle_until.get('/power/vs/0') is not None
 
 
 async def test_send_command_survives_stale_confirm_poll(

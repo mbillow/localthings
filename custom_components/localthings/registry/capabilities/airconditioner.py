@@ -115,20 +115,39 @@ def _display_light_write(payload, rep, href=None):
 
 
 def _climate_write(payload, rep, href=None):
-    """Map a (kind, value) command from the climate platform to the
+    """Map a (kind, value[, extra]) command from the climate platform to the
     (path_segs, body) for that one sub-write. `value` is already the raw device
     code (the platform maps HA<->device). async_send_command POSTs to path_segs,
-    so a single desc drives writes across power/mode/temperature/wind resources.
-    Read-modify-write safe: each write sends only its own field, leaving the
-    resource's other fields (e.g. /mode/vs/0's opaque `options` blob) untouched.
+    so a single desc drives writes across the power/mode/temperature/wind
+    resources.
+
+    Power goes to the vendor `/power/vs/0` (the OCF `/power/0` is absent on most
+    models and a non-authoritative mirror where present -- vendor works on every
+    board). Temperature is board-dependent, so the platform picks the channel
+    and sends `temperature_ocf` (-> OCF `/temperature/desired/0`, boards with the
+    full OCF current+desired pair) or `temperature` (-> vendor `/temperatures/vs/0`,
+    boards without it); each honours only its own channel. Mode/fan/swing/preset
+    are always the vendor `/x/vs/0` resources. Each write sends only its own
+    field(s), leaving the resource's other fields (e.g. /mode/vs/0's opaque
+    `options` blob) untouched.
     """
-    kind, value = payload
+    kind = payload[0]
+    value = payload[1] if len(payload) > 1 else None
     if kind == 'power':
-        return (['power', '0'], {'value': bool(value)})
+        return (['power', 'vs', '0'],
+                {'x.com.samsung.da.power': 'On' if value else 'Off'})
     if kind == 'mode':
         return (['mode', 'vs', '0'], {'x.com.samsung.da.modes': [value]})
+    if kind == 'temperature_ocf':
+        return (['temperature', 'desired', '0'],
+                {'temperature': int(round(float(value)))})
     if kind == 'temperature':
-        return (['temperature', 'desired', '0'], {'temperature': int(round(float(value)))})
+        # Read-modify-write the vendor items[]: start from the current item the
+        # platform passes in (preserving current/min/max/unit) and set desired.
+        item = dict(payload[2]) if len(payload) > 2 and isinstance(payload[2], dict) else {}
+        item.setdefault('x.com.samsung.da.id', '0')
+        item['x.com.samsung.da.desired'] = str(int(round(float(value))))
+        return (['temperatures', 'vs', '0'], {'x.com.samsung.da.items': [item]})
     if kind == 'fan':
         return (['wind', 'strength', 'vs', '0'], {'x.com.samsung.da.modes': value})
     if kind == 'swing':

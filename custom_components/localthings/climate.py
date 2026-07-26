@@ -62,7 +62,12 @@ _SUPPORTED_FIELD = 'x.com.samsung.da.supportedModes'
 _DEVICE_TO_HVAC: dict[str, HVACMode] = {
     'Cool': HVACMode.COOL,
     'Dry': HVACMode.DRY,
+    # Fan-only is spelled 'Wind' on some boards (e.g. TP1X_DA-AC-RAC-01001) and
+    # 'Fan' on others (e.g. TP1X_DA-AC-RAC-01011); both map to FAN_ONLY. The
+    # reverse write can't rely on this map alone (two codes, one HA value) --
+    # _device_code_for_hvac() resolves the code from the unit's supportedModes.
     'Wind': HVACMode.FAN_ONLY,
+    'Fan': HVACMode.FAN_ONLY,
     # The device's 'Auto' is a single-setpoint "device decides" mode -> HA
     # HVACMode.AUTO (renders "Auto"). Not HEAT_COOL: that renders "Heat/cool"
     # and implies a two-setpoint heat+cool range these single-setpoint units
@@ -184,11 +189,15 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         return self.coordinator.resource(href) or {}
 
     def _is_on(self) -> bool:
-        rep = self._rep(POWER_HREF)
-        if 'value' in rep:
-            return bool(rep.get('value'))
+        # Prefer the vendor /power/vs/0 (present on every observed board and the
+        # resource writes target -- see airconditioner._climate_write). The
+        # OCF /power/0 is absent on many boards and a stale mirror on some, so
+        # reading it first showed pre-write state after a power toggle.
         vs = self._rep(POWER_VS_HREF)
-        return str(vs.get('x.com.samsung.da.power', '')).lower() == 'on'
+        power = vs.get('x.com.samsung.da.power')
+        if power is not None:
+            return str(power).lower() == 'on'
+        return bool(self._rep(POWER_HREF).get('value'))
 
     def _supported(self, href: str) -> list[str]:
         return list(self._rep(href).get(_SUPPORTED_FIELD) or [])
@@ -202,6 +211,15 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         return [mapping[c] for c in self._supported(href) if c in mapping]
 
     # -- temperature --------------------------------------------------------
+
+    def _ocf_temp_authoritative(self) -> bool:
+        """True when the OCF /temperature/{current,desired}/0 pair is the
+        authoritative temperature channel -- signalled by /temperature/current/0
+        being present. Those boards honour reads/writes on /temperature/desired/0
+        and reject the vendor /temperatures/vs/0; boards without the pair (only a
+        desired stub, or nothing) are the reverse. Confirmed on live units of
+        both kinds."""
+        return bool(self._rep(TEMP_CURRENT_HREF))
 
     def _temps_vs(self) -> dict:
         """Vendor `/temperatures/vs/0` items[0] (empty {} when absent)."""
@@ -225,10 +243,14 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def target_temperature(self):
-        v = _num(self._rep(TEMP_DESIRED_HREF).get('temperature'))
-        if v is None:
-            v = _num(self._temps_vs().get('x.com.samsung.da.desired'))
-        return v
+        # Read from the same channel writes go to (see async_set_temperature):
+        # OCF /temperature/desired/0 on boards with the full OCF pair, vendor
+        # /temperatures/vs/0 otherwise -- with the other as fallback.
+        ocf = _num(self._rep(TEMP_DESIRED_HREF).get('temperature'))
+        vs = _num(self._temps_vs().get('x.com.samsung.da.desired'))
+        if self._ocf_temp_authoritative():
+            return ocf if ocf is not None else vs
+        return vs if vs is not None else ocf
 
     def _range(self) -> list | None:
         r = self._rep(TEMP_DESIRED_HREF).get('range')
@@ -302,16 +324,35 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     # -- writes -------------------------------------------------------------
 
+    def _device_code_for_hvac(self, hvac_mode: HVACMode):
+        """Device mode code for an HA hvac_mode, chosen from this unit's own
+        supportedModes -- fan-only is 'Wind' on some boards and 'Fan' on
+        others, so the reverse map alone can't pick the code this unit accepts.
+        """
+        for code in self._supported(MODE_HREF):
+            if _DEVICE_TO_HVAC.get(code) == hvac_mode:
+                return code
+        return _HVAC_TO_DEVICE.get(hvac_mode)
+
     async def async_set_temperature(self, **kwargs) -> None:
         temp = kwargs.get('temperature')
-        if temp is not None:
-            await self.coordinator.async_send_command(self._bound, ('temperature', temp))
+        if temp is None:
+            return
+        if self._ocf_temp_authoritative():
+            # OCF-pair boards apply the write on /temperature/desired/0.
+            await self.coordinator.async_send_command(
+                self._bound, ('temperature_ocf', temp))
+        else:
+            # Vendor boards apply it on /temperatures/vs/0; pass the current
+            # item so the write RMWs it (preserving current/min/max/unit).
+            await self.coordinator.async_send_command(
+                self._bound, ('temperature', temp, self._temps_vs()))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         if hvac_mode == HVACMode.OFF:
             await self.coordinator.async_send_command(self._bound, ('power', False))
             return
-        device = _HVAC_TO_DEVICE.get(hvac_mode)
+        device = self._device_code_for_hvac(hvac_mode)
         if device is None:
             return
         if not self._is_on():

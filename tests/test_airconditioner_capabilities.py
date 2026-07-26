@@ -93,15 +93,34 @@ def test_air_filter_usage_is_percentage_of_capacity():
 
 
 def test_climate_write_targets():
-    """The CLIMATE write_fn maps each (kind, value) command to the right OCF
-    POST target and body. `value` is already the raw device code."""
+    """The CLIMATE write_fn maps each (kind, value) command to the right vendor
+    POST target and body. `value` is already the raw device code. Power and
+    temperature target the vendor /power/vs/0 and /temperatures/vs/0 (the OCF
+    /power/0 + /temperature/desired/0 are absent on most boards and ignore
+    writes where present)."""
     write = airconditioner.CLIMATE.entities[0].write_fn
-    assert write(('power', True), {}) == (['power', '0'], {'value': True})
-    assert write(('power', False), {}) == (['power', '0'], {'value': False})
+    assert write(('power', True), {}) == (
+        ['power', 'vs', '0'], {'x.com.samsung.da.power': 'On'})
+    assert write(('power', False), {}) == (
+        ['power', 'vs', '0'], {'x.com.samsung.da.power': 'Off'})
     assert write(('mode', 'Heat'), {}) == (
         ['mode', 'vs', '0'], {'x.com.samsung.da.modes': ['Heat']})
-    assert write(('temperature', 23.6), {}) == (
+    # OCF-pair boards: temperature_ocf -> /temperature/desired/0.
+    assert write(('temperature_ocf', 23.6), {}) == (
         ['temperature', 'desired', '0'], {'temperature': 24})
+    # Vendor boards: temperature RMWs the vendor items[] -- no item -> minimal.
+    assert write(('temperature', 23.6), {}) == (
+        ['temperatures', 'vs', '0'],
+        {'x.com.samsung.da.items': [
+            {'x.com.samsung.da.id': '0', 'x.com.samsung.da.desired': '24'}]})
+    # With the current item passed, other fields are preserved.
+    assert write(('temperature', 22,
+                  {'x.com.samsung.da.id': '0', 'x.com.samsung.da.current': '20.0',
+                   'x.com.samsung.da.maximum': '30'}), {}) == (
+        ['temperatures', 'vs', '0'],
+        {'x.com.samsung.da.items': [
+            {'x.com.samsung.da.id': '0', 'x.com.samsung.da.current': '20.0',
+             'x.com.samsung.da.maximum': '30', 'x.com.samsung.da.desired': '22'}]})
     assert write(('fan', '2'), {}) == (
         ['wind', 'strength', 'vs', '0'], {'x.com.samsung.da.modes': '2'})
     assert write(('swing', 'All'), {}) == (
