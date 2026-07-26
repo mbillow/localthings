@@ -202,15 +202,13 @@ def test_sensing_mode_folds_toggle_and_action():
 
 
 def test_no_filter_reset_button():
-    """No reset control on /filter/hepafilter/vs/0.
+    """No reset control on /filter/hepafilter/vs/0 -- contract unknown.
 
-    Every candidate write returns 2.04 Changed on real AVT-WW-TP1-23-AXX500
-    hardware and then does nothing (filterResetType scalar and list, a
-    filterReset scalar, a filterLastResetDate timestamp, filterUsage '0').
-    The vendor's own resetHepaFilter() via SmartThings does work and moves
-    filterUsage 8 -> 0 without adding any field, so the reset lives in the
-    firmware behind the cloud agent, not behind a writable resource. Guard
-    against a button reappearing on a hunch -- see the module comment.
+    Five candidate writes were tried on real AVT-WW-TP1-23-AXX500 hardware and
+    every one returned 2.04 Changed while leaving filterUsage alone; the module
+    comment lists them. That does not prove no local reset exists, only that it
+    hasn't been found. This test guards against a button reappearing on a hunch
+    -- restore it when someone has a contract confirmed on hardware, not before.
     """
     from custom_components.localthings.registry.entities import ButtonDesc
     assert not [e for e in air_purifier.HEPA_FILTER.entities

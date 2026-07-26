@@ -299,26 +299,28 @@ def _filter_remaining_hours(rep):
     return cap - used
 
 
-# No filter-reset button here, deliberately. The reset is not reachable over
-# the local OCF interface on this board -- established on AVT-WW-TP1-23-AXX500
-# hardware rather than assumed:
+# No filter-reset button here: the write contract for it is unknown. Not
+# "impossible" -- just not found. What was tried on AVT-WW-TP1-23-AXX500
+# hardware, and what each attempt did:
 #
-#   * Every candidate write returns 2.04 Changed and then does nothing:
-#     filterResetType as a scalar 'replaceable' and as ['replaceable'] (both
-#     with the appliance powered off and on), a filterReset scalar (the field
-#     dishwashers carry on /filter/waterfilter/vs/0), a filterLastResetDate
-#     timestamp (SmartThings' custom.hepaFilter exposes that attribute), and
-#     filterUsage '0' itself. The device acknowledges every one and discards
-#     it, so the response code carries no signal -- only the side effect does.
-#   * /filter/hepafilter/0, the OCF-standard variant, returns 4.04.
-#   * Triggering the vendor's own resetHepaFilter() through SmartThings DOES
-#     work, and changes exactly one thing in this resource: filterUsage 8 -> 0.
-#     No new field appears. So filterUsage is what a real reset moves, and it
-#     is read-only to us -- the reset runs inside the firmware, reached over
-#     the cloud agent rather than by writing any resource we can see.
+#   * filterResetType, as scalar 'replaceable' and as ['replaceable'], with
+#     the appliance powered off and powered on   -> 2.04, filterUsage unchanged
+#   * filterReset scalar '01' (the field dishwashers carry on
+#     /filter/waterfilter/vs/0)                  -> 2.04, filterUsage unchanged
+#   * filterLastResetDate timestamp (SmartThings' custom.hepaFilter exposes
+#     that attribute; this resource does not)    -> 2.04, filterUsage unchanged
+#   * filterUsage '0' directly                   -> 2.04, filterUsage unchanged
+#   * GET /filter/hepafilter/0, the OCF-standard variant -> 4.04
 #
-# Shipping a button that PUTs successfully and silently does nothing is worse
-# than not shipping one. If someone finds the real contract, it belongs here.
+# Every write is acknowledged and discarded, so the response code tells you
+# nothing; only the side effect does. For reference, the vendor's own
+# resetHepaFilter() (invoked through SmartThings) does work, and moves exactly
+# one field here -- filterUsage 8 -> 0, with no new key appearing. So a real
+# reset is visible on this resource; we just haven't found the write that
+# triggers it, and it may not be a write to this resource at all.
+#
+# A button that PUTs successfully and silently does nothing is worse than no
+# button. If someone identifies the real contract, it belongs here.
 
 
 # Reuses airconditioner._filter_usage_percent (used/capacity -> %) and the
