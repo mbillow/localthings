@@ -83,9 +83,6 @@
       },
       "stop": {
         "name": "Stop"
-      },
-      "filter_reset": {
-        "name": "Reset HEPA filter"
       }
     },
     "climate": {

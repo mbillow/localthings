@@ -201,18 +201,23 @@ def test_sensing_mode_folds_toggle_and_action():
     assert sm.rep_fn({'x.com.samsung.da.periodicSensingActivationState': 'Off'}) == 'off'
 
 
-def test_filter_reset_and_wifi_ssid_present():
-    """Filter reset button and the Wi-Fi SSID sensor bind on this board.
+def test_no_filter_reset_button():
+    """No reset control on /filter/hepafilter/vs/0.
 
-    The reset type is written back as a LIST, matching how the device reports
-    it -- a scalar was tried on hardware first and was silently ignored.
+    Every candidate write returns 2.04 Changed on real AVT-WW-TP1-23-AXX500
+    hardware and then does nothing (filterResetType scalar and list, a
+    filterReset scalar, a filterLastResetDate timestamp, filterUsage '0').
+    The vendor's own resetHepaFilter() via SmartThings does work and moves
+    filterUsage 8 -> 0 without adding any field, so the reset lives in the
+    firmware behind the cloud agent, not behind a writable resource. Guard
+    against a button reappearing on a hunch -- see the module comment.
     """
     from custom_components.localthings.registry.entities import ButtonDesc
-    fr = next(e for e in air_purifier.HEPA_FILTER.entities if e.key == 'filter_reset')
-    assert isinstance(fr, ButtonDesc)
-    assert fr.write_fn('replaceable', {}) == (
-        ['filter', 'hepafilter', 'vs', '0'],
-        {'x.com.samsung.da.filterResetType': ['replaceable']})
+    assert not [e for e in air_purifier.HEPA_FILTER.entities
+                if isinstance(e, ButtonDesc)]
+
+
+def test_wifi_ssid_present():
     assert 'wifi_ssid' in _state()
 
 

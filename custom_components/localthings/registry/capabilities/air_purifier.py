@@ -299,19 +299,26 @@ def _filter_remaining_hours(rep):
     return cap - used
 
 
-def _filter_reset_write(payload, rep, href=None):
-    # filterResetType advertises ['replaceable']; writing it back is the
-    # hypothesised reset action (should zero filterUsage).
-    #
-    # Sent as a LIST, matching the shape the device reports. A scalar
-    # 'replaceable' was tried first on AVT-WW-TP1-23-AXX500 hardware and the
-    # device accepted the PUT without error but left filterUsage unchanged --
-    # i.e. it silently ignored the wrong-shaped value. laundry.option_write
-    # already establishes the convention for this codebase: a field that reads
-    # as a list is written back as a list (x.com.samsung.da.options), so the
-    # scalar was the anomaly.
-    return ['filter', 'hepafilter', 'vs', '0'], {
-        'x.com.samsung.da.filterResetType': [payload]}
+# No filter-reset button here, deliberately. The reset is not reachable over
+# the local OCF interface on this board -- established on AVT-WW-TP1-23-AXX500
+# hardware rather than assumed:
+#
+#   * Every candidate write returns 2.04 Changed and then does nothing:
+#     filterResetType as a scalar 'replaceable' and as ['replaceable'] (both
+#     with the appliance powered off and on), a filterReset scalar (the field
+#     dishwashers carry on /filter/waterfilter/vs/0), a filterLastResetDate
+#     timestamp (SmartThings' custom.hepaFilter exposes that attribute), and
+#     filterUsage '0' itself. The device acknowledges every one and discards
+#     it, so the response code carries no signal -- only the side effect does.
+#   * /filter/hepafilter/0, the OCF-standard variant, returns 4.04.
+#   * Triggering the vendor's own resetHepaFilter() through SmartThings DOES
+#     work, and changes exactly one thing in this resource: filterUsage 8 -> 0.
+#     No new field appears. So filterUsage is what a real reset moves, and it
+#     is read-only to us -- the reset runs inside the firmware, reached over
+#     the cloud agent rather than by writing any resource we can see.
+#
+# Shipping a button that PUTs successfully and silently does nothing is worse
+# than not shipping one. If someone finds the real contract, it belongs here.
 
 
 # Reuses airconditioner._filter_usage_percent (used/capacity -> %) and the
@@ -339,9 +346,6 @@ HEPA_FILTER = Capability(
         SensorDesc(key='hepa_filter_capacity', field='x.com.samsung.da.filterCapacity',
                    unit='h', icon='mdi:timer-outline', entity_category='diagnostic',
                    enabled_default=False, value_fn=int_or_none),
-        ButtonDesc(key='filter_reset', payload='replaceable',
-                   icon='mdi:air-filter', entity_category='config',
-                   write_fn=_filter_reset_write),
     ),
 )
 
