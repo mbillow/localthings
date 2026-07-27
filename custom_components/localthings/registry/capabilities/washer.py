@@ -45,6 +45,14 @@ from .laundry import (
 # (issue #22). Combo units carry their own course set, so these codes
 # don't imply anything about '1F' on a plain washer.
 #
+# Three more -- '52' Eco Cold, '54' Towels, '60' Self Clean+ -- came from a
+# WF50A8600AV/US, verified directly rather than by inference: the reporter
+# selected each cycle on the physical appliance and read back the resulting
+# raw code from the cycle_select entity's state (issue #80). '54' shares a
+# display name with the existing '24' Towels -- a different code on a
+# different course table legitimately landing on the same label, not a typo
+# (same pattern as '21'/'65' Colors and '27'/'5E' Rinse+Spin above).
+#
 # No static fallback list of those codes is kept here, deliberately: other
 # washer models have a different actual course set (a second dump's active
 # course, '65', isn't even in the list above; models with 'AI Wash'/'Mixed

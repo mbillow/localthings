@@ -114,11 +114,13 @@ def test_climate_write_targets():
 def test_climate_consumed_hrefs_declared_as_coverage():
     """The climate-consumed and ambiguous hrefs are declared in the AC registry
     (as no-entity coverage caps) so they don't leak as gaps -- but produce no
-    standalone entities."""
+    standalone entities. /temperature/current/0 and /temperatures/vs/0 are
+    NOT in this list -- CURRENT_TEMPERATURE / CURRENT_TEMPERATURE_VS give
+    those two real sensor entities (issue #75)."""
     reg, _ = _ac()
     for href in ('/power/0', '/power/vs/0', '/temperature/desired/0',
                  '/wind/strength/vs/0', '/mode/convenient/vs/0',
-                 '/temperatures/vs/0', '/sensors/vs/0', '/humidity/0'):
+                 '/sensors/vs/0', '/humidity/0'):
         caps = reg.capabilities.get(href)
         assert caps, href
         assert all(c.entities == () for c in caps), href
@@ -257,3 +259,50 @@ def test_current_limit_is_read_only():
     than a guessed writable control."""
     for desc in airconditioner.CURRENT_LIMIT.entities:
         assert getattr(desc, 'write_fn', None) is None
+
+
+# ---------------------------------------------------------------------------
+# WindFree unit (issue #75): same ARTIK051_PRAC_20K modelNum family as the
+# original issue #17 fixture, but its /mode/convenient/vs/0 additionally
+# supports Nano/NanoSleep/MotionDirect/MotionIndirect, /wind/direction/vs/0
+# additionally supports Left_And_Right, and /humidity/vs/0's
+# fivepercentHumidity is populated (unlike the all-zero original dump).
+# ---------------------------------------------------------------------------
+
+def _ac_windfree():
+    resources = _load_device('airconditioner_windfree')
+    info = resources['/information/vs/0']
+    reg = for_device_by_model(
+        info['x.com.samsung.da.modelNum'], info['x.com.samsung.da.description'],
+    )
+    return reg, resources
+
+
+def test_windfree_no_unbound_hrefs():
+    reg, resources = _ac_windfree()
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def test_windfree_humidity_and_temperature_sensors_present():
+    reg, resources = _ac_windfree()
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    state = flatten(bound, resources)
+    assert state['humidity'] == 42.0        # fivepercentHumidity, not the stuck humidity=0 field
+    assert state['current_temperature_c'] == 27.0
+
+
+def test_current_temperature_vs_only_binds_when_ocf_href_absent():
+    """CURRENT_TEMPERATURE_VS's match_fn must not double-bind alongside
+    CURRENT_TEMPERATURE when a device (like this one) reports both
+    /temperature/current/0 and /temperatures/vs/0."""
+    match = airconditioner.CURRENT_TEMPERATURE_VS.match_fn
+    assert match({}, {'/temperature/current/0': {}}) is False
+    assert match({}, {}) is True
+
+
+def test_humidity_reads_five_percent_field_not_stuck_humidity_field():
+    desc = airconditioner.HUMIDITY.entities[0]
+    rep = {'x.com.samsung.da.humidity': '0', 'x.com.samsung.da.fivepercentHumidity': '42'}
+    assert desc.value_fn(rep.get(desc.field)) == 42.0

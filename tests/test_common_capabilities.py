@@ -1,5 +1,7 @@
 from custom_components.localthings.registry.capabilities import common
 from custom_components.localthings.registry.discovery import discover
+from custom_components.localthings.registry.entities import BinarySensorDesc, SwitchDesc
+from tests.conftest import _load_device
 
 
 def _reg():
@@ -65,7 +67,7 @@ class TestMergeOptionsField:
 class TestPowerFallback:
     def test_generic_href_read_write(self):
         assert common.POWER_GENERIC.href == '/power/0'
-        desc = common.POWER_GENERIC.entities[0]
+        desc = next(e for e in common.POWER_GENERIC.entities if isinstance(e, SwitchDesc))
         assert desc.value_fn(True) is True
         assert desc.value_fn(False) is False
         path, body = desc.write_fn('On', {})
@@ -80,12 +82,71 @@ class TestPowerFallback:
             {}, {'/power/0': {}, '/power/vs/0': {}}) is False
 
     def test_vs_fallback_read_write(self):
-        desc = common.POWER_VS_FALLBACK.entities[0]
+        desc = next(e for e in common.POWER_VS_FALLBACK.entities if isinstance(e, SwitchDesc))
         assert desc.value_fn('On') is True
         assert desc.value_fn('Off') is False
         path, body = desc.write_fn('On', {})
         assert path == ['power', 'vs', '0']
         assert body == {'x.com.samsung.da.power': 'On'}
+
+    def test_power_switch_hidden_when_firmware_disallows(self):
+        switch = next(e for e in common.POWER_GENERIC.entities if isinstance(e, SwitchDesc))
+        sensor = next(e for e in common.POWER_GENERIC.entities if isinstance(e, BinarySensorDesc))
+        resources = {
+            '/power/0': {'value': True},
+            '/wm/setinfo/vs/0': {'x.com.samsung.da.isModelSettingPowerOnOff': 'false'},
+        }
+        assert switch.exists_fn(resources['/power/0'], resources) is False
+        assert sensor.exists_fn(resources['/power/0'], resources) is True
+
+    def test_power_switch_writable_when_firmware_allows(self):
+        switch = next(e for e in common.POWER_GENERIC.entities if isinstance(e, SwitchDesc))
+        sensor = next(e for e in common.POWER_GENERIC.entities if isinstance(e, BinarySensorDesc))
+        resources = {
+            '/power/0': {'value': True},
+            '/wm/setinfo/vs/0': {'x.com.samsung.da.isModelSettingPowerOnOff': 'true'},
+        }
+        assert switch.exists_fn(resources['/power/0'], resources) is True
+        assert sensor.exists_fn(resources['/power/0'], resources) is False
+
+    def test_power_switch_default_writable_without_setinfo(self):
+        switch = next(e for e in common.POWER_GENERIC.entities if isinstance(e, SwitchDesc))
+        sensor = next(e for e in common.POWER_GENERIC.entities if isinstance(e, BinarySensorDesc))
+        resources = {'/power/0': {'value': True}}
+        assert switch.exists_fn(resources['/power/0'], resources) is True
+        assert sensor.exists_fn(resources['/power/0'], resources) is False
+
+
+class TestWmSetinfoFlags:
+    def test_washer_fixture_carries_setinfo_from_device0(self):
+        """/wm/setinfo/vs/0 lands in the seed snapshot -- no dedicated capability."""
+        resources = _load_device('washer')
+        assert '/wm/setinfo/vs/0' in resources
+        assert common.model_allows_power_on_off(resources) is False
+        assert common.model_setting_without_sc(resources) is True
+
+    def test_dishwasher_allows_power_on_off(self):
+        resources = _load_device('dishwasher')
+        assert common.model_allows_power_on_off(resources) is True
+        assert common.model_setting_without_sc(resources) is False
+
+    def test_deleted_alarms_filtered(self):
+        assert common._active_alarm_codes([
+            {
+                'x.com.samsung.da.code': 'ErrorCode',
+                'x.com.samsung.da.state': 'Deleted',
+            },
+        ]) == 'none'
+        assert common._active_alarm_codes([
+            {
+                'x.com.samsung.da.code': 'LE',
+                'x.com.samsung.da.state': 'Triggered',
+            },
+            {
+                'x.com.samsung.da.code': 'ErrorCode',
+                'x.com.samsung.da.state': 'Deleted',
+            },
+        ]) == 'LE'
 
 
 class TestKidsLockFallback:

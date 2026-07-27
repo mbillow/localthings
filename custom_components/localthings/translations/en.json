@@ -10,8 +10,14 @@
       "burner_hot_surface": {
         "name": "Burner {number} hot surface"
       },
+      "burner_pan_detected": {
+        "name": "Burner {number} pan detected"
+      },
       "cloud_connected": {
         "name": "Cloud connected"
+      },
+      "cooktop_power": {
+        "name": "Cooktop power"
       },
       "cooktop_safety_shutoff_enabled": {
         "name": "Hot surface auto-shutoff enabled"
@@ -34,6 +40,9 @@
       "door_open": {
         "name": "Door"
       },
+      "filter_door_status": {
+        "name": "Filter door"
+      },
       "firmware_update": {
         "name": "Firmware update available"
       },
@@ -52,8 +61,17 @@
       "periodic_air_sensing": {
         "name": "Periodic air sensing"
       },
+      "pouring": {
+        "name": "Pouring"
+      },
       "power_state": {
         "name": "Power state"
+      },
+      "probe_connected": {
+        "name": "Probe connected"
+      },
+      "power_switch": {
+        "name": "Power"
       },
       "rapid_freezing": {
         "name": "Rapid freezing"
@@ -95,9 +113,25 @@
           },
           "preset_mode": {
             "state": {
+              "ai_comfort": "AI Comfort",
               "quiet": "Quiet",
               "smart": "Smart",
               "speed": "Speed"
+            }
+          }
+        }
+      }
+    },
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "auto": "Auto",
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "sleep": "Sleep"
             }
           }
         }
@@ -110,17 +144,23 @@
       "delay_start_hours": {
         "name": "Delay start"
       },
+      "dispense_capacity": {
+        "name": "Dispense capacity"
+      },
       "instance_setpoint": {
         "name": "{instance_name} setpoint"
       },
       "oven_setpoint": {
         "name": "Setpoint"
       },
+      "sensing_interval": {
+        "name": "Sensing interval"
+      },
       "sound_volume": {
         "name": "Sound volume"
       },
-      "sensing_interval": {
-        "name": "Sensing interval"
+      "target_humidity": {
+        "name": "Target humidity"
       }
     },
     "select": {
@@ -192,6 +232,9 @@
           "8f": "Baby Care"
         }
       },
+      "dispense_type": {
+        "name": "Dispense type"
+      },
       "door_alert": {
         "name": "Door alarm",
         "state": {
@@ -204,6 +247,8 @@
       "dryer_cycle_table_03": {
         "name": "Cycle",
         "state": {
+          "01": "Normal",
+          "06": "Time dry",
           "16": "Cotton",
           "18": "Synthetics",
           "19": "Delicates",
@@ -219,6 +264,12 @@
           "1e": "Outdoor",
           "1f": "Mixed load"
         }
+      },
+      "favorite_capacity": {
+        "name": "Favorite capacity"
+      },
+      "favorite_hotwater_temperature": {
+        "name": "Favorite hot water temperature"
       },
       "finish_sound": {
         "name": "Finish sound",
@@ -250,6 +301,9 @@
           "high": "High",
           "extra_high": "Extra high"
         }
+      },
+      "hot_water_temperature": {
+        "name": "Hot water temperature"
       },
       "ice_type": {
         "name": "{instance_name} type",
@@ -289,6 +343,9 @@
           "air_fry": "Air fry"
         }
       },
+      "operating_mode": {
+        "name": "Operating mode"
+      },
       "pantry_zone_mode": {
         "name": "Pantry zone mode",
         "state": {
@@ -314,6 +371,15 @@
       },
       "rinse_cycles": {
         "name": "Rinse cycles"
+      },
+      "sensing_mode": {
+        "name": "AI Purify (Mode)",
+        "state": {
+          "off": "Off",
+          "sensing_only": "Sensing only",
+          "auto_purify": "Auto purify",
+          "st_alarm": "ST Alarm"
+        }
       },
       "softener_concentration": {
         "name": "Softener concentration",
@@ -382,30 +448,37 @@
           "27": "Rinse+Spin",
           "28": "Drain/Spin",
           "29": "Drum Clean+",
+          "2a": "Jeans",
+          "2b": "AI Wash",
           "2d": "Silent Wash",
           "2e": "Baby Care",
           "2f": "Activewear",
           "30": "Cloudy Day",
           "32": "Shirts",
           "33": "Bedding",
+          "34": "Mixed",
           "36": "Wash+Dry",
           "37": "Air Wash",
           "38": "Cotton Dry",
           "39": "Synthetics Dry",
+          "3a": "Drum Clean",
+          "52": "Eco Cold",
           "53": "Heavy Duty",
+          "54": "Towels",
           "55": "Activewear",
           "57": "Delicate",
           "5e": "Rinse+Spin",
+          "60": "Self Clean+",
           "65": "Colors",
           "66": "Denim",
           "7c": "Whites",
           "7d": "Bedding/Waterproof",
           "7e": "Self-Clean",
+          "7f": "Wool/Delicate",
           "86": "Deep Wash",
+          "87": "Download",
           "8f": "Intense Cold",
-          "96": "Less Microfiber",
-          "2b": "AI Wash",
-          "2a": "Jeans"
+          "96": "Less Microfiber"
         }
       },
       "washer_dry_level": {
@@ -419,15 +492,6 @@
           "240": "4 hr",
           "none": "Off",
           "cupboard": "Cupboard"
-        }
-      },
-      "sensing_mode": {
-        "name": "AI Purify (Mode)",
-        "state": {
-          "off": "Off",
-          "sensing_only": "Sensing only",
-          "auto_purify": "Auto purify",
-          "st_alarm": "ST Alarm"
         }
       }
     },
@@ -453,12 +517,18 @@
       "clean_level": {
         "name": "Clean level"
       },
+      "coffee_brew_status": {
+        "name": "Coffee brew status"
+      },
       "connection_mode": {
         "name": "Connection mode",
         "state": {
           "observe": "Push (observe)",
           "poll": "Polling"
         }
+      },
+      "cooktop_running_state": {
+        "name": "Cooktop running state"
       },
       "cooktop_state": {
         "name": "Cooktop state"
@@ -467,6 +537,9 @@
         "name": "Current limit level"
       },
       "current_temp_c": {
+        "name": "Temperature"
+      },
+      "current_temperature_c": {
         "name": "Temperature"
       },
       "diagnosis": {
@@ -511,6 +584,9 @@
       "fan_speed_level": {
         "name": "Fan speed level"
       },
+      "filter_clean_remain_time": {
+        "name": "Filter clean remaining time"
+      },
       "filter_progress": {
         "name": "Filter progress"
       },
@@ -532,8 +608,23 @@
       "fridge_temperature": {
         "name": "Fridge temperature"
       },
+      "hepa_filter_usage": {
+        "name": "Filter usage"
+      },
+      "hepa_filter_usage_hours": {
+        "name": "Filter usage (hours)"
+      },
+      "hepa_filter_life_remaining": {
+        "name": "Filter life remaining"
+      },
+      "hepa_filter_capacity": {
+        "name": "Filter capacity"
+      },
       "hood_filter_capacity": {
         "name": "Filter capacity"
+      },
+      "humidity": {
+        "name": "Humidity"
       },
       "hood_filter_usage": {
         "name": "Filter usage"
@@ -586,6 +677,15 @@
       "power_watts": {
         "name": "Power"
       },
+      "probe_battery": {
+        "name": "Probe battery"
+      },
+      "probe_target_temperature": {
+        "name": "Probe target temperature"
+      },
+      "probe_temperature": {
+        "name": "Probe temperature"
+      },
       "progress": {
         "name": "Progress"
       },
@@ -601,11 +701,29 @@
       "selfcheck_status": {
         "name": "Self-check status"
       },
+      "sterilize_last_time": {
+        "name": "Sterilize last time"
+      },
+      "sterilize_period": {
+        "name": "Sterilize period"
+      },
+      "sterilize_plan_time": {
+        "name": "Sterilize plan time"
+      },
+      "sterilize_run_time": {
+        "name": "Sterilize run time"
+      },
       "super_fine_dust": {
         "name": "Super fine dust"
       },
+      "warming_center_state": {
+        "name": "Warming center state"
+      },
       "water_liters": {
         "name": "Water consumption"
+      },
+      "waterpurifier_status": {
+        "name": "Status"
       },
       "machine_state": {
         "name": "Machine state",
@@ -629,18 +747,6 @@
           "icestatus_stop": "Idle",
           "icestatus_run": "Making ice"
         }
-      },
-      "hepa_filter_usage": {
-        "name": "Filter usage"
-      },
-      "hepa_filter_usage_hours": {
-        "name": "Filter usage (hours)"
-      },
-      "hepa_filter_life_remaining": {
-        "name": "Filter life remaining"
-      },
-      "hepa_filter_capacity": {
-        "name": "Filter capacity"
       }
     },
     "switch": {
@@ -665,6 +771,9 @@
       "bubble_soak": {
         "name": "Bubble soak"
       },
+      "buzz_lock": {
+        "name": "Buzzer lock"
+      },
       "cabinet_light_dim": {
         "name": "Brighten gradually"
       },
@@ -672,6 +781,12 @@
         "name": "Cabinet light"
       },
       "child_lock": {
+        "name": "Child lock"
+      },
+      "coldwater_lock": {
+        "name": "Cold water lock"
+      },
+      "cooktop_child_lock": {
         "name": "Child lock"
       },
       "defrost_delay": {
@@ -683,8 +798,20 @@
       "fast_preheat": {
         "name": "Fast preheat"
       },
+      "favorite_capacity_enabled": {
+        "name": "Favorite capacity"
+      },
+      "favorite_coffee_enabled": {
+        "name": "Favorite coffee"
+      },
+      "favorite_hotwater_enabled": {
+        "name": "Favorite hot water"
+      },
       "fridge_sound": {
         "name": "Sound"
+      },
+      "hotwater_lock": {
+        "name": "Hot water lock"
       },
       "ice_maker_enabled": {
         "name": "Ice maker"
@@ -709,6 +836,15 @@
       },
       "natural_steam": {
         "name": "Natural steam"
+      },
+      "pollution_light": {
+        "name": "Pollution indicator"
+      },
+      "periodic_air_sensing": {
+        "name": "AI Purify (Sensing)"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Do not disturb"
       },
       "power_switch": {
         "name": "Power"
@@ -739,15 +875,6 @@
       },
       "wrinkle_prevent": {
         "name": "Wrinkle prevent"
-      },
-      "pollution_light": {
-        "name": "Pollution indicator"
-      },
-      "periodic_air_sensing": {
-        "name": "AI Purify (Sensing)"
-      },
-      "periodic_sensing_skip_status": {
-        "name": "Do not disturb"
       }
     },
     "time": {
@@ -768,21 +895,6 @@
       },
       "sensing_skip_end": {
         "name": "Do not disturb end"
-      }
-    },
-    "fan": {
-      "fan": {
-        "state_attributes": {
-          "preset_mode": {
-            "state": {
-              "auto": "Auto",
-              "low": "Low",
-              "medium": "Medium",
-              "high": "High",
-              "sleep": "Sleep"
-            }
-          }
-        }
       }
     }
   },

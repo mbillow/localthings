@@ -1,0 +1,201 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "OV_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2024-06-03T04:35:25"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/cooktopmonitoring/vs/0",
+      "rep": {
+        "x.com.samsung.da.warmingCenterState": "Off",
+        "x.com.samsung.da.cooktopMonitoring": "0",
+        "x.com.samsung.da.cooktopRunningState": "Ready",
+        "supportedHoodLampStateList": [
+          "Run",
+          "Ready"
+        ]
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close",
+            "x.com.samsung.da.lock": "Unlock"
+          }
+        ],
+        "rt": [
+          "x.com.samsung.da.doors"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "Bake",
+          "Broil",
+          "ConvectionBake",
+          "ConvectionRoast",
+          "KeepWarm",
+          "BreadProof",
+          "AirFryer",
+          "Dehydrate",
+          "SelfClean",
+          "SteamClean"
+        ],
+        "x.com.samsung.da.modes": [
+          "NoOperation"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_NE8411B-/AC0",
+          "SettingPossible_0",
+          "meatprobe_disconnected",
+          "UpperLamp_Off",
+          "Sound_On",
+          "AdjustingTemp_11",
+          "Sabbath_Off",
+          "EnergySaving_On",
+          "BurnerOnAlert_On"
+        ],
+        "x.com.samsung.da.defaultMode": "ConvectionBake",
+        "x.com.samsung.da.modeSpec": "[{\"mode\":\"Bake\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"285\",\"tempDefaultC\":\"175\",\"tempListLengthC\":\"0\",\"tempMinF\":\"175\",\"tempMaxF\":\"550\",\"tempDefaultF\":\"350\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"Broil\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"61441\",\"tempMaxC\":\"61442\",\"tempDefaultC\":\"61441\",\"tempListLengthC\":\"2\",\"tempListDataC\":[\"61441\",\"61442\"],\"tempMinF\":\"61441\",\"tempMaxF\":\"61442\",\"tempDefaultF\":\"61441\",\"tempListLengthF\":\"2\",\"tempListDataF\":[\"61441\",\"61442\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"ConvectionBake\",\"version\":\"0100\",\"default\":\"Default\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"285\",\"tempDefaultC\":\"160\",\"tempListLengthC\":\"0\",\"tempMinF\":\"175\",\"tempMaxF\":\"550\",\"tempDefaultF\":\"325\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"ConvectionRoast\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"285\",\"tempDefaultC\":\"160\",\"tempListLengthC\":\"0\",\"tempMinF\":\"175\",\"tempMaxF\":\"550\",\"tempDefaultF\":\"325\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"KeepWarm\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"80\",\"tempMaxC\":\"80\",\"tempDefaultC\":\"80\",\"tempListLengthC\":\"1\",\"tempListDataC\":[\"80\"],\"tempMinF\":\"175\",\"tempMaxF\":\"175\",\"tempDefaultF\":\"175\",\"tempListLengthF\":\"1\",\"tempListDataF\":[\"175\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"BreadProof\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Setting\",\"cavity\":\"Single\",\"tempMinC\":\"35\",\"tempMaxC\":\"35\",\"tempDefaultC\":\"35\",\"tempListLengthC\":\"1\",\"tempListDataC\":[\"35\"],\"tempMinF\":\"95\",\"tempMaxF\":\"95\",\"tempDefaultF\":\"95\",\"tempListLengthF\":\"1\",\"tempListDataF\":[\"95\"],\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"AirFryer\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"175\",\"tempMaxC\":\"260\",\"tempDefaultC\":\"220\",\"tempListLengthC\":\"0\",\"tempMinF\":\"350\",\"tempMaxF\":\"500\",\"tempDefaultF\":\"425\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"Dehydrate\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"Start&Setting\",\"cavity\":\"Single\",\"tempMinC\":\"40\",\"tempMaxC\":\"105\",\"tempDefaultC\":\"65\",\"tempListLengthC\":\"0\",\"tempMinF\":\"100\",\"tempMaxF\":\"225\",\"tempDefaultF\":\"150\",\"tempListLengthF\":\"0\",\"timeMin\":\"00:01:00\",\"timeMax\":\"09:59:00\",\"timeDefault\":\"01:00:00\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"SelfClean\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"NotSupported\",\"cavity\":\"Single\",\"tempMinC\":\"NotSupported\",\"tempMaxC\":\"NotSupported\",\"tempDefaultC\":\"NotSupported\",\"tempListLengthC\":\"0\",\"tempMinF\":\"NotSupported\",\"tempMaxF\":\"NotSupported\",\"tempDefaultF\":\"NotSupported\",\"tempListLengthF\":\"0\",\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"},{\"mode\":\"SteamClean\",\"version\":\"0100\",\"default\":\"Normal\",\"control\":\"NotSupported\",\"cavity\":\"Single\",\"tempMinC\":\"NotSupported\",\"tempMaxC\":\"NotSupported\",\"tempDefaultC\":\"NotSupported\",\"tempListLengthC\":\"0\",\"tempMinF\":\"NotSupported\",\"tempMaxF\":\"NotSupported\",\"tempDefaultF\":\"NotSupported\",\"tempListLengthF\":\"0\",\"timeMin\":\"NotSupported\",\"timeMax\":\"NotSupported\",\"timeDefault\":\"NotSupported\",\"probeMinC\":\"NotSupported\",\"probeMaxC\":\"NotSupported\",\"probeDefaultC\":\"NotSupported\",\"probeMinF\":\"NotSupported\",\"probeMaxF\":\"NotSupported\",\"probeDefaultF\":\"NotSupported\",\"powerDefault\":\"NotSupported\",\"powerListLength\":\"0\",\"tempIntervalC\":\"0\",\"tempIntervalF\":\"0\",\"probeIntervalC\":\"0\",\"probeIntervalF\":\"0\"}]",
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.operationTime": "00:00:00",
+        "x.com.samsung.da.remainingTime": "00:00:00",
+        "x.com.samsung.da.progressPercentage": "1",
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/oven/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "rt": [
+          "x.com.samsung.da.oven"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false",
+        "rt": [
+          "x.com.samsung.da.configuration"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "80",
+            "x.com.samsung.da.increment": "1",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ],
+        "rt": [
+          "x.com.samsung.da.temperatures"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    }
+  ]
+}

@@ -16,6 +16,7 @@ from custom_components.localthings.const import (
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities.common import (
     remote_control_enabled,
+    remote_control_required_for_write,
 )
 from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL, PUSH_HEALTH_WINDOW_S
 
@@ -136,6 +137,29 @@ def test_run_discovery_detects_washer_via_model_fallback(
     assert coordinator.device_type_name == 'washer'
 
 
+def test_run_discovery_falls_back_to_host_for_placeholder_serial(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Issue #83: the ARTIK051_DONGLE_REF firmware family reports the
+    literal string 'Nothing(SVC)' as serialNum on every unit. Left as-is,
+    two such units get the same device_serial (which feeds both the HA
+    device-registry identifier and every entity's unique_id), so the
+    second one's entities silently collide and get dropped. It must be
+    treated the same as an empty serial and fall back to the host."""
+    resources = {
+        '/information/vs/0': {
+            'x.com.samsung.da.modelNum':
+                'ARTIK051_DONGLE_REF|00127641|00080020001430300100000000000000',
+            'x.com.samsung.da.description': 'ARTIK_REF_17K',
+            'x.com.samsung.da.serialNum': 'Nothing(SVC)',
+        },
+        '/otninformation/vs/0': {},
+    }
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._run_discovery(resources)
+    assert coordinator.device_serial == mock_entry.data[CONF_HOST]
+
+
 def test_run_discovery_detects_cooktop_via_resource_signature(
     hass: HomeAssistant, mock_entry
 ) -> None:
@@ -145,7 +169,7 @@ def test_run_discovery_detects_cooktop_via_resource_signature(
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     coordinator._run_discovery(_load_device('cooktop'))
 
-    assert coordinator.device_type_name == 'cooktop'
+    assert coordinator.device_type_name == 'gas_cooktop'
     assert coordinator._unbound_hrefs == []
 
 
@@ -880,6 +904,38 @@ class TestRemoteControlEnabled:
         assert remote_control_enabled({}) is True
 
 
+class TestRemoteControlRequiredForWrite:
+    """isModelSettingWithoutSC auto-exempts settings writes, not cycle control."""
+
+    def test_without_flag_always_requires(self):
+        resources = {}
+        assert remote_control_required_for_write(resources, '/washer/vs/0') is True
+        assert remote_control_required_for_write(
+            resources, '/operational/state/vs/0') is True
+
+    def test_without_sc_exempts_settings_keeps_operational(self):
+        resources = {
+            '/wm/setinfo/vs/0': {
+                'x.com.samsung.da.isModelSettingWithoutSC': 'true',
+            },
+        }
+        assert remote_control_required_for_write(resources, '/washer/vs/0') is False
+        assert remote_control_required_for_write(resources, '/course/vs/0') is False
+        assert remote_control_required_for_write(resources, '/buzzersound/vs/0') is False
+        assert remote_control_required_for_write(
+            resources, '/operational/state/vs/0') is True
+        assert remote_control_required_for_write(
+            resources, '/operational/state/0') is True
+
+    def test_without_sc_false_still_requires(self):
+        resources = {
+            '/wm/setinfo/vs/0': {
+                'x.com.samsung.da.isModelSettingWithoutSC': 'false',
+            },
+        }
+        assert remote_control_required_for_write(resources, '/washer/vs/0') is True
+
+
 async def test_send_command_blocked_when_remote_control_disabled(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
@@ -1024,3 +1080,95 @@ async def test_send_command_bypasses_remote_control_when_option_enabled(
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator._cache.get('/some/path') == {'value': 5}
+
+
+async def test_send_command_settings_allowed_when_without_sc(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """Laundry boards with isModelSettingWithoutSC=true accept settings
+    writes while remote control is off -- no options-flow bypass needed."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import SelectDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+    coordinator._cache.apply_rep(
+        '/wm/setinfo/vs/0',
+        {'x.com.samsung.da.isModelSettingWithoutSC': 'true'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (['washer', 'vs', '0'], {'x.com.samsung.da.spinLevel': payload})
+
+    desc = SelectDesc(key='spin_speed', field='x.com.samsung.da.spinLevel',
+                      write_fn=_write_fn)
+    bound = BoundEntity(
+        href='/washer/vs/0', capability=coordinator.bound[0].capability, desc=desc,
+    )
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = lambda *a, **k: (0x44, b'')
+        await coordinator.async_send_command(bound, '1000')
+
+    assert coordinator._cache.get('/washer/vs/0') == {
+        'x.com.samsung.da.spinLevel': '1000',
+    }
+
+
+async def test_send_command_operational_still_blocked_when_without_sc(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """Start/Pause/Stop stay gated on Smart Control even when settings
+    are allowed without it -- isModelSettingWithoutSC is settings-only."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import ButtonDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        '/remotectrl/vs/0',
+        {'x.com.samsung.da.remoteControlEnabled': 'false'},
+        source='test',
+    )
+    coordinator._cache.apply_rep(
+        '/wm/setinfo/vs/0',
+        {'x.com.samsung.da.isModelSettingWithoutSC': 'true'},
+        source='test',
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (['operational', 'state', 'vs', '0'],
+                {'x.com.samsung.da.state': payload})
+
+    desc = ButtonDesc(key='start', payload='Run', write_fn=_write_fn)
+    bound = BoundEntity(
+        href='/operational/state/vs/0',
+        capability=coordinator.bound[0].capability,
+        desc=desc,
+    )
+
+    posted = False
+
+    def _post(*a, **k):
+        nonlocal posted
+        posted = True
+        return (0x44, b'')
+
+    with patch.object(fake, 'subscribe'):
+        fake.post = _post
+        with pytest.raises(ServiceValidationError) as exc_info:
+            await coordinator.async_send_command(bound, 'Run')
+
+    assert exc_info.value.translation_domain == DOMAIN
+    assert exc_info.value.translation_key == 'remote_control_disabled'
+    assert posted is False

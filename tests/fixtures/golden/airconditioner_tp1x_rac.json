@@ -8,6 +8,7 @@
     "climate",
     "current_limit_enabled",
     "current_limit_level",
+    "current_temperature_c",
     "display_light",
     "energy_kwh",
     "energy_saved_kwh",

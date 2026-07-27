@@ -10,8 +10,14 @@
       "burner_hot_surface": {
         "name": "Brander {number} heet oppervlak"
       },
+      "burner_pan_detected": {
+        "name": "Brander {number} pan gedetecteerd"
+      },
       "cloud_connected": {
         "name": "Verbonden met cloud"
+      },
+      "cooktop_power": {
+        "name": "Kookplaat voeding"
       },
       "cooktop_safety_shutoff_enabled": {
         "name": "Automatische uitschakeling heet oppervlak ingeschakeld"
@@ -34,6 +40,9 @@
       "door_open": {
         "name": "Deur"
       },
+      "filter_door_status": {
+        "name": "Filterdeur"
+      },
       "firmware_update": {
         "name": "Firmware-update beschikbaar"
       },
@@ -52,8 +61,17 @@
       "periodic_air_sensing": {
         "name": "Periodieke luchtmeting"
       },
+      "pouring": {
+        "name": "Schenken"
+      },
       "power_state": {
         "name": "Voedingsstatus"
+      },
+      "probe_connected": {
+        "name": "Sonde verbonden"
+      },
+      "power_switch": {
+        "name": "Voeding"
       },
       "rapid_freezing": {
         "name": "Snelvriezen"
@@ -95,9 +113,25 @@
           },
           "preset_mode": {
             "state": {
+              "ai_comfort": "AI-comfort",
               "quiet": "Stil",
               "smart": "Slim",
               "speed": "Snel"
+            }
+          }
+        }
+      }
+    },
+    "fan": {
+      "fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "auto": "Automatisch",
+              "low": "Laag",
+              "medium": "Gemiddeld",
+              "high": "Hoog",
+              "sleep": "Slaap"
             }
           }
         }
@@ -110,17 +144,23 @@
       "delay_start_hours": {
         "name": "Uitgestelde start"
       },
+      "dispense_capacity": {
+        "name": "Schenkhoeveelheid"
+      },
       "instance_setpoint": {
         "name": "Instelpunt {instance_name}"
       },
       "oven_setpoint": {
         "name": "Instelpunt"
       },
+      "sensing_interval": {
+        "name": "Meetinterval"
+      },
       "sound_volume": {
         "name": "Geluidsvolume"
       },
-      "sensing_interval": {
-        "name": "Meetinterval"
+      "target_humidity": {
+        "name": "Doelvochtigheid"
       }
     },
     "select": {
@@ -192,6 +232,9 @@
           "8f": "Babyverzorging"
         }
       },
+      "dispense_type": {
+        "name": "Type dispenser"
+      },
       "door_alert": {
         "name": "Deuralarm",
         "state": {
@@ -204,6 +247,8 @@
       "dryer_cycle_table_03": {
         "name": "Programma",
         "state": {
+          "01": "Normaal",
+          "06": "Tijdprogramma",
           "16": "Katoen",
           "18": "Synthetisch",
           "19": "Fijne was",
@@ -219,6 +264,12 @@
           "1e": "Outdoor",
           "1f": "Gemengde was"
         }
+      },
+      "favorite_capacity": {
+        "name": "Favoriete capaciteit"
+      },
+      "favorite_hotwater_temperature": {
+        "name": "Favoriete temperatuur warm water"
       },
       "finish_sound": {
         "name": "Eindgeluid",
@@ -250,6 +301,9 @@
           "high": "Hoog",
           "extra_high": "Extra hoog"
         }
+      },
+      "hot_water_temperature": {
+        "name": "Temperatuur warm water"
       },
       "ice_type": {
         "name": "Type {instance_name}",
@@ -289,6 +343,9 @@
           "air_fry": "Airfryen"
         }
       },
+      "operating_mode": {
+        "name": "Bedrijfsmodus"
+      },
       "pantry_zone_mode": {
         "name": "Modus voorraadzone",
         "state": {
@@ -314,6 +371,15 @@
       },
       "rinse_cycles": {
         "name": "Spoelcycli"
+      },
+      "sensing_mode": {
+        "name": "AI-zuivering (modus)",
+        "state": {
+          "off": "Uit",
+          "sensing_only": "Alleen meten",
+          "auto_purify": "Automatisch zuiveren",
+          "st_alarm": "ST-melding"
+        }
       },
       "softener_concentration": {
         "name": "Concentratie wasverzachter",
@@ -382,30 +448,37 @@
           "27": "Spoelen+centrifugeren",
           "28": "Afpompen/centrifugeren",
           "29": "Drum Clean+",
+          "2a": "Spijkerbroek",
+          "2b": "AI Wash",
           "2d": "Stille was",
           "2e": "Babyverzorging",
           "2f": "Sportkleding",
           "30": "Bewolkte dag",
           "32": "Overhemden",
           "33": "Beddengoed",
+          "34": "Gemengd",
           "36": "Wassen+drogen",
           "37": "Air Wash",
           "38": "Katoen drogen",
           "39": "Synthetisch drogen",
+          "3a": "Trommel reinigen",
+          "52": "Eco koud",
           "53": "Intensief",
+          "54": "Handdoeken",
           "55": "Sportkleding",
           "57": "Fijn",
           "5e": "Spoelen+centrifugeren",
+          "60": "Zelfreinigend+",
           "65": "Bonte was",
           "66": "Spijkergoed",
           "7c": "Witte was",
           "7d": "Beddengoed/Waterdicht",
           "7e": "Zelfreinigend",
+          "7f": "Wol/Fijn",
           "86": "Diep wassen",
+          "87": "Downloaden",
           "8f": "Intensief koud",
-          "96": "Minder microvezels",
-          "2b": "AI Wash",
-          "2a": "Spijkerbroek"
+          "96": "Minder microvezels"
         }
       },
       "washer_dry_level": {
@@ -419,15 +492,6 @@
           "240": "4 uur",
           "none": "Uit",
           "cupboard": "Kastdroog"
-        }
-      },
-      "sensing_mode": {
-        "name": "AI-zuivering (modus)",
-        "state": {
-          "off": "Uit",
-          "sensing_only": "Alleen meten",
-          "auto_purify": "Automatisch zuiveren",
-          "st_alarm": "ST-melding"
         }
       }
     },
@@ -453,12 +517,18 @@
       "clean_level": {
         "name": "Reinigingsniveau"
       },
+      "coffee_brew_status": {
+        "name": "Koffiezetstatus"
+      },
       "connection_mode": {
         "name": "Verbindingsmodus",
         "state": {
           "observe": "Push (observeren)",
           "poll": "Polling"
         }
+      },
+      "cooktop_running_state": {
+        "name": "Loopstatus kookplaat"
       },
       "cooktop_state": {
         "name": "Status kookplaat"
@@ -467,6 +537,9 @@
         "name": "Niveau stroombegrenzing"
       },
       "current_temp_c": {
+        "name": "Temperatuur"
+      },
+      "current_temperature_c": {
         "name": "Temperatuur"
       },
       "diagnosis": {
@@ -511,6 +584,9 @@
       "fan_speed_level": {
         "name": "Ventilatorniveau"
       },
+      "filter_clean_remain_time": {
+        "name": "Resterende tijd filterreiniging"
+      },
       "filter_progress": {
         "name": "Filterverbruik"
       },
@@ -532,8 +608,23 @@
       "fridge_temperature": {
         "name": "Koelkasttemperatuur"
       },
+      "hepa_filter_usage": {
+        "name": "Filtergebruik"
+      },
+      "hepa_filter_usage_hours": {
+        "name": "Filtergebruik (uren)"
+      },
+      "hepa_filter_life_remaining": {
+        "name": "Resterende filterlevensduur"
+      },
+      "hepa_filter_capacity": {
+        "name": "Filtercapaciteit"
+      },
       "hood_filter_capacity": {
         "name": "Filtercapaciteit"
+      },
+      "humidity": {
+        "name": "Luchtvochtigheid"
       },
       "hood_filter_usage": {
         "name": "Filterverbruik"
@@ -586,6 +677,15 @@
       "power_watts": {
         "name": "Vermogen"
       },
+      "probe_battery": {
+        "name": "Sonde batterij"
+      },
+      "probe_target_temperature": {
+        "name": "Doeltemperatuur sonde"
+      },
+      "probe_temperature": {
+        "name": "Temperatuur sonde"
+      },
       "progress": {
         "name": "Voortgang"
       },
@@ -601,11 +701,29 @@
       "selfcheck_status": {
         "name": "Status zelfcontrole"
       },
+      "sterilize_last_time": {
+        "name": "Laatste sterilisatie"
+      },
+      "sterilize_period": {
+        "name": "Sterilisatie-interval"
+      },
+      "sterilize_plan_time": {
+        "name": "Geplande sterilisatie"
+      },
+      "sterilize_run_time": {
+        "name": "Sterilisatieduur"
+      },
       "super_fine_dust": {
         "name": "Ultrafijnstof"
       },
+      "warming_center_state": {
+        "name": "Status warmhoudzone"
+      },
       "water_liters": {
         "name": "Waterverbruik"
+      },
+      "waterpurifier_status": {
+        "name": "Status"
       },
       "machine_state": {
         "name": "Machinestatus",
@@ -629,18 +747,6 @@
           "icestatus_stop": "Inactief",
           "icestatus_run": "IJs maken"
         }
-      },
-      "hepa_filter_usage": {
-        "name": "Filtergebruik"
-      },
-      "hepa_filter_usage_hours": {
-        "name": "Filtergebruik (uren)"
-      },
-      "hepa_filter_life_remaining": {
-        "name": "Resterende filterlevensduur"
-      },
-      "hepa_filter_capacity": {
-        "name": "Filtercapaciteit"
       }
     },
     "switch": {
@@ -665,6 +771,9 @@
       "bubble_soak": {
         "name": "Bubble Soak"
       },
+      "buzz_lock": {
+        "name": "Zoemerslot"
+      },
       "cabinet_light_dim": {
         "name": "Geleidelijk feller"
       },
@@ -672,6 +781,12 @@
         "name": "Kastverlichting"
       },
       "child_lock": {
+        "name": "Kinderslot"
+      },
+      "coldwater_lock": {
+        "name": "Koudwaterslot"
+      },
+      "cooktop_child_lock": {
         "name": "Kinderslot"
       },
       "defrost_delay": {
@@ -683,8 +798,20 @@
       "fast_preheat": {
         "name": "Snel voorverwarmen"
       },
+      "favorite_capacity_enabled": {
+        "name": "Favoriete capaciteit"
+      },
+      "favorite_coffee_enabled": {
+        "name": "Favoriete koffie"
+      },
+      "favorite_hotwater_enabled": {
+        "name": "Favoriet warm water"
+      },
       "fridge_sound": {
         "name": "Geluid"
+      },
+      "hotwater_lock": {
+        "name": "Heetwaterslot"
       },
       "ice_maker_enabled": {
         "name": "IJsmaker"
@@ -709,6 +836,15 @@
       },
       "natural_steam": {
         "name": "Natuurlijke stoom"
+      },
+      "pollution_light": {
+        "name": "Vervuilingsindicator"
+      },
+      "periodic_air_sensing": {
+        "name": "AI-zuivering (meting)"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Niet storen"
       },
       "power_switch": {
         "name": "Voeding"
@@ -739,15 +875,6 @@
       },
       "wrinkle_prevent": {
         "name": "Kreukpreventie"
-      },
-      "pollution_light": {
-        "name": "Vervuilingsindicator"
-      },
-      "periodic_air_sensing": {
-        "name": "AI-zuivering (meting)"
-      },
-      "periodic_sensing_skip_status": {
-        "name": "Niet storen"
       }
     },
     "time": {
@@ -768,21 +895,6 @@
       },
       "sensing_skip_end": {
         "name": "Niet storen einde"
-      }
-    },
-    "fan": {
-      "fan": {
-        "state_attributes": {
-          "preset_mode": {
-            "state": {
-              "auto": "Automatisch",
-              "low": "Laag",
-              "medium": "Gemiddeld",
-              "high": "Hoog",
-              "sleep": "Slaap"
-            }
-          }
-        }
       }
     }
   },

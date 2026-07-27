@@ -59,9 +59,21 @@ def _ml_to_l(v):
 
 
 def _active_alarm_codes(items):
+    """Join active alarm codes; skip retained rows Samsung leaves as Deleted.
+
+    Laundry boards keep a Deleted ErrorCode row in /alarms/vs/0 after the
+    condition clears (see WD7000B diagnostics). Surface only live alarms so
+    HA doesn't stick on a stale ErrorCode. Range-hood has its own stricter
+    helper that also drops ErrorCode_OFF.
+    """
     if not items or not isinstance(items, list):
         return 'none'
-    codes = [i.get('x.com.samsung.da.code') for i in items if i.get('x.com.samsung.da.code')]
+    codes = [
+        i.get('x.com.samsung.da.code')
+        for i in items
+        if i.get('x.com.samsung.da.code')
+        and str(i.get('x.com.samsung.da.state', '')).lower() != 'deleted'
+    ]
     return ', '.join(codes) if codes else 'none'
 
 
@@ -90,6 +102,52 @@ def merge_options_field(cached, new_tokens):
         if not replaced:
             merged.append(token)
     return merged
+
+
+# /wm/setinfo/vs/0 -- laundry-family firmware capability flags. Present on
+# washers, dryers, and dishwashers; absent on fridge/oven/AC. Static for the
+# life of a given board, so reading them from the /device/0 seed (no dedicated
+# poll_tier) is enough.
+_SETINFO_HREF = '/wm/setinfo/vs/0'
+_POWER_ON_OFF_FIELD = 'x.com.samsung.da.isModelSettingPowerOnOff'
+_WITHOUT_SC_FIELD = 'x.com.samsung.da.isModelSettingWithoutSC'
+
+
+def model_allows_power_on_off(resources: dict) -> bool:
+    """True unless firmware explicitly declares remote power on/off unsupported.
+
+    `/wm/setinfo/vs/0`.`isModelSettingPowerOnOff` is `"false"` on many laundry
+    boards (washers/dryers): `/power/0` and `/power/vs/0` still report state,
+    but CoAP writes are ignored. Absent setinfo (non-laundry families) keeps
+    the writable switch -- current behavior.
+    """
+    setinfo = resources.get(_SETINFO_HREF)
+    if setinfo is None:
+        return True
+    flag = setinfo.get(_POWER_ON_OFF_FIELD)
+    if flag is None:
+        return True
+    return str(flag).lower() != 'false'
+
+
+def model_setting_without_sc(resources: dict) -> bool:
+    """True when firmware declares settings writable without Smart Control.
+
+    `/wm/setinfo/vs/0`.`isModelSettingWithoutSC` is `"true"` on washers/dryers
+    that accept temperature/spin/cycle-option writes while remote control is
+    off. Cycle start/pause/stop still need Smart Control on those boards --
+    the flag name is settings-specific, not a blanket remote-control bypass.
+    """
+    setinfo = resources.get(_SETINFO_HREF) or {}
+    return str(setinfo.get(_WITHOUT_SC_FIELD, '')).lower() == 'true'
+
+
+def _power_switch_exists(rep, resources):
+    return model_allows_power_on_off(resources)
+
+
+def _power_sensor_exists(rep, resources):
+    return not model_allows_power_on_off(resources)
 
 
 def sensor_item_value(items, sensor_type, index=0):
@@ -128,10 +186,17 @@ def sensor_item_value(items, sensor_type, index=0):
 POWER_GENERIC = Capability(
     href='/power/0',
     entities=(
+        # Writable when firmware allows remote power; otherwise a read-only
+        # binary_sensor with the same key keeps HA state without a dead switch.
         SwitchDesc(key='power_switch', field='value',
                    value_fn=lambda v: bool(v),
+                   exists_fn=_power_switch_exists,
                    write_fn=lambda p, rep, href=None: (
                        ['power', '0'], {'value': p == 'On'})),
+        BinarySensorDesc(key='power_switch', field='value',
+                         device_class='power',
+                         value_fn=lambda v: bool(v),
+                         exists_fn=_power_sensor_exists),
     ),
 )
 
@@ -141,9 +206,14 @@ POWER_VS_FALLBACK = Capability(
     entities=(
         SwitchDesc(key='power_switch', field='x.com.samsung.da.power',
                    value_fn=lambda v: v == 'On',
+                   exists_fn=_power_switch_exists,
                    write_fn=lambda p, rep, href=None: (
                        ['power', 'vs', '0'],
                        {'x.com.samsung.da.power': 'On' if p == 'On' else 'Off'})),
+        BinarySensorDesc(key='power_switch', field='x.com.samsung.da.power',
+                         device_class='power',
+                         value_fn=lambda v: v == 'On',
+                         exists_fn=_power_sensor_exists),
     ),
 )
 
@@ -190,6 +260,20 @@ def remote_control_enabled(resources: dict) -> bool:
     if fallback is not None:
         return str(fallback.get('x.com.samsung.da.remoteControlEnabled')).lower() == 'true'
     return True
+
+
+def remote_control_required_for_write(resources: dict, bound_href: str) -> bool:
+    """Whether a write to bound_href should be gated on Smart Control.
+
+    When isModelSettingWithoutSC is true, laundry firmware accepts settings
+    writes (wash temp, spin, course options, buzzer, ...) with remote
+    control off, but cycle start/pause/stop on /operational/state still
+    need Smart Control. Absent that flag, keep the historical blanket gate.
+    """
+    if not model_setting_without_sc(resources):
+        return True
+    href = bound_href or ''
+    return href.startswith('/operational/state')
 
 
 REMOTE_CONTROL_GENERIC = Capability(

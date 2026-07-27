@@ -1,0 +1,295 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/selfcheck/vs/0",
+      "rep": {
+        "x.com.samsung.da.status": "Ready",
+        "x.com.samsung.da.result": "Success",
+        "x.com.samsung.da.error": [
+          "DA_ERROR_NONE"
+        ],
+        "x.com.samsung.da.supportedActions": [
+          "Start"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.modes": [
+          "WATERFILTER_DISABLE"
+        ]
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP2X_WATERPURIFIER_20K|00156641|900000000216130001088700000E0000",
+        "x.com.samsung.da.description": "TP2X_WATERPURIFIER_20K",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "RP0",
+        "x.com.samsung.da.diagMinVersion": "1.0",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "WiFi Module",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02144A240904",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Micom",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "24091109, 2409110D, 22092302, FFFFFFFF, 23030200, FFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+00:00",
+        "x.com.samsung.supprtedtype": 1
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "otnStatus": "None",
+        "flashingProgress": "",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "A-WPWW-TP2-22-COMMON",
+            "versions": [
+              "20240904"
+            ],
+            "visVersion": "240904"
+          },
+          {
+            "type": "Micom",
+            "modelId": "03800015664100156041",
+            "versions": [
+              "24091109",
+              "2409110D"
+            ],
+            "visVersion": "240911"
+          },
+          {
+            "type": "Micom",
+            "modelId": "038000156141FFFFFFFF",
+            "versions": [
+              "22092302",
+              "FFFFFFFF"
+            ],
+            "visVersion": "220923"
+          },
+          {
+            "type": "Micom",
+            "modelId": "038000159141FFFFFFFF",
+            "versions": [
+              "23030200",
+              "FFFFFFFF"
+            ],
+            "visVersion": "230302"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/filter/waterfilter/vs/0",
+      "rep": {
+        "x.com.samsung.da.filterUsage": "90",
+        "x.com.samsung.da.filterUsageResolution": "1",
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.lastResetDate": "2025-08-29T03:22:31",
+        "x.com.samsung.da.filterResetType": [
+          "replaceable"
+        ]
+      }
+    },
+    {
+      "href": "/status/lock/vs/0",
+      "rep": {
+        "x.com.samsung.da.coldwaterLock": "Unlocked",
+        "x.com.samsung.da.buzzLock": "Unlocked"
+      }
+    },
+    {
+      "href": "/setting/waterpurifier/vs/0",
+      "rep": {
+        "x.com.samsung.da.hotwaterLevel": "5",
+        "x.com.samsung.da.desiredType": "ambientwater",
+        "x.com.samsung.da.tempDesiredHotWater": "40",
+        "x.com.samsung.da.tempUnit": "C",
+        "x.com.samsung.da.desiredCapacity": "100",
+        "x.com.samsung.da.capacityUnit": "C",
+        "x.com.samsung.da.capacityResolution": "10",
+        "x.com.samsung.da.hotwaterRange": [
+          "40",
+          "90"
+        ],
+        "x.com.samsung.da.desiredCapacityRange": [
+          "50",
+          "2000"
+        ],
+        "x.com.samsung.da.supportedTypes": [
+          "ambientwater",
+          "coldwater",
+          "hotwater"
+        ],
+        "x.com.samsung.da.pourStatus": "Off"
+      }
+    },
+    {
+      "href": "/status/waterpurifier/vs/0",
+      "rep": {
+        "x.com.samsung.da.status": "Ready",
+        "x.com.samsung.da.filterDoorStatus": "Close",
+        "x.com.samsung.da.sterilizeRunTime": "0",
+        "x.com.samsung.da.sterilizeStartTime": "2026-07-27T17:00:00",
+        "x.com.samsung.da.sterilizePeriod": "3",
+        "x.com.samsung.da.sterilizePlanTime": "2026-07-27T17:00:00",
+        "x.com.samsung.da.sterilizeLastTime": "2026-07-24T17:08:25",
+        "x.com.samsung.da.sterilizeMaxTime": "10",
+        "x.com.samsung.da.filterCleanRemainTime": "0",
+        "x.com.samsung.da.filterCleanMaxTime": "14"
+      }
+    },
+    {
+      "href": "/favorite/capacity/vs/0",
+      "rep": {
+        "x.com.samsung.da.switchCapacity": "On",
+        "x.com.samsung.da.defaultCapacity": "100",
+        "x.com.samsung.da.capacityList": [
+          "100",
+          "200",
+          "260",
+          "500",
+          "9999"
+        ]
+      }
+    },
+    {
+      "href": "/favorite/hotwater/vs/0",
+      "rep": {
+        "x.com.samsung.da.switchHotwater": "Unlocked",
+        "x.com.samsung.da.favorite.defaultTemperature": "40",
+        "x.com.samsung.da.favorite.revision": "0",
+        "x.com.samsung.da.favorite.showList": [
+          "40",
+          "75",
+          "85",
+          "90"
+        ],
+        "x.com.samsung.da.favorite.supportedList": [
+          "40",
+          "75",
+          "85",
+          "90"
+        ]
+      }
+    },
+    {
+      "href": "/automation/waterpurifier/vs/0",
+      "rep": {
+        "automation.supported.modes": [
+          "0"
+        ],
+        "automation.supported.options": [
+          "capacity"
+        ]
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "Asia/Seoul",
+        "offset": "+09:00",
+        "DST": "OFF"
+      }
+    },
+    {
+      "href": "/recipe/coffee/vs/0",
+      "rep": {
+        "publisher.support": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ]
+      }
+    },
+    {
+      "href": "/coffee/custom/recipe/vs/0",
+      "rep": {
+        "publisher.support": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ]
+      }
+    },
+    {
+      "href": "/favorite/coffee/vs/0",
+      "rep": {
+        "favorite.activate": "On",
+        "brew.status": "Suspend",
+        "favorite.enable.list": [
+          "0",
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "href": "/recipe/coffee/deletion/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/brand/recipe/info/vs/0",
+      "rep": {
+        "revision": "0",
+        "brand.num.max": "1"
+      }
+    }
+  ]
+}

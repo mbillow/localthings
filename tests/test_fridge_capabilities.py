@@ -20,9 +20,32 @@ class TestTempCurrentGeneric:
         assert desc.unit_fn({'temperature': 5.0}) == '°F'
 
 
+class TestDoorGeneric:
+    """Issues #77/#83: DOOR_GENERIC used to read only the bare `openState`
+    field. Most /door/* resources use that, but the ARTIK051_DONGLE_REF
+    family's /door/onedoorfreezer/vs/0 reports the vendor-prefixed
+    `x.com.samsung.da.openState` instead -- the pattern capability still
+    bound the href either way, but the entity's value was always None."""
+
+    def test_reads_bare_open_state(self):
+        desc = fridge.DOOR_GENERIC.entities[0]
+        assert desc.rep_fn({'openState': 'Open'}) is True
+        assert desc.rep_fn({'openState': 'Close'}) is False
+
+    def test_reads_vendor_prefixed_open_state(self):
+        desc = fridge.DOOR_GENERIC.entities[0]
+        assert desc.rep_fn({'x.com.samsung.da.openState': 'Open'}) is True
+        assert desc.rep_fn({'x.com.samsung.da.openState': 'Close'}) is False
+
+    def test_prefers_bare_field_when_both_present(self):
+        desc = fridge.DOOR_GENERIC.entities[0]
+        rep = {'openState': 'Open', 'x.com.samsung.da.openState': 'Close'}
+        assert desc.rep_fn(rep) is True
+
+
 class TestTempSetpointGeneric:
     def test_unit_reads_celsius(self):
-        desc = fridge.TEMP_SETPOINT_GENERIC.entities[0]
+        desc = fridge.TEMP_SETPOINT.entities[0]
         assert desc.unit_fn({'temperature': -19.0, 'units': 'C'}) == '°C'
 
 
@@ -229,6 +252,75 @@ class TestArtik051AndTp2xFixturesHaveCompleteCoverage:
         assert unbound == []
         state = flatten(bound, resources)
         assert state['flex_zone_mode'] == 'CV_FDR_BEVERAGE'
+
+
+class TestArtik051DongleRefFixtureCoverage:
+    """Issues #77/#83: the ARTIK051_DONGLE_REF standalone freezer resolves
+    to the refrigerator registry (segment-based modelNum detection) with
+    zero unbound hrefs, and its door/temperature entities -- which only
+    bind through pattern capabilities the 'unknown' fallback never tried --
+    now carry real values."""
+
+    def test_no_unbound_hrefs_and_expected_entities(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import (
+            for_device_by_model, refrigerator,
+        )
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('refrigerator_artik051_dongle_ref')
+        info = resources['/information/vs/0']
+        reg = for_device_by_model(
+            info['x.com.samsung.da.modelNum'], info['x.com.samsung.da.description'])
+        assert reg is not None and reg.name == 'refrigerator'
+
+        unbound = []
+        bound = discover(
+            resources, refrigerator.REGISTRY.capabilities,
+            refrigerator.REGISTRY.pattern_capabilities, log=unbound.append,
+        )
+        assert unbound == []
+        state = flatten(bound, resources)
+        assert state['door_onedoorfreezer_open'] is False   # rep reports 'Close'
+        assert state['freezer_temperature'] == -20.0
+        assert state['freezer_setpoint'] == -20.0
+
+
+class TestArtik051DongleRefCoolerFixtureCoverage:
+    """Issue #78: RR40M7165WW, the fridge half of the same household
+    ARTIK051_DONGLE_REF dongle setup as issue #77's freezer. Notably reports
+    *two* door hrefs (/door/cooler/0 and /door/onedoorfreezer/vs/0) despite
+    being a single-door fridge, not a fridge/freezer combo -- apparently
+    shared firmware naming across the product line, not a real second
+    compartment. Both must still resolve to zero unbound hrefs and real
+    values with the same fix as #77."""
+
+    def test_no_unbound_hrefs_and_expected_entities(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.by_type import (
+            for_device_by_model, refrigerator,
+        )
+        from custom_components.localthings.registry.discovery import discover
+        from tests.conftest import _load_device
+
+        resources = _load_device('refrigerator_artik051_dongle_ref_cooler')
+        info = resources['/information/vs/0']
+        reg = for_device_by_model(
+            info['x.com.samsung.da.modelNum'], info['x.com.samsung.da.description'])
+        assert reg is not None and reg.name == 'refrigerator'
+
+        unbound = []
+        bound = discover(
+            resources, refrigerator.REGISTRY.capabilities,
+            refrigerator.REGISTRY.pattern_capabilities, log=unbound.append,
+        )
+        assert unbound == []
+        state = flatten(bound, resources)
+        assert state['door_cooler_open'] is False
+        assert state['door_onedoorfreezer_open'] is False
+        assert state['cooler_temperature'] == 3.0
+        assert state['cooler_setpoint'] == 3.0
 
 
 class TestRefrigeratorAiEnergyLevelFixtureCoverage:

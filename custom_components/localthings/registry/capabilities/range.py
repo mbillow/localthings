@@ -24,7 +24,8 @@ write pattern already proven safe elsewhere in this codebase (oven setpoint,
 icemaker toggles).
 """
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
+from .common import normalize_temp_unit
 
 # Observed as high as 4 (this issue's dump); user-reported hardware with 5
 # burners exists. Kept a little above both since exists_fn gates unused
@@ -50,6 +51,10 @@ def _burner_field_fn(i, field):
 def _burner_hot_surface_fn(i):
     get_state = _burner_field_fn(i, 'hotSurfaceState')
     return lambda burner_list: get_state(burner_list) not in (None, 'normal')
+
+
+def _burner_pan_detection_fn(i):
+    return lambda burner_list: bool(_burner_field_fn(i, 'panDetection')(burner_list))
 
 
 def _power_level_options(resources):
@@ -100,7 +105,20 @@ def _burner_entities(i):
                          translation_placeholders={'number': str(n)},
                          exists_fn=exists,
                          value_fn=_burner_hot_surface_fn(i)),
+        BinarySensorDesc(key=f'burner_{i}_pan_detected', field='burnerList',
+                         icon='mdi:pot',
+                         translation_key='burner_pan_detected',
+                         translation_placeholders={'number': str(n)},
+                         entity_category='diagnostic',
+                         exists_fn=exists,
+                         value_fn=_burner_pan_detection_fn(i)),
     )
+
+
+def _child_lock_write(p, rep, href=None):
+    if p not in ('On', 'Off'):
+        return None
+    return ['cooktop', 'status', 'vs', '0'], {'childLock': p.lower()}
 
 
 COOKTOP_STATUS = Capability(
@@ -109,6 +127,22 @@ COOKTOP_STATUS = Capability(
     entities=(
         SensorDesc(key='cooktop_state', field='operationState',
                    icon='mdi:pot-steam'),
+        # The cooktop section's own on/off (issue #86) -- distinct from
+        # common.POWER's /power/0 or /power/vs/0, which some boards in this
+        # family (the range combo) additionally carry for the whole
+        # appliance. Read-only: no live device to confirm remotely turning
+        # a cooktop on wouldn't leave a burner active unattended.
+        BinarySensorDesc(key='cooktop_power', field='power',
+                         device_class='power', icon='mdi:pot-steam',
+                         value_fn=lambda v: str(v).lower() == 'on'),
+        # Safe to write -- a lock toggle, not a heat control -- via a
+        # direct single-field PUT (no RMW needed; unlike burnerList this
+        # is a lone scalar, not an array of siblings to preserve).
+        SwitchDesc(key='cooktop_child_lock', field='childLock',
+                   device_class='lock', entity_category='config',
+                   icon='mdi:lock',
+                   value_fn=lambda v: str(v).lower() == 'on',
+                   write_fn=_child_lock_write),
         *[e for i in range(MAX_BURNERS) for e in _burner_entities(i)],
     ),
 )
@@ -131,5 +165,48 @@ COOKTOP_SAFETY = Capability(
         BinarySensorDesc(key='cooktop_safety_shutoff_enabled', field='safetyAlert',
                          entity_category='config',
                          value_fn=lambda v: (v or {}).get('state') == 'on'),
+    ),
+)
+
+# Bluetooth meat probe (issue #86). All-idle sentinel values when
+# disconnected (operationBurnerNumber -1, temperatures 0) -- no special
+# gating on those, matching cooktop.PAIRED_HOOD_STATUS's own precedent of
+# showing a disconnected accessory's fields plainly rather than hiding the
+# whole capability.
+PROBE_STATUS = Capability(
+    href='/bluetooth/probe/status/vs/0',
+    poll_tier='warm',
+    entities=(
+        BinarySensorDesc(key='probe_connected', field='connectionState',
+                         device_class='connectivity',
+                         value_fn=lambda v: str(v).lower() == 'connected'),
+        SensorDesc(key='probe_battery', field='batteryPercentage',
+                   device_class='battery', state_class='measurement',
+                   unit='%', entity_category='diagnostic'),
+        SensorDesc(key='probe_temperature', field='currentTemperature',
+                   device_class='temperature', state_class='measurement',
+                   unit_fn=lambda rep: normalize_temp_unit(rep.get('temperatureUnit'), '°C')),
+        SensorDesc(key='probe_target_temperature', field='targetTemperature',
+                   device_class='temperature', entity_category='diagnostic',
+                   unit_fn=lambda rep: normalize_temp_unit(rep.get('temperatureUnit'), '°C')),
+    ),
+)
+
+# Some range boards (issue #74's NE63B8411SS) report no /cooktop/status/vs/0
+# burner array at all -- their local API only exposes this coarse
+# monitoring resource for the cooktop half, with no per-burner detail.
+# Meaning of `cooktopMonitoring` (a bare "0" on the only dump seen) and
+# `warmingCenterState`'s full value set aren't confirmed, so both are
+# exposed as plain sensors rather than guessed at as a switch/select --
+# `supportedHoodLampStateList` has no corresponding live-state field on
+# this resource, so nothing to bind it to yet.
+COOKTOP_MONITORING = Capability(
+    href='/cooktopmonitoring/vs/0',
+    poll_tier='warm',
+    entities=(
+        SensorDesc(key='cooktop_running_state', field='x.com.samsung.da.cooktopRunningState',
+                   icon='mdi:pot-steam-outline'),
+        SensorDesc(key='warming_center_state', field='x.com.samsung.da.warmingCenterState',
+                   icon='mdi:heat-wave', entity_category='diagnostic'),
     ),
 )

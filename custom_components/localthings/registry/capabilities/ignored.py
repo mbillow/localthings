@@ -131,4 +131,12 @@ IGNORED: list[Capability] = [
     # parallel write-capable capability around an unverified generic OCF
     # write contract.
     Capability(href='/operational/state/0'),
+
+    # Cooktop guided-cooking/recipe status (issue #86, TP1X_DA-KS-COOKTOP
+    # family): sequenceNumber, operationBurnerNumber, a stageInfo block, and
+    # a textData.menu string -- every field empty/zero on the only dump
+    # seen so far (device idle, no guided-cooking program active). Same
+    # "don't guess" treatment as the microwave family's /recipe/cook/vs/0.
+    # Revisit if a dump with an active recipe surfaces.
+    Capability(href='/cooktop/recipe/status/vs/0'),
 ]

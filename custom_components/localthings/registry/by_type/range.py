@@ -25,5 +25,6 @@ REGISTRY = DeviceRegistry(
         range_caps.COOKTOP_STATUS,
         range_caps.COOKTOP_SPEC,
         range_caps.COOKTOP_SAFETY,
+        range_caps.COOKTOP_MONITORING,
     ]),
 )

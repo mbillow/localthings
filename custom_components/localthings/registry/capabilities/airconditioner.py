@@ -16,6 +16,7 @@ by_type registry.
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ClimateDesc, SensorDesc, SwitchDesc
+from .common import normalize_temp_unit
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -48,6 +49,25 @@ def _num(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _temps_vs_item(rep):
+    """First item of the vendor `/temperatures/vs/0` items[] array -- the
+    Tizen Lite board's only current-temperature source (see climate.py's
+    identical helper; duplicated rather than imported to avoid a
+    capabilities<->platform import cycle)."""
+    items = rep.get('x.com.samsung.da.items')
+    if isinstance(items, (list, tuple)) and items and isinstance(items[0], dict):
+        return items[0]
+    return {}
+
+
+def _temps_vs_current(rep):
+    return _num(_temps_vs_item(rep).get('x.com.samsung.da.current'))
+
+
+def _temps_vs_unit(rep):
+    return normalize_temp_unit(_temps_vs_item(rep).get('x.com.samsung.da.unit'), '°C')
 
 
 def _filter_usage_percent(rep):
@@ -199,6 +219,48 @@ CURRENT_LIMIT = Capability(
     ),
 )
 
+# The climate entity already surfaces current_temperature as a card
+# attribute, but that's not enough for history graphs/automations/
+# statistics -- issue #75 asked for a standalone sensor. Same OCF-standard-
+# with-vendor-fallback shape as common.py's POWER_GENERIC/POWER_VS_FALLBACK
+# pair: both share key='current_temperature_c' so only one ever binds
+# (match_fn gates the vendor one off when the OCF resource is present).
+CURRENT_TEMPERATURE = Capability(
+    href=HREF_TEMP_CURRENT,
+    poll_tier='warm',
+    entities=(
+        SensorDesc(key='current_temperature_c', field='temperature',
+                   device_class='temperature', state_class='measurement',
+                   unit_fn=lambda rep: normalize_temp_unit(rep.get('units'), '°C')),
+    ),
+)
+
+CURRENT_TEMPERATURE_VS = Capability(
+    href=HREF_TEMPS_VS,
+    poll_tier='warm',
+    match_fn=lambda rep, resources: HREF_TEMP_CURRENT not in resources,
+    entities=(
+        SensorDesc(key='current_temperature_c', rep_fn=_temps_vs_current,
+                   device_class='temperature', state_class='measurement',
+                   unit_fn=_temps_vs_unit),
+    ),
+)
+
+# Only the vendor resource's `fivepercentHumidity` (current reading, rounded
+# to the nearest 5%) has live data on the issue #75 dump -- its `humidity`
+# field, and the OCF-standard /humidity/0 resource entirely, both read a
+# stuck "0" there and stay ignored per the 'don't guess' rule (see
+# _AC_IGNORED below).
+HUMIDITY = Capability(
+    href='/humidity/vs/0',
+    poll_tier='warm',
+    entities=(
+        SensorDesc(key='humidity', field='x.com.samsung.da.fivepercentHumidity',
+                   device_class='humidity', state_class='measurement', unit='%',
+                   value_fn=_num),
+    ),
+)
+
 # ---------------------------------------------------------------------------
 # AC-scoped coverage: the CLIMATE_CONSUMED_HREFS above (read by the climate
 # entity) plus vendor duplicates / all-zero-ambiguous / plumbing resources.
@@ -221,8 +283,10 @@ _AC_IGNORED = [
     # All-zero and ambiguously encoded on this model (2-value arrays); the
     # 'don't guess' rule -- leave unmodeled rather than invent entities.
     '/sensors/vs/0',
+    # Stuck at "0" on every dump seen -- HUMIDITY above reads the vendor
+    # resource's usable fivepercentHumidity field instead; this OCF-standard
+    # one has no corresponding live value confirmed yet.
     '/humidity/0',
-    '/humidity/vs/0',
     # Presence-personalization plumbing (empty item list here).
     '/personality/presence/vs/0',
     # --- TP1X/TP2X-class housekeeping / opaque blobs. These carry no
@@ -251,8 +315,11 @@ _AC_IGNORED = [
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).
+# HREF_TEMP_CURRENT and HREF_TEMPS_VS are excluded here -- CURRENT_TEMPERATURE
+# / CURRENT_TEMPERATURE_VS above already cover those two with real entities.
 COVERAGE = [
     Capability(href=h, poll_tier='warm') for h in CLIMATE_CONSUMED_HREFS
+    if h not in (HREF_TEMP_CURRENT, HREF_TEMPS_VS)
 ] + [
     Capability(href=h) for h in _AC_IGNORED
 ]

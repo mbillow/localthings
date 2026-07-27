@@ -168,3 +168,4 @@ def test_all_entity_state_translation_keys_are_lowercase():
         for translation in platform.values():
             for state_key in translation.get("state", {}):
                 assert state_key == state_key.lower()
+    

@@ -508,3 +508,19 @@ async def test_options_flow_finish_preserves_existing_options(
 
     assert result['type'] == FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_BYPASS_REMOTE_CONTROL] is True
+
+
+def test_is_placeholder_serial_catches_nothing_svc():
+    """Issue #83: the ARTIK051_DONGLE_REF firmware family reports the
+    literal string 'Nothing(SVC)' as serialNum on every unit -- non-empty,
+    so it must be caught by name, not by the plain `if not serial` check."""
+    from custom_components.localthings.config_flow import _is_placeholder_serial
+    assert _is_placeholder_serial('Nothing(SVC)') is True
+    assert _is_placeholder_serial('nothing(svc)') is True
+    assert _is_placeholder_serial('  Nothing(SVC)  ') is True
+
+
+def test_is_placeholder_serial_accepts_real_serials():
+    from custom_components.localthings.config_flow import _is_placeholder_serial
+    assert _is_placeholder_serial('0A1B2C3D4E5F') is False
+    assert _is_placeholder_serial('') is False

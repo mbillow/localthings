@@ -61,6 +61,21 @@ def test_registry_reproduces_golden_state_keys_for_washer():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_washer_wa8000t():
+    """Top-load washer (WA8000T, issue #106) reports no oneUiVersion and
+    used the 'WA' consumer-model prefix, previously unmapped in
+    _CONSUMER_PREFIX_TO_KEY -- fell back to 'unknown'."""
+    from tests.conftest import _load_device
+    resources = _load_device('washer_wa8000t')
+    golden = json.loads((GOLDEN / 'washer_wa8000t.json').read_text())
+    state_keys = _new_state_keys('washer_wa8000t', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer():
     from tests.conftest import _load_device
     resources = _load_device('dryer')
@@ -73,11 +88,76 @@ def test_registry_reproduces_golden_state_keys_for_dryer():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
+    """DVE50A8600V/A3 (issue #79) -- description pairs two model numbers
+    ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
+    one segment before the actual last segment ('8600'). The old
+    last-segment-only check missed it and fell back to 'unknown'; resolved
+    via _consumer_model_key scanning segments from the end."""
+    from tests.conftest import _load_device
+    resources = _load_device('dryer_dve50a8600')
+    golden = json.loads((GOLDEN / 'dryer_dve50a8600.json').read_text())
+    state_keys = _new_state_keys('dryer_dve50a8600', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_airconditioner():
     from tests.conftest import _load_device
     resources = _load_device('airconditioner')
     golden = json.loads((GOLDEN / 'airconditioner.json').read_text())
     state_keys = _new_state_keys('airconditioner', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_dehumidifier():
+    """TP1X_DA_AC_DHM_01001_0000 (issue #88, AY18CG7500GED) shares the DA_AC_
+    board family with the room-AC models but carries the '_DHM_' token;
+    resolved via the '_DHM_' modelNum fallback in for_device_by_model into a
+    dedicated dehumidifier registry (target humidity, operating mode, reused
+    AC filter/auto-clean/mute-once capabilities)."""
+    from tests.conftest import _load_device
+    resources = _load_device('dehumidifier')
+    golden = json.loads((GOLDEN / 'dehumidifier.json').read_text())
+    state_keys = _new_state_keys('dehumidifier', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_water_purifier():
+    """TP2X_WATERPURIFIER_20K (issue #90) reports no oneUiVersion; resolved
+    via the 'WATERPURIFIER' modelNum/description fallback into a dedicated
+    water_purifier registry (dispense settings, sterilize/filter status,
+    favorite capacity, and the three lock switches)."""
+    from tests.conftest import _load_device
+    resources = _load_device('water_purifier')
+    golden = json.loads((GOLDEN / 'water_purifier.json').read_text())
+    state_keys = _new_state_keys('water_purifier', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_water_purifier_coffee():
+    """TP2X_WATERPURIFIER_20K coffee-capable variant (issue #107) adds
+    /favorite/coffee/vs/0, /favorite/hotwater/vs/0, and three static
+    coffee-recipe resources not present in issue #90's original dump."""
+    from tests.conftest import _load_device
+    resources = _load_device('water_purifier_coffee')
+    golden = json.loads((GOLDEN / 'water_purifier_coffee.json').read_text())
+    state_keys = _new_state_keys('water_purifier_coffee', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
@@ -166,6 +246,45 @@ def test_registry_reproduces_golden_state_keys_for_artik051_ref_17k():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_artik051_dongle_ref_cooler():
+    """RR40M7165WW (issue #78) -- the same ARTIK051_DONGLE_REF household
+    dongle family as issue #77's freezer, but the fridge half: reports
+    /door/cooler/0 *and* /door/onedoorfreezer/vs/0 (the latter apparently
+    shared firmware naming, not an actual second freezer compartment) plus
+    /temperature/{current,desired}/cooler/0. Same pipe-delimited modelNum
+    detection gap and DOOR_GENERIC field-name gap as #77, same fix."""
+    from tests.conftest import _load_device
+    resources = _load_device('refrigerator_artik051_dongle_ref_cooler')
+    golden = json.loads((GOLDEN / 'refrigerator_artik051_dongle_ref_cooler.json').read_text())
+    state_keys = _new_state_keys('refrigerator_artik051_dongle_ref_cooler', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_artik051_dongle_ref():
+    """ARTIK051_DONGLE_REF standalone freezer (issues #77/#83) -- reports no
+    oneUiVersion and a pipe-delimited modelNum ('..._DONGLE_REF|<rest>')
+    that the old '_REF_' substring check missed entirely; resolved via the
+    segment-based check in for_device_by_model. Its door
+    (/door/onedoorfreezer/vs/0) and temperature
+    (/temperature/{current,desired}/freezer/0) hrefs only bind through
+    fridge.py's pattern capabilities, which the 'unknown' fallback never
+    tries -- so this also regression-tests that those resources bind at
+    all once routed to the right registry."""
+    from tests.conftest import _load_device
+    resources = _load_device('refrigerator_artik051_dongle_ref')
+    golden = json.loads((GOLDEN / 'refrigerator_artik051_dongle_ref.json').read_text())
+    state_keys = _new_state_keys('refrigerator_artik051_dongle_ref', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_tp2x_ref_20k():
     """TP2X_REF_20K -- CV_FDR_-prefixed flex zone (issue #32) plus the extra
     energy fields (cumulativeConsumption/monthlyConsumption/
@@ -231,6 +350,23 @@ def test_registry_reproduces_golden_state_keys_for_caww_tp2():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_window_ac():
+    """TP1X_DA_AC_WAC_01001_0000 (issue #87, Bespoke Window AC AW06C7155EWAZ)
+    reports no oneUiVersion and carries the '_WAC_' (Window Air Conditioner)
+    token instead of '_RAC_'/'_PRAC_'; resolved via the '_WAC_' modelNum
+    fallback in for_device_by_model. Otherwise binds cleanly against the
+    existing airconditioner registry with zero unbound hrefs."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_window_ac')
+    golden = json.loads((GOLDEN / 'airconditioner_window_ac.json').read_text())
+    state_keys = _new_state_keys('airconditioner_window_ac', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_tp1x_rac():
     """TP1X_DA-AC-RAC-01001_0000 (issue #38) -- fuller RAC board with display
     light, self-check, mute-once, and a current-limit setting."""
@@ -238,6 +374,23 @@ def test_registry_reproduces_golden_state_keys_for_tp1x_rac():
     resources = _load_device('airconditioner_tp1x_rac')
     golden = json.loads((GOLDEN / 'airconditioner_tp1x_rac.json').read_text())
     state_keys = _new_state_keys('airconditioner_tp1x_rac', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_airconditioner_windfree():
+    """ARTIK051_PRAC_20K, WindFree-capable unit (issue #75) -- same modelNum
+    family as the original issue #17 fixture, but its /mode/convenient/vs/0
+    additionally reports Nano/NanoSleep/MotionDirect/MotionIndirect, its
+    /wind/direction/vs/0 reports Left_And_Right, and /humidity/vs/0's
+    fivepercentHumidity is actually populated."""
+    from tests.conftest import _load_device
+    resources = _load_device('airconditioner_windfree')
+    golden = json.loads((GOLDEN / 'airconditioner_windfree.json').read_text())
+    state_keys = _new_state_keys('airconditioner_windfree', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
@@ -255,6 +408,37 @@ def test_registry_reproduces_golden_state_keys_for_range():
     resources = _load_device('range')
     golden = json.loads((GOLDEN / 'range.json').read_text())
     state_keys = _new_state_keys('range', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_induction_cooktop():
+    """Standalone induction cooktop, no oven attached (model
+    TP1X_DA-KS-COOKTOP-01011, issue #86) -- reports no oneUiVersion and a
+    hyphenated '-COOKTOP-' modelNum token, resolved via
+    for_device_by_model into its own 'induction_cooktop' registry (not
+    cooktop.REGISTRY, which is the unrelated NA9300K gas-cooktop family)."""
+    from tests.conftest import _load_device
+    resources = _load_device('induction_cooktop')
+    golden = json.loads((GOLDEN / 'induction_cooktop.json').read_text())
+    state_keys = _new_state_keys('induction_cooktop', resources)
+
+def test_registry_reproduces_golden_state_keys_for_range_no_info():
+    """NE63B8411SS (issue #74) -- reports no oneUiVersion *and* no
+    /information/vs/0 at all, so neither for_device nor
+    for_device_by_model has anything to key off; resolved via the 'Bake'-
+    in-supportedModes + /cooktopmonitoring/vs/0 signature in
+    for_device_by_resources. This board's local API has no per-burner
+    /cooktop/status/vs/0 array either -- only the coarse
+    /cooktopmonitoring/vs/0 monitoring resource covered by range.py's
+    COOKTOP_MONITORING."""
+    from tests.conftest import _load_device
+    resources = _load_device('range_no_info')
+    golden = json.loads((GOLDEN / 'range_no_info.json').read_text())
+    state_keys = _new_state_keys('range_no_info', resources)
     assert set(state_keys) == set(golden['state_keys']), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

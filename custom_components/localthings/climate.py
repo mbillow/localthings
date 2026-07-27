@@ -20,6 +20,8 @@ back for, power, mode, temperature and wind resources alike.
 """
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -53,6 +55,8 @@ from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
 
+_LOGGER = logging.getLogger(__name__)
+
 _MODES_FIELD = 'x.com.samsung.da.modes'
 _SUPPORTED_FIELD = 'x.com.samsung.da.supportedModes'
 
@@ -67,6 +71,19 @@ _DEVICE_TO_HVAC: dict[str, HVACMode] = {
     'Heat': HVACMode.HEAT,
 }
 _HVAC_TO_DEVICE = {v: k for k, v in _DEVICE_TO_HVAC.items()}
+
+# AI-driven auto-comfort mode (issue #93, A-CAWW-TP2-20-COMMON). Not a flat
+# _DEVICE_TO_HVAC entry: 'AIComfort' isn't a distinct thermodynamic operation
+# like Cool/Dry/Heat, it's an AI overlay on top of the device's own 'Auto'
+# behavior -- confirmed by this unit reporting both 'Auto' and 'AIComfort' as
+# separate, mutually-exclusive entries in /mode/vs/0's supportedModes. Modeled
+# the idiomatic HA way instead: hvac_mode reports AUTO (same as plain 'Auto'
+# would if it were ever mapped there) and a dedicated 'ai_comfort' preset
+# carries the distinction a bare hvac_mode can't. Not reachable via
+# async_set_hvac_mode -- entered/left only through the preset, since there's
+# no dedicated HVACMode value for it to write back to.
+_AI_COMFORT_MODE = 'AIComfort'
+PRESET_AI_COMFORT = 'ai_comfort'
 
 # Fan (wind strength): device codes "0".."4" -> HA standard fan constants where
 # a clean match exists so they auto-localize; "turbo" is custom (translated).
@@ -84,6 +101,7 @@ _DEVICE_TO_SWING: dict[str, str] = {
     'Fix': 'off',
     'All': 'both',
     'Up_And_Low': 'vertical',
+    'Left_And_Right': 'horizontal',  # issue #75
 }
 _SWING_TO_DEVICE = {v: k for k, v in _DEVICE_TO_SWING.items()}
 
@@ -164,6 +182,11 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
             | ClimateEntityFeature.TURN_ON
             | ClimateEntityFeature.TURN_OFF
         )
+        # (href, raw device code) pairs already logged by _warn_unmapped --
+        # these properties are read on every coordinator refresh, so an
+        # un-deduped warning would spam the log for any device with a
+        # genuinely unrecognized code.
+        self._warned_unmapped: set[tuple[str, str]] = set()
 
     # -- resource helpers ---------------------------------------------------
 
@@ -180,13 +203,34 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     def _supported(self, href: str) -> list[str]:
         return list(self._rep(href).get(_SUPPORTED_FIELD) or [])
 
+    def _warn_unmapped(self, href: str, code: str) -> None:
+        """Log once per (href, code) when a device-reported mode has no
+        entry in the relevant device<->HA map, so a real device gap surfaces
+        in the log instead of silently vanishing (issue #93)."""
+        key = (href, code)
+        if key in self._warned_unmapped:
+            return
+        self._warned_unmapped.add(key)
+        _LOGGER.warning(
+            "%s: device mode %r on %s has no HA mapping and was dropped; "
+            "please file an issue with your diagnostics dump",
+            self.entity_id, code, href,
+        )
+
     def _read_mode(self, href: str, mapping: dict):
         """Current mode of a wind/convenient resource, mapped to its HA value."""
-        return mapping.get(_first(self._rep(href).get(_MODES_FIELD)))
+        raw = _first(self._rep(href).get(_MODES_FIELD))
+        if raw is not None and raw not in mapping:
+            self._warn_unmapped(href, raw)
+        return mapping.get(raw)
 
     def _read_modes(self, href: str, mapping: dict) -> list[str]:
         """Supported modes of a resource, mapped to HA values (unknowns dropped)."""
-        return [mapping[c] for c in self._supported(href) if c in mapping]
+        supported = self._supported(href)
+        for c in supported:
+            if c not in mapping:
+                self._warn_unmapped(href, c)
+        return [mapping[c] for c in supported if c in mapping]
 
     # -- temperature --------------------------------------------------------
 
@@ -250,14 +294,23 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         if not self._is_on():
             return HVACMode.OFF
         device = _first(self._rep(MODE_HREF).get(_MODES_FIELD))
+        if device == _AI_COMFORT_MODE:
+            return HVACMode.AUTO
+        if device is not None and device not in _DEVICE_TO_HVAC:
+            self._warn_unmapped(MODE_HREF, device)
         return _DEVICE_TO_HVAC.get(device, HVACMode.AUTO)
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
         modes = [HVACMode.OFF]
         for m in self._supported(MODE_HREF):
+            if m == _AI_COMFORT_MODE:
+                continue
             mapped = _DEVICE_TO_HVAC.get(m)
-            if mapped is not None and mapped not in modes:
+            if mapped is None:
+                self._warn_unmapped(MODE_HREF, m)
+                continue
+            if mapped not in modes:
                 modes.append(mapped)
         return modes
 
@@ -281,11 +334,16 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def preset_mode(self):
+        if _first(self._rep(MODE_HREF).get(_MODES_FIELD)) == _AI_COMFORT_MODE:
+            return PRESET_AI_COMFORT
         return self._read_mode(CONVENIENT_HREF, _DEVICE_TO_PRESET)
 
     @property
     def preset_modes(self) -> list[str]:
-        return self._read_modes(CONVENIENT_HREF, _DEVICE_TO_PRESET)
+        modes = self._read_modes(CONVENIENT_HREF, _DEVICE_TO_PRESET)
+        if _AI_COMFORT_MODE in self._supported(MODE_HREF):
+            modes.append(PRESET_AI_COMFORT)
+        return modes
 
     # -- writes -------------------------------------------------------------
 
@@ -324,4 +382,10 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         await self._set_mapped('swing', _SWING_TO_DEVICE, swing_mode)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
+        if preset_mode == PRESET_AI_COMFORT:
+            # Writes the primary mode resource, not the convenient one --
+            # 'AIComfort' lives in /mode/vs/0 alongside Cool/Dry/Auto, not in
+            # /mode/convenient/vs/0 with Quiet/Smart/Speed/Sleep.
+            await self.coordinator.async_send_command(self._bound, ('mode', _AI_COMFORT_MODE))
+            return
         await self._set_mapped('preset', _PRESET_TO_DEVICE, preset_mode)

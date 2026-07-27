@@ -1,0 +1,184 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/bespoke/vs/0",
+      "rep": {
+        "x.com.samsung.da.BespokeProduct": "Off"
+      }
+    },
+    {
+      "href": "/defrost/delay/0",
+      "rep": {}
+    },
+    {
+      "href": "/defrost/delay/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/door/onedoorfreezer/vs/0",
+      "rep": {
+        "x.com.samsung.da.openState": "Close"
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+02:00",
+        "x.com.samsung.supprtedtype": 1
+      }
+    },
+    {
+      "href": "/icemaker/status/0",
+      "rep": {}
+    },
+    {
+      "href": "/icemaker/status/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "ARTIK051_DONGLE_REF|00127641|00080020001430300100000000000000",
+        "x.com.samsung.da.description": "ARTIK_REF_17K",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "WiFi Module",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "011120190711",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Micom",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "2103120d,ffffffff",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/mode/0",
+      "rep": {
+        "supportedModes": [
+          "HOMECARE_WIZARD_V2",
+          "ENERGY_REPORT_MODEL",
+          "18K_REF_OUTDOOR_CONTROL_V2"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2",
+          "ENERGY_REPORT_MODEL",
+          "18K_REF_OUTDOOR_CONTROL_V2"
+        ]
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "Micom",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/refrigeration/0",
+      "rep": {
+        "defrost": false,
+        "rapidFreeze": false,
+        "rapidCool": false
+      }
+    },
+    {
+      "href": "/refrigeration/vs/0",
+      "rep": {
+        "x.com.samsung.da.rapidFreezing": "Off"
+      }
+    },
+    {
+      "href": "/sabbath/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/temperature/current/freezer/0",
+      "rep": {
+        "range": [
+          -23.0,
+          -15.0
+        ],
+        "units": "C",
+        "temperature": -20.0
+      }
+    },
+    {
+      "href": "/temperature/desired/freezer/0",
+      "rep": {
+        "range": [
+          -23.0,
+          -15.0
+        ],
+        "units": "C",
+        "temperature": -20.0
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.desired": "-20",
+            "x.com.samsung.da.current": "-20",
+            "x.com.samsung.da.maximum": "-15",
+            "x.com.samsung.da.minimum": "-23",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ]
+      }
+    }
+  ]
+}

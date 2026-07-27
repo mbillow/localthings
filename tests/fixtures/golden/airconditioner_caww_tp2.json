@@ -5,10 +5,12 @@
     "alarm_code",
     "auto_clean",
     "climate",
+    "current_temperature_c",
     "diagnosis_status",
     "energy_kwh",
     "energy_saved_kwh",
     "firmware_update",
+    "humidity",
     "mute_once",
     "power_watts"
   ]

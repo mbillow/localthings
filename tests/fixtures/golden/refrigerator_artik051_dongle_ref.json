@@ -1,0 +1,22 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "defrost_active",
+    "defrost_delay",
+    "diagnosis_status",
+    "door_onedoorfreezer_open",
+    "energy_kwh",
+    "energy_last_month_kwh",
+    "energy_saved_kwh",
+    "energy_this_month_kwh",
+    "firmware_update",
+    "freezer_setpoint",
+    "freezer_temperature",
+    "ice_maker_enabled",
+    "power_energy_kwh",
+    "power_watts",
+    "rapid_freezing",
+    "rapid_fridge",
+    "sabbath_mode"
+  ]
+}

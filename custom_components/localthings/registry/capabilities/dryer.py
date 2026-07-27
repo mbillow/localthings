@@ -42,7 +42,10 @@ DRYER_SETTINGS = Capability(
 # under entity.select.dryer_cycle (Table_03, DV5000-class, captured
 # 2026-05-29). Codes 0x21 and 0x4C appear in the issue #14 DV90BB5245AES1
 # editCourseList but aren't identified yet -- they render as the raw code
-# until named. The /st/dryercourse/vs/0 resource re-encodes the same selected
+# until named. Codes '01' Normal and '06' Time dry were confirmed on a
+# DVE50A8600V/A3 (also Table_03) by selecting each cycle on the physical
+# appliance and reading back the raw code from the entity's state (issue
+# #80). The /st/dryercourse/vs/0 resource re-encodes the same selected
 # course and is ignored (ignored.py) -- the mirror of how /st/washercourse/vs/0
 # is ignored for washers.
 DRYER_COURSE = Capability(

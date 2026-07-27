@@ -3,8 +3,9 @@ from typing import Optional
 
 from ._base import DeviceRegistry
 from . import (
-    air_purifier, airconditioner, cooktop, dishwasher, dryer, oven,
-    range as _range, range_hood, refrigerator, washer,
+    air_purifier, airconditioner, cooktop, dehumidifier, dishwasher, dryer,
+    induction_cooktop, oven, range as _range, range_hood, refrigerator,
+    washer, water_purifier,
 )
 
 __all__ = [
@@ -19,14 +20,17 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     'airconditioner': airconditioner.REGISTRY,
     'air_conditioner': airconditioner.REGISTRY,
     'cooktop': cooktop.REGISTRY,
+    'dehumidifier': dehumidifier.REGISTRY,
     'dishwasher': dishwasher.REGISTRY,
     'dryer': dryer.REGISTRY,
+    'induction_cooktop': induction_cooktop.REGISTRY,
     'oven': oven.REGISTRY,
     'hood': range_hood.REGISTRY,
     'range': _range.REGISTRY,
     'range_hood': range_hood.REGISTRY,
     'refrigerator': refrigerator.REGISTRY,
     'washer': washer.REGISTRY,
+    'water_purifier': water_purifier.REGISTRY,
 }
 
 
@@ -82,9 +86,53 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     'WD': 'washer',
     'WF': 'washer',
     'WV': 'washer',  # FlexWash twin units (e.g. WV55M9600AW) -- issue #19
+    'WA': 'washer',  # Top-load washers (e.g. WA8000T) -- issue #106
     'DV': 'dryer',
     'DW': 'dishwasher',
 }
+
+
+def _model_num_segments(model_num: str) -> list[str]:
+    """Underscore-delimited segments of modelNum's pipe-prefix.
+
+    Most boards wrap a token in underscores on both sides ('..._REF_...'),
+    which a plain substring check catches fine. But the ARTIK051_DONGLE_REF
+    family (issues #77, #83) reports modelNum as
+    '<board>_DONGLE_REF|<rest...>' -- REF is the *last* segment before the
+    pipe, with no trailing underscore, so '_REF_' never matches and the
+    device silently fell back to 'unknown'. Splitting on '_' and checking
+    segment membership catches both shapes without caring which side (if
+    either) has a delimiter.
+    """
+    prefix = (model_num or '').split('|', 1)[0]
+    return prefix.split('_')
+
+
+def _consumer_model_key(description: str) -> Optional[str]:
+    """Registry key from the consumer-model token in `description`, or None.
+
+    Usually that token is the last '_'-delimited segment before any
+    '/board-info' suffix (e.g. '..._WW90DG6U25LEU4' -> 'WW90DG6U25LEU4').
+    But issue #79's dryer pairs two model numbers in one description --
+    '..._DVE50A8800_8600/DC92-...' -- so the true consumer token
+    ('DVE50A8800') sits one segment *before* the actual last segment
+    ('8600', a bare second model number with no recognizable prefix). Scan
+    segments from the end and take the first one that resolves, rather
+    than assuming the last segment is always it.
+
+    Only a 2-letter *prefix* match -- e.g. 'WAC' (the Window Air Conditioner
+    board-family token, issue #87) also starts with 'WA' (the top-load-washer
+    prefix, issue #106) at this granularity. for_device_by_model() calls the
+    board-family modelNum checks first and this function only as a fallback,
+    so that ambiguity resolves correctly without this function needing to
+    know about unrelated device families.
+    """
+    segments = (description or '').split('/', 1)[0].split('_')
+    for segment in reversed(segments):
+        key = _CONSUMER_PREFIX_TO_KEY.get(segment[:2].upper())
+        if key is not None:
+            return key
+    return None
 
 
 def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegistry]:
@@ -100,9 +148,13 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
         DeviceRegistry if the consumer-model code or modelNum resolves to a
         known type, None otherwise.
     """
-    token = (description or '').split('/', 1)[0].rsplit('_', 1)[-1]
-    key = _CONSUMER_PREFIX_TO_KEY.get(token[:2].upper())
-    if key is None and '_REF_' in (model_num or ''):
+    # Board-family modelNum tokens are checked first, and the fuzzier
+    # 2-letter consumer-model prefix from `description` only as a fallback
+    # (see the bottom of this function) -- some board tokens are themselves
+    # only 2-3 letters long ('WAC', issue #87) and would otherwise collide
+    # with an unrelated consumer prefix at that granularity ('WA', issue #106).
+    key = None
+    if key is None and 'REF' in _model_num_segments(model_num):
         key = 'refrigerator'
     # Room air conditioners (e.g. ARTIK051_PRAC_20K) report no oneUiVersion and
     # a modelNum carrying the '_PRAC_' (Package Room Air Conditioner) token.
@@ -122,6 +174,22 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # resource (see airconditioner.py's _AC_IGNORED).
     if key is None and '-CAWW-' in (model_num or '').upper():
         key = 'airconditioner'
+    # Dehumidifiers (e.g. TP1X_DA_AC_DHM_01001_0000, issue #88) share the
+    # DA_AC_ board family with the room-AC models above but carry the
+    # '_DHM_' (DeHuMidifier) token instead of '_RAC_'/'_PRAC_'. Distinct
+    # registry: target humidity, not temperature, is the primary control,
+    # and there's no climate composite.
+    if key is None and '_DHM_' in (model_num or ''):
+        key = 'dehumidifier'
+    # Window air conditioners (e.g. TP1X_DA_AC_WAC_01001_0000, issue #87)
+    # report no oneUiVersion and carry the '_WAC_' (Window Air Conditioner)
+    # token instead of '_RAC_'/'_PRAC_'. Same TP1X-class resource surface
+    # as the room-AC models above (mode/convenient/wind/temperature/power/
+    # filter/humidity all confirmed against the issue #87 dump binding
+    # cleanly against the existing airconditioner registry once routed
+    # here) -- no WAC-specific resources needed.
+    if key is None and '_WAC_' in (model_num or ''):
+        key = 'airconditioner'
     # Air purifiers (e.g. ARTIK051_TVTL_18K, issue #56) report no
     # oneUiVersion either, and carry the '_TVTL_' board-family token.
     if key is None and '_TVTL_' in (model_num or ''):
@@ -129,6 +197,10 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     model_identity = f'{model_num} {description}'.upper()
     if key is None and ('_COOKTOP' in model_identity or '_GB_CT_' in model_identity):
         key = 'cooktop'
+    # Water purifiers (e.g. TP2X_WATERPURIFIER_20K, issue #90) report no
+    # oneUiVersion and carry the 'WATERPURIFIER' board-family token.
+    if key is None and 'WATERPURIFIER' in model_identity:
+        key = 'water_purifier'
     if key is None and model_identity.startswith('AHD-'):
         key = 'range_hood'
     # Air purifiers on the newer AVT-WW-TP1 board (e.g. AVT-WW-TP1-23-AXX500)
@@ -151,6 +223,21 @@ def for_device_by_model(model_num: str, description: str) -> Optional[DeviceRegi
     # oneUiVersion and doesn't match the washer/dryer/dishwasher prefix map.
     if key is None and '-OVEN-' in (model_num or '').upper():
         key = 'oven'
+    # Standalone induction cooktops (e.g. TP1X_DA-KS-COOKTOP-01011, issue
+    # #86) -- same board family and '/cooktop/status/vs/0' resource shape
+    # as the range combo above, but no oven attached at all. Distinct from
+    # the '_COOKTOP'/'_GB_CT_' underscore-delimited check above: that one
+    # matches a different, older gas-cooktop family (cooktop.py's NA9300K
+    # class, burner state embedded in /mode/vs/0's options array) whose
+    # modelNum token is underscore-delimited, not hyphenated like this
+    # board family's.
+    if key is None and '-COOKTOP-' in (model_num or '').upper():
+        key = 'induction_cooktop'
+    # Consumer-model prefix from `description` (washer/dryer/dishwasher) --
+    # last, since it's the fuzziest match (a bare 2-letter prefix) and would
+    # otherwise shadow the more specific board-family tokens above.
+    if key is None:
+        key = _consumer_model_key(description)
     return _REGISTRY_BY_KEY.get(key) if key else None
 
 
@@ -180,4 +267,18 @@ def for_device_by_resources(resources: dict[str, dict]) -> Optional[DeviceRegist
         and '/hood/lamp/vs/0' in resources
     ):
         return _REGISTRY_BY_KEY['range_hood']
+    # Oven/range-combo boards that report no /information/vs/0 at all
+    # (issue #74's NE63B8411SS -- the resource is simply absent from the
+    # dump, not just empty) can't be matched via for_device_by_model's
+    # modelNum tokens either. 'Bake' is oven/range cook-mode vocabulary that
+    # no other family's /mode/vs/0 uses (confirmed against the microwave,
+    # cooktop, and every laundry fixture), so its presence alongside the
+    # oven cavity resource is a safe signature. Distinguish range (has a
+    # cooktop half) from a plain wall oven by which cooktop-status resource,
+    # if any, is also present.
+    supported_modes = mode.get('x.com.samsung.da.supportedModes') or ()
+    if '/oven/vs/0' in resources and 'Bake' in supported_modes:
+        if '/cooktopmonitoring/vs/0' in resources or '/cooktop/status/vs/0' in resources:
+            return _REGISTRY_BY_KEY['range']
+        return _REGISTRY_BY_KEY['oven']
     return None

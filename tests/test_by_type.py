@@ -42,9 +42,12 @@ class TestForDevice:
         assert registry.name == 'refrigerator'
 
     def test_for_device_returns_cooktop_registry(self):
+        """The registry's own .name is 'gas_cooktop' (disambiguated from
+        induction_cooktop), but the lookup key devices route through stays
+        'cooktop' -- oneUiVersion "Cooktop" still resolves here."""
         registry = for_device('7.0 Cooktop')
         assert registry is not None
-        assert registry.name == 'cooktop'
+        assert registry.name == 'gas_cooktop'
 
     def test_for_device_returns_range_hood_registry(self):
         registry = for_device('7.0 Range Hood')
@@ -111,6 +114,46 @@ class TestWasherRegistry:
             assert href in registry.capabilities, f"{href} missing from washer registry"
 
 
+class TestModelNumSegments:
+    def test_splits_pipe_prefix_on_underscore(self):
+        from custom_components.localthings.registry.by_type import _model_num_segments
+        assert _model_num_segments('ARTIK051_DONGLE_REF|00127641|000800200014') == [
+            'ARTIK051', 'DONGLE', 'REF',
+        ]
+
+    def test_ignores_everything_after_first_pipe(self):
+        from custom_components.localthings.registry.by_type import _model_num_segments
+        assert _model_num_segments('TP2X_RAC_20K|abc|REF_should_not_appear') == [
+            'TP2X', 'RAC', '20K',
+        ]
+
+    def test_empty_for_none_or_empty_input(self):
+        from custom_components.localthings.registry.by_type import _model_num_segments
+        assert _model_num_segments('') == ['']
+        assert _model_num_segments(None) == ['']
+
+
+class TestConsumerModelKey:
+    def test_finds_key_in_last_segment(self):
+        from custom_components.localthings.registry.by_type import _consumer_model_key
+        assert _consumer_model_key('DA_WM_TP1_21_COMMON_WW5000C') == 'washer'
+
+    def test_finds_key_before_a_trailing_unrecognized_segment(self):
+        """Issue #79: 'DVE50A8800_8600' pairs two model numbers -- the real
+        consumer token is the second-to-last segment, not the last."""
+        from custom_components.localthings.registry.by_type import _consumer_model_key
+        assert _consumer_model_key(
+            'DA_WM_TP1_21_COMMON_DVE50A8800_8600/DC92-02835A_0080') == 'dryer'
+
+    def test_ignores_everything_after_first_slash(self):
+        from custom_components.localthings.registry.by_type import _consumer_model_key
+        assert _consumer_model_key('DA_WM_TP1_21_COMMON_WW5000C/DW9000_board') == 'washer'
+
+    def test_none_when_no_segment_matches(self):
+        from custom_components.localthings.registry.by_type import _consumer_model_key
+        assert _consumer_model_key('ARTIK051_DONGLE_REF') is None
+
+
 class TestForDeviceByModel:
     """Fallback device-type detection for hardware without oneUiVersion."""
 
@@ -138,6 +181,20 @@ class TestForDeviceByModel:
         from custom_components.localthings.registry.by_type import for_device_by_model
         reg = for_device_by_model(
             'DA_WM_TP2_20_COMMON_DV5000T', 'DA_WM_TP2_20_COMMON_DV5000T',
+        )
+        assert reg is not None
+        assert reg.name == 'dryer'
+
+    def test_dryer_dve50a8600_paired_model_numbers_in_description(self):
+        """Issue #79: description pairs two model numbers
+        ('..._DVE50A8800_8600/DC92-...'), so the 'DV' consumer token is one
+        segment before the literal last segment ('8600', which has no
+        recognizable prefix on its own). The old last-segment-only check
+        fell through to 'unknown' here."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'DA_WM_TP1_21_COMMON|20286441|300000010015110002A3031700000000',
+            'DA_WM_TP1_21_COMMON_DVE50A8800_8600/DC92-02835A_0080',
         )
         assert reg is not None
         assert reg.name == 'dryer'
@@ -178,6 +235,20 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'refrigerator'
 
+    def test_refrigerator_dongle_ref_pipe_delimited_modelnum(self):
+        """Issues #77/#83: the ARTIK051_DONGLE_REF family's modelNum is
+        '<board>_DONGLE_REF|<rest>' -- REF is the last underscore segment
+        before the pipe, with no trailing underscore, so the plain '_REF_'
+        substring check used to miss it entirely and the device fell back
+        to 'unknown' with only common capabilities."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'ARTIK051_DONGLE_REF|00127641|00080020001430300100000000000000',
+            'ARTIK_REF_17K',
+        )
+        assert reg is not None
+        assert reg.name == 'refrigerator'
+
     def test_airconditioner_via_prac_token(self):
         """Issue #17: a room AC (ARTIK051_PRAC_20K) reports no oneUiVersion and
         an unrecognized consumer token ('20K'); it falls back to the '_PRAC_'
@@ -190,6 +261,59 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'airconditioner'
 
+    def test_dehumidifier_via_dhm_token(self):
+        """Issue #88: a dehumidifier (AY18CG7500GED) shares the DA_AC_ board
+        family with the room-AC models but reports no oneUiVersion and
+        carries the '_DHM_' (DeHuMidifier) token instead of
+        '_RAC_'/'_PRAC_'/'_WAC_'; falls back to the '_DHM_' token in
+        modelNum."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA_AC_DHM_01001_0000|10253841|77000000001700000A00000000000000',
+            'TP1X_DA_AC_DHM_01001_0000',
+        )
+        assert reg is not None
+        assert reg.name == 'dehumidifier'
+
+    def test_water_purifier_via_waterpurifier_token(self):
+        """Issue #90: a water purifier (TP2X_WATERPURIFIER_20K) reports no
+        oneUiVersion and no consumer-prefix match; falls back to the
+        'WATERPURIFIER' token shared by modelNum and description."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP2X_WATERPURIFIER_20K|00132341|900000000215130001060F0000020000',
+            'TP2X_WATERPURIFIER_20K',
+        )
+        assert reg is not None
+        assert reg.name == 'water_purifier'
+
+    def test_airconditioner_via_wac_token(self):
+        """Issue #87: a Bespoke Window AC (AW06C7155EWAZ) reports no
+        oneUiVersion and a modelNum carrying the '_WAC_' (Window Air
+        Conditioner) token instead of '_RAC_'/'_PRAC_'; falls back to the
+        '_WAC_' token in modelNum."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA_AC_WAC_01001_0000|40460041|50030018001611020A00000000000000',
+            'AW06C7155EWAZ',
+        )
+        assert reg is not None
+        assert reg.name == 'airconditioner'
+
+    def test_wac_token_not_shadowed_by_wa_washer_prefix(self):
+        """Regression: adding the 'WA' consumer-model prefix (issue #106)
+        must not hijack devices whose description literally equals their
+        modelNum (e.g. the Window AC family, issue #87) and so contains a
+        'WAC' segment -- 'WAC'[:2] == 'WA' would otherwise match the washer
+        prefix before the more specific '_WAC_' modelNum check ever runs."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA_AC_WAC_01001_0000|40460041|50030018001611020A00000000000000',
+            'TP1X_DA_AC_WAC_01001_0000',
+        )
+        assert reg is not None
+        assert reg.name == 'airconditioner'
+
     def test_cooktop_via_legacy_model_description(self):
         """Older cooktops identify themselves as ARTIK051_GLOBAL_COOKTOP."""
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -198,7 +322,7 @@ class TestForDeviceByModel:
             'ARTIK051_GLOBAL_COOKTOP',
         )
         assert reg is not None
-        assert reg.name == 'cooktop'
+        assert reg.name == 'gas_cooktop'
 
     def test_range_hood_via_ahd_model(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -229,6 +353,17 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'washer'
 
+    def test_washer_wa_prefix(self):
+        """Top-load washers (e.g. WA8000T) use the WA consumer-model prefix
+        -- issue #106."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'DA_WM_TP2_20_COMMON|20233741|200000010014110002A3020200000000',
+            'DA_WM_TP2_20_COMMON_WA8000T/DC92-02810A_0002',
+        )
+        assert reg is not None
+        assert reg.name == 'washer'
+
     def test_oven_via_oven_token(self):
         """Issue #55: a wall oven (NV7000BS/ET5) reports no oneUiVersion and
         an unrecognized consumer token ('NV'); it falls back to the '-OVEN-'
@@ -240,6 +375,28 @@ class TestForDeviceByModel:
         )
         assert reg is not None
         assert reg.name == 'oven'
+
+    def test_induction_cooktop_via_hyphenated_cooktop_token(self):
+        """Issue #86: a standalone induction cooktop (NV8500T-/KO4) reports
+        no oneUiVersion and an unrecognized consumer token ('NV'); it falls
+        back to the hyphenated '-COOKTOP-' token in modelNum -- distinct
+        from the underscore-delimited '_COOKTOP'/'_GB_CT_' check, which is
+        the unrelated older NA9300K gas-cooktop family."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA-KS-COOKTOP-01011|40459741|50000203001711000A00000000000000',
+            'NV8500T-/KO4',
+        )
+        assert reg is not None
+        assert reg.name == 'induction_cooktop'
+
+    def test_hyphenated_cooktop_token_not_confused_with_range(self):
+        """'-COOKTOP-' and '-RANGE-' must route to distinct registries even
+        though both are TP1X_DA-KS- board-family siblings."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model('TP1X_DA-KS-COOKTOP-01011', 'NV8500T-/KO4')
+        assert reg is not None
+        assert reg.name != 'range'
 
     def test_unknown_model_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -259,7 +416,7 @@ class TestForDeviceByResources:
         reg = for_device_by_resources(_load_device('cooktop'))
 
         assert reg is not None
-        assert reg.name == 'cooktop'
+        assert reg.name == 'gas_cooktop'
 
     def test_unrelated_mode_options_are_not_cooktop(self):
         from custom_components.localthings.registry.by_type import for_device_by_resources
@@ -284,3 +441,46 @@ class TestForDeviceByResources:
         reg = for_device_by_resources(resources)
         assert reg is not None
         assert reg.name == 'range_hood'
+
+    def test_ne63b8411ss_without_information_or_burner_status_is_range(self):
+        """Issue #74: no oneUiVersion, no /information/vs/0 at all, and no
+        /cooktop/status/vs/0 burner array -- only /cooktopmonitoring/vs/0.
+        'Bake' in supportedModes plus that monitoring resource must still
+        route this to the range registry, not plain oven or unknown."""
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+        resources = {
+            '/mode/vs/0': {
+                'x.com.samsung.da.supportedModes': ['Bake', 'Broil', 'SelfClean'],
+                'x.com.samsung.da.options': ['DeviceType_NE8411B-/AC0'],
+            },
+            '/oven/vs/0': {'x.com.samsung.da.state': 'Ready'},
+            '/cooktopmonitoring/vs/0': {'x.com.samsung.da.cooktopRunningState': 'Ready'},
+        }
+        reg = for_device_by_resources(resources)
+        assert reg is not None
+        assert reg.name == 'range'
+
+    def test_bake_without_cooktop_resource_is_plain_oven(self):
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+        resources = {
+            '/mode/vs/0': {
+                'x.com.samsung.da.supportedModes': ['Bake', 'Broil'],
+                'x.com.samsung.da.options': ['DeviceType_SOME_OVEN'],
+            },
+            '/oven/vs/0': {'x.com.samsung.da.state': 'Ready'},
+        }
+        reg = for_device_by_resources(resources)
+        assert reg is not None
+        assert reg.name == 'oven'
+
+    def test_bake_without_oven_cavity_resource_is_not_matched(self):
+        """'Bake' alone isn't enough -- the oven cavity resource must also
+        be present, or this falls through to None like any other unknown
+        shape."""
+        from custom_components.localthings.registry.by_type import for_device_by_resources
+        resources = {
+            '/mode/vs/0': {
+                'x.com.samsung.da.supportedModes': ['Bake', 'Broil'],
+            },
+        }
+        assert for_device_by_resources(resources) is None

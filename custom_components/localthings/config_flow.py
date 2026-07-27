@@ -197,6 +197,18 @@ def _find_live_ports(host: str, ports: list[int], timeout: float) -> list[int]:
     return _order_candidates(live)
 
 
+def _is_placeholder_serial(serial: str) -> bool:
+    """True for a non-empty serialNum that isn't actually a real identity.
+
+    The ARTIK051_DONGLE_REF firmware family reports the literal string
+    'Nothing(SVC)' for every unit -- non-empty, so the plain `if not
+    serial` check here (and the equivalent one in coordinator.py's
+    `_run_discovery`) doesn't catch it, and two such units get the same
+    config-entry unique_id / entity unique_ids and collide (issue #83).
+    """
+    return serial.strip().lower().startswith('nothing')
+
+
 def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     """Fetch UUID, mint leaf cert, probe each port. Returns config entry data dict."""
     import cbor2
@@ -261,7 +273,7 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
                 .get('/information/vs/0', {})
                 .get('x.com.samsung.da.serialNum', '')
             )
-            if not serial:
+            if not serial or _is_placeholder_serial(serial):
                 serial = f"{host}:{port}"
             one_ui_version = (
                 resources

@@ -1,0 +1,243 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "CT_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-07-26T06:30:18"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/bluetooth/hood/status/vs/0",
+      "rep": {
+        "connectionState": "disconnected",
+        "micomModelId": "",
+        "firmwareVersion": "",
+        "power": "off",
+        "fanSpeed": 0,
+        "lampState": "off",
+        "timer": {}
+      }
+    },
+    {
+      "href": "/bluetooth/probe/status/vs/0",
+      "rep": {
+        "connectionState": "disconnected",
+        "batteryState": "normal",
+        "batteryPercentage": 0,
+        "operationBurnerNumber": -1,
+        "temperatureUnit": "C",
+        "targetTemperature": 0,
+        "currentTemperature": 0
+      }
+    },
+    {
+      "href": "/cooktop/recipe/status/vs/0",
+      "rep": {
+        "sequenceNumber": 160,
+        "operationBurnerNumber": 2,
+        "stageInfo": {
+          "numberOfStages": 0,
+          "cookingTimeList": []
+        },
+        "textData": {
+          "menu": ""
+        }
+      }
+    },
+    {
+      "href": "/cooktop/spec/vs/0",
+      "rep": {
+        "deviceType": "cooktop",
+        "micomModelId": "NV8500T-/KO4",
+        "supportedFeatureList": [
+          "kitchenService"
+        ],
+        "numberOfBurners": 3,
+        "supportedBurnerList": [
+          0,
+          1,
+          2
+        ],
+        "supportedPowerLevelList": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "boost",
+          "0",
+          "keepWarm"
+        ],
+        "supportedRecipeProtocolVersion": 3
+      }
+    },
+    {
+      "href": "/cooktop/status/vs/0",
+      "rep": {
+        "sequenceNumber": 3214,
+        "power": "off",
+        "childLock": "off",
+        "operationState": "ready",
+        "additionalStateList": [
+          ""
+        ],
+        "burnerList": [
+          {
+            "burnerNumber": 0,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          },
+          {
+            "burnerNumber": 1,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          },
+          {
+            "burnerNumber": 2,
+            "mode": "normal",
+            "operationState": "ready",
+            "powerLevel": "0",
+            "hotSurfaceState": "normal",
+            "panDetection": true,
+            "timer": {
+              "operationState": "ready",
+              "cookingTime": 0,
+              "remainingTime": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.cumulativePower": "212700",
+        "x.com.samsung.da.cumulativeUnit": "Wh"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP1X_DA-KS-COOKTOP-01011|40459741|50000203001711000A00000000000000",
+        "x.com.samsung.da.description": "NV8500T-/KO4",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "26033000",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "04597A23021100, 04596A23080300",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "KCA",
+        "x.com.samsung.da.diagTsId": "DA01"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "flashingProgress": "",
+        "otnTarget": "main",
+        "otnStatus": "None",
+        "otnCompleteDate": "noHistory",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "AKS-WW-TP1-21-COOKTOP-2",
+            "versions": [
+              "40260330"
+            ],
+            "visVersion": "260330"
+          },
+          {
+            "type": "Micom",
+            "modelId": "05114045974140459641",
+            "versions": [
+              "23021100",
+              "23080300"
+            ],
+            "visVersion": "230803"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "Asia/Seoul",
+        "offset": "+09:00",
+        "DST": "OFF"
+      }
+    }
+  ]
+}

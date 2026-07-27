@@ -1,0 +1,31 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "buzz_lock",
+    "coffee_brew_status",
+    "coldwater_lock",
+    "dispense_capacity",
+    "dispense_type",
+    "favorite_capacity",
+    "favorite_capacity_enabled",
+    "favorite_coffee_enabled",
+    "favorite_hotwater_enabled",
+    "favorite_hotwater_temperature",
+    "filter_clean_remain_time",
+    "filter_door_status",
+    "filter_status",
+    "filter_usage",
+    "firmware_update",
+    "hot_water_temperature",
+    "hotwater_lock",
+    "pouring",
+    "selfcheck_error",
+    "selfcheck_result",
+    "selfcheck_status",
+    "sterilize_last_time",
+    "sterilize_period",
+    "sterilize_plan_time",
+    "sterilize_run_time",
+    "waterpurifier_status"
+  ]
+}

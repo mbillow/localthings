@@ -82,3 +82,41 @@ def test_burner_hot_surface_true_when_not_normal():
                 if e.key == 'burner_0_hot_surface')
     assert desc.value_fn([{'burnerNumber': 0, 'hotSurfaceState': 'hot'}]) is True
     assert desc.value_fn([{'burnerNumber': 0, 'hotSurfaceState': 'normal'}]) is False
+
+
+def test_burner_pan_detected(): # issue #86
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities
+                if e.key == 'burner_0_pan_detected')
+    assert desc.value_fn([{'burnerNumber': 0, 'panDetection': True}]) is True
+    assert desc.value_fn([{'burnerNumber': 0, 'panDetection': False}]) is False
+    assert desc.value_fn([{'burnerNumber': 1, 'panDetection': True}]) is False  # different burner
+
+
+def test_cooktop_power_is_read_only(): # issue #86
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities if e.key == 'cooktop_power')
+    assert desc.value_fn('On') is True
+    assert desc.value_fn('Off') is False
+    assert not hasattr(desc, 'write_fn')  # BinarySensorDesc has no write path at all
+
+
+def test_cooktop_child_lock_write(): # issue #86
+    desc = next(e for e in range_caps.COOKTOP_STATUS.entities if e.key == 'cooktop_child_lock')
+    assert desc.value_fn('on') is True
+    assert desc.value_fn('off') is False
+    path, body = desc.write_fn('On', {})
+    assert path == ['cooktop', 'status', 'vs', '0']
+    assert body == {'childLock': 'on'}
+    assert desc.write_fn('Bogus', {}) is None
+
+
+def test_probe_status_temperature_unit_reads_live_field(): # issue #86
+    desc = next(e for e in range_caps.PROBE_STATUS.entities if e.key == 'probe_temperature')
+    assert desc.unit_fn({'temperatureUnit': 'C'}) == '°C'
+    assert desc.unit_fn({'temperatureUnit': 'F'}) == '°F'
+    assert desc.unit_fn({}) == '°C'
+
+
+def test_probe_status_connected_value_fn(): # issue #86
+    desc = next(e for e in range_caps.PROBE_STATUS.entities if e.key == 'probe_connected')
+    assert desc.value_fn('Connected') is True
+    assert desc.value_fn('Disconnected') is False

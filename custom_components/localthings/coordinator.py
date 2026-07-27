@@ -22,7 +22,11 @@ from smartthings_local.ocf.state_cache import StateCache
 
 from .registry.batch import parse_device0_batch
 from .registry.by_type import for_device, for_device_by_model, for_device_by_resources
-from .registry.capabilities.common import merge_options_field, remote_control_enabled
+from .registry.capabilities.common import (
+    merge_options_field,
+    remote_control_enabled,
+    remote_control_required_for_write,
+)
 from .registry.discovery import discover, BoundEntity
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
@@ -47,6 +51,22 @@ class _NoOpDescriptor:
 
 
 _RECOVERY_RETRY_S = 600.0  # re-attempt observe mode this often while polling
+
+
+def _is_placeholder_serial(serial: str) -> bool:
+    """True for a non-empty serialNum that isn't actually a real identity.
+
+    The ARTIK051_DONGLE_REF firmware family reports the literal string
+    'Nothing(SVC)' for every unit -- non-empty, so the plain `if not
+    serial` check below doesn't catch it, and `device_serial` feeds both
+    the HA device-registry identifier and every entity's unique_id
+    (entity.py), so two such units on the same install silently collide
+    and the second one's entities get dropped (issue #83). Mirrors the
+    identical helper in config_flow.py's `_probe_and_validate` -- kept
+    separate rather than imported to avoid pulling the config-flow module
+    into the runtime coordinator's import graph for a two-line check.
+    """
+    return serial.strip().lower().startswith('nothing')
 
 
 class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -312,7 +332,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._unbound_hrefs = unbound
 
         serial = info.get('x.com.samsung.da.serialNum', '')
-        if not serial:
+        if not serial or _is_placeholder_serial(serial):
             serial = self._entry.data[CONF_HOST]
         self.device_serial = serial
 
@@ -531,7 +551,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         opted this device out of it via CONF_BYPASS_REMOTE_CONTROL (issue
         #54: some devices accept certain writes, e.g. a washer's default
         dosing levels, even while reporting remote control off, so the
-        block's assumption doesn't hold for every model)."""
+        block's assumption doesn't hold for every model), or the laundry
+        firmware flag isModelSettingWithoutSC declares settings writable
+        without Smart Control (cycle start/pause/stop on /operational/state
+        still require it)."""
         desc = bound_entity.desc
         write_fn = getattr(desc, 'write_fn', None)
         if write_fn is None:
@@ -540,7 +563,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rep = self._cache.get(href or '') or {}
         resources = self._cache.snapshot()
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
-        if not bypass_remote_control and not remote_control_enabled(resources):
+        if (
+            not bypass_remote_control
+            and remote_control_required_for_write(resources, href or '')
+            and not remote_control_enabled(resources)
+        ):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="remote_control_disabled",
@@ -553,7 +580,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     translation_domain=DOMAIN,
                     translation_key=error,
                 )
-        result = write_fn(payload, rep, href)
+        try:
+            result = write_fn(payload, rep, href, resources)
+        except TypeError:
+            result = write_fn(payload, rep, href)
         if result is None:
             self._log.warning("write_fn rejected payload %r for %s", payload, href)
             return
