@@ -20,9 +20,7 @@ from ._base import DeviceRegistry, _build
 REGISTRY = DeviceRegistry(
     name='air_purifier',
     capabilities=_build([
-        # Drop the global /wirelessinfo ignore -- this family exposes the SSID
-        # (air_purifier.WIRELESS below) instead.
-        *[c for c in ignored.IGNORED if c.href != '/wirelessinfo/vs/0'],
+        *ignored.IGNORED,
         *common.UNIVERSAL,
         # Power switch only on fan-less boards (TVTL); on AVT the fan owns on/off.
         air_purifier.POWER_SWITCH,
@@ -38,7 +36,6 @@ REGISTRY = DeviceRegistry(
         air_purifier.WIND_STRENGTH,
         air_purifier.HEPA_FILTER,
         air_purifier.AIR_LEVEL_CHECK,
-        air_purifier.WIRELESS,
         airconditioner.MUTE_ONCE,
         *air_purifier.COVERAGE,
         *air_purifier.AVT_COVERAGE,

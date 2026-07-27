@@ -42,10 +42,6 @@ class SamsungEntityDescription:
     icon: Optional[str] = None
     entity_category: Optional[str] = None      # 'diagnostic' | 'config' | None
     enabled_default: bool = True
-    # Static extra state attributes surfaced on the entity (e.g. a short usage
-    # note). Applied verbatim by LocalThingsEntity; not part of the flattened
-    # state or the translation catalog.
-    extra_attributes: Optional[Mapping[str, str]] = None
     value_fn: Callable[[Any], Any] = _identity
     rep_fn: Optional[Callable[[dict], Any]] = None   # replaces field+value_fn; receives full rep
     # (rep, resources): rep is this entity's own href's representation;

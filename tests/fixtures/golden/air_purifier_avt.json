@@ -27,7 +27,6 @@
     "sensing_mode",
     "sensing_skip_end",
     "sensing_skip_start",
-    "super_fine_dust",
-    "wifi_ssid"
+    "super_fine_dust"
   ]
 }

@@ -93,8 +93,6 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         raw_cat = bound.desc.entity_category
         self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None
         self._attr_entity_registry_enabled_default = bound.desc.enabled_default
-        if bound.desc.extra_attributes is not None:
-            self._attr_extra_state_attributes = dict(bound.desc.extra_attributes)
 
     @property
     def translation_key(self) -> str | None:

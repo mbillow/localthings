@@ -60,7 +60,7 @@ import datetime
 
 from ..capability import Capability
 from ..entities import (
-    BinarySensorDesc, ButtonDesc, FanDesc, NumberDesc, SelectDesc, SensorDesc,
+    BinarySensorDesc, FanDesc, NumberDesc, SelectDesc, SensorDesc,
     SwitchDesc, TimeDesc,
 )
 from .airconditioner import _filter_usage_percent
@@ -462,9 +462,6 @@ AIR_LEVEL_CHECK = Capability(
         SwitchDesc(key='periodic_air_sensing',
                    field='x.com.samsung.da.periodicSensingActivationState',
                    icon='mdi:radar', entity_category='config',
-                   extra_attributes={
-                       'description': 'Runs the selected AI Purify (Mode) '
-                                      'while the air purifier is powered off'},
                    value_fn=lambda v: str(v).lower() == 'on',
                    write_fn=_periodic_sensing_write),
         SensorDesc(key='air_sensing_state', field='x.com.samsung.da.sensingState',
@@ -504,19 +501,6 @@ AVT_IGNORED = [
 ]
 
 AVT_COVERAGE = [Capability(href=h) for h in AVT_IGNORED]
-
-# The connected Wi-Fi network name. /wirelessinfo/vs/0 is in the global
-# ignored.IGNORED (MACs are sensitive), so the air-purifier registry drops that
-# ignore for this href and binds this instead (SSID only, MACs left unmodeled).
-WIRELESS = Capability(
-    href='/wirelessinfo/vs/0',
-    poll_tier='cold',
-    entities=(
-        SensorDesc(key='wifi_ssid', field='connectedApSsid',
-                   icon='mdi:wifi', entity_category='diagnostic'),
-    ),
-)
-
 
 def _no_fan_board(rep, resources):
     """The standalone power switch is redundant on boards that expose a fan

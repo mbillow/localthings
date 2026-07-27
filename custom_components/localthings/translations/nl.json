@@ -641,9 +641,6 @@
       },
       "hepa_filter_capacity": {
         "name": "Filtercapaciteit"
-      },
-      "wifi_ssid": {
-        "name": "Wifi-netwerk"
       }
     },
     "switch": {

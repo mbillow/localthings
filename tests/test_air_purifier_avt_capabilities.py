@@ -1,9 +1,9 @@
 """Tests for the AVT-WW-TP1-class air-purifier profile (model
 AVT-WW-TP1-23-AXX500). Shares the air_purifier registry with the ARTIK051_TVTL
 family but is detected by the 'AVT-' modelNum prefix and exposes fan speed on
-/wind/strength/vs/0 and the filter on /filter/hepafilter/vs/0. Write contracts
-for the fan, pollution light, and sensing interval were confirmed on real
-hardware via the integration's Debug write tool."""
+/wind/strength/vs/0 and the filter on /filter/hepafilter/vs/0. The fan, pollution
+light, sensing interval, sensing-mode select and do-not-disturb window write
+contracts were all confirmed against a real unit."""
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model
 from custom_components.localthings.registry.capabilities import air_purifier
@@ -61,8 +61,6 @@ def test_expected_entities_present():
         'sensing_interval', 'sensing_mode',
         # do-not-disturb (skip-sensing window)
         'periodic_sensing_skip_status', 'sensing_skip_start', 'sensing_skip_end',
-        # Wi-Fi SSID
-        'wifi_ssid',
     ):
         assert key in state, key
 
@@ -214,9 +212,6 @@ def test_no_filter_reset_button():
     assert not [e for e in air_purifier.HEPA_FILTER.entities
                 if isinstance(e, ButtonDesc)]
 
-
-def test_wifi_ssid_present():
-    assert 'wifi_ssid' in _state()
 
 
 def test_mute_once_reuses_airconditioner_capability():
