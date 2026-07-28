@@ -431,29 +431,63 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         # matching the climate contract other integrations follow. Without this a
         # set_temperature call carrying hvac_mode (e.g. a dashboard "turn on to
         # Auto 24" button) set the setpoint but never changed mode or powered on.
+        temp = kwargs.get('temperature')
+        temperature_command = None
+        if temp is not None:
+            kind = (
+                'temperature_ocf'
+                if self._ocf_temp_authoritative()
+                else 'temperature'
+            )
+            temperature_command = (kind, temp)
         hvac_mode = kwargs.get('hvac_mode')
         if hvac_mode is not None:
-            await self.async_set_hvac_mode(hvac_mode)
+            await self._async_set_hvac_mode(
+                hvac_mode, preserve_target=temp is None)
             if hvac_mode == HVACMode.OFF:
                 return
-        temp = kwargs.get('temperature')
-        if temp is None:
+        if temperature_command is None:
             return
         # OCF-pair boards write /temperature/desired/0; vendor boards write
-        # /temperatures/vs/0 (see airconditioner._climate_write).
-        kind = 'temperature_ocf' if self._ocf_temp_authoritative() else 'temperature'
-        await self.coordinator.async_send_command(self._bound, (kind, temp))
+        # /temperatures/vs/0 (see airconditioner._climate_write). The channel
+        # is captured before a requested mode transition because its refresh
+        # may temporarily expose an incomplete resource snapshot.
+        await self.coordinator.async_send_command(
+            self._bound, temperature_command)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        await self._async_set_hvac_mode(hvac_mode, preserve_target=True)
+
+    async def _async_set_hvac_mode(
+        self, hvac_mode: HVACMode, *, preserve_target: bool,
+    ) -> None:
         if hvac_mode == HVACMode.OFF:
             await self.coordinator.async_send_command(self._bound, ('power', False))
             return
         device = self._device_code_for_hvac(hvac_mode)
         if device is None:
             return
-        if not self._is_on():
+        was_off = not self._is_on()
+        preserved_command = None
+        if was_off and preserve_target:
+            target = self.target_temperature
+            if target is not None:
+                kind = (
+                    'temperature_ocf'
+                    if self._ocf_temp_authoritative()
+                    else 'temperature'
+                )
+                preserved_command = (kind, target)
+        if was_off:
             await self.coordinator.async_send_command(self._bound, ('power', True))
         await self.coordinator.async_send_command(self._bound, ('mode', device))
+        # Some boards restore a stale secondary temperature channel while
+        # powering up. Reassert the pre-transition setpoint after issuing the
+        # power and mode writes so that OFF -> ON keeps the user's existing
+        # target (including a valid minimum such as 16 °C).
+        if preserved_command is not None:
+            await self.coordinator.async_send_command(
+                self._bound, preserved_command)
 
     async def async_turn_on(self) -> None:
         await self.coordinator.async_send_command(self._bound, ('power', True))
