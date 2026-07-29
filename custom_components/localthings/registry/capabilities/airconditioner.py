@@ -16,7 +16,7 @@ by_type registry.
 """
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ClimateDesc, NumberDesc, SensorDesc, SwitchDesc
-from .laundry import bool_option_exists, bool_option_value, option_value, option_write
+from .laundry import bool_option_exists, option_value, option_write
 
 # ---------------------------------------------------------------------------
 # Canonical AC resource hrefs. The climate entity (climate.py) binds the
@@ -74,13 +74,25 @@ def _volume_write(payload, rep, href=None):
     }
 
 
+# The RAC Light token is INVERTED: Light_Off = display lit, Light_On =
+# display dark (verified on three live RAC units, 2026-07-29; matches the
+# long-standing SmartThings quirk where you send "Light_Off" to turn the
+# panel on). Both the read and the write below flip the token so the HA
+# switch tracks the physical display, not the wire token. Two historical
+# bugs lived here: the write used `'On' if payload else 'Off'` -- but the
+# switch platform passes the *string* 'Off', which is truthy, so both
+# toggle directions sent Light_On -- and neither direction accounted for
+# the inversion. air_purifier's Light token is NOT inverted; its mapping
+# is deliberately different.
+def _light_value(rep):
+    v = option_value(rep.get('x.com.samsung.da.options'), 'Light')
+    return None if v is None else v == 'Off'
+
+
 def _light_write(payload, rep, href=None):
-    # payload is the switch platform's 'On'/'Off' string -- pass it through
-    # like air_purifier.MODE does. Truthiness is wrong here: 'Off' is a
-    # non-empty string, so `'On' if payload else 'Off'` sent Light_On for
-    # both toggle directions.
     return ['mode', 'vs', '0'], {
-        'x.com.samsung.da.options': option_write('Light', payload),
+        'x.com.samsung.da.options': option_write(
+            'Light', 'Off' if payload == 'On' else 'On'),
     }
 
 
@@ -180,7 +192,7 @@ CLIMATE = Capability(
         # same key.
         SwitchDesc(key='display_light', icon='mdi:led-on',
                    entity_category='config',
-                   rep_fn=bool_option_value('Light'),
+                   rep_fn=_light_value,
                    exists_fn=lambda rep, resources: (
                        HREF_LIGHT not in resources
                        and bool_option_exists('Light')(rep, resources)),

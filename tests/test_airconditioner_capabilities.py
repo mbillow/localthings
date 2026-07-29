@@ -251,16 +251,27 @@ def test_display_light_write_target():
     assert write('Off', {}) == (['light', 'vs', '0'], {'mode': 'Off'})
 
 
-def test_options_display_light_write_target():
-    """Regression: the options-based display light (TP2X-class, no
-    /light/vs/0) must map the 'On'/'Off' payload by value. 'Off' is a
-    truthy non-empty string, so the old truthiness check sent Light_On
-    for both toggle directions -- displays lit back up on every
-    night-time turn_off."""
+def test_options_display_light_write_is_inverted():
+    """Regression: the RAC Light token is inverted (Light_Off = display
+    lit), and the payload arrives as the *string* 'On'/'Off' -- the old
+    truthiness check (`'On' if payload else 'Off'`) sent Light_On for
+    both toggle directions, so displays lit back up on every night-time
+    turn_off. Turning the switch on must send Light_Off and vice versa."""
     assert airconditioner._light_write('On', {}) == (
-        ['mode', 'vs', '0'], {'x.com.samsung.da.options': ['Light_On']})
-    assert airconditioner._light_write('Off', {}) == (
         ['mode', 'vs', '0'], {'x.com.samsung.da.options': ['Light_Off']})
+    assert airconditioner._light_write('Off', {}) == (
+        ['mode', 'vs', '0'], {'x.com.samsung.da.options': ['Light_On']})
+
+
+def test_options_display_light_state_is_inverted():
+    """Same inversion on the read side: Light_Off in options[] means the
+    display is physically lit, so the switch reports on; absent token
+    reports unknown, not off."""
+    assert airconditioner._light_value(
+        {'x.com.samsung.da.options': ['Light_Off', 'Volume_100']}) is True
+    assert airconditioner._light_value(
+        {'x.com.samsung.da.options': ['Light_On', 'Volume_100']}) is False
+    assert airconditioner._light_value({'x.com.samsung.da.options': []}) is None
 
 
 def test_current_limit_is_read_only():
