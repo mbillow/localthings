@@ -75,9 +75,12 @@ def _volume_write(payload, rep, href=None):
 
 
 def _light_write(payload, rep, href=None):
+    # payload is the switch platform's 'On'/'Off' string -- pass it through
+    # like air_purifier.MODE does. Truthiness is wrong here: 'Off' is a
+    # non-empty string, so `'On' if payload else 'Off'` sent Light_On for
+    # both toggle directions.
     return ['mode', 'vs', '0'], {
-        'x.com.samsung.da.options': option_write(
-            'Light', 'On' if payload else 'Off'),
+        'x.com.samsung.da.options': option_write('Light', payload),
     }
 
 
