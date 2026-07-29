@@ -75,10 +75,12 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     # Air conditioners. Every one of these is a distinct board family with
     # the same resource surface: room (issues #37, #91), package, Korean
     # (#136), window (#87), 2-in-1 floor+wall (#150, #153), system/commercial
-    # (#52), and ARA-WW wall-mount (#115, #116, #117, #120).
+    # (#52), ARA-WW wall-mount (#115, #116, #117, #120), and CAC
+    # (TP1X_DA-AC-CAC-01001, a Korean-market unit).
     'RAC': 'airconditioner',
     'PRAC': 'airconditioner',
     'KRAC': 'airconditioner',
+    'CAC': 'airconditioner',
     'WAC': 'airconditioner',
     'FAC': 'airconditioner',
     'CAWW': 'airconditioner',

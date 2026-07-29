@@ -102,6 +102,19 @@ class TestBoardTokenTable:
         for prefix, key in _CONSUMER_PREFIX_TO_KEY.items():
             assert key in _REGISTRY_BY_KEY, f"{prefix!r} -> unknown registry {key!r}"
 
+    def test_cac_board_family_types_as_air_conditioner(self):
+        """TP1X_DA-AC-CAC-01001 is a Korean-market air conditioner whose token
+        matched nothing: 'CAC' was absent, and the bare 'AC' that the rest of the
+        modelNum offers is deliberately not in the table. It resolved to None and
+        raised the unrecognised-device repair despite reporting the same resource
+        surface the airconditioner registry already covers."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        registry = for_device_by_model(
+            'TP1X_DA-AC-CAC-01001_0000|10255541|60030717171811DF42005F2A00F2ED00',
+            'TP1X_DA-AC-CAC-01001_0000')
+        assert registry is not None
+        assert registry.name == 'airconditioner'
+
     def test_tokens_are_upper_case(self):
         """`_board_tokens` upper-cases before lookup, so a lower-case entry
         would be dead."""
