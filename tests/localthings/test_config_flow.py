@@ -10,7 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
     CONF_BYPASS_REMOTE_CONTROL, CONF_CA_CERT_PEM, CONF_CA_KEY_PEM,
-    CONF_HOST, CONF_PORT, DOMAIN,
+    CONF_HOST, CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM, CONF_PORT, DOMAIN,
 )
 
 from .conftest import (
@@ -539,3 +539,355 @@ def test_is_placeholder_serial_accepts_real_serials():
     from custom_components.localthings.config_flow import _is_placeholder_serial
     assert _is_placeholder_serial('0A1B2C3D4E5F') is False
     assert _is_placeholder_serial('') is False
+
+
+import time
+
+
+def test_race_returns_first_winner():
+    """First worker to return a valid info dict wins; wall-clock << sequential."""
+    from custom_components.localthings.config_flow import _race_handshake, _CertRejected
+
+    def worker(port):
+        if port == 49155:
+            return {"port": port, "serial": "WINNER", "ok": True}
+        # False-positive port: simulate the library's connect() TimeoutError.
+        raise TimeoutError(f"DTLS handshake timeout to 10.0.0.1:{port}")
+
+    t0 = time.monotonic()
+    info, cert_rejected, _ = _race_handshake("10.0.0.1", [49154, 49155, 49153], worker)
+    elapsed = time.monotonic() - t0
+    assert info == {"port": 49155, "serial": "WINNER", "ok": True}
+    assert cert_rejected is False
+    assert elapsed < 1.0   # winner is instant; no 12 s false-positive penalty
+
+
+def test_race_all_timeout_no_cert_rejected():
+    """All workers timeout → (None, False); not a cert problem, so no fallback."""
+    from custom_components.localthings.config_flow import _race_handshake
+
+    def worker(port):
+        raise TimeoutError(f"DTLS handshake timeout to 10.0.0.1:{port}")
+
+    info, cert_rejected, _ = _race_handshake("10.0.0.1", [49154, 49155], worker)
+    assert info is None
+    assert cert_rejected is False
+
+
+def test_race_all_cert_rejected_classified():
+    """All workers raise _CertRejected → cert_rejected=True (triggers fallback upstream)."""
+    from custom_components.localthings.config_flow import _race_handshake, _CertRejected
+
+    def worker(port):
+        raise _CertRejected(f"alert handshake failure from 10.0.0.1:{port}")
+
+    info, cert_rejected, _ = _race_handshake("10.0.0.1", [49154, 49155], worker)
+    assert info is None
+    assert cert_rejected is True
+
+
+def test_race_mixed_cert_and_timeout_not_all_cert():
+    """Mix of cert-reject and timeout → cert_rejected=False (ambiguous, no fallback)."""
+    from custom_components.localthings.config_flow import _race_handshake, _CertRejected
+
+    def worker(port):
+        if port == 49154:
+            raise _CertRejected("alert handshake failure")
+        raise TimeoutError("DTLS handshake timeout")
+
+    info, cert_rejected, _ = _race_handshake("10.0.0.1", [49154, 49155], worker)
+    assert info is None
+    assert cert_rejected is False
+
+
+async def test_probe_race_winner_with_fake_session(hass: HomeAssistant, monkeypatch) -> None:
+    """_probe_and_validate races candidates and returns the winner's port/info."""
+    import cbor2
+    from custom_components.localthings import config_flow
+
+    device0 = [
+        {'rt': ['x.com.samsung.devcol']},
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum': 'TP2X_REF_20K|00136643|...',
+            'x.com.samsung.da.description': 'TP2X_REF_20K',
+            'x.com.samsung.da.serialNum': 'FRIDGE-RACE-001',
+        }},
+        {'href': '/otninformation/vs/0', 'rep': {}},
+    ]
+
+    class _FakeSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.host, self.port = host, port
+        def connect(self):
+            if self.port != 49155:
+                raise TimeoutError(f"DTLS handshake timeout to {self.host}:{self.port}")
+        def start_reader(self):
+            pass
+        def get(self, path, timeout=15.0):
+            return 0x45, cbor2.dumps(device0)
+        def close(self):
+            pass
+
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: 'test-uuid')
+    monkeypatch.setattr(
+        config_flow, '_mint_leaf_cert',
+        lambda ca_cert, ca_key, uuid: ('FULLCHAIN', 'LEAFKEY'),
+    )
+    monkeypatch.setattr(
+        config_flow, '_find_live_ports',
+        lambda host, ports, timeout: [49154, 49155, 49153],
+    )
+    monkeypatch.setattr(
+        'smartthings_local.protocol.dtls_session.DtlsCoapSession', _FakeSession,
+    )
+
+    info = await hass.async_add_executor_job(
+        config_flow._probe_and_validate, '10.0.0.254', 'CA', 'CAKEY',
+    )
+    assert info['port'] == 49155
+    assert info['serial'] == 'FRIDGE-RACE-001'
+    assert info['leaf_cert_pem'] == 'FULLCHAIN'
+    assert info['device_type_recognized'] is True
+
+
+async def test_cached_leaf_skips_fetch_and_mint(hass: HomeAssistant, monkeypatch) -> None:
+    """When cached_leaf is provided, UUID fetch + leaf mint are not called."""
+    import cbor2
+    from custom_components.localthings import config_flow
+
+    device0 = [
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum': 'TP2X_REF_20K|x', 'x.com.samsung.da.description': 'TP2X_REF_20K',
+            'x.com.samsung.da.serialNum': 'CACHED-001'}},
+        {'href': '/otninformation/vs/0', 'rep': {}},
+    ]
+
+    class _FakeSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None): self.port = port
+        def connect(self): pass
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps(device0)
+        def close(self): pass
+
+    fetch_calls = []
+    mint_calls = []
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: fetch_calls.append(1) or 'UUID')
+    monkeypatch.setattr(config_flow, '_mint_leaf_cert', lambda *a, **k: mint_calls.append(1) or ('X', 'Y'))
+    monkeypatch.setattr(config_flow, '_find_live_ports', lambda host, ports, t: [49155])
+    monkeypatch.setattr('smartthings_local.protocol.dtls_session.DtlsCoapSession', _FakeSession)
+
+    info = await hass.async_add_executor_job(
+        config_flow._probe_and_validate,
+        '10.0.0.254', 'CA', 'CAKEY', ('CACHEDFULLCHAIN', 'CACHEDLEAFKEY'),
+    )
+    assert info['leaf_cert_pem'] == 'CACHEDFULLCHAIN'
+    assert info['leaf_key_pem'] == 'CACHEDLEAFKEY'
+    assert info['port'] == 49155
+    assert fetch_calls == []   # UUID fetch skipped
+    assert mint_calls == []    # mint skipped
+
+
+async def test_second_device_passes_cached_leaf(hass: HomeAssistant, monkeypatch) -> None:
+    """The has_creds branch passes the existing entry's leaf as cached_leaf."""
+    from custom_components.localthings import config_flow
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from .conftest import ENTRY_DATA, MOCK_HOST
+
+    existing = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA)
+    existing.add_to_hass(hass)
+
+    captured = {}
+
+    def fake_probe(host, ca_cert, ca_key, cached_leaf=None, hass=None, entry=None):
+        captured['cached_leaf'] = cached_leaf
+        captured['hass'] = hass
+        captured['entry'] = entry
+        return {'port': 49155, 'serial': 'SECOND-DEV', 'leaf_cert_pem': 'L', 'leaf_key_pem': 'K',
+                'one_ui_version': '', 'device_type_recognized': True}
+
+    monkeypatch.setattr(config_flow, '_probe_and_validate', fake_probe)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={'source': 'user'})
+    assert result['step_id'] == 'user_reuse'
+    result = await hass.config_entries.flow.async_configure(
+        result['flow_id'], {CONF_HOST: MOCK_HOST},
+    )
+    assert result['type'] == FlowResultType.CREATE_ENTRY
+    assert captured['cached_leaf'] == (
+        ENTRY_DATA[CONF_LEAF_CERT_PEM], ENTRY_DATA[CONF_LEAF_KEY_PEM],
+    )
+    assert captured['hass'] is hass
+    assert captured['entry'] is existing
+
+
+async def test_fallback_re_mint_on_all_cert_rejected(hass: HomeAssistant, monkeypatch) -> None:
+    """Cached leaf, all workers cert-reject → fetch+mint once, second race succeeds."""
+    import cbor2
+    from custom_components.localthings import config_flow
+
+    device0 = [
+        {'rt': ['x.com.samsung.devcol']},
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum': 'TP2X_REF_20K|x', 'x.com.samsung.da.description': 'TP2X_REF_20K',
+            'x.com.samsung.da.serialNum': 'ROT-001'}},
+        {'href': '/otninformation/vs/0', 'rep': {}},
+    ]
+
+    class _RejectSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.cert_pem = cert_pem
+        def connect(self):
+            raise ConnectionError("DTLS handshake error: alert handshake failure")
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps(device0)
+        def close(self): pass
+
+    class _OkSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.cert_pem = cert_pem
+        def connect(self): pass
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps(device0)
+        def close(self): pass
+
+    # First race (cached leaf 'OLDFULLCHAIN'): every candidate cert-rejects.
+    # Second race (re-minted leaf 'NEWCHAIN'): ok. Decision keyed on cert_pem
+    # so it's deterministic under parallel worker construction (no shared counter).
+    def factory(host, port, cert_pem=None, key_pem=None):
+        if cert_pem == 'OLDFULLCHAIN':
+            return _RejectSession(host, port, cert_pem, key_pem)
+        return _OkSession(host, port, cert_pem, key_pem)
+    monkeypatch.setattr('smartthings_local.protocol.dtls_session.DtlsCoapSession', factory)
+
+    fetch_calls = []
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: fetch_calls.append(1) or 'NEW-UUID')
+    monkeypatch.setattr(config_flow, '_mint_leaf_cert', lambda *a, **k: ('NEWCHAIN', 'NEWKEY'))
+    monkeypatch.setattr(config_flow, '_find_live_ports', lambda host, ports, t: [49154, 49155, 49153])
+    # _persist_refreshed_leaf needs an entry; pass a MockConfigEntry.
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(domain=DOMAIN, data={**ENTRY_DATA, CONF_HOST: '10.0.0.254'})
+    entry.add_to_hass(hass)
+    monkeypatch.setattr(config_flow, '_persist_refreshed_leaf', lambda *a, **k: None)
+
+    info = await hass.async_add_executor_job(
+        config_flow._probe_and_validate,
+        '10.0.0.254', 'CA', 'CAKEY', ('OLDFULLCHAIN', 'OLDLEAFKEY'), hass, entry,
+    )
+    assert info['serial'] == 'ROT-001'
+    assert info['leaf_cert_pem'] == 'NEWCHAIN'   # re-minted leaf used
+    assert fetch_calls == [1]                     # UUID fetched exactly once (fallback)
+
+
+async def test_persist_refreshed_leaf_updates_entry(hass: HomeAssistant, monkeypatch) -> None:
+    """E2E: the fresh-mint fallback persists the refreshed leaf to the
+    existing entry. Does NOT monkeypatch _persist_refreshed_leaf, so the
+    real `asyncio.run_coroutine_threadsafe(...).result()` path runs."""
+    import cbor2
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.const import (
+        CONF_LEAF_CERT_PEM, CONF_LEAF_KEY_PEM,
+    )
+
+    device0 = [
+        {'rt': ['x.com.samsung.devcol']},
+        {'href': '/information/vs/0', 'rep': {
+            'x.com.samsung.da.modelNum': 'TP2X_REF_20K|x',
+            'x.com.samsung.da.description': 'TP2X_REF_20K',
+            'x.com.samsung.da.serialNum': 'PERSIST-001'}},
+        {'href': '/otninformation/vs/0', 'rep': {}},
+    ]
+
+    class _RejectSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.cert_pem = cert_pem
+        def connect(self):
+            raise ConnectionError("DTLS handshake error: alert handshake failure")
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps(device0)
+        def close(self): pass
+
+    class _OkSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None):
+            self.cert_pem = cert_pem
+        def connect(self): pass
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps(device0)
+        def close(self): pass
+
+    def factory(host, port, cert_pem=None, key_pem=None):
+        if cert_pem == 'OLDFULLCHAIN':
+            return _RejectSession(host, port, cert_pem, key_pem)
+        return _OkSession(host, port, cert_pem, key_pem)
+    monkeypatch.setattr('smartthings_local.protocol.dtls_session.DtlsCoapSession', factory)
+
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: 'NEW-UUID')
+    monkeypatch.setattr(config_flow, '_mint_leaf_cert', lambda *a, **k: ('NEWCHAIN', 'NEWKEY'))
+    monkeypatch.setattr(config_flow, '_find_live_ports', lambda host, ports, t: [49154, 49155, 49153])
+
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    entry = MockConfigEntry(domain=DOMAIN, data={**ENTRY_DATA, CONF_HOST: '10.0.0.254'})
+    entry.add_to_hass(hass)
+
+    info = await hass.async_add_executor_job(
+        config_flow._probe_and_validate,
+        '10.0.0.254', 'CA', 'CAKEY', ('OLDFULLCHAIN', 'OLDLEAFKEY'), hass, entry,
+    )
+    await hass.async_block_till_done()
+
+    assert info['leaf_cert_pem'] == 'NEWCHAIN'
+    assert entry.data[CONF_LEAF_CERT_PEM] == 'NEWCHAIN'
+    assert entry.data[CONF_LEAF_KEY_PEM] == 'NEWKEY'
+
+
+async def test_no_fallback_on_timeout(hass: HomeAssistant, monkeypatch) -> None:
+    """Cached leaf, all workers timeout → no re-mint, CannotConnect."""
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.config_flow import CannotConnect
+
+    class _TimeoutSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None): pass
+        def connect(self): raise TimeoutError("DTLS handshake timeout")
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): raise AssertionError("should not reach GET")
+        def close(self): pass
+    monkeypatch.setattr('smartthings_local.protocol.dtls_session.DtlsCoapSession', _TimeoutSession)
+    fetch_calls = []
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: fetch_calls.append(1) or 'UUID')
+    monkeypatch.setattr(config_flow, '_mint_leaf_cert', lambda *a, **k: ('X', 'Y'))
+    monkeypatch.setattr(config_flow, '_find_live_ports', lambda host, ports, t: [49154, 49155])
+
+    with pytest.raises(CannotConnect):
+        await hass.async_add_executor_job(
+            config_flow._probe_and_validate,
+            '10.0.0.254', 'CA', 'CAKEY', ('OLDCHAIN', 'OLDKEY'), hass, None,
+        )
+    assert fetch_calls == []   # no UUID fetch (timeout is not a cert problem)
+
+
+async def test_no_fallback_on_mixed_errors(hass: HomeAssistant, monkeypatch) -> None:
+    """Cached leaf, mix of cert-reject + timeout → no re-mint, CannotConnect."""
+    import cbor2
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.config_flow import CannotConnect
+
+    class _MixSession:
+        def __init__(self, host, port, cert_pem=None, key_pem=None): self.port = port
+        def connect(self):
+            if self.port == 49154:
+                raise ConnectionError("DTLS handshake error: alert handshake failure")
+            raise TimeoutError("DTLS handshake timeout")
+        def start_reader(self): pass
+        def get(self, path, timeout=15.0): return 0x45, cbor2.dumps([])
+        def close(self): pass
+    monkeypatch.setattr('smartthings_local.protocol.dtls_session.DtlsCoapSession', _MixSession)
+    fetch_calls = []
+    monkeypatch.setattr(config_flow, '_fetch_samsung_uuid', lambda: fetch_calls.append(1) or 'UUID')
+    monkeypatch.setattr(config_flow, '_mint_leaf_cert', lambda *a, **k: ('X', 'Y'))
+    monkeypatch.setattr(config_flow, '_find_live_ports', lambda host, ports, t: [49154, 49155])
+
+    with pytest.raises(CannotConnect):
+        await hass.async_add_executor_job(
+            config_flow._probe_and_validate,
+            '10.0.0.254', 'CA', 'CAKEY', ('OLDCHAIN', 'OLDKEY'), hass, None,
+        )
+    assert fetch_calls == []   # mix → no fallback

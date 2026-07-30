@@ -42,6 +42,14 @@ LIVENESS_PROBE_TIMEOUT_S = 1.5
 # without stalling setup; it matches the per-resource read timeout elsewhere.
 PROBE_GET_TIMEOUT_S = 10.0
 
+# Ceiling for the whole parallel DTLS handshake race in the config-flow probe.
+# A winning worker must complete connect() + GET /device/0 within this window;
+# the real port typically finishes in ~1.4 s (handshake) + GET. Set to
+# HANDSHAKE_TIMEOUT_S (12 s, library default) + PROBE_GET_TIMEOUT_S (10 s) +
+# slack so a slow-but-real device can still win, while a fully dead host
+# fails fast relative to the old N x 12 s sequential loop.
+RACE_OVERALL_S = 25.0
+
 # Base for the local (client-side) DTLS source port, distinct from the
 # destination probe ports above. See coordinator._local_source_port for why a
 # fixed per-device source port matters and how the per-device offset is

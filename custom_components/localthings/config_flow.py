@@ -1,6 +1,7 @@
 """Config flow for Local Things integration."""
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
 import logging
@@ -9,12 +10,17 @@ import selectors
 import socket
 import ssl
 import time
-from typing import Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+from typing import TYPE_CHECKING, Any, Callable
 
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
     ObjectSelector,
     SelectSelector,
@@ -33,6 +39,7 @@ from .const import (
     CONF_BYPASS_REMOTE_CONTROL,
     PROBE_PORT_RANGE, PREFERRED_PROBE_PORTS, LIVENESS_PROBE_TIMEOUT_S,
     PROBE_GET_TIMEOUT_S,
+    RACE_OVERALL_S,
 )
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
@@ -49,6 +56,36 @@ class CannotConnect(Exception):
 
 class InvalidCA(Exception):
     pass
+
+
+class _CertRejected(Exception):
+    """Raised by a probe worker when the device rejects the client cert
+    (DTLS alert: handshake_failure / bad_certificate / unknown_ca / ...).
+    Distinguished from a port TimeoutError so the probe can decide whether a
+    full-cert-rejection warrants a UUID-rotation re-mint fallback."""
+
+
+# DTLS alert phrases that signal the device rejected the client cert. The
+# first four are the spec/design's cert-reject alerts. The extra two widen
+# the net: `access denied` (alert 49) is the device's ACL rejecting the peer
+# UUID — a genuine cert-rejection signal in OCF; `decrypt error` (alert 51)
+# is broader but included so an all-ports crypto failure still triggers the
+# re-mint attempt. The fallback is bounded: it only fires when ALL
+# candidates match, so a spurious match on one port is harmless.
+_CERT_ALERT_MARKERS = (
+    'handshake failure', 'bad certificate', 'unknown ca',
+    'certificate unknown', 'access denied', 'decrypt error',
+)
+
+
+def _is_cert_alert(exc: Exception) -> bool:
+    """True iff a DtlsCoapSession.connect() failure looks like a DTLS cert-reject
+    alert. DtlsCoapSession wraps SSL.Error as ConnectionError("DTLS handshake
+    error: <SSL.Error str>"); we match on the alert phrase in that string.
+    Conservative: anything unrecognized is treated as a generic handshake error
+    (NOT a cert reject), so the UUID-rotation fallback never fires on a guess."""
+    msg = str(exc).lower()
+    return any(m in msg for m in _CERT_ALERT_MARKERS)
 
 
 def _fetch_samsung_uuid() -> str:
@@ -219,31 +256,127 @@ def _is_placeholder_serial(serial: str) -> bool:
     return serial.strip().lower().startswith('nothing')
 
 
-def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
-    """Fetch UUID, mint leaf cert, probe each port. Returns config entry data dict."""
+def _race_handshake(
+    host: str, candidates: list[int], worker: Callable[[int], dict],
+) -> tuple[dict | None, bool, Exception | None]:
+    """Race `worker(port)` across `candidates` in parallel threads.
+
+    `worker(port)` must return an info dict on success or raise:
+      * _CertRejected  — device rejected the client cert
+      * TimeoutError    — port didn't answer the DTLS handshake
+      * Exception       — any other failure (SSL error, GET code != 2.05, ...)
+
+    Returns (info, False, None) as soon as the first worker returns a valid
+    info dict. Losing workers are NOT waited for: shutdown(wait=False) leaves
+    them running as daemon threads (ThreadPoolExecutor workers are daemons
+    on Python 3.9+), and each worker's `finally: sess.close()` cleans its
+    socket when it eventually times out / errors.
+    Returns (None, cert_rejected, last_exc) if no worker succeeds, where
+    cert_rejected is True iff every candidate raised _CertRejected — the
+    signal the caller uses to decide whether to re-mint the leaf cert once —
+    and last_exc is the most recent exception seen (timeout, cert-reject, or
+    generic) so the caller's CannotConnect message can carry a per-port hint
+    about why the race failed (e.g. the DTLS timeout when all ports went
+    silent).
+    """
+    cert_error_count = 0
+    last_exc: Exception | None = None
+    ex = ThreadPoolExecutor(max_workers=max(1, len(candidates)))
+    try:
+        futs = [ex.submit(worker, p) for p in candidates]
+        try:
+            for fut in as_completed(futs, timeout=RACE_OVERALL_S):
+                try:
+                    info = fut.result()
+                except _CertRejected as e:
+                    cert_error_count += 1
+                    last_exc = e
+                    _LOGGER.debug("race: port rejected cert: %s", e)
+                except Exception as e:  # noqa: BLE001 — classify by type below
+                    last_exc = e
+                    _LOGGER.debug("race: port failed: %s", e)
+                else:
+                    return info, False, None
+        except FuturesTimeoutError as e:
+            last_exc = e
+            _LOGGER.debug("race: no winner within %.1fs", RACE_OVERALL_S)
+    finally:
+        ex.shutdown(wait=False)
+    cert_rejected = cert_error_count == len(candidates) and cert_error_count > 0
+    return None, cert_rejected, last_exc
+
+
+def _persist_refreshed_leaf(
+    hass: HomeAssistant, entry: config_entries.ConfigEntry, fullchain_pem: str, key_pem: str,
+) -> None:
+    """Update an existing config entry's leaf cert/key after a UUID-rotation
+    re-mint, so subsequent device adds reuse the fresh leaf.
+
+    Called from the executor thread (_probe_and_validate runs there), so we
+    schedule the async update on the HA loop and block briefly for it to
+    complete. Best-effort: a failure to persist must not abort the in-progress
+    add (the info dict already carries the fresh leaf for THIS entry).
+    """
+    async def _update():
+        await hass.config_entries.async_update_entry(
+            entry,
+            data={**entry.data,
+                  CONF_LEAF_CERT_PEM: fullchain_pem,
+                  CONF_LEAF_KEY_PEM: key_pem},
+        )
+    try:
+        fut = asyncio.run_coroutine_threadsafe(_update(), hass.loop)
+        fut.result(timeout=5.0)
+    except Exception as e:  # noqa: BLE001 — best-effort
+        _LOGGER.warning("Failed to persist refreshed leaf cert: %s", e)
+
+
+def _probe_and_validate(
+    host: str,
+    ca_cert_pem: str,
+    ca_key_pem: str,
+    cached_leaf: tuple[str, str] | None = None,
+    hass: Any = None,
+    entry: Any = None,
+) -> dict:
+    """Fetch UUID (or reuse cached_leaf), mint leaf cert if needed, race ports.
+
+    Returns config entry data dict. ``cached_leaf`` is an optional
+    ``(fullchain_pem, key_pem)`` tuple reused from a prior config entry — when
+    provided, the Samsung-cloud UUID fetch and leaf mint are skipped and the
+    cached leaf is raced directly. On all-cert-rejected with a cached leaf
+    present, a one-shot fresh-mint fallback fires: re-fetch UUID, re-mint,
+    race again. When that fallback succeeds and ``hass``+``entry`` are
+    provided, the refreshed leaf is persisted to the existing entry via
+    ``_persist_refreshed_leaf`` so subsequent device adds reuse it.
+    """
     import cbor2
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
     from .registry.batch import parse_device0_batch
     from .registry.by_type import resolve as resolve_registry
 
-    _LOGGER.debug("Fetching Samsung cloud UUID from %s", _SAMSUNG_CLOUD_HOST)
-    try:
-        uuid = _fetch_samsung_uuid()
-    except Exception as exc:
-        _LOGGER.debug("UUID fetch failed: %s", exc, exc_info=True)
-        raise CannotConnect(f"Failed to fetch Samsung UUID: {exc}") from exc
-    _LOGGER.debug("Got UUID: %s", uuid)
+    if cached_leaf is not None:
+        fullchain_pem, leaf_key_pem = cached_leaf
+        _LOGGER.debug("Reusing cached leaf cert (UUID fetch + mint skipped)")
+    else:
+        _LOGGER.debug("Fetching Samsung cloud UUID from %s", _SAMSUNG_CLOUD_HOST)
+        try:
+            uuid = _fetch_samsung_uuid()
+        except Exception as exc:
+            _LOGGER.debug("UUID fetch failed: %s", exc, exc_info=True)
+            raise CannotConnect(f"Failed to fetch Samsung UUID: {exc}") from exc
+        _LOGGER.debug("Got UUID: %s", uuid)
 
-    _LOGGER.debug("Minting leaf cert for UUID %s", uuid)
-    try:
-        fullchain_pem, leaf_key_pem = _mint_leaf_cert(ca_cert_pem, ca_key_pem, uuid)
-    except InvalidCA:
-        _LOGGER.debug("CA credentials invalid", exc_info=True)
-        raise
-    except Exception as exc:
-        _LOGGER.debug("Leaf cert minting failed: %s", exc, exc_info=True)
-        raise CannotConnect(f"Failed to mint leaf cert: {exc}") from exc
-    _LOGGER.debug("Leaf cert minted successfully")
+        _LOGGER.debug("Minting leaf cert for UUID %s", uuid)
+        try:
+            fullchain_pem, leaf_key_pem = _mint_leaf_cert(ca_cert_pem, ca_key_pem, uuid)
+        except InvalidCA:
+            _LOGGER.debug("CA credentials invalid", exc_info=True)
+            raise
+        except Exception as exc:
+            _LOGGER.debug("Leaf cert minting failed: %s", exc, exc_info=True)
+            raise CannotConnect(f"Failed to mint leaf cert: {exc}") from exc
+        _LOGGER.debug("Leaf cert minted successfully")
 
     candidates = _find_live_ports(
         host, PROBE_PORT_RANGE, LIVENESS_PROBE_TIMEOUT_S
@@ -257,51 +390,81 @@ def _probe_and_validate(host: str, ca_cert_pem: str, ca_key_pem: str) -> dict:
     # generic "no live port found" message.
     _LOGGER.debug("Live DTLS port candidates on %s: %s", host, candidates)
 
-    last_exc = None
-    for port in candidates:
-        sess = None
-        try:
-            sess = DtlsCoapSession(
-                host, port,
-                cert_pem=fullchain_pem,
-                key_pem=leaf_key_pem,
-            )
-            sess.connect()
-            sess.start_reader()
-            code, payload = sess.get(['device', '0'], timeout=PROBE_GET_TIMEOUT_S)
-            if code != 0x45 or not payload:
-                raise CannotConnect(f"port {port}: unexpected code {code:#04x}")
-            body = cbor2.loads(payload)
-            resources = (
-                parse_device0_batch(body) if isinstance(body, list) else {}
-            )
-            serial = (
-                resources
-                .get('/information/vs/0', {})
-                .get('x.com.samsung.da.serialNum', '')
-            )
-            if not serial or _is_placeholder_serial(serial):
-                serial = f"{host}:{port}"
-            recognized_registry = resolve_registry(resources)
-            return {
-                "port": port,
-                "serial": serial,
-                "leaf_cert_pem": fullchain_pem,
-                "leaf_key_pem": leaf_key_pem,
-                "device_type_recognized": recognized_registry is not None,
-            }
-        except CannotConnect:
-            raise
-        except Exception as exc:
-            last_exc = exc
-            _LOGGER.debug("port %d failed: %s", port, exc)
-        finally:
-            if sess is not None:
+    def _make_worker(
+        cert_pem: str, key_pem: str, session_factory: Callable[..., Any] = DtlsCoapSession,
+    ) -> Callable[[int], dict]:
+        """Nested per-port worker closure. Captures `host` and the
+        function-level imports (cbor2, parse_device0_batch, resolve_registry).
+        session_factory defaults to DtlsCoapSession (function-level import,
+        re-resolved each _probe_and_validate call so monkeypatches take)."""
+        def worker(port):
+            sess = session_factory(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            try:
+                try:
+                    sess.connect()
+                except TimeoutError:
+                    raise
+                except Exception as e:
+                    if _is_cert_alert(e):
+                        raise _CertRejected(str(e)) from e
+                    raise
+                sess.start_reader()
+                code, payload = sess.get(['device', '0'], timeout=PROBE_GET_TIMEOUT_S)
+                if code != 0x45 or not payload:
+                    raise CannotConnect(f"port {port}: unexpected code {code:#04x}")
+                body = cbor2.loads(payload)
+                resources = (
+                    parse_device0_batch(body) if isinstance(body, list) else {}
+                )
+                serial = (
+                    resources.get('/information/vs/0', {})
+                    .get('x.com.samsung.da.serialNum', '')
+                )
+                if not serial or _is_placeholder_serial(serial):
+                    serial = f"{host}:{port}"
+                recognized_registry = resolve_registry(resources)
+                return {
+                    "port": port,
+                    "serial": serial,
+                    "leaf_cert_pem": cert_pem,
+                    "leaf_key_pem": key_pem,
+                    "device_type_recognized": recognized_registry is not None,
+                }
+            finally:
                 try:
                     sess.close()
                 except Exception:
                     pass
-    raise CannotConnect(f"no port responded on {host}: {last_exc}")
+        return worker
+
+    worker = _make_worker(fullchain_pem, leaf_key_pem)
+    info, cert_rejected, last_exc = _race_handshake(host, candidates, worker)
+
+    if info is None and cert_rejected and cached_leaf is not None:
+        # All candidates rejected the cached leaf cert → UUID likely rotated.
+        # Re-fetch UUID + re-mint once, then race again with the fresh leaf.
+        _LOGGER.info("Cached leaf rejected by all ports; re-minting (UUID rotation?)")
+        try:
+            uuid = _fetch_samsung_uuid()
+            fullchain_pem, leaf_key_pem = _mint_leaf_cert(ca_cert_pem, ca_key_pem, uuid)
+        except InvalidCA:
+            raise
+        except Exception as exc:
+            raise CannotConnect(f"re-mint after cert rejection failed: {exc}") from exc
+        info, _, last_exc = _race_handshake(
+            host, candidates, _make_worker(fullchain_pem, leaf_key_pem),
+        )
+        if info is not None and hass is not None and entry is not None:
+            _persist_refreshed_leaf(hass, entry, fullchain_pem, leaf_key_pem)
+
+    if info is None:
+        base = f"no port responded on {host}"
+        if last_exc is not None:
+            base = f"{base}: {last_exc}"
+        raise CannotConnect(
+            base + (" (cert rejected)" if cert_rejected else "")
+        )
+    return info
 
 
 class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -350,12 +513,24 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._ca_cert_pem = user_input[CONF_CA_CERT_PEM].strip()
                 self._ca_key_pem  = user_input[CONF_CA_KEY_PEM].strip()
 
+            cached_leaf = None
+            entry_ref = None
+            if has_creds:
+                cached_leaf = (
+                    existing[0].data[CONF_LEAF_CERT_PEM],
+                    existing[0].data[CONF_LEAF_KEY_PEM],
+                )
+                entry_ref = existing[0]
+
             try:
                 info = await self.hass.async_add_executor_job(
                     _probe_and_validate,
                     self._host,
                     self._ca_cert_pem,
                     self._ca_key_pem,
+                    cached_leaf,
+                    self.hass,
+                    entry_ref,
                 )
             except InvalidCA:
                 errors["base"] = "invalid_ca"
