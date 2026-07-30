@@ -349,6 +349,19 @@ def _probe_and_validate(
     race again. When that fallback succeeds and ``hass``+``entry`` are
     provided, the refreshed leaf is persisted to the existing entry via
     ``_persist_refreshed_leaf`` so subsequent device adds reuse it.
+
+    Note: the winning worker's DTLS session is closed here on an ephemeral
+    source port. The coordinator's first connect (coordinator._connect_session)
+    binds a fixed local port — a different 5-tuple — so it cannot evict this
+    probe's just-closed session at handshake time per RFC 6347 §4.2.8, and the
+    appliance rejects the coordinator's first handshake until the orphan ages
+    out (~8s observed on ARTIK051/TP2X). One-time per device add, auto-recovers
+    on the coordinator's retry; not a bug, just the last visible latency chunk
+    now that the probe itself races instead of sequencing through false-positive
+    timeouts. Fixing it would mean handing the probe's session to the
+    coordinator, but that session is on an ephemeral port and the coordinator's
+    fixed-port eviction relies on a stable 5-tuple across reconnects — so the
+    hand-off defers the same ~8s to the first reconnect rather than removing it.
     """
     import cbor2
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
