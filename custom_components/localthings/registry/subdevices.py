@@ -36,7 +36,18 @@ the only thing ever actually confirmed to work for this pattern -- on the
 assumption that a composite device's siblings share the master's resource
 surface. See `Subdevice.flat_hrefs`.
 
-Both are "the same thing wearing different clothes": a logical subdevice is a
+Pattern C -- UUID prefix advertised only via `/oic/res`
+(`AWM-WW-AID-26-ONEBODY` washer+dryer combo, issue #241). The board answers
+`numofsubdevice='2'` on `/multidevice/vs/0` but has no `/subdevices/vs/0`
+(no `subdeviceIdList`) and 4.04s `/device/1`/`/device/2`; the washer
+subdevice's UUID appears nowhere except as the path prefix of the
+`x.com.samsung.da.multidevice` link in `/oic/res`, and
+`GET /<uuid>/device/0` answers the washer's own full Collection batch
+(model `..._WF80H` vs. the master's `..._DV80H27H`) -- Pattern B's
+transform with the UUID sourced from the link prefix instead of
+`subdeviceIdList`.
+
+All of these are "the same thing wearing different clothes": a logical subdevice is a
 seed collection path to poll, plus an href transform between the canonical
 href the registry knows (`/mode/vs/0`) and the actual on-the-wire href. The
 detection signals don't overlap on either captured board (the Pattern A
@@ -87,6 +98,12 @@ import cbor2
 from .batch import parse_device0_batch
 
 _INDEXED_HREF_RE = re.compile(r'^/device/(\d+)$')
+
+# A UUID as the first path segment of an /oic/res link href -- Pattern C's
+# discovery signal (issue #241): a subdevice tree whose UUID is advertised
+# nowhere except as this prefix (no subdeviceIdList, no /device/<n>).
+_UUID_PREFIX_RE = re.compile(
+    r'^/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/')
 
 # Speculative /device/<n> siblings probed when /oic/res doesn't reveal a
 # second logical subdevice's Collection on this board (moved here from
@@ -338,17 +355,11 @@ def enumerate_subdevices(
         if probe_log is not None:
             probe_log(seed_href, bool(batch))
 
-    # --- Pattern B: UUID-prefixed tree (TP2X_FAC_BORA_21K) ------------------
-    raw_ids = (resources.get('/subdevices/vs/0') or {}).get(
-        'x.com.samsung.da.subdeviceIdList')
-    # Tolerate anything but a list of strings -- this field is redaction-prone
-    # (it matches the 'deviceid' substring rule in redact.py) and the existing
-    # airconditioner_fac_bora fixture carries the literal string
-    # '**REDACTED**'/'REDACTED' there. That must yield zero subdevices, not a
-    # crash -- issue #177 is additive, it must never break an already-working
-    # single-climate-entity device.
-    ids = raw_ids if isinstance(raw_ids, list) else []
-    for sub_id in sorted(i for i in ids if isinstance(i, str) and i):
+    def _probe_prefixed(sub_id: str) -> None:
+        """Materialize one UUID-prefixed subdevice candidate -- shared by
+        Pattern B (ids from subdeviceIdList) and Pattern C (ids from
+        /oic/res link prefixes) below, which differ only in where the UUID
+        came from."""
         seed = (sub_id, 'device', '0')
         batch = _get_batch(sess, seed)
         _probed(_seed_href(seed), batch)
@@ -356,7 +367,7 @@ def enumerate_subdevices(
             subdevice = Subdevice(kind='prefixed', key=sub_id, seed_path=seed)
             fetched.update(normalize_seed_batch(subdevice, batch))
             subdevices.append(subdevice)
-            continue
+            return
         # Fallback (issue #205): TP2X_FAC_BORA_21K itself -- the board this
         # pattern was built against -- turns out not to always expose its own
         # `/<uuid>/device/0` Collection either, so "every prefixed subdevice
@@ -393,11 +404,49 @@ def enumerate_subdevices(
                 flat_hrefs.append(href)
                 fetched[actual] = rep
         if not flat_hrefs:
-            continue
+            return
         subdevices.append(Subdevice(
             kind='prefixed', key=sub_id, seed_path=(),
             flat_hrefs=tuple(flat_hrefs),
         ))
+
+    # --- Pattern B: UUID-prefixed tree (TP2X_FAC_BORA_21K) ------------------
+    raw_ids = (resources.get('/subdevices/vs/0') or {}).get(
+        'x.com.samsung.da.subdeviceIdList')
+    # Tolerate anything but a list of strings -- this field is redaction-prone
+    # (it matches the 'deviceid' substring rule in redact.py) and the existing
+    # airconditioner_fac_bora fixture carries the literal string
+    # '**REDACTED**'/'REDACTED' there. That must yield zero subdevices, not a
+    # crash -- issue #177 is additive, it must never break an already-working
+    # single-climate-entity device.
+    ids = raw_ids if isinstance(raw_ids, list) else []
+    listed = sorted(i for i in ids if isinstance(i, str) and i)
+    for sub_id in listed:
+        _probe_prefixed(sub_id)
+
+    # --- Pattern C: UUID prefix advertised only via /oic/res ----------------
+    # (AWM-WW-AID-26-ONEBODY washer+dryer combo, issue #241.) A third
+    # multidevice shape: the board answers numofsubdevice='2' on
+    # /multidevice/vs/0, but carries no /subdevices/vs/0 (no subdeviceIdList
+    # -- Pattern B's signal) and 4.04s /device/1 and /device/2 (Pattern A's).
+    # The only trace of the sibling is a UUID-prefixed link in /oic/res
+    # itself: the x.com.samsung.da.multidevice link,
+    # '/<uuid>/multidevice/vs/0' on the reporting board. Its washer tree
+    # answers a full Collection at /<uuid>/device/0, exactly Pattern B's
+    # transform -- so treat every UUID path prefix seen in /oic/res as a
+    # prefixed-subdevice candidate (minus ones subdeviceIdList already
+    # named). Probing is the same tolerated-404 RETRIEVE as everything else
+    # here, and discover_partitioned's entity-level liveness gate still
+    # decides materialization, so a board that advertises a UUID link
+    # without a live sibling behind it contributes nothing.
+    linked = sorted({
+        m.group(1)
+        for link in _iter_oic_res_hrefs(oic_res_links)
+        for m in [_UUID_PREFIX_RE.match(link.get('href', ''))]
+        if m
+    } - set(listed))
+    for sub_id in linked:
+        _probe_prefixed(sub_id)
 
     # --- Pattern A: indexed siblings (ARTIK051_DONGLE_FAC_18K) --------------
     indices = sorted({
