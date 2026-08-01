@@ -1,0 +1,759 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.longnotisubscription": "false",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "ErrorCode_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-08-01T21:32:45",
+            "x.com.samsung.da.state": "Deleted"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/temperatures/indoor/vs/0",
+      "rep": {
+        "x.com.samsung.da.type": "Water",
+        "x.com.samsung.da.desired": "5.0",
+        "x.com.samsung.da.current": "30.0",
+        "x.com.samsung.da.maximum": "25.0",
+        "x.com.samsung.da.minimum": "5.0",
+        "x.com.samsung.da.increment": "0.5",
+        "x.com.samsung.da.offset": "0.0",
+        "x.com.samsung.da.unit": "Celsius"
+      }
+    },
+    {
+      "href": "/temperatures/dhw/vs/0",
+      "rep": {
+        "x.com.samsung.da.type": "Water",
+        "x.com.samsung.da.unit": "Celsius",
+        "x.com.samsung.da.desired": "40.0",
+        "x.com.samsung.da.current": "38.0",
+        "x.com.samsung.da.maximum": "62.0",
+        "x.com.samsung.da.minimum": "40.0",
+        "x.com.samsung.da.increment": "0.5"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.cumulativePower": "2448844",
+        "x.com.samsung.da.cumulativeSavedPower": "0",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativePowerType": "individual"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "Cool",
+          "Heat",
+          "Auto"
+        ],
+        "x.com.samsung.da.modes": [
+          "Cool"
+        ],
+        "x.com.samsung.da.options": [
+          "OutdoorTemp_80",
+          "KeyInputPermit_On",
+          "ModePermit_NoLimit",
+          "Thermostat_CoolHeat_Off"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "Thermostat_CoolHeat",
+          "DurationOn",
+          "KeyInputPermit",
+          "ModePermit",
+          "Volume",
+          "OutdoorTemp"
+        ]
+      }
+    },
+    {
+      "href": "/mode/dhw/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "Eco",
+          "Std",
+          "Power",
+          "Force"
+        ],
+        "x.com.samsung.da.modes": [
+          "Eco"
+        ],
+        "x.com.samsung.da.options": [
+          "Thermostat_Dhw_Off",
+          "KeyInputPermit_On"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "Thermostat_Dhw",
+          "KeyInputPermit"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off",
+        "causeSource": "SMTS"
+      }
+    },
+    {
+      "href": "/power/dhw/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On",
+        "causeSource": "SMTS"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP1X_DA_AC_EHS_01001_0000|10250141|60070105001711034A00010000002000",
+        "x.com.samsung.da.description": "TP1X_DA_AC_EHS_01001_0000",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "AE0",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagTsId": "DA01",
+        "x.com.samsung.da.serialNumOption": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02504A260402",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "02501A24062401,FFFFFFFFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Outdoor",
+            "x.com.samsung.da.number": "02572A23081000,02549A10000800"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+01:00",
+        "x.com.samsung.supprtedtype": 1
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "0000000000"
+      }
+    },
+    {
+      "href": "/drlc/vs/0",
+      "rep": {
+        "x.com.samsung.da.drlcLevel": "0",
+        "x.com.samsung.da.durationminutes": "0",
+        "x.com.samsung.da.drlcStartTime": "1970-01-01T00:00:00Z",
+        "x.com.samsung.da.override": "Off",
+        "x.com.samsung.da.realSaving": "Off"
+      }
+    },
+    {
+      "href": "/availablecontrolsets/vs/0",
+      "rep": {
+        "x.com.samsung.da.sets": "0001003200FA0B0190026C0C0000CE32",
+        "x.com.samsung.da.id": "EHS",
+        "x.com.samsung.da.version": "1.0"
+      }
+    },
+    {
+      "href": "/da/softreset/vs/0",
+      "rep": {
+        "x.com.samsung.da.softwarereset": "false"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "otnStatus": "None",
+        "flashingProgress": "",
+        "otnTarget": "main",
+        "otnCompleteDate": "noHistory",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "AEH-WW-TP1-22-AE6000",
+            "versions": [
+              "17260402"
+            ],
+            "visVersion": "260402"
+          },
+          {
+            "type": "Micom",
+            "modelId": "040010250141FFFFFFFF",
+            "versions": [
+              "24062401",
+              "FFFFFFFF"
+            ],
+            "visVersion": "240624"
+          },
+          {
+            "type": "Micom",
+            "modelId": "04001025724110254941",
+            "versions": [
+              "23081000",
+              "10000800"
+            ],
+            "visVersion": "230810"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "Europe/London",
+        "offset": "+01:00",
+        "DST": "ON"
+      }
+    },
+    {
+      "href": "/option/muteonce/vs/0",
+      "rep": {
+        "muteonce": "Off"
+      }
+    },
+    {
+      "href": "/reserverulesets/vs/0",
+      "rep": {
+        "x.com.samsung.da.sets": "0EFFFFFFFF05190F370B283E",
+        "x.com.samsung.da.id": "EHS",
+        "x.com.samsung.da.version": "1.0"
+      }
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "TKIP",
+          "AES",
+          "WEP-64",
+          "WEP-128"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/option/outgoing/vs/0",
+      "rep": {
+        "x.com.samsung.da.away": "Off"
+      }
+    },
+    {
+      "href": "/sac/installationinfo/vs/0",
+      "rep": {
+        "installationOptions": [
+          {
+            "id": "0",
+            "option": "12300000000000000000"
+          },
+          {
+            "id": "1",
+            "option": "20010000000000000000"
+          },
+          {
+            "id": "2",
+            "option": "50000000000000000000"
+          },
+          {
+            "id": "3",
+            "option": "30000000000000000000"
+          }
+        ],
+        "installationDeviceNum": [
+          {
+            "id": "0",
+            "number": "01"
+          },
+          {
+            "id": "1",
+            "number": "01"
+          },
+          {
+            "id": "2",
+            "number": "00"
+          }
+        ],
+        "outdoorInfo": [
+          {
+            "id": "0",
+            "info": "02572A230810",
+            "serial": "**REDACTED**"
+          },
+          {
+            "id": "1",
+            "info": "000000000000",
+            "serial": "**REDACTED**"
+          },
+          {
+            "id": "2",
+            "info": "000000000000",
+            "serial": "**REDACTED**"
+          },
+          {
+            "id": "3",
+            "info": "000000000000",
+            "serial": "**REDACTED**"
+          }
+        ],
+        "mcuInfo": [
+          {
+            "id": "0",
+            "info": "000000000000"
+          },
+          {
+            "id": "1",
+            "info": "000000000000"
+          },
+          {
+            "id": "2",
+            "info": "000000000000"
+          },
+          {
+            "id": "3",
+            "info": "000000000000"
+          },
+          {
+            "id": "4",
+            "info": "000000000000"
+          },
+          {
+            "id": "5",
+            "info": "000000000000"
+          },
+          {
+            "id": "6",
+            "info": "000000000000"
+          },
+          {
+            "id": "7",
+            "info": "000000000000"
+          },
+          {
+            "id": "8",
+            "info": "000000000000"
+          },
+          {
+            "id": "9",
+            "info": "000000000000"
+          },
+          {
+            "id": "10",
+            "info": "000000000000"
+          },
+          {
+            "id": "11",
+            "info": "000000000000"
+          },
+          {
+            "id": "12",
+            "info": "000000000000"
+          },
+          {
+            "id": "13",
+            "info": "000000000000"
+          },
+          {
+            "id": "14",
+            "info": "000000000000"
+          },
+          {
+            "id": "15",
+            "info": "000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/ehsfsv/vs/0",
+      "rep": {
+        "items": [
+          {
+            "setting": "0407010A01017202EE02260101"
+          },
+          {
+            "setting": "0408010A010096017200960101"
+          },
+          {
+            "setting": "041B010A0101F402BC026C0101"
+          },
+          {
+            "setting": "041C010A01012C019001900101"
+          },
+          {
+            "setting": "07DB010A01FF380032FFE20101"
+          },
+          {
+            "setting": "07DC010A01006400C800960101"
+          },
+          {
+            "setting": "07E5010A0100AA02EE01540101"
+          },
+          {
+            "setting": "07E6010A0100AA02EE014A0101"
+          },
+          {
+            "setting": "07EF010A0100AA02EE028A0101"
+          },
+          {
+            "setting": "07F0010A0100AA02EE00AA0101"
+          },
+          {
+            "setting": "082B0101000000000400000101"
+          },
+          {
+            "setting": "082C0101000000000400000101"
+          },
+          {
+            "setting": "082D0101000001000400040101"
+          },
+          {
+            "setting": "0BC30101000000000200020101"
+          },
+          {
+            "setting": "0BFF0101000000000100000101"
+          },
+          {
+            "setting": "0FAB0101000000000100000101"
+          },
+          {
+            "setting": "0FAC010A01FF6A00C800000101"
+          },
+          {
+            "setting": "0FB50101000000000200000101"
+          },
+          {
+            "setting": "0FCA010A010032009600640101"
+          },
+          {
+            "setting": "0FDD0101000000000100000101"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/ehscycle/vs/0",
+      "rep": {
+        "indoor": [
+          {
+            "cycledata": "4B055455050500000000000000000000000000000004CCA70000005D05054B",
+            "datetime": "2026-08-01T21:23:08"
+          },
+          {
+            "cycledata": "4B055454050500000000000000000000000000000004CCAC0000005D05054B",
+            "datetime": "2026-08-01T21:28:08"
+          }
+        ],
+        "outdoor": [
+          {
+            "cycledata": "00000000555A4A53490207D000000000FFFF00480046325700000000",
+            "datetime": "2026-08-01T21:23:08"
+          },
+          {
+            "cycledata": "00000000555A4952490207D000000000000000480046325600000000",
+            "datetime": "2026-08-01T21:28:08"
+          }
+        ],
+        "unit": "Celsius"
+      }
+    },
+    {
+      "href": "/option/dhwdisplay/vs/0",
+      "rep": {
+        "x.com.samsung.da.dhwdisplay": "Show"
+      }
+    },
+    {
+      "href": "/actions/zone1/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/actions/dhw/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.timelineId": "0",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Sun"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "1",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Mon"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "2",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Tue"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "3",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Wed"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "4",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Thu"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "5",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Fri"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "x.com.samsung.da.timelineId": "6",
+            "x.com.samsung.da.module": "DHW",
+            "x.com.samsung.da.temperatureType": "Water",
+            "x.com.samsung.da.dayofWeek": [
+              "Sat"
+            ],
+            "x.com.samsung.da.timeblocks": [
+              {
+                "x.com.samsung.da.timeblockId": "0",
+                "x.com.samsung.da.start": [
+                  {
+                    "x.com.samsung.da.time": "03:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Std",
+                    "x.com.samsung.da.desired": "45.0"
+                  }
+                ],
+                "x.com.samsung.da.end": [
+                  {
+                    "x.com.samsung.da.time": "05:00",
+                    "x.com.samsung.da.power": "On",
+                    "x.com.samsung.da.mode": "Eco",
+                    "x.com.samsung.da.desired": "40.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -337,6 +337,20 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == 'dehumidifier'
 
+    def test_ehs_via_ehs_token(self):
+        """A Samsung EHS air-to-water heat pump (TP1X_DA_AC_EHS_01001_0000)
+        shares the DA_AC_ board family with the room-AC models but reports
+        no oneUiVersion and carries the '_EHS_' (Eco Heating System) token
+        instead of '_RAC_'/'_PRAC_'/'_WAC_'/'_DHM_'; falls back to the
+        '_EHS_' token in modelNum."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+        reg = for_device_by_model(
+            'TP1X_DA_AC_EHS_01001_0000|10250141|60070105001711034A00010000002000',
+            'TP1X_DA_AC_EHS_01001_0000',
+        )
+        assert reg is not None
+        assert reg.name == 'ehs'
+
     def test_water_purifier_via_waterpurifier_token(self):
         """Issue #90: a water purifier (TP2X_WATERPURIFIER_20K) reports no
         oneUiVersion and no consumer-prefix match; falls back to the

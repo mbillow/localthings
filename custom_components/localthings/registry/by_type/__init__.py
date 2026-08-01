@@ -5,7 +5,7 @@ from typing import Optional, Sequence
 from ._base import DeviceRegistry
 from . import (
     air_dresser, air_monitor, air_purifier, airconditioner, cooktop,
-    dehumidifier, dishwasher, dryer, induction_cooktop, microwave, oven,
+    dehumidifier, dishwasher, dryer, ehs, induction_cooktop, microwave, oven,
     range as _range, range_hood, refrigerator, vacuum_station, washer,
     water_purifier,
 )
@@ -27,6 +27,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     'dehumidifier': dehumidifier.REGISTRY,
     'dishwasher': dishwasher.REGISTRY,
     'dryer': dryer.REGISTRY,
+    'ehs': ehs.REGISTRY,
     'induction_cooktop': induction_cooktop.REGISTRY,
     'microwave': microwave.REGISTRY,
     'oven': oven.REGISTRY,
@@ -87,6 +88,10 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     'CAC': 'airconditioner',        # issue #191 -- TP1X_DA-AC-CAC-01001_0000
     'ARA': 'airconditioner',
     'DHM': 'dehumidifier',          # issue #88 -- target humidity, no climate
+    'EHS': 'ehs',                   # Eco Heating System air-to-water heat pump --
+                                     # zone1 space heating/cooling + dhw domestic
+                                     # hot water, its own /mode/*/vs/0 and
+                                     # /temperatures/*/vs/0 resource shapes
     'TVTL': 'air_purifier',         # issue #56 (ARTIK051)
     'VTWW': 'air_purifier',         # issue #151 (BESPOKE Cube Air)
     'AVT': 'air_purifier',          # issue #190 -- AVT-WW-TP1-23-AXX500, a

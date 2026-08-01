@@ -199,6 +199,12 @@
       },
       "tropical_night_mode": {
         "name": "Tropický noční režim"
+      },
+      "zone_target_temperature": {
+        "name": "Zone target temperature"
+      },
+      "dhw_target_temperature": {
+        "name": "DHW target temperature"
       }
     },
     "select": {
@@ -612,6 +618,12 @@
           "none": "Vypnuto",
           "cupboard": "Do skříně"
         }
+      },
+      "zone_mode": {
+        "name": "Zone mode"
+      },
+      "dhw_mode": {
+        "name": "DHW mode"
       }
     },
     "sensor": {
@@ -954,6 +966,12 @@
           "icestatus_stop": "Nečinný",
           "icestatus_run": "Vyrábí led"
         }
+      },
+      "zone_temperature": {
+        "name": "Zone temperature"
+      },
+      "dhw_temperature": {
+        "name": "DHW temperature"
       }
     },
     "switch": {
@@ -1115,6 +1133,15 @@
       },
       "wrinkle_prevent": {
         "name": "Ochrana proti pomačkání"
+      },
+      "zone_power": {
+        "name": "Zone power"
+      },
+      "dhw_power": {
+        "name": "DHW power"
+      },
+      "away_mode": {
+        "name": "Away mode"
       }
     },
     "time": {

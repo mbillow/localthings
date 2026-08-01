@@ -49,6 +49,18 @@ def test_registry_reproduces_golden_state_keys_for_washer():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_ehs():
+    from tests.conftest import _load_device
+    resources = _load_device('ehs')
+    golden = json.loads((GOLDEN / 'ehs.json').read_text())
+    state_keys = _new_state_keys('ehs', resources)
+    assert set(state_keys) == set(golden['state_keys']), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_wa8000t():
     """Top-load washer (WA8000T, issue #106) reports no oneUiVersion and
     used the 'WA' consumer-model prefix, previously unmapped in
