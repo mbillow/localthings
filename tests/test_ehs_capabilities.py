@@ -7,7 +7,7 @@ flatten, and the zone/dhw mode and temperature write contracts.
 
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model
-from custom_components.localthings.registry.capabilities import ehs_cycle
+from custom_components.localthings.registry.capabilities import ehs_cycle, ehs_fsv
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import NumberDesc, SelectDesc, WaterHeaterDesc
 from tests.conftest import _load_device
@@ -378,3 +378,191 @@ def test_diagnostic_cycle_sensors_disabled_by_default():
         "outdoor_temperature",
     ):
         assert _desc(key).enabled_default is True, key
+
+
+# ---------------------------------------------------------------------------
+# /ehsfsv/vs/0 -- decoded Field Setting Values (installer settings)
+# ---------------------------------------------------------------------------
+
+# code -> (minimum, maximum, value), independently re-derived from the raw
+# fixture bytes (see the task's own worked table in ehs_fsv.py's module
+# docstring) -- every one of the fixture's 20 records.
+_EXPECTED_FSV_RECORDS = {
+    1031: (37.0, 75.0, 55.0),
+    1032: (15.0, 37.0, 15.0),
+    1051: (50.0, 70.0, 62.0),
+    1052: (30.0, 40.0, 40.0),
+    2011: (-20.0, 5.0, -3.0),
+    2012: (10.0, 20.0, 15.0),
+    2021: (17.0, 75.0, 34.0),
+    2022: (17.0, 75.0, 33.0),
+    2031: (17.0, 75.0, 65.0),
+    2032: (17.0, 75.0, 17.0),
+    2091: (0.0, 4.0, 0.0),
+    2092: (0.0, 4.0, 0.0),
+    2093: (1.0, 4.0, 4.0),
+    3011: (0.0, 2.0, 2.0),
+    3071: (0.0, 1.0, 0.0),
+    4011: (0.0, 1.0, 0.0),
+    4012: (-15.0, 20.0, 0.0),
+    4021: (0.0, 2.0, 0.0),
+    4042: (5.0, 15.0, 10.0),
+    4061: (0.0, 1.0, 0.0),
+}
+
+# Codes bound as sensors in ehs_fsv.FSV_SENSORS that this fixture does NOT
+# report -- present in the curated table for a model that does, gated off
+# here by exists_fn.
+_ABSENT_ON_FIXTURE = (2041, 3021, 3023)
+
+# Codes bound as sensors that carry no unit/device_class because their
+# value is a device-code enum, not a physical quantity.
+_ENUM_FSV_KEYS = (
+    'fsv_water_law_selection', 'fsv_dhw_application_mode',
+    'fsv_heating_dhw_priority', 'fsv_backup_heater_application',
+    'fsv_zone_control_application',
+)
+
+
+def _fsv_rep():
+    _, resources = _ehs()
+    return resources['/ehsfsv/vs/0']
+
+
+def test_all_fixture_fsv_records_decode_as_expected():
+    """Every one of the fixture's 20 /ehsfsv/vs/0 records decodes to the
+    code/min/max/value set independently re-derived from the raw bytes --
+    the strongest evidence the byte table (offsets, scale divisor, signed
+    int16) is correct, not just plausible-looking."""
+    rep = _fsv_rep()
+    items = rep['items']
+    assert len(items) == 20
+    decoded = {}
+    for item in items:
+        record = ehs_fsv._decode_setting(item['setting'])
+        assert record is not None
+        decoded[record.code] = (record.minimum, record.maximum, record.value)
+    assert decoded == _EXPECTED_FSV_RECORDS
+
+
+def test_signed_decode_fsv_4012_minimum():
+    """FSV #4012's minimum bytes are 0xFF6A -- must decode as signed int16
+    (-15.0), not as an unsigned 65386 (or 65386/10 = 6538.6)."""
+    record = ehs_fsv._find_fsv(_fsv_rep(), 4012)
+    assert record is not None
+    assert record.minimum == -15.0
+    assert record.maximum == 20.0
+
+
+def test_scale_divisor_applied_for_both_scale_1_and_scale_10():
+    """FSV #1031 is a scale-10 record (37.0/75.0/55.0); FSV #2093 is a
+    scale-1 record (1/4/4) -- both must come out correctly scaled, not off
+    by a factor of 10 either way."""
+    scale_10 = ehs_fsv._find_fsv(_fsv_rep(), 1031)
+    assert (scale_10.minimum, scale_10.maximum, scale_10.value) == (37.0, 75.0, 55.0)
+    scale_1 = ehs_fsv._find_fsv(_fsv_rep(), 2093)
+    assert (scale_1.minimum, scale_1.maximum, scale_1.value) == (1.0, 4.0, 4.0)
+
+
+def test_dhw_temperature_limits_cross_check_against_dhw_resource():
+    """FSV #1051's value must equal /temperatures/dhw/vs/0's `maximum`, and
+    FSV #1052's value must equal its `minimum` -- read both sides from the
+    actual resources, not hardcoded, since this is the strongest available
+    proof that bytes 9-10 really are the value field (an independently-read
+    sibling resource agreeing, not just an internally-consistent decode)."""
+    _, resources = _ehs()
+    dhw = resources['/temperatures/dhw/vs/0']
+    dhw_maximum = float(dhw['x.com.samsung.da.maximum'])
+    dhw_minimum = float(dhw['x.com.samsung.da.minimum'])
+    fsv_1051 = ehs_fsv._find_fsv(resources['/ehsfsv/vs/0'], 1051)
+    fsv_1052 = ehs_fsv._find_fsv(resources['/ehsfsv/vs/0'], 1052)
+    assert fsv_1051.value == dhw_maximum
+    assert fsv_1052.value == dhw_minimum
+
+    state = _state()
+    assert state['fsv_dhw_temperature_maximum'] == dhw_maximum
+    assert state['fsv_dhw_temperature_minimum'] == dhw_minimum
+
+
+def test_exists_fn_gates_codes_absent_from_this_fixture():
+    """#2041 (water law selection) isn't one of the fixture's 20 records --
+    exists_fn must report False and flatten() must produce no state key for
+    it. #2021 (present) must report True."""
+    rep = _fsv_rep()
+    absent_desc = _desc('fsv_water_law_selection')
+    present_desc = _desc('fsv_water_law_1_cold_target')
+    assert absent_desc.exists_fn(rep, {}) is False
+    assert present_desc.exists_fn(rep, {}) is True
+
+    state = _state()
+    assert 'fsv_water_law_selection' not in state
+    assert 'fsv_water_law_1_cold_target' in state
+
+
+def test_all_curated_absent_codes_produce_no_entity():
+    """#2041/#3021/#3023 are all in the curated FSV table (for a model that
+    reports them) but none of the three is in this fixture -- confirm all
+    three are actually gated off, not just one of them."""
+    rep = _fsv_rep()
+    absent_keys = ('fsv_water_law_selection', 'fsv_dhw_max_hp_temperature',
+                   'fsv_dhw_hp_on_hysteresis')
+    for code, key in zip(_ABSENT_ON_FIXTURE, absent_keys):
+        assert ehs_fsv._find_fsv(rep, code) is None, code
+        assert _desc(key).exists_fn(rep, {}) is False, key
+    state = _state()
+    for key in absent_keys:
+        assert key not in state, key
+
+
+def test_malformed_fsv_input_returns_none_not_raise():
+    assert ehs_fsv._decode_setting(None) is None
+    assert ehs_fsv._decode_setting(123) is None
+    assert ehs_fsv._decode_setting('not-hex-zz') is None
+    assert ehs_fsv._decode_setting('0407010A0101720') is None  # odd length
+    assert ehs_fsv._decode_setting('0407010A0101') is None  # too short (6 bytes)
+
+    assert ehs_fsv._find_fsv(None, 1031) is None
+    assert ehs_fsv._find_fsv({}, 1031) is None  # missing items
+    assert ehs_fsv._find_fsv({'items': 'not-a-list'}, 1031) is None
+    assert ehs_fsv._find_fsv({'items': [None]}, 1031) is None  # null entry
+    assert ehs_fsv._find_fsv({'items': [{'setting': 'zz'}]}, 1031) is None
+
+    desc = _desc('fsv_heating_outlet_temperature_maximum')
+    assert desc.rep_fn(None) is None
+    assert desc.rep_fn({}) is None
+    assert desc.rep_fn({'items': [None, {'setting': 'not-hex'}]}) is None
+
+
+def test_enum_fsv_sensors_have_no_device_class_or_unit():
+    """The device-code enum FSVs (#2041, #3011, #4011, #4021, #4061) must
+    ship with no device_class and no unit -- inventing either would be a
+    read-side label guess (adding-device-support skill §5): the FSV
+    reference gives these codes' meanings but not Samsung's own label
+    strings, so device_class='enum' with invented options is deferred to a
+    future phase."""
+    for key in _ENUM_FSV_KEYS:
+        desc = _desc(key)
+        assert desc.device_class is None, key
+        assert desc.unit is None, key
+
+
+def test_temperature_fsv_sensors_have_device_class_and_unit():
+    for key in ('fsv_outdoor_curve_cold_point', 'fsv_heating_outlet_temperature_maximum',
+                'fsv_dhw_temperature_maximum', 'fsv_heating_dhw_changeover_temperature'):
+        desc = _desc(key)
+        assert desc.device_class == 'temperature', key
+        assert desc.unit == '°C', key
+
+
+def test_all_fsv_sensors_are_disabled_diagnostic():
+    """~18 new diagnostic entities must not be dumped on existing EHS users
+    at upgrade -- every FSV sensor ships enabled_default=False, and all are
+    entity_category='diagnostic' since none has a confirmed write contract
+    yet."""
+    for desc in ehs_fsv.FSV_SENSORS:
+        assert desc.enabled_default is False, desc.key
+        assert desc.entity_category == 'diagnostic', desc.key
+
+
+def test_fsv_capability_poll_tier_is_cold():
+    assert ehs_fsv.EHS_FSV.poll_tier == 'cold'

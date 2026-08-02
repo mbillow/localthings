@@ -285,7 +285,7 @@ _EHS_IGNORED = [
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
     # /ehscycle/vs/0 is bound -- see ehs_cycle.EHS_CYCLE.
-    "/ehsfsv/vs/0",  # opaque hex-encoded factory setting values
+    # /ehsfsv/vs/0 is bound -- see ehs_fsv.EHS_FSV.
     "/option/dhwdisplay/vs/0",  # front-panel DHW-display show/hide, cosmetic only
     "/reserverulesets/vs/0",  # opaque hex-encoded schedule reservation blob
     "/sac/installationinfo/vs/0",  # static outdoor/indoor installation info, diagnostic only

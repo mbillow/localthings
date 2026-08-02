@@ -2066,6 +2066,60 @@
       },
       "cycle_updated": {
         "name": "Cycle updated"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Water law outdoor temperature curve, cold point (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Water law outdoor temperature curve, warm point (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Water law 1 target temperature at cold outdoor temperature (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Water law 1 target temperature at warm outdoor temperature (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Water law 2 target temperature at cold outdoor temperature (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Water law 2 target temperature at warm outdoor temperature (FSV 2032)"
+      },
+      "fsv_water_law_selection": {
+        "name": "Water law selection (FSV 2041)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "DHW target temperature maximum limit (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "DHW target temperature minimum limit (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "DHW application mode (FSV 3011)"
+      },
+      "fsv_dhw_max_hp_temperature": {
+        "name": "DHW maximum heat pump temperature (FSV 3021)"
+      },
+      "fsv_dhw_hp_on_hysteresis": {
+        "name": "DHW heat pump on hysteresis (FSV 3023)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Heating and DHW priority (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Heating/DHW priority changeover outdoor temperature (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Backup heater application (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Heating water outlet temperature maximum limit (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Heating water outlet temperature minimum limit (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zone control application (FSV 4061)"
       }
     },
     "switch": {
