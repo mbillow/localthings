@@ -280,6 +280,8 @@ AWAY_MODE = Capability(
 # EHS-scoped coverage: opaque vendor plumbing or resources with no
 # confirmed write contract on this dump. Not in the global ignored.IGNORED
 # since these are EHS-only shapes needing their own verification elsewhere.
+# Hex-encoded does not mean unreadable -- the cycle and FSV blobs both
+# decoded cleanly once read, so treat an entry here as "not read yet".
 _EHS_IGNORED = [
     "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
