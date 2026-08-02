@@ -201,10 +201,10 @@
         "name": "Tropický noční režim"
       },
       "zone_target_temperature": {
-        "name": "Zone target temperature"
+        "name": "Požadovaná teplota zóny"
       },
       "dhw_target_temperature": {
-        "name": "DHW target temperature"
+        "name": "Požadovaná teplota TUV"
       }
     },
     "select": {
@@ -620,10 +620,10 @@
         }
       },
       "zone_mode": {
-        "name": "Zone mode"
+        "name": "Režim zóny"
       },
       "dhw_mode": {
-        "name": "DHW mode"
+        "name": "Režim TUV"
       }
     },
     "sensor": {
@@ -968,10 +968,10 @@
         }
       },
       "zone_temperature": {
-        "name": "Zone temperature"
+        "name": "Teplota zóny"
       },
       "dhw_temperature": {
-        "name": "DHW temperature"
+        "name": "Teplota TUV"
       }
     },
     "switch": {
@@ -1135,13 +1135,13 @@
         "name": "Ochrana proti pomačkání"
       },
       "zone_power": {
-        "name": "Zone power"
+        "name": "Napájení zóny"
       },
       "dhw_power": {
-        "name": "DHW power"
+        "name": "Napájení TUV"
       },
       "away_mode": {
-        "name": "Away mode"
+        "name": "Režim nepřítomnosti"
       }
     },
     "time": {

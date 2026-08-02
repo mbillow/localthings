@@ -201,10 +201,10 @@
         "name": "Tropische nachtmodus"
       },
       "zone_target_temperature": {
-        "name": "Zone target temperature"
+        "name": "Doeltemperatuur zone"
       },
       "dhw_target_temperature": {
-        "name": "DHW target temperature"
+        "name": "Doeltemperatuur warm water"
       }
     },
     "select": {
@@ -620,10 +620,10 @@
         }
       },
       "zone_mode": {
-        "name": "Zone mode"
+        "name": "Zonemodus"
       },
       "dhw_mode": {
-        "name": "DHW mode"
+        "name": "Warmwatermodus"
       }
     },
     "sensor": {
@@ -968,10 +968,10 @@
         }
       },
       "zone_temperature": {
-        "name": "Zone temperature"
+        "name": "Zonetemperatuur"
       },
       "dhw_temperature": {
-        "name": "DHW temperature"
+        "name": "Warmwatertemperatuur"
       }
     },
     "switch": {
@@ -1135,13 +1135,13 @@
         "name": "Kreukpreventie"
       },
       "zone_power": {
-        "name": "Zone power"
+        "name": "Zonevoeding"
       },
       "dhw_power": {
-        "name": "DHW power"
+        "name": "Warmwatervoeding"
       },
       "away_mode": {
-        "name": "Away mode"
+        "name": "Afwezigheidsmodus"
       }
     },
     "time": {
