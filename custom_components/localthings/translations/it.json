@@ -1141,115 +1141,115 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add Samsung appliance",
-        "description": "Enter the IP address of your Samsung appliance and the AC14K_M CA credentials used to mint device certificates.",
+        "title": "Aggiungi un elettrodomestico Samsung",
+        "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung e le credenziali CA AC14K_M utilizzate per generare i certificati del dispositivo.",
         "data": {
-          "host": "IP address",
-          "ca_cert_pem": "CA certificate (PEM)",
-          "ca_key_pem": "CA private key (PEM)"
+          "host": "Indirizzo IP",
+          "ca_cert_pem": "Certificato CA (PEM)",
+          "ca_key_pem": "Chiave privata CA (PEM)"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
-          "ca_cert_pem": "The PEM-encoded AC14K_M CA certificate chain. Paste the full contents of your fullchain PEM including all BEGIN/END CERTIFICATE blocks.",
-          "ca_key_pem": "The PEM-encoded AC14K_M private key. Paste the full contents including the BEGIN/END PRIVATE KEY header and footer."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "ca_cert_pem": "La catena di certificati CA AC14K_M codificata in formato PEM. Incolla l'intero contenuto del tuo file PEM dell'intera catena, inclusi tutti i blocchi BEGIN/END CERTIFICATE.",
+          "ca_key_pem": "La chiave privata AC14K_M codificata in formato PEM. Incollare l'intero contenuto, inclusi l'intestazione e il piè di pagina BEGIN/END PRIVATE KEY."
         }
       },
       "user_reuse": {
-        "title": "Add Samsung appliance",
-        "description": "Enter the IP address of your Samsung appliance. The CA credentials from an existing LocalThings appliance will be reused.",
+        "title": "Aggiungi un elettrodomestico Samsung",
+        "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung. Le credenziali CA di un dispositivo LocalThings esistente verranno riutilizzate.",
         "data": {
-          "host": "IP address"
+          "host": "Indirizzo IP"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
         }
       },
       "confirm_unknown_type": {
-        "title": "Appliance type not recognized",
-        "description": "This appliance's type couldn't be recognized. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
+        "title": "Tipo di elettrodomestico non riconosciuto",
+        "description": "Il tipo di questo apparecchio non è stato riconosciuto. Verrà comunque aggiunto, ma solo con le funzionalità di base (alimentazione, allarmi, ... se presenti) anziché con tutte le funzionalità della sua famiglia. Puoi contribuire all'aggiunta del supporto completo in seguito scaricando i dati diagnostici per questo dispositivo (Impostazioni > Dispositivi e servizi > questo dispositivo > il menu > Scarica diagnostica) e inviandoli in una nuova segnalazione. Invia comunque la segnalazione per aggiungerlo."
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
-      "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
-      "unknown": "Unexpected error. Check the Home Assistant logs for details."
+      "cannot_connect": "Impossibile connettersi al dispositivo. Verificare che l'indirizzo IP sia raggiungibile e che le credenziali CA siano corrette.",
+      "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
+      "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli."
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Il dispositivo è già configurato"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "LocalThings options",
+        "title": "Opzioni LocalThings",
         "menu_options": {
-          "settings": "Device settings",
-          "debug_write": "Debug: write to a resource"
+          "settings": "Impostazioni dispositivo",
+          "debug_write": "Debug: scrivi su una risorsa"
         }
       },
       "settings": {
-        "title": "Device settings",
-        "description": "Some devices accept certain writes (e.g. default detergent/softener dosing on a washer) even while reporting remote control off. By default, LocalThings blocks every write with a clear error whenever a device reports remote control off, rather than letting the device silently reject it. Only enable this if you've confirmed writes actually work on this device with remote control off -- otherwise you'll trade that clear error for a silent failure.\n\nEstimated finish time is recomputed from the device's remaining-time estimate on every poll, which can drift or get revised by a minute or two between updates. Raise the minimum-change value below to hold the sensor at its last reported value until the estimate moves by at least that many minutes, cutting down on history/logbook noise. Set it to 0 to report every computed change.",
+        "title": "Impostazioni dispositivo",
+        "description": "Alcuni dispositivi accettano determinate scritture (ad esempio, il dosaggio predefinito di detersivo/ammorbidente su una lavatrice) anche quando segnalano che il controllo remoto è disattivato. Per impostazione predefinita, LocalThings blocca ogni scrittura con un errore chiaro ogni volta che un dispositivo segnala che il controllo remoto è disattivato, invece di consentire al dispositivo di rifiutarla silenziosamente. Abilitare questa opzione solo se si è verificato che le scritture funzionano effettivamente su questo dispositivo con il controllo remoto disattivato; in caso contrario, si sostituirà l'errore chiaro con un errore silenzioso.\n\nIl tempo di fine stimato viene ricalcolato dalla stima del tempo rimanente del dispositivo a ogni interrogazione, che può variare o essere rivista di uno o due minuti tra un aggiornamento e l'altro. Aumentare il valore di variazione minima riportato di seguito per mantenere il sensore al suo ultimo valore segnalato finché la stima non si sposta di almeno quel numero di minuti, riducendo il rumore nella cronologia/registro. Impostarlo su 0 per segnalare ogni variazione calcolata.",
         "data": {
-          "bypass_remote_control_lock": "Allow writes even when remote control is reported off",
-          "finish_time_hysteresis_minutes": "Estimated finish -- minimum change (minutes)"
+          "bypass_remote_control_lock": "Consenti la scrittura anche quando il controllo remoto risulta disattivato.",
+          "finish_time_hysteresis_minutes": "Tempo finale stimato - variazione minima (minuti)"
         }
       },
       "debug_write": {
-        "title": "Debug: write to a resource",
-        "description": "Power-user tool for pinning down device-specific write behavior. Pick the resource (href) you want to write to, or type a custom one that isn't listed. This bypasses the remote-control-off block and sends exactly the fields you provide -- it can misconfigure your appliance, so use it deliberately.",
+        "title": "Debug: scrivi su una risorsa",
+        "description": "Strumento avanzato per definire con precisione il comportamento di scrittura specifico del dispositivo. Seleziona la risorsa (href) su cui desideri scrivere oppure digitane una personalizzata non presente nell'elenco. Questo bypassa il blocco di disattivazione del controllo remoto e invia esattamente i campi specificati; tuttavia, potrebbe causare una configurazione errata del dispositivo, quindi utilizzalo con cautela.",
         "data": {
-          "href": "Resource href"
+          "href": "Risorsa href"
         }
       },
       "debug_edit": {
-        "title": "Debug write: {href}",
-        "description": "Current value of `{href}`:\n```\n{current_value}\n```\nEnter ONLY the field(s) you want to change below. What you enter is sent to the device as-is (a partial update); it is NOT merged with the fields shown above, so don't paste the whole value back. Mind the types: a numeric string like \"1\" must stay quoted -- a bare 1 is sent as an integer, which some devices reject.",
+        "title": "Scrittura di debug: {href}",
+        "description": "Valore corrente di `{href}`:\n```\n{current_value}\n```\nInserisci SOLO il/i campo/i che desideri modificare qui sotto. Ciò che inserisci viene inviato al dispositivo così com'è (un aggiornamento parziale); NON viene unito ai campi mostrati sopra, quindi non incollare l'intero valore. Fai attenzione ai tipi: una stringa numerica come \"1\" deve rimanere tra virgolette; un semplice 1 viene inviato come numero intero, che alcuni dispositivi rifiutano.",
         "data": {
-          "payload": "Payload to write"
+          "payload": "Payload da scrivere"
         }
       },
       "debug_result": {
-        "title": "Debug write result",
-        "description": "The device returned CoAP code {code}. A 2.xx class means the write was accepted; 4.xx/5.xx means it was rejected. The resource now reads:\n```\n{new_value}\n```\nIf the value is unchanged, the device likely dropped the write. Pick what to do next:",
+        "title": "Risultato della scrittura di debug",
+        "description": "Il dispositivo ha restituito il codice CoAP {code}. Una classe 2.xx significa che la scrittura è stata accettata; 4.xx/5.xx significa che è stata rifiutata. La risorsa ora legge:\n```\n{new_value}\n```\nSe il valore non è cambiato, è probabile che il dispositivo abbia rifiutato la scrittura. Scegli cosa fare dopo:",
         "menu_options": {
-          "debug_write": "Write another resource",
-          "finish": "Finish"
+          "debug_write": "Scrivi un'altra risorsa",
+          "finish": "Fine"
         }
       }
     },
     "error": {
-      "empty_payload": "Enter at least one field to write.",
-      "write_failed": "The write failed. Check the Home Assistant logs for details."
+      "empty_payload": "Inserisci almeno un campo da scrivere.",
+      "write_failed": "Operazione di scrittura non riuscita. Controlla i registri di Home Assistant per i dettagli."
     },
     "abort": {
-      "not_loaded": "This device isn't connected yet. Try again once it has loaded."
+      "not_loaded": "Questo dispositivo non è ancora connesso. Riprova dopo il caricamento."
     }
   },
   "issues": {
     "device_gap": {
-      "title": "Incomplete capability coverage for {device_name}",
-      "description": "This device is missing full capability coverage. Either its appliance type wasn't recognized, or some of the resources it exposes aren't modeled yet. It'll keep working with whatever is already supported. You can help expand support by going to Settings > Devices & Services > {device_name} > the menu (top right) > Download diagnostics, then filing it with the linked issue template."
+      "title": "Copertura delle funzionalità incompleta per {device_name}",
+      "description": "Questo dispositivo non è completamente supportato. Il tipo di dispositivo non è stato riconosciuto oppure alcune delle risorse che espone non sono ancora state modellate. Continuerò a funzionare con le funzionalità già supportate. Puoi contribuire ad ampliare il supporto andando su Impostazioni > Dispositivi e servizi > {nome_dispositivo} > il menu (in alto a destra) > Scarica diagnostica, quindi inviando una segnalazione tramite il modulo di segnalazione collegato."
     }
   },
   "exceptions": {
     "remote_control_disabled": {
-      "message": "Remote control is turned off on this device. Check your appliance's manual for how to enable remote control before Home Assistant can control it."
+      "message": "Smart Control è disattivato su questo dispositivo. Verificare sul manuale utente come abilitarlo prima che Home Assistant possa controllarlo."
     },
     "debug_payload_empty": {
-      "message": "Debug write payload must be a non-empty object."
+      "message": "Il payload di scrittura di debug deve essere un oggetto non vuoto."
     },
     "resource_href_required": {
-      "message": "A resource href is required."
+      "message": "E' richiesta una risorsa href."
     },
     "bubble_soak_unavailable_for_cycle": {
-      "message": "Bubble Soak isn't available on the selected cycle."
+      "message": "Smacchia tutto+ non è disponibile per il ciclo selezionato."
     },
     "pre_wash_unavailable_for_cycle": {
-      "message": "Pre-wash isn't available on the selected cycle."
+      "message": "Prelavaggio non è disponibile per il ciclo selezionato."
     },
     "intensive_unavailable_for_cycle": {
-      "message": "Intensive isn't available on the selected cycle."
+      "message": "Intensivo non è disponibile per il ciclo selezionato."
     }
   }
 }
