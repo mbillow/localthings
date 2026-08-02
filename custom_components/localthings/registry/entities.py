@@ -17,6 +17,7 @@ WriteFn = Optional[Callable[[Any, dict], "tuple[list[str], dict] | None"]]
 # cross-resource lookups exists_fn needs (e.g. reading a sibling href's live
 # option list).
 ValidateFn = Optional[Callable[[Any, dict, dict], "str | None"]]
+DisplayFn = Optional[Callable[[Any, dict], Any]]
 
 
 def _identity(v: Any) -> Any:
@@ -76,6 +77,10 @@ class SelectDesc(SamsungEntityDescription):
     # snapshot (not just this entity's own href) and returns raw device
     # option values; see select.py's LocalThingsSelect._raw_options().
     options_field: Optional[str] = None  # resource field that contains the live options list
+    # Optional device-specific fallback for values absent from the translation
+    # catalog. Receives (raw_value, canonical_resources); select.py applies it
+    # identically to the current state and every option.
+    display_fn: DisplayFn = None
     write_fn: WriteFn = None
 
 

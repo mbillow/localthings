@@ -165,6 +165,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     _POST_TIMEOUT_S: float = 8.0
     _POLL_TIMEOUT_S: float = 35.0
 
+    # First-discovery subdevice enumeration is part of config-entry setup, so
+    # it must have a finite wall-clock cost. A UUID-prefixed AC whose
+    # /<uuid>/device/0 Collection is absent falls back to individual property
+    # probes; some firmware silently drops unknown prefixed paths instead of
+    # returning 4.04, making the old 10s-per-href scan take several minutes.
+    # Keep enough time for a real blockwise Collection response, then use
+    # short timeouts for the small Property resources, all under one budget.
+    _SUBDEVICE_ENUMERATION_BUDGET_S: float = 15.0
+    _SUBDEVICE_COLLECTION_TIMEOUT_S: float = 10.0
+    _SUBDEVICE_PROPERTY_TIMEOUT_S: float = 1.0
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         # Per-device logger (module logger scoped to this device's host) so
         # every log line — including the base DataUpdateCoordinator's own
@@ -551,6 +562,45 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Discovery (runs once on first successful poll)
     # ------------------------------------------------------------------
 
+    def _subdevice_probe_priority(
+        self, resources: dict[str, dict],
+    ) -> tuple[str, ...]:
+        """Return live primary-entity hrefs in hot/warm-first order.
+
+        A prefixed subdevice without a Collection endpoint has to be probed
+        one Property href at a time. Resolve the master through the same
+        registry used by discovery and put resources that produce primary
+        entities first. This is metadata-driven rather than an AC-specific
+        list: a future composite appliance gets the priority its own registry
+        declares, while unknown devices simply retain the normal href order.
+        """
+        registry = resolve_registry(
+            resources,
+            device_types=self._identity.device_types if self._identity else (),
+        )
+        if registry is None:
+            return ()
+
+        tier_rank = {'hot': 0, 'warm': 1, 'cold': 2}
+        ranked = []
+        for order, href in enumerate(resources):
+            primary_caps = [
+                capability
+                for capability in registry.capabilities.get(href, ())
+                if any(
+                    desc.entity_category is None
+                    for desc in capability.entities
+                )
+            ]
+            if not primary_caps:
+                continue
+            rank = min(
+                tier_rank.get(capability.poll_tier, 2)
+                for capability in primary_caps
+            )
+            ranked.append((rank, order, href))
+        return tuple(href for _, _, href in sorted(ranked))
+
     def _enumerate_subdevices_blocking(self, resources: dict[str, dict]) -> dict[str, dict]:
         """One-time (first discovery only) probe for sibling indoor subdevices
         sharing this connection (issue #177) -- see
@@ -578,6 +628,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         subdevices, extra = enumerate_subdevices(
             sess, resources, oic_res,
             probe_log=lambda href, found: probes.__setitem__(href, found),
+            preferred_hrefs=self._subdevice_probe_priority(resources),
+            time_budget=self._SUBDEVICE_ENUMERATION_BUDGET_S,
+            collection_timeout=self._SUBDEVICE_COLLECTION_TIMEOUT_S,
+            property_timeout=self._SUBDEVICE_PROPERTY_TIMEOUT_S,
         )
         self.subdevices = subdevices
         self._subdevice_probes = probes

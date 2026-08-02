@@ -82,6 +82,16 @@ class TestWasherCourse:
         rep = {'x.com.samsung.da.options': ['DeviceType_0167', 'Course_1C', 'GMT_04']}
         assert desc.rep_fn(rep) == '1C'
 
+    def test_reported_table_02_course_codes_are_translated(self):
+        """The owner confirmed this washer's newer Table_02 course family."""
+        from custom_components.localthings.catalog import translated_states
+
+        confirmed = {
+            '69', '6a', '6b', '6c', '6d', '6e', '6f', '70', '71',
+            '72', '73', '74', '75', '76', '77', '78', '79', '88',
+        }
+        assert confirmed <= translated_states('select', 'washer_cycle_table_02')
+
     def test_missing_course_option_returns_none(self):
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
         assert desc.rep_fn({'x.com.samsung.da.options': ['GMT_04']}) is None
@@ -89,6 +99,7 @@ class TestWasherCourse:
     def test_cycle_desc_uses_cycle_options_callable(self):
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == 'cycle')
         assert desc.options is laundry.cycle_options
+        assert desc.display_fn is laundry.washer_cycle_fallback
 
     def test_exists_only_when_edit_course_list_is_live(self):
         """No hardcoded course table is kept -- the selector only appears

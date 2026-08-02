@@ -49,7 +49,7 @@ def _translation_state(value: str, known: frozenset[str]) -> str | None:
     return snake if snake in known else None
 
 
-def _display(value, translation_key: Optional[str]):
+def _display(value, translation_key: Optional[str], fallback_fn=None):
     """Turn a raw device option/state value into what's shown in the UI.
 
     `translation_key` is the entity's already-resolved key (SelectDesc.
@@ -78,11 +78,17 @@ def _display(value, translation_key: Optional[str]):
         if not known:
             # No state table for this key: either the entity isn't translated
             # at all, or its name is translated but its options deliberately
-            # aren't (an unrecognized course table, say). Either way the
-            # opaque device value is the best thing to show.
-            return value
-        if translated := _translation_state(value, known):
+            # aren't (an unrecognized course table, say). Give an explicit
+            # device-specific fallback the opportunity to make an opaque value
+            # readable; otherwise the raw device value remains the best choice.
+            if fallback_fn is None:
+                return value
+        elif translated := _translation_state(value, known):
             return translated
+    if fallback_fn is not None:
+        fallback = fallback_fn(value)
+        if fallback is not None:
+            return fallback
     if value.islower():
         return value.replace('_', ' ').title()
     return _CAMEL_BOUNDARY_RE.sub(' ', value)
@@ -94,7 +100,16 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
         super().__init__(coordinator, bound)
         desc: SelectDesc = bound.desc
         if not desc.options_field and not callable(desc.options):
-            self._attr_options = [_display(o, self.translation_key) for o in desc.options]
+            self._attr_options = [self._display_option(o) for o in desc.options]
+
+    def _display_option(self, value):
+        """Normalize both current state and options through one path."""
+        display_fn = self._bound.desc.display_fn
+        fallback_fn = (
+            (lambda raw: display_fn(raw, self._resources))
+            if display_fn is not None else None
+        )
+        return _display(value, self.translation_key, fallback_fn)
 
     def _raw_options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
@@ -116,17 +131,17 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def options(self) -> list[str]:
         desc: SelectDesc = self._bound.desc
         if desc.options_field or callable(desc.options):
-            return [_display(o, self.translation_key) for o in self._raw_options()]
+            return [self._display_option(o) for o in self._raw_options()]
         return self._attr_options
 
     @property
     def current_option(self):
         raw = (self.coordinator.data or {}).get(self._state_key)
-        return _display(raw, self.translation_key)
+        return self._display_option(raw)
 
     async def async_select_option(self, option: str) -> None:
         raw = next(
-            (o for o in self._raw_options() if _display(o, self.translation_key) == option),
+            (o for o in self._raw_options() if self._display_option(o) == option),
             option,
         )
         await self.coordinator.async_send_command(self._bound, raw)

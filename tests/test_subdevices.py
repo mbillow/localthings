@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import cbor2
 
+from custom_components.localthings.registry import subdevices as subdevices_module
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.entities import BinarySensorDesc, SensorDesc
 from custom_components.localthings.registry.subdevices import (
@@ -316,6 +317,116 @@ def test_enumerate_prefixed_flat_fallback_probe_log_reports_every_href_tried():
     enumerate_subdevices(sess, resources, oic_res_links=[], probe_log=probes.__setitem__)
     assert probes[f'/{_UUID}/device/0'] is False
     assert probes[f'/{_UUID}/mode/vs/0'] is True
+
+
+def test_enumeration_budget_bounds_silent_prefixed_fallback_and_uses_priority(
+    monkeypatch,
+):
+    """A firmware that drops unknown prefixed paths cannot stall setup.
+
+    The Collection probe gets the larger blockwise allowance. The preferred
+    live-state href is then attempted first, and the last Property probe is
+    clamped to exactly the time left in the shared enumeration budget.
+    """
+    class Clock:
+        now = 0.0
+
+        def monotonic(self):
+            return self.now
+
+    class SilentSession:
+        def __init__(self, clock):
+            self.clock = clock
+            self.calls = []
+
+        def get(self, path, timeout=10.0):
+            self.calls.append((tuple(path), timeout))
+            self.clock.now += timeout
+            raise TimeoutError
+
+        def pace(self):
+            pass
+
+    clock = Clock()
+    session = SilentSession(clock)
+    monkeypatch.setattr(subdevices_module.time, 'monotonic', clock.monotonic)
+    resources = {
+        '/subdevices/vs/0': {
+            'x.com.samsung.da.subdeviceIdList': [_UUID],
+        },
+        '/power/vs/0': {'power': 'On'},
+        '/mode/vs/0': {'mode': 'Cool'},
+    }
+
+    found, extra = enumerate_subdevices(
+        session,
+        resources,
+        oic_res_links=[],
+        preferred_hrefs=('/mode/vs/0',),
+        time_budget=7.0,
+        collection_timeout=4.0,
+        property_timeout=2.0,
+    )
+
+    assert found == []
+    assert extra == {}
+    assert clock.now == 7.0
+    assert session.calls == [
+        ((_UUID, 'device', '0'), 4.0),
+        ((_UUID, 'mode', 'vs', '0'), 2.0),
+        ((_UUID, 'power', 'vs', '0'), 1.0),
+    ]
+
+
+def test_enumeration_keeps_preferred_response_found_before_budget_expires(
+    monkeypatch,
+):
+    """A useful early response survives later silent probes hitting the cap."""
+    class Clock:
+        now = 0.0
+
+        def monotonic(self):
+            return self.now
+
+    class PartlyResponsiveSession:
+        def __init__(self, clock):
+            self.clock = clock
+
+        def get(self, path, timeout=10.0):
+            if tuple(path) == (_UUID, 'mode', 'vs', '0'):
+                return 0x45, cbor2.dumps({'mode': 'Cool'})
+            self.clock.now += timeout
+            raise TimeoutError
+
+        def pace(self):
+            pass
+
+    clock = Clock()
+    monkeypatch.setattr(subdevices_module.time, 'monotonic', clock.monotonic)
+    resources = {
+        '/subdevices/vs/0': {
+            'x.com.samsung.da.subdeviceIdList': [_UUID],
+        },
+        '/power/vs/0': {'power': 'On'},
+        '/mode/vs/0': {'mode': 'Cool'},
+    }
+
+    found, extra = enumerate_subdevices(
+        PartlyResponsiveSession(clock),
+        resources,
+        oic_res_links=[],
+        preferred_hrefs=('/mode/vs/0',),
+        time_budget=7.0,
+        collection_timeout=4.0,
+        property_timeout=2.0,
+    )
+
+    assert [(subdevice.kind, subdevice.key) for subdevice in found] == [
+        ('prefixed', _UUID),
+    ]
+    assert found[0].flat_hrefs == ('/mode/vs/0',)
+    assert extra == {f'/{_UUID}/mode/vs/0': {'mode': 'Cool'}}
+    assert clock.now == 7.0
 
 
 def test_enumerate_prefixed_flat_fallback_with_no_master_hrefs_to_probe_is_a_no_op():

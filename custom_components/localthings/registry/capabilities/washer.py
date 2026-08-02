@@ -20,7 +20,7 @@ from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc
 from .laundry import (
     bool_option_exists, bool_option_switch, cycle_options, cycle_select, hex_pairs, option_value,
-    option_write,
+    option_write, washer_cycle_fallback,
 )
 
 # ---------------------------------------------------------------------------
@@ -53,6 +53,10 @@ from .laundry import (
 # display name with the existing '24' Towels -- a different code on a
 # different course table legitimately landing on the same label, not a typo
 # (same pattern as '21'/'65' Colors and '27'/'5E' Rinse+Spin above).
+# The owner of a Korean Table_02 washer confirmed the names for its newer
+# 69/6A-79/88 course-code family, including Course_69 as AI Wash. Those names
+# live only in the table-scoped translation catalog; codes not confirmed by
+# the owner or device metadata continue to use the safe unknown-code fallback.
 #
 # No static fallback list of those codes is kept here, deliberately: other
 # washer models have a different actual course set (a second dump's active
@@ -302,7 +306,8 @@ WASHER_COURSE = Capability(
     href='/course/vs/0',
     entities=(
         cycle_select(translation_key='washer_cycle', icon='mdi:washing-machine',
-                     table_href='/st/washercourse/vs/0'),
+                     table_href='/st/washercourse/vs/0',
+                     display_fn=washer_cycle_fallback),
         SensorDesc(key='drum_clean_cycles_remaining', unit='cycles',
                    icon='mdi:washing-machine-alert',
                    state_class='measurement',

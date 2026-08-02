@@ -35,6 +35,54 @@ class TestCourseHelpers:
         assert laundry.option_value(opts, 'Course') == '1C'
         assert laundry.option_value(opts, 'Missing') is None
 
+    def test_decodes_device_provided_personal_course_names(self):
+        """Real /wm/personalcourse/vs/0 entries from the reported washer.
+
+        The first TLV field contains a byte-counted UTF-8 name. It is the only
+        course-name metadata in the diagnostics and is safe to display without
+        assigning an inferred meaning to any standard course code.
+        """
+        resources = {
+            '/wm/personalcourse/vs/0': {
+                'x.com.samsung.da.courses': [
+                    'F1_0106EC868DEC98B7021EED8CACED8BB020EB93B1',
+                    'F2_00',
+                    'F3_0109EC9A94EAB8B0EBB3B40220ECA084EC9AA9',
+                ],
+            },
+        }
+        first_name = bytes.fromhex('EC868DEC98B7').decode('utf-8')
+        second_name = bytes.fromhex('EC9A94EAB8B0EBB3B4').decode('utf-8')
+        assert laundry.personal_course_labels(resources) == {
+            'F1': first_name,
+            'F3': second_name,
+        }
+
+    def test_personal_course_names_reject_malformed_payloads(self):
+        resources = {
+            '/wm/personalcourse/vs/0': {
+                'x.com.samsung.da.courses': [
+                    'F1_not-hex',
+                    'F2_0106AA',
+                    'F3_020141',
+                    None,
+                ],
+            },
+        }
+        assert laundry.personal_course_labels(resources) == {}
+
+    def test_washer_cycle_fallback_uses_labels_then_safe_unknown_text(self):
+        resources = {
+            '/wm/personalcourse/vs/0': {
+                'x.com.samsung.da.courses': ['F1_0106EC868DEC98B7'],
+            },
+        }
+        expected = bytes.fromhex('EC868DEC98B7').decode('utf-8')
+        assert laundry.washer_cycle_fallback('F1', resources) == expected
+        assert laundry.washer_cycle_fallback('69', resources) == 'Unknown (0x69)'
+        assert laundry.washer_cycle_fallback('6f', resources) == 'Unknown (0x6F)'
+        assert laundry.washer_cycle_fallback('Normal', resources) is None
+
 
 class TestCourseCodesFromSupportedOptions:
     """cycle_options()'s fallback for boards that populate

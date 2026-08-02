@@ -45,3 +45,9 @@ def test_known_camel_case_state_uses_snake_case_translation_key():
 
 def test_display_passes_through_non_string_values():
     assert _display(None, _UNTRANSLATED) is None
+
+
+def test_display_uses_fallback_when_translation_has_no_state_table():
+    assert _display('69', 'cycle', lambda value: f'Unknown (0x{value})') == (
+        'Unknown (0x69)'
+    )

@@ -125,6 +125,47 @@ def test_no_catalog_carries_unresolved_core_references():
         assert unresolved == [], language
 
 
+def test_confirmed_korean_table_02_washer_course_names():
+    states = _load('en')['entity']['select']['washer_cycle_table_02']['state']
+    assert {code: states[code] for code in (
+        '69', '6a', '6b', '6c', '6d', '6e', '6f', '70', '71',
+        '72', '73', '74', '75', '76', '77', '78', '79', '88',
+    )} == {
+        '69': 'AI Wash',
+        '6a': 'Wool',
+        '6b': 'Denim',
+        '6c': 'Blouses',
+        '6d': 'Delicates',
+        '6e': 'Active Wear',
+        '6f': 'Bedding',
+        '70': 'Towels',
+        '71': 'Quick Wash',
+        '72': 'Shirts',
+        '73': 'Sanitize',
+        '74': 'Drum Clean',
+        '75': 'Outdoor',
+        '76': 'Baby Care',
+        '77': 'Cottons',
+        '78': 'Rinse + Spin',
+        '79': 'Spin Only',
+        '88': 'Pet Care',
+    }
+
+
+def test_confirmed_dishwasher_course_names():
+    states = _load('en')['entity']['select']['dishwasher_cycle']['state']
+    assert {code: states[code] for code in (
+        '82', '8a', 'a7', 'a8', '8c', '88',
+    )} == {
+        '82': 'Auto',
+        '8a': 'Normal',
+        'a7': 'Heavy',
+        'a8': 'Express',
+        '8c': 'Extra Silence',
+        '88': 'Self Clean',
+    }
+
+
 # The hood fan is its device's primary feature: fan.py sets _attr_name = None
 # so it presents as the device itself, and never reads a catalog name. Same
 # for the ARTIK051 air-purifier's airflow_fan (issue #56) -- ordered speed
@@ -233,4 +274,3 @@ def test_every_kimchi_zone_supportmode_code_has_a_state_label():
                 if code.lower() not in state_labels:
                     missing.append((path.name, href, code))
     assert missing == []
-

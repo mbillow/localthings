@@ -2,6 +2,9 @@
 (custom_components/localthings/select.py) -- the static tuple, options_field,
 and callable forms of SelectDesc.options.
 """
+from custom_components.localthings.registry.capabilities.laundry import (
+    cycle_select, washer_cycle_fallback,
+)
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.discovery import BoundEntity
 from custom_components.localthings.registry.entities import SelectDesc
@@ -106,3 +109,78 @@ async def test_unknown_vendor_option_round_trips_to_exact_raw_value():
     assert entity.options[-1] == 'Future Vendor Mode'
     await entity.async_select_option('Future Vendor Mode')
     assert coordinator.writes == ['FutureVendorMode']
+
+
+async def test_washer_diagnostic_cycle_values_share_one_display_and_write_path():
+    """Regression for Course_69/EditCourseList_696F... from real hardware."""
+    class _WritableCoordinator(_FakeCoordinator):
+        data = {'cycle': '69'}
+
+        def __init__(self, last_resources):
+            super().__init__(last_resources)
+            self.writes = []
+
+        async def async_send_command(self, bound, value):
+            self.writes.append(value)
+
+    desc = cycle_select(
+        translation_key='washer_cycle',
+        icon='mdi:washing-machine',
+        table_href='/st/washercourse/vs/0',
+        display_fn=washer_cycle_fallback,
+    )
+    capability = Capability(href='/course/vs/0', entities=(desc,))
+    bound = BoundEntity(href='/course/vs/0', capability=capability, desc=desc)
+    resources = {
+        '/course/vs/0': {'x.com.samsung.da.options': ['Course_69']},
+        '/st/washercourse/vs/0': {
+            'x.com.samsung.da.st.courseTable': 'Table_02',
+        },
+        '/wm/editcourse/vs/0': {
+            'x.com.samsung.da.editCourseList': (
+                'EditCourseList_696F757801719688706D6A7376726C6E6B777479F1F3'
+            ),
+        },
+        '/wm/personalcourse/vs/0': {
+            'x.com.samsung.da.courses': [
+                'F1_0106EC868DEC98B7',
+                'F3_0109EC9A94EAB8B0EBB3B4',
+            ],
+        },
+    }
+    coordinator = _WritableCoordinator(resources)
+    entity = LocalThingsSelect(coordinator, bound)
+    first_name = bytes.fromhex('EC868DEC98B7').decode('utf-8')
+    second_name = bytes.fromhex('EC9A94EAB8B0EBB3B4').decode('utf-8')
+
+    # Known catalog states stay as HA translation keys; the frontend renders
+    # this confirmed Table_02 mapping as "AI Wash".
+    assert entity.current_option == '69'
+    assert entity.options == [
+        '69',
+        '6f',
+        '75',
+        '78',
+        '01',
+        '71',
+        '96',
+        '88',
+        '70',
+        '6d',
+        '6a',
+        '73',
+        '76',
+        '72',
+        '6c',
+        '6e',
+        '6b',
+        '77',
+        '74',
+        '79',
+        first_name,
+        second_name,
+    ]
+
+    await entity.async_select_option('6f')
+    await entity.async_select_option(first_name)
+    assert coordinator.writes == ['6F', 'F1']

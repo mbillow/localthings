@@ -20,6 +20,7 @@ Door-LED keys use NO `x.com.samsung.da.` prefix -- `setBrightness` /
 `setNightLight` -- preserved exactly as they appear in the OCF resource rep.
 """
 from datetime import time as dt_time
+import string
 
 from ...catalog import has_entity_translation
 from ..capability import Capability
@@ -276,12 +277,56 @@ def cycle_write(p, rep, href=None):
     }
 
 
+def personal_course_labels(resources, href='/wm/personalcourse/vs/0'):
+    """Return device-provided personal course names keyed by course code.
+
+    Populated entries use a small TLV payload. The leading field is
+    ``01 <UTF-8-byte-length> <name>``; later fields contain a description and
+    settings and are intentionally left uninterpreted. Empty slots are
+    encoded as ``<code>_00``. Malformed or undecodable entries are ignored so
+    opaque device data can never become a misleading label.
+    """
+    rep = resources.get(href) or {}
+    labels = {}
+    for entry in rep.get('x.com.samsung.da.courses') or []:
+        if not isinstance(entry, str) or '_' not in entry:
+            continue
+        code, encoded = entry.split('_', 1)
+        try:
+            payload = bytes.fromhex(encoded)
+        except ValueError:
+            continue
+        if len(payload) < 3 or payload[0] != 0x01:
+            continue
+        name_length = payload[1]
+        if name_length == 0 or len(payload) < 2 + name_length:
+            continue
+        try:
+            name = payload[2:2 + name_length].decode('utf-8')
+        except UnicodeDecodeError:
+            continue
+        if name.strip() and name.isprintable():
+            labels[code.upper()] = name
+    return labels
+
+
+def washer_cycle_fallback(value, resources):
+    """Label an untranslated washer course without guessing its meaning."""
+    if not isinstance(value, str):
+        return None
+    if label := personal_course_labels(resources).get(value.upper()):
+        return label
+    if len(value) == 2 and all(char in string.hexdigits for char in value):
+        return f'Unknown (0x{value.upper()})'
+    return None
+
+
 def _table_id(resources, table_href):
     rep = resources.get(table_href) or {}
     return rep.get('x.com.samsung.da.st.courseTable')
 
 
-def cycle_select(*, translation_key, icon, table_href=None):
+def cycle_select(*, translation_key, icon, table_href=None, display_fn=None):
     """A 'Cycle' select over /course/vs/0, labelled from `translation_key`.
 
     The option list, current value, and write path are all shared across
@@ -293,8 +338,11 @@ def cycle_select(*, translation_key, icon, table_href=None):
     from /st/washercourse/vs/0 or /st/dryercourse/vs/0's
     x.com.samsung.da.st.courseTable (e.g. 'washer_cycle' + 'Table_02' ->
     'washer_cycle_table_02'). An absent or unrecognized table id gets the
-    name-only ``cycle`` translation key while the raw course code remains
-    visible and writable.
+    name-only ``cycle`` translation key. The raw course code remains writable;
+    its display uses display_fn when supplied, otherwise it remains raw.
+
+    display_fn is an optional family-specific fallback for untranslated raw
+    values. select.py applies it after catalog lookup to both state and options.
 
     This matters because course codes are NOT guaranteed consistent across
     board generations sharing the same /course/vs/0 contract: every code in
@@ -304,10 +352,9 @@ def cycle_select(*, translation_key, icon, table_href=None):
     there for all we've verified. So a table-specific key is used only when
     the shipped catalog actually has one; any other table (Table_00 today,
     whatever ships next) falls back to the name-only ``cycle`` key, which
-    shows the raw course code rather than a label borrowed from another
-    board generation. Translating a new table is therefore a
-    translations-only change -- add the ``<family>_cycle_<table>`` entry and
-    this resolver picks it up.
+    does not borrow a label from another board generation. Translating a new
+    table is therefore a translations-only change -- add the
+    ``<family>_cycle_<table>`` entry and this resolver picks it up.
 
     Left at its default for dishwasher, which has no equivalent table-id
     resource in any dump seen and no evidence its course codes vary by
@@ -328,6 +375,7 @@ def cycle_select(*, translation_key, icon, table_href=None):
         options=cycle_options,
         exists_fn=lambda rep, resources: bool(cycle_options(resources)),
         rep_fn=lambda rep: option_value(rep.get('x.com.samsung.da.options'), 'Course'),
+        display_fn=display_fn,
         write_fn=cycle_write,
     )
 
