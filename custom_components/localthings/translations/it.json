@@ -20,7 +20,7 @@
         "name": "Burner {number} pan detected"
       },
       "child_lock": {
-        "name": "Child lock"
+        "name": "Blocco Bambini"
       },
       "cloud_connected": {
         "name": "Cloud connected"
@@ -44,13 +44,13 @@
         "name": "Odor controller active"
       },
       "cycle_active": {
-        "name": "Running"
+        "name": "In esecuzione"
       },
       "defrost_active": {
         "name": "Defrost active"
       },
       "detergent_low": {
-        "name": "Detergent low"
+        "name": "Aggiungi detersivo"
       },
       "device_active": {
         "name": "Device active"
@@ -62,7 +62,7 @@
         "name": "Filter door"
       },
       "firmware_update": {
-        "name": "Firmware update available"
+        "name": "Firmware"
       },
       "instance_open": {
         "name": "{instance_name} open"
@@ -104,7 +104,7 @@
         "name": "Smart Control"
       },
       "softener_low": {
-        "name": "Softener low"
+        "name": "Aggiungi ammorbidente"
       }
     },
     "button": {
@@ -115,16 +115,16 @@
         "name": "Start diagnosis"
       },
       "pause": {
-        "name": "Pause"
+        "name": "Pausa"
       },
       "selfcheck_start": {
         "name": "Start self-check"
       },
       "start": {
-        "name": "Start"
+        "name": "Avvio"
       },
       "stop": {
-        "name": "Stop"
+        "name": "Arresto"
       }
     },
     "climate": {
@@ -174,7 +174,7 @@
         "name": "Cook time"
       },
       "delay_start_hours": {
-        "name": "Delay start"
+        "name": "Ritardo di avvio"
       },
       "dispense_capacity": {
         "name": "Dispense capacity"
@@ -249,7 +249,7 @@
         }
       },
       "cycle": {
-        "name": "Cycle"
+        "name": "Ciclo"
       },
       "detergent_quantity": {
         "name": "Quantità detersivo",
@@ -744,10 +744,10 @@
         "name": "Diagnosis status"
       },
       "drum_clean_cycles_remaining": {
-        "name": "Drum clean due in"
+        "name": "Pulizia cestello fra"
       },
       "drum_clean_last_cleaned": {
-        "name": "Drum last cleaned"
+        "name": "Ultima pulizia cestello"
       },
       "dry_level": {
         "name": "Dry level"
@@ -885,10 +885,10 @@
         "name": "Probe temperature"
       },
       "progress": {
-        "name": "Progress"
+        "name": "Avanzamento"
       },
       "progress_percentage": {
-        "name": "Progress percent"
+        "name": "Avanzamento percentuale"
       },
       "selfcheck_error": {
         "name": "Self-check error"
@@ -1006,7 +1006,7 @@
         "name": "Autofill pitcher"
       },
       "bubble_soak": {
-        "name": "Bubble soak"
+        "name": "Smacchia tutto+"
       },
       "buzz_lock": {
         "name": "Buzzer lock"
@@ -1018,13 +1018,13 @@
         "name": "Cabinet light"
       },
       "child_lock": {
-        "name": "Child lock"
+        "name": "Blocco Bambini"
       },
       "coldwater_lock": {
         "name": "Cold water lock"
       },
       "cooktop_child_lock": {
-        "name": "Child lock"
+        "name": "Blocco Bambini"
       },
       "defrost_delay": {
         "name": "Defrost delay"
@@ -1063,7 +1063,7 @@
         "name": "{instance_name} enabled"
       },
       "intensive": {
-        "name": "Intensive"
+        "name": "Intensivo"
       },
       "lamp": {
         "name": "Lamp"
@@ -1087,7 +1087,7 @@
         "name": "Power"
       },
       "pre_wash": {
-        "name": "Pre-wash"
+        "name": "Prelavaggio"
       },
       "rapid_freezing": {
         "name": "Rapid freezing"
