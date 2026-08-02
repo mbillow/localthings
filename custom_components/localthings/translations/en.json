@@ -1566,6 +1566,9 @@
       "air_filter_pm1_usage": {
         "name": "PM1 filter usage"
       },
+      "zone_water_law_offset": {
+        "name": "Zone water law offset"
+      },
       "air_filter_pm1_usage_hours": {
         "name": "PM1 filter usage hours"
       },

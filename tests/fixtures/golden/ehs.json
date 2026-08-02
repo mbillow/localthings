@@ -11,6 +11,7 @@
     "zone_mode",
     "zone_power",
     "zone_target_temperature",
-    "zone_temperature"
+    "zone_temperature",
+    "zone_water_law_offset"
   ]
 }

@@ -215,3 +215,18 @@ def test_away_mode_write_contract():
     path, body = desc.write_fn("On", {})
     assert path == ["option", "outgoing", "vs", "0"]
     assert body == {"x.com.samsung.da.away": "On"}
+
+
+def test_zone_water_law_offset_reads_zero():
+    """The water-law (weather-compensation) offset carried alongside the
+    zone setpoint on /temperatures/indoor/vs/0. Samsung's cloud REST API
+    doesn't expose this field at all -- reading the device directly does."""
+    state = _state()
+    assert state["zone_water_law_offset"] == 0.0
+
+
+def test_zone_water_law_offset_is_diagnostic():
+    """Read-only for now -- see ehs.ZONE_TEMPERATURE's comment: reclassify
+    to 'config' if/when a write_fn is added."""
+    desc = _desc("zone_water_law_offset")
+    assert desc.entity_category == "diagnostic"

@@ -167,6 +167,20 @@ ZONE_TEMPERATURE = Capability(
     entities=(
         _zone_temperature_sensor("zone_temperature"),
         _zone_climate("zone_climate", HREF_ZONE1_POWER, HREF_ZONE1_TEMPERATURE),
+        # Water-law (weather-compensation) offset applied to the calculated
+        # flow setpoint. 'diagnostic' specifically because it's read-only on
+        # this dump -- reclassify to 'config' if/when a write_fn is added.
+        # No min/max/step bound to it: the rep's minimum/maximum/increment
+        # fields scope `desired` (see the NumberDesc below), not `offset`.
+        SensorDesc(
+            key="zone_water_law_offset",
+            field="x.com.samsung.da.offset",
+            device_class="temperature",
+            unit_fn=_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            value_fn=_num,
+        ),
         NumberDesc(
             key="zone_target_temperature",
             field="x.com.samsung.da.desired",
