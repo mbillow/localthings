@@ -870,10 +870,10 @@
         "name": "Paired hood model"
       },
       "power_energy_kwh": {
-        "name": "Power energy"
+        "name": "Energia"
       },
       "power_watts": {
-        "name": "Power"
+        "name": "Potenza"
       },
       "probe_battery": {
         "name": "Probe battery"
@@ -1084,7 +1084,7 @@
         "name": "Cooktop-on alert"
       },
       "power_switch": {
-        "name": "Power"
+        "name": "Potenza"
       },
       "pre_wash": {
         "name": "Prelavaggio"
