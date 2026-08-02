@@ -762,7 +762,7 @@
         "name": "Dust"
       },
       "energy_kwh": {
-        "name": "Energy"
+        "name": "Energia"
       },
       "energy_last_month_kwh": {
         "name": "Energy (last month)"
