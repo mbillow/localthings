@@ -7,6 +7,7 @@ flatten, and the zone/dhw mode and temperature write contracts.
 
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model
+from custom_components.localthings.registry.capabilities import ehs_cycle
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import NumberDesc, SelectDesc, WaterHeaterDesc
 from tests.conftest import _load_device
@@ -59,11 +60,24 @@ def test_expected_state_keys_present():
         "zone_mode",
         "zone_temperature",
         "zone_target_temperature",
+        "zone_water_law_offset",
         "water_heater",
         "away_mode",
         "mute_once",
         "alarm_code",
         "energy_kwh",
+        "cycle_flow_temperature",
+        "cycle_return_temperature",
+        "cycle_flow_rate",
+        "cycle_pump_speed",
+        "compressor_frequency",
+        "outdoor_temperature",
+        "compressor_target_frequency",
+        "discharge_temperature",
+        "evaporator_saturation_temperature",
+        "suction_temperature",
+        "evaporator_inlet_temperature",
+        "cycle_updated",
     ):
         assert key in state, key
 
@@ -218,9 +232,6 @@ def test_away_mode_write_contract():
 
 
 def test_zone_water_law_offset_reads_zero():
-    """The water-law (weather-compensation) offset carried alongside the
-    zone setpoint on /temperatures/indoor/vs/0. Samsung's cloud REST API
-    doesn't expose this field at all -- reading the device directly does."""
     state = _state()
     assert state["zone_water_law_offset"] == 0.0
 
@@ -230,3 +241,140 @@ def test_zone_water_law_offset_is_diagnostic():
     to 'config' if/when a write_fn is added."""
     desc = _desc("zone_water_law_offset")
     assert desc.entity_category == "diagnostic"
+
+
+# ---------------------------------------------------------------------------
+# /ehscycle/vs/0 -- decoded indoor/outdoor cycle telemetry
+# ---------------------------------------------------------------------------
+
+
+def test_cycle_decodes_against_fixture_bytes():
+    """Every /ehscycle/vs/0-derived reading, decoded from the real dump's
+    newest sample (the rolling log is oldest-first; see
+    test_newest_sample_is_used_not_oldest for the proof of which sample
+    that is). The fixture's two samples are five minutes apart and
+    genuinely differ by one count on the flow/evaporator-saturation/
+    suction bytes -- these are the *newest* sample's values, not
+    necessarily whatever a single-sample dump elsewhere would show."""
+    state = _state()
+    assert state["cycle_return_temperature"] == 29.0
+    assert state["evaporator_inlet_temperature"] == 20.0
+    assert state["outdoor_temperature"] == 18.0
+    assert state["compressor_frequency"] == 0.0
+    assert state["compressor_target_frequency"] == 0.0
+    assert state["discharge_temperature"] == 35.0
+    assert state["cycle_pump_speed"] == 0.0
+    assert state["cycle_flow_rate"] == 0.0
+    assert state["cycle_flow_temperature"] == 29.0
+    assert state["evaporator_saturation_temperature"] == 18.0
+    assert state["suction_temperature"] == 27.0
+
+
+def test_newest_sample_is_used_not_oldest():
+    """The rolling log is oldest-first. The cycle counter (indoor bytes
+    21-23) advances by 5 between the fixture's two samples -- 314535
+    (oldest, 21:23:08) to 314540 (newest, 21:28:08) -- which is what
+    actually distinguishes them (several other indoor bytes are identical
+    across both samples)."""
+    _, resources = _ehs()
+    rep = resources["/ehscycle/vs/0"]
+    oldest_bytes = bytes.fromhex(rep["indoor"][0]["cycledata"])
+    newest_bytes = bytes.fromhex(rep["indoor"][-1]["cycledata"])
+    assert ehs_cycle.indoor_cycle_counter(oldest_bytes) == 314535
+    assert ehs_cycle.indoor_cycle_counter(newest_bytes) == 314540
+    used = ehs_cycle._last_sample(rep, "indoor")
+    assert ehs_cycle.indoor_cycle_counter(used) == 314540
+
+
+def test_indoor_byte27_matches_dhw_current():
+    """Cheapest proof the whole indoor byte-offset table is aligned: byte
+    27, decoded, must exactly equal /temperatures/dhw/vs/0's `current` --
+    an independently-read resource -- not just look plausible."""
+    _, resources = _ehs()
+    cycle_rep = resources["/ehscycle/vs/0"]
+    dhw_current = float(resources["/temperatures/dhw/vs/0"]["x.com.samsung.da.current"])
+    newest = bytes.fromhex(cycle_rep["indoor"][-1]["cycledata"])
+    assert ehs_cycle.indoor_dhw_tank_temperature(newest) == dhw_current == 38.0
+
+
+def test_cycle_flow_rate_not_gated_on_pump_speed():
+    """cycle_flow_rate is the raw byte-7 reading, never zeroed just because
+    pump speed (byte 8) reads 0 -- see ehs_cycle's module docstring for why
+    that staleness correction (real for Samsung's cloud API, unconfirmed
+    for this integration's direct DTLS-CoAP reads) is deliberately not
+    applied."""
+    synthetic = bytearray(
+        bytes.fromhex("4B055454050500000000000000000000000000000004CCAC0000005D05054B")
+    )
+    synthetic[7] = 50  # 5.0 L/min
+    synthetic[8] = 0  # pump stopped
+    assert ehs_cycle.indoor_flow_rate(bytes(synthetic)) == 5.0
+
+
+def test_unvalidated_lengths_return_none():
+    """24-byte indoor and 18-byte outdoor forms are documented elsewhere
+    but not present in any dump we have -- and the 24-byte indoor form
+    uses a different byte map than the validated 31/36-byte one -- so both
+    must return None rather than guess at an unconfirmed layout."""
+    indoor_24 = bytes(24)
+    outdoor_18 = bytes(18)
+    assert ehs_cycle.indoor_flow_temperature(indoor_24) is None
+    assert ehs_cycle.indoor_evaporator_inlet_temperature(indoor_24) is None
+    assert ehs_cycle.outdoor_temperature(outdoor_18) is None
+    assert ehs_cycle.outdoor_discharge_temperature(outdoor_18) is None
+
+
+def test_malformed_cycledata_returns_none_not_raise():
+    desc = _desc("cycle_flow_temperature")
+    assert desc.rep_fn({"indoor": [{"cycledata": "not-hex-zz", "datetime": "x"}]}) is None
+    assert desc.rep_fn({"indoor": [{"cycledata": "ABC", "datetime": "x"}]}) is None  # odd length
+    assert desc.rep_fn({"indoor": []}) is None
+    assert desc.rep_fn({}) is None
+    assert desc.rep_fn({"indoor": [{"datetime": "x"}]}) is None  # missing cycledata
+    assert desc.rep_fn({"indoor": [None]}) is None  # malformed sample entry
+
+
+def test_36_byte_indoor_form_reuses_31_byte_layout():
+    """Documented elsewhere as a 36-byte indoor variant, not present in our
+    fixture -- the first 31 bytes share the validated layout; the 5
+    trailing bytes are unknown and unused."""
+    padded = (
+        bytes.fromhex("4B055454050500000000000000000000000000000004CCAC0000005D05054B")
+        + bytes(5)
+    )
+    assert ehs_cycle.indoor_flow_temperature(padded) == 29.0
+    assert ehs_cycle.indoor_evaporator_inlet_temperature(padded) == 20.0
+
+
+def test_cycle_updated_is_timezone_aware():
+    """HA's timestamp device_class requires an aware datetime; the device
+    reports a naive local ISO string, so this must be normalized (see
+    common.parse_iso_utc, this codebase's established handling for that
+    shape) rather than shipped naive."""
+    state = _state()
+    assert state["cycle_updated"] is not None
+    assert state["cycle_updated"].tzinfo is not None
+
+
+def test_diagnostic_cycle_sensors_disabled_by_default():
+    """The six purely-diagnostic /ehscycle/vs/0 sensors ship disabled so an
+    existing EHS user doesn't get a dozen new entities dumped on them at
+    upgrade; the six primary ones stay enabled."""
+    for key in (
+        "compressor_target_frequency",
+        "discharge_temperature",
+        "evaporator_saturation_temperature",
+        "suction_temperature",
+        "evaporator_inlet_temperature",
+        "cycle_updated",
+    ):
+        assert _desc(key).enabled_default is False, key
+    for key in (
+        "cycle_flow_temperature",
+        "cycle_return_temperature",
+        "cycle_flow_rate",
+        "cycle_pump_speed",
+        "compressor_frequency",
+        "outdoor_temperature",
+    ):
+        assert _desc(key).enabled_default is True, key

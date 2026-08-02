@@ -1664,6 +1664,39 @@
           "dual": "Dubbel",
           "triple": "Drievoudig"
         }
+      },
+      "cycle_flow_temperature": {
+        "name": "Cycle flow temperature"
+      },
+      "cycle_return_temperature": {
+        "name": "Cycle return temperature"
+      },
+      "cycle_flow_rate": {
+        "name": "Cycle flow rate"
+      },
+      "cycle_pump_speed": {
+        "name": "Cycle pump speed"
+      },
+      "compressor_frequency": {
+        "name": "Compressor frequency"
+      },
+      "compressor_target_frequency": {
+        "name": "Compressor target frequency"
+      },
+      "discharge_temperature": {
+        "name": "Discharge temperature"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Evaporator saturation temperature"
+      },
+      "suction_temperature": {
+        "name": "Suction temperature"
+      },
+      "evaporator_inlet_temperature": {
+        "name": "Evaporator inlet temperature"
+      },
+      "cycle_updated": {
+        "name": "Cycle updated"
       }
     },
     "switch": {
