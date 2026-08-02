@@ -282,8 +282,13 @@ AWAY_MODE = Capability(
 # since these are EHS-only shapes needing their own verification elsewhere.
 # Hex-encoded does not mean unreadable -- the cycle and FSV blobs both
 # decoded cleanly once read, so treat an entry here as "not read yet".
+#
+# /availablecontrolsets/vs/0 reads as a leading byte then 5-byte
+# [id][min][max] records, x10-scaled: id 0x01 is the zone's 5.0..25.0 and
+# id 0x0B the DHW's 40.0..62.0. It stays ignored because the numbers above
+# already take those bounds from the resources that own them.
 _EHS_IGNORED = [
-    "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
+    "/availablecontrolsets/vs/0",  # control-range summary, duplicates the zone/DHW bounds
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
     # /ehscycle/vs/0 is bound -- see ehs_cycle.EHS_CYCLE.
