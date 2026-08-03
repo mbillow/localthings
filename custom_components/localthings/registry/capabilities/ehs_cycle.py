@@ -89,20 +89,19 @@ evidence against needing it here: pump speed and the indoor flow-rate
 byte agree (both 0) within the same sample, on a direct-read dump. So
 `cycle_flow_rate` is bound straight through, unmodified.
 """
-from __future__ import annotations
 
-from typing import Optional
+from __future__ import annotations
 
 from ..capability import Capability
 from ..entities import SensorDesc
 from .common import normalize_temp_unit, parse_iso_utc
 
-
 # ---------------------------------------------------------------------------
 # Sample selection -- defensive by construction, never raises.
 # ---------------------------------------------------------------------------
 
-def _hex_bytes(hexstr) -> Optional[bytes]:
+
+def _hex_bytes(hexstr) -> bytes | None:
     if not isinstance(hexstr, str) or not hexstr:
         return None
     try:
@@ -111,7 +110,7 @@ def _hex_bytes(hexstr) -> Optional[bytes]:
         return None
 
 
-def _last_sample_dict(rep, which: str) -> Optional[dict]:
+def _last_sample_dict(rep, which: str) -> dict | None:
     if not isinstance(rep, dict):
         return None
     samples = rep.get(which)
@@ -121,28 +120,28 @@ def _last_sample_dict(rep, which: str) -> Optional[dict]:
     return last if isinstance(last, dict) else None
 
 
-def _last_sample(rep, which: str) -> Optional[bytes]:
+def _last_sample(rep, which: str) -> bytes | None:
     """The most recent sample's decoded `cycledata` bytes for 'indoor' or
     'outdoor' -- the log is oldest-first, so the freshest reading is
     always the last list element."""
     sample = _last_sample_dict(rep, which)
     if sample is None:
         return None
-    return _hex_bytes(sample.get('cycledata'))
+    return _hex_bytes(sample.get("cycledata"))
 
 
 def _cycle_temp_unit(rep):
     # This resource's own `unit` field, not the `x.com.samsung.da.unit`
     # field the other EHS temperature resources use -- see ehs._temp_unit.
-    return normalize_temp_unit(rep.get('unit') if isinstance(rep, dict) else None, '°C')
+    return normalize_temp_unit(rep.get("unit") if isinstance(rep, dict) else None, "°C")
 
 
 def _i16(b: bytes, offset: int) -> int:
-    return int.from_bytes(b[offset:offset + 2], 'big', signed=True)
+    return int.from_bytes(b[offset : offset + 2], "big", signed=True)
 
 
 def _u24(b: bytes, offset: int) -> int:
-    return int.from_bytes(b[offset:offset + 3], 'big', signed=False)
+    return int.from_bytes(b[offset : offset + 3], "big", signed=False)
 
 
 # ---------------------------------------------------------------------------
@@ -150,37 +149,38 @@ def _u24(b: bytes, offset: int) -> int:
 # for its first 31 bytes). Each returns None for any other length.
 # ---------------------------------------------------------------------------
 
-def indoor_evaporator_inlet_temperature(b: bytes) -> Optional[float]:
+
+def indoor_evaporator_inlet_temperature(b: bytes) -> float | None:
     if len(b) not in (31, 36):
         return None
     return float(b[0] - 55)
 
 
-def indoor_return_temperature(b: bytes) -> Optional[float]:
+def indoor_return_temperature(b: bytes) -> float | None:
     if len(b) not in (31, 36):
         return None
     return float(b[2] - 55)
 
 
-def indoor_flow_temperature(b: bytes) -> Optional[float]:
+def indoor_flow_temperature(b: bytes) -> float | None:
     if len(b) not in (31, 36):
         return None
     return float(b[3] - 55)
 
 
-def indoor_flow_rate(b: bytes) -> Optional[float]:
+def indoor_flow_rate(b: bytes) -> float | None:
     if len(b) not in (31, 36):
         return None
     return b[7] / 10
 
 
-def indoor_pump_speed(b: bytes) -> Optional[float]:
+def indoor_pump_speed(b: bytes) -> float | None:
     if len(b) not in (31, 36):
         return None
     return float(b[8])
 
 
-def indoor_cycle_counter(b: bytes) -> Optional[int]:
+def indoor_cycle_counter(b: bytes) -> int | None:
     """Not bound as a sensor -- used only to prove sample-freshness
     selection (§ module docstring) against the real fixture bytes."""
     if len(b) not in (31, 36):
@@ -188,7 +188,7 @@ def indoor_cycle_counter(b: bytes) -> Optional[int]:
     return _u24(b, 21)
 
 
-def indoor_dhw_tank_temperature(b: bytes) -> Optional[float]:
+def indoor_dhw_tank_temperature(b: bytes) -> float | None:
     """Not bound as a sensor -- duplicates /temperatures/dhw/vs/0's
     `current`. Exposed so a test can decode byte 27 directly and assert
     that equality, the cheapest proof this whole byte table is aligned."""
@@ -201,37 +201,38 @@ def indoor_dhw_tank_temperature(b: bytes) -> Optional[float]:
 # Outdoor byte decoders (28-byte form only).
 # ---------------------------------------------------------------------------
 
-def outdoor_compressor_frequency(b: bytes) -> Optional[float]:
+
+def outdoor_compressor_frequency(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(_i16(b, 0))
 
 
-def outdoor_compressor_target_frequency(b: bytes) -> Optional[float]:
+def outdoor_compressor_target_frequency(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(_i16(b, 2))
 
 
-def outdoor_discharge_temperature(b: bytes) -> Optional[float]:
+def outdoor_discharge_temperature(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(b[5] - 55)
 
 
-def outdoor_evaporator_saturation_temperature(b: bytes) -> Optional[float]:
+def outdoor_evaporator_saturation_temperature(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(b[6] - 55)
 
 
-def outdoor_suction_temperature(b: bytes) -> Optional[float]:
+def outdoor_suction_temperature(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(b[7] - 55)
 
 
-def outdoor_temperature(b: bytes) -> Optional[float]:
+def outdoor_temperature(b: bytes) -> float | None:
     if len(b) != 28:
         return None
     return float(b[8] - 55)
@@ -241,22 +242,25 @@ def outdoor_temperature(b: bytes) -> Optional[float]:
 # rep_fn plumbing: decode the newest sample of the given loop, defensively.
 # ---------------------------------------------------------------------------
 
+
 def _indoor(decoder):
     def rep_fn(rep):
-        b = _last_sample(rep, 'indoor')
+        b = _last_sample(rep, "indoor")
         return None if b is None else decoder(b)
+
     return rep_fn
 
 
 def _outdoor(decoder):
     def rep_fn(rep):
-        b = _last_sample(rep, 'outdoor')
+        b = _last_sample(rep, "outdoor")
         return None if b is None else decoder(b)
+
     return rep_fn
 
 
 def _cycle_updated(rep):
-    sample = _last_sample_dict(rep, 'indoor')
+    sample = _last_sample_dict(rep, "indoor")
     if sample is None:
         return None
     # The device reports a bare ISO string ("2026-08-01T21:23:08"), no
@@ -271,58 +275,108 @@ def _cycle_updated(rep):
     # consistent with every other bare ISO field in this integration rather
     # than making EHS the one family that guesses differently -- but a
     # capture taken at a known wall-clock time would settle it either way.
-    return parse_iso_utc(sample.get('datetime'))
+    return parse_iso_utc(sample.get("datetime"))
 
 
 # Cycle data refreshes roughly every 5 minutes on the device (consecutive
 # fixture samples are 5 minutes apart and the counter advances by 5 between
 # them) -- 'warm' matches that cadence rather than over- or under-polling it.
 EHS_CYCLE = Capability(
-    href='/ehscycle/vs/0',
-    poll_tier='warm',
+    href="/ehscycle/vs/0",
+    poll_tier="warm",
     entities=(
-        SensorDesc(key='cycle_flow_temperature', rep_fn=_indoor(indoor_flow_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement'),
-        SensorDesc(key='cycle_return_temperature', rep_fn=_indoor(indoor_return_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement'),
-        SensorDesc(key='cycle_flow_rate', rep_fn=_indoor(indoor_flow_rate),
-                   unit='L/min', device_class='volume_flow_rate',
-                   state_class='measurement'),
-        SensorDesc(key='cycle_pump_speed', rep_fn=_indoor(indoor_pump_speed),
-                   unit='%', state_class='measurement'),
-        SensorDesc(key='compressor_frequency', rep_fn=_outdoor(outdoor_compressor_frequency),
-                   unit='Hz', device_class='frequency',
-                   state_class='measurement'),
-        SensorDesc(key='outdoor_temperature', rep_fn=_outdoor(outdoor_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement'),
-        SensorDesc(key='compressor_target_frequency',
-                   rep_fn=_outdoor(outdoor_compressor_target_frequency),
-                   unit='Hz', device_class='frequency',
-                   state_class='measurement',
-                   entity_category='diagnostic', enabled_default=False),
-        SensorDesc(key='discharge_temperature', rep_fn=_outdoor(outdoor_discharge_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement',
-                   entity_category='diagnostic', enabled_default=False),
-        SensorDesc(key='evaporator_saturation_temperature',
-                   rep_fn=_outdoor(outdoor_evaporator_saturation_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement',
-                   entity_category='diagnostic', enabled_default=False),
-        SensorDesc(key='suction_temperature', rep_fn=_outdoor(outdoor_suction_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement',
-                   entity_category='diagnostic', enabled_default=False),
-        SensorDesc(key='evaporator_inlet_temperature',
-                   rep_fn=_indoor(indoor_evaporator_inlet_temperature),
-                   device_class='temperature', unit_fn=_cycle_temp_unit,
-                   state_class='measurement',
-                   entity_category='diagnostic', enabled_default=False),
-        SensorDesc(key='cycle_updated', rep_fn=_cycle_updated,
-                   device_class='timestamp',
-                   entity_category='diagnostic', enabled_default=False),
+        SensorDesc(
+            key="cycle_flow_temperature",
+            rep_fn=_indoor(indoor_flow_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="cycle_return_temperature",
+            rep_fn=_indoor(indoor_return_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="cycle_flow_rate",
+            rep_fn=_indoor(indoor_flow_rate),
+            unit="L/min",
+            device_class="volume_flow_rate",
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="cycle_pump_speed",
+            rep_fn=_indoor(indoor_pump_speed),
+            unit="%",
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="compressor_frequency",
+            rep_fn=_outdoor(outdoor_compressor_frequency),
+            unit="Hz",
+            device_class="frequency",
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="outdoor_temperature",
+            rep_fn=_outdoor(outdoor_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+        ),
+        SensorDesc(
+            key="compressor_target_frequency",
+            rep_fn=_outdoor(outdoor_compressor_target_frequency),
+            unit="Hz",
+            device_class="frequency",
+            state_class="measurement",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
+        SensorDesc(
+            key="discharge_temperature",
+            rep_fn=_outdoor(outdoor_discharge_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
+        SensorDesc(
+            key="evaporator_saturation_temperature",
+            rep_fn=_outdoor(outdoor_evaporator_saturation_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
+        SensorDesc(
+            key="suction_temperature",
+            rep_fn=_outdoor(outdoor_suction_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
+        SensorDesc(
+            key="evaporator_inlet_temperature",
+            rep_fn=_indoor(indoor_evaporator_inlet_temperature),
+            device_class="temperature",
+            unit_fn=_cycle_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
+        SensorDesc(
+            key="cycle_updated",
+            rep_fn=_cycle_updated,
+            device_class="timestamp",
+            entity_category="diagnostic",
+            enabled_default=False,
+        ),
     ),
 )

@@ -53,9 +53,10 @@ native_min/native_max from these device-reported fields rather than a
 hardcoded constant, exactly as ehs.ZONE_TARGET_TEMPERATURE already does for
 `/temperatures/indoor/vs/0`'s minimum/maximum/increment fields.
 """
+
 from __future__ import annotations
 
-from typing import NamedTuple, Optional
+from typing import Any, NamedTuple
 
 from ..capability import Capability
 from ..entities import SensorDesc
@@ -69,10 +70,10 @@ class FsvRecord(NamedTuple):
 
 
 def _i16(b: bytes, offset: int) -> int:
-    return int.from_bytes(b[offset:offset + 2], 'big', signed=True)
+    return int.from_bytes(b[offset : offset + 2], "big", signed=True)
 
 
-def _decode_setting(setting) -> Optional[FsvRecord]:
+def _decode_setting(setting) -> FsvRecord | None:
     """Decode one `items[]` entry's `setting` hex string into its FSV
     code/min/max/value. Defensive throughout -- a non-string, non-hex, or
     wrong-length `setting` returns None rather than raising."""
@@ -84,7 +85,7 @@ def _decode_setting(setting) -> Optional[FsvRecord]:
         return None
     if len(b) != 13:
         return None
-    code = int.from_bytes(b[0:2], 'big', signed=False)
+    code = int.from_bytes(b[0:2], "big", signed=False)
     scale = b[3] or 1  # defensive: a 0 scale would divide-by-zero below
     return FsvRecord(
         code=code,
@@ -94,19 +95,19 @@ def _decode_setting(setting) -> Optional[FsvRecord]:
     )
 
 
-def _find_fsv(rep, code: int) -> Optional[FsvRecord]:
+def _find_fsv(rep, code: int) -> FsvRecord | None:
     """Scan `items[]` for the record matching `code`. Defensive throughout:
     a missing/non-dict rep, a missing/non-list `items`, a non-dict entry,
     or a record that fails to decode are all skipped rather than raising."""
     if not isinstance(rep, dict):
         return None
-    items = rep.get('items')
+    items = rep.get("items")
     if not isinstance(items, list):
         return None
     for item in items:
         if not isinstance(item, dict):
             continue
-        record = _decode_setting(item.get('setting'))
+        record = _decode_setting(item.get("setting"))
         if record is not None and record.code == code:
             return record
     return None
@@ -117,16 +118,19 @@ def _find_fsv(rep, code: int) -> Optional[FsvRecord]:
 # _indoor/_outdoor factories.
 # ---------------------------------------------------------------------------
 
+
 def _fsv_value_fn(code: int):
     def rep_fn(rep):
         record = _find_fsv(rep, code)
         return None if record is None else record.value
+
     return rep_fn
 
 
 def _fsv_exists_fn(code: int):
     def exists_fn(rep, resources):
         return _find_fsv(rep, code) is not None
+
     return exists_fn
 
 
@@ -171,15 +175,15 @@ def _fsv(code: int, key: str, *, temperature: bool = False, **kw) -> SensorDesc:
     enabled_default=False: this adds up to 18 new diagnostic entities and
     they must not be dumped on every existing EHS user at upgrade.
     """
-    extra = {}
+    extra: dict[str, Any] = {}
     if temperature:
-        extra['device_class'] = 'temperature'
-        extra['unit'] = '°C'
+        extra["device_class"] = "temperature"
+        extra["unit"] = "°C"
     return SensorDesc(
         key=key,
         rep_fn=_fsv_value_fn(code),
         exists_fn=_fsv_exists_fn(code),
-        entity_category='diagnostic',
+        entity_category="diagnostic",
         enabled_default=False,
         **extra,
         **kw,
@@ -198,42 +202,39 @@ FSV_SENSORS = (
     # these locally. #2011/#2012 are the outdoor-temperature axis anchors
     # for the water-law curve; #2021/#2022 and #2031/#2032 are the two
     # curves' (WL1/WL2) target flow temperatures at those anchors.
-    _fsv(2011, 'fsv_outdoor_curve_cold_point', temperature=True),
-    _fsv(2012, 'fsv_outdoor_curve_warm_point', temperature=True),
-    _fsv(2021, 'fsv_water_law_1_cold_target', temperature=True),
-    _fsv(2022, 'fsv_water_law_1_warm_target', temperature=True),
-    _fsv(2031, 'fsv_water_law_2_cold_target', temperature=True),
-    _fsv(2032, 'fsv_water_law_2_warm_target', temperature=True),
-    _fsv(2041, 'fsv_water_law_selection'),  # enum, unitless -- not in our fixture
-
+    _fsv(2011, "fsv_outdoor_curve_cold_point", temperature=True),
+    _fsv(2012, "fsv_outdoor_curve_warm_point", temperature=True),
+    _fsv(2021, "fsv_water_law_1_cold_target", temperature=True),
+    _fsv(2022, "fsv_water_law_1_warm_target", temperature=True),
+    _fsv(2031, "fsv_water_law_2_cold_target", temperature=True),
+    _fsv(2032, "fsv_water_law_2_warm_target", temperature=True),
+    _fsv(2041, "fsv_water_law_selection"),  # enum, unitless -- not in our fixture
     # --- DHW ------------------------------------------------------------
     # #1051/#1052's values cross-check exactly against
     # /temperatures/dhw/vs/0's maximum/minimum (see module docstring) --
     # the strongest evidence available that these are the tank setpoint
     # limits, not some other pair of temperature-shaped FSVs.
-    _fsv(1051, 'fsv_dhw_temperature_maximum', temperature=True),
-    _fsv(1052, 'fsv_dhw_temperature_minimum', temperature=True),
-    _fsv(3011, 'fsv_dhw_application_mode'),  # enum, unitless
-    _fsv(3021, 'fsv_dhw_max_hp_temperature', temperature=True),  # not in our fixture
-    _fsv(3023, 'fsv_dhw_hp_on_hysteresis', temperature=True),  # not in our fixture
-
+    _fsv(1051, "fsv_dhw_temperature_maximum", temperature=True),
+    _fsv(1052, "fsv_dhw_temperature_minimum", temperature=True),
+    _fsv(3011, "fsv_dhw_application_mode"),  # enum, unitless
+    _fsv(3021, "fsv_dhw_max_hp_temperature", temperature=True),  # not in our fixture
+    _fsv(3023, "fsv_dhw_hp_on_hysteresis", temperature=True),  # not in our fixture
     # --- Heating priority -------------------------------------------------
-    _fsv(4011, 'fsv_heating_dhw_priority'),  # enum, unitless
-    _fsv(4012, 'fsv_heating_dhw_changeover_temperature', temperature=True),
-    _fsv(4021, 'fsv_backup_heater_application'),  # enum, unitless
-
+    _fsv(4011, "fsv_heating_dhw_priority"),  # enum, unitless
+    _fsv(4012, "fsv_heating_dhw_changeover_temperature", temperature=True),
+    _fsv(4021, "fsv_backup_heater_application"),  # enum, unitless
     # --- Zone / outlet limits ----------------------------------------------
-    _fsv(1031, 'fsv_heating_outlet_temperature_maximum', temperature=True),
-    _fsv(1032, 'fsv_heating_outlet_temperature_minimum', temperature=True),
-    _fsv(4061, 'fsv_zone_control_application'),  # enum, unitless
+    _fsv(1031, "fsv_heating_outlet_temperature_maximum", temperature=True),
+    _fsv(1032, "fsv_heating_outlet_temperature_minimum", temperature=True),
+    _fsv(4061, "fsv_zone_control_application"),  # enum, unitless
 )
 
 EHS_FSV = Capability(
-    href='/ehsfsv/vs/0',
+    href="/ehsfsv/vs/0",
     # Installer settings change almost never -- only when someone re-runs
     # commissioning -- unlike /ehscycle/vs/0's ~5-minute telemetry cadence
     # ('warm'). 'cold' matches how rarely this resource's values actually
     # move.
-    poll_tier='cold',
+    poll_tier="cold",
     entities=FSV_SENSORS,
 )
