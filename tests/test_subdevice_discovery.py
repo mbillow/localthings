@@ -285,11 +285,12 @@ async def test_fac_bora_205_flat_fallback_clones_master_and_materializes(
     (issue #205), but issue #265 replaced the old per-href confirmation loop
     -- which used to hold this candidate back with only /information/vs/0
     ever confirmed live under the prefix -- with an unconditional clone of
-    the master's own hrefs and values under the prefix. So the sibling now
-    materializes immediately with the master's own climate state as its
-    assumed starting point, rather than waiting on per-href confirmation
-    that this firmware may never give (this test used to assert the
-    opposite: that the liveness gate correctly held the candidate back)."""
+    the master's own hrefs and values under the prefix, plus one bounded
+    retry of /information/vs/0 itself. So the sibling now materializes
+    immediately with the master's own climate state as its assumed starting
+    point, but its own real, distinct model/serial (this test used to
+    assert the opposite: that the liveness gate correctly held the
+    candidate back)."""
     coordinator = _coordinator(hass)
     resources, _oic_res, _seeds = _load_device_full("airconditioner_fac_bora_205_flat")
     await _discover(coordinator, "airconditioner_fac_bora_205_flat")
@@ -301,15 +302,25 @@ async def test_fac_bora_205_flat_fallback_clones_master_and_materializes(
     assert subdevice.seed_path == ()
     assert subdevice.flat_hrefs == tuple(sorted(resources))
 
-    # Only the seed Collection itself was ever probed over the network --
-    # no more per-href confirmation loop to log.
+    # The seed Collection and the one bounded /information/vs/0 retry were
+    # probed over the network -- nothing else, no per-href confirmation loop.
     assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
+    assert coordinator._subdevice_probes[f"/{_SUB_UUID}/information/vs/0"] is True
+    allowed = {f"/{_SUB_UUID}/device/0", f"/{_SUB_UUID}/information/vs/0"}
     assert not any(
-        href.startswith(f"/{_SUB_UUID}/") and href != f"/{_SUB_UUID}/device/0"
+        href.startswith(f"/{_SUB_UUID}/") and href not in allowed
         for href in coordinator._subdevice_probes
     )
 
     assert _climate_bound(coordinator, _SUB_UUID) is not None
+
+    # The confirmed /information/vs/0 reply -- not the master's cloned one --
+    # is what device_info_for() reads, so the sibling's HA device shows its
+    # own real model/serial rather than looking like a duplicate of the
+    # master (issue #177 comment 5113518087's real hand-read capture).
+    info = coordinator.device_info_for(subdevice)
+    assert info["model"] == "TP2X_FAC_BORA_RAC_21K"
+    assert info["model"] != coordinator.device_info.get("model")
 
     # Confirms the master itself is completely unaffected by its sibling's
     # Collection endpoint not answering -- same guarantee every other

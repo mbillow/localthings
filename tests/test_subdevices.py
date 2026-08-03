@@ -302,9 +302,12 @@ def test_enumerate_prefixed_falls_back_to_cloning_master_state_when_device0_coll
     master href individually under the prefix to confirm one used to be the
     fallback, but a firmware that drops packets instead of 4.04ing turned
     that into a ~300s hang that took the whole config entry's setup down
-    with it. So the fallback no longer touches the network at all -- it
+    with it. So the fallback no longer loops over every master href -- it
     trusts the device's own subdeviceIdList claim and clones the master's
-    current hrefs and values verbatim under the prefix."""
+    current hrefs and values verbatim under the prefix, plus one bounded
+    retry of /information/vs/0 specifically (see the dedicated test below);
+    that retry also fails to answer here, so the clone is all this
+    candidate ends up with."""
     resources = {
         "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
         "/mode/vs/0": {"m": "cool"},
@@ -324,6 +327,38 @@ def test_enumerate_prefixed_falls_back_to_cloning_master_state_when_device0_coll
     }
 
 
+def test_enumerate_prefixed_flat_fallback_confirms_its_own_information():
+    """When the one bounded retry of /<uuid>/information/vs/0 *does* answer,
+    its real reply overrides the master's cloned /information/vs/0 -- so the
+    sibling's device_info shows its own model/serial instead of the
+    master's, which would otherwise read as a duplicate device in the UI
+    even though the two devices' registry identifiers are genuinely
+    distinct (see device_info_for)."""
+    resources = {
+        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
+        "/information/vs/0": {"x.com.samsung.da.modelNum": "MASTER_MODEL"},
+        "/mode/vs/0": {"m": "cool"},
+    }
+    sess = _FakeSession(
+        {
+            # (_UUID, 'device', '0') absent -> Collection probe fails.
+            (_UUID, "information", "vs", "0"): {
+                "x.com.samsung.da.modelNum": "SIBLING_MODEL",
+                "x.com.samsung.da.serialNum": "SIBLING-SERIAL",
+            },
+        }
+    )
+    subdevices, extra = enumerate_subdevices(sess, resources, oic_res_links=[])
+    assert len(subdevices) == 1
+    subdevice = subdevices[0]
+    assert subdevice.flat_hrefs == ("/information/vs/0", "/mode/vs/0", "/subdevices/vs/0")
+    assert extra[f"/{_UUID}/information/vs/0"] == {
+        "x.com.samsung.da.modelNum": "SIBLING_MODEL",
+        "x.com.samsung.da.serialNum": "SIBLING-SERIAL",
+    }
+    assert extra[f"/{_UUID}/mode/vs/0"] == {"m": "cool"}
+
+
 def test_enumerate_prefixed_flat_fallback_is_a_no_op_with_no_master_hrefs_to_clone():
     """A degenerate `resources` (nothing at all, not even /subdevices/vs/0 --
     can't happen via the subdeviceIdList path but shared by _probe_prefixed
@@ -338,9 +373,11 @@ def test_enumerate_prefixed_flat_fallback_is_a_no_op_with_no_master_hrefs_to_clo
     assert extra == {}
 
 
-def test_enumerate_prefixed_flat_fallback_probe_log_only_reports_the_seed():
-    """Only /<uuid>/device/0 is ever probed over the network now -- no more
-    per-href probing to log."""
+def test_enumerate_prefixed_flat_fallback_probe_log_only_reports_seed_and_information():
+    """Only /<uuid>/device/0 (the seed) and /<uuid>/information/vs/0 (the one
+    bounded exception -- so the sibling gets its own model/serial rather
+    than the master's cloned ones) are ever probed over the network now --
+    no more per-href probing loop to log."""
     resources = {
         "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
         "/mode/vs/0": {"m": "cool"},
@@ -350,9 +387,9 @@ def test_enumerate_prefixed_flat_fallback_probe_log_only_reports_the_seed():
         _FakeSession({}), resources, oic_res_links=[], probe_log=probes.__setitem__
     )
     assert probes[f"/{_UUID}/device/0"] is False
-    assert not any(
-        href.startswith(f"/{_UUID}/") and href != f"/{_UUID}/device/0" for href in probes
-    )
+    assert probes[f"/{_UUID}/information/vs/0"] is False
+    allowed = {f"/{_UUID}/device/0", f"/{_UUID}/information/vs/0"}
+    assert not any(href.startswith(f"/{_UUID}/") and href not in allowed for href in probes)
 
 
 def test_enumerate_prefixed_flat_fallback_does_not_cross_contaminate_a_second_uuid():

@@ -47,10 +47,17 @@ trying to re-confirm that claim one href at a time bought unreliable
 confirmation at a cost that could take the integration down with it. So the
 fallback now trusts the claim and clones the master's current hrefs *and*
 values verbatim under the prefix as this cycle's assumed state for the
-sibling -- no extra RETRIEVEs at all. `coordinator._poll_subdevice_flat_hrefs`
-still re-GETs each of those hrefs individually, under the prefix, on every
-later summary poll (unchanged by this), correcting the assumption toward
-the sibling's real values as responses arrive; an href the firmware never
+sibling, with one bounded exception: it still retries a single individual
+`GET /<uuid>/information/vs/0` -- the one href this pattern has ever
+actually confirmed to answer on its own, per the paragraph above -- so the
+sibling's HA device shows its own model/serial rather than the master's
+cloned ones (identical model/serial across two otherwise-distinct devices
+reads as a duplicate, even though their device-registry identifiers are
+genuinely different). That's one extra RETRIEVE per candidate, not the ~30
+that caused issue #265. `coordinator._poll_subdevice_flat_hrefs` still
+re-GETs every cloned href individually, under the prefix, on every later
+summary poll (unchanged by this), correcting the assumption toward the
+sibling's real values as responses arrive; an href the firmware never
 answers under that prefix just keeps mirroring the master indefinitely --
 which, for a board proven not to expose that href at all, is what "assume
 it exists" has to mean in practice. See `Subdevice.flat_hrefs`.
@@ -420,8 +427,8 @@ def enumerate_subdevices(
         # there, so trust it outright rather than spend an unbounded,
         # firmware-dependent number of RETRIEVEs re-confirming it href by
         # href: clone the master's current hrefs and values verbatim under
-        # this prefix as the sibling's assumed state, no further RETRIEVEs
-        # at all. coordinator._poll_subdevice_flat_hrefs re-GETs each of
+        # this prefix as the sibling's assumed state, no per-href probing
+        # loop at all. coordinator._poll_subdevice_flat_hrefs re-GETs each of
         # these hrefs individually, under the prefix, on every later summary
         # poll (unchanged by this), correcting the clone toward the
         # sibling's real values as responses arrive; an href the firmware
@@ -433,6 +440,25 @@ def enumerate_subdevices(
             return
         for href in flat_hrefs:
             fetched[f"/{sub_id}{href}"] = resources[href]
+        # One exception, worth its own bounded RETRIEVE rather than trusting
+        # the clone: /information/vs/0 is what device_info_for() reads for
+        # this subdevice's own model/serial. Left cloned from the master,
+        # the sibling's HA device page would show the *master's* model and
+        # serial verbatim -- distinct device-registry identifiers (derived
+        # from this UUID, see device_info_for), but reading as a duplicate
+        # of the master to anyone looking at the two devices' info. This is
+        # also the one href ever actually confirmed to answer under this
+        # pattern's prefix on real hardware (issue #177 comment 5113518087),
+        # so it's worth retrying here even though the rest of the fallback
+        # no longer probes anything -- one extra RETRIEVE per candidate,
+        # not the ~30 that caused issue #265.
+        info_seed = (sub_id, "information", "vs", "0")
+        info = _get_property(sess, info_seed)
+        _probed(_seed_href(info_seed), info)
+        if info:
+            fetched[f"/{sub_id}/information/vs/0"] = info
+            if "/information/vs/0" not in flat_hrefs:
+                flat_hrefs = tuple(sorted({*flat_hrefs, "/information/vs/0"}))
         subdevices.append(
             Subdevice(
                 kind="prefixed",
