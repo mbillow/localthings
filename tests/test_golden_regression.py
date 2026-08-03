@@ -1104,18 +1104,16 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_fac_bora_2in1(
 
 def test_registry_reproduces_golden_state_keys_for_airconditioner_fac_bora_205_flat():
     """The same reporter's same physical TP2X_FAC_BORA_21K unit as the _2in1
-    fixture above, but a later capture (issue #205) where /<uuid>/device/0 doesn't
-    answer -- contrary to what that fixture's own seed batch assumed the
-    Collection endpoint would do. device0/oic_res are real; the only
-    UUID-prefixed data is the one href ever actually confirmed live
-    (/information/vs/0, same real capture the _2in1 fixture uses), fed
-    through registry.subdevices.enumerate_subdevices' per-href flat
-    fallback instead of a Collection batch. /information/vs/0 alone binds
-    no entity, so the candidate is found but never materializes -- this
-    golden has no `subdevice_...`-prefixed keys at all, same shape as
-    tests/fixtures/golden/airconditioner_fac_bora.json, which is the point:
-    a device whose sibling can't yet be confirmed live must regress to
-    exactly the master-only state, never a phantom or partial subdevice."""
+    fixture above, but a later capture (issue #205) where /<uuid>/device/0
+    doesn't answer -- contrary to what that fixture's own seed batch assumed
+    the Collection endpoint would do. device0/oic_res are real; there is no
+    UUID-prefixed seed data at all, which is the point of this fixture:
+    issue #265 replaced the old per-href confirmation fallback with an
+    unconditional clone of the master's own hrefs/values under the prefix,
+    so this golden's `subdevice_...`-prefixed keys are now the *same set* as
+    the master's own unprefixed keys -- every entity the master has, the
+    assumed sibling gets too, not just the handful the _2in1 fixture's
+    synthetic partial seed happened to confirm."""
     name = "airconditioner_fac_bora_205_flat"
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_subdevice_aware_state_keys(name)

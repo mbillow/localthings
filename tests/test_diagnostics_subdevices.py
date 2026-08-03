@@ -111,24 +111,26 @@ async def test_diagnostics_reports_prefixed_subdevice(
     assert diag["subdevices_skipped"] == []
 
 
-async def test_diagnostics_reports_flat_hrefs_for_skipped_prefixed_candidate(
+async def test_diagnostics_reports_flat_hrefs_for_materialized_prefixed_candidate(
     hass: HomeAssistant,
     enable_custom_integrations,
 ) -> None:
-    """issue #205: a prefixed candidate found through the per-href flat
+    """issue #205: a prefixed candidate found through the clone-the-master
     fallback (no working /<uuid>/device/0 Collection) has no meaningful
     seed_path -- diagnostics reports None there instead of the misleading
-    bare "/" an empty tuple would otherwise join to, and lists the actual
-    hrefs the fallback confirmed instead."""
+    bare "/" an empty tuple would otherwise join to, and lists the full set
+    of hrefs the fallback assumed (issue #265 -- every href the master
+    itself has, not just a confirmed few) instead."""
     coordinator = _coordinator(hass)
     await _discover(coordinator, "airconditioner_fac_bora_205_flat")
     hass.data.setdefault(DOMAIN, {})[coordinator._entry.entry_id] = coordinator
 
     diag = await async_get_config_entry_diagnostics(hass, coordinator._entry)
 
-    assert diag["subdevices"] == []
-    assert len(diag["subdevices_skipped"]) == 1
-    skipped = diag["subdevices_skipped"][0]
-    assert skipped["kind"] == "prefixed"
-    assert skipped["seed_path"] is None
-    assert skipped["flat_hrefs"] == ["/information/vs/0"]
+    assert diag["subdevices_skipped"] == []
+    assert len(diag["subdevices"]) == 1
+    subdevice = diag["subdevices"][0]
+    assert subdevice["kind"] == "prefixed"
+    assert subdevice["seed_path"] is None
+    assert subdevice["flat_hrefs"] == sorted(diag["resources"])
+    assert subdevice["bound_entity_count"] > 0

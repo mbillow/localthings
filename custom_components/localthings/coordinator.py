@@ -462,10 +462,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Re-poll a flat-mode prefixed subdevice's hrefs individually
         (issue #205) -- it has no Collection endpoint to batch-refresh
         through (see enumerate_subdevices' fallback), so each canonical
-        href confirmed at enumeration time gets its own GET under the
-        subdevice's prefix. A href failing to answer this cycle just drops
-        out of the result, same "never let a sibling's flakiness fail the
-        master's poll" posture as the Collection path above.
+        href assumed at enumeration time (cloned from the master's own
+        state, issue #265 -- not yet confirmed live under this subdevice's
+        own prefix) gets its own GET under the subdevice's prefix, which is
+        what turns the clone into this sibling's real value once it
+        answers. A href failing to answer this cycle just drops out of the
+        result and leaves whatever value is already cached (the clone, until
+        corrected) in place -- same "never let a sibling's flakiness fail
+        the master's poll" posture as the Collection path above.
 
         Takes `sess` from the caller (already None-checked there) rather
         than re-reading self._session -- async_close() can null that
@@ -477,7 +481,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         this method builds) -- those are already refreshed every 3s/6s by
         _run_subpolls, strictly more current than this once-per-summary-poll
         pass could offer, so re-fetching them here would only add GETs
-        without adding freshness. A subdevice with many confirmed hrefs
+        without adding freshness. A subdevice with many assumed hrefs
         (unlike a Collection batch, which is always one GET regardless of
         count) is otherwise a summary-poll cost that scales with its href
         count."""

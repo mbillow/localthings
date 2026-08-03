@@ -295,73 +295,64 @@ def test_enumerate_prefixed_from_subdevice_id_list():
     assert extra == {f"/{_UUID}/mode/vs/0": {"m": "cool"}}
 
 
-def test_enumerate_prefixed_falls_back_to_flat_hrefs_when_device0_collection_is_empty():
+def test_enumerate_prefixed_falls_back_to_cloning_master_state_when_device0_collection_is_empty():
     """issue #205: not every prefixed subdevice exposes its own
     /<uuid>/device/0 Collection -- not even TP2X_FAC_BORA_21K, the board
-    this pattern was built against, always does. When it doesn't,
-    enumeration probes every href the master itself answered this cycle,
-    individually, under the UUID prefix, and keeps whichever ones answer."""
+    this pattern was built against, always does. issue #265: probing every
+    master href individually under the prefix to confirm one used to be the
+    fallback, but a firmware that drops packets instead of 4.04ing turned
+    that into a ~300s hang that took the whole config entry's setup down
+    with it. So the fallback no longer touches the network at all -- it
+    trusts the device's own subdeviceIdList claim and clones the master's
+    current hrefs and values verbatim under the prefix."""
     resources = {
         "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
         "/mode/vs/0": {"m": "cool"},
         "/power/vs/0": {"p": "On"},
     }
-    sess = _FakeSession(
-        {
-            # (_UUID, 'device', '0') deliberately absent -> Collection probe fails.
-            (_UUID, "mode", "vs", "0"): {"mode": "cool"},
-            # (_UUID, 'power', 'vs', '0') deliberately absent -> drops out.
-        }
-    )
+    sess = _FakeSession({})  # (_UUID, 'device', '0') absent -> Collection probe fails.
     subdevices, extra = enumerate_subdevices(sess, resources, oic_res_links=[])
     assert len(subdevices) == 1
     subdevice = subdevices[0]
     assert (subdevice.kind, subdevice.key) == ("prefixed", _UUID)
     assert subdevice.seed_path == ()
-    assert subdevice.flat_hrefs == ("/mode/vs/0",)
-    assert extra == {f"/{_UUID}/mode/vs/0": {"mode": "cool"}}
-
-
-def test_enumerate_prefixed_flat_fallback_materializes_nothing_when_no_href_answers():
-    """Same posture as every other candidate check in this module: nothing
-    answering means no candidate, not a crash."""
-    resources = {
-        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
-        "/mode/vs/0": {"m": "cool"},
+    assert subdevice.flat_hrefs == ("/mode/vs/0", "/power/vs/0", "/subdevices/vs/0")
+    assert extra == {
+        f"/{_UUID}/mode/vs/0": {"m": "cool"},
+        f"/{_UUID}/power/vs/0": {"p": "On"},
+        f"/{_UUID}/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
     }
-    subdevices, extra = enumerate_subdevices(_FakeSession({}), resources, oic_res_links=[])
-    assert subdevices == []
-    assert extra == {}
 
 
-def test_enumerate_prefixed_flat_fallback_probe_log_reports_every_href_tried():
-    resources = {
-        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
-        "/mode/vs/0": {"m": "cool"},
-    }
-    sess = _FakeSession(
-        {
-            (_UUID, "mode", "vs", "0"): {"mode": "cool"},
-        }
+def test_enumerate_prefixed_flat_fallback_is_a_no_op_with_no_master_hrefs_to_clone():
+    """A degenerate `resources` (nothing at all, not even /subdevices/vs/0 --
+    can't happen via the subdeviceIdList path but shared by _probe_prefixed
+    with Pattern C, whose ids come from /oic/res instead) must not crash the
+    fallback -- there's nothing to clone, so nothing materializes."""
+    subdevices, extra = enumerate_subdevices(
+        _FakeSession({}),
+        {},
+        oic_res_links=[{"href": f"/{_UUID}/multidevice/vs/0"}],
     )
-    probes: dict[str, bool] = {}
-    enumerate_subdevices(sess, resources, oic_res_links=[], probe_log=probes.__setitem__)
-    assert probes[f"/{_UUID}/device/0"] is False
-    assert probes[f"/{_UUID}/mode/vs/0"] is True
-
-
-def test_enumerate_prefixed_flat_fallback_with_no_master_hrefs_to_probe_is_a_no_op():
-    """The master itself having nothing but /subdevices/vs/0 in its own
-    resources this cycle (e.g. a very first, mostly-empty poll) must not
-    crash the fallback loop -- the only href in `resources` is
-    /subdevices/vs/0 itself, which the fake session doesn't answer under
-    the prefix either, so nothing materializes."""
-    resources = {
-        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
-    }
-    subdevices, extra = enumerate_subdevices(_FakeSession({}), resources, oic_res_links=[])
     assert subdevices == []
     assert extra == {}
+
+
+def test_enumerate_prefixed_flat_fallback_probe_log_only_reports_the_seed():
+    """Only /<uuid>/device/0 is ever probed over the network now -- no more
+    per-href probing to log."""
+    resources = {
+        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
+        "/mode/vs/0": {"m": "cool"},
+    }
+    probes: dict[str, bool] = {}
+    enumerate_subdevices(
+        _FakeSession({}), resources, oic_res_links=[], probe_log=probes.__setitem__
+    )
+    assert probes[f"/{_UUID}/device/0"] is False
+    assert not any(
+        href.startswith(f"/{_UUID}/") and href != f"/{_UUID}/device/0" for href in probes
+    )
 
 
 def test_enumerate_prefixed_flat_fallback_does_not_cross_contaminate_a_second_uuid():
@@ -379,9 +370,7 @@ def test_enumerate_prefixed_flat_fallback_does_not_cross_contaminate_a_second_uu
                 _DEVCOL_REP,
                 {"href": "/mode/vs/0", "rep": {"m": "a-collection"}},
             ],
-            # uuid_b's Collection deliberately absent -> falls back to the flat
-            # per-href probe.
-            (uuid_b, "mode", "vs", "0"): {"m": "b-flat"},
+            # uuid_b's Collection deliberately absent -> falls back to cloning.
         }
     )
     subdevices, extra = enumerate_subdevices(sess, resources, oic_res_links=[])
@@ -391,10 +380,11 @@ def test_enumerate_prefixed_flat_fallback_does_not_cross_contaminate_a_second_uu
     assert by_key[uuid_a].seed_path == (uuid_a, "device", "0")
     assert by_key[uuid_a].flat_hrefs == ()
     assert by_key[uuid_b].seed_path == ()
-    assert by_key[uuid_b].flat_hrefs == ("/mode/vs/0",)
+    assert by_key[uuid_b].flat_hrefs == ("/mode/vs/0", "/subdevices/vs/0")
     assert extra == {
         f"/{uuid_a}/mode/vs/0": {"m": "a-collection"},
-        f"/{uuid_b}/mode/vs/0": {"m": "b-flat"},
+        f"/{uuid_b}/mode/vs/0": {"m": "cool"},
+        f"/{uuid_b}/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [uuid_a, uuid_b]},
     }
 
 

@@ -273,35 +273,43 @@ async def test_fac_bora_2in1_unique_ids_include_subdevice_prefix(hass: HomeAssis
 # ---------------------------------------------------------------------------
 # Same reporter and physical unit/UUID again -- issue #205, but this
 # time /<uuid>/device/0 doesn't answer. Exercises enumerate_subdevices'
-# per-href flat-probe fallback (registry/subdevices.py) against a real
-# capture instead of the synthetic sessions test_subdevices.py uses.
+# clone-the-master fallback (registry/subdevices.py, issue #265) against a
+# real capture instead of the synthetic sessions test_subdevices.py uses.
 # ---------------------------------------------------------------------------
 
 
-async def test_fac_bora_205_flat_fallback_finds_candidate_but_gate_holds_it_back(
+async def test_fac_bora_205_flat_fallback_clones_master_and_materializes(
     hass: HomeAssistant,
 ):
-    """The fixture's only seeded UUID-prefixed href is /information/vs/0 --
-    the one href ever actually confirmed live under this prefix (issue #177
-    comment 5113518087) -- since nothing else has been confirmed yet for
-    this unit. That's enough for the flat-probe fallback to find a
-    candidate, but /information/vs/0 binds no entity on its own (it's only
-    ever read for device-type resolution, never bound as a capability), so
-    discover_partitioned's liveness gate correctly holds it back rather than
-    materializing a phantom climate card from unconfirmed hrefs. This is the
-    honest current state of issue #205, not a guess at its resolution."""
+    """/<uuid>/device/0 still doesn't answer for this reporter's unit
+    (issue #205), but issue #265 replaced the old per-href confirmation loop
+    -- which used to hold this candidate back with only /information/vs/0
+    ever confirmed live under the prefix -- with an unconditional clone of
+    the master's own hrefs and values under the prefix. So the sibling now
+    materializes immediately with the master's own climate state as its
+    assumed starting point, rather than waiting on per-href confirmation
+    that this firmware may never give (this test used to assert the
+    opposite: that the liveness gate correctly held the candidate back)."""
     coordinator = _coordinator(hass)
+    resources, _oic_res, _seeds = _load_device_full("airconditioner_fac_bora_205_flat")
     await _discover(coordinator, "airconditioner_fac_bora_205_flat")
 
-    assert coordinator.subdevices == []
-    assert [s.subdevice.key for s in coordinator._skipped_subdevices] == [_SUB_UUID]
-    skipped = coordinator._skipped_subdevices[0].subdevice
-    assert skipped.kind == "prefixed"
-    assert skipped.seed_path == ()
-    assert skipped.flat_hrefs == ("/information/vs/0",)
+    assert [su.key for su in coordinator.subdevices] == [_SUB_UUID]
+    assert coordinator._skipped_subdevices == []
+    subdevice = coordinator.subdevices[0]
+    assert subdevice.kind == "prefixed"
+    assert subdevice.seed_path == ()
+    assert subdevice.flat_hrefs == tuple(sorted(resources))
 
+    # Only the seed Collection itself was ever probed over the network --
+    # no more per-href confirmation loop to log.
     assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
-    assert coordinator._subdevice_probes[f"/{_SUB_UUID}/information/vs/0"] is True
+    assert not any(
+        href.startswith(f"/{_SUB_UUID}/") and href != f"/{_SUB_UUID}/device/0"
+        for href in coordinator._subdevice_probes
+    )
+
+    assert _climate_bound(coordinator, _SUB_UUID) is not None
 
     # Confirms the master itself is completely unaffected by its sibling's
     # Collection endpoint not answering -- same guarantee every other
@@ -310,14 +318,12 @@ async def test_fac_bora_205_flat_fallback_finds_candidate_but_gate_holds_it_back
 
 
 async def test_flat_subdevice_materializes_and_repolls_end_to_end(hass: HomeAssistant):
-    """Synthetic (not a real capture, unlike the fixture-driven test above) --
-    exercises the one path nothing else covers: a flat-mode prefixed
-    subdevice with *enough* confirmed hrefs to actually pass
-    discover_partitioned's liveness gate and materialize a real climate
-    entity, then a subsequent _poll_subdevice_seed re-poll refreshing its
-    state all the way through to canonical_resources -- the path a real
-    resolution of issue #205 (once more hrefs are confirmed live for some
-    unit) would actually need.
+    """Synthetic seeds (not a real capture, unlike the fixture-driven test
+    above) -- exercises the one path nothing else covers: a flat-mode
+    prefixed subdevice materializing off a clone of the master's own state
+    (issue #265) and then a subsequent _poll_subdevice_seed re-poll
+    refreshing its state all the way through to canonical_resources as real
+    per-href confirmation arrives.
 
     Also pins _poll_subdevice_flat_hrefs' hot/warm skip: climate-critical
     hrefs (power/mode/temperature) land on the warm tier by discovery's own
@@ -327,62 +333,45 @@ async def test_flat_subdevice_materializes_and_repolls_end_to_end(hass: HomeAssi
     /option/autoclean/vs/0 is cold-tier and is what actually needs this
     path."""
     resources, oic_res, _real_seeds = _load_device_full("airconditioner_fac_bora_2in1")
-    seeds = {
-        # No (_SUB_UUID, 'device', '0') entry -- forces the flat fallback,
-        # same as the real issue #205 capture above, but this time with
-        # enough hrefs answering to actually materialize. power/mode/
-        # temperature values copied verbatim from that fixture's own (real)
-        # Collection-batch seed, just served individually instead of
-        # batched, to isolate "does flat mode produce the same result as
-        # Collection mode" as the only variable.
-        f"/{_SUB_UUID}/power/vs/0": {"x.com.samsung.da.power": "On"},
-        f"/{_SUB_UUID}/mode/vs/0": {
-            "x.com.samsung.da.supportedModes": ["Cool", "Dry", "Wind", "Auto"],
-            "x.com.samsung.da.modes": ["Cool"],
-            "x.com.samsung.da.options": [],
-        },
-        f"/{_SUB_UUID}/temperature/current/0": {
-            "range": [18.0, 30.0],
-            "units": "C",
-            "temperature": 26.0,
-        },
-        f"/{_SUB_UUID}/temperature/desired/0": {
-            "range": [18.0, 30.0],
-            "units": "C",
-            "temperature": 24.0,
-        },
-        # Cold-tier -- not covered by _run_subpolls, so this is the href
-        # that actually depends on _poll_subdevice_flat_hrefs to ever
-        # refresh at all.
-        f"/{_SUB_UUID}/option/autoclean/vs/0": {
-            "x.com.samsung.da.settingStatus": "Off",
-        },
-    }
+    # No (_SUB_UUID, 'device', '0') entry -- forces the flat fallback, same
+    # as the real issue #205 capture above. No per-href seeds are needed for
+    # materialization itself anymore: the fallback clones the master's own
+    # `resources` (real climate state included) under the prefix, with no
+    # RETRIEVEs at all.
     coordinator = _coordinator(hass)
-    await _discover_with(coordinator, resources, oic_res, seeds)
+    await _discover_with(coordinator, resources, oic_res, seeds={})
 
     assert [su.key for su in coordinator.subdevices] == [_SUB_UUID]
     subdevice = coordinator.subdevices[0]
     assert subdevice.seed_path == ()
-    assert subdevice.flat_hrefs != ()
+    assert subdevice.flat_hrefs == tuple(sorted(resources))
 
     sub_climate = _climate_bound(coordinator, _SUB_UUID)
     assert sub_climate is not None
 
+    # Cloned initial state mirrors the master's own values verbatim.
+    initial_temp = resources["/temperature/current/0"]["temperature"]
+    initial_autoclean = resources["/option/autoclean/vs/0"]["x.com.samsung.da.settingStatus"]
+    res = coordinator.canonical_resources(subdevice)
+    assert res["/temperature/current/0"]["temperature"] == initial_temp
+    assert res["/option/autoclean/vs/0"]["x.com.samsung.da.settingStatus"] == initial_autoclean
+
     # Re-poll: a fresh reading under the prefix should reach
     # canonical_resources through _poll_subdevice_seed's flat-mode branch,
-    # not just sit frozen at the one-time enumeration snapshot.
+    # correcting the clone toward the sibling's real, confirmed value --
+    # not just sitting frozen at the one-time enumeration snapshot.
     # FakeCoapSession's `seeds` is typed `dict[str, list]` for the common
     # batch-list shape, but (per its own docstring) also legitimately holds
     # plain Property maps for probe-style hrefs like these two.
+    fresh_autoclean = "Off" if initial_autoclean != "Off" else "On"
     seeds_map = cast("dict[str, Any]", cast(FakeCoapSession, coordinator._session).seeds)
     seeds_map[f"/{_SUB_UUID}/temperature/current/0"] = {
         "range": [18.0, 30.0],
         "units": "C",
-        "temperature": 27.5,
+        "temperature": initial_temp + 1.5,
     }
     seeds_map[f"/{_SUB_UUID}/option/autoclean/vs/0"] = {
-        "x.com.samsung.da.settingStatus": "On",
+        "x.com.samsung.da.settingStatus": fresh_autoclean,
     }
     refreshed = coordinator._poll_subdevice_seed(subdevice)
 
@@ -391,16 +380,16 @@ async def test_flat_subdevice_materializes_and_repolls_end_to_end(hass: HomeAssi
     # through this path.
     assert f"/{_SUB_UUID}/temperature/current/0" not in refreshed
     assert refreshed == {
-        f"/{_SUB_UUID}/option/autoclean/vs/0": {"x.com.samsung.da.settingStatus": "On"},
+        f"/{_SUB_UUID}/option/autoclean/vs/0": {"x.com.samsung.da.settingStatus": fresh_autoclean},
     }
 
     for href, rep in refreshed.items():
         coordinator._observe.apply(href, rep, source="poll")
     res = coordinator.canonical_resources(subdevice)
-    assert res["/option/autoclean/vs/0"]["x.com.samsung.da.settingStatus"] == "On"
+    assert res["/option/autoclean/vs/0"]["x.com.samsung.da.settingStatus"] == fresh_autoclean
     # Confirms the skip is about redundant re-fetching, not stale data --
     # the warm-tier value from initial discovery is still there, untouched.
-    assert res["/temperature/current/0"]["temperature"] == 26.0
+    assert res["/temperature/current/0"]["temperature"] == initial_temp
 
 
 class _FakeCollectionSession:

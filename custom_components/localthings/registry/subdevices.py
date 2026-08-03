@@ -30,11 +30,30 @@ second subdevice exists at that prefix, but not evidence that `GET
 around) itself returns anything. Issue #205, the same unit on a later
 version, is that assumption failing: `/<uuid>/device/0` comes back empty.
 So `enumerate_subdevices` tries it first (a future board might genuinely
-expose it) and falls back, when it's empty, to probing every href the
-master itself answered this cycle individually under the UUID prefix --
-the only thing ever actually confirmed to work for this pattern -- on the
-assumption that a composite device's siblings share the master's resource
-surface. See `Subdevice.flat_hrefs`.
+expose it) and, when it's empty, assumes the sibling shares the master's
+resource surface outright rather than trying to confirm it href by href.
+
+That per-href confirmation is what this module did originally, and issue
+#265 is why it doesn't anymore: `ARTIK051_FAC_TIME_21K`'s firmware doesn't
+4.04 an href it doesn't recognize under a foreign prefix, it drops the
+packet -- so probing the ~30 hrefs a real AC dump carries, each waiting out
+the full 10s RETRIEVE timeout before moving on, took close enough to five
+minutes to trip Home Assistant's own bootstrap-stage timeout and fail the
+whole config entry, main unit included, before a single entity existed.
+A device naming this UUID in its own `subdeviceIdList` (or `/oic/res` link
+prefix, Pattern C) is already the device's own claim that a real subdevice
+lives there; spending an unbounded, firmware-dependent amount of RETRIEVEs
+trying to re-confirm that claim one href at a time bought unreliable
+confirmation at a cost that could take the integration down with it. So the
+fallback now trusts the claim and clones the master's current hrefs *and*
+values verbatim under the prefix as this cycle's assumed state for the
+sibling -- no extra RETRIEVEs at all. `coordinator._poll_subdevice_flat_hrefs`
+still re-GETs each of those hrefs individually, under the prefix, on every
+later summary poll (unchanged by this), correcting the assumption toward
+the sibling's real values as responses arrive; an href the firmware never
+answers under that prefix just keeps mirroring the master indefinitely --
+which, for a board proven not to expose that href at all, is what "assume
+it exists" has to mean in practice. See `Subdevice.flat_hrefs`.
 
 Pattern C -- UUID prefix advertised only via `/oic/res`
 (`AWM-WW-AID-26-ONEBODY` washer+dryer combo, issue #241). The board answers
@@ -134,10 +153,13 @@ class Subdevice:
     `flat_hrefs` is non-empty only for a 'prefixed' subdevice that doesn't
     expose its own Collection at `seed_path` (issue #205 -- not even
     TP2X_FAC_BORA_21K, the board this pattern was built against, always
-    does). When set, `seed_path` is meaningless (left as `()`) and this
-    subdevice's state comes from GETting each of these canonical hrefs
-    individually under its prefix instead of one Collection batch -- see
-    enumerate_subdevices' fallback and coordinator._poll_subdevice_seed.
+    does). When set, `seed_path` is meaningless (left as `()`); enumeration
+    seeds this subdevice's initial state by cloning the master's own current
+    hrefs/values under its prefix rather than confirming them live (issue
+    #265 -- see enumerate_subdevices' fallback), and from then on
+    coordinator._poll_subdevice_seed refreshes it by GETting each of these
+    canonical hrefs individually under its prefix instead of one Collection
+    batch, correcting the clone toward real values as responses arrive.
     """
 
     kind: str  # 'main' | 'indexed' | 'prefixed'
@@ -379,49 +401,44 @@ def enumerate_subdevices(
             fetched.update(normalize_seed_batch(subdevice, batch))
             subdevices.append(subdevice)
             return
-        # Fallback (issue #205): TP2X_FAC_BORA_21K itself -- the board this
+        # Fallback (issue #265, superseding the per-href probe issue #205
+        # originally added here): TP2X_FAC_BORA_21K itself -- the board this
         # pattern was built against -- turns out not to always expose its own
         # `/<uuid>/device/0` Collection either, so "every prefixed subdevice
-        # has one" doesn't hold even on the reference hardware. With no
-        # Collection to seed from and no per-UUID entry in `/oic/res` to
-        # enumerate hrefs from, the only signal left is that a composite
-        # device's siblings are the same physical board family as the
-        # subdevice this config entry already talks to -- so probe every
-        # href the master itself answered this cycle, individually, under
-        # this UUID's prefix, and keep whichever ones answer. Each is a
-        # plain tolerated-404 RETRIEVE, same posture as every other probe in
-        # this function.
-        #
-        # Known gap, not yet guarded against: a firmware that answers *any*
-        # request under an unrecognized prefix (echoing the master's own
-        # state back rather than 4.04ing) would pass every one of these
-        # probes and, if the echoed state also clears discover_partitioned's
-        # liveness gate, materialize a phantom duplicate of the master
-        # rather than a real sibling. Every board seen so far genuinely
-        # 4.04s on paths it doesn't own (issue #205's own unit answered only
-        # 1 of 31 probes), so this hasn't been built -- the one place it
-        # could hook in later is comparing a candidate's confirmed reps
-        # against the master's own values for those same canonical hrefs.
-        flat_hrefs = []
-        first = True
-        for href in sorted(resources):
-            if not first:
-                sess.pace()
-            first = False
-            actual = f"/{sub_id}{href}"
-            rep = _get_property(sess, tuple(actual.strip("/").split("/")))
-            _probed(actual, rep)
-            if rep:
-                flat_hrefs.append(href)
-                fetched[actual] = rep
+        # has one" doesn't hold even on the reference hardware. This used to
+        # respond by probing every href the master itself answered this
+        # cycle, individually, under this UUID's prefix, keeping whichever
+        # ones answered -- but issue #265's ARTIK051_FAC_TIME_21K drops
+        # packets for hrefs it doesn't recognize under a foreign prefix
+        # instead of 4.04ing them, so that loop's ~30 RETRIEVEs (a real AC
+        # dump's href count) each ran out the full 10s timeout, took close
+        # to five minutes, and tripped Home Assistant's own bootstrap-stage
+        # timeout -- failing the whole config entry, main unit included,
+        # before a single entity existed. The device already named this
+        # UUID in its own subdeviceIdList (or an /oic/res link prefix,
+        # Pattern C) -- that's the device's own claim a real subdevice lives
+        # there, so trust it outright rather than spend an unbounded,
+        # firmware-dependent number of RETRIEVEs re-confirming it href by
+        # href: clone the master's current hrefs and values verbatim under
+        # this prefix as the sibling's assumed state, no further RETRIEVEs
+        # at all. coordinator._poll_subdevice_flat_hrefs re-GETs each of
+        # these hrefs individually, under the prefix, on every later summary
+        # poll (unchanged by this), correcting the clone toward the
+        # sibling's real values as responses arrive; an href the firmware
+        # never answers under this prefix just keeps mirroring the master
+        # indefinitely -- the necessary meaning of "assume it exists" for a
+        # board already proven not to expose that href at all.
+        flat_hrefs = tuple(sorted(resources))
         if not flat_hrefs:
             return
+        for href in flat_hrefs:
+            fetched[f"/{sub_id}{href}"] = resources[href]
         subdevices.append(
             Subdevice(
                 kind="prefixed",
                 key=sub_id,
                 seed_path=(),
-                flat_hrefs=tuple(flat_hrefs),
+                flat_hrefs=flat_hrefs,
             )
         )
 
