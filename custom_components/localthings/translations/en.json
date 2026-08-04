@@ -117,6 +117,9 @@
       "diagnosis_start": {
         "name": "Start diagnosis"
       },
+      "filter_time_reset": {
+        "name": "Reset filter time"
+      },
       "pause": {
         "name": "Pause"
       },

@@ -20,6 +20,7 @@ from dataclasses import replace
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
+    ButtonDesc,
     ClimateDesc,
     NumberDesc,
     SelectDesc,
@@ -685,62 +686,45 @@ CLIMATE = Capability(
         # threshold, rather than the app clearing counter and alarm separately.)
         #
         # ---------------------------------------------------------------------
-        # RESETTING THIS COUNTER: NOT SOLVED YET -- no reset entity here, and
-        # the notes below are so the next attempt starts from the evidence
-        # rather than from scratch. I could not work out how to drive the reset
-        # locally; that is not the same as it being impossible, and none of the
-        # results below rule out a mechanism I simply haven't found.
+        # RESETTING THIS COUNTER: FilterCleanAlarm_Clear, through the same
+        # single-token options merge as every other setting on this href.
+        # Measured on an ARTIK051_KRAC_18K: 2.04 Changed, FilterTime_95 (9 h
+        # 30 min) -> FilterTime_0, still zero on a fresh DTLS session and on
+        # every poll after; none of the other 17 tokens moved and the alarm
+        # entries stayed Deleted.
         #
-        # What the reset actually is: a *command*, not a value write. Samsung
-        # models it as capability `custom.dustFilter`, command
-        # `resetDustFilter`, no arguments (implemented in several SmartThings HA
-        # forks; not in the core integration). That reframes every failed
-        # attempt below -- nothing changes the counter by writing to it,
-        # because the board zeroes it itself on receiving a command.
+        # It is a trigger, not a setting. The board zeroes the counter on
+        # receiving the token and never reports FilterCleanAlarm_ itself on this
+        # generation -- which is exactly why two earlier rounds against live
+        # hardware failed, and why both failures are worth keeping here:
         #
-        # Tried, all against a live unit, all failed:
-        #   * FilterTime_0 via the single-token options merge that works for
-        #     every other setting on this href -- accepted with no error, then
-        #     discarded. Two units, opposite power states, to rule out the
-        #     obvious confound: 5595 -> back to 5595 after 69 s (powered off,
-        #     alarm active) and 1925 -> back to 1925 after 65 s (actively
-        #     cooling).
-        #   * A full options[] read-modify-write with FilterTime_0 substituted,
-        #     instead of the single-token merge -- zero fields changed anywhere.
-        #   * A write to /consumable/vs/0, the board's own filter resource
-        #     (items[{name: FilterProgress, state: N}]) -- discarded. /oic/res
-        #     declares that resource oic.if.s, i.e. read-only, which fits.
-        #   * /actions/vs/0 (x.com.samsung.da.actions, oic.if.a) is the obvious
-        #     local command channel, but publishes no schema: GET returns {} on
-        #     baseline and on oic.if.a, and five POSTs probing the *shape*
-        #     (empty map, empty string, empty array, invalid value, items shape)
-        #     all returned 4.00 with an empty body -- no echo of accepted field
-        #     names, unlike the laundry firmware's "Control fail, <...>". I
-        #     deliberately did not enumerate guessed action names against a live
-        #     appliance: an unknown vocabulary on a channel called "actions" can
-        #     hold a factory reset next to the one we want.
-        #   * /hass/state/vs/0 and /hass/command/vs/0 (advertised in /oic/res,
-        #     and /opt/data/hass.db exists in /file/list) -> 4.04 on every
-        #     interface, so unimplemented scaffolding on this firmware.
-        #   * /file/transfer/vs/0 serves only /mnt/usage.db; selecting another
-        #     path returns 4.05/4.00, so the firmware can't be pulled that way
-        #     to read the action vocabulary out of it.
-        #   * /rm/micomdata/vs/0 (channel toward the MICOM board the physical
-        #     panel talks to) stays empty even after successfully enabling
-        #     remote management.
+        #   * FilterTime_0, i.e. writing the *value*. Accepted with no error and
+        #     discarded: 5595 -> 5595 after 69 s, 1925 -> 1925 after 65 s, on
+        #     two units in opposite power states. The counter is not writable.
+        #   * The cloud capability's command name (custom.dustFilter /
+        #     resetDustFilter) POSTed to /actions/vs/0 in five envelope shapes --
+        #     all 4.00 with an empty body. That name is real, but it names a
+        #     cloud command; this transport does not carry it.
         #
-        # What the failures are NOT: a transport, permission or cert problem.
-        # A control write of rmState on /rm/state/vs/0 was accepted (2.04
-        # Changed, value held, restored afterwards), and FilterAlarmTime_ below
-        # is written through the very same options merge and kept. So writes
-        # work; this one value just isn't driven that way.
-        #
-        # Where I'd look next: the action vocabulary for /actions/vs/0 from an
-        # independent source (firmware image, or a capture of what the cloud
-        # sends the device), or the IR path -- the physical remote has a filter
-        # reset (Options -> Filter Reset -> SET), and IRremoteESP8266 decodes
-        # this AC family, though issue #1277's dump doesn't include that button.
+        # The reset button in Samsung's own app for this appliance sends exactly
+        # the token above, and skips the write entirely when the counter is
+        # already zero. That is also the lesson: a trigger cannot be found by
+        # diffing what the appliance reports before and after the app does the
+        # thing, because a trigger is never stored -- the earlier conclusion
+        # that the reset must be cloud-only came from precisely that diff.
         # ---------------------------------------------------------------------
+        ButtonDesc(
+            key="filter_time_reset",
+            field="",
+            payload="FilterCleanAlarm_Clear",
+            icon="mdi:restart",
+            entity_category="config",
+            exists_fn=_has_option_token("FilterTime"),
+            write_fn=lambda p, rep, href=None: (
+                ["mode", "vs", "0"],
+                {"x.com.samsung.da.options": [p]},
+            ),
+        ),
         SensorDesc(
             key="filter_time",
             rep_fn=_option_token_num("FilterTime", divisor=10),

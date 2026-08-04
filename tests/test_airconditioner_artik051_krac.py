@@ -235,6 +235,28 @@ def test_filter_alarm_time_reads_the_threshold_and_writes_one_token():
     )
 
 
+def test_filter_time_reset_writes_the_appliance_s_own_trigger_token():
+    """FilterCleanAlarm_Clear, measured on hardware: 2.04 Changed and
+    FilterTime_95 -> FilterTime_0, still zero on a fresh session and every poll
+    after. The token is a trigger the board acts on rather than a value it
+    stores -- it never appears in options[] -- so the button is gated on the
+    counter's own token being present, which is what says this board has a
+    filter timer at all."""
+    desc = _desc(_load_device(FIXTURE), "filter_time_reset")
+    assert desc is not None
+    assert desc.write_fn(desc.payload, {}) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["FilterCleanAlarm_Clear"]},
+    )
+
+
+def test_filter_time_reset_stays_off_boards_without_the_counter():
+    """No FilterTime_ token, no counter to reset. Newer boards report filter
+    usage through their own resource and would need a different mechanism, so
+    offering a button that writes a legacy token there would be a guess."""
+    assert _desc(_load_device("airconditioner_tp1x_rac"), "filter_time_reset") is None
+
+
 def test_filter_alarm_time_stays_off_boards_with_a_real_threshold_resource():
     """Newer boards carry air_filter_threshold off supportedFilterDesiredUsage;
     two thresholds on one device would be a coin flip for the user.
