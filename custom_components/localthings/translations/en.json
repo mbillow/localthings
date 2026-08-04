@@ -284,6 +284,9 @@
           "90": "Self clean",
           "0e": "AI Wash",
           "07": "Pre blast",
+          "85": "Delicate",
+          "0C": "Express",
+          "0D": "Self clean",
           "8d": "Pots and pans",
           "8e": "Plastic",
           "8f": "Baby Care"
@@ -316,8 +319,10 @@
           "23": "Quick Dry 35'",
           "24": "Cool air",
           "25": "Warm air",
+          "26": "Air wash",
           "27": "Time dry",
           "29": "AI Dry",
+          "2A": "Hygiene Care+",
           "1a": "Wool",
           "1b": "Bedding",
           "1c": "Shirts",
@@ -585,6 +590,7 @@
           "32": "Shirts",
           "33": "Bedding",
           "34": "Mixed",
+          "35": "E Cotton",
           "36": "Wash+Dry",
           "37": "Air Wash",
           "38": "Cotton Dry",
@@ -1235,18 +1241,10 @@
       },
       "confirm_unknown_type": {
         "title": "Appliance type not recognized",
-        "description": "This appliance reported model \"{model}\", which isn't a type LocalThings recognizes yet. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
+        "description": "This appliance's type couldn't be recognized. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
       }
     },
     "error": {
-      "no_response": "No response from that IP address — nothing came back on any port in the appliance's local API range (UDP 49152-49160). Check the IP address is correct, the appliance is powered on and on the same network as Home Assistant, and that no firewall is dropping UDP traffic to it.",
-      "ports_closed": "That IP address is reachable, but it actively refused every port in the local API range (UDP 49152-49160). Either it isn't a Samsung appliance, or it's on older firmware that only talks to Samsung's cloud over TCP 8888, which this integration can't use.",
-      "no_dtls_server": "Ports in the local API range are reachable at that address, but nothing there answered a DTLS handshake. Check that the IP address belongs to the appliance and not another device on your network.",
-      "handshake_timeout": "The appliance answered on its local API port but never finished the DTLS handshake. It is usually still holding the session from a previous attempt — wait about a minute and try again.",
-      "cert_rejected": "The appliance rejected the certificate. The CA certificate and key are most likely not the AC14K_M CA this appliance trusts, or they don't pair. The Home Assistant log records the exact alert the appliance sent.",
-      "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
-      "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
-      "unexpected_response": "Connected to the device successfully, but it didn't return a usable device description. It may not be an appliance this integration supports. The Home Assistant log records what it sent.",
       "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details."
