@@ -239,6 +239,9 @@
       "diagnosis_start": {
         "name": "Iniciar diagnóstico"
       },
+      "filter_time_reset": {
+        "name": "Restablecer el contador del filtro"
+      },
       "pause": {
         "name": "Pausar"
       },

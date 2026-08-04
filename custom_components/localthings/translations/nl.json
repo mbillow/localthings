@@ -117,6 +117,9 @@
       "diagnosis_start": {
         "name": "Diagnose starten"
       },
+      "filter_time_reset": {
+        "name": "Filterteller op nul zetten"
+      },
       "pause": {
         "name": "Pauzeren"
       },
