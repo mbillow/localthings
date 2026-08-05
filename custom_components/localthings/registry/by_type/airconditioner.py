@@ -14,6 +14,10 @@ every other AC family, so this registry needs two mutually-exclusive variants
 of that one capability instead of the single shared one every other registry
 uses unconditionally.
 
+common.ALARMS is swapped the same way, for ALARMS_WITH_MESSAGE -- the alarm
+code sensor is shared with every other family, and the added sensor that turns
+an air-conditioner error code into its message is not.
+
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0.
 """
 
@@ -25,7 +29,12 @@ REGISTRY = DeviceRegistry(
     capabilities=_build(
         [
             *ignored.IGNORED,
-            *[c for c in common.UNIVERSAL if c is not common.ENERGY_METER],
+            *[
+                c
+                for c in common.UNIVERSAL
+                if c is not common.ENERGY_METER and c is not common.ALARMS
+            ],
+            airconditioner.ALARMS_WITH_MESSAGE,
             airconditioner.ENERGY_METER_GENERIC,
             airconditioner.ENERGY_METER_LEGACY,
             dishwasher.DIAGNOSIS,

@@ -266,6 +266,113 @@ def _legacy_cumulative_power_kwh(v):
     return round(n / 100000.0, 2)
 
 
+# ---------------------------------------------------------------------------
+# What an error code means, in the appliance's own words.
+#
+# /alarms/vs/0 carries the code as `ErrorCode_<code>`, and common.ALARMS surfaces
+# it verbatim -- useful for an automation, useless for a person: "E464" says
+# nothing. The appliance's own app resolves it against a catalog of 45 codes
+# (RACMOB_error_message_<code>_result in its language file, reached by taking the
+# part after the underscore and lower-casing it, exactly as below).
+#
+# The English strings here are Samsung's own, quoted from that catalog rather
+# than rewritten, so what Home Assistant shows is what the appliance's app would
+# have shown. They stay in English regardless of the user's language: they are
+# the message, not a label, and translating them here would mean inventing
+# wording the appliance never used.
+#
+# A code outside this table becomes the code itself rather than nothing -- the
+# table is what one app build knew, and an unrecognised code is still the thing a
+# service call will ask for.
+_ERROR_MESSAGES = {
+    "E101": "Indoor unit communication reception error",
+    "E121": "Short circuit or open circuit of the indoor temperature sensor",
+    "E122": "A short or open circuit of the Eva-in sensor of the indoor unit",
+    "E123": "A short or open circuit of the Eva-MID sensor of the indoor unit",
+    "E154": "Indoor fan error",
+    "E162": "EEPROM error",
+    "E163": "EEPROM option setting error",
+    "E201": "Indoor/outdoor unit communication error",
+    "E202": "Indoor/outdoor unit communication error",
+    "E203": "Main/Inv communication error",
+    "E221": "Short circuit or open circuit of the outdoor temperature sensor",
+    "E231": "Short circuit or open circuit of the cold temperature sensor",
+    "E237": "Outdoor Cond. Out Sensor Short/Open",
+    "E251": "Short circuit or open circuit of the output temperature sensor",
+    "E320": "OLP sensor error",
+    "E403": "Trip caused by indoor freeze",
+    "E404": "Heating overload trip",
+    "E416": "Output temperature trip",
+    "E422": "Pipe blockage error",
+    "E425": "Electric current error (INV)",
+    "E440": "Heating stop at temperatures above the Start inhibit activation",
+    "E441": "Cooling stop at temperatures above the Start inhibit activation",
+    "E458": "Fan speed error (INV)",
+    "E461": "Comp starting error (INV)",
+    "E462": "Electric current trip",
+    "E463": "OLP trip",
+    "E464": "IPM Over Current (INV)",
+    "E465": "Compressor overload protection (INV)",
+    "E466": "DC-link voltage under/over error (INV)",
+    "E467": "Comp rotation error (INV)",
+    "E468": "Current sensor error (INV)",
+    "E469": "DC-link voltage sensor error (INV)",
+    "E470": "Outdoor unit EEPROM Read/Write Error",
+    "E471": "INV/Outdoor transmission error EEPROM",
+    "E472": "AC Line Zero Cross Signal out (INV)",
+    "E473": "Comp Lock Error (INV)",
+    "E474": "Heat sink errors (INV)",
+    "E475": "FAN2 inverter error (INV)",
+    "E483": "H/W DC Link Over detection (INV)",
+    "E484": "PFC error (INV)",
+    "E485": "Input voltage sensor error (INV)",
+    "E488": "Input voltage sensor error (INV)",
+    "E500": "Heat sink overheat error (INV)",
+    "E554": "Gas shortage error",
+    "E660": "Bootcode inverter error (INV)",
+}
+
+
+def _error_message(items):
+    """The active error's message, its bare code if unknown, or 'none'.
+
+    Reads the same rows common._active_alarm_codes does -- a row is live only
+    when its state is not Deleted and its code does not carry the '_OFF'
+    placeholder suffix -- and looks only at ErrorCode_ rows: FilterAlarm and
+    friends are reminders with their own entities, not faults with a code.
+    """
+    if not items or not isinstance(items, list):
+        return "none"
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        code = str(item.get("x.com.samsung.da.code") or "")
+        if not code.upper().startswith("ERRORCODE_"):
+            continue
+        if str(item.get("x.com.samsung.da.state", "")).lower() == "deleted":
+            continue
+        value = code.split("_", 1)[1]
+        if value.upper() in ("OFF", ""):
+            continue
+        return _ERROR_MESSAGES.get(value.upper(), value.upper())
+    return "none"
+
+
+ALARMS_WITH_MESSAGE = replace(
+    common.ALARMS,
+    entities=(
+        *common.ALARMS.entities,
+        SensorDesc(
+            key="error_message",
+            field="x.com.samsung.da.items",
+            icon="mdi:alert-circle-outline",
+            entity_category="diagnostic",
+            value_fn=_error_message,
+        ),
+    ),
+)
+
+
 ENERGY_METER_LEGACY = replace(
     common.ENERGY_METER,
     match_fn=lambda rep, resources: is_legacy_board(resources),

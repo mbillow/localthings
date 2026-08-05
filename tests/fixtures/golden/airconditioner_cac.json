@@ -10,6 +10,7 @@
     "air_filter_usage_hours",
     "air_purify",
     "alarm_code",
+    "error_message",
     "auto_clean",
     "auto_clean_progress",
     "auto_clean_running",

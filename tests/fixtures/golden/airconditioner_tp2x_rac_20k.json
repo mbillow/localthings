@@ -4,6 +4,7 @@
     "air_filter_usage",
     "air_filter_usage_hours",
     "alarm_code",
+    "error_message",
     "auto_clean",
     "auto_clean_progress",
     "auto_clean_running",

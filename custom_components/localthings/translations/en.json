@@ -684,6 +684,9 @@
       "alarm_code": {
         "name": "Alarm code"
       },
+      "error_message": {
+        "name": "Error message"
+      },
       "auto_ventilation_action": {
         "name": "Auto ventilation action"
       },

@@ -217,6 +217,30 @@ def _desc(resources, key):
     return None
 
 
+def test_error_message_resolves_the_code_the_way_the_appliance_does():
+    """The fixture is a healthy unit -- ErrorCode_OFF / Deleted -- so the codes
+    are injected. The strings are Samsung's own, from the catalog its app reads,
+    and an unrecognised code has to fall through to the code itself rather than
+    to nothing: this table is what one app build knew, not what the appliance can
+    report."""
+    assert _state()["error_message"] == "none"
+
+    def with_alarm(code, state="Created"):
+        fresh = _load_device(FIXTURE)
+        fresh["/alarms/vs/0"]["x.com.samsung.da.items"] = [
+            {"x.com.samsung.da.code": code, "x.com.samsung.da.state": state}
+        ]
+        bound, _ = _discover(fresh)
+        return flatten(bound, fresh)["error_message"]
+
+    assert with_alarm("ErrorCode_E464") == "IPM Over Current (INV)"
+    assert with_alarm("ErrorCode_E554") == "Gas shortage error"
+    assert with_alarm("ErrorCode_E999") == "E999"
+    assert with_alarm("ErrorCode_E464", state="Deleted") == "none"
+    # Reminders are not faults: they have their own entities and no code table.
+    assert with_alarm("FilterAlarm") == "none"
+
+
 def test_filter_alarm_time_reads_the_threshold_and_writes_one_token():
     """The interval FilterTime_ is measured against, offered by the app as a
     180/300/500/700 hour radio. All four were walked on hardware while watching

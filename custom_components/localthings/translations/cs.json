@@ -684,6 +684,9 @@
       "alarm_code": {
         "name": "Kód alarmu"
       },
+      "error_message": {
+        "name": "Chybová hláška"
+      },
       "auto_ventilation_action": {
         "name": "Akce automatického větrání"
       },

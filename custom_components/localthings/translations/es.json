@@ -803,6 +803,9 @@
       "alarm_code": {
         "name": "Código de alarma"
       },
+      "error_message": {
+        "name": "Mensaje de error"
+      },
       "auto_ventilation_action": {
         "name": "Acción de ventilación automática"
       },

@@ -2,6 +2,7 @@
   "state_keys": [
     "air_monitoring",
     "alarm_code",
+    "error_message",
     "auto_clean_legacy",
     "auto_clean_progress_legacy",
     "beep",
