@@ -120,7 +120,7 @@ def test_climate_write_targets():
     # OCF-pair boards: temperature_ocf -> /temperature/desired/0.
     assert write(("temperature_ocf", 23.6), {}) == (
         ["temperature", "desired", "0"],
-        {"temperature": 24},
+        {"temperature": 23.6},
     )
     # Vendor boards: temperature -> /temperatures/vs/0, carrying only the id
     # and the changed field -- the device merges current/min/max/unit itself
@@ -147,6 +147,27 @@ def test_climate_write_targets():
         {"x.com.samsung.da.modes": "Sleep"},
     )
     assert write(("bogus", 1), {}) is None
+
+
+def test_climate_write_preserves_half_degree_temperature_steps():
+    climate_desc = next(e for e in airconditioner.CLIMATE.entities if isinstance(e, ClimateDesc))
+    write = climate_desc.write_fn
+    resources = {
+        "/temperature/control/vs/0": {"x.com.samsung.da.increment": "0.5"},
+        "/temperatures/vs/0": {"x.com.samsung.da.increment": "0.5"},
+    }
+    assert write(("temperature_ocf", 24.5), {}, None, resources) == (
+        ["temperature", "desired", "0"],
+        {"temperature": 24.5},
+    )
+    assert write(("temperature", 24.5), {}, None, resources) == (
+        ["temperatures", "vs", "0"],
+        {
+            "x.com.samsung.da.items": [
+                {"x.com.samsung.da.id": "0", "x.com.samsung.da.desired": "24.5"}
+            ]
+        },
+    )
 
 
 def test_climate_consumed_hrefs_declared_as_coverage():

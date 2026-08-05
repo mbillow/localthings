@@ -450,7 +450,48 @@ def _humidity(rep):
     return None
 
 
-def _climate_write(payload, rep, href=None):
+def _quantize_temperature(value, step):
+    """Quantize a temperature to the device's advertised step size."""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if step is None:
+        return numeric
+    try:
+        step_value = float(step)
+    except (TypeError, ValueError):
+        return numeric
+    if step_value <= 0:
+        return numeric
+    quantized = round(numeric / step_value) * step_value
+    if quantized.is_integer():
+        return int(quantized)
+    return quantized
+
+
+def _temperature_step(rep, resources=None):
+    """Return the device-reported temperature increment from the coordinator snapshot."""
+    candidates = []
+    if resources is not None:
+        candidates.extend(
+            (
+                resources.get(HREF_TEMP_CONTROL),
+                resources.get(HREF_TEMPS_VS),
+            )
+        )
+    candidates.append(rep)
+    for resource in candidates:
+        if not isinstance(resource, dict):
+            continue
+        for key in ("increment", "x.com.samsung.da.increment"):
+            step = _num(resource.get(key))
+            if step is not None:
+                return step
+    return None
+
+
+def _climate_write(payload, rep, href=None, resources=None):
     """Map a (kind, value) command from the climate platform to the
     (path_segs, body) for that one sub-write. `value` is already the raw device
     code (the platform maps HA<->device). async_send_command POSTs to path_segs,
@@ -479,18 +520,25 @@ def _climate_write(payload, rep, href=None):
     if kind == "mode":
         return (["mode", "vs", "0"], {"x.com.samsung.da.modes": [value]})
     if kind == "temperature_ocf":
-        return (["temperature", "desired", "0"], {"temperature": round(float(value))})
+        step = _temperature_step(rep, resources)
+        quantized = _quantize_temperature(value, step)
+        return (["temperature", "desired", "0"], {"temperature": quantized})
     if kind == "temperature":
         # Vendor items[] array; only one item observed on every AC dump, id
         # '0'. See the docstring above for why this doesn't echo current/
         # minimum/maximum/unit back at the unit.
+        step = _temperature_step(rep, resources)
+        quantized = _quantize_temperature(value, step)
+        desired = quantized
+        if isinstance(quantized, float) and quantized.is_integer():
+            desired = int(quantized)
         return (
             ["temperatures", "vs", "0"],
             {
                 "x.com.samsung.da.items": [
                     {
                         "x.com.samsung.da.id": "0",
-                        "x.com.samsung.da.desired": str(round(float(value))),
+                        "x.com.samsung.da.desired": str(desired),
                     }
                 ]
             },
