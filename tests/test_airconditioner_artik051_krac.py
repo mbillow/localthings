@@ -398,6 +398,7 @@ def test_preset_comes_from_the_comode_token():
         "comfort",
         "2step",
         "speed",
+        "smart",
     ]
 
     options = resources["/mode/vs/0"]["x.com.samsung.da.options"]
@@ -405,6 +406,19 @@ def test_preset_comes_from_the_comode_token():
         "Comode_Nano" if option.startswith("Comode_") else option for option in options
     ]
     assert _climate(resources).preset_mode == "nano"
+
+
+def test_smart_saver_is_a_preset_like_any_other_token():
+    """Comode_Smart is Samsung's Smart Saver: confirmed on an ARTIK051_KRAC_18K,
+    where writing it moved the reported min_temp from 16 to 24 and lifted a 22
+    target to 24. It reads and writes through the same token path as the codes
+    learned from the cloud -- the only difference is where the name came from."""
+    resources = _load_device(FIXTURE)
+    options = resources["/mode/vs/0"]["x.com.samsung.da.options"]
+    resources["/mode/vs/0"]["x.com.samsung.da.options"] = [
+        "Comode_Smart" if option.startswith("Comode_") else option for option in options
+    ]
+    assert _climate(resources).preset_mode == "smart"
 
 
 async def test_preset_write_uses_the_token_path():

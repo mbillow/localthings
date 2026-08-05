@@ -265,7 +265,13 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     # Preset codes on legacy ARTIK051 boards, learned by driving the same unit
     # through its cloud integration and reading the local token back each time:
     # Nano=windFree, Quiet, Comfort, 2Step, Speed=Fast Turbo, Off=none.
-    _LEGACY_PRESET_CODES = ("Off", "Nano", "Quiet", "Comfort", "2Step", "Speed")
+    #
+    # Smart is Samsung's "Smart Saver", which has no cloud counterpart to learn
+    # it from -- it was read out of the appliance's own app and then confirmed
+    # on hardware: writing Comode_Smart moved the unit's reported min_temp from
+    # 16 to 24 and lifted a 22 target to 24, which is exactly what Samsung
+    # documents Smart Saver doing, and Comode_Off put both back.
+    _LEGACY_PRESET_CODES = ("Off", "Nano", "Quiet", "Comfort", "2Step", "Speed", "Smart")
 
     def _legacy_convenient(self) -> dict:
         """A /mode/convenient/vs/0-shaped rep built from the Comode_* token in
