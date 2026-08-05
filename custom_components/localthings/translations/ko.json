@@ -684,6 +684,9 @@
       "alarm_code": {
         "name": "알람 코드"
       },
+      "error_message": {
+        "name": "오류 메시지"
+      },
       "auto_ventilation_action": {
         "name": "자동 환기 동작"
       },
