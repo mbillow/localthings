@@ -255,7 +255,8 @@ def test_filter_time_reset_stays_off_boards_without_the_counter():
     usage through their own resource and would need a different mechanism, so
     offering a button that writes a legacy token there would be a guess."""
     assert _desc(_load_device("airconditioner_tp1x_rac"), "filter_time_reset") is None
-    
+
+
 def test_auto_clean_progress_and_stop_come_off_their_own_tokens():
     """Three tokens describe the drying cycle and the switch only covered the
     first. AutocleanProgress_ is a percentage -- the app renders it into a
