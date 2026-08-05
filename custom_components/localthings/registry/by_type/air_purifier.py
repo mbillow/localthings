@@ -22,6 +22,12 @@ match_fn discriminators that keep them from colliding):
   resource surface as A-VTWW-TP2-21-COMMON above; no new capabilities
   needed.
 
+AIR_LEVEL_CHECK ("AI Purify" -- the periodic air-quality sensing engine on
+/airlevelcheck/vs/0) is shared by the last three of those: their dumps all
+carry the resource with the same field names, and only the TVTL family has no
+such href. It was covered as opaque plumbing until two AVT-WW-TP1 dumps
+(issues #84 and #190) showed it drives a real user-facing feature.
+
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0 (identical field/write
 contract).
 """
@@ -38,6 +44,7 @@ REGISTRY = DeviceRegistry(
             *common.POWER,
             dishwasher.DIAGNOSIS,
             air_purifier.AIR_QUALITY,
+            air_purifier.AIR_LEVEL_CHECK,
             air_purifier.FILTER,
             air_purifier.DEVICE_ACTIVE,
             air_purifier.AIRFLOW_GENERIC,

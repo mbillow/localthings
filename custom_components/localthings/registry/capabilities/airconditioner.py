@@ -624,6 +624,45 @@ CLIMATE = Capability(
             icon="mdi:fan-auto",
             entity_category="config",
         ),
+        # A drying cycle the unit runs after cooling, to keep the coil from going
+        # mouldy. Three tokens describe it and the switch above only covered the
+        # first: Autoclean_ is the setting, AutocleanProgress_ is how far a
+        # running cycle has got, and StopAutoClean_ is a channel for ending one
+        # early -- its presence is what says the appliance takes that at all
+        # (the app gates its own stop button on exactly that), and the value it
+        # reports while nothing is running is Idle.
+        #
+        # The percentage scale is the app's own: `<progress max="100">` with the
+        # token rendered as "{{value}}%" beside it. An idle unit here reports 1
+        # rather than 0, the same floor the laundry firmware's progressPercentage
+        # sits at when Ready, so 0-vs-1 is not a reliable "is it running" test --
+        # which is why the button below is not gated on it.
+        #
+        # The sensor shares AUTO_CLEAN's catalog entry, like auto_clean_legacy
+        # above: same figure, different board generation. Distinct key, so
+        # nothing collides if a board ever reported both.
+        SensorDesc(
+            key="auto_clean_progress_legacy",
+            translation_key="auto_clean_progress",
+            rep_fn=_option_token_num("AutocleanProgress"),
+            exists_fn=_has_option_token("AutocleanProgress"),
+            unit="%",
+            state_class="measurement",
+            icon="mdi:progress-check",
+            entity_category="diagnostic",
+        ),
+        ButtonDesc(
+            key="auto_clean_stop",
+            field="",
+            payload="StopAutoClean_Set",
+            icon="mdi:fan-off",
+            entity_category="config",
+            exists_fn=_has_option_token("StopAutoClean"),
+            write_fn=lambda p, rep, href=None: (
+                ["mode", "vs", "0"],
+                {"x.com.samsung.da.options": [p]},
+            ),
+        ),
         SwitchDesc(
             key="air_monitoring",
             rep_fn=_option_token_on("AirMonitoring"),

@@ -120,6 +120,9 @@
       "filter_time_reset": {
         "name": "Vynulovat počítadlo filtru"
       },
+      "auto_clean_stop": {
+        "name": "Zastavit samočištění"
+      },
       "pause": {
         "name": "Pozastavit"
       },
@@ -193,6 +196,9 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "sensing_interval": {
+        "name": "Interval AI Purify"
       },
       "setpoint": {
         "name": "Požadovaná teplota"
@@ -496,6 +502,14 @@
       },
       "rinse_cycles": {
         "name": "Počet máchání"
+      },
+      "sensing_mode": {
+        "name": "Akce AI Purify",
+        "state": {
+          "off": "Pouze měření",
+          "airpurify": "Automatické čištění",
+          "alarm": "Dostat upozornění"
+        }
       },
       "softener_concentration": {
         "name": "Koncentrace aviváže",
@@ -1033,6 +1047,12 @@
       "display": {
         "name": "Displej"
       },
+      "periodic_air_sensing": {
+        "name": "AI Purify"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Přeskočení měření AI Purify"
+      },
       "pet_filter_activation": {
         "name": "Aktivace filtru pro domácí mazlíčky"
       },
@@ -1202,6 +1222,12 @@
       },
       "night_start": {
         "name": "Začátek nočního osvětlení"
+      },
+      "sensing_skip_end": {
+        "name": "Konec přeskočení měření AI Purify"
+      },
+      "sensing_skip_start": {
+        "name": "Začátek přeskočení měření AI Purify"
       }
     },
     "water_heater": {

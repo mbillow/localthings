@@ -242,6 +242,9 @@
       "filter_time_reset": {
         "name": "Restablecer el contador del filtro"
       },
+      "auto_clean_stop": {
+        "name": "Detener la autolimpieza"
+      },
       "pause": {
         "name": "Pausar"
       },
@@ -315,6 +318,9 @@
       },
       "oven_setpoint": {
         "name": "Punto de ajuste"
+      },
+      "sensing_interval": {
+        "name": "Intervalo de AI Purify"
       },
       "setpoint": {
         "name": "Punto de ajuste"
@@ -618,6 +624,14 @@
       },
       "rinse_cycles": {
         "name": "Aclarados"
+      },
+      "sensing_mode": {
+        "name": "Acción de AI Purify",
+        "state": {
+          "off": "Solo medición",
+          "airpurify": "Limpieza automática",
+          "alarm": "Recibir notificación"
+        }
       },
       "softener_concentration": {
         "name": "Concentración del suavizante",
@@ -1155,6 +1169,12 @@
       "display": {
         "name": "Pantalla"
       },
+      "periodic_air_sensing": {
+        "name": "AI Purify"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Omisión de medición de AI Purify"
+      },
       "pet_filter_activation": {
         "name": "Activación de filtro para mascotas"
       },
@@ -1324,6 +1344,12 @@
       },
       "night_start": {
         "name": "Inicio de la luz nocturna"
+      },
+      "sensing_skip_end": {
+        "name": "Fin de la omisión de medición de AI Purify"
+      },
+      "sensing_skip_start": {
+        "name": "Inicio de la omisión de medición de AI Purify"
       }
     },
     "water_heater": {

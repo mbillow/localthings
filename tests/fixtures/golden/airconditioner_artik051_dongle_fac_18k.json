@@ -2,6 +2,7 @@
   "state_keys": [
     "alarm_code",
     "auto_clean_legacy",
+    "auto_clean_progress_legacy",
     "beep",
     "clean_level",
     "climate",
@@ -18,6 +19,7 @@
     "super_fine_dust",
     "subdevice1_alarm_code",
     "subdevice1_auto_clean_legacy",
+    "subdevice1_auto_clean_progress_legacy",
     "subdevice1_beep",
     "subdevice1_climate",
     "subdevice1_current_temperature_c",

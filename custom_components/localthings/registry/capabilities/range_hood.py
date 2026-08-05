@@ -7,8 +7,6 @@ brightness remain separate controls because the device advertises them as two
 independent fields.
 """
 
-from datetime import UTC, datetime
-
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
@@ -19,14 +17,7 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
-from .common import int_or_none, sensor_item_value
-
-
-def _timestamp(value):
-    try:
-        return datetime.fromtimestamp(float(value), tz=UTC)
-    except (TypeError, ValueError, OSError):
-        return None
+from .common import epoch_to_utc, int_or_none, sensor_item_value
 
 
 def _active_alarm_codes(items):
@@ -286,7 +277,7 @@ AIR_LEVEL_CHECK = Capability(
             field="x.com.samsung.da.lastSensingTime",
             device_class="timestamp",
             entity_category="diagnostic",
-            value_fn=_timestamp,
+            value_fn=epoch_to_utc,
         ),
         SensorDesc(
             key="last_air_sensing_level",

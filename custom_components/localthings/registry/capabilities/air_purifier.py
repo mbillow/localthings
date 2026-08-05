@@ -58,6 +58,8 @@ one unit, stuck at 0 throughout on the other), so AIRFLOW_VS_FALLBACK below
 stays a plain read-only diagnostic even after this change.
 """
 
+import datetime
+
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -66,8 +68,9 @@ from ..entities import (
     SelectDesc,
     SensorDesc,
     SwitchDesc,
+    TimeDesc,
 )
-from .common import filter_usage_percent, int_or_none, sensor_item_value
+from .common import epoch_to_utc, filter_usage_percent, int_or_none, sensor_item_value
 from .laundry import bool_option_exists, bool_option_value, option_value, option_write
 
 # Newer TP1X_DA-AC-AIR-class boards (e.g. TP1X_DA-AC-AIR-01031_0000, issue
@@ -507,6 +510,266 @@ SOUND_VOLUME = Capability(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# AI Purify -- /airlevelcheck/vs/0 (issues #84 and #190)
+#
+# Covered as "periodic air-quality sensing scheduler plumbing" until two dumps
+# of the AVT-WW-TP1-23 board showed it is not plumbing: it drives the feature
+# the SmartThings app calls AI Purify, where the unit wakes on a timer, samples
+# the air, and optionally acts on the result. Every field is named, none are
+# opaque, and two of them are already user-set on the reported units.
+#
+# Three of this registry's four board families report the resource with the
+# same field names -- TP1X_DA-AC-AIR (#130), A-VTWW-TP2 (#151) and AVT-WW-TP1
+# (#84, #190); only ARTIK051_TVTL (#56) has no such href. Bound unconditionally
+# rather than behind a match_fn so any board reporting it is covered; the one
+# field that genuinely varies is gated per-entity below.
+#
+# The resource carries two independent knobs and they get one entity each,
+# rather than being folded into a single control:
+#
+#   periodicSensingActivationState  On/Off              -- is AI Purify running
+#   autoExeState                    Off/Airpurify/Alarm -- what it does with a
+#                                                          bad reading
+#
+# The appliance itself presents them that way: its own UI has an on/off for AI
+# Purify separately from the three mode choices. Folding them into one select
+# was tried first and lost two things -- a configured action became invisible
+# while the feature was off, and no option could toggle the feature without
+# also overwriting the action.
+#
+# Note the two 'off's mean opposite things and are not interchangeable. The
+# switch's off stops the unit sampling at all; the select's off is the
+# advertised autoExeState "Off", where the unit keeps sampling and simply
+# doesn't act on what it measures -- the app calls that choice "sensing only".
+#
+# The select reads its options straight off supportedAutoExeState rather than
+# a typed-in tuple, the same shape SOUND_MODE below uses for supportedModes: a
+# board advertising a fourth action gets it accepted on both the options list
+# and the write path.
+#
+# range_hood.AIR_LEVEL_CHECK already models this same href, and its read-only
+# keys (air_sensing_state / last_air_sensing_time / last_air_sensing_level) are
+# reused verbatim so both families share one catalog entry. It is deliberately
+# NOT imported: the hood exposes periodic_air_sensing as a read-only
+# BinarySensorDesc and this board needs a writable SwitchDesc on that same key,
+# so reusing the hood's capability would migrate every hood user's entity to a
+# different platform.
+#
+# Verification: every write below was exercised on AVT-WW-TP1-23-AXX500
+# hardware. This board returns 2.04 for writes it silently discards (see
+# HEPA_FILTER's filter-reset note), so an echo proves nothing -- each was
+# judged by the value surviving a reconnect, which forces a new DTLS session,
+# fresh discovery and a fresh observe of this href, leaving no cached state to
+# read back. The other two families get the writes on field-shape grounds, the
+# same basis on which they already share MODE, HEPA_FILTER and the air-quality
+# sensors.
+#
+# Deferred: startSensingOnce (On/Off on all three dumps) looks like a one-shot
+# "sense now" trigger and would be a ButtonDesc, but nothing here writes it yet
+# and this board is known to acknowledge writes it discards -- so it stays
+# unbound until someone can confirm the side effect rather than the echo.
+# ---------------------------------------------------------------------------
+
+
+def _interval_minutes(seconds):
+    """Device stores the interval in seconds; the entity is in minutes.
+
+    `is None` rather than a falsy check so a reported 0 is distinguishable
+    from a missing one. Anything else nonzero rounds up rather than to
+    nearest, so a sub-minute value can't render as 0 and fall below the
+    entity's own floor.
+    """
+    secs = int_or_none(seconds)
+    if secs is None:
+        return None
+    return -(-secs // 60) if secs > 0 else 0
+
+
+def _interval_write(payload, rep, href=None):
+    # Minutes in the UI -> seconds on the wire (scalar string). Modelled as a
+    # free Number rather than the app's three fixed choices (10 min / 30 min /
+    # 1 hour): this resource advertises no supported-values or range field for
+    # the interval -- supportedAutoExeState sits right beside it, so the board
+    # does advertise constraints where it has them -- and it accepts values the
+    # app never offers. Writing 60 s, six times finer than the app's smallest
+    # choice, drove an observed ~60 s sensing cycle on hardware.
+    #
+    # One minute is the floor because that's the resolution this board reports
+    # results at: lastSensingTime lands on an exact minute on every sample from
+    # the AVT-WW-TP1 and A-VTWW-TP2 boards (both fixtures, and eleven
+    # consecutive live readings), where the TP1X/AC/hood boards report arbitrary
+    # seconds. A sub-minute interval is therefore unobservable here whether or
+    # not the board honours it. Zero is refused for a separate reason: unlike
+    # oven.cook_time or operational's delay hours, where 0 is a real setting
+    # ("no timer", "no delay"), nothing establishes what a 0 interval does to
+    # this board -- so native_min stops the UI offering it, and this guard
+    # covers the service-call path. Silent no-op via a None return, the same
+    # shape range_hood._lamp_level_write uses for a level the device didn't
+    # advertise.
+    minutes = round(float(payload))
+    if minutes < 1:
+        return None
+    return ["airlevelcheck", "vs", "0"], {
+        "x.com.samsung.da.periodicSensingInterval": str(minutes * 60)
+    }
+
+
+def _periodic_sensing_write(payload, rep, href=None):
+    # The master on/off for AI Purify. Leaves autoExeState alone, so the
+    # configured action survives the feature being switched off and comes back
+    # with it -- the thing the select cannot do, since every option it writes
+    # sets an action.
+    return ["airlevelcheck", "vs", "0"], {
+        "x.com.samsung.da.periodicSensingActivationState": ("On" if payload == "On" else "Off")
+    }
+
+
+def _skip_status_write(payload, rep, href=None):
+    return ["airlevelcheck", "vs", "0"], {
+        "x.com.samsung.da.periodicSensingSkipStatus": ("On" if payload == "On" else "Off")
+    }
+
+
+# The daily window during which periodic sensing is skipped, stored as one
+# HHMMHHMM string (start+end) on periodicSensingSkipTime. The read side is
+# cross-confirmed on two units: issue #84's sits at the inert '00000000', while
+# issue #190's carries a real user-set '03002300' -> 03:00-23:00. Split into
+# two HA time entities; each write reads the other half back out of the live
+# rep so the pair round-trips. Confirmed in both directions on hardware: from
+# 13:00-23:00, writing start=07:30 then end=22:00 left the device holding
+# '07302200' -- each write kept the half it wasn't given.
+def _skip_time_read(part):
+    def _read(value):
+        raw = str(value or "")
+        chunk = raw[0:4] if part == "start" else raw[4:8]
+        if len(chunk) == 4 and chunk.isdigit():
+            try:
+                return datetime.time(int(chunk[:2]), int(chunk[2:]))
+            except ValueError:
+                return None
+        return None
+
+    return _read
+
+
+def _skip_half(raw, part):
+    """The half this write isn't setting, normalized. Padding alone would carry
+    a malformed value straight back to the device -- writing start over a junk
+    skip time would send '0730' + junk. The read side already refuses a half it
+    can't parse, so an unparseable one becomes '0000' here and the pair
+    round-trips honestly in the same cases."""
+    chunk = (str(raw or "") + "00000000")[:8]
+    other = chunk[4:8] if part == "start" else chunk[0:4]
+    return other if _skip_time_read("end" if part == "start" else "start")(chunk) else "0000"
+
+
+def _skip_time_write(part):
+    def _write(value, rep, href=None):
+        raw = rep.get("x.com.samsung.da.periodicSensingSkipTime", "")
+        hhmm = f"{value.hour:02d}{value.minute:02d}"
+        other = _skip_half(raw, part)
+        new = hhmm + other if part == "start" else other + hhmm
+        return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.periodicSensingSkipTime": new}
+
+    return _write
+
+
+AIR_LEVEL_CHECK = Capability(
+    href="/airlevelcheck/vs/0",
+    poll_tier="warm",
+    entities=(
+        SwitchDesc(
+            key="periodic_air_sensing",
+            field="x.com.samsung.da.periodicSensingActivationState",
+            icon="mdi:radar",
+            entity_category="config",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_periodic_sensing_write,
+        ),
+        # Options come off supportedAutoExeState, not a table here -- the
+        # catalog carries the labels for the three values seen so far, and an
+        # unrecognized fourth still reaches the user (select.py falls back to
+        # the device's own token when the catalog doesn't know it).
+        SelectDesc(
+            key="sensing_mode",
+            field="x.com.samsung.da.autoExeState",
+            options_field="x.com.samsung.da.supportedAutoExeState",
+            translation_key="sensing_mode",
+            icon="mdi:radar",
+            entity_category="config",
+            write_fn=lambda p, rep, href=None: (
+                ["airlevelcheck", "vs", "0"],
+                {"x.com.samsung.da.autoExeState": p},
+            ),
+        ),
+        # The one field that varies across the three families reporting this
+        # resource: the TP1X_DA-AC-AIR dump (#130) omits it while both
+        # AVT-WW-TP1 dumps and the A-VTWW-TP2 dump carry it, so that board runs
+        # the sensing engine on a fixed interval it doesn't expose.
+        NumberDesc(
+            key="sensing_interval",
+            field="x.com.samsung.da.periodicSensingInterval",
+            icon="mdi:timer-cog",
+            entity_category="config",
+            native_min=1,
+            native_max=60,
+            step=1,
+            unit="min",
+            exists_fn=lambda rep, resources: "x.com.samsung.da.periodicSensingInterval" in rep,
+            value_fn=_interval_minutes,
+            write_fn=_interval_write,
+        ),
+        SwitchDesc(
+            key="periodic_sensing_skip_status",
+            field="x.com.samsung.da.periodicSensingSkipStatus",
+            icon="mdi:sleep",
+            entity_category="config",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_skip_status_write,
+        ),
+        TimeDesc(
+            key="sensing_skip_start",
+            field="x.com.samsung.da.periodicSensingSkipTime",
+            icon="mdi:clock-start",
+            entity_category="config",
+            value_fn=_skip_time_read("start"),
+            write_fn=_skip_time_write("start"),
+        ),
+        TimeDesc(
+            key="sensing_skip_end",
+            field="x.com.samsung.da.periodicSensingSkipTime",
+            icon="mdi:clock-end",
+            entity_category="config",
+            value_fn=_skip_time_read("end"),
+            write_fn=_skip_time_write("end"),
+        ),
+        # Read-only status, same keys as range_hood.AIR_LEVEL_CHECK.
+        SensorDesc(
+            key="air_sensing_state",
+            field="x.com.samsung.da.sensingState",
+            icon="mdi:radar",
+            entity_category="diagnostic",
+        ),
+        SensorDesc(
+            key="last_air_sensing_time",
+            field="x.com.samsung.da.lastSensingTime",
+            device_class="timestamp",
+            entity_category="diagnostic",
+            value_fn=epoch_to_utc,
+        ),
+        # 'Kr1' on both dumps -- a national air-quality grade whose scale is
+        # region-prefixed and undocumented here, so it stays a raw diagnostic
+        # rather than being mapped to an asserted enum.
+        SensorDesc(
+            key="last_air_sensing_level",
+            field="x.com.samsung.da.lastSensingLevel",
+            icon="mdi:air-filter",
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
 # /humidity/0 and /humidity/vs/0 are empty {} on both dumps this family has
 # been verified against -- covered here (not globally, per ignored.py's
 # module docstring) since those hrefs collide with fridge/AC schemas
@@ -522,7 +785,6 @@ SOUND_VOLUME = Capability(
 COVERAGE = [
     Capability(href="/humidity/0"),
     Capability(href="/humidity/vs/0"),
-    Capability(href="/airlevelcheck/vs/0"),  # periodic air-quality sensing scheduler plumbing
     Capability(href="/availablecontrolsets/vs/0"),  # opaque hex-encoded control-set bitmap
     Capability(href="/da/softreset/vs/0"),  # soft-reset trigger plumbing
     Capability(href="/keepnormalstate/vs/0"),  # internal keep-normal flag

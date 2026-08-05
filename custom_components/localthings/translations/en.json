@@ -120,6 +120,9 @@
       "filter_time_reset": {
         "name": "Reset filter time"
       },
+      "auto_clean_stop": {
+        "name": "Stop auto clean"
+      },
       "pause": {
         "name": "Pause"
       },
@@ -193,6 +196,9 @@
       },
       "oven_setpoint": {
         "name": "Setpoint"
+      },
+      "sensing_interval": {
+        "name": "AI Purify interval"
       },
       "setpoint": {
         "name": "Setpoint"
@@ -496,6 +502,14 @@
       },
       "rinse_cycles": {
         "name": "Rinse cycles"
+      },
+      "sensing_mode": {
+        "name": "AI Purify action",
+        "state": {
+          "off": "Sensing only",
+          "airpurify": "Auto clean",
+          "alarm": "Get notified"
+        }
       },
       "softener_concentration": {
         "name": "Softener concentration",
@@ -1033,6 +1047,12 @@
       "display": {
         "name": "Display"
       },
+      "periodic_air_sensing": {
+        "name": "AI Purify"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "AI Purify sensing skip"
+      },
       "pet_filter_activation": {
         "name": "Pet filter activation"
       },
@@ -1202,6 +1222,12 @@
       },
       "night_start": {
         "name": "Night light start"
+      },
+      "sensing_skip_end": {
+        "name": "AI Purify sensing skip end"
+      },
+      "sensing_skip_start": {
+        "name": "AI Purify sensing skip start"
       }
     },
     "water_heater": {

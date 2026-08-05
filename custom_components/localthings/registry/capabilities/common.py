@@ -64,6 +64,18 @@ def parse_iso_utc(raw):
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
+def epoch_to_utc(value):
+    """Unix epoch seconds -> aware UTC datetime, for the boards that report a
+    bare epoch rather than the ISO string parse_iso_utc handles. Lived in
+    range_hood.py as `_timestamp` until air_purifier.py needed the same reading
+    for /airlevelcheck/vs/0's lastSensingTime -- promoted here rather than
+    cross-imported, matching how filter_usage_percent was shared."""
+    try:
+        return datetime.fromtimestamp(float(value), tz=UTC)
+    except (TypeError, ValueError, OSError):
+        return None
+
+
 def filter_usage_percent(rep):
     """Filter usage as a percentage of rated capacity. Several families
     (AC, air purifier) report `filterUsage` as a raw count in
