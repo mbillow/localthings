@@ -218,3 +218,102 @@ Patches are welcome, especially:
 - Protocol-level fixes, which belong upstream in [`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local) rather than here. HA-side fixes (entities, config flow, coordinator, registry) belong in this repo.
 
 If you submit a PR, please don't include real device UUIDs, MACs, serials, IPs, or CA private key material. Use the placeholders from the config-flow form instead.
+
+-----------
+# localthings 커스텀 패치 — Samsung 시스템 청정환기 (ACA-KR-TP2-21-AN9000)
+
+이 포크는 [mbillow/localthings](https://github.com/mbillow/localthings)에
+"시스템 청정환기"(모델 ACA-KR-TP2-21-AN9000, vid `DA-AC-DIFFUSER-01001`)의
+누락된 리소스 커버리지를 추가한 개인 패치입니다. 원본 프로젝트에는 아직
+반영되지 않았습니다.
+
+## 배경
+이 기기는 `/oic/d`에서 자신을 `oic.d.airconditioner`로 선언해서
+localthings의 `airconditioner` 레지스트리로 라우팅되는데, 실제로는 일반
+에어컨과 다른 리소스 구조(청정/환기/스마트환기 모드, 헤파필터, 인공지능
+청정 등)를 가지고 있어서 다수의 리소스가 `unbound_hrefs`로 남아 있었습니다.
+(진단 덤프로 직접 재현·검증한 이력은 이 저장소의 이슈/PR 설명 참고)
+
+## 바꾼 파일 3개
+| 파일 | 바뀐 내용 |
+|---|---|
+| `custom_components/localthings/registry/capabilities/airconditioner.py` | 아래 "추가된 기능" 참고 |
+| `custom_components/localthings/registry/by_type/airconditioner.py` | 새 캡퍼빌리티들을 레지스트리에 등록 |
+| `custom_components/localthings/translations/en.json` | 새 엔티티 이름/옵션 라벨 |
+
+파일 안에서 `# --- 커스텀 추가분 ---` ~ `# --- 커스텀 추가분 끝 ---` 주석으로
+감싼 부분이 전부 이번에 추가한 코드입니다. 원본과 무엇이 다른지 한눈에
+보려면:
+```bash
+git diff v0.18.0 -- custom_components/localthings/registry/capabilities/airconditioner.py
+git diff v0.18.0 -- custom_components/localthings/registry/by_type/airconditioner.py
+git diff v0.18.0 -- custom_components/localthings/translations/en.json
+```
+
+## 추가된 기능
+- `switch.power_switch` — 독립 전원 스위치 (원래 이 레지스트리는 climate
+  카드로만 전원을 다루도록 설계돼 있었음 -- 대시보드에서 바로 켜고 끌 수
+  있게 별도 스위치 추가. climate 카드와 href를 공유하며 충돌 없음)
+- `select.ventilation_mode` — 청정 / 환기 / 스마트환기 (climate 카드의
+  hvac_mode로는 표현 안 되는 이 기기 고유 모드 어휘)
+- `select.fan_speed_select` — 팬속도 (자동/약/중/강). 원래 climate
+  카드 안의 fan_mode로만 흡수되던 것을 독립 컨트롤로도 노출
+- `select.swing_direction_select` — 스윙 방향 (Up and Low / Fixed).
+  swing_mode와 동일하게 독립 컨트롤로도 노출
+- `switch.windfree` / `switch.windsleep` — 무풍 / 취침모드
+- `switch.ai_clean_active` / `select.ai_clean_mode` — 인공지능 청정
+  (원래 "의미 없는 내부 plumbing"으로 무시되던 `/airlevelcheck/vs/0`를
+  실제 SmartThings 앱 기능에 대응하는 진짜 컨트롤로 승격)
+- `sensor.dust`(PM10) / `fine_dust`(PM2.5) / `super_fine_dust`(PM1.0) /
+  `odor` / `clean_level` / `co2` — 공기질 6종, `µg/m³`/`ppm`/`Lv` 단위와
+  HA 표준 device_class(pm10/pm25/pm1) 포함
+- `sensor.hepa_filter_usage` / `sensor.hepa_filter_status` — 헤파필터
+  (air_purifier.py의 기존 캡퍼빌리티 재사용)
+- `binary_sensor.device_active` — 기기 활성 상태 (air_purifier.py 재사용)
+- `sensor.model_name` — 모델명 진단 센서 (원래 기기타입 판별에만 쓰이고
+  전역 무시되던 `/information/vs/0`을 이 레지스트리에서만 예외로 노출)
+
+## 다른 에어컨 사용자에게 미치는 영향
+`power_switch`, `fan_speed_select`, `swing_direction_select`,
+`ai_clean_active`/`ai_clean_mode`, `model_name`은 `airconditioner`
+레지스트리 전체가 공유하는 href를 다루기 때문에, 이 통합구성요소로
+연결된 **다른 모든 진짜 에어컨 모델에도 똑같이 새 엔티티가 생깁니다**
+(기존 climate 카드 동작에는 영향 없음 -- 추가 노출일 뿐). 반대로
+`ventilation_mode`, `windfree`, `windsleep`은 이 기기의 특이한 모드
+어휘로만 게이팅돼 있어서 다른 에어컨에는 나타나지 않습니다.
+
+## 검증
+HA 없이 `registry/` 패키지만으로 직접 구동해서 확인했습니다
+(adding-device-support 스킬의 §2 방식):
+- 이 모델의 실제 진단 덤프로 `unbound_hrefs: []` (커버리지 100%)
+- `tests/fixtures/airconditioner*_device.json` 기존 22개 fixture 전부
+  재실행 — 에러 없음, 기존 entity 개수/값 회귀 없음
+
+## ⚠ 확인 안 된 부분 (실기기 미확인)
+아래 쓰기(write) 계약은 이 파일의 다른 단순 필드들과 같은 패턴으로 추정한
+것이며, 실기기에서 눌러본 결과가 아직 없습니다. 사용해보시고 안 먹는
+게 있으면 이슈로 남겨주세요:
+- `power_switch`, `windfree`, `windsleep`, `ai_clean_active`,
+  `ai_clean_mode`, `ventilation_mode`, `fan_speed_select`,
+  `swing_direction_select`의 쓰기 동작
+
+## 설치 (HACS 커스텀 저장소)
+1. HACS → 우측 상단 점 3개 → 사용자 지정 저장소(Custom repositories)
+2. 저장소 URL에 이 포크 주소 입력, 카테고리는 "통합 구성 요소"
+3. 추가 후 "localthings" 검색해서 설치 (원본 대신 이 포크가 뜸)
+
+## 원본과 계속 동기화하기 (업스트림 업데이트 따라가기)
+```bash
+git remote add upstream https://github.com/mbillow/localthings.git
+git fetch upstream
+git merge upstream/main   # 또는 rebase
+```
+충돌 나면 위 "바꾼 파일 3개" 표에 있는 파일들 위주로 확인하세요 —
+`# --- 커스텀 추가분 ---` 주석으로 감싼 블록만 살아있으면 됩니다.
+원본 프로젝트가 나중에 이 기기를 정식 지원하게 되면, 그때는 이 포크
+대신 원본으로 다시 옮기는 걸 추천드립니다.
+
+## 원본 프로젝트에 기여하기
+이 패치가 실기기에서 잘 동작하는 게 확인되면, 원본 저장소에 이슈나 PR로
+제보하는 것도 좋은 방법입니다 — adding-device-support 스킬 문서에 나온
+대로, 이 프로젝트는 실사용자 리포트 기반으로 기기 지원을 넓혀갑니다.
