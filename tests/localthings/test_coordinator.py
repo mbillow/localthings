@@ -69,8 +69,8 @@ async def test_summary_interval(hass: HomeAssistant, mock_entry, mock_coordinato
     assert coordinator.update_interval == timedelta(seconds=SUMMARY_INTERVAL_S)
 
 
-async def test_update_failed_on_persistent_poll_error(hass: HomeAssistant, mock_entry) -> None:
-    """ConfigEntryNotReady raised when poll fails even after reconnect."""
+async def test_offline_initial_setup_succeeds(hass: HomeAssistant, mock_entry) -> None:
+    """ConfigEntry setup succeeds in offline mode when initial poll fails."""
 
     with (
         patch("custom_components.localthings.coordinator.LocalThingsCoordinator._connect_session"),
@@ -83,8 +83,10 @@ async def test_update_failed_on_persistent_poll_error(hass: HomeAssistant, mock_
         result = await hass.config_entries.async_setup(mock_entry.entry_id)
         await hass.async_block_till_done()
 
-    # Setup fails — entry should not be in hass.data
-    assert not result or mock_entry.entry_id not in hass.data.get(DOMAIN, {})
+    # Setup succeeds — entry should be in hass.data and state is LOADED
+    assert result
+    assert mock_entry.entry_id in hass.data.get(DOMAIN, {})
+    assert mock_entry.state == ConfigEntryState.LOADED
 
 
 # ---------------------------------------------------------------------------
@@ -1758,13 +1760,11 @@ async def test_first_refresh_timeout_recovers_via_reconnect(
     assert coordinator._consecutive_poll_timeouts == 0
 
 
-async def test_first_refresh_persistent_timeout_fails_setup(
+async def test_first_refresh_persistent_timeout_succeeds_offline(
     hass: HomeAssistant, mock_entry
 ) -> None:
-    """When the reconnect times out too, the first refresh must fail so HA
-    retries on its backoff -- not load an entity-less entry. The session it
-    left open is closed on the way out (`_poll_once` keeps it up on a
-    `TimeoutError`, and the source port is fixed per device)."""
+    """When initial refresh times out, setup still succeeds in offline mode
+    and retries in background."""
     with (
         patch("custom_components.localthings.coordinator.LocalThingsCoordinator._connect_session"),
         patch(
@@ -1772,21 +1772,11 @@ async def test_first_refresh_persistent_timeout_fails_setup(
             side_effect=_HANDSHAKE_TIMEOUT,
         ),
         patch("custom_components.localthings.coordinator.LocalThingsCoordinator._close_session"),
-        # Asserted on `async_close` rather than `_close_session`: the
-        # reconnect path calls the latter on its own, so it is already true
-        # whether or not setup cleans up after itself.
-        patch.object(
-            LocalThingsCoordinator,
-            "async_close",
-            autospec=True,
-        ) as mock_async_close,
     ):
         await hass.config_entries.async_setup(mock_entry.entry_id)
         await hass.async_block_till_done()
 
-    assert mock_entry.state is ConfigEntryState.SETUP_RETRY
-    assert not hass.states.async_all()
-    mock_async_close.assert_awaited_once()
+    assert mock_entry.state is ConfigEntryState.LOADED
 
 
 async def test_post_discovery_timeout_is_still_deferred(

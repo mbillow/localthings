@@ -7,7 +7,6 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
@@ -147,14 +146,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
-        # `_poll_once` deliberately leaves the session up on a TimeoutError
-        # (see its docstring), so a refresh failing that way leaves a live,
-        # bound UDP socket nothing would ever close. HA retries setup with a
-        # new coordinator, and the source port is fixed by design
-        # (`_local_source_port`), so an abandoned socket would squat the
-        # exact port the next attempt binds.
-        await coordinator.async_close()
-        raise ConfigEntryNotReady(f"Cannot connect to device: {err}") from err
+        _LOGGER.warning(
+            "Initial connection to device failed (%s); starting offline and retrying in background",
+            err,
+        )
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # Send the DTLS close_notify on Core shutdown, not just on unload (issue
