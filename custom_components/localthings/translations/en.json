@@ -296,6 +296,9 @@
           "0e": "AI Wash",
           "07": "Pre blast",
           "8d": "Pots and pans",
+          "85": "Delicate",
+          "0c": "Express",
+          "0d": "Self clean",
           "8e": "Plastic",
           "8f": "Baby Care"
         }
@@ -327,8 +330,10 @@
           "23": "Quick Dry 35'",
           "24": "Cool air",
           "25": "Warm air",
+          "26": "Air wash",
           "27": "Time dry",
           "29": "AI Dry",
+          "2a": "Hygiene Care+",
           "1a": "Wool",
           "1b": "Bedding",
           "1c": "Shirts",
@@ -607,6 +612,7 @@
           "32": "Shirts",
           "33": "Bedding",
           "34": "Mixed",
+          "35": "E Cotton",
           "36": "Wash+Dry",
           "37": "Air Wash",
           "38": "Cotton Dry",
