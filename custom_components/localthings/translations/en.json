@@ -258,7 +258,11 @@
         "name": "Buzzer sound",
         "state": {
           "off": "Off",
-          "on": "On"
+          "on": "On",
+          "volume_off": "Off",
+          "volume_low": "Low",
+          "volume_med": "Medium",
+          "volume_high": "High"
         }
       },
       "discharging_time": {
@@ -884,13 +888,20 @@
         "name": "Temperature"
       },
       "diagnosis": {
-        "name": "Diagnosis"
+        "name": "Diagnosis",
+        "state": {
+          "ready": "Ready"
+        }
       },
       "diagnosis_status": {
-        "name": "Diagnosis status"
+        "name": "Diagnosis status",
+        "state": {
+          "ready": "Ready"
+        }
       },
       "drum_clean_cycles_remaining": {
-        "name": "Drum clean due in"
+        "name": "Drum clean due in",
+        "unit_of_measurement": "cycles"
       },
       "drum_clean_last_cleaned": {
         "name": "Drum last cleaned"
@@ -1031,7 +1042,21 @@
         "name": "Probe temperature"
       },
       "progress": {
-        "name": "Progress"
+        "name": "Progress",
+        "state": {
+          "idle": "Idle",
+          "weight_sensing": "Weight sensing",
+          "wash": "Washing",
+          "rinse": "Rinsing",
+          "spin": "Spinning",
+          "finish": "Finished",
+          "steaming": "Steaming",
+          "air_washing": "Air washing",
+          "drying": "Drying",
+          "cooling": "Cooling",
+          "pre_drain": "Pre-drain",
+          "pre_wash": "Pre-wash"
+        }
       },
       "progress_percentage": {
         "name": "Progress percent"

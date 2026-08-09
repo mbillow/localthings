@@ -7,6 +7,7 @@ from typing import ClassVar, cast
 
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities.laundry import (
+    BUZZER_SOUND,
     cycle_select,
     washer_cycle_fallback,
 )
@@ -45,6 +46,25 @@ def test_options_field_unaffected():
     desc = SelectDesc(key="x", options_field="supported")
     entity = _make_select(desc, "/x/vs/0", {"/x/vs/0": {"supported": ["Lo", "Hi"]}})
     assert entity.options == ["Lo", "Hi"]
+
+
+def test_buzzer_volume_options_normalize_to_translation_keys():
+    desc = next(e for e in BUZZER_SOUND.entities if e.key == "buzzer_sound")
+    entity = _make_select(
+        desc,
+        "/buzzersound/vs/0",
+        {
+            "/buzzersound/vs/0": {
+                "supportedBuzzerSound": [
+                    "Volume_Off",
+                    "Volume_Low",
+                    "Volume_Med",
+                    "Volume_High",
+                ]
+            }
+        },
+    )
+    assert entity.options == ["volume_off", "volume_low", "volume_med", "volume_high"]
 
 
 def test_callable_options_receives_full_resource_snapshot():

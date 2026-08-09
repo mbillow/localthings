@@ -11,6 +11,17 @@ def test_machine_state_maps_samsung_to_ocf():
     assert ms.value_fn("Ready") == "idle"
 
 
+def test_progress_is_a_translatable_enum():
+    desc = next(e for e in OPERATIONAL_STATE.entities if e.key == "progress")
+    assert desc.device_class == "enum"
+    assert "rinse" in desc.options
+    assert desc.rep_fn is not None
+    assert (
+        desc.rep_fn({"x.com.samsung.da.state": "Run", "x.com.samsung.da.progress": "Rinse"})
+        == "rinse"
+    )
+
+
 class TestProgressPercentage:
     """issue #9: device firmware leaves progressPercentage stale (e.g. '1')
     after a cycle ends instead of resetting it, so it must be gated on

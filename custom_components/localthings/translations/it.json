@@ -258,7 +258,11 @@
         "name": "Suono cicalino",
         "state": {
           "off": "Spento",
-          "on": "Acceso"
+          "on": "Acceso",
+          "volume_off": "Spento",
+          "volume_low": "Basso",
+          "volume_med": "Medio",
+          "volume_high": "Alto"
         }
       },
       "discharging_time": {
@@ -884,13 +888,20 @@
         "name": "Temperatura"
       },
       "diagnosis": {
-        "name": "Diagnosi"
+        "name": "Diagnosi",
+        "state": {
+          "ready": "Pronto"
+        }
       },
       "diagnosis_status": {
-        "name": "Stato diagnosi"
+        "name": "Stato diagnosi",
+        "state": {
+          "ready": "Pronto"
+        }
       },
       "drum_clean_cycles_remaining": {
-        "name": "Pulizia cestello fra"
+        "name": "Pulizia cestello fra",
+        "unit_of_measurement": "cicli"
       },
       "drum_clean_last_cleaned": {
         "name": "Ultima pulizia cestello"
@@ -1031,7 +1042,21 @@
         "name": "Temperatura sonda"
       },
       "progress": {
-        "name": "Avanzamento"
+        "name": "Avanzamento",
+        "state": {
+          "idle": "Inattivo",
+          "weight_sensing": "Rilevamento del carico",
+          "wash": "Lavaggio",
+          "rinse": "Risciacquo",
+          "spin": "Centrifuga",
+          "finish": "Completato",
+          "steaming": "Vapore",
+          "air_washing": "Lavaggio ad aria",
+          "drying": "Asciugatura",
+          "cooling": "Raffreddamento",
+          "pre_drain": "Scarico preliminare",
+          "pre_wash": "Prelavaggio"
+        }
       },
       "progress_percentage": {
         "name": "Avanzamento percentuale"

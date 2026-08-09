@@ -258,7 +258,11 @@
         "name": "Signalton",
         "state": {
           "off": "Aus",
-          "on": "Ein"
+          "on": "Ein",
+          "volume_off": "Aus",
+          "volume_low": "Niedrig",
+          "volume_med": "Mittel",
+          "volume_high": "Hoch"
         }
       },
       "discharging_time": {
@@ -878,13 +882,20 @@
         "name": "Temperatur"
       },
       "diagnosis": {
-        "name": "Diagnose"
+        "name": "Diagnose",
+        "state": {
+          "ready": "Bereit"
+        }
       },
       "diagnosis_status": {
-        "name": "Diagnosestatus"
+        "name": "Diagnosestatus",
+        "state": {
+          "ready": "Bereit"
+        }
       },
       "drum_clean_cycles_remaining": {
-        "name": "Trommelreinigung fällig in"
+        "name": "Trommelreinigung fällig in",
+        "unit_of_measurement": "Zyklen"
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel zuletzt gereinigt"
@@ -1025,7 +1036,21 @@
         "name": "Fühlertemperatur"
       },
       "progress": {
-        "name": "Fortschritt"
+        "name": "Fortschritt",
+        "state": {
+          "idle": "Leerlauf",
+          "weight_sensing": "Beladungserkennung",
+          "wash": "Waschen",
+          "rinse": "Spülen",
+          "spin": "Schleudern",
+          "finish": "Fertig",
+          "steaming": "Dämpfen",
+          "air_washing": "Luftreinigung",
+          "drying": "Trocknen",
+          "cooling": "Abkühlen",
+          "pre_drain": "Abpumpen",
+          "pre_wash": "Vorwäsche"
+        }
       },
       "progress_percentage": {
         "name": "Fortschritt in Prozent"

@@ -67,6 +67,12 @@ CYCLE_OPTIONS = Capability(
 # Self-diagnostic trigger and last-operation-source sensor
 # ---------------------------------------------------------------------------
 
+
+def _diagnosis_status(value):
+    """Normalize the confirmed idle diagnosis state for HA translation."""
+    return "ready" if value == "Ready" else value
+
+
 DIAGNOSIS = Capability(
     href="/diagnosis/vs/0",
     poll_tier="cold",
@@ -76,6 +82,9 @@ DIAGNOSIS = Capability(
             field="x.com.samsung.da.diagnosisStart",
             icon="mdi:stethoscope",
             entity_category="diagnostic",
+            device_class="enum",
+            options=("ready",),
+            value_fn=_diagnosis_status,
         ),
         ButtonDesc(
             key="diagnosis_start",

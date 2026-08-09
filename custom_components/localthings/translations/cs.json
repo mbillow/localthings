@@ -258,7 +258,11 @@
         "name": "Zvuk bzučáku",
         "state": {
           "off": "Vypnuto",
-          "on": "Zapnuto"
+          "on": "Zapnuto",
+          "volume_off": "Vypnuto",
+          "volume_low": "Nízká",
+          "volume_med": "Střední",
+          "volume_high": "Vysoká"
         }
       },
       "discharging_time": {
@@ -884,13 +888,20 @@
         "name": "Teplota"
       },
       "diagnosis": {
-        "name": "Diagnostika"
+        "name": "Diagnostika",
+        "state": {
+          "ready": "Připraveno"
+        }
       },
       "diagnosis_status": {
-        "name": "Stav diagnostiky"
+        "name": "Stav diagnostiky",
+        "state": {
+          "ready": "Připraveno"
+        }
       },
       "drum_clean_cycles_remaining": {
-        "name": "Čištění bubnu za"
+        "name": "Čištění bubnu za",
+        "unit_of_measurement": "cyklů"
       },
       "drum_clean_last_cleaned": {
         "name": "Poslední čištění bubnu"
@@ -1031,7 +1042,21 @@
         "name": "Teplota sondy"
       },
       "progress": {
-        "name": "Průběh"
+        "name": "Průběh",
+        "state": {
+          "idle": "Nečinný",
+          "weight_sensing": "Detekce náplně",
+          "wash": "Praní",
+          "rinse": "Máchání",
+          "spin": "Odstřeďování",
+          "finish": "Dokončeno",
+          "steaming": "Napařování",
+          "air_washing": "Osvěžení vzduchem",
+          "drying": "Sušení",
+          "cooling": "Chlazení",
+          "pre_drain": "Vypouštění",
+          "pre_wash": "Předpírka"
+        }
       },
       "progress_percentage": {
         "name": "Průběh v procentech"

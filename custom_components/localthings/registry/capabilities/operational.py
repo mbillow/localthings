@@ -24,8 +24,25 @@ def _to_ocf(v):
     return _SAMSUNG_STATE_TO_OCF.get(v, v) if v is not None else None
 
 
+_PROGRESS_STATES = {
+    "None": "idle",
+    "Weightsensing": "weight_sensing",
+    "Wash": "wash",
+    "Rinse": "rinse",
+    "Spin": "spin",
+    "Finish": "finish",
+    "Steaming": "steaming",
+    "Airwashing": "air_washing",
+    "Drying": "drying",
+    "Cooling": "cooling",
+    "Predrain": "pre_drain",
+    "Prewash": "pre_wash",
+}
+
+
 def _progress(v):
-    return "Idle" if v in (None, "None") else v
+    """Normalize known Samsung phase tokens for Home Assistant enum translation."""
+    return _PROGRESS_STATES.get(v, v)
 
 
 def _int(v):
@@ -161,8 +178,10 @@ OPERATIONAL_STATE = Capability(
         SensorDesc(
             key="progress",
             icon="mdi:progress-wrench",
+            device_class="enum",
+            options=tuple(_PROGRESS_STATES.values()),
             rep_fn=lambda rep: (
-                "Idle"
+                "idle"
                 if _SAMSUNG_STATE_TO_OCF.get(rep.get("x.com.samsung.da.state")) != "active"
                 else _progress(rep.get("x.com.samsung.da.progress"))
             ),

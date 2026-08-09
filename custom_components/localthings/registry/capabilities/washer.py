@@ -263,7 +263,6 @@ WASHER_COURSE = Capability(
         ),
         SensorDesc(
             key="drum_clean_cycles_remaining",
-            unit="cycles",
             icon="mdi:washing-machine-alert",
             state_class="measurement",
             exists_fn=lambda rep, resources: drum_clean_cycles_remaining(rep) is not None,
