@@ -1045,17 +1045,17 @@
         "name": "Průběh",
         "state": {
           "idle": "Nečinný",
-          "weight_sensing": "Detekce náplně",
+          "weightsensing": "Detekce náplně",
           "wash": "Praní",
           "rinse": "Máchání",
           "spin": "Odstřeďování",
           "finish": "Dokončeno",
           "steaming": "Napařování",
-          "air_washing": "Osvěžení vzduchem",
+          "airwashing": "Osvěžení vzduchem",
           "drying": "Sušení",
           "cooling": "Chlazení",
-          "pre_drain": "Vypouštění",
-          "pre_wash": "Předpírka"
+          "predrain": "Vypouštění",
+          "prewash": "Předpírka"
         }
       },
       "progress_percentage": {

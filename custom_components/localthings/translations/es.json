@@ -1191,17 +1191,17 @@
         "name": "Progreso",
         "state": {
           "idle": "Inactiva",
-          "weight_sensing": "Detección de carga",
+          "weightsensing": "Detección de carga",
           "wash": "Lavado",
           "rinse": "Aclarado",
           "spin": "Centrifugado",
           "finish": "Finalizado",
           "steaming": "Vaporización",
-          "air_washing": "Lavado con aire",
+          "airwashing": "Lavado con aire",
           "drying": "Secado",
           "cooling": "Enfriamiento",
-          "pre_drain": "Drenaje previo",
-          "pre_wash": "Prelavado"
+          "predrain": "Drenaje previo",
+          "prewash": "Prelavado"
         }
       },
       "progress_percentage": {

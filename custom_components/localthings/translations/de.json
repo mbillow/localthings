@@ -1039,17 +1039,17 @@
         "name": "Fortschritt",
         "state": {
           "idle": "Leerlauf",
-          "weight_sensing": "Beladungserkennung",
+          "weightsensing": "Beladungserkennung",
           "wash": "Waschen",
           "rinse": "Spülen",
           "spin": "Schleudern",
           "finish": "Fertig",
           "steaming": "Dämpfen",
-          "air_washing": "Luftreinigung",
+          "airwashing": "Luftreinigung",
           "drying": "Trocknen",
           "cooling": "Abkühlen",
-          "pre_drain": "Abpumpen",
-          "pre_wash": "Vorwäsche"
+          "predrain": "Abpumpen",
+          "prewash": "Vorwäsche"
         }
       },
       "progress_percentage": {

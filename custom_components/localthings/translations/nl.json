@@ -1045,17 +1045,17 @@
         "name": "Voortgang",
         "state": {
           "idle": "Inactief",
-          "weight_sensing": "Beladingsdetectie",
+          "weightsensing": "Beladingsdetectie",
           "wash": "Wassen",
           "rinse": "Spoelen",
           "spin": "Centrifugeren",
           "finish": "Voltooid",
           "steaming": "Stomen",
-          "air_washing": "Luchtreiniging",
+          "airwashing": "Luchtreiniging",
           "drying": "Drogen",
           "cooling": "Koelen",
-          "pre_drain": "Vooraf afpompen",
-          "pre_wash": "Voorwas"
+          "predrain": "Vooraf afpompen",
+          "prewash": "Voorwas"
         }
       },
       "progress_percentage": {

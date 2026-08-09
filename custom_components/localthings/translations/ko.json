@@ -1045,17 +1045,17 @@
         "name": "진행률",
         "state": {
           "idle": "대기",
-          "weight_sensing": "세탁물 감지",
+          "weightsensing": "세탁물 감지",
           "wash": "세탁",
           "rinse": "헹굼",
           "spin": "탈수",
           "finish": "완료",
           "steaming": "스팀",
-          "air_washing": "에어워시",
+          "airwashing": "에어워시",
           "drying": "건조",
           "cooling": "냉각",
-          "pre_drain": "사전 배수",
-          "pre_wash": "애벌빨래"
+          "predrain": "사전 배수",
+          "prewash": "애벌빨래"
         }
       },
       "progress_percentage": {

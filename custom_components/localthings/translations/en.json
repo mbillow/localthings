@@ -1045,17 +1045,17 @@
         "name": "Progress",
         "state": {
           "idle": "Idle",
-          "weight_sensing": "Weight sensing",
+          "weightsensing": "Weight sensing",
           "wash": "Washing",
           "rinse": "Rinsing",
           "spin": "Spinning",
           "finish": "Finished",
           "steaming": "Steaming",
-          "air_washing": "Air washing",
+          "airwashing": "Air washing",
           "drying": "Drying",
           "cooling": "Cooling",
-          "pre_drain": "Pre-drain",
-          "pre_wash": "Pre-wash"
+          "predrain": "Pre-drain",
+          "prewash": "Pre-wash"
         }
       },
       "progress_percentage": {

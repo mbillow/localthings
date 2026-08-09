@@ -15,6 +15,7 @@ def test_progress_is_a_translatable_enum():
     desc = next(e for e in OPERATIONAL_STATE.entities if e.key == "progress")
     assert desc.device_class == "enum"
     assert "rinse" in desc.options
+    assert "Rinse" not in desc.options
     assert desc.rep_fn is not None
     assert (
         desc.rep_fn({"x.com.samsung.da.state": "Run", "x.com.samsung.da.progress": "Rinse"})

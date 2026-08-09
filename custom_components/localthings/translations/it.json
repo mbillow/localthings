@@ -1045,17 +1045,17 @@
         "name": "Avanzamento",
         "state": {
           "idle": "Inattivo",
-          "weight_sensing": "Rilevamento del carico",
+          "weightsensing": "Rilevamento del carico",
           "wash": "Lavaggio",
           "rinse": "Risciacquo",
           "spin": "Centrifuga",
           "finish": "Completato",
           "steaming": "Vapore",
-          "air_washing": "Lavaggio ad aria",
+          "airwashing": "Lavaggio ad aria",
           "drying": "Asciugatura",
           "cooling": "Raffreddamento",
-          "pre_drain": "Scarico preliminare",
-          "pre_wash": "Prelavaggio"
+          "predrain": "Scarico preliminare",
+          "prewash": "Prelavaggio"
         }
       },
       "progress_percentage": {

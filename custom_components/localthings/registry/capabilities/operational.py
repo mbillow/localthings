@@ -6,6 +6,7 @@ Shared by dryer/dishwasher/oven/washer families.
 import math
 from datetime import UTC, datetime, timedelta
 
+from ...catalog import translated_states
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ButtonDesc, NumberDesc, SensorDesc
 
@@ -24,25 +25,8 @@ def _to_ocf(v):
     return _SAMSUNG_STATE_TO_OCF.get(v, v) if v is not None else None
 
 
-_PROGRESS_STATES = {
-    "None": "idle",
-    "Weightsensing": "weight_sensing",
-    "Wash": "wash",
-    "Rinse": "rinse",
-    "Spin": "spin",
-    "Finish": "finish",
-    "Steaming": "steaming",
-    "Airwashing": "air_washing",
-    "Drying": "drying",
-    "Cooling": "cooling",
-    "Predrain": "pre_drain",
-    "Prewash": "pre_wash",
-}
-
-
 def _progress(v):
-    """Normalize known Samsung phase tokens for Home Assistant enum translation."""
-    return _PROGRESS_STATES.get(v, v)
+    return "idle" if v in (None, "None") else v.lower()
 
 
 def _int(v):
@@ -179,7 +163,7 @@ OPERATIONAL_STATE = Capability(
             key="progress",
             icon="mdi:progress-wrench",
             device_class="enum",
-            options=tuple(_PROGRESS_STATES.values()),
+            options=tuple(sorted(translated_states("sensor", "progress"))),
             rep_fn=lambda rep: (
                 "idle"
                 if _SAMSUNG_STATE_TO_OCF.get(rep.get("x.com.samsung.da.state")) != "active"
