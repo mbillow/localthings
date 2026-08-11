@@ -15,6 +15,12 @@ that follows them explains why the reset looked cloud-only for as long as it
 did — a genuine trap worth knowing about before the next reset-adjacent
 mystery on this board family.
 
+Scope: all of the above applies to boards that carry the counter as a
+`FilterTime_<N>` option token on `/mode/vs/0`. Not every AC does. See
+"Boards with no `FilterTime` token" at the end for an `ARTIK051_PRAC_20K`
+that keeps the counter in its own resource, rejects both the token and a
+direct write, and has no local reset at all.
+
 ## What the reset actually is
 
 A **command**, not a value write. Samsung's cloud models it as capability
@@ -92,3 +98,72 @@ on every unit on record).
 The entity key stays `filter_time` rather than `filter_time_elapsed`:
 renaming it would change every existing unit's `entity_id`/`unique_id` for a
 wording improvement only.
+
+## Boards with no `FilterTime` token (`ARTIK051_PRAC_20K`)
+
+Negative result, measured 2026-08-11 on integration v0.21.0 / HA 2026.8.1,
+against one head of a three-head multi-split (`OptionCode_35880`,
+`ExtendOptionCode_199181`). **There is no local reset on this board**, by
+either route. Reset appears to be panel-only.
+
+This generation does not put the counter in `/mode/vs/0` at all. Its
+options blob carries no `FilterTime`, no `FilterAlarmTime` and no
+`FilterCleanAlarm`:
+
+```json
+["Sleep_0", "ArtificialWorking_Off", "ComfortAICooling_Off",
+ "AiTempChanged_Off", "AiTemp_240", "OutdoorTemp_77", "CoolCapa_25",
+ "WarmCapa_32", "Light_Off", "Volume_100", "OptionCode_35880",
+ "ExtendOptionCode_199181", "RacInfo_None", "UpdateAllow_NotAllowed",
+ "DurationOn_0", "WelcomeCoolingState_Off"]
+```
+
+The counter lives in its own resource instead, as a **percentage** of a
+500-hour interval rather than tenths of an hour —
+`/filter/airdustfilter/vs/0`:
+
+```json
+{
+  "x.com.samsung.da.filterUsage": "96",
+  "x.com.samsung.da.filterUsageResolution": "1",
+  "x.com.samsung.da.filterDesiredUsage": "500",
+  "x.com.samsung.da.filterStatus": "normal",
+  "x.com.samsung.da.filterCapacity": "500",
+  "x.com.samsung.da.filterCapacityUnit": "Hour",
+  "x.com.samsung.da.filterResetType": ["replaceable", "washable"]
+}
+```
+
+Three attempts, all against a live unit deliberately put in `fan_only`
+first — writes to a powered-off head on this board are dropped silently
+with no error, which would otherwise be indistinguishable from a rejected
+write:
+
+| Target | Payload | Result |
+|---|---|---|
+| `/mode/vs/0` | `{"x.com.samsung.da.options": ["FilterCleanAlarm_Clear"]}` | 4.00, options blob byte-identical |
+| `/filter/airdustfilter/vs/0` | `{"x.com.samsung.da.filterUsage": "0"}` | 4.00 |
+| `/filter/airdustfilter/vs/0` | `{"x.com.samsung.da.filterUsage": 0}` (integer) | 5.00 |
+
+`filterUsage` stayed at `96` throughout, verified by a live re-read after
+each write rather than by the integration's optimistic state.
+
+The last two rows are the informative pair. They differ only in JSON type
+and return *different* codes, which rules out both boring explanations: an
+unresolved href or an unrecognised field name would fail identically. The
+board parses the field, faults on the wrong type, and still refuses the
+value when typed as the string its own rep uses. The resource is
+**read-only**, not mis-addressed.
+
+One trap worth stating plainly: `filterResetType:
+["replaceable","washable"]` describes what the filter *is*, not a reset
+command that exists. It reads like a hint that a reset write is available
+somewhere. It is not.
+
+Since the integration cannot perform the reset here, it can still observe
+it. The counter only climbs in normal use, so a downward crossing is
+unambiguous: a `numeric_state` trigger with `below: 10` on
+`sensor.<name>_filter_usage`, stamping an `input_datetime`, keeps an
+honest "last cleaned" date without pretending a reset entity exists. The
+blind spot is a reset performed while HA is down or the entry is
+unloaded — no state transition, so that stamp has to be set by hand.
