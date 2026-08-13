@@ -51,13 +51,13 @@ def _has_top_level_modes(rep, resources):
     return isinstance(rep.get("x.com.samsung.da.supportedModes"), (list, tuple))
 
 
-# The fourth column is state_class, which is what makes Home Assistant keep
-# long-term statistics for a sensor -- without one, a reading is only in the
-# short-term recorder history and disappears with the next purge (10 days by
-# default), so it can't back a long-range air-quality graph. The values are
-# already numeric (sensor_item_value returns int), so nothing else was in the
-# way; three sensors in this same module (filter_progress, fan_speed_level,
-# hepa_filter_usage) already declare one.
+# Columns: key, icon, device item type, state_class, device_class, unit.
+# state_class is what makes Home Assistant keep long-term statistics --
+# without one, a reading is only in the short-term recorder history and
+# disappears with the next purge (10 days by default), so it can't back a
+# long-range air-quality graph. The values are already numeric
+# (sensor_item_value returns int); three sensors in this same module
+# (filter_progress, fan_speed_level, hepa_filter_usage) already declare one.
 #
 # Only the three particulate readings get it. They fall monotonically with
 # particle size on three independent board families -- 11/9/5 on ARTIK051_TVTL
@@ -67,15 +67,16 @@ def _has_top_level_modes(rep, resources):
 # indices instead, where the mean of a grade isn't obviously meaningful; left
 # without a state_class rather than guessing.
 #
-# Deliberately no device_class/unit here: pm1/pm25/pm10 would assert the
-# reading is a µg/m³ concentration, and the dumps never say so. That's a
-# separate call from making the series recordable at all.
+# device_class/unit confirmed on a live ARTIK051_TVTL against the SmartThings
+# app at the same moment (issue #325): Dust=PM10, FineDust=PM2.5,
+# SuperFineDust=PM1, all µg/m³. Dust matched PM10 exactly; the other two
+# were 1 µg/m³ off the app, same order.
 _AIR_QUALITY_SENSORS = (
-    ("dust", "mdi:blur", "Dust", "measurement"),
-    ("fine_dust", "mdi:blur", "FineDust", "measurement"),
-    ("super_fine_dust", "mdi:blur", "SuperFineDust", "measurement"),
-    ("odor", "mdi:scent", "Odor", None),
-    ("clean_level", "mdi:air-filter", "CleanLevel", None),
+    ("dust", "mdi:blur", "Dust", "measurement", "pm10", "µg/m³"),
+    ("fine_dust", "mdi:blur", "FineDust", "measurement", "pm25", "µg/m³"),
+    ("super_fine_dust", "mdi:blur", "SuperFineDust", "measurement", "pm1", "µg/m³"),
+    ("odor", "mdi:scent", "Odor", None, None, None),
+    ("clean_level", "mdi:air-filter", "CleanLevel", None, None, None),
 )
 
 AIR_QUALITY = Capability(
@@ -87,9 +88,11 @@ AIR_QUALITY = Capability(
             field="x.com.samsung.da.items",
             icon=icon,
             state_class=state_class,
+            device_class=device_class,
+            unit=unit,
             value_fn=lambda items, t=sensor_type: sensor_item_value(items, t),
         )
-        for key, icon, sensor_type, state_class in _AIR_QUALITY_SENSORS
+        for key, icon, sensor_type, state_class, device_class, unit in _AIR_QUALITY_SENSORS
     ),
 )
 

@@ -643,6 +643,7 @@
           "04": "Snelle was",
           "06": "XXL was",
           "08": "Spoelen+centrifugeren",
+          "0a": "Handdoeken",
           "17": "Gedownload",
           "1b": "Katoen",
           "1c": "Eco 40-60",
@@ -709,6 +710,7 @@
           "8f": "Intensief koud",
           "96": "Minder microvezels",
           "a0": "15' Snelle was",
+          "b0": "Gemengde was",
           "35": "Eco katoen"
         }
       },

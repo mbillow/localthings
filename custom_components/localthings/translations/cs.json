@@ -643,6 +643,7 @@
           "04": "Rychlé praní",
           "06": "XXL prádlo",
           "08": "Máchání+odstřeďování",
+          "0a": "Ručníky",
           "17": "Stažený program",
           "1b": "Bavlna",
           "1c": "Eco 40-60",
@@ -709,6 +710,7 @@
           "8f": "Intenzivní studená",
           "96": "Méně mikrovláken",
           "a0": "15min rychlé praní",
+          "b0": "Smíšená náplň",
           "35": "Eko bavlna"
         }
       },

@@ -15,13 +15,12 @@ A second `value` list element on the particulate-matter types (e.g. Dust's
 board confirms what its scale means -- left unbound rather than guessed;
 index 0 is the only slot any family has ever read.
 
-Dust/FineDust/SuperFineDust aren't assigned an HA `device_class`
-(pm10/pm25/pm1) or `unit` despite reading like plausible ug/m3 particulate
-values: Samsung's own two-tier Korean convention maps only to a PM10/PM2.5
-pair, and this board's three-tier naming doesn't confirm where the extra
-tier or a PM1 reading fits. A wrong guess would silently mislabel every
-reading forever, so they're plain `measurement` sensors named after the
-device's own field instead, matching air_purifier.AIR_QUALITY's precedent.
+Dust/FineDust/SuperFineDust stay without an HA `device_class`/`unit` on
+this board. The three-tier mapping (Dust=PM10, FineDust=PM2.5,
+SuperFineDust=PM1, µg/m³) is confirmed for the air-purifier family
+(issue #325) but this standalone monitor has no same-moment app
+correlation of its own, so it keeps the untyped measurement sensors
+rather than inheriting that label.
 """
 
 from datetime import time as dt_time
@@ -31,12 +30,13 @@ from ..entities import BinarySensorDesc, SensorDesc, SwitchDesc, TimeDesc
 from .air_purifier import _AIR_QUALITY_SENSORS
 from .common import int_or_none, sensor_item_value
 
-# _AIR_QUALITY_SENSORS' fourth column (state_class) is deliberately discarded
+# Extra columns (state_class, device_class, unit) are deliberately discarded
 # here: air_purifier leaves Odor/CleanLevel unstamped because they read as
 # graded indices on that family, while this board has stamped all five as
-# `measurement` since it was added (issue #210). Consuming the column would
-# silently drop long-term statistics for two sensors on shipped devices, so
-# the shared rows supply only the key/icon/type here.
+# `measurement` since it was added (issue #210). Consuming state_class would
+# silently drop long-term statistics for two sensors on shipped devices, and
+# the pm10/pm25/pm1 labels are confirmed only for the purifier family
+# (issue #325). The shared rows supply only the key/icon/type here.
 SENSORS = Capability(
     href="/sensors/vs/0",
     poll_tier="warm",
@@ -49,7 +49,7 @@ SENSORS = Capability(
                 state_class="measurement",
                 value_fn=lambda items, t=sensor_type: sensor_item_value(items, t),
             )
-            for key, icon, sensor_type, _ in _AIR_QUALITY_SENSORS
+            for key, icon, sensor_type, *_ in _AIR_QUALITY_SENSORS
         ),
         SensorDesc(
             key="co2",

@@ -643,6 +643,7 @@
           "04": "Lavaggio rapido",
           "06": "Bucato XXL",
           "08": "Risciacquo+Centrifuga",
+          "0a": "Asciugamani",
           "17": "Scaricato",
           "1b": "Cotone",
           "1c": "Eco 40-60",
@@ -709,7 +710,8 @@
           "79": "Solo centrifuga",
           "88": "Cura animali",
           "35": "Cotone E",
-          "a0": "Rapido 15'"
+          "a0": "Rapido 15'",
+          "b0": "Carico misto"
         }
       },
       "washer_dry_level": {

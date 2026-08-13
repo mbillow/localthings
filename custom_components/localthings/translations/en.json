@@ -643,6 +643,7 @@
           "04": "Quick Wash",
           "06": "XXL Laundry",
           "08": "Rinse+Spin",
+          "0a": "Towels",
           "17": "Downloaded",
           "1b": "Cotton",
           "1c": "Eco 40-60",
@@ -709,7 +710,8 @@
           "88": "Pet Care",
           "8f": "Intense Cold",
           "96": "Less Microfiber",
-          "a0": "15' Quick Wash"
+          "a0": "15' Quick Wash",
+          "b0": "Mixed load"
         }
       },
       "washer_dry_level": {
