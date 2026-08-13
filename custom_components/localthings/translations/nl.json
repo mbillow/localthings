@@ -937,7 +937,10 @@
         "name": "Droogtijd"
       },
       "dryer_type": {
-        "name": "Type droger"
+        "name": "Type droger",
+        "state": {
+          "Electricity": "Elektriciteit"
+        }
       },
       "dust": {
         "name": "Stof"
@@ -1066,7 +1069,17 @@
         "name": "Sondetemperatuur"
       },
       "progress": {
-        "name": "Voortgang"
+        "name": "Voortgang",
+        "state": {
+          "Cooling": "Koelen",
+          "Drying": "Drogen",
+          "Finish": "Klaar",
+          "Idle": "Inactief",
+          "Rinse": "Gepauzeerd",
+          "Spin": "Centrifugeren",
+          "Wash": "Wassen",
+          "Weightsensing": "Gewichtsdetectie"
+        }
       },
       "progress_percentage": {
         "name": "Voortgangspercentage"
