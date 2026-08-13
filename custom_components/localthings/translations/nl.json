@@ -1075,10 +1075,10 @@
           "Drying": "Drogen",
           "Finish": "Klaar",
           "Idle": "Inactief",
-          "Rinse": "Gepauzeerd",
+          "Rinse": "Spoelen",
           "Spin": "Centrifugeren",
           "Wash": "Wassen",
-          "Weightsensing": "Gewichtsdetectie"
+          "Weightsensing": "Wegen"
         }
       },
       "progress_percentage": {
