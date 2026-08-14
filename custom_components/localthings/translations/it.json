@@ -110,7 +110,7 @@
         "name": "Aggiungi ammorbidente"
       },
       "stick_ble_connected": {
-        "name": "Stick BLE connected"
+        "name": "Scopa elettrica connessa via BLE"
       }
     },
     "button": {
@@ -876,10 +876,10 @@
         "name": "Stato scopa elettrica"
       },
       "stick_operation_mode": {
-        "name": "Stick operation mode"
+        "name": "Modalità operativa scopa elettrica"
       },
       "stick_cleaning_status": {
-        "name": "Stick cleaning status"
+        "name": "Stato pulizia scopa elettrica"
       },
       "uvc_operation_time": {
         "name": "Tempo funzionamento UV-C"

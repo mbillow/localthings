@@ -306,7 +306,7 @@
         "name": "Limpieza automática en curso"
       },
       "stick_ble_connected": {
-        "name": "Stick BLE connected"
+        "name": "Aspiradora conectada por BLE"
       }
     },
     "button": {
@@ -1069,10 +1069,10 @@
         "name": "Estado de la aspiradora"
       },
       "stick_operation_mode": {
-        "name": "Stick operation mode"
+        "name": "Modo de funcionamiento de la aspiradora"
       },
       "stick_cleaning_status": {
-        "name": "Stick cleaning status"
+        "name": "Estado de limpieza de la aspiradora"
       },
       "uvc_operation_time": {
         "name": "Tiempo de funcionamiento UV-C"

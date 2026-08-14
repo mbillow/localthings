@@ -110,7 +110,7 @@
         "name": "Wasverzachter bijna op"
       },
       "stick_ble_connected": {
-        "name": "Stick BLE verbonden"
+        "name": "Steel via BLE verbonden"
       }
     },
     "button": {
@@ -876,10 +876,10 @@
         "name": "Status steel"
       },
       "stick_operation_mode": {
-        "name": "Stick bedieningsmodus"
+        "name": "Bedieningsmodus steel"
       },
       "stick_cleaning_status": {
-        "name": "Stick schoonmaakstatus"
+        "name": "Schoonmaakstatus steel"
       },
       "uvc_operation_time": {
         "name": "UV-C-bedrijfstijd"

@@ -110,7 +110,7 @@
         "name": "Málo aviváže"
       },
       "stick_ble_connected": {
-        "name": "Stick BLE connected"
+        "name": "Tyč připojena přes BLE"
       }
     },
     "button": {
@@ -876,10 +876,10 @@
         "name": "Stav tyče"
       },
       "stick_operation_mode": {
-        "name": "Stick operation mode"
+        "name": "Provozní režim tyče"
       },
       "stick_cleaning_status": {
-        "name": "Stick cleaning status"
+        "name": "Stav čištění tyče"
       },
       "uvc_operation_time": {
         "name": "Doba provozu UV-C"
