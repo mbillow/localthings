@@ -108,6 +108,9 @@
       },
       "softener_low": {
         "name": "Wasverzachter bijna op"
+      },
+      "stick_ble_connected": {
+        "name": "Stick BLE verbonden"
       }
     },
     "button": {
@@ -871,6 +874,12 @@
       },
       "stick_status": {
         "name": "Status steel"
+      },
+      "stick_operation_mode": {
+        "name": "Stick bedieningsmodus"
+      },
+      "stick_cleaning_status": {
+        "name": "Stick schoonmaakstatus"
       },
       "uvc_operation_time": {
         "name": "UV-C-bedrijfstijd"

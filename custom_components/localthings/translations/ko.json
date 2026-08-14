@@ -108,6 +108,9 @@
       },
       "softener_low": {
         "name": "섬유유연제 부족"
+      },
+      "stick_ble_connected": {
+        "name": "Stick BLE connected"
       }
     },
     "button": {
@@ -871,6 +874,12 @@
       },
       "stick_status": {
         "name": "스틱 청소기 상태"
+      },
+      "stick_operation_mode": {
+        "name": "Stick operation mode"
+      },
+      "stick_cleaning_status": {
+        "name": "Stick cleaning status"
       },
       "uvc_operation_time": {
         "name": "UV-C 작동 시간"

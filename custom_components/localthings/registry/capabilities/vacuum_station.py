@@ -1,19 +1,14 @@
 """Capabilities for the Samsung stick-vacuum clean/auto-empty station
-(model A-VSKR-TP1-22-VS9500AL, "Bespoke Jet" clean station, issue #131).
+(models A-VSKR-TP1-22-VS9500AL / A-VSWW-TP1-23-VS9700, issues #131 / #219).
 
-The reporter's diagnostics dump shows no vacuum-body state at all (no
-suction level, no battery, no cleaning-mode/room-mapping control, no
-docked/undocked status even) -- only the clean station's own dustbag,
-dustbin auto-empty settings, and UV-C sanitizing-cycle status. This
-strongly suggests the WiFi/DTLS module lives in the station, not the
-handheld stick: the station is the only "device" this integration's local
-API can see, and the wand's own controls are unrelated hardware not
-reachable this way. Modeled as its own device type -- these hrefs don't
-overlap with any existing family, so there's no shared-href ambiguity to
-resolve against another type (see registry/by_type/__init__.py's
-docstring for that rule).
+The WiFi/DTLS module lives in the clean station. Older VS9500 dumps
+(#131) exposed only dustbag/dustbin/UV-C station state. VS9700 dumps
+(#219) additionally expose `/status/stick/vs/0` with the wand's battery
+%, cleaning/charging status, and BLE link -- still no suction/room-map
+control. Modeled as its own device type -- these hrefs don't overlap with
+any existing family (see registry/by_type/__init__.py's docstring).
 
-Resources verified against the issue #131 diagnostics dump.
+Resources verified against issue #131 and #219 diagnostics dumps.
 """
 
 from ..capability import Capability
@@ -153,6 +148,49 @@ CLEANSTATION_STATUS = Capability(
             device_class="timestamp",
             entity_category="diagnostic",
             value_fn=_parse_iso_utc,
+        ),
+    ),
+)
+
+# Wand body state reported through the station (VS9700 / issue #219). Absent
+# on the older VS9500 dump (#131) -- discovery drops entities when the href
+# is missing.
+STICK_BODY = Capability(
+    href="/status/stick/vs/0",
+    poll_tier="warm",
+    entities=(
+        SensorDesc(
+            key="battery",
+            field="x.com.samsung.da.stickbattery",
+            device_class="battery",
+            state_class="measurement",
+            unit="%",
+            value_fn=int_or_none,
+        ),
+        BinarySensorDesc(
+            key="battery_charging",
+            field="x.com.samsung.da.stickcleaningstatus",
+            device_class="battery_charging",
+            value_fn=lambda v: v == "Charging",
+        ),
+        SensorDesc(
+            key="stick_cleaning_status",
+            field="x.com.samsung.da.stickcleaningstatus",
+            icon="mdi:vacuum",
+            entity_category="diagnostic",
+        ),
+        SensorDesc(
+            key="stick_operation_mode",
+            field="x.com.samsung.da.stickoperationmode",
+            icon="mdi:broom",
+            entity_category="diagnostic",
+        ),
+        BinarySensorDesc(
+            key="stick_ble_connected",
+            field="x.com.samsung.da.stickbleconnection",
+            device_class="connectivity",
+            entity_category="diagnostic",
+            value_fn=lambda v: v == "On",
         ),
     ),
 )
