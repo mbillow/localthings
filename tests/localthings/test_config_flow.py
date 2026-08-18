@@ -49,9 +49,7 @@ async def _configure_host_then_ca(
     key: str = MOCK_CA_KEY_PEM,
 ):
     """First-device path: IP (Part 1) then CA credentials (Part 2)."""
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_HOST: host}
-    )
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: host})
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "ca"
     return await hass.config_entries.flow.async_configure(
@@ -207,9 +205,7 @@ def test_parse_ca_credentials_rejects_a_bundle_with_no_key() -> None:
         _parse_ca_credentials(MOCK_CA_CERT_PEM, "")
 
 
-async def test_first_device_accepts_combined_bundle_only(
-    hass: HomeAssistant, mock_probe
-) -> None:
+async def test_first_device_accepts_combined_bundle_only(hass: HomeAssistant, mock_probe) -> None:
     """A user who pastes the whole bundle into the cert field, and leaves
     the key field empty, completes setup."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
@@ -267,9 +263,7 @@ def test_compatibility_does_not_call_8888_once_dtls_is_confirmed(monkeypatch) ->
     assert scan.confirmed == [49154]
 
 
-async def test_legacy_firmware_surfaces_on_the_host_form(
-    hass: HomeAssistant, monkeypatch
-) -> None:
+async def test_legacy_firmware_surfaces_on_the_host_form(hass: HomeAssistant, monkeypatch) -> None:
     """The user sees the older-firmware message on the IP step, before any
     CA paste, so they never think the credentials were the problem."""
     from custom_components.localthings import config_flow
