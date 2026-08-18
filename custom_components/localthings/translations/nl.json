@@ -1465,16 +1465,24 @@
     "step": {
       "user": {
         "title": "Samsung-apparaat toevoegen",
-        "description": "Voer het IP-adres van je Samsung-apparaat en de AC14K_M-CA-inloggegevens in waarmee apparaatcertificaten worden aangemaakt.",
+        "description": "Voer het IP-adres van je Samsung-apparaat in. Home Assistant controleert zelf of het het lokale protocol spreekt — nmap of een ander hulpmiddel is niet nodig.",
         "data": {
-          "host": "IP-adres",
-          "ca_cert_pem": "CA-certificaat (PEM)",
-          "ca_key_pem": "Privésleutel van CA (PEM)"
+          "host": "IP-adres"
         },
         "data_description": {
-          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
-          "ca_cert_pem": "De PEM-gecodeerde AC14K_M-CA-certificaatketen. Plak de volledige inhoud van je fullchain-PEM, inclusief alle blokken BEGIN CERTIFICATE en END CERTIFICATE.",
-          "ca_key_pem": "De PEM-gecodeerde AC14K_M-privésleutel. Plak de volledige inhoud, inclusief de kop- en voettekst BEGIN PRIVATE KEY en END PRIVATE KEY."
+          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
+        }
+      },
+      "ca": {
+        "title": "CA-inloggegevens (eenmalig)",
+        "description": "Plak de AC14K_M-CA-inloggegevens. Een gecombineerd PEM-bestand is prima — zet het hele bestand in het eerste veld en laat het sleutelveld leeg. Dit hoeft maar één keer; elk apparaat dat je daarna toevoegt, hergebruikt ze. Deze integratie downloadt of levert de CA niet.",
+        "data": {
+          "ca_cert_pem": "CA-certificaat of gecombineerd bundel (PEM)",
+          "ca_key_pem": "Privésleutel van CA (PEM), als die nog niet in het bundel zit"
+        },
+        "data_description": {
+          "ca_cert_pem": "Plak de volledige PEM. Als het bestand zowel het certificaat als de sleutel bevat, volstaat dit veld.",
+          "ca_key_pem": "Alleen nodig als het eerste veld alleen het certificaat is, zonder sleutel."
         }
       },
       "user_reuse": {
@@ -1503,6 +1511,7 @@
       "unexpected_response": "Verbinding met het apparaat is gelukt, maar het gaf geen bruikbare apparaatbeschrijving terug. Mogelijk is het geen apparaat dat deze integratie ondersteunt. Het Home Assistant-logboek bevat wat het stuurde.",
       "cannot_connect": "Kan geen verbinding maken met het apparaat. Controleer of het IP-adres bereikbaar is en de CA-inloggegevens juist zijn.",
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
+      "legacy_firmware": "Dit adres heeft geen lokale DTLS-API (UDP 49152-49160), maar wel TCP 8888. Dat is oudere Samsung-firmware (ongeveer 2018-2022), die deze integratie niet kan bedienen.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie."
     },
     "abort": {

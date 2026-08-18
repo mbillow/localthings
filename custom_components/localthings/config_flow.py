@@ -58,6 +58,7 @@ from .const import (
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
     DOMAIN,
+    LEGACY_HTTPS_PORT,
     LIVENESS_PROBE_TIMEOUT_S,
     PREFERRED_PROBE_PORTS,
     PROBE_GET_TIMEOUT_S,
@@ -159,6 +160,24 @@ class InvalidCA(Exception):
     error_key = "invalid_ca"
 
 
+class LegacyFirmware(CannotConnect):
+    """The host is an older 8888/tcp appliance, not DTLS-CoAP."""
+
+    error_key = "legacy_firmware"
+
+
+_PEM_CERT_RE = re.compile(
+    r"(-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----)",
+    re.DOTALL,
+)
+_PEM_KEY_RE = re.compile(
+    r"(-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----"
+    r".*?"
+    r"-----END (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----)",
+    re.DOTALL,
+)
+
+
 def _fetch_samsung_uuid() -> str:
     """Connect to Samsung's cloud gateway and extract the UUID from its TLS
     cert. Verification is disabled: Samsung's chain has a self-signed cert,
@@ -193,6 +212,64 @@ def _normalize_pem(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [line for line in text.split("\n") if line.strip()]
     return "\n".join(lines)
+
+
+def _parse_ca_credentials(cert_field: str, key_field: str = "") -> tuple[str, str]:
+    """Accept a combined CA bundle in one field, or cert + key in two.
+
+    setup_cert.py's public bundle is one PEM with the key and four certs.
+    Requiring the user to split that outside Home Assistant was the
+    remaining out-of-HA step; extracting both halves here means they can
+    paste the whole file and stop.
+    """
+    cert_field = _normalize_pem(cert_field or "")
+    key_field = _normalize_pem(key_field or "")
+    certs = _PEM_CERT_RE.findall(cert_field)
+    keys = _PEM_KEY_RE.findall(cert_field) or _PEM_KEY_RE.findall(key_field)
+    if not certs:
+        raise InvalidCA("No certificate found in CA PEM")
+    if not keys:
+        raise InvalidCA("No private key found in CA PEM")
+    ca_cert_pem = "\n".join(certs)
+    ca_key_pem = keys[0]
+    if _ca_pair_mismatch(certs[0], ca_key_pem):
+        raise InvalidCA("CA certificate and private key do not pair")
+    return ca_cert_pem, ca_key_pem
+
+
+def _ca_pair_mismatch(cert_pem: str, key_pem: str) -> bool:
+    """True only when both PEMs load and the key is not this cert's key.
+
+    Unloadable PEMs return False so a later minting step can raise
+    InvalidCA with its own message -- mock PEMs in tests are not real
+    X.509, and a user who pasted a truncated block should see that at
+    mint time rather than a 'do not pair' message.
+    """
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode())
+        key = serialization.load_pem_private_key(key_pem.encode(), password=None)
+        cert_spki = cert.public_key().public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        key_spki = key.public_key().public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+    except Exception:
+        return False
+    return cert_spki != key_spki
+
+
+def _tcp_port_open(host: str, port: int, timeout: float = 1.5) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
 
 
 def _mint_leaf_cert(ca_cert_pem: str, ca_key_pem: str, uuid: str) -> tuple[str, str]:
@@ -476,6 +553,34 @@ def _scan_ports(host: str) -> _PortScan:
         candidates,
     )
     return _PortScan(candidates, [], sweep)
+
+
+def _assess_compatibility(host: str) -> _PortScan:
+    """Part 1: is this a DTLS-CoAP appliance? No credentials needed.
+
+    Confirmed DTLS wins even if TCP 8888 is also open. 8888 with every
+    local-API port refused is the older cloud-token firmware. Anything
+    else is left for the later handshake to classify -- including the
+    preferred-port rescue for issue #192's sweep misses.
+    """
+    scan = _scan_ports(host)
+    if scan.confirmed:
+        return scan
+    sweep = scan.swept
+    if (
+        sweep is not None
+        and not sweep.live
+        and sweep.refused
+        and not sweep.unreachable
+        and _tcp_port_open(host, LEGACY_HTTPS_PORT)
+    ):
+        raise LegacyFirmware(
+            f"{host} refused UDP {PROBE_PORT_RANGE[0]}-{PROBE_PORT_RANGE[-1]} "
+            f"but TCP {LEGACY_HTTPS_PORT} is open"
+        )
+    if sweep is not None and sweep.unreachable and not sweep.refused and not sweep.live:
+        raise NoResponse(f"{host} is unreachable (ports {sweep.unreachable})")
+    return scan
 
 
 # TLS alerts (RFC 5246 §7.2) that mean "I looked at your certificate and
@@ -772,11 +877,14 @@ def _probe_and_validate(
     ca_cert_pem: str,
     ca_key_pem: str,
     existing_leaf: tuple[str, str] | None = None,
+    scan: _PortScan | None = None,
 ) -> dict:
     """Find the device's port, authenticate to it, and resolve its identity.
 
     Port detection runs first and needs no credentials, so an unreachable
     host fails here rather than after a round trip to Samsung's cloud.
+    The config flow's compatibility step already ran that scan; pass it
+    in as `scan` so we don't probe the appliance twice.
 
     `existing_leaf` is another entry's already-minted leaf (issue #211).
     Every appliance accepts the same leaf, so adding a second device can
@@ -785,7 +893,8 @@ def _probe_and_validate(
     stale (the UUID does rotate), a confirmed-live device rejecting it
     re-mints and retries once, so the reuse stays self-correcting.
     """
-    scan = _scan_ports(host)
+    if scan is None:
+        scan = _scan_ports(host)
 
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
@@ -821,6 +930,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._ca_cert_pem: str = ""
         self._ca_key_pem: str = ""
         self._pending_info: dict | None = None
+        self._scan: _PortScan | None = None
+        self._existing_leaf: tuple[str, str] | None = None
+        self._ca_form_values: dict[str, Any] | None = None
 
     @staticmethod
     @callback
@@ -856,102 +968,164 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        existing = self.hass.config_entries.async_entries(DOMAIN)
-        has_creds = bool(existing)
+    def _has_stored_ca(self) -> bool:
+        return bool(self.hass.config_entries.async_entries(DOMAIN))
 
+    def _host_form(
+        self,
+        user_input: dict[str, Any] | None,
+        errors: dict[str, str],
+    ) -> ConfigFlowResult:
+        return self.async_show_form(
+            step_id="user_reuse" if self._has_stored_ca() else "user",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Required(CONF_HOST): _TEXT}),
+                user_input,
+            ),
+            errors=errors,
+        )
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Part 1: take the IP and check the appliance is DTLS-CoAP."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             self._host = user_input[CONF_HOST].strip()
-            existing_leaf = None
-            if has_creds:
-                self._ca_cert_pem = existing[0].data[CONF_CA_CERT_PEM]
-                self._ca_key_pem = existing[0].data[CONF_CA_KEY_PEM]
-                leaf_cert = existing[0].data.get(CONF_LEAF_CERT_PEM)
-                leaf_key = existing[0].data.get(CONF_LEAF_KEY_PEM)
-                if leaf_cert and leaf_key:
-                    existing_leaf = (leaf_cert, leaf_key)
-            else:
-                # Normalized here, not just before minting: this is also
-                # what gets stored and reused to re-mint the leaf later.
-                self._ca_cert_pem = _normalize_pem(user_input[CONF_CA_CERT_PEM])
-                self._ca_key_pem = _normalize_pem(user_input[CONF_CA_KEY_PEM])
-
             try:
-                info = await self.hass.async_add_executor_job(
-                    _probe_and_validate,
-                    self._host,
-                    self._ca_cert_pem,
-                    self._ca_key_pem,
-                    existing_leaf,
+                self._scan = await self.hass.async_add_executor_job(
+                    _assess_compatibility, self._host
                 )
-            except (CannotConnect, InvalidCA) as exc:
-                # Every probe failure carries the message that fits it (see
-                # CannotConnect); the log line is where the specifics live.
-                _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
+            except CannotConnect as exc:
+                _LOGGER.warning(
+                    "Compatibility check of %s failed [%s]: %s",
+                    self._host,
+                    exc.error_key,
+                    exc,
+                )
                 errors["base"] = exc.error_key
             except Exception:
-                _LOGGER.exception("Unexpected error during device probe")
+                _LOGGER.exception("Unexpected error during compatibility check")
                 errors["base"] = "unknown"
             else:
-                # An entry created before v4 still carries the serial-keyed
-                # unique_id until its first *live* poll adopts the UUID
-                # (coordinator._resolve_identity) -- which can be a long
-                # while for an appliance that is off, since an entry loads
-                # from its snapshot in the meantime (issue #295). The UUID
-                # check below can't see such an entry, so re-adding this
-                # very appliance during that window would be waved through
-                # as a second entry; the two would then collide the moment
-                # the older one re-keyed, and rekey_entry resolves a
-                # collision by *deleting* the duplicate rows -- taking the
-                # original entry's entity_ids, history and automations with
-                # them. Matched on the legacy key together with the host, so
-                # issue #381's two units (same serial, different addresses)
-                # stay separable.
-                legacy_unique_id = f"localthings_{info['serial']}"
-                if any(
-                    other.unique_id == legacy_unique_id
-                    and other.data.get(CONF_HOST) == self._host
-                    and CONF_DEVICE_KEY not in other.data
-                    for other in existing
-                ):
-                    return self.async_abort(reason="already_configured")
-                # Keyed on the OCF device UUID rather than the serialNum
-                # (issue #381): two units of a model that ship the same
-                # well-formed serial are indistinguishable here otherwise,
-                # and the second one is turned away as already configured.
-                await self.async_set_unique_id(f"localthings_{info['device_key']}")
-                self._abort_if_unique_id_configured()
-                if info["device_type_recognized"]:
-                    return self._create_entry(info)
-                self._pending_info = info
-                return await self.async_step_confirm_unknown_type()
+                existing = self.hass.config_entries.async_entries(DOMAIN)
+                if existing:
+                    self._ca_cert_pem = existing[0].data[CONF_CA_CERT_PEM]
+                    self._ca_key_pem = existing[0].data[CONF_CA_KEY_PEM]
+                    leaf_cert = existing[0].data.get(CONF_LEAF_CERT_PEM)
+                    leaf_key = existing[0].data.get(CONF_LEAF_KEY_PEM)
+                    if leaf_cert and leaf_key:
+                        self._existing_leaf = (leaf_cert, leaf_key)
+                    return await self._async_finish_probe()
+                return await self.async_step_ca()
 
-        if has_creds:
-            schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
-            step_id = "user_reuse"
-        else:
-            schema = vol.Schema(
-                {
-                    vol.Required(CONF_HOST): _TEXT,
-                    vol.Required(CONF_CA_CERT_PEM): _MULTILINE,
-                    vol.Required(CONF_CA_KEY_PEM): _MULTILINE,
-                }
-            )
-            step_id = "user"
-
-        return self.async_show_form(
-            step_id=step_id,
-            data_schema=self.add_suggested_values_to_schema(schema, user_input),
-            errors=errors,
-        )
+        return self._host_form(user_input, errors)
 
     async def async_step_user_reuse(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the localized host-only form for additional appliances."""
         return await self.async_step_user(user_input)
+
+    def _ca_form(
+        self,
+        user_input: dict[str, Any] | None,
+        errors: dict[str, str],
+    ) -> ConfigFlowResult:
+        return self.async_show_form(
+            step_id="ca",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema(
+                    {
+                        vol.Required(CONF_CA_CERT_PEM): _MULTILINE,
+                        vol.Optional(CONF_CA_KEY_PEM, default=""): _MULTILINE,
+                    }
+                ),
+                user_input,
+            ),
+            errors=errors,
+        )
+
+    async def async_step_ca(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Part 2: one-time CA credentials, including a combined PEM bundle."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            self._ca_form_values = {
+                CONF_CA_CERT_PEM: user_input.get(CONF_CA_CERT_PEM, ""),
+                CONF_CA_KEY_PEM: user_input.get(CONF_CA_KEY_PEM, ""),
+            }
+            try:
+                self._ca_cert_pem, self._ca_key_pem = _parse_ca_credentials(
+                    user_input.get(CONF_CA_CERT_PEM, ""),
+                    user_input.get(CONF_CA_KEY_PEM, ""),
+                )
+            except InvalidCA as exc:
+                _LOGGER.warning("CA credentials rejected [%s]: %s", exc.error_key, exc)
+                errors["base"] = exc.error_key
+            else:
+                return await self._async_finish_probe()
+
+        return self._ca_form(user_input, errors)
+
+    async def _async_finish_probe(self) -> ConfigFlowResult:
+        """Authenticate and create the entry, after host + CA are known."""
+        existing = self.hass.config_entries.async_entries(DOMAIN)
+        try:
+            info = await self.hass.async_add_executor_job(
+                _probe_and_validate,
+                self._host,
+                self._ca_cert_pem,
+                self._ca_key_pem,
+                self._existing_leaf,
+                self._scan,
+            )
+        except (CannotConnect, InvalidCA) as exc:
+            # Every probe failure carries the message that fits it (see
+            # CannotConnect); the log line is where the specifics live.
+            _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
+            errors = {"base": exc.error_key}
+            if existing:
+                return self._host_form({CONF_HOST: self._host}, errors)
+            return self._ca_form(self._ca_form_values, errors)
+        except Exception:
+            _LOGGER.exception("Unexpected error during device probe")
+            errors = {"base": "unknown"}
+            if existing:
+                return self._host_form({CONF_HOST: self._host}, errors)
+            return self._ca_form(self._ca_form_values, errors)
+
+        # An entry created before v4 still carries the serial-keyed
+        # unique_id until its first *live* poll adopts the UUID
+        # (coordinator._resolve_identity) -- which can be a long
+        # while for an appliance that is off, since an entry loads
+        # from its snapshot in the meantime (issue #295). The UUID
+        # check below can't see such an entry, so re-adding this
+        # very appliance during that window would be waved through
+        # as a second entry; the two would then collide the moment
+        # the older one re-keyed, and rekey_entry resolves a
+        # collision by *deleting* the duplicate rows -- taking the
+        # original entry's entity_ids, history and automations with
+        # them. Matched on the legacy key together with the host, so
+        # issue #381's two units (same serial, different addresses)
+        # stay separable.
+        legacy_unique_id = f"localthings_{info['serial']}"
+        if any(
+            other.unique_id == legacy_unique_id
+            and other.data.get(CONF_HOST) == self._host
+            and CONF_DEVICE_KEY not in other.data
+            for other in existing
+        ):
+            return self.async_abort(reason="already_configured")
+        # Keyed on the OCF device UUID rather than the serialNum
+        # (issue #381): two units of a model that ship the same
+        # well-formed serial are indistinguishable here otherwise,
+        # and the second one is turned away as already configured.
+        await self.async_set_unique_id(f"localthings_{info['device_key']}")
+        self._abort_if_unique_id_configured()
+        if info["device_type_recognized"]:
+            return self._create_entry(info)
+        self._pending_info = info
+        return await self.async_step_confirm_unknown_type()
 
     async def async_step_confirm_unknown_type(
         self, user_input: dict[str, Any] | None = None

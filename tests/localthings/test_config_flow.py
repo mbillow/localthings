@@ -40,11 +40,42 @@ from .conftest import (
 )
 
 
-async def test_form_first_device(hass: HomeAssistant) -> None:
-    """First device: form asks for host, CA cert, and CA key."""
+async def _configure_host_then_ca(
+    hass: HomeAssistant,
+    result,
+    *,
+    host: str = MOCK_HOST,
+    cert: str = MOCK_CA_CERT_PEM,
+    key: str = MOCK_CA_KEY_PEM,
+):
+    """First-device path: IP (Part 1) then CA credentials (Part 2)."""
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: host}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "ca"
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_CA_CERT_PEM: cert, CONF_CA_KEY_PEM: key},
+    )
+
+
+async def test_form_first_device(hass: HomeAssistant, mock_compatible) -> None:
+    """First device: host only, then a CA step. No nmap, no split PEM required."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
+    data_schema = result["data_schema"]
+    assert data_schema is not None
+    assert CONF_HOST in data_schema.schema
+    assert CONF_CA_CERT_PEM not in data_schema.schema
+    assert CONF_CA_KEY_PEM not in data_schema.schema
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "ca"
     data_schema = result["data_schema"]
     assert data_schema is not None
     assert CONF_CA_CERT_PEM in data_schema.schema
@@ -68,14 +99,7 @@ async def test_form_second_device_reuses_creds(hass: HomeAssistant) -> None:
 async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
     """Happy path: valid IP connects, entry created with discovered port."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_HOST] == MOCK_HOST
     assert result["data"][CONF_PORT] == MOCK_PORT
@@ -91,14 +115,7 @@ async def test_setup_normalizes_messy_pasted_pem(hass: HomeAssistant, mock_probe
     messy_key = "\ufeff" + MOCK_CA_KEY_PEM.replace("\n", "\r\n")
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: messy_cert,
-            CONF_CA_KEY_PEM: messy_key,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result, cert=messy_cert, key=messy_key)
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_CA_CERT_PEM] == MOCK_CA_CERT_PEM
     assert result["data"][CONF_CA_KEY_PEM] == MOCK_CA_KEY_PEM
@@ -115,6 +132,162 @@ def test_normalize_pem_strips_bom_crlf_and_blank_lines() -> None:
     # A clean PEM (the `type`-dump case) passes through unchanged.
     clean = "-----BEGIN CERTIFICATE-----\nTEST-CA\n-----END CERTIFICATE-----"
     assert _normalize_pem(clean) == clean
+
+
+def _rsa_ca_pair() -> tuple[str, str]:
+    """A throwaway self-signed pair for bundle/pair tests. Not AC14K_M."""
+    import datetime
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.datetime.now(datetime.UTC)
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test-ca")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    return (
+        cert.public_bytes(serialization.Encoding.PEM).decode(),
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode(),
+    )
+
+
+def test_parse_ca_credentials_accepts_a_combined_bundle() -> None:
+    """The public AC14K_M bundle is one PEM with the key and several certs.
+    Pasting that whole file, with an empty key field, has to work — that is
+    the in-HA replacement for running setup_cert.py just to split it."""
+    from custom_components.localthings.config_flow import _parse_ca_credentials
+
+    cert_pem, key_pem = _rsa_ca_pair()
+    extra = "-----BEGIN CERTIFICATE-----\nUPSTREAM\n-----END CERTIFICATE-----"
+    bundle = f"{key_pem}\n{cert_pem}\n{extra}"
+    got_cert, got_key = _parse_ca_credentials(bundle, "")
+    assert "BEGIN CERTIFICATE" in got_cert
+    assert "UPSTREAM" in got_cert
+    assert "BEGIN PRIVATE KEY" in got_key
+    assert "BEGIN PRIVATE KEY" not in got_cert
+
+
+def test_parse_ca_credentials_still_accepts_split_fields() -> None:
+    from custom_components.localthings.config_flow import _normalize_pem, _parse_ca_credentials
+
+    cert_pem, key_pem = _rsa_ca_pair()
+    got_cert, got_key = _parse_ca_credentials(cert_pem, key_pem)
+    assert got_cert == _normalize_pem(cert_pem)
+    assert got_key == _normalize_pem(key_pem)
+
+
+def test_parse_ca_credentials_rejects_a_mismatched_pair() -> None:
+    from custom_components.localthings.config_flow import InvalidCA, _parse_ca_credentials
+
+    cert_a, _key_a = _rsa_ca_pair()
+    _cert_b, key_b = _rsa_ca_pair()
+    with pytest.raises(InvalidCA, match="do not pair"):
+        _parse_ca_credentials(cert_a, key_b)
+
+
+def test_parse_ca_credentials_rejects_a_bundle_with_no_key() -> None:
+    from custom_components.localthings.config_flow import InvalidCA, _parse_ca_credentials
+
+    with pytest.raises(InvalidCA, match="No private key"):
+        _parse_ca_credentials(MOCK_CA_CERT_PEM, "")
+
+
+async def test_first_device_accepts_combined_bundle_only(
+    hass: HomeAssistant, mock_probe
+) -> None:
+    """A user who pastes the whole bundle into the cert field, and leaves
+    the key field empty, completes setup."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    bundle = f"{MOCK_CA_KEY_PEM}\n{MOCK_CA_CERT_PEM}"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_CA_CERT_PEM: bundle},
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_CA_CERT_PEM] == MOCK_CA_CERT_PEM
+    assert result["data"][CONF_CA_KEY_PEM] == MOCK_CA_KEY_PEM
+
+
+def test_legacy_firmware_is_reported_when_only_8888_is_open(monkeypatch) -> None:
+    """Part 1 inside HA: an 8888-only box is named as older firmware
+    instead of sending the user to nmap."""
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.config_flow import LegacyFirmware
+
+    monkeypatch.setattr(
+        config_flow,
+        "_scan_ports",
+        lambda host: config_flow._PortScan(
+            candidates=[49154, 49155],
+            confirmed=[],
+            swept=_sweep_result(refused=list(config_flow.PROBE_PORT_RANGE)),
+        ),
+    )
+    monkeypatch.setattr(config_flow, "_tcp_port_open", lambda host, port, timeout=1.5: True)
+
+    with pytest.raises(LegacyFirmware) as err:
+        config_flow._assess_compatibility(MOCK_HOST)
+    assert err.value.error_key == "legacy_firmware"
+
+
+def test_compatibility_does_not_call_8888_once_dtls_is_confirmed(monkeypatch) -> None:
+    """A board that also listens on 8888 must not be classified as legacy
+    after ClientHello already proved a DTLS server."""
+    from custom_components.localthings import config_flow
+
+    monkeypatch.setattr(
+        config_flow,
+        "_scan_ports",
+        lambda host: config_flow._PortScan(candidates=[49154], confirmed=[49154]),
+    )
+
+    def _no_tcp(host, port, timeout=1.5):
+        raise AssertionError("TCP 8888 must not be probed once DTLS is confirmed")
+
+    monkeypatch.setattr(config_flow, "_tcp_port_open", _no_tcp)
+    scan = config_flow._assess_compatibility(MOCK_HOST)
+    assert scan.confirmed == [49154]
+
+
+async def test_legacy_firmware_surfaces_on_the_host_form(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """The user sees the older-firmware message on the IP step, before any
+    CA paste, so they never think the credentials were the problem."""
+    from custom_components.localthings import config_flow
+
+    def _legacy(host):
+        raise config_flow.LegacyFirmware(f"{host} is 8888-only")
+
+    monkeypatch.setattr(config_flow, "_assess_compatibility", _legacy)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    errors = result["errors"]
+    assert errors is not None
+    assert errors["base"] == "legacy_firmware"
 
 
 def test_order_candidates_prefers_known_ports() -> None:
@@ -335,14 +508,7 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     monkeypatch.setattr(config_flow, "_find_live_ports", _no_sweep)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PORT] == 49153
@@ -371,14 +537,7 @@ async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, 
     )
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PORT] == 49153
 
@@ -401,14 +560,7 @@ async def test_probe_falls_back_when_library_lacks_the_clienthello_probe(
     )
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PORT] == 49154
 
@@ -427,14 +579,7 @@ async def test_entry_stores_resolved_identity(hass: HomeAssistant, monkeypatch, 
     _patch_clienthello(monkeypatch, {49154})
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_SERIAL] == "DISHWASHER-49153"
@@ -844,14 +989,7 @@ async def test_cert_rejection_surfaces_its_own_error_in_the_form(
     FakeSession.reject_certs = {"FULLCHAIN"}
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.FORM
     errors = result["errors"]
@@ -875,14 +1013,7 @@ async def test_unreachable_cloud_gateway_is_reported_separately(
     monkeypatch.setattr(config_flow, "_fetch_samsung_uuid", _no_cloud)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.FORM
     errors = result["errors"]
@@ -900,14 +1031,7 @@ async def test_unusable_device0_is_reported_separately(
     monkeypatch.setattr(FakeSession, "get", lambda self, path, timeout=15.0: (0x84, b""))
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.FORM
     errors = result["errors"]
@@ -946,8 +1070,8 @@ def test_every_error_key_the_flow_can_raise_has_a_message() -> None:
     assert set(catalog) == keys
 
 
-async def test_cannot_connect(hass: HomeAssistant) -> None:
-    """Failed probe: form re-shown with cannot_connect error."""
+async def test_cannot_connect(hass: HomeAssistant, mock_compatible) -> None:
+    """Failed probe: CA form re-shown with cannot_connect error."""
     from custom_components.localthings.config_flow import CannotConnect
 
     with patch(
@@ -955,15 +1079,9 @@ async def test_cannot_connect(hass: HomeAssistant) -> None:
         side_effect=CannotConnect("no port"),
     ):
         result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_HOST: MOCK_HOST,
-                CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-                CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-            },
-        )
+        result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "ca"
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "cannot_connect"
@@ -972,14 +1090,7 @@ async def test_cannot_connect(hass: HomeAssistant) -> None:
 async def test_recognized_type_skips_confirmation_step(hass: HomeAssistant, mock_probe) -> None:
     """A recognized device type creates the entry with no extra step."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
@@ -988,14 +1099,7 @@ async def test_unknown_type_shows_confirmation_step(
 ) -> None:
     """An unrecognized device type shows a confirmation step before creating the entry."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "confirm_unknown_type"
 
@@ -1018,14 +1122,7 @@ async def test_unknown_type_step_description_makes_no_version_claim(
     from pathlib import Path
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     assert result["step_id"] == "confirm_unknown_type"
 
     steps = json.loads(
