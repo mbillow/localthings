@@ -216,7 +216,7 @@ def test_identity_is_resolved_before_any_poll(hass: HomeAssistant, mock_entry) -
     assert coordinator.device_key == MOCK_DEVICE_KEY
     assert coordinator.device_info["identifiers"] == {(DOMAIN, MOCK_DEVICE_KEY)}
     assert coordinator.device_info["model"] == MOCK_MODEL
-    assert coordinator.device_info["name"] == f"Samsung Refrigerator ({MOCK_MODEL})"
+    assert coordinator.device_info["name"] == "Samsung Refrigerator"
     assert mock_entry.data[CONF_HOST] not in str(coordinator.device_info["identifiers"])
 
 

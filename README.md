@@ -85,7 +85,9 @@ This repo doesn't include the needed CA bundle. For an example of how to obtain 
 5. The flow sends a DTLS `ClientHello` to every port in the `49152-49160` range at once and keeps the one that answers -- a real DTLS server identifies itself in about one round trip, and the probe stops there, so nothing is left behind on the appliance. Only that port is then given a real certificate handshake: it fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, and reads the device's identity and `/device/0`. On success it creates the config entry, already knowing the appliance's serial, model, and type.
 6. Every subsequent device only asks for the host IP. The stored CA credentials are reused, and so is the leaf cert itself -- every appliance accepts the same one -- so adding a second appliance doesn't depend on Samsung's cloud being reachable at all. If a device rejects the reused cert (the UUID behind it does rotate), the flow mints a fresh one and retries by itself.
 
-Entities appear under one HA device per appliance, named for the appliance's type and model. Rename freely: the device is keyed on the appliance's own OCF device ID, not its name. (Some Samsung models ship the same serial number on every unit of a model, so the serial can't tell two of them apart -- the OCF device ID can.)
+Entities appear under one HA device per appliance, named for the appliance's type alone -- `Samsung Refrigerator`, `Samsung Air Conditioner` -- since Home Assistant builds every entity_id on the device out of that name, giving you `sensor.samsung_refrigerator_energy`. The model is registered on the device itself rather than folded into the name, so a board string like `ARTIK051_DONGLE_REF` shows up on the device page instead of in 46 entity_ids. Rename freely: the device is keyed on the appliance's own OCF device ID, not its name. (Some Samsung models ship the same serial number on every unit of a model, so the serial can't tell two of them apart -- the OCF device ID can.)
+
+Upgrading from a release that put the model in the name renames the device, but Home Assistant assigns an entity_id once, when the entity is first registered -- existing entity_ids, and every automation referencing them, are untouched. Rename the entities yourself if you want the shorter ids retroactively.
 
 ---
 
@@ -279,7 +281,7 @@ This only applies to an appliance the integration has reached at least once. A b
 
 ### Multi-subdevice ("2-in-1") air conditioner systems
 
-Some Samsung installs run more than one indoor subdevice off a single outdoor unit, all reachable over the *one* IP/DTLS session your config entry connects to (a floor-standing + wall-mounted 2-in-1 is a common shape). The integration discovers any sibling subdevices automatically, once, right after the first successful poll — there's nothing to configure. Each discovered subdevice gets its own HA device (linked to the main one via "via device") and its own `climate` card, so it lands in its own room in the dashboard instead of being invisible or mixed into the master's state.
+Some Samsung installs run more than one indoor subdevice off a single outdoor unit, all reachable over the *one* IP/DTLS session your config entry connects to (a floor-standing + wall-mounted 2-in-1 is a common shape). The integration discovers any sibling subdevices automatically, once, right after the first successful poll — there's nothing to configure. Each discovered subdevice gets its own HA device (named `... Unit 2`, `Unit 3`, and linked to the main one via "via device") and its own `climate` card, so it lands in its own room in the dashboard instead of being invisible or mixed into the master's state.
 
 Two on-the-wire shapes are supported, both keyed off what the appliance itself reports:
 

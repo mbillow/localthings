@@ -840,7 +840,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         from .registry.identity import device_display_name
 
         return self.async_create_entry(
-            title=f"{device_display_name(info['device_type_name'], '')} ({self._host})",
+            title=f"{device_display_name(info['device_type_name'])} ({self._host})",
             data={
                 CONF_HOST: self._host,
                 CONF_PORT: info["port"],

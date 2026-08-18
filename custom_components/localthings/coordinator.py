@@ -324,9 +324,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_key)},
-            name=device_display_name(
-                entry.data.get(CONF_DEVICE_TYPE), entry.data.get(CONF_MODEL) or ""
-            ),
+            name=device_display_name(entry.data.get(CONF_DEVICE_TYPE)),
             manufacturer=entry.data.get(CONF_MANUFACTURER) or "Samsung",
             model=entry.data.get(CONF_MODEL) or None,
         )
@@ -760,22 +758,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         model = model_num.split("|", 1)[0] if model_num else ""
         serial = info.get("x.com.samsung.da.serialNum") or None
         base_name = self.device_info.get("name") or "Samsung Appliance"
-        if model:
-            label = model.replace("_", " ").title()
-        else:
-            # No identity resource yet (or ever) for this subdevice -- fall
-            # back to a generic label. 'Subdevice <n>' only applies to an
-            # indexed subdevice; UUID-prefixed ones are never more than one
-            # per connection today.
-            label = (
-                f"Subdevice {subdevice.key}"
-                if subdevice.kind == "indexed"
-                else "Secondary Subdevice"
-            )
+        # Positional, not this subdevice's own modelNum: that is a board
+        # string ('TP2X_FAC_BORA_RAC_21K') and this name is what HA
+        # slugifies into the subdevice's entity_ids, same rule as
+        # device_display_name. The master is unit 1 -- `subdevices` never
+        # includes it -- so the first sibling is unit 2.
+        ordinal = self.subdevices.index(subdevice) + 2 if subdevice in self.subdevices else 2
         return DeviceInfo(
             identifiers={(DOMAIN, f"{self.device_key}_{subdevice.key}")},
             via_device=(DOMAIN, self.device_key),
-            name=f"{base_name} {label}",
+            name=f"{base_name} Unit {ordinal}",
             manufacturer=self.device_info.get("manufacturer") or "Samsung",
             model=model or None,
             serial_number=serial,
@@ -1452,7 +1444,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         ident = self._identity
         model = resolve_model(model_num, ident)
-        name = device_display_name(device_type_name, model)
+        name = device_display_name(device_type_name)
         mfr = (ident.manufacturer if ident else "") or "Samsung"
 
         self.device_info = DeviceInfo(

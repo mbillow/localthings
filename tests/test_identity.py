@@ -2,6 +2,7 @@ import cbor2
 
 from custom_components.localthings.registry.identity import (
     DeviceIdentity,
+    device_display_name,
     is_usable_device_id,
     ocf_device_key,
     read_identity,
@@ -252,3 +253,19 @@ def test_ocf_device_key_reports_absence_rather_than_collapsing_to_the_serial():
     assert ocf_device_key(None) is None
     assert ocf_device_key(_identity(serial="REAL-SERIAL")) is None
     assert ocf_device_key(_identity(device_id="abc-123")) == "abc-123"
+
+
+def test_the_device_name_is_the_device_type_alone():
+    """The name is what HA slugifies into every entity_id on the device, so
+    the board string that modelNum reports stays out of it -- it is still
+    registered as the device's `model` (see coordinator.device_info)."""
+    assert device_display_name("refrigerator") == "Samsung Refrigerator"
+    assert device_display_name("range_hood") == "Samsung Range Hood"
+    assert device_display_name(None) == "Samsung Appliance"
+
+
+def test_registry_type_names_that_dont_title_case_into_english():
+    """Two registry names are SmartThings/Samsung spellings, not what the
+    appliance is called -- and this one is the user-visible half."""
+    assert device_display_name("airconditioner") == "Samsung Air Conditioner"
+    assert device_display_name("ehs") == "Samsung Heat Pump"

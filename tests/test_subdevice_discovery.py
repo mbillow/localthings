@@ -151,8 +151,10 @@ async def test_pattern_a_sub1_device_info_links_via_device_to_master(hass: HomeA
     assert info["identifiers"] == {(DOMAIN, f"{master_serial}_1")}
     assert info["via_device"] == (DOMAIN, master_serial)
     # The subdevice's own /information/vs/1 (real, ARTIK051_DONGLE_FAC_RAC_18K)
-    # is what names/models this device, not the master's.
+    # is what models this device, not the master's -- but it never reaches
+    # the name, which HA slugifies into this subdevice's entity_ids.
     assert info["model"] == "ARTIK051_DONGLE_FAC_RAC_18K"
+    assert info["name"] == "Samsung Air Conditioner Unit 2"
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +253,9 @@ async def test_fac_bora_2in1_subdevice_device_info(hass: HomeAssistant):
     # Confirmed live by the reporter (DESIGN-177.md section 1): the wall
     # subdevice's own identity, distinct from the master's TP2X_FAC_BORA_21K.
     assert info["model"] == "TP2X_FAC_BORA_RAC_21K"
+    # Neither the board string nor the subdevice UUID is a name a user
+    # wants slugified into `climate.<this>_...`.
+    assert info["name"] == "Samsung Air Conditioner Unit 2"
 
 
 async def test_fac_bora_2in1_unique_ids_include_subdevice_prefix(hass: HomeAssistant):

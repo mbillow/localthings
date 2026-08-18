@@ -135,14 +135,37 @@ def resolve_model(model_num: str, identity: DeviceIdentity | None) -> str:
     return identity.model if identity else ""
 
 
-def device_display_name(device_type_name: str | None, model: str) -> str:
-    """The HA device name for a resolved device type + model. Shared by the
-    config flow and the coordinator's post-discovery rebuild, so the name a
-    device is first registered under matches what discovery produces later
-    -- otherwise every setup would rename the device once the first poll
-    landed."""
-    device_type = device_type_name.replace("_", " ").title() if device_type_name else "Appliance"
-    return f"Samsung {device_type} ({model})" if model else f"Samsung {device_type}"
+# Registry type names whose title-cased form isn't what the appliance is
+# called: 'airconditioner' is one word only because SmartThings' own type
+# string is, and 'ehs' is Samsung's internal name for the air-to-water
+# heat pump (see by_type/ehs.py).
+_DISPLAY_TYPE_NAMES = {
+    "airconditioner": "Air Conditioner",
+    "ehs": "Heat Pump",
+}
+
+
+def device_display_name(device_type_name: str | None) -> str:
+    """The HA device name for a resolved device type.
+
+    Deliberately carries no model: HA slugifies this name into the
+    entity_id of every entity the device registers, and modelNum is a
+    board string, so folding it in produced ids like
+    `sensor.samsung_refrigerator_artik051_dongle_ref_energy`. The model
+    still reaches the UI through DeviceInfo's own `model` field, which
+    nothing derives an entity_id from.
+
+    Shared by the config flow and the coordinator's post-discovery
+    rebuild, so the name a device is first registered under matches what
+    discovery produces later -- otherwise every setup would rename the
+    device once the first poll landed.
+    """
+    if not device_type_name:
+        return "Samsung Appliance"
+    device_type = _DISPLAY_TYPE_NAMES.get(
+        device_type_name, device_type_name.replace("_", " ").title()
+    )
+    return f"Samsung {device_type}"
 
 
 def _get(sess, path) -> dict:
