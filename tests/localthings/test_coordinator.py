@@ -1349,6 +1349,151 @@ async def test_send_command_raises_after_reconnect_retry_also_fails(
     assert coordinator.observe_mode == MODE_POLL
 
 
+async def test_send_command_timeout_retries_in_place_without_reconnecting(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """Issue #384: a write timeout is a dropped datagram, not a dead session.
+
+    smartthings-local retransmits every block of a GET but sends a POST
+    exactly once, so a single loss surfaces here as a timeout on a session
+    that is still fine. Retrying in place has to be tried before spending a
+    reconnect -- which costs the pause, a fresh handshake, and every OBSERVE
+    subscription this device has."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    hrefs = coordinator._hot_hrefs + coordinator._warm_hrefs
+
+    fake.notify_on_subscribe = {"notified": True}
+    entered = await hass.async_add_executor_job(
+        coordinator._observe.try_enter_observe_mode, fake, hrefs, 0.02, 0.8
+    )
+    assert entered is True
+
+    def _write_fn(payload, rep, href=None):
+        return (["test", "vs", "0"], {"value": payload})
+
+    desc = NumberDesc(key="test", field="value", write_fn=_write_fn)
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+
+    calls = {"n": 0}
+
+    def _post(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise SessionTimeoutError()
+        return (0x44, b"")
+
+    with (
+        patch.object(coordinator, "_close_session") as mock_close,
+        patch.object(coordinator, "_connect_session") as mock_connect,
+        patch(
+            "custom_components.localthings.coordinator.asyncio.sleep",
+            new=AsyncMock(),
+        ) as mock_sleep,
+    ):
+        fake.post = _post
+        await coordinator.async_send_command(bound, 5)
+
+    assert calls["n"] == 2
+    assert not mock_close.called
+    assert not mock_connect.called
+    # No _RECONNECT_PAUSE_S burned on a session that never needed replacing.
+    assert not mock_sleep.called
+    # And the push subscriptions the reconnect would have thrown away survive.
+    assert coordinator.observe_mode == MODE_OBSERVE
+    assert coordinator._cache.get("/test/vs/0") == {"value": 5}
+
+
+async def test_send_command_timeout_falls_back_to_reconnect(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """The in-place retry (issue #384) is an extra rung on the ladder, not a
+    replacement: a href that keeps timing out must still reach the reconnect
+    retry and, failing that, the user (issue #294)."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href=None):
+        return (["test", "vs", "0"], {"value": payload})
+
+    desc = NumberDesc(key="test", field="value", write_fn=_write_fn)
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+
+    calls = {"n": 0}
+
+    def _post(*args, **kwargs):
+        calls["n"] += 1
+        raise SessionTimeoutError()
+
+    with (
+        patch.object(coordinator, "_close_session") as mock_close,
+        patch(
+            "custom_components.localthings.coordinator.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+        pytest.raises(HomeAssistantError),
+    ):
+        fake.post = _post
+        await coordinator.async_send_command(bound, 5)
+
+    # First attempt, in-place retry, then the reconnect's own retry.
+    assert calls["n"] == 3
+    assert mock_close.called
+
+
+async def test_write_paces_before_posting(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """Issue #384: RT-OCF silently drops a request that lands inside the
+    rate-limit interval, and nothing retransmits a POST -- so an unpaced
+    write can only ever surface as a timeout. Every other send site paces;
+    the write path has to as well."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    def _write_fn(payload, rep, href=None):
+        return (["test", "vs", "0"], {"value": payload})
+
+    desc = NumberDesc(key="test", field="value", write_fn=_write_fn)
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+
+    order: list[str] = []
+
+    fake.pace = lambda: order.append("pace")
+
+    def _post(*args, **kwargs):
+        order.append("post")
+        return (0x44, b"")
+
+    fake.post = _post
+    await coordinator.async_send_command(bound, 5)
+
+    assert order == ["pace", "post"]
+
+
 async def test_send_command_reconnect_downgrades_observe_mode(
     hass: HomeAssistant,
     mock_entry,

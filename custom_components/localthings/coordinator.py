@@ -9,6 +9,7 @@ import logging
 import threading
 import time
 import zlib
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
@@ -1953,47 +1954,77 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
+            # Pace like every other send site (issue #384): RT-OCF drops a
+            # request that lands inside the rate-limit interval, and nothing
+            # retransmits a POST, so an unpaced write can only surface as a
+            # timeout. Worst on a reconnect retry, where _connect_session()
+            # has just read three identity resources.
+            sess.pace()
             code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
 
-        # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
-        # landing on a session Samsung's firmware closed between polls used
-        # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
                 await self.hass.async_add_executor_job(_do_put)
-            except Exception as e:
-                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
-                await self.hass.async_add_executor_job(self._close_session)
-                # The session is dead the moment it's closed, so any OBSERVE
-                # subscriptions on it are too -- downgrade here, before the
-                # retry, so a retry that also fails doesn't leave mode
-                # claiming "Push" on a session that no longer exists
-                # (issue #294; the poll path handles the same fact for its
-                # own reconnect the same way, unconditionally on close).
-                if self._observe.mode == MODE_OBSERVE:
-                    self._observe.downgrade_to_poll()
-                    self._resubscribe_due = True
-                await asyncio.sleep(self._RECONNECT_PAUSE_S)
+            except TimeoutError as e:
+                # A timeout is a late ACK, not a dead session -- the same
+                # reading _defer_reconnect_for takes on the poll path. A
+                # POST is sent exactly once (smartthings-local retransmits
+                # every block of a GET, never a write), so one dropped
+                # datagram lands here on a healthy session, and reconnecting
+                # over it costs the pause, a fresh handshake, and this
+                # device's OBSERVE subscriptions (issue #384).
+                self._log.info("command timed out for %s, retrying: %s", write_href, e)
                 try:
                     await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
-                    self._log.error("command failed for %s after reconnect: %s", write_href, e2)
-                    raise HomeAssistantError(
-                        translation_domain=DOMAIN,
-                        translation_key="command_failed",
-                        translation_placeholders={"href": write_href, "error": str(e2)},
-                    ) from e2
-                # The retry's own reconnect pause + second PUT can eat well
-                # into the settle window armed above, leaving too little of
-                # it for the confirming poll below and reviving the
-                # revert-then-reapply symptom settle_s exists to prevent
-                # (issue #9). Re-arm it fresh now that the write actually
-                # landed.
-                self._observe.mark_write_pending(
-                    write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
-                )
+                    await self._reconnect_and_retry_write(_do_put, write_href, e2)
+                else:
+                    self._rearm_write_settle(write_href)
+            except Exception as e:
+                await self._reconnect_and_retry_write(_do_put, write_href, e)
         await self.async_request_refresh()
+
+    def _rearm_write_settle(self, write_href: str) -> None:
+        """Re-arm the settle guard once a retried write finally lands.
+
+        The retries eat into the window armed before the first PUT, leaving
+        too little of it for the confirming poll and reviving the
+        revert-then-reapply symptom settle_s exists to prevent (issue #9)."""
+        self._observe.mark_write_pending(
+            write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+        )
+
+    async def _reconnect_and_retry_write(
+        self, do_put: Callable[[], None], write_href: str, e: Exception
+    ) -> None:
+        """Reconnect and retry a failed write once, raising if it fails again.
+
+        Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
+        landing on a session Samsung's firmware closed between polls used to
+        be silently lost -- no retry, no user-facing error."""
+        self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
+        await self.hass.async_add_executor_job(self._close_session)
+        # The session is dead the moment it's closed, so any OBSERVE
+        # subscriptions on it are too -- downgrade here, before the retry, so
+        # a retry that also fails doesn't leave mode claiming "Push" on a
+        # session that no longer exists (issue #294; the poll path handles
+        # the same fact for its own reconnect the same way, unconditionally
+        # on close).
+        if self._observe.mode == MODE_OBSERVE:
+            self._observe.downgrade_to_poll()
+            self._resubscribe_due = True
+        await asyncio.sleep(self._RECONNECT_PAUSE_S)
+        try:
+            await self.hass.async_add_executor_job(do_put)
+        except Exception as e2:
+            self._log.error("command failed for %s after reconnect: %s", write_href, e2)
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={"href": write_href, "error": str(e2)},
+            ) from e2
+        self._rearm_write_settle(write_href)
 
     # ------------------------------------------------------------------
     # Debug raw write/read (issue #54, extended for issue #300): a
@@ -2012,6 +2043,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = self._session
         if sess is None:
             raise RuntimeError("no session")
+        sess.pace()
         code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
         self._log.warning("DEBUG raw write POST %s %r → code %#04x", href, body, code)
         new_rep: dict = {}

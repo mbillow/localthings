@@ -216,6 +216,10 @@ class FakeObserveSession:
     def refresh_observes(self, paths):
         return None
 
+    def pace(self):
+        """No-op stand-in for the real session's rate limiter, which the
+        write path calls before every POST (issue #384)."""
+
     def close(self):
         self.closed = True
 
