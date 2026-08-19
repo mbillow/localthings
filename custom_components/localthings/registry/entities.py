@@ -111,6 +111,11 @@ class SwitchDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class LightDesc(SamsungEntityDescription):
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class ButtonDesc(SamsungEntityDescription):
     payload: Any = ""
     # Optional press-time payload generation. The button platform supplies
@@ -173,6 +178,7 @@ PLATFORM_OF: dict[type, str] = {
     BinarySensorDesc: "binary_sensor",
     SelectDesc: "select",
     SwitchDesc: "switch",
+    LightDesc: "light",
     ButtonDesc: "button",
     NumberDesc: "number",
     TimeDesc: "time",
