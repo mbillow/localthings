@@ -888,8 +888,8 @@ def test_registry_reproduces_golden_state_keys_for_microwave_me7500d():
 def test_registry_reproduces_golden_state_keys_for_microwave_me7500d_lamp_high():
     """Same TP1X_DA-KS-MICROWAVE-01051/ME7500D board as microwave_me7500d
     above, but this live capture (issue #152) is the first to report a
-    non-Off Lamp token ('Lamp_High'). Locks in that the lamp switch reads
-    it as on rather than the previously-hardcoded 'On'-only comparison."""
+    non-Off Lamp token ('Lamp_High'). Locks in that the native light remains
+    present when the device is at its high brightness step."""
     from tests.conftest import _load_device
 
     resources = _load_device("microwave_me7500d_lamp_high")

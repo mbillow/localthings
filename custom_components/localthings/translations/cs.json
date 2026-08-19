@@ -183,6 +183,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lampa"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Doba vaření"

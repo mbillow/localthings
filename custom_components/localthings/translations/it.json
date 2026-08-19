@@ -183,6 +183,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lampada"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Tempo di cottura"
