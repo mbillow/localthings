@@ -58,6 +58,14 @@ async def _configure_host_then_ca(
     )
 
 
+def _suggested(result, key):
+    """What a re-shown form prefills into `key`, or None."""
+    for marker in result["data_schema"].schema:
+        if marker == key:
+            return (marker.description or {}).get("suggested_value")
+    return None
+
+
 async def test_form_first_device(hass: HomeAssistant, mock_compatible) -> None:
     """First device: host only, then a CA step. No nmap, no split PEM required."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
@@ -203,6 +211,17 @@ def test_parse_ca_credentials_rejects_a_bundle_with_no_key() -> None:
 
     with pytest.raises(InvalidCA, match="No private key"):
         _parse_ca_credentials(MOCK_CA_CERT_PEM, "")
+
+
+def test_parse_ca_credentials_names_a_passphrase_protected_key() -> None:
+    """`load_pem_private_key` cannot open one without the passphrase and HA
+    has nowhere to ask for it, so the pair check swallows the failure and the
+    user is left with the generic 'could not be loaded' at mint time."""
+    from custom_components.localthings.config_flow import EncryptedCAKey, _parse_ca_credentials
+
+    encrypted = "-----BEGIN ENCRYPTED PRIVATE KEY-----\nTEST\n-----END ENCRYPTED PRIVATE KEY-----"
+    with pytest.raises(EncryptedCAKey, match="passphrase-protected"):
+        _parse_ca_credentials(MOCK_CA_CERT_PEM, encrypted)
 
 
 async def test_first_device_accepts_combined_bundle_only(hass: HomeAssistant, mock_probe) -> None:
@@ -986,6 +1005,8 @@ async def test_cert_rejection_surfaces_its_own_error_in_the_form(
     result = await _configure_host_then_ca(hass, result)
 
     assert result["type"] == FlowResultType.FORM
+    # The CA is what this one blames, so the paste stays in front of the user.
+    assert result["step_id"] == "ca"
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "cert_rejected"
@@ -1065,7 +1086,7 @@ def test_every_error_key_the_flow_can_raise_has_a_message() -> None:
 
 
 async def test_cannot_connect(hass: HomeAssistant, mock_compatible) -> None:
-    """Failed probe: CA form re-shown with cannot_connect error."""
+    """Failed probe: host form re-shown with cannot_connect error."""
     from custom_components.localthings.config_flow import CannotConnect
 
     with patch(
@@ -1075,10 +1096,39 @@ async def test_cannot_connect(hass: HomeAssistant, mock_compatible) -> None:
         result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
         result = await _configure_host_then_ca(hass, result)
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "ca"
+    assert result["step_id"] == "user"
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "cannot_connect"
+
+
+async def test_an_address_failure_goes_back_to_the_host_step_and_keeps_the_ca(
+    hass: HomeAssistant, mock_compatible
+) -> None:
+    """The compatibility check is deliberately lenient, so a mistyped IP can
+    still reach the handshake. Failing back onto the CA screen would strand
+    the user -- it has no host field -- and re-asking for the CA file on the
+    way back would undo the point of the one-time paste."""
+    from custom_components.localthings.config_flow import PortsClosed
+
+    with patch(
+        "custom_components.localthings.config_flow._probe_and_validate",
+        side_effect=PortsClosed("refused every port"),
+    ):
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        result = await _configure_host_then_ca(hass, result)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"base": "ports_closed"}
+    assert _suggested(result, CONF_HOST) == MOCK_HOST
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "192.168.0.99"}
+    )
+    assert result["step_id"] == "ca"
+    assert _suggested(result, CONF_CA_CERT_PEM) == MOCK_CA_CERT_PEM
+    assert _suggested(result, CONF_CA_KEY_PEM) == MOCK_CA_KEY_PEM
 
 
 async def test_recognized_type_skips_confirmation_step(hass: HomeAssistant, mock_probe) -> None:

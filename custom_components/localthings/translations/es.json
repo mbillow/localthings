@@ -49,6 +49,7 @@
       "unexpected_response": "La conexión con el dispositivo se estableció correctamente, pero no devolvió una descripción de dispositivo utilizable. Puede que no sea un electrodoméstico compatible con esta integración. El registro de Home Assistant recoge lo que envió.",
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP sea accesible y que las credenciales CA sean correctas.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
+      "encrypted_ca_key": "La clave privada de la CA está protegida con contraseña y Home Assistant no puede desbloquearla. Exporta o convierte la clave sin contraseña y pega esa.",
       "legacy_firmware": "Esa dirección no tiene API DTLS local (UDP 49152-49160), pero responde en TCP 8888. Es firmware Samsung antiguo (aprox. 2018-2022), que esta integración no puede controlar.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles."
     },

@@ -1511,6 +1511,7 @@
       "unexpected_response": "Die Verbindung zum Gerät war erfolgreich, es hat jedoch keine verwendbare Gerätebeschreibung zurückgegeben. Möglicherweise wird dieses Gerät von der Integration nicht unterstützt. Weitere Informationen in den Logs.",
       "cannot_connect": "Verbindung zum Gerät nicht möglich. Prüfen Sie, ob die IP-Adresse erreichbar und die CA-Zugangsdaten korrekt sind.",
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
+      "encrypted_ca_key": "Der private CA-Schlüssel ist passwortgeschützt und Home Assistant kann ihn nicht entsperren. Exportieren oder konvertieren Sie den Schlüssel ohne Passwort und fügen Sie diesen ein.",
       "legacy_firmware": "An dieser Adresse gibt es keine lokale DTLS-API (UDP 49152-49160), aber TCP 8888 antwortet. Das ist ältere Samsung-Firmware (etwa 2018-2022), die diese Integration nicht steuern kann.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs."
     },

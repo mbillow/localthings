@@ -160,6 +160,12 @@ class InvalidCA(Exception):
     error_key = "invalid_ca"
 
 
+class EncryptedCAKey(InvalidCA):
+    """The pasted CA private key is passphrase-protected."""
+
+    error_key = "encrypted_ca_key"
+
+
 class LegacyFirmware(CannotConnect):
     """The host is an older 8888/tcp appliance, not DTLS-CoAP."""
 
@@ -232,6 +238,8 @@ def _parse_ca_credentials(cert_field: str, key_field: str = "") -> tuple[str, st
         raise InvalidCA("No private key found in CA PEM")
     ca_cert_pem = "\n".join(certs)
     ca_key_pem = keys[0]
+    if ca_key_pem.startswith("-----BEGIN ENCRYPTED"):
+        raise EncryptedCAKey("CA private key is passphrase-protected")
     if _ca_pair_mismatch(certs[0], ca_key_pem):
         raise InvalidCA("CA certificate and private key do not pair")
     return ca_cert_pem, ca_key_pem
@@ -240,10 +248,9 @@ def _parse_ca_credentials(cert_field: str, key_field: str = "") -> tuple[str, st
 def _ca_pair_mismatch(cert_pem: str, key_pem: str) -> bool:
     """True only when both PEMs load and the key is not this cert's key.
 
-    Unloadable PEMs return False so a later minting step can raise
-    InvalidCA with its own message -- mock PEMs in tests are not real
-    X.509, and a user who pasted a truncated block should see that at
-    mint time rather than a 'do not pair' message.
+    Unloadable PEMs return False so the later minting step can raise
+    InvalidCA with its own message: a truncated paste is not a mismatched
+    pair, and saying so sends the user looking for the wrong file.
     """
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
@@ -562,6 +569,11 @@ def _assess_compatibility(host: str) -> _PortScan:
     local-API port refused is the older cloud-token firmware. Anything
     else is left for the later handshake to classify -- including the
     preferred-port rescue for issue #192's sweep misses.
+
+    A firewall answering ICMP admin-prohibited (EACCES) lands in `refused`
+    too, so a filtered host that also passes TCP 8888 reads as legacy here
+    and loses that rescue -- narrow enough to accept, since the ClientHello
+    probe above would have confirmed a device the router really lets through.
     """
     scan = _scan_ports(host)
     if scan.confirmed:
@@ -1045,6 +1057,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    def _retry_form(self, errors: dict[str, str], *, blame_ca: bool) -> ConfigFlowResult:
+        """Re-show whichever screen holds the field that can fix the failure.
+
+        Host and CA are separate steps now, so re-showing the CA form for a
+        failure the address caused would strand a first-time user: that
+        screen has no host field, and a mistyped IP could then only be fixed
+        by abandoning the flow. A later appliance has no CA step to go back
+        to at all.
+        """
+        if blame_ca and not self._has_stored_ca():
+            return self._ca_form(self._ca_form_values, errors)
+        return self._host_form({CONF_HOST: self._host}, errors)
+
     async def async_step_ca(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Part 2: one-time CA credentials, including a combined PEM bundle."""
         errors: dict[str, str] = {}
@@ -1055,7 +1080,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_CA_KEY_PEM: user_input.get(CONF_CA_KEY_PEM, ""),
             }
             try:
-                self._ca_cert_pem, self._ca_key_pem = _parse_ca_credentials(
+                # In the executor: _ca_pair_mismatch imports `cryptography`
+                # lazily and parses a cert and a private key, and a lazy
+                # import on the event loop is what HA's blocking-call
+                # detection flags.
+                self._ca_cert_pem, self._ca_key_pem = await self.hass.async_add_executor_job(
+                    _parse_ca_credentials,
                     user_input.get(CONF_CA_CERT_PEM, ""),
                     user_input.get(CONF_CA_KEY_PEM, ""),
                 )
@@ -1065,7 +1095,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self._async_finish_probe()
 
-        return self._ca_form(user_input, errors)
+        # Re-entered from the host step after a failed probe (user_input is
+        # None there): the paste was never what failed, so keep it.
+        return self._ca_form(user_input or self._ca_form_values, errors)
 
     async def _async_finish_probe(self) -> ConfigFlowResult:
         """Authenticate and create the entry, after host + CA are known."""
@@ -1083,16 +1115,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Every probe failure carries the message that fits it (see
             # CannotConnect); the log line is where the specifics live.
             _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
-            errors = {"base": exc.error_key}
-            if existing:
-                return self._host_form({CONF_HOST: self._host}, errors)
-            return self._ca_form(self._ca_form_values, errors)
+            return self._retry_form(
+                {"base": exc.error_key},
+                blame_ca=isinstance(exc, InvalidCA | CertRejected),
+            )
         except Exception:
             _LOGGER.exception("Unexpected error during device probe")
-            errors = {"base": "unknown"}
-            if existing:
-                return self._host_form({CONF_HOST: self._host}, errors)
-            return self._ca_form(self._ca_form_values, errors)
+            return self._retry_form({"base": "unknown"}, blame_ca=False)
 
         # An entry created before v4 still carries the serial-keyed
         # unique_id until its first *live* poll adopts the UUID

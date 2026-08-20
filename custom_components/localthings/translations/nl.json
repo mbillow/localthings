@@ -1511,6 +1511,7 @@
       "unexpected_response": "Verbinding met het apparaat is gelukt, maar het gaf geen bruikbare apparaatbeschrijving terug. Mogelijk is het geen apparaat dat deze integratie ondersteunt. Het Home Assistant-logboek bevat wat het stuurde.",
       "cannot_connect": "Kan geen verbinding maken met het apparaat. Controleer of het IP-adres bereikbaar is en de CA-inloggegevens juist zijn.",
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
+      "encrypted_ca_key": "De privésleutel van de CA is met een wachtwoord beveiligd en Home Assistant kan hem niet ontgrendelen. Exporteer of converteer de sleutel zonder wachtwoord en plak die.",
       "legacy_firmware": "Dit adres heeft geen lokale DTLS-API (UDP 49152-49160), maar wel TCP 8888. Dat is oudere Samsung-firmware (ongeveer 2018-2022), die deze integratie niet kan bedienen.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie."
     },

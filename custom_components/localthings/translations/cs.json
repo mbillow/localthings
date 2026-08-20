@@ -1511,6 +1511,7 @@
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
       "cannot_connect": "Nelze se připojit k zařízení. Ověřte, že je IP adresa dostupná a že jsou přihlašovací údaje CA správné.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
+      "encrypted_ca_key": "Privátní klíč CA je chráněn heslem a Home Assistant jej nedokáže odemknout. Vyexportujte nebo převeďte klíč bez hesla a vložte ten.",
       "legacy_firmware": "Na této adrese není místní DTLS API (UDP 49152-49160), ale odpovídá TCP 8888. Jde o starší firmware Samsung (zhruba 2018-2022), který tato integrace neumí ovládat.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant."
     },
