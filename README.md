@@ -24,9 +24,9 @@ This integration uses the [`smartthings-local`](https://github.com/QuiteYellow/S
 
 ### What you get
 
-Adding a device just needs a host IP and your CA credentials in the UI. The integration reads the appliance's identity and picks the matching capability registry on its own, so there's no per-model descriptor to write for a new unit of a type that's already supported.
+Adding a device just needs a host IP in the UI. The integration checks compatibility itself, reads the appliance's identity, and picks the matching capability registry on its own, so there's no per-model descriptor to write for a new unit of a type that's already supported.
 
-Credential setup is one-time. The first device you add asks for a CA certificate and key (see Part 2); every device after that reuses the same stored CA and only asks for the host IP, minting its own per-device leaf cert automatically.
+Credential setup is one-time and also happens in that same UI. The first device you add asks you to paste the AC14K_M CA (a combined PEM file is fine); every device after that reuses the same stored CA and only asks for the host IP, minting its own per-device leaf cert automatically.
 
 Your state stays on your LAN: HA talks to the appliance over a direct DTLS session, and Samsung's cloud sees nothing from this integration. (The appliance itself still maintains its own connection to Samsung; that's firmware behavior on the device side, not something this integration controls.)
 
@@ -56,40 +56,27 @@ Other Tizen RT / DAWIT-family appliances almost certainly speak the same protoco
 
 ---
 
-## Part 1: Is your appliance compatible?
+## Add the integration in Home Assistant
 
-```sh
-# UDP scan for DTLS-CoAP ports
-nmap -Pn -sU -p 49152-49160 "$APPLIANCE_IP"
-```
-
-- Any UDP port in `49152-49160` open|filtered with a DTLS handshake responding: newer firmware (Tizen RT 3.x, DAWIT 3.0+). This is what the integration talks to. Most devices answer on `49154`/`49155`, but some builds bind lower (e.g. `49153`). The config flow probes the whole range and auto-detects the live port, so you don't need to know which one your device uses.
-- Only `8888/tcp` open (token-based HTTPS): older firmware (roughly 2018-2022). **Not supported here.**
-
----
-
-## Part 2: One-time setup, get the AC14K_M CA credentials
-
-The config flow (Part 3) needs a **CA certificate and CA private key** to mint each device's leaf cert itself. Specifically, it needs the `AC14K_M` intermediate CA — a cert chain that's been public for years and still ships in current Samsung firmware trust stores. Every Samsung Tizen/RT-OCF appliance trusts identities chained to that CA with full access by default, so a cert signed by it is what lets HA talk to your appliance without Samsung's cloud in the loop. HA doesn't need the *device's* original cert or key, only something `AC14K_M` has signed, and it mints that itself once you give it the CA.
-
-This repo doesn't include the needed CA bundle. For an example of how to obtain it, including fetching the AC14K_M cert and key and verifying they pair, see the `smartthings-local` protocol project's [`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py). However you obtain the CA cert and key, paste their PEM contents into the HA config flow's "CA Certificate (PEM)" and "CA Private Key (PEM)" fields in Part 3. You only need to do this once, since every appliance you add afterward reuses the same stored CA.
-
----
-
-## Part 3: Add the integration in Home Assistant
+Everything below happens in Home Assistant. You do not need nmap, Python, or a terminal.
 
 1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or add this repo as a custom repository in HACS — `Integration` category — and install it from there.)
 2. Restart HA.
 3. **Settings > Devices & Services > Add Integration > LocalThings.**
-4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
-5. The flow sends a DTLS `ClientHello` to every port in the `49152-49160` range at once and keeps the one that answers -- a real DTLS server identifies itself in about one round trip, and the probe stops there, so nothing is left behind on the appliance. Only that port is then given a real certificate handshake: it fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, and reads the device's identity and `/device/0`. On success it creates the config entry, already knowing the appliance's serial, model, and type.
-6. Every subsequent device only asks for the host IP. The stored CA credentials are reused, and so is the leaf cert itself -- every appliance accepts the same one -- so adding a second appliance doesn't depend on Samsung's cloud being reachable at all. If a device rejects the reused cert (the UUID behind it does rotate), the flow mints a fresh one and retries by itself.
+4. Enter the appliance's IP. The flow probes UDP `49152-49160` for a DTLS server (the old nmap step), and checks TCP `8888` when nothing in that range answers:
+   - A DTLS answer in that UDP range: newer firmware (Tizen RT 3.x, DAWIT 3.0+). This is what the integration talks to. Most devices answer on `49154`/`49155`, but some builds bind lower (e.g. `49153`). The live port is detected automatically.
+   - Only `8888/tcp` open (token-based HTTPS): older firmware (roughly 2018-2022). **Not supported here.** The flow usually names this for you, on the IP screen, before it asks for anything else. It needs the appliance to actively refuse the UDP range to be sure, though, so a firewall that drops those packets silently instead leaves it to the handshake, which fails a step later with "nothing there speaks DTLS".
+5. First device only: paste the **AC14K_M CA** on the next screen. A combined PEM (certificate + private key in one file) can go entirely in the first field; the key field can stay empty. The flow splits the bundle and checks that the cert and key pair. The key can't be passphrase-protected -- HA has nowhere to ask you for the passphrase, and says so rather than failing later. This repo does not include or download the CA. For an example of how to obtain it, see the `smartthings-local` protocol project's [`setup_cert.py`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py). You only do this once — every appliance after that reuses the stored CA.
+6. The flow then sends a DTLS `ClientHello` to every port in the `49152-49160` range at once and keeps the one that answers -- a real DTLS server identifies itself in about one round trip, and the probe stops there, so nothing is left behind on the appliance. Only that port is then given a real certificate handshake: it fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, and reads the device's identity and `/device/0`. On success it creates the config entry, already knowing the appliance's serial, model, and type.
+7. Every subsequent device only asks for the host IP. The stored CA credentials are reused, and so is the leaf cert itself -- every appliance accepts the same one -- so adding a second appliance doesn't depend on Samsung's cloud being reachable at all. If a device rejects the reused cert (the UUID does rotate), the flow mints a fresh one and retries by itself.
+
+The CA is the `AC14K_M` intermediate — a cert chain that's been public for years and still ships in current Samsung firmware trust stores. Every Samsung Tizen/RT-OCF appliance trusts identities chained to that CA with full access by default, so a cert signed by it is what lets HA talk to your appliance without Samsung's cloud in the loop. HA doesn't need the *device's* original cert or key, only something `AC14K_M` has signed, and it mints that itself once you give it the CA.
 
 Entities appear under one HA device per appliance, named for the appliance's type and model. Rename freely: the device is keyed on the appliance's own OCF device ID, not its name. (Some Samsung models ship the same serial number on every unit of a model, so the serial can't tell two of them apart -- the OCF device ID can.)
 
 ---
 
-## Part 4: Per-device settings
+## Per-device settings
 
 Each device has its own **Configure** option in Settings > Devices & Services, under **Device settings**:
 
@@ -101,7 +88,7 @@ The same **Configure** menu has a **Forget remembered modes** step, which clears
 
 ---
 
-## Part 5: Reading and writing resources directly
+## Reading and writing resources directly
 
 Two HA actions, `localthings.write_resource` and `localthings.read_resource`, talk to a device's OCF resources directly instead of through this integration's entity model. They exist for two overlapping jobs: pinning down a device-specific write contract (the reverse-engineering work `docs/investigations/` and the provenance comments throughout `registry/capabilities/` are all about), and driving a resource this integration doesn't model as an entity yet, without waiting on a release.
 
@@ -161,7 +148,7 @@ data:
 
 returning `{"href", "actual_href", "code", "raw_code", "rep"}` off a **live GET straight from the device**, not the cache — which can be up to a poll interval stale, exactly the staleness that would make `held` above meaningless. A sixth key, `body`, appears only when the response isn't a Property map: a Collection (`/device/0`, and the `x.com.samsung.devcol` siblings some boards expose) answers a CBOR list, which `rep` can't carry, and which would otherwise read as an accepted-but-empty resource. Omit `href` and you get `{"resources": {href: rep, ...}}`, the cached snapshot of everything this integration currently tracks on that device, with no GET at all — useful for seeing what's there before you start writing to it, without hammering the appliance.
 
-The **Debug write** panel under a device's Configure menu (Part 4) is the friendlier single-write path over this same machinery — pick an href, type a payload, see the result — for when you don't need a sequence.
+The **Debug write** panel under a device's Configure menu is the friendlier single-write path over this same machinery — pick an href, type a payload, see the result — for when you don't need a sequence.
 
 ---
 
@@ -244,7 +231,7 @@ support for hardware the maintainers don't have.
 
 When a diagnostics dump alone isn't enough to pin down how a resource actually behaves — whether a write sticks,
 what order things need to happen in, whether the device reverts a change on its own — the `localthings.write_resource`
-and `localthings.read_resource` actions from Part 5 are the tool for probing it directly and reporting back what
+and `localthings.read_resource` actions are the tool for probing it directly and reporting back what
 you found.
 
 ---

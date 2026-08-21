@@ -101,6 +101,11 @@ DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES = 3
 # handshake.
 PROBE_PORT_RANGE = list(range(49152, 49161))
 
+# Older (roughly 2018-2022) firmware that this integration does not speak:
+# token-based HTTPS instead of DTLS-CoAP. Used only as a compatibility
+# signal when the UDP range has no DTLS server.
+LEGACY_HTTPS_PORT = 8888
+
 # Ports we've historically seen complete a DTLS handshake; tried first when
 # more than one port in the range looks live.
 PREFERRED_PROBE_PORTS = [49154, 49155]

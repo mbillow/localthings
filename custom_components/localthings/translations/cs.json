@@ -1497,16 +1497,24 @@
     "step": {
       "user": {
         "title": "Přidat spotřebič Samsung",
-        "description": "Zadejte IP adresu vašeho spotřebiče Samsung a přihlašovací údaje CA AC14K_M použité k vydávání certifikátů zařízení.",
+        "description": "Zadejte IP adresu vašeho spotřebiče Samsung. Home Assistant sám ověří, zda zařízení mluví místním protokolem — nmap ani jiný nástroj nepotřebujete.",
         "data": {
-          "host": "IP adresa",
-          "ca_cert_pem": "Certifikát CA (PEM)",
-          "ca_key_pem": "Privátní klíč CA (PEM)"
+          "host": "IP adresa"
         },
         "data_description": {
-          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
-          "ca_cert_pem": "Certifikát CA AC14K_M ve formátu PEM. Vložte celý obsah řetězce fullchain PEM včetně všech bloků BEGIN/END CERTIFICATE.",
-          "ca_key_pem": "Privátní klíč AC14K_M ve formátu PEM. Vložte celý obsah včetně hlavičky a patičky BEGIN/END PRIVATE KEY."
+          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
+        }
+      },
+      "ca": {
+        "title": "Přihlašovací údaje CA (jednorázově)",
+        "description": "Vložte přihlašovací údaje CA AC14K_M. Stačí kombinovaný soubor PEM — vložte ho celý do prvního pole a pole pro klíč nechte prázdné. Toto je potřeba jen jednou; každý další spotřebič je znovu použije. Tato integrace CA nestahuje ani nedodává.",
+        "data": {
+          "ca_cert_pem": "Certifikát CA nebo kombinovaný balíček (PEM)",
+          "ca_key_pem": "Privátní klíč CA (PEM), pokud už není v balíčku"
+        },
+        "data_description": {
+          "ca_cert_pem": "Vložte celý PEM. Pokud soubor obsahuje certifikát i klíč, toto pole stačí.",
+          "ca_key_pem": "Potřebné jen tehdy, když první pole obsahuje pouze certifikát bez klíče."
         }
       },
       "user_reuse": {
@@ -1535,6 +1543,8 @@
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
       "cannot_connect": "Nelze se připojit k zařízení. Ověřte, že je IP adresa dostupná a že jsou přihlašovací údaje CA správné.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
+      "encrypted_ca_key": "Privátní klíč CA je chráněn heslem a Home Assistant jej nedokáže odemknout. Vyexportujte nebo převeďte klíč bez hesla a vložte ten.",
+      "legacy_firmware": "Na této adrese není místní DTLS API (UDP 49152-49160), ale odpovídá TCP 8888. Jde o starší firmware Samsung (zhruba 2018-2022), který tato integrace neumí ovládat.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant."
     },
     "abort": {

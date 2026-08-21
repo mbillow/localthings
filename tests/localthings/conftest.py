@@ -149,7 +149,17 @@ def _probe_result(*, recognized: bool) -> dict:
 
 
 @pytest.fixture
-def mock_probe():
+def mock_compatible():
+    """Skip the real UDP/TCP compatibility check on the host step."""
+    with patch(
+        "custom_components.localthings.config_flow._assess_compatibility",
+        return_value=object(),
+    ) as m:
+        yield m
+
+
+@pytest.fixture
+def mock_probe(mock_compatible):
     """Patch _probe_and_validate to succeed (recognized type) without a real DTLS connection."""
     with patch(
         "custom_components.localthings.config_flow._probe_and_validate",
@@ -159,7 +169,7 @@ def mock_probe():
 
 
 @pytest.fixture
-def mock_probe_unknown_type():
+def mock_probe_unknown_type(mock_compatible):
     """Patch _probe_and_validate to succeed, but with an unrecognized device type."""
     with patch(
         "custom_components.localthings.config_flow._probe_and_validate",
