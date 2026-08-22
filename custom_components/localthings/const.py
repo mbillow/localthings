@@ -14,6 +14,7 @@ PLATFORMS = [
 ]
 
 CONF_HOST = "host"
+CONF_OCF_DEVICE_ID = "ocf_device_id"
 CONF_PORT = "port"
 CONF_CA_CERT_PEM = "ca_cert_pem"
 CONF_CA_KEY_PEM = "ca_key_pem"

@@ -1500,11 +1500,13 @@
         "description": "Voer het IP-adres van je Samsung-apparaat en de AC14K_M-CA-inloggegevens in waarmee apparaatcertificaten worden aangemaakt.",
         "data": {
           "host": "IP-adres",
+          "ocf_device_id": "Exacte OCF-apparaat-UUID (geavanceerd)",
           "ca_cert_pem": "CA-certificaat (PEM)",
           "ca_key_pem": "Privésleutel van CA (PEM)"
         },
         "data_description": {
           "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
+          "ocf_device_id": "Optionele exacte OCF-apparaat-UUID (di) voor een host die meerdere logische apparaten aanbiedt. Laat leeg voor normale configuratie. Dit is niet de apparaat-ID van het SmartThings-platform.",
           "ca_cert_pem": "De PEM-gecodeerde AC14K_M-CA-certificaatketen. Plak de volledige inhoud van je fullchain-PEM, inclusief alle blokken BEGIN CERTIFICATE en END CERTIFICATE.",
           "ca_key_pem": "De PEM-gecodeerde AC14K_M-privésleutel. Plak de volledige inhoud, inclusief de kop- en voettekst BEGIN PRIVATE KEY en END PRIVATE KEY."
         }
@@ -1513,10 +1515,12 @@
         "title": "Samsung-apparaat toevoegen",
         "description": "Voer het IP-adres van je Samsung-apparaat in. De CA-inloggegevens van een bestaand LocalThings-apparaat worden hergebruikt.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "ocf_device_id": "Exacte OCF-apparaat-UUID (geavanceerd)"
         },
         "data_description": {
-          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
+          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
+          "ocf_device_id": "Optionele exacte OCF-apparaat-UUID (di) voor een host die meerdere logische apparaten aanbiedt. Laat leeg voor normale configuratie. Dit is niet de apparaat-ID van het SmartThings-platform."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "Het apparaat weigerde de DTLS-handshake om een reden die niets met het certificaat te maken heeft, hoogstwaarschijnlijk een protocol- of cipher-mismatch. Het Home Assistant-logboek bevat de precieze alert die het stuurde.",
       "cloud_unreachable": "Kon de cloudgateway van Samsung niet bereiken om de UUID op te halen die nodig is om het certificaat van dit apparaat aan te maken. Controleer de internettoegang van Home Assistant en probeer het opnieuw.",
       "unexpected_response": "Verbinding met het apparaat is gelukt, maar het gaf geen bruikbare apparaatbeschrijving terug. Mogelijk is het geen apparaat dat deze integratie ondersteunt. Het Home Assistant-logboek bevat wat het stuurde.",
+      "invalid_ocf_device_id": "Voer één canonieke OCF-apparaat-UUID (di) in die niet nul is, of laat dit geavanceerde veld leeg.",
+      "identity_discovery_unavailable": "Identiteitsgebonden detectie kon niet worden uitgevoerd. Controleer of Home Assistant een IPv4-interface op het LAN van het apparaat heeft en of deze build de vereiste smartthings-local-detectie-API bevat.",
+      "identity_target_not_found": "Op het opgegeven IP-adres is geen stabiele OCF-advertentie gevonden die met deze UUID overeenkomt. Controleer het IP-adres en de exacte OCF-apparaat-UUID (di).",
+      "identity_target_ambiguous": "Identiteitsgebonden detectie vond meer dan één actief endpoint of het resultaat veranderde tussen rondes. Er is niets geselecteerd.",
+      "identity_advertisement_invalid": "De overeenkomende OCF-advertentie bevatte geen veilig, aan de bron gebonden beveiligd endpoint. Er is niets geselecteerd.",
+      "identity_no_dtls_server": "De overeenkomende OCF-advertentie leverde kandidaten voor beveiligde poorten op, maar identificeerde niet precies één actieve DTLS-listener.",
+      "identity_mismatch": "Het geverifieerde endpoint meldde een andere of ontbrekende OCF-apparaat-UUID. De configuratie is gestopt voordat het apparaat werd gelezen of toegevoegd.",
       "cannot_connect": "Kan geen verbinding maken met het apparaat. Controleer of het IP-adres bereikbaar is en de CA-inloggegevens juist zijn.",
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie."

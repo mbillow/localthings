@@ -1500,11 +1500,13 @@
         "description": "삼성 가전제품의 IP 주소와 기기 인증서 발급에 사용할 AC14K_M CA 인증 정보를 입력하세요.",
         "data": {
           "host": "IP 주소",
+          "ocf_device_id": "정확한 OCF 기기 UUID(고급)",
           "ca_cert_pem": "CA 인증서(PEM)",
           "ca_key_pem": "CA 개인 키(PEM)"
         },
         "data_description": {
           "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50).",
+          "ocf_device_id": "하나의 호스트가 여러 논리 기기를 노출할 때 사용할 정확한 OCF 기기 UUID(di)입니다. 일반 설정에서는 비워 두세요. SmartThings 플랫폼 기기 ID와는 다릅니다.",
           "ca_cert_pem": "PEM으로 인코딩된 AC14K_M CA 인증서 체인입니다. 모든 BEGIN/END CERTIFICATE 블록을 포함한 전체 인증서 체인 PEM 내용을 붙여 넣으세요.",
           "ca_key_pem": "PEM으로 인코딩된 AC14K_M 개인 키입니다. BEGIN/END PRIVATE KEY 머리글과 바닥글을 포함한 전체 내용을 붙여 넣으세요."
         }
@@ -1513,10 +1515,12 @@
         "title": "삼성 가전제품 추가",
         "description": "삼성 가전제품의 IP 주소를 입력하세요. 기존 LocalThings 가전제품의 CA 인증 정보를 다시 사용합니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "ocf_device_id": "정확한 OCF 기기 UUID(고급)"
         },
         "data_description": {
-          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."
+          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50).",
+          "ocf_device_id": "하나의 호스트가 여러 논리 기기를 노출할 때 사용할 정확한 OCF 기기 UUID(di)입니다. 일반 설정에서는 비워 두세요. SmartThings 플랫폼 기기 ID와는 다릅니다."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "인증서와 관련 없는 이유로 가전제품이 DTLS 핸드셰이크를 거부했습니다. 프로토콜이나 암호화 방식이 일치하지 않을 가능성이 큽니다. 가전제품이 보낸 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "cloud_unreachable": "이 기기의 인증서 발급에 필요한 UUID를 가져오기 위해 삼성 클라우드 게이트웨이에 연결할 수 없습니다. Home Assistant의 인터넷 연결을 확인한 후 다시 시도하세요.",
       "unexpected_response": "기기에 연결했지만 사용할 수 있는 기기 설명을 반환하지 않았습니다. 이 통합 구성요소에서 지원하는 가전제품이 아닐 수 있습니다. 기기가 보낸 내용은 Home Assistant 로그에 기록됩니다.",
+      "invalid_ocf_device_id": "표준 형식의 0이 아닌 OCF 기기 UUID(di)를 입력하거나 이 고급 필드를 비워 두세요.",
+      "identity_discovery_unavailable": "UUID 기반 탐색을 실행할 수 없습니다. Home Assistant에 가전제품 LAN용 IPv4 인터페이스가 있고 이 빌드에 필요한 smartthings-local 탐색 API가 포함되어 있는지 확인하세요.",
+      "identity_target_not_found": "입력한 IP 주소에서 해당 UUID와 일치하는 안정적인 OCF 광고를 찾지 못했습니다. 가전제품 IP와 정확한 OCF 기기 UUID(di)를 확인하세요.",
+      "identity_target_ambiguous": "UUID 기반 탐색에서 둘 이상의 활성 엔드포인트가 발견되었거나 라운드 사이에 결과가 바뀌었습니다. 아무것도 선택하지 않았습니다.",
+      "identity_advertisement_invalid": "일치하는 OCF 광고에 안전하게 출처가 결합된 보안 엔드포인트가 없습니다. 아무것도 선택하지 않았습니다.",
+      "identity_no_dtls_server": "일치하는 OCF 광고가 보안 포트 후보를 반환했지만 정확히 하나의 활성 DTLS 리스너를 확인하지 못했습니다.",
+      "identity_mismatch": "인증된 엔드포인트가 다른 OCF 기기 UUID를 보고했거나 UUID를 보고하지 않았습니다. 기기를 읽거나 추가하기 전에 설정을 중단했습니다.",
       "cannot_connect": "기기에 연결할 수 없습니다. IP 주소에 연결할 수 있는지와 CA 인증 정보가 올바른지 확인하세요.",
       "invalid_ca": "CA 인증서 또는 개인 키를 불러올 수 없습니다. PEM 내용이 올바르고 키가 인증서와 일치하는지 확인하세요.",
       "unknown": "예기치 않은 오류가 발생했습니다. 자세한 내용은 Home Assistant 로그에서 확인하세요."

@@ -1500,11 +1500,13 @@
         "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung e le credenziali CA AC14K_M utilizzate per generare i certificati del dispositivo.",
         "data": {
           "host": "Indirizzo IP",
+          "ocf_device_id": "UUID esatto del dispositivo OCF (avanzato)",
           "ca_cert_pem": "Certificato CA (PEM)",
           "ca_key_pem": "Chiave privata CA (PEM)"
         },
         "data_description": {
           "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "ocf_device_id": "UUID esatto opzionale del dispositivo OCF (di) per un host che espone più dispositivi logici. Lasciare vuoto per la configurazione normale. Non è l'ID dispositivo della piattaforma SmartThings.",
           "ca_cert_pem": "La catena di certificati CA AC14K_M codificata in formato PEM. Incolla l'intero contenuto del tuo file PEM dell'intera catena, inclusi tutti i blocchi BEGIN/END CERTIFICATE.",
           "ca_key_pem": "La chiave privata AC14K_M codificata in formato PEM. Incollare l'intero contenuto, inclusi l'intestazione e il piè di pagina BEGIN/END PRIVATE KEY."
         }
@@ -1513,10 +1515,12 @@
         "title": "Aggiungi un elettrodomestico Samsung",
         "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung. Le credenziali CA di un dispositivo LocalThings esistente verranno riutilizzate.",
         "data": {
-          "host": "Indirizzo IP"
+          "host": "Indirizzo IP",
+          "ocf_device_id": "UUID esatto del dispositivo OCF (avanzato)"
         },
         "data_description": {
-          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "ocf_device_id": "UUID esatto opzionale del dispositivo OCF (di) per un host che espone più dispositivi logici. Lasciare vuoto per la configurazione normale. Non è l'ID dispositivo della piattaforma SmartThings."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "L'apparecchio ha rifiutato l'handshake DTLS per un motivo non legato al certificato, molto probabilmente un'incompatibilità di protocollo o di cifratura. Il log di Home Assistant riporta l'alert esatto inviato.",
       "cloud_unreachable": "Impossibile raggiungere il gateway cloud di Samsung per ottenere l'UUID necessario a emettere il certificato di questo dispositivo. Verifica l'accesso a internet di Home Assistant e riprova.",
       "unexpected_response": "Connessione al dispositivo riuscita, ma non ha restituito una descrizione del dispositivo utilizzabile. Potrebbe non essere un apparecchio supportato da questa integrazione. Il log di Home Assistant riporta ciò che ha inviato.",
+      "invalid_ocf_device_id": "Inserire un UUID dispositivo OCF (di) canonico e diverso da zero oppure lasciare vuoto questo campo avanzato.",
+      "identity_discovery_unavailable": "Impossibile eseguire il rilevamento associato all'identità. Verificare che Home Assistant disponga di un'interfaccia IPv4 sulla LAN dell'apparecchio e che questa build includa l'API di rilevamento smartthings-local richiesta.",
+      "identity_target_not_found": "Nessun annuncio OCF stabile corrisponde a questo UUID all'indirizzo IP indicato. Verificare l'IP e l'UUID esatto del dispositivo OCF (di).",
+      "identity_target_ambiguous": "Il rilevamento associato all'identità ha trovato più di un endpoint attivo oppure il risultato è cambiato tra i round. Non è stato selezionato nulla.",
+      "identity_advertisement_invalid": "L'annuncio OCF corrispondente non conteneva un endpoint sicuro associato all'origine. Non è stato selezionato nulla.",
+      "identity_no_dtls_server": "L'annuncio OCF corrispondente ha restituito candidati di porte sicure, ma non ha identificato esattamente un listener DTLS attivo.",
+      "identity_mismatch": "L'endpoint autenticato ha riportato un UUID dispositivo OCF diverso o mancante. La configurazione è stata interrotta prima di leggere o aggiungere il dispositivo.",
       "cannot_connect": "Impossibile connettersi al dispositivo. Verificare che l'indirizzo IP sia raggiungibile e che le credenziali CA siano corrette.",
       "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
       "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli."
