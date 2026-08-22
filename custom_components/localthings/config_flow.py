@@ -52,6 +52,7 @@ from .const import (
     CONF_LEARN_MODES,
     CONF_MANUFACTURER,
     CONF_MODEL,
+    CONF_OCF_DEVICE_ID,
     CONF_PORT,
     CONF_SERIAL,
     DEFAULT_CLOUD_COURSES_ENABLED,
@@ -153,6 +154,42 @@ class UnexpectedResponse(CannotConnect):
     """We authenticated, but the device didn't return a usable description."""
 
     error_key = "unexpected_response"
+
+
+class IdentityDiscoveryUnavailable(CannotConnect):
+    """Identity-bound discovery is unavailable on this host or installation."""
+
+    error_key = "identity_discovery_unavailable"
+
+
+class IdentityTargetNotFound(CannotConnect):
+    """No stable advertisement matched the requested OCF device UUID."""
+
+    error_key = "identity_target_not_found"
+
+
+class IdentityTargetAmbiguous(CannotConnect):
+    """Discovery could not select one stable endpoint for the requested UUID."""
+
+    error_key = "identity_target_ambiguous"
+
+
+class IdentityAdvertisementInvalid(CannotConnect):
+    """The matching discovery response did not contain a safe endpoint."""
+
+    error_key = "identity_advertisement_invalid"
+
+
+class IdentityNoDtlsServer(CannotConnect):
+    """Advertised endpoint candidates did not identify one DTLS listener."""
+
+    error_key = "identity_no_dtls_server"
+
+
+class IdentityMismatch(CannotConnect):
+    """The authenticated endpoint did not report the requested OCF identity."""
+
+    error_key = "identity_mismatch"
 
 
 class InvalidCA(Exception):
@@ -478,6 +515,59 @@ def _scan_ports(host: str) -> _PortScan:
     return _PortScan(candidates, [], sweep)
 
 
+def _identity_discovery_failure(reason: str) -> CannotConnect:
+    """Map a low-level, redacted discovery reason to a stable UI failure."""
+
+    failures: dict[str, type[CannotConnect]] = {
+        "unavailable": IdentityDiscoveryUnavailable,
+        "not_found": IdentityTargetNotFound,
+        "ambiguous": IdentityTargetAmbiguous,
+        "invalid_advertisement": IdentityAdvertisementInvalid,
+        "address_mismatch": IdentityAdvertisementInvalid,
+    }
+    failure = failures.get(reason, IdentityAdvertisementInvalid)
+    return failure("Identity-bound endpoint discovery could not select a safe endpoint")
+
+
+def _scan_identity_endpoint(
+    host: str,
+    target_device_id: str,
+    interface_address: str,
+) -> _PortScan:
+    """Select and statelessly verify only the endpoint bound to one OCF ``di``.
+
+    This path intentionally has no fixed-band or known-host fallback.  Falling
+    back after the caller supplied an exact logical-device identity would lose
+    the identity-to-source binding that made this path necessary.
+    """
+
+    from .endpoint_discovery import (
+        IdentityEndpointDiscoveryError,
+        discover_identity_endpoint,
+    )
+
+    try:
+        endpoint = discover_identity_endpoint(host, target_device_id, interface_address)
+    except IdentityEndpointDiscoveryError as exc:
+        raise _identity_discovery_failure(exc.reason) from exc
+
+    try:
+        confirmed = _clienthello_scan(endpoint.address, list(endpoint.ports))
+    except Exception as exc:
+        raise IdentityDiscoveryUnavailable(
+            "Identity-bound endpoint candidates could not be checked"
+        ) from exc
+    if not confirmed:
+        raise IdentityNoDtlsServer(
+            "The identity-bound advertisement did not identify a live DTLS endpoint"
+        )
+    if len(confirmed) != 1:
+        raise IdentityTargetAmbiguous(
+            "More than one identity-bound endpoint answered the stateless DTLS probe"
+        )
+    return _PortScan(candidates=confirmed, confirmed=confirmed)
+
+
 # TLS alerts (RFC 5246 §7.2) that mean "I looked at your certificate and
 # said no", as opposed to a protocol/cipher disagreement -- what an
 # appliance sends when the CA behind the leaf isn't one it trusts, the
@@ -644,7 +734,12 @@ def _mint_credentials(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
     return fullchain_pem, leaf_key_pem
 
 
-def _read_device(sess, host: str, port: int) -> dict:
+def _read_device(
+    sess,
+    host: str,
+    port: int,
+    expected_device_id: str | None = None,
+) -> dict:
     """Resolve this device's identity over an already-connected session.
 
     /oic/d before /device/0, deliberately: the device's own OCF device-type
@@ -671,6 +766,26 @@ def _read_device(sess, host: str, port: int) -> dict:
     )
 
     identity = read_identity(sess, None)
+    if expected_device_id is not None:
+        from .endpoint_discovery import normalize_ocf_device_id
+
+        raw_device = identity.raw.get("/oic/d")
+        raw_device_id = (
+            raw_device.get("di")
+            if isinstance(raw_device, dict) and "di" in raw_device
+            else identity.device_id
+        )
+        try:
+            actual_device_id = normalize_ocf_device_id(raw_device_id)
+        except ValueError:
+            actual_device_id = None
+        if actual_device_id != expected_device_id:
+            # Never fall back to pi, serial, or host here.  The caller chose
+            # this path specifically to bind one logical OCF device, and the
+            # authenticated /oic/d response is the authoritative final gate.
+            raise IdentityMismatch(
+                "The authenticated endpoint did not report the requested OCF device identity"
+            )
 
     code, payload = sess.get(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
     if code != 0x45 or not payload:
@@ -697,7 +812,7 @@ def _read_device(sess, host: str, port: int) -> dict:
         # kept alongside it because the coordinator corroborates a later
         # change of key against it (issue #381). read_identity has already
         # fetched /oic/p and /oic/d above, so this costs no extra round trip.
-        "device_key": resolve_device_key(identity, raw_serial, host),
+        "device_key": expected_device_id or resolve_device_key(identity, raw_serial, host),
         "serial": resolve_serial(raw_serial, host),
         "model": resolve_model(info.get("x.com.samsung.da.modelNum", ""), identity),
         "manufacturer": identity.manufacturer or "Samsung",
@@ -740,7 +855,13 @@ def _diagnose_failures(
     return {port: alert} if alert is not None else {}
 
 
-def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str) -> dict:
+def _handshake_and_read(
+    host: str,
+    scan: _PortScan,
+    cert_pem: str,
+    key_pem: str,
+    expected_device_id: str | None = None,
+) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
     from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
@@ -751,7 +872,7 @@ def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str)
             sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
             sess.connect()
             sess.start_reader()
-            return _read_device(sess, host, port)
+            return _read_device(sess, host, port, expected_device_id)
         except CannotConnect:
             # The device answered, just not with something we can use --
             # trying the remaining ports can't improve on that.
@@ -772,6 +893,8 @@ def _probe_and_validate(
     ca_cert_pem: str,
     ca_key_pem: str,
     existing_leaf: tuple[str, str] | None = None,
+    target_device_id: str | None = None,
+    interface_address: str | None = None,
 ) -> dict:
     """Find the device's port, authenticate to it, and resolve its identity.
 
@@ -785,7 +908,14 @@ def _probe_and_validate(
     stale (the UUID does rotate), a confirmed-live device rejecting it
     re-mints and retries once, so the reuse stays self-correcting.
     """
-    scan = _scan_ports(host)
+    if target_device_id is None:
+        scan = _scan_ports(host)
+    else:
+        if interface_address is None:
+            raise IdentityDiscoveryUnavailable(
+                "No local IPv4 interface was available for identity-bound discovery"
+            )
+        scan = _scan_identity_endpoint(host, target_device_id, interface_address)
 
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
@@ -794,7 +924,7 @@ def _probe_and_validate(
         cert_pem, key_pem = _mint_credentials(ca_cert_pem, ca_key_pem)
 
     try:
-        info = _handshake_and_read(host, scan, cert_pem, key_pem)
+        info = _handshake_and_read(host, scan, cert_pem, key_pem, target_device_id)
     except CertRejected:
         # The only failure a fresh certificate can fix, and only worth a
         # second pass when the certificate wasn't freshly minted already.
@@ -802,7 +932,7 @@ def _probe_and_validate(
             raise
         _LOGGER.debug("Reused leaf rejected by %s; re-minting and retrying", host)
         cert_pem, key_pem = _mint_credentials(ca_cert_pem, ca_key_pem)
-        info = _handshake_and_read(host, scan, cert_pem, key_pem)
+        info = _handshake_and_read(host, scan, cert_pem, key_pem, target_device_id)
 
     return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
 
@@ -862,7 +992,38 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
 
+        if has_creds:
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_HOST): _TEXT,
+                    vol.Optional(CONF_OCF_DEVICE_ID): _TEXT,
+                }
+            )
+            step_id = "user_reuse"
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_HOST): _TEXT,
+                    vol.Optional(CONF_OCF_DEVICE_ID): _TEXT,
+                    vol.Required(CONF_CA_CERT_PEM): _MULTILINE,
+                    vol.Required(CONF_CA_KEY_PEM): _MULTILINE,
+                }
+            )
+            step_id = "user"
+
         if user_input is not None:
+            from .endpoint_discovery import normalize_ocf_device_id
+
+            try:
+                target_device_id = normalize_ocf_device_id(user_input.get(CONF_OCF_DEVICE_ID))
+            except ValueError:
+                errors[CONF_OCF_DEVICE_ID] = "invalid_ocf_device_id"
+                return self.async_show_form(
+                    step_id=step_id,
+                    data_schema=self.add_suggested_values_to_schema(schema, user_input),
+                    errors=errors,
+                )
+
             self._host = user_input[CONF_HOST].strip()
             existing_leaf = None
             if has_creds:
@@ -879,13 +1040,38 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._ca_key_pem = _normalize_pem(user_input[CONF_CA_KEY_PEM])
 
             try:
-                info = await self.hass.async_add_executor_job(
-                    _probe_and_validate,
-                    self._host,
-                    self._ca_cert_pem,
-                    self._ca_key_pem,
-                    existing_leaf,
-                )
+                if target_device_id is None:
+                    # Preserve the existing scan and executor call exactly for
+                    # ordinary setup.  Identity-aware discovery is opt-in and
+                    # cannot add latency to this path.
+                    info = await self.hass.async_add_executor_job(
+                        _probe_and_validate,
+                        self._host,
+                        self._ca_cert_pem,
+                        self._ca_key_pem,
+                        existing_leaf,
+                    )
+                else:
+                    from homeassistant.components import network
+
+                    try:
+                        interface_address = await network.async_get_source_ip(
+                            self.hass,
+                            target_ip=self._host,
+                        )
+                    except Exception as exc:
+                        raise IdentityDiscoveryUnavailable(
+                            "No local IPv4 route was available for identity-bound discovery"
+                        ) from exc
+                    info = await self.hass.async_add_executor_job(
+                        _probe_and_validate,
+                        self._host,
+                        self._ca_cert_pem,
+                        self._ca_key_pem,
+                        existing_leaf,
+                        target_device_id,
+                        interface_address,
+                    )
             except (CannotConnect, InvalidCA) as exc:
                 # Every probe failure carries the message that fits it (see
                 # CannotConnect); the log line is where the specifics live.
@@ -927,19 +1113,6 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self._create_entry(info)
                 self._pending_info = info
                 return await self.async_step_confirm_unknown_type()
-
-        if has_creds:
-            schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
-            step_id = "user_reuse"
-        else:
-            schema = vol.Schema(
-                {
-                    vol.Required(CONF_HOST): _TEXT,
-                    vol.Required(CONF_CA_CERT_PEM): _MULTILINE,
-                    vol.Required(CONF_CA_KEY_PEM): _MULTILINE,
-                }
-            )
-            step_id = "user"
 
         return self.async_show_form(
             step_id=step_id,

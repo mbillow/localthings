@@ -24,7 +24,7 @@ This integration uses the [`smartthings-local`](https://github.com/QuiteYellow/S
 
 ### What you get
 
-Adding a device just needs a host IP and your CA credentials in the UI. The integration reads the appliance's identity and picks the matching capability registry on its own, so there's no per-model descriptor to write for a new unit of a type that's already supported.
+Adding a device normally just needs a host IP and your CA credentials in the UI. The integration reads the appliance's identity and picks the matching capability registry on its own, so there's no per-model descriptor to write for a new unit of a type that's already supported. For the uncommon case where one physical host exposes several logical OCF devices, the advanced setup path can bind endpoint selection to one exact OCF device UUID.
 
 Credential setup is one-time. The first device you add asks for a CA certificate and key (see Part 2); every device after that reuses the same stored CA and only asks for the host IP, minting its own per-device leaf cert automatically.
 
@@ -81,9 +81,13 @@ This repo doesn't include the needed CA bundle. For an example of how to obtain 
 1. Copy `custom_components/localthings/` into your HA config's `custom_components/` directory. (Or add this repo as a custom repository in HACS — `Integration` category — and install it from there.)
 2. Restart HA.
 3. **Settings > Devices & Services > Add Integration > LocalThings.**
-4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2.
-5. The flow sends a DTLS `ClientHello` to every port in the `49152-49160` range at once and keeps the one that answers -- a real DTLS server identifies itself in about one round trip, and the probe stops there, so nothing is left behind on the appliance. Only that port is then given a real certificate handshake: it fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, and reads the device's identity and `/device/0`. On success it creates the config entry, already knowing the appliance's serial, model, and type.
+4. First device: paste the appliance's IP, plus the contents of the CA private and public key from Part 2. Leave **Exact OCF device UUID (advanced)** blank for normal setup.
+5. With the advanced field left blank, the flow sends a DTLS `ClientHello` to every port in the `49152-49160` range at once and keeps the one that answers -- a real DTLS server identifies itself in about one round trip, and the probe stops there, so nothing is left behind on the appliance. Only that port is then given a real certificate handshake: it fetches the current UUID from Samsung's cloud gateway, mints a leaf cert signed by your CA, and reads the device's identity and `/device/0`. On success it creates the config entry, already knowing the appliance's serial, model, and type. Supplying an exact OCF device UUID uses the identity-bound path below instead and never scans or falls back to the fixed port band.
 6. Every subsequent device only asks for the host IP. The stored CA credentials are reused, and so is the leaf cert itself -- every appliance accepts the same one -- so adding a second appliance doesn't depend on Samsung's cloud being reachable at all. If a device rejects the reused cert (the UUID behind it does rotate), the flow mints a fresh one and retries by itself.
+
+For the uncommon case where one IP exposes several logical OCF devices, the advanced field accepts the exact OCF device UUID (`di`). This is the UUID reported by the target's authenticated OCF `/oic/d` resource, not the SmartThings platform device ID or a Samsung cloud certificate UUID. Use this path only when that exact value is already available from authenticated OCF diagnostics; LocalThings does not derive it from SmartThings metadata. The flow runs identity-aware multicast discovery on Home Assistant's route-selected IPv4 interface, accepts only a stable exact-`di` advertisement from the submitted IP, and statelessly probes only the advertised secure ports. After authentication it reads `/oic/d` and requires the same exact UUID before it requests `/device/0` or creates an entry. It never falls back to `pi`, a serial number, the host, or the normal fixed port band on this explicit path.
+
+This advanced field changes setup-time endpoint selection and identity verification only. It does not acquire credentials, perform ownership transfer, add reconnect-time rediscovery, or make an appliance compatible with the certificate authentication described in Part 2 if that appliance requires a different authentication method.
 
 Entities appear under one HA device per appliance, named for the appliance's type and model. Rename freely: the device is keyed on the appliance's own OCF device ID, not its name. (Some Samsung models ship the same serial number on every unit of a model, so the serial can't tell two of them apart -- the OCF device ID can.)
 

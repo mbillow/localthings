@@ -1500,11 +1500,13 @@
         "description": "Geben Sie die IP-Adresse Ihres Samsung-Geräts sowie die AC14K_M-CA-Zugangsdaten ein, mit denen Gerätezertifikate erstellt werden.",
         "data": {
           "host": "IP-Adresse",
+          "ocf_device_id": "Exakte OCF-Geräte-UUID (erweitert)",
           "ca_cert_pem": "CA-Zertifikat (PEM)",
           "ca_key_pem": "CA-Privatschlüssel (PEM)"
         },
         "data_description": {
           "host": "Lokale IP-Adresse Ihres Samsung-Geräts (z. B. 192.168.1.50).",
+          "ocf_device_id": "Optionale exakte OCF-Geräte-UUID (di) für einen Host, der mehrere logische Geräte bereitstellt. Für die normale Einrichtung leer lassen. Dies ist nicht die SmartThings-Plattform-Geräte-ID.",
           "ca_cert_pem": "Die PEM-codierte AC14K_M-CA-Zertifikatskette. Fügen Sie den vollständigen Inhalt Ihrer Fullchain-PEM-Datei ein, einschließlich aller BEGIN/END CERTIFICATE-Blöcke.",
           "ca_key_pem": "Der PEM-codierte AC14K_M-Privatschlüssel. Fügen Sie den vollständigen Inhalt einschließlich der BEGIN/END PRIVATE KEY-Kopf- und Fußzeile ein."
         }
@@ -1513,10 +1515,12 @@
         "title": "Samsung-Gerät hinzufügen",
         "description": "Geben Sie die IP-Adresse Ihres Samsung-Geräts ein. Die CA-Zugangsdaten eines bereits vorhandenen LocalThings-Geräts werden wiederverwendet.",
         "data": {
-          "host": "IP-Adresse"
+          "host": "IP-Adresse",
+          "ocf_device_id": "Exakte OCF-Geräte-UUID (erweitert)"
         },
         "data_description": {
-          "host": "Lokale IP-Adresse Ihres Samsung-Geräts (z. B. 192.168.1.50)."
+          "host": "Lokale IP-Adresse Ihres Samsung-Geräts (z. B. 192.168.1.50).",
+          "ocf_device_id": "Optionale exakte OCF-Geräte-UUID (di) für einen Host, der mehrere logische Geräte bereitstellt. Für die normale Einrichtung leer lassen. Dies ist nicht die SmartThings-Plattform-Geräte-ID."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "Das Gerät hat den DTLS-Handshake aus einem Grund abgelehnt, der nichts mit dem Zertifikat zu tun hat — höchstwahrscheinlich eine falsche Protokoll- oder Verschlüsselungsübereinstimmung. Weitere Informationen in den Logs.",
       "cloud_unreachable": "Das Cloud-Gateway von Samsung konnte nicht erreicht werden, um die für die Zertifikatserstellung dieses Geräts benötigte UUID abzurufen. Prüfen Sie den Internetzugang von Home Assistant und versuchen Sie es erneut.",
       "unexpected_response": "Die Verbindung zum Gerät war erfolgreich, es hat jedoch keine verwendbare Gerätebeschreibung zurückgegeben. Möglicherweise wird dieses Gerät von der Integration nicht unterstützt. Weitere Informationen in den Logs.",
+      "invalid_ocf_device_id": "Geben Sie eine kanonische OCF-Geräte-UUID (di) ungleich Null ein oder lassen Sie dieses erweiterte Feld leer.",
+      "identity_discovery_unavailable": "Die identitätsgebundene Suche konnte nicht ausgeführt werden. Stellen Sie sicher, dass Home Assistant eine IPv4-Schnittstelle im LAN des Geräts hat und dieser Build die erforderliche smartthings-local-API enthält.",
+      "identity_target_not_found": "An der angegebenen IP-Adresse wurde keine stabile OCF-Ankündigung für diese UUID gefunden. Prüfen Sie die IP-Adresse und die exakte OCF-Geräte-UUID (di).",
+      "identity_target_ambiguous": "Die identitätsgebundene Suche fand mehr als einen aktiven Endpunkt oder das Ergebnis änderte sich zwischen den Durchläufen. Es wurde nichts ausgewählt.",
+      "identity_advertisement_invalid": "Die passende OCF-Ankündigung enthielt keinen sicheren, an die Quelle gebundenen Endpunkt. Es wurde nichts ausgewählt.",
+      "identity_no_dtls_server": "Die passende OCF-Ankündigung lieferte sichere Portkandidaten, aber nicht genau einen aktiven DTLS-Listener.",
+      "identity_mismatch": "Der authentifizierte Endpunkt meldete eine andere oder keine OCF-Geräte-UUID. Die Einrichtung wurde vor dem Lesen oder Hinzufügen des Geräts beendet.",
       "cannot_connect": "Verbindung zum Gerät nicht möglich. Prüfen Sie, ob die IP-Adresse erreichbar und die CA-Zugangsdaten korrekt sind.",
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs."

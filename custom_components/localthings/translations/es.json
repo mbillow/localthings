@@ -6,11 +6,13 @@
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung y las credenciales AC14K_M CA usadas para emitir los certificados de dispositivo.",
         "data": {
           "host": "Dirección IP",
+          "ocf_device_id": "UUID exacto del dispositivo OCF (avanzado)",
           "ca_cert_pem": "Certificado CA (PEM)",
           "ca_key_pem": "Clave privada CA (PEM)"
         },
         "data_description": {
           "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
+          "ocf_device_id": "UUID exacto opcional del dispositivo OCF (di) para un host que expone varios dispositivos lógicos. Déjalo vacío para la configuración normal. No es el ID de dispositivo de la plataforma SmartThings.",
           "ca_cert_pem": "Cadena de certificados CA AC14K_M codificada en PEM. Pega el contenido completo de tu PEM fullchain incluyendo todos los bloques BEGIN/END CERTIFICATE.",
           "ca_key_pem": "Clave privada AC14K_M codificada en PEM. Pega el contenido completo incluyendo la cabecera y el pie BEGIN/END PRIVATE KEY."
         }
@@ -19,10 +21,12 @@
         "title": "Añadir electrodoméstico Samsung",
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung. Se reutilizarán las credenciales CA de un electrodoméstico LocalThings existente.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "ocf_device_id": "UUID exacto del dispositivo OCF (avanzado)"
         },
         "data_description": {
-          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
+          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
+          "ocf_device_id": "UUID exacto opcional del dispositivo OCF (di) para un host que expone varios dispositivos lógicos. Déjalo vacío para la configuración normal. No es el ID de dispositivo de la plataforma SmartThings."
         }
       },
       "confirm_unknown_type": {
@@ -39,6 +43,13 @@
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
       "cloud_unreachable": "No se pudo contactar con la pasarela en la nube de Samsung para obtener el UUID necesario para emitir el certificado de este dispositivo. Comprueba el acceso a internet de Home Assistant e inténtalo de nuevo.",
       "unexpected_response": "La conexión con el dispositivo se estableció correctamente, pero no devolvió una descripción de dispositivo utilizable. Puede que no sea un electrodoméstico compatible con esta integración. El registro de Home Assistant recoge lo que envió.",
+      "invalid_ocf_device_id": "Introduce un UUID de dispositivo OCF (di) canónico y distinto de cero, o deja vacío este campo avanzado.",
+      "identity_discovery_unavailable": "No se pudo ejecutar la detección vinculada a la identidad. Comprueba que Home Assistant tenga una interfaz IPv4 en la LAN del electrodoméstico y que esta compilación incluya la API de detección de smartthings-local necesaria.",
+      "identity_target_not_found": "No se encontró un anuncio OCF estable que coincida con ese UUID en la dirección IP indicada. Comprueba la IP y el UUID exacto del dispositivo OCF (di).",
+      "identity_target_ambiguous": "La detección vinculada a la identidad encontró más de un endpoint activo o el resultado cambió entre rondas. No se seleccionó ninguno.",
+      "identity_advertisement_invalid": "El anuncio OCF coincidente no contenía un endpoint seguro vinculado al origen. No se seleccionó ninguno.",
+      "identity_no_dtls_server": "El anuncio OCF coincidente devolvió candidatos de puertos seguros, pero no identificó exactamente un listener DTLS activo.",
+      "identity_mismatch": "El endpoint autenticado informó de un UUID de dispositivo OCF diferente o ausente. La configuración se detuvo antes de leer o añadir el dispositivo.",
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP sea accesible y que las credenciales CA sean correctas.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles."

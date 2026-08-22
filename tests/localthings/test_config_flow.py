@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import ClassVar, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -21,6 +21,7 @@ from custom_components.localthings.const import (
     CONF_LEAF_CERT_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
+    CONF_OCF_DEVICE_ID,
     CONF_PORT,
     CONF_SERIAL,
     DOMAIN,
@@ -49,6 +50,7 @@ async def test_form_first_device(hass: HomeAssistant) -> None:
     assert data_schema is not None
     assert CONF_CA_CERT_PEM in data_schema.schema
     assert CONF_CA_KEY_PEM in data_schema.schema
+    assert CONF_OCF_DEVICE_ID in data_schema.schema
 
 
 async def test_form_second_device_reuses_creds(hass: HomeAssistant) -> None:
@@ -63,6 +65,115 @@ async def test_form_second_device_reuses_creds(hass: HomeAssistant) -> None:
     assert data_schema is not None
     assert CONF_CA_CERT_PEM not in data_schema.schema
     assert CONF_CA_KEY_PEM not in data_schema.schema
+    assert CONF_OCF_DEVICE_ID in data_schema.schema
+
+
+async def test_normal_setup_does_not_enter_identity_discovery(
+    hass: HomeAssistant, mock_probe
+) -> None:
+    """Leaving the advanced field blank preserves the original call contract."""
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_HOST: MOCK_HOST,
+            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
+            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
+        },
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    mock_probe.assert_called_once_with(
+        MOCK_HOST,
+        MOCK_CA_CERT_PEM,
+        MOCK_CA_KEY_PEM,
+        None,
+    )
+
+
+async def test_identity_setup_passes_canonical_di_and_route_interface(
+    hass: HomeAssistant, mock_probe
+) -> None:
+    """The opt-in path supplies one exact di and HA's route-selected IPv4 source."""
+
+    target = "1BB10CD6-3214-4BC5-842E-19A0FE2D8123"
+    source_ip = "10.0.0.10"
+    with patch(
+        "homeassistant.components.network.async_get_source_ip",
+        new=AsyncMock(return_value=source_ip),
+    ) as source:
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_HOST: MOCK_HOST,
+                CONF_OCF_DEVICE_ID: target,
+                CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
+                CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
+            },
+        )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    source.assert_awaited_once_with(hass, target_ip=MOCK_HOST)
+    mock_probe.assert_called_once_with(
+        MOCK_HOST,
+        MOCK_CA_CERT_PEM,
+        MOCK_CA_KEY_PEM,
+        None,
+        target.lower(),
+        source_ip,
+    )
+    assert CONF_OCF_DEVICE_ID not in result["data"]
+
+
+async def test_invalid_identity_is_a_field_error_without_network_io(
+    hass: HomeAssistant, mock_probe
+) -> None:
+    """A malformed or nil di is rejected before route selection or probing."""
+
+    with patch(
+        "homeassistant.components.network.async_get_source_ip",
+        new=AsyncMock(),
+    ) as source:
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_HOST: MOCK_HOST,
+                CONF_OCF_DEVICE_ID: "00000000-0000-0000-0000-000000000000",
+                CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
+                CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
+            },
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_OCF_DEVICE_ID: "invalid_ocf_device_id"}
+    mock_probe.assert_not_called()
+    source.assert_not_awaited()
+
+
+async def test_identity_setup_reports_missing_ipv4_route(hass: HomeAssistant, mock_probe) -> None:
+    """Route selection failure is explicit and never enters the blocking probe."""
+
+    with patch(
+        "homeassistant.components.network.async_get_source_ip",
+        new=AsyncMock(side_effect=OSError("no route")),
+    ):
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_HOST: MOCK_HOST,
+                CONF_OCF_DEVICE_ID: MOCK_DEVICE_KEY,
+                CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
+                CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
+            },
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "identity_discovery_unavailable"}
+    mock_probe.assert_not_called()
 
 
 async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
@@ -411,6 +522,249 @@ async def test_probe_falls_back_when_library_lacks_the_clienthello_probe(
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PORT] == 49154
+
+
+def test_identity_scan_probes_only_advertised_ports(monkeypatch) -> None:
+    """Identity candidates are statelessly verified without unioning a fixed band."""
+
+    from custom_components.localthings import config_flow, endpoint_discovery
+
+    endpoint = endpoint_discovery.IdentityEndpoint(MOCK_HOST, (41000, 46060))
+    monkeypatch.setattr(
+        endpoint_discovery,
+        "discover_identity_endpoint",
+        lambda host, target_device_id, interface_address: endpoint,
+    )
+    calls = []
+
+    def scan(host, ports):
+        calls.append((host, ports))
+        return [46060]
+
+    monkeypatch.setattr(config_flow, "_clienthello_scan", scan)
+
+    result = config_flow._scan_identity_endpoint(
+        MOCK_HOST,
+        MOCK_DEVICE_KEY,
+        "10.0.0.10",
+    )
+
+    assert calls == [(MOCK_HOST, [41000, 46060])]
+    assert result.candidates == [46060]
+    assert result.confirmed == [46060]
+    assert result.swept is None
+
+
+def test_identity_scan_rejects_multiple_live_dtls_endpoints(monkeypatch) -> None:
+    from custom_components.localthings import config_flow, endpoint_discovery
+
+    monkeypatch.setattr(
+        endpoint_discovery,
+        "discover_identity_endpoint",
+        lambda host, target_device_id, interface_address: endpoint_discovery.IdentityEndpoint(
+            MOCK_HOST, (41000, 46060)
+        ),
+    )
+    monkeypatch.setattr(config_flow, "_clienthello_scan", lambda host, ports: list(ports))
+
+    with pytest.raises(config_flow.IdentityTargetAmbiguous):
+        config_flow._scan_identity_endpoint(MOCK_HOST, MOCK_DEVICE_KEY, "10.0.0.10")
+
+
+def test_identity_scan_rejects_no_live_dtls_endpoint_without_fallback(monkeypatch) -> None:
+    from custom_components.localthings import config_flow, endpoint_discovery
+
+    monkeypatch.setattr(
+        endpoint_discovery,
+        "discover_identity_endpoint",
+        lambda host, target_device_id, interface_address: endpoint_discovery.IdentityEndpoint(
+            MOCK_HOST, (46060,)
+        ),
+    )
+    monkeypatch.setattr(config_flow, "_clienthello_scan", lambda host, ports: [])
+    monkeypatch.setattr(
+        config_flow,
+        "_scan_ports",
+        lambda host: pytest.fail("the fixed-band fallback must not run"),
+    )
+
+    with pytest.raises(config_flow.IdentityNoDtlsServer):
+        config_flow._scan_identity_endpoint(MOCK_HOST, MOCK_DEVICE_KEY, "10.0.0.10")
+
+
+@pytest.mark.parametrize(
+    ("reason", "error_key"),
+    [
+        ("unavailable", "identity_discovery_unavailable"),
+        ("not_found", "identity_target_not_found"),
+        ("ambiguous", "identity_target_ambiguous"),
+        ("invalid_advertisement", "identity_advertisement_invalid"),
+        ("address_mismatch", "identity_advertisement_invalid"),
+        ("future_reason", "identity_advertisement_invalid"),
+    ],
+)
+def test_identity_discovery_reasons_map_to_stable_ui_errors(reason, error_key) -> None:
+    from custom_components.localthings import config_flow
+
+    assert config_flow._identity_discovery_failure(reason).error_key == error_key
+
+
+def test_probe_identity_path_has_no_fixed_scan_fallback(monkeypatch) -> None:
+    """An explicit di selects one fail-closed scan path and reaches auth with that same di."""
+
+    from custom_components.localthings import config_flow
+
+    scan = config_flow._PortScan([46060], [46060])
+    calls = []
+    monkeypatch.setattr(
+        config_flow,
+        "_scan_ports",
+        lambda host: pytest.fail("the fixed-band scan must not run for an exact di"),
+    )
+    monkeypatch.setattr(
+        config_flow,
+        "_scan_identity_endpoint",
+        lambda host, target_device_id, interface_address: scan,
+    )
+    monkeypatch.setattr(config_flow, "_mint_credentials", lambda ca, key: ("CERT", "KEY"))
+
+    def handshake(host, actual_scan, cert, key, expected_device_id):
+        calls.append((host, actual_scan, cert, key, expected_device_id))
+        return {"port": 46060}
+
+    monkeypatch.setattr(config_flow, "_handshake_and_read", handshake)
+
+    result = config_flow._probe_and_validate(
+        MOCK_HOST,
+        MOCK_CA_CERT_PEM,
+        MOCK_CA_KEY_PEM,
+        target_device_id=MOCK_DEVICE_KEY,
+        interface_address="10.0.0.10",
+    )
+
+    assert calls == [(MOCK_HOST, scan, "CERT", "KEY", MOCK_DEVICE_KEY)]
+    assert result == {"port": 46060, "leaf_cert_pem": "CERT", "leaf_key_pem": "KEY"}
+
+
+@pytest.mark.parametrize("actual_device_id", [None, "0d431826-546c-428f-86d1-63d8798f8742"])
+def test_authenticated_identity_must_match_exact_di_before_device_dump(
+    monkeypatch, actual_device_id
+) -> None:
+    """A missing or mismatched di cannot fall back to pi, serial, or host."""
+
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.registry import identity as identity_module
+
+    identity = identity_module.DeviceIdentity(
+        manufacturer="Samsung",
+        model="model",
+        name="washer",
+        serial=None,
+        device_id=actual_device_id,
+        platform_id=MOCK_DEVICE_KEY,
+    )
+    monkeypatch.setattr(identity_module, "read_identity", lambda sess, serial: identity)
+
+    class Session:
+        def get(self, *args, **kwargs):
+            pytest.fail("/device/0 must not be read before exact di validation")
+
+    with pytest.raises(config_flow.IdentityMismatch):
+        config_flow._read_device(Session(), MOCK_HOST, 46060, MOCK_DEVICE_KEY)
+
+
+def test_authenticated_identity_match_allows_device_dump(monkeypatch) -> None:
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.registry import identity as identity_module
+
+    identity = identity_module.DeviceIdentity(
+        manufacturer="Samsung",
+        model="model",
+        name="washer",
+        serial=None,
+        device_id=MOCK_DEVICE_KEY.upper(),
+        platform_id=None,
+        device_types=("oic.d.washer",),
+    )
+    monkeypatch.setattr(identity_module, "read_identity", lambda sess, serial: identity)
+
+    class Session:
+        def get(self, path, timeout=15.0):
+            import cbor2
+
+            assert path == ["device", "0"]
+            return 0x45, cbor2.dumps(WASHER_DEVICE0)
+
+    result = config_flow._read_device(Session(), MOCK_HOST, 46060, MOCK_DEVICE_KEY)
+
+    assert result["port"] == 46060
+    assert result["device_key"] == MOCK_DEVICE_KEY
+
+
+@pytest.mark.parametrize(
+    "raw_device_id",
+    [
+        f"uuid:{MOCK_DEVICE_KEY}",
+        f"URN:UUID:{MOCK_DEVICE_KEY}",
+        bytes.fromhex(MOCK_DEVICE_KEY.replace("-", "")),
+    ],
+)
+def test_authenticated_raw_di_is_canonicalized_for_device_key(
+    monkeypatch,
+    raw_device_id,
+) -> None:
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.registry import identity as identity_module
+
+    identity = identity_module.DeviceIdentity(
+        manufacturer="Samsung",
+        model="model",
+        name="washer",
+        serial=None,
+        device_id=None,
+        platform_id=None,
+        device_types=("oic.d.washer",),
+        raw={"/oic/d": {"di": raw_device_id}},
+    )
+    monkeypatch.setattr(identity_module, "read_identity", lambda sess, serial: identity)
+
+    class Session:
+        def get(self, path, timeout=15.0):
+            import cbor2
+
+            assert path == ["device", "0"]
+            return 0x45, cbor2.dumps(WASHER_DEVICE0)
+
+    result = config_flow._read_device(Session(), MOCK_HOST, 46060, MOCK_DEVICE_KEY)
+
+    assert result["device_key"] == MOCK_DEVICE_KEY
+
+
+def test_authenticated_identity_rejects_malformed_raw_di_before_device_dump(
+    monkeypatch,
+) -> None:
+    """Untrusted CBOR types fail as an identity mismatch, without a fallback."""
+
+    from custom_components.localthings import config_flow
+    from custom_components.localthings.registry import identity as identity_module
+
+    identity = identity_module.DeviceIdentity(
+        manufacturer="Samsung",
+        model="model",
+        name="washer",
+        serial=None,
+        device_id=MOCK_DEVICE_KEY,
+        platform_id=None,
+        raw={"/oic/d": {"di": []}},
+    )
+    monkeypatch.setattr(identity_module, "read_identity", lambda sess, serial: identity)
+
+    class Session:
+        def get(self, *args, **kwargs):
+            pytest.fail("/device/0 must not be read after malformed raw di")
+
+    with pytest.raises(config_flow.IdentityMismatch):
+        config_flow._read_device(Session(), MOCK_HOST, 46060, MOCK_DEVICE_KEY)
 
 
 async def test_entry_stores_resolved_identity(hass: HomeAssistant, monkeypatch, fake_dtls) -> None:
@@ -930,6 +1284,7 @@ def test_every_error_key_the_flow_can_raise_has_a_message() -> None:
         and issubclass(cls, (config_flow.CannotConnect, config_flow.InvalidCA))
     }
     keys.add("unknown")
+    keys.add("invalid_ocf_device_id")
 
     catalog = json.loads(
         (

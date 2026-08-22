@@ -1500,11 +1500,13 @@
         "description": "Enter the IP address of your Samsung appliance and the AC14K_M CA credentials used to mint device certificates.",
         "data": {
           "host": "IP address",
+          "ocf_device_id": "Exact OCF device UUID (advanced)",
           "ca_cert_pem": "CA certificate (PEM)",
           "ca_key_pem": "CA private key (PEM)"
         },
         "data_description": {
           "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
+          "ocf_device_id": "Optional exact OCF device UUID (di) for a host that exposes multiple logical devices. Leave blank for normal setup. This is not the SmartThings platform device ID.",
           "ca_cert_pem": "The PEM-encoded AC14K_M CA certificate chain. Paste the full contents of your fullchain PEM including all BEGIN/END CERTIFICATE blocks.",
           "ca_key_pem": "The PEM-encoded AC14K_M private key. Paste the full contents including the BEGIN/END PRIVATE KEY header and footer."
         }
@@ -1513,10 +1515,12 @@
         "title": "Add Samsung appliance",
         "description": "Enter the IP address of your Samsung appliance. The CA credentials from an existing LocalThings appliance will be reused.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "ocf_device_id": "Exact OCF device UUID (advanced)"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
+          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
+          "ocf_device_id": "Optional exact OCF device UUID (di) for a host that exposes multiple logical devices. Leave blank for normal setup. This is not the SmartThings platform device ID."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
       "unexpected_response": "Connected to the device successfully, but it didn't return a usable device description. It may not be an appliance this integration supports. The Home Assistant log records what it sent.",
+      "invalid_ocf_device_id": "Enter one canonical, non-zero OCF device UUID (di), or leave this advanced field blank.",
+      "identity_discovery_unavailable": "Identity-bound discovery could not run. Make sure Home Assistant has an IPv4 interface on the appliance's LAN and that this build includes the required smartthings-local discovery API.",
+      "identity_target_not_found": "No stable OCF advertisement matched that device UUID at the submitted IP address. Confirm the appliance IP and its exact OCF device UUID (di).",
+      "identity_target_ambiguous": "Identity-bound discovery found more than one live endpoint or the result changed between rounds. Nothing was selected.",
+      "identity_advertisement_invalid": "The matching OCF advertisement did not contain a safe, source-bound secure endpoint. Nothing was selected.",
+      "identity_no_dtls_server": "The matching OCF advertisement returned secure-port candidates, but they did not identify exactly one live DTLS listener.",
+      "identity_mismatch": "The authenticated endpoint reported a different or missing OCF device UUID. Setup stopped before reading or adding the device.",
       "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details."

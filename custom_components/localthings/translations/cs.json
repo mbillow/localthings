@@ -1500,11 +1500,13 @@
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung a přihlašovací údaje CA AC14K_M použité k vydávání certifikátů zařízení.",
         "data": {
           "host": "IP adresa",
+          "ocf_device_id": "Přesné UUID zařízení OCF (pokročilé)",
           "ca_cert_pem": "Certifikát CA (PEM)",
           "ca_key_pem": "Privátní klíč CA (PEM)"
         },
         "data_description": {
           "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
+          "ocf_device_id": "Volitelné přesné UUID zařízení OCF (di) pro hostitele, který zpřístupňuje více logických zařízení. Pro běžné nastavení ponechte prázdné. Nejde o ID zařízení platformy SmartThings.",
           "ca_cert_pem": "Certifikát CA AC14K_M ve formátu PEM. Vložte celý obsah řetězce fullchain PEM včetně všech bloků BEGIN/END CERTIFICATE.",
           "ca_key_pem": "Privátní klíč AC14K_M ve formátu PEM. Vložte celý obsah včetně hlavičky a patičky BEGIN/END PRIVATE KEY."
         }
@@ -1513,10 +1515,12 @@
         "title": "Přidat spotřebič Samsung",
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung. Přihlašovací údaje CA z existujícího spotřebiče LocalThings budou znovu použity.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "ocf_device_id": "Přesné UUID zařízení OCF (pokročilé)"
         },
         "data_description": {
-          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
+          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
+          "ocf_device_id": "Volitelné přesné UUID zařízení OCF (di) pro hostitele, který zpřístupňuje více logických zařízení. Pro běžné nastavení ponechte prázdné. Nejde o ID zařízení platformy SmartThings."
         }
       },
       "confirm_unknown_type": {
@@ -1533,6 +1537,13 @@
       "handshake_failed": "Spotřebič odmítl DTLS handshake z důvodu, který nesouvisí s certifikátem — nejspíše kvůli neshodě protokolu nebo šifry. Přesný alert najdete v logu Home Assistanta.",
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
+      "invalid_ocf_device_id": "Zadejte jedno kanonické nenulové UUID zařízení OCF (di), nebo toto pokročilé pole ponechte prázdné.",
+      "identity_discovery_unavailable": "Zjišťování podle identity nelze spustit. Ověřte, že Home Assistant má rozhraní IPv4 v síti spotřebiče a že tato verze obsahuje požadované rozhraní API smartthings-local.",
+      "identity_target_not_found": "Na zadané IP adrese nebyla nalezena stabilní reklama OCF odpovídající tomuto UUID. Ověřte IP adresu a přesné UUID zařízení OCF (di).",
+      "identity_target_ambiguous": "Zjišťování podle identity našlo více než jeden aktivní koncový bod nebo se výsledek mezi koly změnil. Nic nebylo vybráno.",
+      "identity_advertisement_invalid": "Odpovídající reklama OCF neobsahovala bezpečný zabezpečený koncový bod vázaný na zdroj. Nic nebylo vybráno.",
+      "identity_no_dtls_server": "Odpovídající reklama OCF vrátila kandidáty zabezpečených portů, ale neurčila právě jeden aktivní server DTLS.",
+      "identity_mismatch": "Ověřený koncový bod nahlásil jiné nebo chybějící UUID zařízení OCF. Nastavení bylo zastaveno před načtením nebo přidáním zařízení.",
       "cannot_connect": "Nelze se připojit k zařízení. Ověřte, že je IP adresa dostupná a že jsou přihlašovací údaje CA správné.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant."
