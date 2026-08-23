@@ -613,6 +613,17 @@
           "3d": "Denim"
         }
       },
+      "dryer_dry_level": {
+        "name": "Nivel de secado",
+        "state": {
+          "none": "Desactivado",
+          "damp": "Húmedo",
+          "less": "Menos",
+          "normal": "Normal",
+          "more": "Más",
+          "very": "Muy"
+        }
+      },
       "favorite_capacity": {
         "name": "Capacidad favorita"
       },

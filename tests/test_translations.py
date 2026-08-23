@@ -376,6 +376,19 @@ def test_confirmed_dryer_table_03_dv19t8745bv_course_names():
         assert d_states["3d"] == w_states["66"], language  # Denim
 
 
+def test_confirmed_dryer_dry_level_labels():
+    """dryer_dry_level's word vocabulary (None/Damp/Less/Normal/More/Very),
+    confirmed across the TP1_21 dryer fixtures. The numeric vocabulary
+    (None/1/2/3) that DV6800N reports is deliberately NOT translated -- no
+    confirmed meaning for the digits exists, and select._display renders an
+    uncatalogued value raw rather than guessing a label for it."""
+    states = _load("en")["entity"]["select"]["dryer_dry_level"]["state"]
+    assert set(states) == {"none", "damp", "less", "normal", "more", "very"}
+    assert states["none"] == "Off"
+    for digit in ("1", "2", "3"):
+        assert digit not in states
+
+
 def test_reported_washer_standard_courses_all_have_table_02_labels():
     """Every non-personal code in the reported washer's live course list
     must resolve through the Table_02 catalog instead of appearing as raw

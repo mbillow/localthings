@@ -416,6 +416,17 @@
           "3d": "Denim"
         }
       },
+      "dryer_dry_level": {
+        "name": "Dry level",
+        "state": {
+          "none": "Off",
+          "damp": "Damp",
+          "less": "Less",
+          "normal": "Normal",
+          "more": "More",
+          "very": "Very"
+        }
+      },
       "favorite_capacity": {
         "name": "Favorite capacity"
       },

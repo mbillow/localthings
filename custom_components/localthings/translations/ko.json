@@ -416,6 +416,17 @@
           "3d": "데님"
         }
       },
+      "dryer_dry_level": {
+        "name": "건조 단계",
+        "state": {
+          "none": "끄기",
+          "damp": "촉촉",
+          "less": "적게",
+          "normal": "표준",
+          "more": "많이",
+          "very": "매우 많이"
+        }
+      },
       "favorite_capacity": {
         "name": "즐겨찾기 출수량"
       },

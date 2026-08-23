@@ -4,7 +4,7 @@ from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model, resolve
 from custom_components.localthings.registry.capabilities import dryer, ignored
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SelectDesc
+from custom_components.localthings.registry.entities import SelectDesc, SensorDesc
 from tests.conftest import _load_device
 
 
@@ -51,6 +51,68 @@ def test_expected_entities_present():
         "energy_kwh",
     ):
         assert key in state, key
+
+
+class TestDryLevel:
+    """dryLevel moved from a read-only sensor to a writable select,
+    mirroring washer.py's combo select -- same options_field/exists_fn/
+    write_fn shape, but its own translation_key: the field means a dryness
+    dial here, not the combo's duration-in-minutes dial."""
+
+    def test_is_a_select_not_a_sensor(self):
+        assert not any(
+            e.key == "dry_level" and isinstance(e, SensorDesc)
+            for e in dryer.DRYER_SETTINGS.entities
+        )
+        desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
+        assert isinstance(desc, SelectDesc)
+
+    def test_translation_key_is_dryer_specific(self):
+        desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
+        assert desc.translation_key == "dryer_dry_level"
+
+    def test_sits_in_controls_with_its_writable_siblings(self):
+        """A per-load choice, not device configuration: it belongs beside the
+        cycle select and wrinkle_prevent, which both carry no category -- and
+        that is where the sensor it replaces already sat, so an upgrading
+        user finds it where they left it."""
+        desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
+        assert desc.entity_category is None
+        wrinkle = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "wrinkle_prevent")
+        assert wrinkle.entity_category is None
+
+    def test_options_field(self):
+        desc = next(
+            e
+            for e in dryer.DRYER_SETTINGS.entities
+            if e.key == "dry_level" and isinstance(e, SelectDesc)
+        )
+        assert desc.options_field == "x.com.samsung.da.supportedDryLevel"
+
+    def test_presence_is_field_gated_not_narrowed_by_an_exists_fn(self):
+        """The select must appear exactly where the sensor it replaces did.
+        washer.py gates its combo dry_level on supportedDryLevel to tell a
+        combo from a plain washer; every dryer has a dry level, so the same
+        gate here would only suppress the entity -- including on a rep that
+        is a stub at discovery time, which entity._is_included admits so a
+        sub-poll can populate it. A missing entity would be permanent: the
+        v4->v5 migration removes the old sensor row unconditionally."""
+        desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
+        assert desc.exists_fn is None
+        assert desc.field == "x.com.samsung.da.dryLevel"
+
+    def test_write(self):
+        desc = next(
+            e
+            for e in dryer.DRYER_SETTINGS.entities
+            if e.key == "dry_level" and isinstance(e, SelectDesc)
+        )
+        assert desc.write_fn is not None
+        result = desc.write_fn("Normal", {})
+        assert result is not None
+        path, body = result
+        assert path == ["washer", "vs", "0"]
+        assert body == {"x.com.samsung.da.dryLevel": "Normal"}
 
 
 def test_job_beginning_status_reads_current_status():

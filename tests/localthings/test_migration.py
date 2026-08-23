@@ -44,10 +44,11 @@ async def test_migration_recovers_serial_from_unique_id(
     await hass.async_block_till_done()
 
     # Straight through to the current version: v2 -> v3 is a statistics
-    # relabel that no-ops for a family without particulate sensors, and
-    # v3 -> v4 only records the legacy key for the coordinator to re-key
-    # from once a poll produces an OCF device id.
-    assert entry.version == 4
+    # relabel that no-ops for a family without particulate sensors, v3 -> v4
+    # only records the legacy key for the coordinator to re-key from once a
+    # poll produces an OCF device id, and v4 -> v5 no-ops for an entry with
+    # no dry_level sensor to drop.
+    assert entry.version == 5
     assert entry.data[CONF_SERIAL] == MOCK_SERIAL
 
 
@@ -262,7 +263,7 @@ async def test_migration_rejects_a_future_entry_version(hass: HomeAssistant) -> 
     written by a newer release."""
     from custom_components.localthings import async_migrate_entry
 
-    entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=5)
+    entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=6)
     entry.add_to_hass(hass)
 
     assert await async_migrate_entry(hass, entry) is False
@@ -280,3 +281,41 @@ async def test_migration_without_a_unique_id_falls_back_to_host(hass: HomeAssist
     assert await async_migrate_entry(hass, entry) is True
     assert entry.data[CONF_SERIAL] == entry.data[CONF_HOST]
     assert entry.unique_id == f"{DOMAIN}_{MOCK_HOST}"
+
+
+async def test_migration_drops_the_superseded_dry_level_sensor(hass: HomeAssistant) -> None:
+    """dryer.py's dry_level moved from a sensor to a select; unique_ids are
+    scoped by (integration, platform), so the old sensor row can only be
+    dropped, not carried across -- same tail-matching contract as the
+    particulate-statistics relabel: a plain match, a subdevice-instanced
+    match, a select-domain row with the same tail (untouched, wrong
+    domain), and an unrelated sensor (untouched, wrong tail)."""
+    from custom_components.localthings import async_migrate_entry
+
+    entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=4)
+    entry.add_to_hass(hass)
+    ent_reg = er.async_get(hass)
+
+    orphan = ent_reg.async_get_or_create(
+        "sensor", DOMAIN, f"{DOMAIN}_{MOCK_SERIAL}_dry_level", config_entry=entry
+    )
+    orphan_instanced = ent_reg.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{DOMAIN}_{MOCK_SERIAL}_subdevice_uuid_dry_level_2",
+        config_entry=entry,
+    )
+    survivor_select = ent_reg.async_get_or_create(
+        "select", DOMAIN, f"{DOMAIN}_{MOCK_SERIAL}_dry_level", config_entry=entry
+    )
+    unrelated_sensor = ent_reg.async_get_or_create(
+        "sensor", DOMAIN, f"{DOMAIN}_{MOCK_SERIAL}_dry_time", config_entry=entry
+    )
+
+    assert await async_migrate_entry(hass, entry) is True
+
+    assert entry.version == 5
+    assert ent_reg.async_get(orphan.entity_id) is None
+    assert ent_reg.async_get(orphan_instanced.entity_id) is None
+    assert ent_reg.async_get(survivor_select.entity_id) is not None
+    assert ent_reg.async_get(unrelated_sensor.entity_id) is not None
