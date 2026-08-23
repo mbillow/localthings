@@ -250,6 +250,158 @@ def drum_clean_last_cleaned(rep):
         return None
 
 
+# ---------------------------------------------------------------------------
+# supportedOptions -- what each course permits.
+#
+# A 1-nibble header followed by one fixed-width record per selectable
+# course. A record is that course's own hex code, then zero or more 2-byte
+# groups; every fixture in the corpus fits `1 + 2*groups` bytes, from an
+# AirDresser carrying no groups at all to an 11-byte WA8000T record.
+#
+#   <hdr:1 nibble> ( <course:1> ( <kind:nibble><default:nibble> <mask:1> )* )*
+#
+# The mask indexes that option's own supported<Option> list, and so does
+# the default nibble -- but into the list, not into the mask: a dishwasher
+# reports default 0 with a mask allowing only index 1.
+#
+# Four kinds are pinned, each against a device that can contradict them:
+#
+#   0xD dry     A DV5000T's fourteen records reproduce exactly what its
+#               panel offers per course -- 1/2/3 on Cotton, only 2 on
+#               Towels, only 1 on Wool, none on Quick Dry or the three
+#               air/time courses.
+#   0x8 temp    A WW6500 owner read one course's three dials off the
+#   0x9 rinse   panel: Cold/20/30/40 with no "None" offered, every rinse
+#   0xA spin    count including none, and every spin including rinse-hold.
+#               Its masks are 0x1E/0x3F/0x3F, which decode to exactly
+#               those sets against supportedWaterTemperature (0x1E skips
+#               bit 0, the "None" the panel indeed omits),
+#               supportedRinseCycles and supportedSpinLevel. Only 0x8
+#               reaches bit 6 anywhere in that table, which none of the
+#               other two lists is long enough to hold.
+#
+# Corroborating all four: across every dump here, each live value sits
+# inside the set its course's mask decodes to. 0x0/0x5/0x6/0x7/0xB/0xC
+# stay unnamed -- nothing pins them, and 0xE looks like dry time on the one
+# board that carries it but no dump proves it.
+#
+# The kinds are not entity names. 0xD is "dry", not "dry level":
+# dishwashers carry it with no supportedDryLevel at all (their dry setting
+# is heated_dry). A caller keys the mask against its own list rather than
+# assuming what it counts.
+#
+# A mask is what supportedOptions advertises, and an appliance can enforce
+# more than it advertises: a WW6500 offers only 2-5 rinses on Baby Care --
+# on its own panel, not just in SmartThings -- where the mask allows all
+# six. Its other thirteen courses match dial for dial, default included.
+# So gating on a mask can offer a little more than the machine really
+# takes. That is the safe direction, since the device refuses what it will
+# not do, but it is not a guarantee and an entity should not present a
+# mask as the appliance's last word.
+#
+# An empty mask means the device declares no range, which is NOT
+# automatically "nothing is selectable". On a dryer's Quick Dry it really
+# is none (panel-confirmed above), but a washer's cloud Download slot
+# reports empty masks for all three of its kinds while still holding live
+# values, because the downloaded program supplies its own. Deciding
+# between those is the caller's job, per entity, with its own evidence.
+# ---------------------------------------------------------------------------
+
+OPTION_KIND_WATER_TEMPERATURE = 0x8
+OPTION_KIND_RINSE = 0x9
+OPTION_KIND_SPIN = 0xA
+OPTION_KIND_DRY = 0xD
+
+
+def _course_records(course_rep, must_cover=None):
+    """{course code: record hex} from supportedOptions, or {} if unreadable.
+
+    Record width is recovered the way it always has been -- see the guards
+    in _course_codes_from_supported_options, which this backs.
+
+    `must_cover` adds one more: the split's course codes must include every
+    code given. Callers that can see a live editCourseList pass it, which
+    pins the width outright on every dump here that has one; the
+    course-list fallback itself cannot, since it only runs when that list
+    is missing in the first place.
+    """
+    raw = course_rep.get("x.com.samsung.da.supportedOptions")
+    hexstr = raw[0] if isinstance(raw, list) and raw else raw
+    if not isinstance(hexstr, str) or len(hexstr) < 3:
+        return {}
+    body = hexstr[1:]
+    if len(body) % 2:
+        return {}
+    total_bytes = len(body) // 2
+    current = option_value(course_rep.get("x.com.samsung.da.options"), "Course")
+    for k in range(1, total_bytes + 1):
+        if total_bytes % k:
+            continue
+        n = total_bytes // k
+        if n < 2:
+            continue
+        records = [body[i * k * 2 : (i + 1) * k * 2] for i in range(n)]
+        firsts = [r[:2] for r in records]
+        if len(set(firsts)) != n:
+            continue
+        if current is not None and current not in firsts:
+            continue
+        if must_cover and not must_cover <= set(firsts):
+            continue
+        return dict(zip(firsts, records, strict=True))
+    return {}
+
+
+def course_option_mask(resources, kind, course=None):
+    """(default index, allowed indices) for `kind` on the selected course.
+
+    None when this device says nothing usable -- no supportedOptions, an
+    unrecognized course, or no group of that kind on the record. Callers
+    treat that as "no opinion" rather than "nothing allowed": several
+    boards carry supported<Option> lists with no supportedOptions groups at
+    all, and refusing everything there would be worse than not gating.
+
+    The default index is into the same supported<Option> list as the
+    allowed indices, but it is NOT necessarily one of them -- a dishwasher
+    reports default 0 alongside a mask allowing only index 1. Callers that
+    want a fallback value have to decide for themselves whether an
+    out-of-set default is usable.
+
+    Where the device also publishes an editCourseList, the split has to
+    account for every code on it (see _course_records). That check is free
+    here and it is the difference between mis-gating an entity silently and
+    declining to gate it at all.
+    """
+    course_rep = resources.get("/course/vs/0") or {}
+    edit_list = parse_edit_course_list(
+        (resources.get("/wm/editcourse/vs/0") or {}).get("x.com.samsung.da.editCourseList")
+    )
+    records = _course_records(course_rep, must_cover=set(edit_list))
+    if not records:
+        return None
+    if course is None:
+        course = option_value(course_rep.get("x.com.samsung.da.options"), "Course")
+    record = records.get(course)
+    if record is None:
+        return None
+    for i in range(2, len(record), 4):
+        group = record[i : i + 4]
+        if len(group) < 4:
+            break
+        try:
+            head = int(group[:2], 16)
+            mask = int(group[2:], 16)
+        except ValueError:
+            # Not hex after all, so this split is not a record table --
+            # the width guards alone can't tell. Say nothing rather than
+            # raise into whatever entity asked.
+            return None
+        if head >> 4 != kind:
+            continue
+        return head & 0xF, [bit for bit in range(8) if mask >> bit & 1]
+    return None
+
+
 def _course_codes_from_supported_options(course_rep):
     """Fallback for an empty/missing editCourseList: derive the selectable
     course list from /course/vs/0's own supportedOptions instead (issue #1:
@@ -273,29 +425,12 @@ def _course_codes_from_supported_options(course_rep):
     rather than a proof. Not guarded further: course tables are typically
     large enough that colliding by chance on both checks is unlikely, and
     no device seen so far needs it.
+
+    The record payload behind those first bytes is decoded by
+    course_option_mask above; both share _course_records, so the split
+    they see can never drift apart.
     """
-    raw = course_rep.get("x.com.samsung.da.supportedOptions")
-    hexstr = raw[0] if isinstance(raw, list) and raw else raw
-    if not isinstance(hexstr, str) or len(hexstr) < 3:
-        return []
-    body = hexstr[1:]
-    if len(body) % 2:
-        return []
-    total_bytes = len(body) // 2
-    current = option_value(course_rep.get("x.com.samsung.da.options"), "Course")
-    for k in range(1, total_bytes + 1):
-        if total_bytes % k:
-            continue
-        n = total_bytes // k
-        if n < 2:
-            continue
-        firsts = [body[i * k * 2 : i * k * 2 + 2] for i in range(n)]
-        if len(set(firsts)) != n:
-            continue
-        if current is not None and current not in firsts:
-            continue
-        return firsts
-    return []
+    return list(_course_records(course_rep))
 
 
 def option_tokens(*pairs):
