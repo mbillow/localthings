@@ -9,6 +9,7 @@ from datetime import UTC
 
 from custom_components.localthings.registry.capabilities import washer
 from custom_components.localthings.registry.entities import SelectDesc
+from tests.conftest import _load_device
 
 
 def _rep_by_href(cap, href):
@@ -156,6 +157,25 @@ class TestWasherCourse:
 
         confirmed = {"01", "70", "55", "71", "72", "77", "57", "73", "74", "75", "78"}
         assert confirmed <= translated_states("select", "washer_cycle_table_00")
+
+    def test_ww6500_table_00_course_codes_are_translated(self):
+        """A disjoint 5B-6B slice of the same table as the WF45R6300AW
+        above, derived from the shipped dump rather than retyped here: a
+        course list that grows, or picks up a code the catalog has no label
+        for, fails here instead of rendering as raw hex. This dump's
+        editCourseList is empty (issue #1), which is why the codes come from
+        supportedOptions."""
+        from custom_components.localthings.catalog import translated_states
+        from custom_components.localthings.registry.capabilities.laundry import cycle_options
+
+        resources = _load_device("washer_ww6500")
+        desc = next(e for e in washer.WASHER_COURSE.entities if e.key == "cycle")
+        assert desc.translation_key(resources) == "washer_cycle_table_00"
+        codes = cycle_options(resources)
+        assert len(codes) == 14
+        assert {code.lower() for code in codes} <= translated_states(
+            "select", "washer_cycle_table_00"
+        )
 
     def test_missing_course_option_returns_none(self):
         desc = next(e for e in washer.WASHER_COURSE.entities if e.key == "cycle")

@@ -865,16 +865,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normal",
-          "70": "Servicio intensivo",
           "55": "Blancos",
-          "71": "Ropa de cama",
-          "72": "Desinfección",
-          "77": "Planchado fácil",
           "57": "Autolimpieza+",
-          "73": "Aclarar + Centrifugar",
-          "74": "Ropa deportiva",
-          "75": "Delicados",
-          "78": "Lavado rápido",
           "5b": "Algodón",
           "5c": "Extra rápido",
           "5d": "Super Eco",
@@ -888,7 +880,15 @@
           "66": "Ropa de cama",
           "67": "Sintéticos",
           "68": "Algodón E",
-          "6b": "Solo centrifugar"
+          "6b": "Solo centrifugar",
+          "70": "Servicio intensivo",
+          "71": "Ropa de cama",
+          "72": "Desinfección",
+          "73": "Aclarar + Centrifugar",
+          "74": "Ropa deportiva",
+          "75": "Delicados",
+          "77": "Planchado fácil",
+          "78": "Lavado rápido"
         }
       },
       "washer_cycle_table_02": {

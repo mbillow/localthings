@@ -668,16 +668,8 @@
         "name": "Programma",
         "state": {
           "01": "Normaal",
-          "70": "Intensief",
           "55": "Witte was",
-          "71": "Beddengoed",
-          "72": "Hygiëne",
-          "77": "Strijkvrij",
           "57": "Self Clean+",
-          "73": "Spoelen + centrifugeren",
-          "74": "Sportkleding",
-          "75": "Fijne was",
-          "78": "Snelle was",
           "5b": "Katoen",
           "5c": "Extra snel",
           "5d": "Super Eco",
@@ -691,7 +683,15 @@
           "66": "Beddengoed",
           "67": "Synthetisch",
           "68": "Eco katoen",
-          "6b": "Alleen centrifugeren"
+          "6b": "Alleen centrifugeren",
+          "70": "Intensief",
+          "71": "Beddengoed",
+          "72": "Hygiëne",
+          "73": "Spoelen + centrifugeren",
+          "74": "Sportkleding",
+          "75": "Fijne was",
+          "77": "Strijkvrij",
+          "78": "Snelle was"
         }
       },
       "washer_cycle_table_02": {

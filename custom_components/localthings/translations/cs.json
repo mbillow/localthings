@@ -668,16 +668,8 @@
         "name": "Cyklus",
         "state": {
           "01": "Normální",
-          "70": "Intenzivní",
           "55": "Bílé prádlo",
-          "71": "Ložní prádlo",
-          "72": "Dezinfekce",
-          "77": "Nežehlivé prádlo",
           "57": "Samočištění+",
-          "73": "Máchání + odstřeďování",
-          "74": "Sportovní oblečení",
-          "75": "Jemné prádlo",
-          "78": "Rychlé praní",
           "5b": "Bavlna",
           "5c": "Extra rychlý",
           "5d": "Super Eco",
@@ -691,7 +683,15 @@
           "66": "Ložní prádlo",
           "67": "Syntetika",
           "68": "Eko bavlna",
-          "6b": "Pouze odstřeďování"
+          "6b": "Pouze odstřeďování",
+          "70": "Intenzivní",
+          "71": "Ložní prádlo",
+          "72": "Dezinfekce",
+          "73": "Máchání + odstřeďování",
+          "74": "Sportovní oblečení",
+          "75": "Jemné prádlo",
+          "77": "Nežehlivé prádlo",
+          "78": "Rychlé praní"
         }
       },
       "washer_cycle_table_02": {

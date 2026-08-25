@@ -668,16 +668,8 @@
         "name": "Cycle",
         "state": {
           "01": "Normal",
-          "70": "Heavy Duty",
           "55": "Whites",
-          "71": "Bedding",
-          "72": "Sanitize",
-          "77": "Perm Press",
           "57": "Self Clean+",
-          "73": "Rinse + Spin",
-          "74": "Active Wear",
-          "75": "Delicates",
-          "78": "Quick Wash",
           "5b": "Cotton",
           "5c": "Extra Speed",
           "5d": "Super Eco Wash",
@@ -691,7 +683,15 @@
           "66": "Bedding",
           "67": "Synthetics",
           "68": "E Cotton",
-          "6b": "Spin Only"
+          "6b": "Spin Only",
+          "70": "Heavy Duty",
+          "71": "Bedding",
+          "72": "Sanitize",
+          "73": "Rinse + Spin",
+          "74": "Active Wear",
+          "75": "Delicates",
+          "77": "Perm Press",
+          "78": "Quick Wash"
         }
       },
       "washer_cycle_table_02": {

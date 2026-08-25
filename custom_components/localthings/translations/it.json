@@ -668,16 +668,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normale",
-          "70": "Intenso",
           "55": "Bianchi",
-          "71": "Biancheria da letto",
-          "72": "Igienizzante",
-          "77": "Pronto da stirare",
           "57": "Self Clean+",
-          "73": "Risciacquo+Centrifuga",
-          "74": "Abbigliamento sportivo",
-          "75": "Delicati",
-          "78": "Lavaggio rapido",
           "5b": "Cotone",
           "5c": "Extra rapido",
           "5d": "Super Eco",
@@ -691,7 +683,15 @@
           "66": "Biancheria da letto",
           "67": "Sintetici",
           "68": "Cotone E",
-          "6b": "Solo centrifuga"
+          "6b": "Solo centrifuga",
+          "70": "Intenso",
+          "71": "Biancheria da letto",
+          "72": "Igienizzante",
+          "73": "Risciacquo+Centrifuga",
+          "74": "Abbigliamento sportivo",
+          "75": "Delicati",
+          "77": "Pronto da stirare",
+          "78": "Lavaggio rapido"
         }
       },
       "washer_cycle_table_02": {

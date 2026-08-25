@@ -631,16 +631,8 @@
         "name": "Programm",
         "state": {
           "01": "Normal",
-          "70": "Intensiv",
           "55": "Weißwäsche",
-          "71": "Bettwäsche",
-          "72": "Hygienespülung",
-          "77": "Pflegeleicht",
           "57": "Selbstreinigung+",
-          "73": "Spülen + Schleudern",
-          "74": "Sportkleidung",
-          "75": "Feinwäsche",
-          "78": "Schnellwäsche",
           "5b": "Baumwolle",
           "5c": "Extra Schnell",
           "5d": "Super Eco",
@@ -654,7 +646,15 @@
           "66": "Bettwäsche",
           "67": "Pflegeleicht",
           "68": "Eco Baumwolle",
-          "6b": "Nur Schleudern"
+          "6b": "Nur Schleudern",
+          "70": "Intensiv",
+          "71": "Bettwäsche",
+          "72": "Hygienespülung",
+          "73": "Spülen + Schleudern",
+          "74": "Sportkleidung",
+          "75": "Feinwäsche",
+          "77": "Pflegeleicht",
+          "78": "Schnellwäsche"
         }
       },
       "washer_cycle_table_02": {

@@ -379,19 +379,21 @@ def test_confirmed_dryer_table_03_dv19t8745bv_course_names():
 def test_confirmed_ww6500_table_00_course_names():
     """A WW6500 owner (DA_WM_A51_20_COMMON) read all fourteen of their
     Table_00 courses out of the SmartThings app, none of which had a label
-    before -- the codes sit in the 5B-6B range, disjoint from the 01/55-78
-    codes another Table_00 device already contributed.
+    before -- 5B-6B, disjoint from the 01/55-78 an earlier Table_00 device
+    contributed.
 
-    Eleven reuse a string this catalog already carries for the same cycle,
-    checked in every locale rather than English alone: a locale that
-    translated one of these differently from the code it shares a meaning
-    with would still pass the key-topology test, the gap issue #343 fell
-    through. Only 5C and 61 are new wording -- the app calls 5C "Extra
-    rychlý" rather than the "Super rychlé" it uses for Table_02's 1D, so
-    the two deliberately do NOT share a label.
+    Twelve reuse an existing string, each pinned to its washer_cycle_table_02
+    twin: only 5E, 64 and 66 have one inside Table_00 itself (75, 73, 71).
+    Pinned in every locale, not English alone -- a locale that worded one
+    differently from the code it shares a meaning with would still pass the
+    key-topology test, the gap issue #343 fell through. Only 5C and 61 are
+    new wording, and the app calls 5C "Extra rychlý" rather than the "Super
+    rychlé" it uses for Table_02's 1D, so the two deliberately do NOT share
+    a label.
     """
     shared = {
         "5b": "1b",  # Cotton
+        "5d": "03",  # Super Eco Wash
         "5e": "26",  # Delicates
         "5f": "0c",  # Baby Care
         "60": "07",  # Outdoor
@@ -402,7 +404,6 @@ def test_confirmed_ww6500_table_00_course_names():
         "67": "25",  # Synthetics
         "68": "35",  # E Cotton
         "6b": "0d",  # Spin Only
-        "5d": "03",  # Super Eco Wash
     }
     for language in _languages():
         select = _load(language)["entity"]["select"]
