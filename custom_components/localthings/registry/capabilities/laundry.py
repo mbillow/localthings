@@ -254,9 +254,7 @@ def drum_clean_last_cleaned(rep):
 # supportedOptions -- what each course permits.
 #
 # A 1-nibble header followed by one fixed-width record per selectable
-# course. A record is that course's own hex code, then zero or more 2-byte
-# groups; every fixture in the corpus fits `1 + 2*groups` bytes, from an
-# AirDresser carrying no groups at all to an 11-byte WA8000T record.
+# course: the course's own hex code, then zero or more 2-byte groups.
 #
 #   <hdr:1 nibble> ( <course:1> ( <kind:nibble><default:nibble> <mask:1> )* )*
 #
@@ -264,47 +262,27 @@ def drum_clean_last_cleaned(rep):
 # the default nibble -- but into the list, not into the mask: a dishwasher
 # reports default 0 with a mask allowing only index 1.
 #
-# Four kinds are pinned, each against a device that can contradict them:
+# Four kinds are named: 0x8 water temperature, 0x9 rinse and 0xA spin from a
+# WW6500 panel reading plus a list-length argument (the reading alone cannot
+# separate rinse from spin), 0xD dry from a DV5000T's. The rest stay unnamed,
+# 0xB included -- but 0xB, not 0xD, is the dry dial on the WW6600R combo,
+# which carries no 0xD at all, so a gate keyed on 0xD alone silently no-ops
+# there. Evidence for all of it in docs/investigations/course-option-groups.md.
 #
-#   0xD dry     A DV5000T's fourteen records reproduce exactly what its
-#               panel offers per course -- 1/2/3 on Cotton, only 2 on
-#               Towels, only 1 on Wool, none on Quick Dry or the three
-#               air/time courses.
-#   0x8 temp    A WW6500 owner read one course's three dials off the
-#   0x9 rinse   panel: Cold/20/30/40 with no "None" offered, every rinse
-#   0xA spin    count including none, and every spin including rinse-hold.
-#               Its masks are 0x1E/0x3F/0x3F, which decode to exactly
-#               those sets against supportedWaterTemperature (0x1E skips
-#               bit 0, the "None" the panel indeed omits),
-#               supportedRinseCycles and supportedSpinLevel. Only 0x8
-#               reaches bit 6 anywhere in that table, which none of the
-#               other two lists is long enough to hold.
+# A kind is not an entity name: dishwashers carry 0xD with no
+# supportedDryLevel at all (their dry setting is heated_dry), so callers key
+# the mask against their own list rather than assuming what it counts.
 #
-# Corroborating all four: across every dump here, each live value sits
-# inside the set its course's mask decodes to. 0x0/0x5/0x6/0x7/0xB/0xC
-# stay unnamed -- nothing pins them, and 0xE looks like dry time on the one
-# board that carries it but no dump proves it.
+# Two things a caller cannot infer from the bytes:
 #
-# The kinds are not entity names. 0xD is "dry", not "dry level":
-# dishwashers carry it with no supportedDryLevel at all (their dry setting
-# is heated_dry). A caller keys the mask against its own list rather than
-# assuming what it counts.
-#
-# A mask is what supportedOptions advertises, and an appliance can enforce
-# more than it advertises: a WW6500 offers only 2-5 rinses on Baby Care --
-# on its own panel, not just in SmartThings -- where the mask allows all
-# six. Its other thirteen courses match dial for dial, default included.
-# So gating on a mask can offer a little more than the machine really
-# takes. That is the safe direction, since the device refuses what it will
-# not do, but it is not a guarantee and an entity should not present a
-# mask as the appliance's last word.
-#
-# An empty mask means the device declares no range, which is NOT
-# automatically "nothing is selectable". On a dryer's Quick Dry it really
-# is none (panel-confirmed above), but a washer's cloud Download slot
-# reports empty masks for all three of its kinds while still holding live
-# values, because the downloaded program supplies its own. Deciding
-# between those is the caller's job, per entity, with its own evidence.
+#   - A mask is what the device advertises, not what it enforces. A WW6500
+#     takes only 2-5 rinses on Baby Care -- on its own panel, not just in
+#     SmartThings -- where the mask allows all six. Gating on one offers at
+#     most a little too much, which the appliance then refuses.
+#   - An empty mask is NOT automatically "nothing is selectable". On a
+#     dryer's Quick Dry it is, but a washer's cloud Download slot reports
+#     empty masks for every kind while still holding live values, because
+#     the downloaded program supplies its own. That call is the caller's.
 # ---------------------------------------------------------------------------
 
 OPTION_KIND_WATER_TEMPERATURE = 0x8

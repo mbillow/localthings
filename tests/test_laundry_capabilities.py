@@ -4,6 +4,7 @@ from typing import ClassVar
 
 from custom_components.localthings.registry.capabilities import laundry
 from custom_components.localthings.registry.entities import SelectDesc
+from tests.conftest import FIXTURES, _load_device
 
 
 class TestCourseHelpers:
@@ -304,12 +305,11 @@ class TestCourseOptionGroups:
     <kind nibble><default nibble> <mask>, the mask indexing that option's
     own supported<Option> list.
 
-    Only kind 0xD is claimed. It was read off a DV5000T whose fourteen
-    records reproduce exactly what its panel offers per course, and the
-    same shape decodes in range on every dryer-family dump in the corpus
-    (see TestCourseOptionGroupsAcrossCorpus). The washer kinds 0x8/0x9/0xA
-    line up with temperature/rinse/spin by shape only, so nothing here
-    names them.
+    Four kinds are named -- 0xD dry off a DV5000T's per-course panel
+    report, 0x8/0x9/0xA off a WW6500's; both readings are checked against
+    the corpus in TestCourseOptionGroupsAcrossCorpus. The evidence, and the
+    WW6600R combo that carries its dry dial on 0xB instead, is written up
+    in docs/investigations/course-option-groups.md.
     """
 
     # DA_WM_TP1_21_COMMON DV9400B, from dryer_tp1_21_drum_clean: K=3, so a
@@ -363,8 +363,6 @@ class TestCourseOptionGroups:
     def test_default_index_is_into_the_list_not_the_allowed_set(self):
         """A dishwasher reports default 0 while allowing only index 1, so a
         caller cannot treat the default as a member of the allowed set."""
-        from tests.conftest import _load_device
-
         resources = _load_device("dishwasher")
         found = laundry.course_option_mask(resources, laundry.OPTION_KIND_DRY, course="83")
         assert found == (0, [1])
@@ -425,8 +423,6 @@ class TestCourseOptionGroups:
         two-record excerpt legitimately resolves to a different width than
         the nineteen-record original.
         """
-        from tests.conftest import _load_device
-
         resources = _load_device("dryer_dve50a8600")
         levels = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryLevel"]
         assert levels == ["None", "Damp", "Less", "Normal", "More", "Very"]
@@ -441,11 +437,10 @@ class TestCourseOptionGroups:
 class TestCourseOptionGroupsAcrossCorpus:
     """Structure invariants over every shipped dump, so a future fixture
     that decodes differently fails here rather than silently mis-gating an
-    entity."""
+    entity -- and, alongside them, the individual dumps the kind naming
+    rests on, which are what those invariants are checking is still true."""
 
     def _dumps(self):
-        from tests.conftest import FIXTURES, _load_device
-
         for path in sorted(FIXTURES.glob("*_device.json")):
             yield path.name, _load_device(path.name[: -len("_device.json")])
 
@@ -467,8 +462,6 @@ class TestCourseOptionGroupsAcrossCorpus:
         this pins the sets rather than the course code -- which is all the
         kind naming rests on.
         """
-        from tests.conftest import _load_device
-
         resources = _load_device("washer_ww6500")
         washer = resources["/washer/vs/0"]
         lists = (
@@ -492,6 +485,55 @@ class TestCourseOptionGroupsAcrossCorpus:
                 matching.append(code)
         assert matching == ["5C", "61"]
 
+    def test_spin_cannot_be_rinse_on_a_list_length_argument(self):
+        """The panel reading above cannot in fact tell rinse from spin: on
+        both courses that match it the two masks are 0x3F alike, so swapping
+        the constants leaves it passing. This is the independent structural
+        half -- on the `washer` dump 0xA addresses index 6, which a
+        six-entry supportedRinseCycles cannot hold, so 0xA is not rinse
+        whatever an owner reports. 0x9 tops out at index 5 there, exactly
+        what that list allows."""
+        resources = _load_device("washer")
+        washer = resources["/washer/vs/0"]
+        assert len(washer["x.com.samsung.da.supportedRinseCycles"]) == 6
+        top = {}
+        for code in laundry._course_records(resources["/course/vs/0"]):
+            for kind in (laundry.OPTION_KIND_RINSE, laundry.OPTION_KIND_SPIN):
+                found = laundry.course_option_mask(resources, kind, course=code)
+                if found and found[1]:
+                    top[kind] = max(top.get(kind, 0), max(found[1]))
+        assert top[laundry.OPTION_KIND_SPIN] == 6
+        assert top[laundry.OPTION_KIND_RINSE] == 5
+
+    def test_the_combo_carries_its_dry_dial_on_0xb_not_0xd(self):
+        """Recorded so the next change does not re-derive it: the WW6600R
+        combo is the only board here with a real multi-entry
+        supportedDryLevel, and it has no 0xD group at all -- its dry dial is
+        0xB, dry-only courses dropping "None" and defaulting to Cupboard.
+        A gate keyed on 0xD alone would silently no-op on the one board
+        family that already ships a writable dry_level select.
+
+        0xB stays unnamed: washer_dryer_onebody_awm is also a combo and
+        uses 0xD, so this is not a rule the corpus can state yet. See
+        docs/investigations/course-option-groups.md.
+        """
+        resources = _load_device("washer_dryer_combo")
+        levels = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryLevel"]
+        assert len(levels) == 8
+
+        def decode(kind, course):
+            found = laundry.course_option_mask(resources, kind, course=course)
+            return None if found is None else (levels[found[0]], [levels[i] for i in found[1]])
+
+        # Pinned, so "no course carries 0xD" cannot pass by decoding nothing.
+        records = laundry._course_records(resources["/course/vs/0"])
+        assert len(records) == 24
+        assert all(decode(laundry.OPTION_KIND_DRY, code) is None for code in records)
+        wash_and_dry = ["None", "Cupboard", "30", "60", "90"]
+        assert decode(0xB, "1C") == ("None", wash_and_dry)
+        assert decode(0xB, "36") == ("Cupboard", wash_and_dry[1:])  # dry-only
+        assert decode(0xB, "24") == ("None", [])  # wash-only
+
     def test_dv6800n_dry_policy_agrees_with_the_other_board_family(self):
         """The DV6800N is the one dump carrying both a dry-level (0xD) and a
         dry-time (0xE) group, and its courses are labelled -- so it is where
@@ -506,8 +548,6 @@ class TestCourseOptionGroupsAcrossCorpus:
         Two unrelated code spaces would not agree like that on a mask read
         at the wrong offset.
         """
-        from tests.conftest import _load_device
-
         resources = _load_device("dryer_dv6800n")
         levels = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryLevel"]
         times = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryTime"]
