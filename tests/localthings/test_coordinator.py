@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import time
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import cbor2
 import pytest
@@ -20,6 +20,9 @@ from smartthings_local.errors import SessionClosedError, SessionError, SessionTi
 from custom_components.localthings.const import (
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_HOST,
+    CONF_LEAF_CERT_PEM,
+    CONF_LEAF_KEY_PEM,
+    CONF_PORT,
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
@@ -1898,6 +1901,65 @@ def test_local_source_port_non_ipv4_falls_back_to_hash() -> None:
     port = _local_source_port("some-hostname")
     assert port == _local_source_port("some-hostname")
     assert DTLS_LOCAL_PORT_BASE <= port <= DTLS_LOCAL_PORT_BASE + 0xFF
+
+
+def test_connect_session_preserves_the_certificate_session_contract(
+    hass: HomeAssistant,
+    mock_entry,
+) -> None:
+    """The coordinator owns lifecycle I/O after the factory constructs a session."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    session = MagicMock()
+    identity = MagicMock()
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_certificate_session",
+            return_value=session,
+        ) as session_factory,
+        patch(
+            "custom_components.localthings.coordinator.read_identity",
+            return_value=identity,
+        ) as read_identity,
+    ):
+        coordinator._connect_session()
+
+    session_factory.assert_called_once_with(
+        mock_entry.data[CONF_HOST],
+        mock_entry.data[CONF_PORT],
+        certificate_pem=mock_entry.data[CONF_LEAF_CERT_PEM],
+        private_key_pem=mock_entry.data[CONF_LEAF_KEY_PEM],
+        on_notification=coordinator._observe.on_notification,
+        local_port=_local_source_port(mock_entry.data[CONF_HOST]),
+    )
+    assert session.method_calls[:2] == [call.connect(), call.start_reader()]
+    read_identity.assert_called_once_with(session, None)
+    assert coordinator._session is session
+    assert coordinator._identity is identity
+
+
+def test_connect_session_does_not_publish_an_unstarted_session(
+    hass: HomeAssistant,
+    mock_entry,
+) -> None:
+    """A failed connect remains invisible to poll and command paths."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    session = MagicMock()
+    session.start_reader.side_effect = RuntimeError("reader failed")
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_certificate_session",
+            return_value=session,
+        ),
+        patch("custom_components.localthings.coordinator.read_identity") as read_identity,
+        pytest.raises(RuntimeError, match="reader failed"),
+    ):
+        coordinator._connect_session()
+
+    assert session.method_calls[:2] == [call.connect(), call.start_reader()]
+    read_identity.assert_not_called()
+    assert coordinator._session is None
 
 
 # ----------------------------------------------------------------------

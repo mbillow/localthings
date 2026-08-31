@@ -25,6 +25,7 @@ from smartthings_local.ocf.state_cache import StateCache
 from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
 from . import cloudcourse
+from . import session as session_factory
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
@@ -800,11 +801,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
         key_pem = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsCoapSession(
+        sess = session_factory.create_certificate_session(
             host,
             port,
-            cert_pem=cert_pem,
-            key_pem=key_pem,
+            certificate_pem=cert_pem,
+            private_key_pem=key_pem,
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
         )
