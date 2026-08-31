@@ -35,6 +35,7 @@ from homeassistant.helpers.selector import (
 )
 
 from . import cloudcourse
+from . import session as session_factory
 from .const import (
     CLIENTHELLO_PROBE_RETRIES,
     CLIENTHELLO_PROBE_TIMEOUT_S,
@@ -742,13 +743,16 @@ def _diagnose_failures(
 
 def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
-    from smartthings_local.protocol.dtls_session import DtlsCoapSession
-
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
         sess = None
         try:
-            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            sess = session_factory.create_certificate_session(
+                host,
+                port,
+                certificate_pem=cert_pem,
+                private_key_pem=key_pem,
+            )
             sess.connect()
             sess.start_reader()
             return _read_device(sess, host, port)
