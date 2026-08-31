@@ -189,6 +189,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lamp"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Bereidingstijd"

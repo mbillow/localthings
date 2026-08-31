@@ -17,10 +17,9 @@ different from an oven, and defined fresh here:
     that plain ovens don't report -- exposed as its own sensor.
   * Lamp: this family's option-array token is bare 'Lamp' (issue #137), not
     oven.py's 'UpperLamp', and genuinely absent on the combi dump (issue
-    #121), so it's exists_fn-gated rather than assumed universal. 'On' has
-    never been observed as a value; the only confirmed non-Off token is
-    'High' (issue #152) -- the switch treats any non-Off/non-None value as
-    "on" for reads and writes back 'High'/'Off'.
+    #121), so it's exists_fn-gated rather than assumed universal. The three
+    confirmed tokens are Off/Low/High (issues #152/#181), exposed as a native
+    HA brightness light at 0/50/100 percent.
   * Filter reminder / end signal reminder: bare 'FilterRemind'/'RemindBeep'
     option-array tokens (issue #181), gated with exists_fn like Lamp since
     the MW7300B combi dump has neither.
@@ -30,7 +29,7 @@ Cooking-mode writes are unproven here, same caveat as oven.py's OVEN_MODE
 """
 
 from ..capability import Capability
-from ..entities import NumberDesc, SelectDesc, SensorDesc, SwitchDesc
+from ..entities import LightDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import int_or_none, normalize_temp_unit
 from .laundry import option_value, option_write
 
@@ -133,6 +132,14 @@ def _lamp_exists(rep, resources):
     return option_value(rep.get("x.com.samsung.da.options"), "Lamp") is not None
 
 
+def _lamp_brightness(options):
+    return {
+        "Off": 0,
+        "Low": 128,
+        "High": 255,
+    }.get(option_value(options, "Lamp"))
+
+
 def _filter_remind_exists(rep, resources):
     return option_value(rep.get("x.com.samsung.da.options"), "FilterRemind") is not None
 
@@ -142,13 +149,18 @@ def _remind_beep_exists(rep, resources):
 
 
 def _lamp_write(p, rep, href=None):
-    if p not in ("On", "Off"):
+    try:
+        brightness = float(p)
+    except (TypeError, ValueError):
         return None
     if not rep.get("x.com.samsung.da.options"):
         return None
-    # 'High'/'Off' are the two confirmed tokens (see module docstring);
-    # 'On' has never been observed and likely isn't recognized.
-    token = "High" if p == "On" else "Off"
+    if brightness <= 0:
+        token = "Off"
+    elif brightness <= 128:
+        token = "Low"
+    else:
+        token = "High"
     return ["mode", "vs", "0"], {
         "x.com.samsung.da.options": option_write("Lamp", token),
     }
@@ -245,12 +257,12 @@ MICROWAVE_MODE = Capability(
             value_fn=lambda opts: option_value(opts, "Sound") == "On",
             write_fn=_sound_write,
         ),
-        SwitchDesc(
+        LightDesc(
             key="lamp",
             field="x.com.samsung.da.options",
             icon="mdi:track-light",
             exists_fn=_lamp_exists,
-            value_fn=lambda opts: option_value(opts, "Lamp") not in (None, "Off"),
+            value_fn=_lamp_brightness,
             write_fn=_lamp_write,
         ),
         # issue #181: Filter Reminder / End Signal Reminder toggles, only on
