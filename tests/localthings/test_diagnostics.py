@@ -7,9 +7,16 @@ import threading
 from pathlib import Path
 
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings import diagnostics as diagnostics_mod
-from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.const import (
+    AUTH_OWNER_PSK,
+    CONF_AUTH_TYPE,
+    CONF_OWNER_PSK,
+    CONF_OWNER_UUID,
+    DOMAIN,
+)
 from custom_components.localthings.diagnostics import async_get_config_entry_diagnostics
 from custom_components.localthings.registry.redact import REDACTED
 
@@ -37,6 +44,36 @@ async def test_diagnostics_shape_and_redaction(
     assert resources["/wirelessinfo/vs/0"]["macaddressWiFi"] == REDACTED
     # Ordinary state survives.
     assert resources["/status/lock/vs/0"]["x.com.samsung.da.ado.devicecontrol"] == "On"
+
+
+async def test_owner_psk_diagnostics_expose_only_the_authentication_type(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """Config-entry credentials must never join a diagnostics download."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    owner_uuid = "12121212-3434-4656-8787-9a9a9a9a9a9a"
+    owner_psk = "00112233445566778899aabbccddeeff"
+    owner_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+            CONF_OWNER_UUID: owner_uuid,
+            CONF_OWNER_PSK: owner_psk,
+        },
+        version=5,
+    )
+    owner_entry.add_to_hass(hass)
+    hass.data[DOMAIN][owner_entry.entry_id] = hass.data[DOMAIN][mock_entry.entry_id]
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, owner_entry)
+    rendered = json.dumps(diagnostics, sort_keys=True)
+
+    assert diagnostics["auth_type"] == AUTH_OWNER_PSK
+    assert set(diagnostics) & {CONF_AUTH_TYPE, CONF_OWNER_UUID, CONF_OWNER_PSK} == {CONF_AUTH_TYPE}
+    assert owner_uuid not in rendered
+    assert owner_psk not in rendered
 
 
 async def test_diagnostics_include_ocf_identity(

@@ -1522,6 +1522,18 @@
       "confirm_unknown_type": {
         "title": "Apparaattype niet herkend",
         "description": "Dit apparaat meldt model \"{model}\", een type dat LocalThings nog niet herkent. Het apparaat wordt toch toegevoegd, maar alleen met algemene mogelijkheden (zoals voeding en alarmen, voor zover aanwezig), in plaats van alle mogelijkheden voor deze apparaatfamilie. Je kunt daarna helpen volledige ondersteuning toe te voegen door diagnostische gegevens voor dit apparaat te downloaden (Instellingen > Apparaten & diensten > dit apparaat > het menu > Diagnostische gegevens downloaden) en deze bij een nieuw issue te voegen. Kies Verzenden om het apparaat toch toe te voegen."
+      },
+      "reauth_confirm": {
+        "title": "OwnerPSK opnieuw verifiëren",
+        "description": "Voer de bestaande OCF-eigenaarsgegevens voor {device} in. LocalThings valideert en bewaart alleen gegevens die je al bezit; het verkrijgt, herleidt, provisiont of roteert ze niet en draagt geen eigendom over.",
+        "data": {
+          "owner_uuid": "UUID van eigenaar",
+          "owner_psk": "OwnerPSK"
+        },
+        "data_description": {
+          "owner_uuid": "De OCF-eigenaars-UUID die als 16-byte PSK-clientidentiteit wordt gebruikt.",
+          "owner_psk": "De bestaande 128- of 256-bits OwnerPSK, hexadecimaal gecodeerd."
+        }
       }
     },
     "error": {
@@ -1534,11 +1546,14 @@
       "cloud_unreachable": "Kon de cloudgateway van Samsung niet bereiken om de UUID op te halen die nodig is om het certificaat van dit apparaat aan te maken. Controleer de internettoegang van Home Assistant en probeer het opnieuw.",
       "unexpected_response": "Verbinding met het apparaat is gelukt, maar het gaf geen bruikbare apparaatbeschrijving terug. Mogelijk is het geen apparaat dat deze integratie ondersteunt. Het Home Assistant-logboek bevat wat het stuurde.",
       "cannot_connect": "Kan geen verbinding maken met het apparaat. Controleer of het IP-adres bereikbaar is en de CA-inloggegevens juist zijn.",
+      "invalid_auth": "De OwnerPSK-gegevens zijn geweigerd of horen bij een ander OCF-apparaat.",
+      "psk_cannot_connect": "Het geconfigureerde OCF-eindpunt is niet bereikbaar. De opgeslagen gegevens zijn niet gewijzigd.",
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie."
     },
     "abort": {
-      "already_configured": "Apparaat is al geconfigureerd"
+      "already_configured": "Apparaat is al geconfigureerd",
+      "reauth_not_supported": "Deze invoer gebruikt geen OwnerPSK-authenticatie."
     }
   },
   "options": {

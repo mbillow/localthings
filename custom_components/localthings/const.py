@@ -15,10 +15,15 @@ PLATFORMS = [
 
 CONF_HOST = "host"
 CONF_PORT = "port"
+CONF_AUTH_TYPE = "auth_type"
+AUTH_CERTIFICATE = "certificate"
+AUTH_OWNER_PSK = "owner_psk"
 CONF_CA_CERT_PEM = "ca_cert_pem"
 CONF_CA_KEY_PEM = "ca_key_pem"
 CONF_LEAF_CERT_PEM = "leaf_cert_pem"
 CONF_LEAF_KEY_PEM = "leaf_key_pem"
+CONF_OWNER_UUID = "owner_uuid"
+CONF_OWNER_PSK = "owner_psk"
 
 # Device identity, resolved once by the config flow's probe and persisted
 # on the entry (issue #236) -- what the coordinator mints registry keys

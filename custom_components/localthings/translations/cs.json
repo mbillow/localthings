@@ -1522,6 +1522,18 @@
       "confirm_unknown_type": {
         "title": "Typ spotřebiče nebyl rozpoznán",
         "description": "Tento spotřebič hlásí model „{model}“, což je typ, který LocalThings zatím nerozpoznává. Přesto bude přidán, ale pouze se společnými funkcemi (napájení, alarmy atd., pokud jsou k dispozici), nikoli s plnou sadou funkcí pro danou rodinu spotřebičů. Podporu můžete později pomoci rozšířit stažením diagnostiky pro toto zařízení (Nastavení > Zařízení a služby > toto zařízení > nabídka > Stáhnout diagnostiku) a jejím vložením do nového issue. Odesláním zařízení přidáte i tak."
+      },
+      "reauth_confirm": {
+        "title": "Opětovné ověření OwnerPSK",
+        "description": "Zadejte existující přihlašovací údaje vlastníka OCF pro zařízení {device}. LocalThings pouze ověří a uloží údaje, které již máte; nezískává je, neodvozuje, nezavádí, neobnovuje ani nepřevádí vlastnictví.",
+        "data": {
+          "owner_uuid": "UUID vlastníka",
+          "owner_psk": "OwnerPSK"
+        },
+        "data_description": {
+          "owner_uuid": "UUID vlastníka OCF používané jako 16bajtová identita klienta PSK.",
+          "owner_psk": "Existující 128bitový nebo 256bitový OwnerPSK zapsaný šestnáctkově."
+        }
       }
     },
     "error": {
@@ -1534,11 +1546,14 @@
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
       "cannot_connect": "Nelze se připojit k zařízení. Ověřte, že je IP adresa dostupná a že jsou přihlašovací údaje CA správné.",
+      "invalid_auth": "Přihlašovací údaje OwnerPSK byly odmítnuty nebo patří jinému zařízení OCF.",
+      "psk_cannot_connect": "Ke nakonfigurovanému koncovému bodu OCF se nelze připojit. Uložené přihlašovací údaje nebyly změněny.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant."
     },
     "abort": {
-      "already_configured": "Zařízení je již nakonfigurováno"
+      "already_configured": "Zařízení je již nakonfigurováno",
+      "reauth_not_supported": "Tato položka nepoužívá ověřování OwnerPSK."
     }
   },
   "options": {

@@ -1522,6 +1522,18 @@
       "confirm_unknown_type": {
         "title": "Appliance type not recognized",
         "description": "This appliance reported model \"{model}\", which isn't a type LocalThings recognizes yet. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate OwnerPSK",
+        "description": "Enter the existing OCF owner credential for {device}. LocalThings only validates and stores a credential you already possess; it does not acquire, derive, provision, rotate, or transfer ownership.",
+        "data": {
+          "owner_uuid": "Owner UUID",
+          "owner_psk": "OwnerPSK"
+        },
+        "data_description": {
+          "owner_uuid": "The OCF owner UUID used as the 16-byte PSK client identity.",
+          "owner_psk": "The existing 128- or 256-bit OwnerPSK, encoded as hexadecimal."
+        }
       }
     },
     "error": {
@@ -1534,11 +1546,14 @@
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
       "unexpected_response": "Connected to the device successfully, but it didn't return a usable device description. It may not be an appliance this integration supports. The Home Assistant log records what it sent.",
       "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
+      "invalid_auth": "The OwnerPSK credential was rejected or belongs to a different OCF device.",
+      "psk_cannot_connect": "Could not reach the configured OCF endpoint. The stored credential was not changed.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details."
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reauth_not_supported": "This entry does not use OwnerPSK authentication."
     }
   },
   "options": {

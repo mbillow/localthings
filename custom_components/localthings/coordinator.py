@@ -16,11 +16,16 @@ from typing import Any, cast
 import cbor2
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    HomeAssistantError,
+    ServiceValidationError,
+)
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from smartthings_local.errors import AuthenticationError
 from smartthings_local.ocf.state_cache import StateCache
 from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
@@ -29,14 +34,14 @@ from . import session as session_factory
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
+    AUTH_OWNER_PSK,
+    CONF_AUTH_TYPE,
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_CLOUD_COURSES,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
     CONF_DEVICE_TYPE,
     CONF_HOST,
-    CONF_LEAF_CERT_PEM,
-    CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
     CONF_MANUFACTURER,
@@ -49,6 +54,11 @@ from .const import (
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
+)
+from .credentials import (
+    InvalidCredentialConfig,
+    OwnerPskDeviceMismatch,
+    require_matching_ocf_uuid,
 )
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
@@ -72,6 +82,7 @@ from .registry.identity import (
     device_display_name,
     ocf_device_key,
     read_identity,
+    read_ocf_device_id,
     resolve_model,
     resolve_serial,
 )
@@ -799,19 +810,26 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _connect_session(self) -> None:
         host = self._entry.data[CONF_HOST]
         port = self._entry.data[CONF_PORT]
-        cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
-        key_pem = self._entry.data[CONF_LEAF_KEY_PEM]
+        auth_type = self._entry.data.get(CONF_AUTH_TYPE)
 
-        sess = session_factory.create_certificate_session(
-            host,
-            port,
-            certificate_pem=cert_pem,
-            private_key_pem=key_pem,
+        sess = session_factory.create_entry_session(
+            self._entry.data,
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
         )
-        sess.connect()
-        sess.start_reader()
+        try:
+            sess.connect()
+            sess.start_reader()
+            if auth_type == AUTH_OWNER_PSK:
+                reported_device_id = read_ocf_device_id(sess)
+                require_matching_ocf_uuid(
+                    self._entry.data[CONF_DEVICE_KEY],
+                    reported_device_id,
+                )
+        except Exception:
+            with contextlib.suppress(Exception):
+                sess.close()
+            raise
         self._session = sess
         self._log.debug("DTLS connected to %s:%d", host, port)
         try:
@@ -1739,6 +1757,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
 
+    def _raise_if_owner_psk_auth_failed(self, error: Exception) -> None:
+        """Translate only definitive OwnerPSK failures into HA reauthentication.
+
+        A generic ``SessionError`` is deliberately not sufficient: current
+        smartthings-local releases use it for both a rejected handshake and
+        endpoint/backend failures. Treating every one as bad credentials would
+        turn an ordinary network outage into a reauthentication prompt.
+        """
+        if self._entry.data.get(CONF_AUTH_TYPE) != AUTH_OWNER_PSK:
+            return
+        if isinstance(error, InvalidCredentialConfig):
+            raise ConfigEntryAuthFailed("stored OwnerPSK credentials are invalid") from error
+        if isinstance(error, OwnerPskDeviceMismatch):
+            raise ConfigEntryAuthFailed("OwnerPSK device identity did not match") from error
+        if isinstance(error, AuthenticationError):
+            raise ConfigEntryAuthFailed("OwnerPSK authentication failed") from error
+
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
     # ------------------------------------------------------------------
@@ -1754,6 +1789,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 resources = await self.hass.async_add_executor_job(self._poll_once)
                 self._mark_device_answered()
             except Exception as e:
+                self._raise_if_owner_psk_auth_failed(e)
                 if self._defer_reconnect_for(e):
                     self._log.debug(
                         "poll failed (%s), not yet treated as session "
@@ -1785,6 +1821,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 try:
                     resources = await self.hass.async_add_executor_job(self._poll_once)
                 except Exception as e2:
+                    self._raise_if_owner_psk_auth_failed(e2)
                     return self._device_unreachable("poll failed after reconnect", e2)
                 else:
                     self._mark_device_answered()

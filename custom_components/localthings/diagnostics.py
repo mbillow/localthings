@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import cloudcourse
-from .const import DOMAIN
+from .const import AUTH_CERTIFICATE, CONF_AUTH_TYPE, DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .registry.capabilities.laundry import cycle_options
 from .registry.encode import json_safe
@@ -79,6 +79,7 @@ async def async_get_config_entry_diagnostics(
     # for why a dump can contain something JSON has no form for.
     return json_safe(
         {
+            "auth_type": entry.data.get(CONF_AUTH_TYPE, AUTH_CERTIFICATE),
             "device_type": coordinator.device_type_name or "unknown",
             "one_ui_version": coordinator.one_ui_version,
             "identity": {

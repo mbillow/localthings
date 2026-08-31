@@ -156,6 +156,26 @@ def _get(sess, path) -> dict:
     return {}
 
 
+def read_ocf_device_id(sess, *, timeout: float = 10.0) -> str | None:
+    """Read only ``/oic/d`` and return its device UUID.
+
+    Unlike the best-effort identity diagnostics below, transport failures
+    propagate so callers can distinguish an unreachable peer from a peer
+    that authenticated but claimed the wrong identity.
+    """
+    code, payload = sess.get(["oic", "d"], timeout=timeout)
+    if code != 0x45 or not payload:
+        return None
+    try:
+        body = cbor2.loads(payload)
+    except (TypeError, ValueError, cbor2.CBORDecodeError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    device_id = body.get("di")
+    return device_id if isinstance(device_id, str) else None
+
+
 def _get_links(sess, path) -> list:
     """Like _get, but for /oic/res: a baseline-Interface RETRIEVE on it
     returns a CBOR array of Link objects (href/rt/if/di/...), not a single

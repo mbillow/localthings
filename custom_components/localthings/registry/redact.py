@@ -28,6 +28,8 @@ _SENSITIVE_SUBSTRINGS = (
     "duid",
     "password",
     "secret",
+    "psk",
+    "credential",
 )
 
 # Matched whole, not as substrings: these are bare one/two-letter keys too

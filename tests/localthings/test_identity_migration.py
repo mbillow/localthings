@@ -178,7 +178,7 @@ async def test_v3_entry_moves_onto_the_device_uuid_keeping_its_entity_ids(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     # The serial is kept alongside the key, not replaced by it: it is what
     # corroborates a later change of UUID.
@@ -215,7 +215,7 @@ async def test_the_oldest_install_walks_all_the_way_from_v1(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     assert entry.unique_id == f"{DOMAIN}_{UUID_A}"
     kept = er.async_get(hass).async_get(existing.entity_id)
@@ -602,7 +602,7 @@ async def test_an_already_migrated_entry_is_left_alone(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     assert _device_identifiers(hass, device.id) == {(DOMAIN, UUID_A)}
     assert _entity_unique_id(hass, existing.entity_id) == (f"{DOMAIN}_{UUID_A}_connection_mode")
