@@ -72,7 +72,7 @@ async def test_relabels_every_particulate_sensor(hass: HomeAssistant) -> None:
         # µg/m³ has a converter, so the class must be named, not None --
         # passing neither is deprecated and breaks in HA Core 2026.11.
         assert call.kwargs["new_unit_class"] == "concentration"
-    assert entry.version == 4
+    assert entry.version == 5
 
 
 async def test_leaves_other_sensors_on_the_same_device_alone(hass: HomeAssistant) -> None:
@@ -102,7 +102,7 @@ async def test_skips_families_that_did_not_gain_the_unit(hass: HomeAssistant) ->
             assert await async_migrate_entry(hass, entry) is True
 
         assert relabel.call_args_list == [], device_type
-        assert entry.version == 4
+        assert entry.version == 5
 
 
 async def test_defers_rather_than_consuming_the_migration_without_the_recorder(
@@ -127,7 +127,7 @@ async def test_defers_rather_than_consuming_the_migration_without_the_recorder(
         assert await async_migrate_entry(hass, entry) is True
 
     assert len(relabel.call_args_list) == 1
-    assert entry.version == 4
+    assert entry.version == 5
 
 
 async def test_omits_unit_class_on_an_older_home_assistant(hass: HomeAssistant) -> None:
@@ -151,7 +151,7 @@ async def test_omits_unit_class_on_an_older_home_assistant(hass: HomeAssistant) 
         assert await async_migrate_entry(hass, entry) is True
 
     assert seen == [{"new_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER}]
-    assert entry.version == 4
+    assert entry.version == 5
 
 
 async def test_a_relabel_failure_never_fails_the_entry(hass: HomeAssistant) -> None:
@@ -165,7 +165,7 @@ async def test_a_relabel_failure_never_fails_the_entry(hass: HomeAssistant) -> N
     with patch(RELABEL, autospec=True, side_effect=TypeError("older HA signature")):
         assert await async_migrate_entry(hass, entry) is True
 
-    assert entry.version == 4
+    assert entry.version == 5
 
 
 async def test_follows_a_renamed_entity_rather_than_rebuilding_its_id(
@@ -226,4 +226,4 @@ async def test_a_fresh_entry_starts_at_the_migrated_version(hass: HomeAssistant)
     """
     from custom_components.localthings.config_flow import LocalThingsConfigFlow
 
-    assert LocalThingsConfigFlow.VERSION == 4
+    assert LocalThingsConfigFlow.VERSION == 5

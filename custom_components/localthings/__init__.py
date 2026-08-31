@@ -16,7 +16,16 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
+from .const import (
+    AUTH_CERTIFICATE,
+    CONF_AUTH_TYPE,
+    CONF_DEVICE_TYPE,
+    CONF_HOST,
+    CONF_PORT,
+    CONF_SERIAL,
+    DOMAIN,
+    PLATFORMS,
+)
 from .coordinator import LocalThingsCoordinator, snapshot_store
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
@@ -213,12 +222,16 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     what the coordinator rewrites *from* once a live poll finally hands it
     a UUID to rewrite *to*.
 
-    The version is still bumped now rather than at that point, because the
-    bump's real job is the `entry.version > 4` downgrade guard below: an
+    v4 -> v5 makes the authentication mode explicit. Every entry written by
+    an older release is certificate-backed, so this adds only the discriminator
+    and leaves all endpoint, credential, identity, and registry data untouched.
+
+    The v4 version is still bumped before a live UUID re-key completes because
+    that bump's real job is the downgrade guard below: an
     entry re-keyed onto a UUID and then loaded by a release that reads
     CONF_SERIAL as the key would silently orphan every entity it has.
     """
-    if entry.version > 4:
+    if entry.version > 5:
         return False  # downgrade: this release doesn't know the newer shape
 
     if entry.version == 1:
@@ -257,6 +270,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.entry_id,
             legacy_key,
         )
+
+    if entry.version == 4:
+        hass.config_entries.async_update_entry(
+            entry,
+            data={**entry.data, CONF_AUTH_TYPE: AUTH_CERTIFICATE},
+            version=5,
+        )
+        _LOGGER.debug("migrated entry %s to version 5 (certificate auth)", entry.entry_id)
 
     return True
 

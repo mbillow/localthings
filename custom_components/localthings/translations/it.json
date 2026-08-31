@@ -1522,6 +1522,18 @@
       "confirm_unknown_type": {
         "title": "Tipo di elettrodomestico non riconosciuto",
         "description": "Questo apparecchio dichiara il modello \"{model}\", un tipo che LocalThings non riconosce ancora. Verrà comunque aggiunto, ma solo con le funzionalità di base (alimentazione, allarmi, ... se presenti) anziché con tutte le funzionalità della sua famiglia. Puoi contribuire all'aggiunta del supporto completo in seguito scaricando i dati diagnostici per questo dispositivo (Impostazioni > Dispositivi e servizi > questo dispositivo > il menu > Scarica diagnostica) e inviandoli in una nuova segnalazione. Invia comunque la segnalazione per aggiungerlo."
+      },
+      "reauth_confirm": {
+        "title": "Ripeti l'autenticazione OwnerPSK",
+        "description": "Inserisci le credenziali proprietario OCF esistenti per {device}. LocalThings convalida e salva solo credenziali già in tuo possesso; non le acquisisce, deriva, configura o ruota e non trasferisce la proprietà.",
+        "data": {
+          "owner_uuid": "UUID proprietario",
+          "owner_psk": "OwnerPSK"
+        },
+        "data_description": {
+          "owner_uuid": "L'UUID proprietario OCF usato come identità client PSK di 16 byte.",
+          "owner_psk": "L'OwnerPSK esistente a 128 o 256 bit, codificato in esadecimale."
+        }
       }
     },
     "error": {
@@ -1534,11 +1546,14 @@
       "cloud_unreachable": "Impossibile raggiungere il gateway cloud di Samsung per ottenere l'UUID necessario a emettere il certificato di questo dispositivo. Verifica l'accesso a internet di Home Assistant e riprova.",
       "unexpected_response": "Connessione al dispositivo riuscita, ma non ha restituito una descrizione del dispositivo utilizzabile. Potrebbe non essere un apparecchio supportato da questa integrazione. Il log di Home Assistant riporta ciò che ha inviato.",
       "cannot_connect": "Impossibile connettersi al dispositivo. Verificare che l'indirizzo IP sia raggiungibile e che le credenziali CA siano corrette.",
+      "invalid_auth": "Le credenziali OwnerPSK sono state rifiutate o appartengono a un altro dispositivo OCF.",
+      "psk_cannot_connect": "Impossibile raggiungere l'endpoint OCF configurato. Le credenziali salvate non sono state modificate.",
       "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
       "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli."
     },
     "abort": {
-      "already_configured": "Il dispositivo è già configurato"
+      "already_configured": "Il dispositivo è già configurato",
+      "reauth_not_supported": "Questa voce non usa l'autenticazione OwnerPSK."
     }
   },
   "options": {

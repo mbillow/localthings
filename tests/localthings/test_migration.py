@@ -13,7 +13,14 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
+    AUTH_CERTIFICATE,
+    AUTH_OWNER_PSK,
+    CONF_AUTH_TYPE,
+    CONF_DEVICE_KEY,
     CONF_HOST,
+    CONF_OWNER_PSK,
+    CONF_OWNER_UUID,
+    CONF_PORT,
     CONF_SERIAL,
     DOMAIN,
 )
@@ -53,7 +60,7 @@ async def test_migration_recovers_serial_from_unique_id(
     # relabel that no-ops for a family without particulate sensors, and
     # v3 -> v4 only records the legacy key for the coordinator to re-key
     # from once a poll produces an OCF device id.
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_SERIAL] == MOCK_SERIAL
 
 
@@ -268,10 +275,52 @@ async def test_migration_rejects_a_future_entry_version(hass: HomeAssistant) -> 
     written by a newer release."""
     from custom_components.localthings import async_migrate_entry
 
-    entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=5)
+    entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=6)
     entry.add_to_hass(hass)
+    before = dict(entry.data)
 
     assert await async_migrate_entry(hass, entry) is False
+    assert entry.version == 6
+    assert entry.data == before
+
+
+async def test_v4_migration_adds_only_certificate_discriminator(
+    hass: HomeAssistant,
+) -> None:
+    """The auth migration must preserve every existing credential byte and identity."""
+    from custom_components.localthings import async_migrate_entry
+
+    data = dict(LEGACY_ENTRY_DATA)
+    data[CONF_SERIAL] = MOCK_SERIAL
+    entry = MockConfigEntry(domain=DOMAIN, data=data, version=4)
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+
+    assert entry.version == 5
+    assert entry.data == {**data, CONF_AUTH_TYPE: AUTH_CERTIFICATE}
+
+
+async def test_current_owner_psk_entry_is_a_migration_noop(
+    hass: HomeAssistant,
+) -> None:
+    """A current PSK entry must never be mistaken for a legacy certificate entry."""
+    from custom_components.localthings import async_migrate_entry
+
+    data = {
+        CONF_HOST: "192.0.2.10",
+        CONF_PORT: 5684,
+        CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+        CONF_DEVICE_KEY: "11111111-2222-4333-8444-555555555555",
+        CONF_OWNER_UUID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        CONF_OWNER_PSK: "00112233445566778899aabbccddeeff",
+    }
+    entry = MockConfigEntry(domain=DOMAIN, data=data, version=5)
+    entry.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, entry) is True
+    assert entry.version == 5
+    assert entry.data == data
 
 
 async def test_migration_without_a_unique_id_falls_back_to_host(hass: HomeAssistant) -> None:

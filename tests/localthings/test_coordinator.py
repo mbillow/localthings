@@ -6,20 +6,33 @@ import asyncio
 import contextlib
 import time
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import cbor2
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers import issue_registry as ir
-from smartthings_local.errors import SessionClosedError, SessionError, SessionTimeoutError
+from homeassistant.helpers.update_coordinator import UpdateFailed
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from smartthings_local.errors import (
+    AuthenticationError,
+    SessionClosedError,
+    SessionError,
+    SessionTimeoutError,
+)
 
 from custom_components.localthings.const import (
+    AUTH_OWNER_PSK,
+    CONF_AUTH_TYPE,
     CONF_BYPASS_REMOTE_CONTROL,
+    CONF_DEVICE_KEY,
     CONF_HOST,
+    CONF_OWNER_PSK,
+    CONF_OWNER_UUID,
+    CONF_PORT,
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
@@ -28,6 +41,10 @@ from custom_components.localthings.coordinator import (
     _RECOVERY_RETRY_S,
     LocalThingsCoordinator,
     _local_source_port,
+)
+from custom_components.localthings.credentials import (
+    InvalidCredentialConfig,
+    OwnerPskDeviceMismatch,
 )
 from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL, PUSH_HEALTH_WINDOW_S
 from custom_components.localthings.registry.capabilities.common import (
@@ -1898,6 +1915,211 @@ def test_local_source_port_non_ipv4_falls_back_to_hash() -> None:
     port = _local_source_port("some-hostname")
     assert port == _local_source_port("some-hostname")
     assert DTLS_LOCAL_PORT_BASE <= port <= DTLS_LOCAL_PORT_BASE + 0xFF
+
+
+def test_connect_session_preserves_the_certificate_session_contract(
+    hass: HomeAssistant,
+    mock_entry,
+) -> None:
+    """The coordinator owns lifecycle I/O after the factory constructs a session."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    session = MagicMock()
+    identity = MagicMock()
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_entry_session",
+            return_value=session,
+        ) as session_factory,
+        patch(
+            "custom_components.localthings.coordinator.read_identity",
+            return_value=identity,
+        ) as read_identity,
+    ):
+        coordinator._connect_session()
+
+    session_factory.assert_called_once_with(
+        mock_entry.data,
+        on_notification=coordinator._observe.on_notification,
+        local_port=_local_source_port(mock_entry.data[CONF_HOST]),
+    )
+    assert session.method_calls[:2] == [call.connect(), call.start_reader()]
+    read_identity.assert_called_once_with(session, None)
+    assert coordinator._session is session
+    assert coordinator._identity is identity
+
+
+def test_connect_session_does_not_publish_an_unstarted_session(
+    hass: HomeAssistant,
+    mock_entry,
+) -> None:
+    """A failed connect remains invisible to poll and command paths."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    session = MagicMock()
+    session.start_reader.side_effect = RuntimeError("reader failed")
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_entry_session",
+            return_value=session,
+        ),
+        patch("custom_components.localthings.coordinator.read_identity") as read_identity,
+        pytest.raises(RuntimeError, match="reader failed"),
+    ):
+        coordinator._connect_session()
+
+    assert session.method_calls[:2] == [call.connect(), call.start_reader()]
+    session.close.assert_called_once_with()
+    read_identity.assert_not_called()
+    assert coordinator._session is None
+
+
+def _owner_psk_entry(hass: HomeAssistant) -> MockConfigEntry:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Synthetic OCF device",
+        data={
+            CONF_HOST: "192.0.2.10",
+            CONF_PORT: 5684,
+            CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+            CONF_DEVICE_KEY: "11111111-2222-4333-8444-555555555555",
+            CONF_OWNER_UUID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            CONF_OWNER_PSK: "00112233445566778899aabbccddeeff",
+        },
+        version=5,
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+def test_owner_psk_session_is_bound_before_it_is_published(
+    hass: HomeAssistant,
+) -> None:
+    """An authenticated session stays private until /oic/d matches the entry."""
+    entry = _owner_psk_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    session = MagicMock()
+    identity = MagicMock()
+
+    def _reported_device_id(candidate) -> str:
+        assert candidate is session
+        assert coordinator._session is None
+        return entry.data[CONF_DEVICE_KEY]
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_entry_session",
+            return_value=session,
+        ) as session_factory,
+        patch(
+            "custom_components.localthings.coordinator.read_ocf_device_id",
+            side_effect=_reported_device_id,
+        ) as read_device_id,
+        patch(
+            "custom_components.localthings.coordinator.read_identity",
+            return_value=identity,
+        ),
+    ):
+        coordinator._connect_session()
+
+    session_factory.assert_called_once_with(
+        entry.data,
+        on_notification=coordinator._observe.on_notification,
+        local_port=_local_source_port(entry.data[CONF_HOST]),
+    )
+    assert session.method_calls[:2] == [call.connect(), call.start_reader()]
+    read_device_id.assert_called_once_with(session)
+    assert coordinator._session is session
+    assert coordinator._identity is identity
+
+
+def test_owner_psk_session_mismatch_is_closed_before_publication(
+    hass: HomeAssistant,
+) -> None:
+    entry = _owner_psk_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    session = MagicMock()
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.session_factory.create_entry_session",
+            return_value=session,
+        ),
+        patch(
+            "custom_components.localthings.coordinator.read_ocf_device_id",
+            return_value="22222222-3333-4444-8555-666666666666",
+        ),
+        patch("custom_components.localthings.coordinator.read_identity") as read_identity,
+        pytest.raises(OwnerPskDeviceMismatch),
+    ):
+        coordinator._connect_session()
+
+    session.close.assert_called_once_with()
+    read_identity.assert_not_called()
+    assert coordinator._session is None
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        InvalidCredentialConfig("invalid OwnerPSK"),
+        OwnerPskDeviceMismatch("authenticated OCF device did not match"),
+        AuthenticationError(),
+    ],
+)
+async def test_definitive_owner_psk_failure_requests_reauthentication(
+    hass: HomeAssistant,
+    failure: Exception,
+) -> None:
+    entry = _owner_psk_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+
+    with (
+        patch.object(coordinator, "_poll_once", side_effect=failure),
+        pytest.raises(ConfigEntryAuthFailed),
+    ):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.parametrize("failure", [SessionError(), TimeoutError()])
+async def test_ambiguous_owner_psk_failure_remains_an_availability_error(
+    hass: HomeAssistant,
+    failure: Exception,
+) -> None:
+    """A silent or unreachable endpoint must not be mislabeled as bad credentials."""
+    entry = _owner_psk_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+
+    with (
+        patch.object(coordinator, "_poll_once", side_effect=[failure, failure]),
+        patch(
+            "custom_components.localthings.coordinator.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+        pytest.raises(UpdateFailed),
+    ):
+        await coordinator._async_update_data()
+
+
+async def test_certificate_authentication_error_keeps_existing_behavior(
+    hass: HomeAssistant,
+    mock_entry,
+) -> None:
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+
+    with (
+        patch.object(
+            coordinator,
+            "_poll_once",
+            side_effect=[AuthenticationError(), AuthenticationError()],
+        ),
+        patch(
+            "custom_components.localthings.coordinator.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+        pytest.raises(UpdateFailed),
+    ):
+        await coordinator._async_update_data()
 
 
 # ----------------------------------------------------------------------

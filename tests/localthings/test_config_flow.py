@@ -4,14 +4,19 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import ClassVar, cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.helpers.selector import TextSelector
+from pytest_homeassistant_custom_component.common import MockConfigEntry, start_reauth_flow
 
 from custom_components.localthings.const import (
+    AUTH_CERTIFICATE,
+    AUTH_OWNER_PSK,
+    CONF_AUTH_TYPE,
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
@@ -21,9 +26,15 @@ from custom_components.localthings.const import (
     CONF_LEAF_CERT_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
+    CONF_OWNER_PSK,
+    CONF_OWNER_UUID,
     CONF_PORT,
     CONF_SERIAL,
     DOMAIN,
+)
+from custom_components.localthings.credentials import (
+    InvalidCredentialConfig,
+    OwnerPskDeviceMismatch,
 )
 
 from .conftest import (
@@ -38,6 +49,30 @@ from .conftest import (
     MOCK_SERIAL,
     _probe_result,
 )
+
+_OWNER_UUID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+_OWNER_PSK = "00112233445566778899aabbccddeeff"
+
+
+def _owner_psk_entry(hass: HomeAssistant) -> MockConfigEntry:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Synthetic OCF device",
+        data={
+            CONF_HOST: "192.0.2.10",
+            CONF_PORT: 5684,
+            CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+            CONF_DEVICE_KEY: "11111111-2222-4333-8444-555555555555",
+            CONF_SERIAL: "SYNTHETIC-SERIAL",
+            CONF_OWNER_UUID: _OWNER_UUID,
+            CONF_OWNER_PSK: _OWNER_PSK,
+        },
+        options={"preserved": True},
+        unique_id="localthings_11111111-2222-4333-8444-555555555555",
+        version=5,
+    )
+    entry.add_to_hass(hass)
+    return entry
 
 
 async def test_form_first_device(hass: HomeAssistant) -> None:
@@ -65,6 +100,59 @@ async def test_form_second_device_reuses_creds(hass: HomeAssistant) -> None:
     assert CONF_CA_KEY_PEM not in data_schema.schema
 
 
+async def test_owner_psk_entry_is_never_a_certificate_reuse_source(
+    hass: HomeAssistant,
+) -> None:
+    """A PSK entry cannot be indexed as though it held a reusable CA key."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_HOST: "192.0.2.10",
+            CONF_PORT: 5684,
+            CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+            CONF_DEVICE_KEY: "11111111-2222-4333-8444-555555555555",
+            CONF_OWNER_UUID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            CONF_OWNER_PSK: "00112233445566778899aabbccddeeff",
+        },
+        version=5,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    data_schema = result["data_schema"]
+    assert data_schema is not None
+    assert CONF_CA_CERT_PEM in data_schema.schema
+    assert CONF_CA_KEY_PEM in data_schema.schema
+
+
+async def test_certificate_reuse_skips_an_earlier_owner_psk_entry(
+    hass: HomeAssistant,
+) -> None:
+    """Entry order cannot make a PSK record hide a valid certificate source."""
+    psk_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_HOST: "192.0.2.10",
+            CONF_PORT: 5684,
+            CONF_AUTH_TYPE: AUTH_OWNER_PSK,
+            CONF_OWNER_UUID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            CONF_OWNER_PSK: "00112233445566778899aabbccddeeff",
+        },
+        version=5,
+    )
+    psk_entry.add_to_hass(hass)
+    certificate_entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, version=5)
+    certificate_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user_reuse"
+
+
 async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
     """Happy path: valid IP connects, entry created with discovered port."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
@@ -79,6 +167,7 @@ async def test_successful_setup(hass: HomeAssistant, mock_probe) -> None:
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_HOST] == MOCK_HOST
     assert result["data"][CONF_PORT] == MOCK_PORT
+    assert result["data"][CONF_AUTH_TYPE] == AUTH_CERTIFICATE
     assert result["data"][CONF_CA_CERT_PEM] == MOCK_CA_CERT_PEM
 
 
@@ -102,6 +191,267 @@ async def test_setup_normalizes_messy_pasted_pem(hass: HomeAssistant, mock_probe
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_CA_CERT_PEM] == MOCK_CA_CERT_PEM
     assert result["data"][CONF_CA_KEY_PEM] == MOCK_CA_KEY_PEM
+
+
+async def test_owner_psk_reauth_form_never_prefills_the_secret(
+    hass: HomeAssistant,
+) -> None:
+    entry = _owner_psk_entry(hass)
+
+    result = await start_reauth_flow(hass, entry)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    schema = result["data_schema"]
+    assert schema is not None
+    marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
+    assert marker.default is vol.UNDEFINED
+    selector = schema.schema[marker]
+    assert isinstance(selector, TextSelector)
+    assert selector.config["type"] == "password"
+    assert _OWNER_PSK not in repr(result)
+
+
+async def test_owner_psk_reauth_updates_only_normalized_credentials(
+    hass: HomeAssistant,
+) -> None:
+    entry = _owner_psk_entry(hass)
+    before = dict(entry.data)
+    before_unique_id = entry.unique_id
+    before_options = dict(entry.options)
+    replacement_uuid = "12121212-3434-4656-8787-9a9a9a9a9a9a"
+    replacement_psk = "AABBCCDDEEFF00112233445566778899"
+
+    result = await start_reauth_flow(hass, entry)
+    with (
+        patch(
+            "custom_components.localthings.config_flow._verify_owner_psk",
+            return_value=(replacement_uuid, replacement_psk.lower()),
+        ) as verify,
+        patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_OWNER_UUID: replacement_uuid.upper(),
+                CONF_OWNER_PSK: replacement_psk,
+            },
+        )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    verify.assert_called_once_with(
+        before[CONF_HOST],
+        before[CONF_PORT],
+        before[CONF_DEVICE_KEY],
+        replacement_uuid.upper(),
+        replacement_psk,
+    )
+    assert entry.data == {
+        **before,
+        CONF_OWNER_UUID: replacement_uuid,
+        CONF_OWNER_PSK: replacement_psk.lower(),
+    }
+    assert entry.unique_id == before_unique_id
+    assert entry.options == before_options
+    schedule_reload.assert_called_once_with(entry.entry_id)
+
+
+async def test_owner_psk_can_be_reconfigured_manually_without_secret_prefill(
+    hass: HomeAssistant,
+) -> None:
+    """Manual recovery stays available when the transport cannot classify rejection."""
+    entry = _owner_psk_entry(hass)
+    before = dict(entry.data)
+    replacement_uuid = "12121212-3434-4656-8787-9a9a9a9a9a9a"
+    replacement_psk = "aabbccddeeff00112233445566778899"
+
+    result = await entry.start_reconfigure_flow(hass)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert _OWNER_PSK not in repr(result)
+
+    with (
+        patch(
+            "custom_components.localthings.config_flow._verify_owner_psk",
+            return_value=(replacement_uuid, replacement_psk),
+        ),
+        patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_OWNER_UUID: replacement_uuid,
+                CONF_OWNER_PSK: replacement_psk,
+            },
+        )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data == {
+        **before,
+        CONF_OWNER_UUID: replacement_uuid,
+        CONF_OWNER_PSK: replacement_psk,
+    }
+    schedule_reload.assert_called_once_with(entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    ("failure", "error_key"),
+    [
+        (InvalidCredentialConfig("invalid OwnerPSK"), "invalid_auth"),
+        (TimeoutError("endpoint timeout"), "psk_cannot_connect"),
+    ],
+)
+async def test_owner_psk_reauth_failure_keeps_stored_credentials_redacted(
+    hass: HomeAssistant,
+    failure: Exception,
+    error_key: str,
+) -> None:
+    entry = _owner_psk_entry(hass)
+    before = dict(entry.data)
+    submitted_psk = "ffeeddccbbaa99887766554433221100"
+
+    result = await start_reauth_flow(hass, entry)
+    with patch(
+        "custom_components.localthings.config_flow._verify_owner_psk",
+        side_effect=failure,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_OWNER_UUID: _OWNER_UUID,
+                CONF_OWNER_PSK: submitted_psk,
+            },
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": error_key}
+    assert entry.data == before
+    assert submitted_psk not in repr(result)
+    schema = result["data_schema"]
+    assert schema is not None
+    marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
+    assert marker.default is vol.UNDEFINED
+
+
+async def test_certificate_entry_does_not_enter_owner_psk_reauth(
+    hass: HomeAssistant,
+) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=ENTRY_DATA,
+        version=5,
+    )
+    entry.add_to_hass(hass)
+
+    result = await start_reauth_flow(hass, entry)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_not_supported"
+
+
+async def test_certificate_entry_does_not_enter_owner_psk_reconfigure(
+    hass: HomeAssistant,
+) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, version=5)
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_not_supported"
+
+
+def test_owner_psk_reauth_probe_closes_the_temporary_session() -> None:
+    from custom_components.localthings.config_flow import _verify_owner_psk
+
+    session = MagicMock()
+    with (
+        patch(
+            "custom_components.localthings.config_flow.time.monotonic",
+            side_effect=[100.0, 100.0, 108.0],
+        ),
+        patch(
+            "custom_components.localthings.config_flow.session_factory.create_owner_psk_session",
+            return_value=session,
+        ),
+        patch(
+            "custom_components.localthings.config_flow.read_ocf_device_id",
+            return_value=MOCK_DEVICE_KEY,
+        ) as read_device_id,
+    ):
+        assert _verify_owner_psk(
+            MOCK_HOST,
+            MOCK_PORT,
+            MOCK_DEVICE_KEY,
+            _OWNER_UUID,
+            _OWNER_PSK,
+        ) == (_OWNER_UUID, _OWNER_PSK)
+
+    session.connect.assert_called_once_with(timeout=10.0)
+    session.start_reader.assert_called_once_with()
+    read_device_id.assert_called_once_with(session, timeout=2.0)
+    session.close.assert_called_once_with()
+
+
+def test_owner_psk_reauth_probe_enforces_one_total_deadline() -> None:
+    from custom_components.localthings.config_flow import _verify_owner_psk
+
+    session = MagicMock()
+    with (
+        patch(
+            "custom_components.localthings.config_flow.time.monotonic",
+            side_effect=[100.0, 100.0, 111.0],
+        ),
+        patch(
+            "custom_components.localthings.config_flow.session_factory.create_owner_psk_session",
+            return_value=session,
+        ),
+        patch(
+            "custom_components.localthings.config_flow.read_ocf_device_id",
+        ) as read_device_id,
+        pytest.raises(TimeoutError, match="validation timed out"),
+    ):
+        _verify_owner_psk(
+            MOCK_HOST,
+            MOCK_PORT,
+            MOCK_DEVICE_KEY,
+            _OWNER_UUID,
+            _OWNER_PSK,
+        )
+
+    session.connect.assert_called_once_with(timeout=10.0)
+    session.start_reader.assert_called_once_with()
+    read_device_id.assert_not_called()
+    session.close.assert_called_once_with()
+
+
+def test_owner_psk_reauth_probe_closes_a_mismatched_session() -> None:
+    from custom_components.localthings.config_flow import _verify_owner_psk
+
+    session = MagicMock()
+    with (
+        patch(
+            "custom_components.localthings.config_flow.session_factory.create_owner_psk_session",
+            return_value=session,
+        ),
+        patch(
+            "custom_components.localthings.config_flow.read_ocf_device_id",
+            return_value="11111111-2222-4333-8444-555555555555",
+        ),
+        pytest.raises(OwnerPskDeviceMismatch),
+    ):
+        _verify_owner_psk(
+            MOCK_HOST,
+            MOCK_PORT,
+            MOCK_DEVICE_KEY,
+            _OWNER_UUID,
+            _OWNER_PSK,
+        )
+
+    session.close.assert_called_once_with()
 
 
 def test_normalize_pem_strips_bom_crlf_and_blank_lines() -> None:
@@ -233,6 +583,17 @@ WASHER_DEVICE0 = [
 ]
 
 
+class FakeCertificateAuth:
+    """Synthetic provider that keeps only the credential label tests need."""
+
+    def __init__(self, certificate_pem: str, private_key_pem: str) -> None:
+        self.certificate_pem = certificate_pem
+        self.private_key_pem = private_key_pem
+
+    def configure_context(self, _context) -> None:
+        """Satisfy the authentication-provider protocol."""
+
+
 class FakeSession:
     """Stand-in for DtlsCoapSession that answers /device/0 for any path.
 
@@ -242,6 +603,7 @@ class FakeSession:
     """
 
     instances: ClassVar[list[FakeSession]] = []
+    probe_instances: ClassVar[list[FakeSession]] = []
     reject_certs: ClassVar[set[str]] = set()
     # smartthings-local >= 0.1.3 ("redacted typed failures") no longer puts
     # the alert in connect()'s exception text -- set True to model that, so
@@ -249,8 +611,10 @@ class FakeSession:
     # instead of the legacy _alert_name text-parsing path.
     redact_rejection: ClassVar[bool] = False
 
-    def __init__(self, host, port, cert_pem=None, key_pem=None, **kwargs):
-        self.host, self.port, self.cert_pem = host, port, cert_pem
+    def __init__(self, host, port, cert_pem=None, key_pem=None, auth=None, **kwargs):
+        self.host, self.port = host, port
+        self.auth = auth
+        self.cert_pem = auth.certificate_pem if auth is not None else cert_pem
         FakeSession.instances.append(self)
 
     def connect(self):
@@ -275,12 +639,40 @@ class FakeSession:
         pass
 
 
+class FakeSessionFactory:
+    """Build config-flow sessions with inspectable synthetic providers."""
+
+    @staticmethod
+    def create_certificate_session(
+        host,
+        port,
+        *,
+        certificate_pem,
+        private_key_pem,
+        **kwargs,
+    ) -> FakeSession:
+        session = FakeSession(
+            host,
+            port,
+            auth=FakeCertificateAuth(certificate_pem, private_key_pem),
+            **kwargs,
+        )
+        FakeSession.probe_instances.append(session)
+        return session
+
+
+def _probe_sessions() -> list[FakeSession]:
+    """Sessions opened by the config flow, excluding the loaded coordinator."""
+    return list(FakeSession.probe_instances)
+
+
 @pytest.fixture
 def fake_dtls(monkeypatch):
     """Wire the probe path up to FakeSession with no real network anywhere."""
     from custom_components.localthings import config_flow
 
     FakeSession.instances = []
+    FakeSession.probe_instances = []
     FakeSession.reject_certs = set()
     FakeSession.redact_rejection = False
     monkeypatch.setattr(config_flow, "_fetch_samsung_uuid", lambda: "test-uuid")
@@ -293,6 +685,7 @@ def fake_dtls(monkeypatch):
         "smartthings_local.protocol.dtls_session.DtlsCoapSession",
         FakeSession,
     )
+    monkeypatch.setattr(config_flow, "session_factory", FakeSessionFactory())
     return FakeSession
 
 
@@ -349,7 +742,7 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     # The whole range is probed (cheaply, in parallel) but only the confirmed
     # port is handed a handshake.
     assert set(probed) == set(config_flow.PROBE_PORT_RANGE)
-    assert [s.port for s in FakeSession.instances] == [49153]
+    assert [session.port for session in _probe_sessions()] == [49153]
 
 
 async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, fake_dtls) -> None:
@@ -470,7 +863,7 @@ async def test_second_device_reuses_the_existing_leaf(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == MOCK_LEAF_CERT_PEM
-    assert FakeSession.instances[0].cert_pem == MOCK_LEAF_CERT_PEM
+    assert _probe_sessions()[0].cert_pem == MOCK_LEAF_CERT_PEM
 
 
 async def test_rejected_reused_leaf_is_reminted(
@@ -492,7 +885,10 @@ async def test_rejected_reused_leaf_is_reminted(
     assert result["type"] == FlowResultType.CREATE_ENTRY
     # Freshly minted, and it's the fresh one that got stored.
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [session.cert_pem for session in _probe_sessions()] == [
+        MOCK_LEAF_CERT_PEM,
+        "FULLCHAIN",
+    ]
 
 
 async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
@@ -529,11 +925,14 @@ async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [session.cert_pem for session in _probe_sessions()] == [
+        MOCK_LEAF_CERT_PEM,
+        "FULLCHAIN",
+    ]
     assert diagnosed == [49154]
 
 
-def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch) -> None:
+def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch, fake_dtls) -> None:
     """_diagnostic_alert commits association state on the device (see its
     own docstring) -- running it once per failing candidate instead of once
     overall would both add latency (each is its own bounded handshake) and
@@ -543,10 +942,8 @@ def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch) -
     port, not three times against every candidate in scan order."""
     from custom_components.localthings import config_flow
 
-    FakeSession.instances = []
     FakeSession.reject_certs = {MOCK_LEAF_CERT_PEM}
     FakeSession.redact_rejection = True
-    monkeypatch.setattr("smartthings_local.protocol.dtls_session.DtlsCoapSession", FakeSession)
 
     diagnosed: list[int] = []
 
@@ -597,7 +994,7 @@ async def test_unconfirmed_port_failure_is_not_reminted(
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "no_dtls_server"
-    assert len(FakeSession.instances) == 1
+    assert len(_probe_sessions()) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -929,7 +1326,7 @@ def test_every_error_key_the_flow_can_raise_has_a_message() -> None:
         if isinstance(cls, type)
         and issubclass(cls, (config_flow.CannotConnect, config_flow.InvalidCA))
     }
-    keys.add("unknown")
+    keys.update({"unknown", "invalid_auth", "psk_cannot_connect"})
 
     catalog = json.loads(
         (

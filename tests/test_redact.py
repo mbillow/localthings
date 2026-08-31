@@ -130,3 +130,21 @@ def test_bare_key_redaction_does_not_leak_into_substring_matching():
         "spinSpeed": "1200",
         "name": "FilterProgress",
     }
+
+
+def test_redacts_psk_and_credential_keys_without_redacting_ordinary_values():
+    redacted = redact_resources(
+        {
+            "/wireless": {
+                "wifiPsk": "00112233445566778899aabbccddeeff",
+                "ownerCredential": "private-controller-state",
+                "securityType": "WPA2-PSK",
+            },
+        }
+    )
+
+    assert redacted["/wireless"] == {
+        "wifiPsk": REDACTED,
+        "ownerCredential": REDACTED,
+        "securityType": "WPA2-PSK",
+    }

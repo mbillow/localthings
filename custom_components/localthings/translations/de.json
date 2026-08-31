@@ -1522,6 +1522,18 @@
       "confirm_unknown_type": {
         "title": "Gerätetyp nicht erkannt",
         "description": "Dieses Gerät hat das Modell \"{model}\" gemeldet, das LocalThings noch nicht als bekannten Typ erkennt. Es wird trotzdem hinzugefügt, jedoch nur mit allgemeinen Funktionen (z. B. Ein/Aus, Alarme, sofern vorhanden) und nicht mit dem vollständigen Funktionsumfang seiner Gerätefamilie. Sie können später helfen, die vollständige Unterstützung hinzuzufügen, indem Sie die Diagnosedaten für dieses Gerät herunterladen (Einstellungen > Geräte & Dienste > dieses Gerät > das Menü > Diagnose herunterladen) und sie in einem neuen Issue einreichen. Bestätigen Sie, um es trotzdem hinzuzufügen."
+      },
+      "reauth_confirm": {
+        "title": "OwnerPSK erneut authentifizieren",
+        "description": "Geben Sie die vorhandenen OCF-Eigentümerzugangsdaten für {device} ein. LocalThings validiert und speichert nur bereits vorhandene Zugangsdaten; es erwirbt, leitet, provisioniert oder rotiert sie nicht und überträgt kein Eigentum.",
+        "data": {
+          "owner_uuid": "Eigentümer-UUID",
+          "owner_psk": "OwnerPSK"
+        },
+        "data_description": {
+          "owner_uuid": "Die OCF-Eigentümer-UUID als 16-Byte-PSK-Clientidentität.",
+          "owner_psk": "Der vorhandene, hexadezimal codierte 128- oder 256-Bit-OwnerPSK."
+        }
       }
     },
     "error": {
@@ -1534,11 +1546,14 @@
       "cloud_unreachable": "Das Cloud-Gateway von Samsung konnte nicht erreicht werden, um die für die Zertifikatserstellung dieses Geräts benötigte UUID abzurufen. Prüfen Sie den Internetzugang von Home Assistant und versuchen Sie es erneut.",
       "unexpected_response": "Die Verbindung zum Gerät war erfolgreich, es hat jedoch keine verwendbare Gerätebeschreibung zurückgegeben. Möglicherweise wird dieses Gerät von der Integration nicht unterstützt. Weitere Informationen in den Logs.",
       "cannot_connect": "Verbindung zum Gerät nicht möglich. Prüfen Sie, ob die IP-Adresse erreichbar und die CA-Zugangsdaten korrekt sind.",
+      "invalid_auth": "Die OwnerPSK-Zugangsdaten wurden abgelehnt oder gehören zu einem anderen OCF-Gerät.",
+      "psk_cannot_connect": "Der konfigurierte OCF-Endpunkt ist nicht erreichbar. Die gespeicherten Zugangsdaten wurden nicht geändert.",
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs."
     },
     "abort": {
-      "already_configured": "Gerät ist bereits konfiguriert"
+      "already_configured": "Gerät ist bereits konfiguriert",
+      "reauth_not_supported": "Dieser Eintrag verwendet keine OwnerPSK-Authentifizierung."
     }
   },
   "options": {

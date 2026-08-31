@@ -13,6 +13,7 @@ import selectors
 import socket
 import ssl
 import time
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
@@ -33,11 +34,16 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
+from smartthings_local.errors import AuthenticationError, SessionError
 
 from . import cloudcourse
+from . import session as session_factory
 from .const import (
+    AUTH_CERTIFICATE,
+    AUTH_OWNER_PSK,
     CLIENTHELLO_PROBE_RETRIES,
     CLIENTHELLO_PROBE_TIMEOUT_S,
+    CONF_AUTH_TYPE,
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
@@ -51,6 +57,8 @@ from .const import (
     CONF_LEARN_MODES,
     CONF_MANUFACTURER,
     CONF_MODEL,
+    CONF_OWNER_PSK,
+    CONF_OWNER_UUID,
     CONF_PORT,
     CONF_SERIAL,
     DEFAULT_CLOUD_COURSES_ENABLED,
@@ -64,14 +72,23 @@ from .const import (
     PROBE_PORT_RANGE,
     SERVICE_WRITE_RESOURCE,
 )
+from .credentials import (
+    InvalidCredentialConfig,
+    OwnerPskDeviceMismatch,
+    normalize_owner_psk,
+    normalize_owner_uuid,
+    require_matching_ocf_uuid,
+)
 from .devices import find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
+from .registry.identity import read_ocf_device_id
 from .registry.subdevices import MAIN
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
+_PASSWORD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 _HYSTERESIS_MINUTES = NumberSelector(
     NumberSelectorConfig(
         min=0,
@@ -92,6 +109,7 @@ _CLOUD_PROBE_INTERVAL_S = 3.0
 _LOGGER = logging.getLogger(__name__)
 
 _SAMSUNG_CLOUD_HOST = "connect-v2.samsungiotcloud.com"
+_REAUTH_TIMEOUT_S = 10.0
 
 
 class CannotConnect(Exception):
@@ -742,13 +760,16 @@ def _diagnose_failures(
 
 def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
-    from smartthings_local.protocol.dtls_session import DtlsCoapSession
-
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
         sess = None
         try:
-            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            sess = session_factory.create_certificate_session(
+                host,
+                port,
+                certificate_pem=cert_pem,
+                private_key_pem=key_pem,
+            )
             sess.connect()
             sess.start_reader()
             return _read_device(sess, host, port)
@@ -807,6 +828,43 @@ def _probe_and_validate(
     return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
 
 
+def _verify_owner_psk(
+    host: str,
+    port: int,
+    device_key: str,
+    owner_uuid: str,
+    owner_psk: str,
+) -> tuple[str, str]:
+    """Validate replacement credentials against the exact peer under one deadline."""
+    normalized_uuid = normalize_owner_uuid(owner_uuid)
+    normalized_psk = normalize_owner_psk(owner_psk)
+    deadline = time.monotonic() + _REAUTH_TIMEOUT_S
+
+    def remaining() -> float:
+        value = deadline - time.monotonic()
+        if value <= 0:
+            raise TimeoutError("OwnerPSK validation timed out")
+        return value
+
+    sess = session_factory.create_owner_psk_session(
+        host,
+        port,
+        owner_uuid=normalized_uuid,
+        owner_psk=normalized_psk,
+    )
+    try:
+        sess.connect(timeout=remaining())
+        sess.start_reader()
+        require_matching_ocf_uuid(
+            device_key,
+            read_ocf_device_id(sess, timeout=remaining()),
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            sess.close()
+    return normalized_uuid, normalized_psk
+
+
 class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # v3 relabels the particulate sensors' recorded statistics; a freshly
     # created entry has none to relabel, so it starts at the migrated
@@ -814,7 +872,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # v4 keys the entry on the OCF device UUID (issue #381), which the probe
     # below resolves up front -- so a new entry is already on the v4 shape
     # and has nothing to re-key either.
-    VERSION = 4
+    # v5 adds an explicit auth discriminator. Existing entries migrate to
+    # certificate mode without changing any credential or identity value.
+    VERSION = 5
 
     def __init__(self) -> None:
         self._host: str = ""
@@ -844,6 +904,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data={
                 CONF_HOST: self._host,
                 CONF_PORT: info["port"],
+                CONF_AUTH_TYPE: AUTH_CERTIFICATE,
                 CONF_CA_CERT_PEM: self._ca_cert_pem,
                 CONF_CA_KEY_PEM: self._ca_key_pem,
                 CONF_LEAF_CERT_PEM: info["leaf_cert_pem"],
@@ -858,7 +919,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         existing = self.hass.config_entries.async_entries(DOMAIN)
-        has_creds = bool(existing)
+        certificate_entries = [
+            entry
+            for entry in existing
+            if entry.data.get(CONF_AUTH_TYPE, AUTH_CERTIFICATE) == AUTH_CERTIFICATE
+        ]
+        has_creds = bool(certificate_entries)
 
         errors: dict[str, str] = {}
 
@@ -866,10 +932,11 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._host = user_input[CONF_HOST].strip()
             existing_leaf = None
             if has_creds:
-                self._ca_cert_pem = existing[0].data[CONF_CA_CERT_PEM]
-                self._ca_key_pem = existing[0].data[CONF_CA_KEY_PEM]
-                leaf_cert = existing[0].data.get(CONF_LEAF_CERT_PEM)
-                leaf_key = existing[0].data.get(CONF_LEAF_KEY_PEM)
+                reusable_entry = certificate_entries[0]
+                self._ca_cert_pem = reusable_entry.data[CONF_CA_CERT_PEM]
+                self._ca_key_pem = reusable_entry.data[CONF_CA_KEY_PEM]
+                leaf_cert = reusable_entry.data.get(CONF_LEAF_CERT_PEM)
+                leaf_key = reusable_entry.data.get(CONF_LEAF_KEY_PEM)
                 if leaf_cert and leaf_key:
                     existing_leaf = (leaf_cert, leaf_key)
             else:
@@ -968,6 +1035,80 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # showing it here means a user filing the device-support issue
             # this step asks for can quote it without digging through logs.
             description_placeholders={"model": info.get("model") or "unknown"},
+        )
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        """Start Home Assistant's standard reauthentication flow for OwnerPSK."""
+        if entry_data.get(CONF_AUTH_TYPE, AUTH_CERTIFICATE) != AUTH_OWNER_PSK:
+            return self.async_abort(reason="reauth_not_supported")
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle user-initiated OwnerPSK replacement."""
+        entry = self._get_reconfigure_entry()
+        if entry.data.get(CONF_AUTH_TYPE, AUTH_CERTIFICATE) != AUTH_OWNER_PSK:
+            return self.async_abort(reason="reauth_not_supported")
+        return await self.async_step_reauth_confirm(user_input)
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Validate replacement OwnerPSK credentials before storing them."""
+        entry = (
+            self._get_reconfigure_entry()
+            if self.source == config_entries.SOURCE_RECONFIGURE
+            else self._get_reauth_entry()
+        )
+        if entry.data.get(CONF_AUTH_TYPE, AUTH_CERTIFICATE) != AUTH_OWNER_PSK:
+            return self.async_abort(reason="reauth_not_supported")
+
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                owner_uuid, owner_psk = await self.hass.async_add_executor_job(
+                    _verify_owner_psk,
+                    entry.data[CONF_HOST],
+                    entry.data[CONF_PORT],
+                    entry.data[CONF_DEVICE_KEY],
+                    user_input[CONF_OWNER_UUID],
+                    user_input[CONF_OWNER_PSK],
+                )
+            except (AuthenticationError, InvalidCredentialConfig, OwnerPskDeviceMismatch):
+                errors["base"] = "invalid_auth"
+            except (SessionError, TimeoutError, OSError) as exc:
+                _LOGGER.warning(
+                    "OwnerPSK reauthentication of %s could not connect [%s]",
+                    entry.data[CONF_HOST],
+                    type(exc).__name__,
+                )
+                errors["base"] = "psk_cannot_connect"
+            except Exception as exc:
+                _LOGGER.error(
+                    "Unexpected OwnerPSK reauthentication failure [%s]",
+                    type(exc).__name__,
+                )
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={
+                        CONF_OWNER_UUID: owner_uuid,
+                        CONF_OWNER_PSK: owner_psk,
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_OWNER_UUID): _TEXT,
+                    vol.Required(CONF_OWNER_PSK): _PASSWORD,
+                }
+            ),
+            description_placeholders={"device": entry.title},
+            errors=errors,
         )
 
 

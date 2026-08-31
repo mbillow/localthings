@@ -15,6 +15,8 @@ from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
+    AUTH_CERTIFICATE,
+    CONF_AUTH_TYPE,
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
     CONF_DEVICE_KEY,
@@ -100,6 +102,7 @@ MOCK_LEAF_KEY_PEM = "-----BEGIN PRIVATE KEY-----\nTEST-LEAF-KEY\n-----END PRIVAT
 ENTRY_DATA = {
     CONF_HOST: MOCK_HOST,
     CONF_PORT: MOCK_PORT,
+    CONF_AUTH_TYPE: AUTH_CERTIFICATE,
     CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
     CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
     CONF_LEAF_CERT_PEM: MOCK_LEAF_CERT_PEM,
@@ -282,7 +285,7 @@ def mock_entry(hass):
         domain=DOMAIN,
         data=ENTRY_DATA,
         unique_id=f"localthings_{MOCK_DEVICE_KEY}",
-        version=4,
+        version=5,
     )
     entry.add_to_hass(hass)
     return entry
