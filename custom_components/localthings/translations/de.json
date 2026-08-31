@@ -416,6 +416,17 @@
           "3d": "Jeansstoff"
         }
       },
+      "dryer_dry_level": {
+        "name": "Trockenstufe",
+        "state": {
+          "none": "Aus",
+          "damp": "Feucht",
+          "less": "Weniger",
+          "normal": "Normal",
+          "more": "Mehr",
+          "very": "Sehr"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoritenmenge"
       },

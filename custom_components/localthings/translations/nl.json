@@ -416,6 +416,17 @@
           "3d": "Spijkergoed"
         }
       },
+      "dryer_dry_level": {
+        "name": "Droogniveau",
+        "state": {
+          "none": "Uit",
+          "damp": "Vochtig",
+          "less": "Minder",
+          "normal": "Normaal",
+          "more": "Meer",
+          "very": "Zeer"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoriete capaciteit"
       },

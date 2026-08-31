@@ -416,6 +416,17 @@
           "3d": "Jeans"
         }
       },
+      "dryer_dry_level": {
+        "name": "Livello asciugatura",
+        "state": {
+          "none": "Spento",
+          "damp": "Umido",
+          "less": "Meno",
+          "normal": "Normale",
+          "more": "Più",
+          "very": "Molto"
+        }
+      },
       "favorite_capacity": {
         "name": "Capacità preferita"
       },

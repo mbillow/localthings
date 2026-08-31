@@ -10,7 +10,7 @@ the /course/vs/0 cycle select -- lives in laundry.py.
 """
 
 from ..capability import Capability
-from ..entities import SensorDesc, SwitchDesc
+from ..entities import SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status
 from .laundry import cycle_select, drum_clean_cycles_remaining, drum_clean_last_cleaned
 
@@ -25,7 +25,39 @@ DRYER_SETTINGS = Capability(
     href="/washer/vs/0",
     poll_tier="warm",
     entities=(
-        SensorDesc(key="dry_level", field="x.com.samsung.da.dryLevel", icon="mdi:water-percent"),
+        # dryLevel here is a dryness dial with a live supportedDryLevel
+        # list, in one of two vocabularies: Damp/Less/Normal/More/Very on
+        # the TP1_21 dryers, or a numeric 1/2/3 on both DV5000T (TP2_20)
+        # and DV6800N (A51_20). Hence its own translation_key rather than
+        # washer.py's washer_dry_level, whose state table is that field's
+        # *other* meaning on a combo (minutes, "30" -> "30 min").
+        #
+        # The write was exercised on a DV5000T, which reports
+        # isModelSettingWithoutSC true and so takes it with Smart Control
+        # off (see common.remote_control_required_for_write).
+        #
+        # Deliberately field-gated rather than carrying washer.py's
+        # exists_fn on supportedDryLevel: there the gate discriminates a
+        # combo from a plain washer, but every dryer has a dry level, so
+        # here it would only suppress the entity -- including on a rep that
+        # is merely a stub at discovery (entity._is_included) and would
+        # have populated on the next sub-poll.
+        #
+        # No entity_category either, unlike washer.py's: this is a per-load
+        # choice made alongside the cycle, not device configuration, so it
+        # belongs in Controls next to the cycle select and wrinkle_prevent
+        # -- and that is where the sensor it replaces already sat.
+        SelectDesc(
+            key="dry_level",
+            field="x.com.samsung.da.dryLevel",
+            icon="mdi:tumble-dryer",
+            translation_key="dryer_dry_level",
+            options_field="x.com.samsung.da.supportedDryLevel",
+            write_fn=lambda p, rep, href=None: (
+                ["washer", "vs", "0"],
+                {"x.com.samsung.da.dryLevel": p},
+            ),
+        ),
         SensorDesc(key="dry_time", field="x.com.samsung.da.dryTime", icon="mdi:timer"),
         SensorDesc(
             key="dryer_type",

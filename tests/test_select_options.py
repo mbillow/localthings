@@ -6,6 +6,7 @@ and callable forms of SelectDesc.options.
 from typing import ClassVar, cast
 
 from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.registry.capabilities import dryer
 from custom_components.localthings.registry.capabilities.laundry import (
     BUZZER_SOUND,
     cycle_select,
@@ -65,6 +66,53 @@ def test_buzzer_volume_options_normalize_to_translation_keys():
         },
     )
     assert entity.options == ["volume_off", "volume_low", "volume_med", "volume_high"]
+
+
+def _dry_level_desc():
+    return next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
+
+
+def test_dryer_dry_level_word_vocabulary_normalizes_to_translation_keys():
+    """Damp/Less/Normal/More/Very are catalogued under dryer_dry_level, so
+    they normalize to lowercase state keys the same way
+    test_buzzer_volume_options_normalize_to_translation_keys does -- Home
+    Assistant's frontend resolves the displayed text from there."""
+    entity = _make_select(
+        _dry_level_desc(),
+        "/washer/vs/0",
+        {
+            "/washer/vs/0": {
+                "x.com.samsung.da.dryLevel": "Normal",
+                "x.com.samsung.da.supportedDryLevel": [
+                    "None",
+                    "Damp",
+                    "Less",
+                    "Normal",
+                    "More",
+                    "Very",
+                ],
+            }
+        },
+    )
+    assert entity.options == ["none", "damp", "less", "normal", "more", "very"]
+
+
+def test_dryer_dry_level_numeric_vocabulary_renders_raw():
+    """DV6800N reports supportedDryLevel as None/1/2/3 rather than the
+    confirmed words. 'None' still normalizes (it is in the catalog); the
+    digits have no catalog entry, so they pass through unchanged instead of
+    being guessed at."""
+    entity = _make_select(
+        _dry_level_desc(),
+        "/washer/vs/0",
+        {
+            "/washer/vs/0": {
+                "x.com.samsung.da.dryLevel": "2",
+                "x.com.samsung.da.supportedDryLevel": ["None", "1", "2", "3"],
+            }
+        },
+    )
+    assert entity.options == ["none", "1", "2", "3"]
 
 
 def test_callable_options_receives_full_resource_snapshot():

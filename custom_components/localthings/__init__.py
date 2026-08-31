@@ -193,6 +193,37 @@ def _relabel_particulate_statistics(hass: HomeAssistant, entry: ConfigEntry) -> 
     return True
 
 
+# Tail-matched for the same reason as _PARTICULATE_KEY_RE above. No
+# device-type gate: no registry binds a sensor-domain dry_level any more,
+# so the domain check plus this tail is already exact.
+_DRY_LEVEL_KEY_RE = re.compile(r"_dry_level(?:_\d+)?$")
+
+
+@callback
+def _drop_orphaned_dry_level_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the sensor row dryer.py's dry_level select supersedes.
+
+    unique_ids are scoped by (integration, platform), so a platform change
+    can't rewrite the old row -- it can only be dropped. dryer.py's select
+    is field-gated, not exists_fn-gated, precisely so it appears wherever
+    the sensor did and this removal is never left unmatched.
+    """
+    ent_reg = er.async_get(hass)
+    for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if registry_entry.domain != "sensor":
+            continue
+        if not _DRY_LEVEL_KEY_RE.search(registry_entry.unique_id):
+            continue
+        # INFO, not debug: this is irreversible and takes the user's rename,
+        # area and any automation reference with it.
+        _LOGGER.info(
+            "removing %s; dry level is now select.%s",
+            registry_entry.entity_id,
+            registry_entry.entity_id.partition(".")[2],
+        )
+        ent_reg.async_remove(registry_entry.entity_id)
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -214,11 +245,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     a UUID to rewrite *to*.
 
     The version is still bumped now rather than at that point, because the
-    bump's real job is the `entry.version > 4` downgrade guard below: an
+    bump's real job is the `entry.version > 5` downgrade guard below: an
     entry re-keyed onto a UUID and then loaded by a release that reads
     CONF_SERIAL as the key would silently orphan every entity it has.
+
+    v4 -> v5 drops the entity-registry row dryer.py's dry_level leaves
+    behind when it moves from a sensor to a select.
     """
-    if entry.version > 4:
+    if entry.version > 5:
         return False  # downgrade: this release doesn't know the newer shape
 
     if entry.version == 1:
@@ -257,6 +291,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.entry_id,
             legacy_key,
         )
+
+    if entry.version == 4:
+        _drop_orphaned_dry_level_sensors(hass, entry)
+        hass.config_entries.async_update_entry(entry, version=5)
+        _LOGGER.debug("migrated entry %s to version 5 (dry_level moved to select)", entry.entry_id)
 
     return True
 

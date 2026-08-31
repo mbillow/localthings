@@ -282,7 +282,7 @@ def mock_entry(hass):
         domain=DOMAIN,
         data=ENTRY_DATA,
         unique_id=f"localthings_{MOCK_DEVICE_KEY}",
-        version=4,
+        version=5,
     )
     entry.add_to_hass(hass)
     return entry

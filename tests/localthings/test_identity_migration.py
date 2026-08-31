@@ -178,7 +178,7 @@ async def test_v3_entry_moves_onto_the_device_uuid_keeping_its_entity_ids(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     # The serial is kept alongside the key, not replaced by it: it is what
     # corroborates a later change of UUID.
@@ -200,7 +200,8 @@ async def test_the_oldest_install_walks_all_the_way_from_v1(
     hass: HomeAssistant, fridge_resources
 ) -> None:
     """A v1 entry -- no stored identity at all, from before issue #236 --
-    walks v1 -> v2 -> v3 -> v4 and then adopts the UUID on its first poll.
+    walks v1 -> v2 -> v3 -> v4 -> v5 and then adopts the UUID on its first
+    poll.
 
     The oldest installs take the longest path, and each step rewrites what
     the next one reads, so the chain is worth pinning as one journey rather
@@ -215,7 +216,7 @@ async def test_the_oldest_install_walks_all_the_way_from_v1(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     assert entry.unique_id == f"{DOMAIN}_{UUID_A}"
     kept = er.async_get(hass).async_get(existing.entity_id)
@@ -593,16 +594,16 @@ async def test_restarting_after_the_upgrade_is_a_no_op(
 async def test_an_already_migrated_entry_is_left_alone(
     hass: HomeAssistant, fridge_resources
 ) -> None:
-    """A v4 entry created by the current config flow has nothing to migrate
+    """A v5 entry created by the current config flow has nothing to migrate
     and nothing to re-key -- it was minted on its UUID."""
-    entry = _entry(hass, version=4, key=UUID_A, serial=MOCK_SERIAL, device_key=UUID_A)
+    entry = _entry(hass, version=5, key=UUID_A, serial=MOCK_SERIAL, device_key=UUID_A)
     device, existing = _seed_registry(hass, entry, UUID_A)
 
     with _reachable(fridge_resources, UUID_A):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    assert entry.version == 4
+    assert entry.version == 5
     assert entry.data[CONF_DEVICE_KEY] == UUID_A
     assert _device_identifiers(hass, device.id) == {(DOMAIN, UUID_A)}
     assert _entity_unique_id(hass, existing.entity_id) == (f"{DOMAIN}_{UUID_A}_connection_mode")

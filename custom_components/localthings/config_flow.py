@@ -814,7 +814,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # v4 keys the entry on the OCF device UUID (issue #381), which the probe
     # below resolves up front -- so a new entry is already on the v4 shape
     # and has nothing to re-key either.
-    VERSION = 4
+    # v5 drops the sensor-domain dry_level registry row a dryer's platform
+    # move orphans; a freshly created entry never had that row.
+    VERSION = 5
 
     def __init__(self) -> None:
         self._host: str = ""
