@@ -1497,16 +1497,24 @@
     "step": {
       "user": {
         "title": "Aggiungi un elettrodomestico Samsung",
-        "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung e le credenziali CA AC14K_M utilizzate per generare i certificati del dispositivo.",
+        "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung. Home Assistant verificherà se parla il protocollo locale: non serve eseguire nmap né altri strumenti.",
         "data": {
-          "host": "Indirizzo IP",
-          "ca_cert_pem": "Certificato CA (PEM)",
-          "ca_key_pem": "Chiave privata CA (PEM)"
+          "host": "Indirizzo IP"
         },
         "data_description": {
-          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
-          "ca_cert_pem": "La catena di certificati CA AC14K_M codificata in formato PEM. Incolla l'intero contenuto del tuo file PEM dell'intera catena, inclusi tutti i blocchi BEGIN/END CERTIFICATE.",
-          "ca_key_pem": "La chiave privata AC14K_M codificata in formato PEM. Incollare l'intero contenuto, inclusi l'intestazione e il piè di pagina BEGIN/END PRIVATE KEY."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
+        }
+      },
+      "ca": {
+        "title": "Credenziali CA (una tantum)",
+        "description": "Incolla le credenziali CA AC14K_M. Va bene un file PEM combinato: metti l'intero file nel primo campo e lascia vuoto quello della chiave. Serve una sola volta; ogni elettrodomestico aggiunto in seguito le riutilizza. Questa integrazione non scarica né fornisce la CA.",
+        "data": {
+          "ca_cert_pem": "Certificato CA o bundle combinato (PEM)",
+          "ca_key_pem": "Chiave privata CA (PEM), se non è già nel bundle"
+        },
+        "data_description": {
+          "ca_cert_pem": "Incolla il PEM completo. Se il file include certificato e chiave, questo campo basta.",
+          "ca_key_pem": "Necessario solo se il primo campo è solo il certificato, senza la chiave."
         }
       },
       "user_reuse": {
@@ -1535,6 +1543,8 @@
       "unexpected_response": "Connessione al dispositivo riuscita, ma non ha restituito una descrizione del dispositivo utilizzabile. Potrebbe non essere un apparecchio supportato da questa integrazione. Il log di Home Assistant riporta ciò che ha inviato.",
       "cannot_connect": "Impossibile connettersi al dispositivo. Verificare che l'indirizzo IP sia raggiungibile e che le credenziali CA siano corrette.",
       "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
+      "encrypted_ca_key": "La chiave privata CA è protetta da passphrase e Home Assistant non può sbloccarla. Esportare o convertire la chiave senza passphrase e incollare quella.",
+      "legacy_firmware": "Questo indirizzo non ha un'API DTLS locale (UDP 49152-49160) ma risponde su TCP 8888. È un firmware Samsung più vecchio (circa 2018-2022), che questa integrazione non può controllare.",
       "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli."
     },
     "abort": {
