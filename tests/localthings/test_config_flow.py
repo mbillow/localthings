@@ -193,7 +193,7 @@ async def test_setup_normalizes_messy_pasted_pem(hass: HomeAssistant, mock_probe
     assert result["data"][CONF_CA_KEY_PEM] == MOCK_CA_KEY_PEM
 
 
-async def test_owner_psk_reauth_form_never_prefills_the_secret(
+async def test_owner_psk_reauth_form_suggests_uuid_without_prefilling_secret(
     hass: HomeAssistant,
 ) -> None:
     entry = _owner_psk_entry(hass)
@@ -204,9 +204,13 @@ async def test_owner_psk_reauth_form_never_prefills_the_secret(
     assert result["step_id"] == "reauth_confirm"
     schema = result["data_schema"]
     assert schema is not None
-    marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
-    assert marker.default is vol.UNDEFINED
-    selector = schema.schema[marker]
+    uuid_marker = next(key for key in schema.schema if key == CONF_OWNER_UUID)
+    assert uuid_marker.default is vol.UNDEFINED
+    assert uuid_marker.description == {"suggested_value": _OWNER_UUID}
+    psk_marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
+    assert psk_marker.default is vol.UNDEFINED
+    assert psk_marker.description is None
+    selector = schema.schema[psk_marker]
     assert isinstance(selector, TextSelector)
     assert selector.config["type"] == "password"
     assert _OWNER_PSK not in repr(result)
@@ -270,6 +274,14 @@ async def test_owner_psk_can_be_reconfigured_manually_without_secret_prefill(
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
+    schema = result["data_schema"]
+    assert schema is not None
+    uuid_marker = next(key for key in schema.schema if key == CONF_OWNER_UUID)
+    assert uuid_marker.default is vol.UNDEFINED
+    assert uuid_marker.description == {"suggested_value": _OWNER_UUID}
+    psk_marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
+    assert psk_marker.default is vol.UNDEFINED
+    assert psk_marker.description is None
     assert _OWNER_PSK not in repr(result)
 
     with (
@@ -311,6 +323,7 @@ async def test_owner_psk_reauth_failure_keeps_stored_credentials_redacted(
 ) -> None:
     entry = _owner_psk_entry(hass)
     before = dict(entry.data)
+    submitted_uuid = "12121212-3434-4656-8787-9a9a9a9a9a9a"
     submitted_psk = "ffeeddccbbaa99887766554433221100"
 
     result = await start_reauth_flow(hass, entry)
@@ -321,7 +334,7 @@ async def test_owner_psk_reauth_failure_keeps_stored_credentials_redacted(
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
-                CONF_OWNER_UUID: _OWNER_UUID,
+                CONF_OWNER_UUID: submitted_uuid,
                 CONF_OWNER_PSK: submitted_psk,
             },
         )
@@ -332,8 +345,12 @@ async def test_owner_psk_reauth_failure_keeps_stored_credentials_redacted(
     assert submitted_psk not in repr(result)
     schema = result["data_schema"]
     assert schema is not None
-    marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
-    assert marker.default is vol.UNDEFINED
+    uuid_marker = next(key for key in schema.schema if key == CONF_OWNER_UUID)
+    assert uuid_marker.default is vol.UNDEFINED
+    assert uuid_marker.description == {"suggested_value": submitted_uuid}
+    psk_marker = next(key for key in schema.schema if key == CONF_OWNER_PSK)
+    assert psk_marker.default is vol.UNDEFINED
+    assert psk_marker.description is None
 
 
 async def test_certificate_entry_does_not_enter_owner_psk_reauth(

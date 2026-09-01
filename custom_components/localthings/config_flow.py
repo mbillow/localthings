@@ -1099,11 +1099,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
 
+        suggested_owner_uuid = (
+            user_input.get(CONF_OWNER_UUID, entry.data[CONF_OWNER_UUID])
+            if user_input is not None
+            else entry.data[CONF_OWNER_UUID]
+        )
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_OWNER_UUID): _TEXT,
+                    vol.Required(
+                        CONF_OWNER_UUID,
+                        description={"suggested_value": suggested_owner_uuid},
+                    ): _TEXT,
                     vol.Required(CONF_OWNER_PSK): _PASSWORD,
                 }
             ),
