@@ -231,9 +231,6 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
-      },
-      "power_level": {
-        "name": "Výkon"
       }
     },
     "select": {
@@ -888,6 +885,12 @@
           "medium": "Střední",
           "on": "Zapnuto"
         }
+      },
+      "power_level": {
+        "name": "Výkon",
+        "state": {
+          "0": "Vypnuto"
+        }
       }
     },
     "sensor": {
@@ -1292,11 +1295,11 @@
       "sub_operation": {
         "name": "Dílčí operace"
       },
-      "weight_unit": {
-        "name": "Jednotka hmotnosti"
+      "cook_time_remaining": {
+        "name": "Zbývající doba vaření"
       },
-      "time_format": {
-        "name": "Formát času"
+      "cook_finish_time": {
+        "name": "Čas dokončení vaření"
       }
     },
     "switch": {

@@ -231,9 +231,6 @@
       },
       "good_sleep": {
         "name": "Guter Schlaf"
-      },
-      "power_level": {
-        "name": "Leistungsstufe"
       }
     },
     "select": {
@@ -888,6 +885,12 @@
           "medium": "Mittel",
           "on": "Ein"
         }
+      },
+      "power_level": {
+        "name": "Leistungsstufe",
+        "state": {
+          "0": "Aus"
+        }
       }
     },
     "sensor": {
@@ -1292,11 +1295,11 @@
       "sub_operation": {
         "name": "Teilvorgang"
       },
-      "weight_unit": {
-        "name": "Gewichtseinheit"
+      "cook_time_remaining": {
+        "name": "Verbleibende Garzeit"
       },
-      "time_format": {
-        "name": "Zeitformat"
+      "cook_finish_time": {
+        "name": "Garende"
       }
     },
     "switch": {

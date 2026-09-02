@@ -510,17 +510,43 @@ def test_status_cooking_mode_write_validates_against_available_modes_and_preserv
     assert desc.write_fn("Bake", rep) is None
 
 
-def test_status_power_level_write_snaps_to_step_and_clamps():
-    desc = _status_entity("power_level", NumberDesc)
+def test_status_power_level_options_reads_live_spec_list():
+    desc = _status_entity("power_level", SelectDesc)
+    assert callable(desc.options)
+    resources = {
+        "/oven/spec/vs/0": {
+            "cavityInfo": {
+                "cavityList": [
+                    {
+                        "modeSpecList": [
+                            {"mode": "Autocook"},
+                            {
+                                "mode": "MicroWave",
+                                "microwavePowerLevel": {
+                                    "unit": "percentage",
+                                    "powerLevelList": [0, 10, 20, 30, 100],
+                                },
+                            },
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+    assert desc.options(resources) == ["0", "10", "20", "30", "100"]
+    assert desc.options({}) == []
+
+
+def test_status_power_level_write_is_direct_no_hardcoded_step():
+    desc = _status_entity("power_level", SelectDesc)
     assert desc.write_fn is not None
     rep = {"microwavePowerLevel": {"unit": "percentage", "setting": 0}}
-    result = desc.write_fn(53, rep)
+    result = desc.write_fn("53", rep)
     assert result == (
         ["oven", "status", "vs", "0"],
-        {"microwavePowerLevel": {"unit": "percentage", "setting": 50}},
+        {"microwavePowerLevel": {"unit": "percentage", "setting": 53}},
     )
-    assert desc.write_fn(150, rep) is None
-    assert desc.write_fn(-10, rep) is None
+    assert desc.write_fn("not a number", rep) is None
 
 
 def test_status_cook_time_write_rejects_out_of_range():
@@ -531,6 +557,31 @@ def test_status_cook_time_write_rejects_out_of_range():
     assert result == (["oven", "status", "vs", "0"], {"time": {"setting": 90}})
     assert desc.write_fn(0, rep) is None
     assert desc.write_fn(6040, rep) is None
+
+
+def test_status_cook_time_remaining_reads_countdown():
+    desc = _status_entity("cook_time_remaining")
+    assert desc.value_fn({"setting": 90, "remaining": 42}) == 42
+    assert desc.value_fn(None) is None
+
+
+def test_status_cook_finish_time_parses_iso_and_blanks_to_none():
+    desc = _status_entity("cook_finish_time")
+    result = desc.value_fn({"completion": "2026-09-01T23:14:23"})
+    assert result is not None
+    assert result.isoformat() == "2026-09-01T23:14:23+00:00"
+    assert desc.value_fn({"completion": ""}) is None
+    assert desc.value_fn(None) is None
+
+
+def test_settings_has_no_orphan_unit_format_sensors():
+    """weightUnit/timeFormat have no live value to unit-ify or format on
+    this board (no weight-bearing entity, no HA-rendered field that reads
+    a device clock-format hint) -- a bare passthrough sensor would just be
+    a raw string nothing else on the device relates to."""
+    keys = {e.key for e in microwave.MICROWAVE_SETTINGS.entities}
+    assert "weight_unit" not in keys
+    assert "time_format" not in keys
 
 
 def test_settings_beep_reads_and_writes():

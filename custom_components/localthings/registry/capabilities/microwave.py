@@ -34,22 +34,28 @@ this board answers none of the hrefs above -- no /oven/vs/0, /mode/vs/0,
 whole cavity (mode, door, child lock, microwave power level, cook time) is
 one bare-field `/oven/status/vs/0` resource (no `x.com.samsung.da.`
 prefix, same plain-camelCase convention range.py's cooktop capabilities
-already document), with static per-mode bounds split into a sibling
-`/oven/spec/vs/0` and separate user-preference toggles in
-`/oven/settings/status/vs/0`. `MICROWAVE_STATUS`/`MICROWAVE_SETTINGS`
-below are this generation's fresh capabilities; `MICROWAVE_SPEC` is a bare
-coverage marker like oven.py's OVEN_SPEC -- its cavityInfo.modeSpecList
-(mode names, time bounds, microwavePowerLevel's powerLevelList) has no
-per-entity descriptor to read it live from (NumberDesc bounds only ever
-see their own href's rep, never a sibling's), so SETPOINT_MIN/MAX below
-are copied from this one dump's modeSpecList rather than read dynamically
--- same "single-dump static bounds" caveat as SETPOINT_MIN_C above.
-Nothing here is confirmed by a live write; see each write_fn's comment.
+already document), with per-mode spec data (time bounds, the
+microwavePowerLevel powerLevelList) in a sibling `/oven/spec/vs/0` and
+separate user-preference toggles in `/oven/settings/status/vs/0`.
+`MICROWAVE_STATUS`/`MICROWAVE_SETTINGS` below are this generation's fresh
+capabilities. `power_level` is a SelectDesc reading spec's powerLevelList
+live (options=<callable>, same cross-href pattern as range.py's cooktop
+power-level select) rather than a NumberDesc with a hardcoded step --
+spec gives a real discrete list, not a fixed interval, and a hardcoded
+step would just be this one dump's number promoted to a rule. `cook_time`
+stays a NumberDesc with bounds copied from this dump's modeSpec
+(SETPOINT_MIN_C-style "single-dump static bounds" caveat) because spec's
+time field has no discrete list to read the same way -- only min/max/
+interval, and no NumberDesc hook reads a sibling href's rep live.
+`MICROWAVE_SPEC` itself stays a bare coverage marker like oven.py's
+OVEN_SPEC, read live by `_power_level_options` rather than exposed
+through its own entity. Nothing here is confirmed by a live write; see
+each write_fn's comment.
 """
 
 from ..capability import Capability
 from ..entities import BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc
-from .common import int_or_none, normalize_temp_unit
+from .common import int_or_none, normalize_temp_unit, parse_iso_utc
 from .laundry import option_value, option_write
 
 # ---------------------------------------------------------------------------
@@ -302,15 +308,13 @@ MICROWAVE_MODE = Capability(
 # Confirmed on issue #433's dump: MicroWave and KeepWarm's modeSpec both
 # report {min: 1, max: 6039, interval: 1} -- seconds (a 6039-second/100-ish
 # minute ceiling is plausible for a combi cook timer; a minutes reading
-# would imply a multi-day cook, which isn't). Single dump, no cross-check
-# -- see module docstring.
+# would imply a multi-day cook, which isn't). Unlike power_level below,
+# modeSpec has no discrete list for time -- min/max/interval is the only
+# shape it comes in, so a NumberDesc with bounds copied from this one
+# dump is the best available (same "single dump, no cross-check" caveat
+# as SETPOINT_MIN_C above; no NumberDesc hook reads a sibling href live).
 COOK_TIME_MIN_S = 1
 COOK_TIME_MAX_S = 6039
-
-# powerLevelList on the same dump's MicroWave modeSpec: 0-100 step 10.
-POWER_LEVEL_MIN = 0
-POWER_LEVEL_MAX = 100
-POWER_LEVEL_STEP = 10
 
 _STATUS_STATE_TO_OCF = {
     "ready": "idle",
@@ -349,12 +353,30 @@ def _status_mode_write(p, rep, href=None):
     return ["oven", "status", "vs", "0"], {"mode": mode}
 
 
+def _power_level_options(resources):
+    """Live powerLevelList from the sibling spec resource's MicroWave
+    modeSpec -- not a fixed step (issue #433's own dump happens to be
+    0-100 by 10s, but that's this board's number, not a rule; a
+    hardcoded step would silently reject whatever list a different
+    board's modeSpec reports). Same cross-href pattern as range.py's
+    cooktop `_power_level_options` reading `/cooktop/spec/vs/0`, and the
+    same reason: a NumberDesc's bounds hooks only ever see their own
+    href's rep, never a sibling's, so a discrete device-reported list has
+    to be surfaced through a SelectDesc instead."""
+    spec = resources.get("/oven/spec/vs/0") or {}
+    for cavity in (spec.get("cavityInfo") or {}).get("cavityList") or ():
+        for mode_spec in cavity.get("modeSpecList") or ():
+            if mode_spec.get("mode") == "MicroWave":
+                levels = (mode_spec.get("microwavePowerLevel") or {}).get("powerLevelList")
+                if levels:
+                    return [str(v) for v in levels]
+    return []
+
+
 def _power_level_write(p, rep, href=None):
     try:
-        level = int(round(float(p) / POWER_LEVEL_STEP) * POWER_LEVEL_STEP)
+        level = int(p)
     except (TypeError, ValueError):
-        return None
-    if not (POWER_LEVEL_MIN <= level <= POWER_LEVEL_MAX):
         return None
     setting = dict(rep.get("microwavePowerLevel") or {})
     setting["setting"] = level
@@ -417,15 +439,12 @@ MICROWAVE_STATUS = Capability(
             value_fn=lambda mode: (mode or {}).get("name"),
             write_fn=_status_mode_write,
         ),
-        NumberDesc(
+        SelectDesc(
             key="power_level",
             field="microwavePowerLevel",
-            unit="%",
-            native_min=float(POWER_LEVEL_MIN),
-            native_max=float(POWER_LEVEL_MAX),
-            step=float(POWER_LEVEL_STEP),
             icon="mdi:radar",
-            value_fn=lambda v: int_or_none((v or {}).get("setting")),
+            options=_power_level_options,
+            value_fn=lambda v: str(int_or_none((v or {}).get("setting"))),
             write_fn=_power_level_write,
         ),
         NumberDesc(
@@ -438,6 +457,34 @@ MICROWAVE_STATUS = Capability(
             icon="mdi:timer",
             value_fn=lambda v: int_or_none((v or {}).get("setting")),
             write_fn=_cook_time_write,
+        ),
+        # Countdown while a cycle runs -- same "setting"/"remaining" split
+        # as oven.py's operationTime/remainingTime, confirmed the same
+        # unit (seconds) as `time.setting` above since both live in this
+        # one `time` object.
+        SensorDesc(
+            key="cook_time_remaining",
+            field="time",
+            unit="s",
+            state_class="measurement",
+            icon="mdi:timer-sand",
+            value_fn=lambda v: int_or_none((v or {}).get("remaining")),
+        ),
+        # Blank ('') on every dump seen -- idle, no cycle running. No dump
+        # has ever shown this populated, so the format is a best-effort
+        # guess rather than confirmed: this firmware generation does use
+        # plain ISO 8601 elsewhere with no offset (/alarms/vs/0's
+        # triggeredTime, e.g. '2026-09-01T23:14:23'), the same shape
+        # common.parse_iso_utc already handles, so that's reused here
+        # rather than inventing a second parser -- but if a live cycle
+        # turns out to report something else (an H:MM:SS duration, say),
+        # this will just read as unavailable rather than misparse.
+        SensorDesc(
+            key="cook_finish_time",
+            field="time",
+            device_class="timestamp",
+            icon="mdi:timer-outline",
+            value_fn=lambda v: parse_iso_utc((v or {}).get("completion")),
         ),
         # subOperation ('ready' alongside operation='ready' on the only
         # dump seen) -- raw diagnostic passthrough, meaning not confirmed
@@ -497,20 +544,15 @@ MICROWAVE_SETTINGS = Capability(
             value_fn=lambda v: str(v).lower() == "on",
             write_fn=_settings_bool_write("displayTimeAutoSync"),
         ),
-        # No supportedWeightUnit/supportedTimeFormat field on this dump to
-        # read a select's options from (skill: don't invent a values list)
-        # -- read-only enum sensors until one surfaces.
-        SensorDesc(
-            key="weight_unit",
-            field="weightUnit",
-            entity_category="diagnostic",
-            icon="mdi:scale",
-        ),
-        SensorDesc(
-            key="time_format",
-            field="timeFormat",
-            entity_category="diagnostic",
-            icon="mdi:clock-outline",
-        ),
+        # weightUnit/timeFormat deliberately have no entity of their own:
+        # weightUnit only means something alongside an actual weight
+        # value, and this board's availableModeList has no defrost-by-
+        # weight mode to attach one to; timeFormat governs the physical
+        # panel's own clock display, not any value this integration reads
+        # (HA already renders `cook_finish_time` per the viewer's own
+        # locale). A bare passthrough sensor of either would just show a
+        # raw string with nothing to relate it to -- if a future dump
+        # adds a weight-bearing mode, unit_fn on that entity should read
+        # this field live rather than a new sensor appearing for it.
     ),
 )

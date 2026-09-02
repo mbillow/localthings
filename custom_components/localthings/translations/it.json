@@ -231,9 +231,6 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura obiettivo zona"
-      },
-      "power_level": {
-        "name": "Livello di potenza"
       }
     },
     "select": {
@@ -888,6 +885,12 @@
           "medium": "Media",
           "on": "Accesa"
         }
+      },
+      "power_level": {
+        "name": "Livello di potenza",
+        "state": {
+          "0": "Spento"
+        }
       }
     },
     "sensor": {
@@ -1292,11 +1295,11 @@
       "sub_operation": {
         "name": "Sotto-operazione"
       },
-      "weight_unit": {
-        "name": "Unità di peso"
+      "cook_time_remaining": {
+        "name": "Tempo di cottura rimanente"
       },
-      "time_format": {
-        "name": "Formato ora"
+      "cook_finish_time": {
+        "name": "Ora di fine cottura"
       }
     },
     "switch": {

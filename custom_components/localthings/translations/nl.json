@@ -231,9 +231,6 @@
       },
       "zone_target_temperature": {
         "name": "Doeltemperatuur zone"
-      },
-      "power_level": {
-        "name": "Vermogensniveau"
       }
     },
     "select": {
@@ -888,6 +885,12 @@
           "medium": "Gemiddeld",
           "on": "Aan"
         }
+      },
+      "power_level": {
+        "name": "Vermogensniveau",
+        "state": {
+          "0": "Uit"
+        }
       }
     },
     "sensor": {
@@ -1292,11 +1295,11 @@
       "sub_operation": {
         "name": "Subbewerking"
       },
-      "weight_unit": {
-        "name": "Gewichtseenheid"
+      "cook_time_remaining": {
+        "name": "Resterende kooktijd"
       },
-      "time_format": {
-        "name": "Tijdnotatie"
+      "cook_finish_time": {
+        "name": "Kooktijd einde"
       }
     },
     "switch": {

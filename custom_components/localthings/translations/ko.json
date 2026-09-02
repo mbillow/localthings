@@ -231,9 +231,6 @@
       },
       "zone_target_temperature": {
         "name": "구역 목표 온도"
-      },
-      "power_level": {
-        "name": "출력 레벨"
       }
     },
     "select": {
@@ -888,6 +885,12 @@
           "medium": "중간",
           "on": "켜짐"
         }
+      },
+      "power_level": {
+        "name": "출력 레벨",
+        "state": {
+          "0": "꺼짐"
+        }
       }
     },
     "sensor": {
@@ -1292,11 +1295,11 @@
       "sub_operation": {
         "name": "하위 작동"
       },
-      "weight_unit": {
-        "name": "중량 단위"
+      "cook_time_remaining": {
+        "name": "남은 조리 시간"
       },
-      "time_format": {
-        "name": "시간 형식"
+      "cook_finish_time": {
+        "name": "조리 완료 시간"
       }
     },
     "switch": {
