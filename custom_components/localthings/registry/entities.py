@@ -59,7 +59,10 @@ class SensorDesc(SamsungEntityDescription):
     state_class: str | None = None
     unit: str | None = None
     unit_fn: Callable[[dict], str] | None = None  # overrides `unit` from the live rep, when set
-    options: tuple | None = None  # required by HA when device_class == 'enum'
+    # Required by HA when device_class == 'enum'. The callable form receives
+    # the coordinator's canonical href->rep snapshot and returns final sensor
+    # state options; its input shape matches SelectDesc.options.
+    options: Any = None  # tuple[str, ...] | Callable[[dict[str, dict]], list[str]]
     # Opt-in: gate this value behind CONF_FINISH_TIME_HYSTERESIS_MINUTES
     # (see sensor.py). Only for values expected to jitter between
     # device-side revisions -- not a general-purpose flag.

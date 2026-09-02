@@ -228,6 +228,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "웰컴 라이팅 감지 거리",
+        "state": {
+          "nearest": "가장 가까움",
+          "near": "가까움",
+          "middle": "중간",
+          "far": "멀리"
+        }
+      },
       "ai_energy_level": {
         "name": "AI 절약 모드 단계"
       },
@@ -864,6 +873,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "웰컴 조명 감지 단계",
+        "state": {
+          "nearest": "가장 가까움",
+          "near": "가까움",
+          "middle": "중간",
+          "far": "멀리"
+        }
+      },
       "auto_clean_progress": {
         "name": "자동 청소 진행률"
       },
@@ -1264,6 +1282,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "야간 조명 일정"
+      },
       "ai_energy_level": {
         "name": "AI 절약 모드"
       },

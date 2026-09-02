@@ -49,8 +49,11 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
             SensorDeviceClass(desc.device_class) if desc.device_class else None
         )
         self._attr_state_class = SensorStateClass(desc.state_class) if desc.state_class else None
-        # Always set, so the `options` property below can read it unguarded.
-        self._attr_options = list(desc.options) if desc.options else None
+        # Always set for static options; callable options are resolved from the
+        # live canonical resource snapshot in the property below.
+        self._attr_options = (
+            None if callable(desc.options) else list(desc.options) if desc.options else None
+        )
         self._hysteresis_value = None
         self._sticky_value = None
         self._sticky_until: float | None = None
@@ -73,12 +76,18 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
         renders raw. Admitting the live value keeps it displayable; it just
         shows untranslated (PR #341 review).
         """
-        if self._attr_options is None:
+        desc = cast(SensorDesc, self._bound.desc)
+        declared = (
+            list(desc.options(self._resources) or [])
+            if callable(desc.options)
+            else self._attr_options
+        )
+        if declared is None:
             return None
         value = self.native_value
-        if not isinstance(value, str) or value in self._attr_options:
-            return self._attr_options
-        return [*self._attr_options, value]
+        if not isinstance(value, str) or value in declared:
+            return declared
+        return [*declared, value]
 
     @property
     def native_value(self):

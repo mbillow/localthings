@@ -425,6 +425,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "Proximidad de iluminación de bienvenida",
+        "state": {
+          "nearest": "Más cercano",
+          "near": "Cerca",
+          "middle": "Medio",
+          "far": "Lejos"
+        }
+      },
       "ai_energy_level": {
         "name": "Nivel del modo de energía IA"
       },
@@ -1061,6 +1070,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Nivel de detección de la iluminación de bienvenida",
+        "state": {
+          "nearest": "Más cercano",
+          "near": "Cerca",
+          "middle": "Medio",
+          "far": "Lejos"
+        }
+      },
       "after_run_progress": {
         "name": "Progreso tras finalizar"
       },
@@ -1461,6 +1479,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "Horario de iluminación nocturna"
+      },
       "ai_energy_level": {
         "name": "Modo de energía IA"
       },

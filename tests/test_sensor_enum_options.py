@@ -49,18 +49,23 @@ class _FakeCoordinator:
         self.device_key = "TEST-SERIAL"
         self.config_entry = _FakeConfigEntry()
         self.resources: dict[str, dict] = {}
+        self.bound = _ALL_BOUND
 
     def resource(self, href: str) -> dict:
         return self.resources.get(href) or {}
 
+    def canonical_resources(self, _subdevice) -> dict[str, dict]:
+        return self.resources
+
     @property
     def data(self) -> dict:
-        return flatten(_ALL_BOUND, self.resources)
+        return flatten(self.bound, self.resources)
 
 
 def _sensor(desc):
     coordinator = _FakeCoordinator()
     bound = BoundEntity(href=_HREF, capability=OPERATIONAL_STATE, desc=desc)
+    coordinator.bound = [bound]
     return LocalThingsSensor(cast(LocalThingsCoordinator, coordinator), bound), coordinator
 
 
@@ -104,6 +109,30 @@ def test_known_values_do_not_grow_the_options_list():
 
     _set(coordinator, state="Run", progress="Rinse")
     assert sensor.options == list(_PROGRESS.options)
+
+
+def test_callable_options_follow_the_live_resource_snapshot():
+    desc = SensorDesc(
+        key="sense_level",
+        field="desiredSenseLevel",
+        device_class="enum",
+        options=lambda resources: list(resources[_HREF]["supportedSenseLevels"]),
+    )
+    sensor, coordinator = _sensor(desc)
+
+    coordinator.resources[_HREF] = {
+        "desiredSenseLevel": "near",
+        "supportedSenseLevels": ["near", "far"],
+    }
+    assert sensor.options == ["near", "far"]
+
+    # A newly reported value remains displayable even before the advertised
+    # list catches up, preserving the existing enum-sensor safety behavior.
+    coordinator.resources[_HREF] = {
+        "desiredSenseLevel": "middle",
+        "supportedSenseLevels": ["near", "far"],
+    }
+    assert sensor.options == ["near", "far", "middle"]
 
 
 def test_a_non_enum_sensor_has_no_options():

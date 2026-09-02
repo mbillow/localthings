@@ -18,6 +18,7 @@
     "freezer_temperature_setpoint",
     "fridge_sound",
     "night_end",
+    "night_lighting_schedule",
     "night_start",
     "power_energy_kwh",
     "power_watts",

@@ -228,6 +228,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "Nabijheidsniveau welkomstverlichting",
+        "state": {
+          "nearest": "Dichtstbij",
+          "near": "Dichtbij",
+          "middle": "Gemiddeld",
+          "far": "Ver"
+        }
+      },
       "ai_energy_level": {
         "name": "Niveau AI Energy Mode"
       },
@@ -864,6 +873,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Detectieniveau welkomstverlichting",
+        "state": {
+          "nearest": "Dichtstbij",
+          "near": "Dichtbij",
+          "middle": "Gemiddeld",
+          "far": "Ver"
+        }
+      },
       "auto_clean_progress": {
         "name": "Auto clean voortgang"
       },
@@ -1264,6 +1282,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "Schema nachtverlichting"
+      },
       "ai_energy_level": {
         "name": "AI Energy Mode"
       },

@@ -16,6 +16,7 @@ segments.
 
 import datetime
 
+from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -574,6 +575,63 @@ AUTOFILL = Capability(
     ),
 )
 
+
+_PROXIMITY_LEVELS = {
+    "0": "nearest",
+    "1": "near",
+    "2": "middle",
+    "3": "far",
+}
+_PROXIMITY_RAW_BY_LEVEL = {level: raw for raw, level in _PROXIMITY_LEVELS.items()}
+
+
+def _proximity_level(value):
+    return _PROXIMITY_LEVELS.get(str(value))
+
+
+def _proximity_options(resources):
+    rep = resources.get("/proximity/vs/0") or {}
+    supported = rep.get("supportedLevels")
+    if not isinstance(supported, (list, tuple)):
+        return []
+    return [str(value) for value in supported if _proximity_level(value) is not None]
+
+
+def _proximity_display(value, _resources):
+    return _proximity_level(value)
+
+
+def _proximity_write(value, rep, href=None):
+    value = str(value)
+    raw = value if value in _PROXIMITY_LEVELS else _PROXIMITY_RAW_BY_LEVEL.get(value.casefold())
+    supported_levels = rep.get("supportedLevels")
+    if not isinstance(supported_levels, (list, tuple)):
+        return None
+    supported = {str(item) for item in supported_levels}
+    if raw is None or raw not in supported:
+        return None
+    return ["proximity", "vs", "0"], {"currentLevel": raw}
+
+
+def _proximity_setting_exists(rep, resources):
+    return is_stub_rep(rep) or (
+        _proximity_level(rep.get("currentLevel")) is not None
+        and bool(_proximity_options(resources))
+    )
+
+
+def _proximity_sense_exists(rep, _resources):
+    return is_stub_rep(rep) or _proximity_level(rep.get("desiredSenseLevel")) is not None
+
+
+def _proximity_sense_options(resources):
+    rep = resources.get("/proximity/vs/0") or {}
+    supported = rep.get("supportedSenseLevels")
+    if not isinstance(supported, (list, tuple)):
+        return []
+    return [level for value in supported if (level := _proximity_level(value)) is not None]
+
+
 WELCOME_LIGHTING = Capability(
     href="/proximity/vs/0",
     poll_tier="warm",
@@ -588,6 +646,30 @@ WELCOME_LIGHTING = Capability(
                 ["proximity", "vs", "0"],
                 {"status": "On" if p == "On" else "Off"},
             ),
+        ),
+        SelectDesc(
+            key="welcome_lighting_proximity",
+            field="currentLevel",
+            icon="mdi:motion-sensor",
+            entity_category="config",
+            options=_proximity_options,
+            display_fn=_proximity_display,
+            exists_fn=_proximity_setting_exists,
+            value_fn=_proximity_level,
+            write_fn=_proximity_write,
+        ),
+        # desiredSenseLevel freezes while welcome lighting is off, so it is
+        # firmware diagnostics rather than a live motion-detection entity.
+        SensorDesc(
+            key="welcome_lighting_sense_level",
+            field="desiredSenseLevel",
+            icon="mdi:motion-sensor",
+            entity_category="diagnostic",
+            enabled_default=False,
+            device_class="enum",
+            options=_proximity_sense_options,
+            exists_fn=_proximity_sense_exists,
+            value_fn=_proximity_level,
         ),
     ),
 )
@@ -673,10 +755,27 @@ def _night_end_write(p, rep, href=None):
     }
 
 
+def _night_lighting_schedule_write(p, rep, href=None):
+    if p not in ("On", "Off"):
+        return None
+    return ["cabinet", "light", "enhanced", "vs", "0"], {
+        "light.control.status": p,
+    }
+
+
 CABINET_LIGHT_ENHANCED = Capability(
     href="/cabinet/light/enhanced/vs/0",
     poll_tier="warm",
     entities=(
+        SwitchDesc(
+            key="night_lighting_schedule",
+            field="light.control.status",
+            icon="mdi:weather-night",
+            entity_category="config",
+            exists_fn=lambda rep, resources: is_stub_rep(rep) or "light.control.status" in rep,
+            value_fn=lambda v: v == "On",
+            write_fn=_night_lighting_schedule_write,
+        ),
         SelectDesc(
             key="day_brightness",
             field="level.brightness.daytime",

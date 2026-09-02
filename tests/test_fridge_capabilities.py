@@ -12,6 +12,10 @@ from custom_components.localthings.registry.entities import (
 )
 
 
+def _entity_by_key(capability, key):
+    return next(entity for entity in capability.entities if entity.key == key)
+
+
 class TestTempCurrentGeneric:
     """Issue #7: unit must be read live from the device, not assumed to be
     Fahrenheit -- a TP1X_REF_21K fridge (RL38C6B0CWW/EG) reports the same
@@ -678,6 +682,10 @@ class TestSwitchOffIsNotInverted:
         (fridge.STATUS_LOCK.entities[1], "x.com.samsung.da.device.sound"),
         (fridge.DEFROST_DELAY.entities[0], "x.com.samsung.da.delayDefrost"),
         (fridge.WELCOME_LIGHTING.entities[0], "status"),
+        (
+            _entity_by_key(fridge.CABINET_LIGHT_ENHANCED, "night_lighting_schedule"),
+            "light.control.status",
+        ),
         (fridge.CABINET_LIGHT.entities[1], "light.dimming.status"),
         (fridge.ICEMAKER_STATUS_FALLBACK.entities[0], "x.com.samsung.da.iceMaker"),
     ]

@@ -228,6 +228,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "Citlivost uvítacího osvětlení",
+        "state": {
+          "nearest": "Nejblíže",
+          "near": "Blízko",
+          "middle": "Středně",
+          "far": "Daleko"
+        }
+      },
       "ai_energy_level": {
         "name": "Úroveň režimu AI Energy"
       },
@@ -864,6 +873,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Úroveň snímání uvítacího osvětlení",
+        "state": {
+          "nearest": "Nejblíže",
+          "near": "Blízko",
+          "middle": "Středně",
+          "far": "Daleko"
+        }
+      },
       "auto_clean_progress": {
         "name": "Průběh automatického čištění"
       },
@@ -1264,6 +1282,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "Plán nočního osvětlení"
+      },
       "ai_energy_level": {
         "name": "Režim AI Energy"
       },

@@ -228,6 +228,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "Empfindlichkeit der Willkommensbeleuchtung",
+        "state": {
+          "nearest": "Am nächsten",
+          "near": "Nah",
+          "middle": "Mittel",
+          "far": "Weit"
+        }
+      },
       "ai_energy_level": {
         "name": "KI-Energiesparstufe"
       },
@@ -864,6 +873,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Erfassungsstufe der Begrüßungsbeleuchtung",
+        "state": {
+          "nearest": "Am nächsten",
+          "near": "Nah",
+          "middle": "Mittel",
+          "far": "Weit"
+        }
+      },
       "auto_clean_progress": {
         "name": "Fortschritt automatische Reinigung"
       },
@@ -1264,6 +1282,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "Zeitplan für Nachtbeleuchtung"
+      },
       "ai_energy_level": {
         "name": "KI-Energiesparmodus"
       },

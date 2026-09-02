@@ -228,6 +228,15 @@
       }
     },
     "select": {
+      "welcome_lighting_proximity": {
+        "name": "Welcome lighting proximity",
+        "state": {
+          "nearest": "Nearest",
+          "near": "Near",
+          "middle": "Middle",
+          "far": "Far"
+        }
+      },
       "ai_energy_level": {
         "name": "AI Energy Mode level"
       },
@@ -864,6 +873,15 @@
       }
     },
     "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Welcome lighting sense level",
+        "state": {
+          "nearest": "Nearest",
+          "near": "Near",
+          "middle": "Middle",
+          "far": "Far"
+        }
+      },
       "auto_clean_progress": {
         "name": "Auto clean progress"
       },
@@ -1264,6 +1282,9 @@
       }
     },
     "switch": {
+      "night_lighting_schedule": {
+        "name": "Night lighting schedule"
+      },
       "ai_energy_level": {
         "name": "AI Energy Mode"
       },

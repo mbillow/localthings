@@ -24,6 +24,7 @@
     "icemaker_one_enabled",
     "icemaker_one_making_status",
     "night_end",
+    "night_lighting_schedule",
     "night_start",
     "power_energy_kwh",
     "power_watts",
