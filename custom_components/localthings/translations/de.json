@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Stick per BLE verbunden"
+      },
+      "grease_filter_alarm": {
+        "name": "Fettfilteralarm"
+      },
+      "front_vent_open": {
+        "name": "Frontlüftung"
       }
     },
     "button": {
@@ -861,6 +867,30 @@
           "ventilation": "Lüftung",
           "smartventilation": "Intelligente Lüftung"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Lüfterstufe",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "boost": "Boost"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lampe",
+        "state": {
+          "off": "Aus",
+          "medium": "Mittel",
+          "on": "Ein"
+        }
+      },
+      "power_level": {
+        "name": "Leistungsstufe",
+        "state": {
+          "0": "Aus"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1291,15 @@
       },
       "energy_saving_operating_status": {
         "name": "Energiespar-Betriebsstatus"
+      },
+      "sub_operation": {
+        "name": "Teilvorgang"
+      },
+      "cook_time_remaining": {
+        "name": "Verbleibende Garzeit"
+      },
+      "cook_finish_time": {
+        "name": "Garende"
       }
     },
     "switch": {
@@ -1476,6 +1515,9 @@
       },
       "windsleep": {
         "name": "Schlafmodus"
+      },
+      "display_time_auto_sync": {
+        "name": "Anzeigezeit automatisch synchronisieren"
       }
     },
     "time": {

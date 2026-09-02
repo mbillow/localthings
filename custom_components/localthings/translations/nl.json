@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Steel via BLE verbonden"
+      },
+      "grease_filter_alarm": {
+        "name": "Vetfilter alarm"
+      },
+      "front_vent_open": {
+        "name": "Voorste ventilatie"
       }
     },
     "button": {
@@ -861,6 +867,30 @@
           "ventilation": "Ventilatie",
           "smartventilation": "Slimme ventilatie"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Ventilatorsnelheid",
+        "state": {
+          "off": "Uit",
+          "low": "Laag",
+          "medium": "Gemiddeld",
+          "high": "Hoog",
+          "boost": "Boost"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lamp",
+        "state": {
+          "off": "Uit",
+          "medium": "Gemiddeld",
+          "on": "Aan"
+        }
+      },
+      "power_level": {
+        "name": "Vermogensniveau",
+        "state": {
+          "0": "Uit"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1291,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "PM1-filtergebruik in uren"
+      },
+      "sub_operation": {
+        "name": "Subbewerking"
+      },
+      "cook_time_remaining": {
+        "name": "Resterende kooktijd"
+      },
+      "cook_finish_time": {
+        "name": "Kooktijd einde"
       }
     },
     "switch": {
@@ -1476,6 +1515,9 @@
       },
       "windsleep": {
         "name": "Slaapmodus"
+      },
+      "display_time_auto_sync": {
+        "name": "Automatische tijdsynchronisatie weergave"
       }
     },
     "time": {

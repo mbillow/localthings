@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "스틱 BLE 연결됨"
+      },
+      "grease_filter_alarm": {
+        "name": "그리스 필터 알람"
+      },
+      "front_vent_open": {
+        "name": "전면 환기구"
       }
     },
     "button": {
@@ -861,6 +867,30 @@
           "ventilation": "환기",
           "smartventilation": "스마트환기"
         }
+      },
+      "hood_fan_speed": {
+        "name": "팬 속도",
+        "state": {
+          "off": "꺼짐",
+          "low": "약",
+          "medium": "중",
+          "high": "강",
+          "boost": "강력"
+        }
+      },
+      "hood_lamp": {
+        "name": "조명",
+        "state": {
+          "off": "꺼짐",
+          "medium": "중간",
+          "on": "켜짐"
+        }
+      },
+      "power_level": {
+        "name": "출력 레벨",
+        "state": {
+          "0": "꺼짐"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1291,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "PM1 필터 사용 시간"
+      },
+      "sub_operation": {
+        "name": "하위 작동"
+      },
+      "cook_time_remaining": {
+        "name": "남은 조리 시간"
+      },
+      "cook_finish_time": {
+        "name": "조리 완료 시간"
       }
     },
     "switch": {
@@ -1476,6 +1515,9 @@
       },
       "windsleep": {
         "name": "취침 모드"
+      },
+      "display_time_auto_sync": {
+        "name": "화면 시간 자동 동기화"
       }
     },
     "time": {

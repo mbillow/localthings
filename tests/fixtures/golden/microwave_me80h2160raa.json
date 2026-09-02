@@ -1,0 +1,24 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "beep",
+    "child_lock",
+    "cook_finish_time",
+    "cook_time",
+    "cook_time_remaining",
+    "cooking_mode",
+    "cycle_active",
+    "display_time_auto_sync",
+    "door_open",
+    "energy_kwh",
+    "firmware_update",
+    "front_vent_open",
+    "grease_filter_alarm",
+    "hood_fan_speed",
+    "hood_lamp",
+    "machine_state",
+    "power_level",
+    "remind_beep",
+    "sub_operation"
+  ]
+}

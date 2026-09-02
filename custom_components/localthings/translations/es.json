@@ -314,6 +314,12 @@
       },
       "stick_ble_connected": {
         "name": "Aspiradora conectada por BLE"
+      },
+      "grease_filter_alarm": {
+        "name": "Alarma del filtro de grasa"
+      },
+      "front_vent_open": {
+        "name": "Ventilación frontal"
       }
     },
     "button": {
@@ -1058,6 +1064,30 @@
           "ventilation": "Ventilación",
           "smartventilation": "Ventilación inteligente"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Velocidad del ventilador",
+        "state": {
+          "off": "Apagado",
+          "low": "Baja",
+          "medium": "Media",
+          "high": "Alta",
+          "boost": "Turbo"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lámpara",
+        "state": {
+          "off": "Apagada",
+          "medium": "Media",
+          "on": "Encendida"
+        }
+      },
+      "power_level": {
+        "name": "Nivel de potencia",
+        "state": {
+          "0": "Apagado"
+        }
       }
     },
     "sensor": {
@@ -1458,6 +1488,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "Horas de uso del filtro PM1"
+      },
+      "sub_operation": {
+        "name": "Suboperación"
+      },
+      "cook_time_remaining": {
+        "name": "Tiempo de cocción restante"
+      },
+      "cook_finish_time": {
+        "name": "Hora de finalización de cocción"
       }
     },
     "switch": {
@@ -1673,6 +1712,9 @@
       },
       "windsleep": {
         "name": "Modo nocturno"
+      },
+      "display_time_auto_sync": {
+        "name": "Sincronización automática de la hora"
       }
     },
     "time": {

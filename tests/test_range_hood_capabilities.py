@@ -40,6 +40,16 @@ def test_ahd_model_resolves_to_range_hood_registry():
     assert registry.name == "range_hood"
 
 
+def test_range_hood_registry_covers_dawit_generation_hrefs():
+    """HOOD_STATUS/HOOD_SPEC (issue #433's built-in combi vent hood) are
+    generic vent-hood capabilities defined in capabilities/range_hood.py,
+    not microwave-specific -- a standalone hood of the same board
+    generation should be covered too, even with no such dump yet."""
+    registry, _ = _hood()
+    assert "/hood/status/vs/0" in registry.capabilities
+    assert "/hood/spec/vs/0" in registry.capabilities
+
+
 def test_range_hood_has_no_unbound_hrefs():
     registry, resources = _hood()
     unbound = []

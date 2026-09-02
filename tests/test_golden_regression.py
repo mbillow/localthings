@@ -940,6 +940,30 @@ def test_registry_reproduces_golden_state_keys_for_microwave_me7500d_lamp_high()
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_microwave_me80h2160raa():
+    """DAWIT 3.0 generation TP1X_DA-KS-MICROWAVE-0102X combi (model
+    OT80H30-/AA0, issue #433) -- reports none of the older microwave hrefs
+    at all (no /oven/vs/0, /mode/vs/0, /temperatures/vs/0, /doors/vs/0,
+    /operational/state/vs/0, /hood/fanspeed/vs/0). Cavity state, cooking
+    mode, child lock, power level and cook time all live in one bare-field
+    /oven/status/vs/0 instead; the built-in vent hood is the analogous
+    /hood/status/vs/0. Also the first fixture with a real /oic/d
+    ('oic.d.microwave'), confirming the new _OIC_TYPE_TO_KEY row routes it
+    the same way the modelNum 'MICROWAVE' board token already did."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_me80h2160raa")
+    golden = json.loads((GOLDEN / "microwave_me80h2160raa.json").read_text())
+    state_keys = _new_state_keys(
+        "microwave_me80h2160raa", resources, device_types=("oic.wk.d", "oic.d.microwave")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_air_purifier_tp1x_da_ac_air():
     """TP1X_DA-AC-AIR-01031_0000 (issue #130) self-reports oneUiVersion
     '7.0 Air purifier' (unused for routing) and resolves via its 'AIR'

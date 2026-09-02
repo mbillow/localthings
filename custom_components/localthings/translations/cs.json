@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Tyč připojena přes BLE"
+      },
+      "grease_filter_alarm": {
+        "name": "Upozornění na tukový filtr"
+      },
+      "front_vent_open": {
+        "name": "Přední větrání"
       }
     },
     "button": {
@@ -861,6 +867,30 @@
           "ventilation": "Větrání",
           "smartventilation": "Chytré větrání"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Rychlost ventilátoru",
+        "state": {
+          "off": "Vypnuto",
+          "low": "Nízká",
+          "medium": "Střední",
+          "high": "Vysoká",
+          "boost": "Intenzivní"
+        }
+      },
+      "hood_lamp": {
+        "name": "Osvětlení",
+        "state": {
+          "off": "Vypnuto",
+          "medium": "Střední",
+          "on": "Zapnuto"
+        }
+      },
+      "power_level": {
+        "name": "Výkon",
+        "state": {
+          "0": "Vypnuto"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1291,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "Hodiny využití PM1 filtru"
+      },
+      "sub_operation": {
+        "name": "Dílčí operace"
+      },
+      "cook_time_remaining": {
+        "name": "Zbývající doba vaření"
+      },
+      "cook_finish_time": {
+        "name": "Čas dokončení vaření"
       }
     },
     "switch": {
@@ -1476,6 +1515,9 @@
       },
       "windsleep": {
         "name": "Noční režim"
+      },
+      "display_time_auto_sync": {
+        "name": "Automatická synchronizace času displeje"
       }
     },
     "time": {

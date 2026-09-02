@@ -1,0 +1,355 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "OV_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-09-01T23:14:23"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "TKIP",
+          "AES",
+          "WEP-64",
+          "WEP-128"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.cumulativePower": "21",
+        "x.com.samsung.da.cumulativeUnit": "Wh"
+      }
+    },
+    {
+      "href": "/hood/spec/vs/0",
+      "rep": {
+        "resourceVersion": 2,
+        "micomModelId": "OT80H30-/AA0",
+        "hoodType": "OTRHood",
+        "fanSpeedList": [
+          "off",
+          "low",
+          "medium",
+          "high",
+          "boost"
+        ],
+        "lampStateList": [
+          "off",
+          "medium",
+          "on"
+        ],
+        "filterList": [
+          "greaseFilter"
+        ]
+      }
+    },
+    {
+      "href": "/hood/status/vs/0",
+      "rep": {
+        "sequenceNumber": 99,
+        "unavailableFanSpeedList": [
+          ""
+        ],
+        "fanSpeed": "off",
+        "lamp": "off",
+        "filter": [
+          {
+            "filterType": "greaseFilter",
+            "alarm": "off"
+          }
+        ],
+        "frontVent": "on"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP1X_DA-KS-MICROWAVE-0102X|A0045641|50040000011A11080A00000000000000",
+        "x.com.samsung.da.description": "OT80H30-/AA0",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "25111800",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00456A26040800",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00473A26020600",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "KM5",
+        "x.com.samsung.da.diagTsId": "DA01"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "flashingProgress": "",
+        "otnTarget": "main",
+        "otnStatus": "None",
+        "otnCompleteDate": "noHistory",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "AKS-WW-TP1-25-MICROWAVE-ME90H",
+            "versions": [
+              "40251118"
+            ],
+            "visVersion": "251118"
+          },
+          {
+            "type": "Micom",
+            "modelId": "0742A0045641FFFFFFFF",
+            "versions": [
+              "26040800",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260408"
+          },
+          {
+            "type": "Micom",
+            "modelId": "0742A0047341FFFFFFFF",
+            "versions": [
+              "26020600",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260206"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/oven/settings/status/vs/0",
+      "rep": {
+        "sequenceNumber": 87,
+        "timeFormat": "12h",
+        "displayTimeAutoSync": "on",
+        "beepSound": "on",
+        "weightUnit": "lbs",
+        "remindBeep": "on"
+      }
+    },
+    {
+      "href": "/oven/spec/vs/0",
+      "rep": {
+        "resourceVersion": 2,
+        "modeSpecVersion": "1.02",
+        "micomModelId": "OT80H30-/AA0",
+        "microwavePowerLevelUnit": "percentage",
+        "cavityInfo": {
+          "numberOfCavity": 1,
+          "cavityType": "single",
+          "serviceDefaultCavity": "single",
+          "cavityList": [
+            {
+              "name": "single",
+              "resourceNumber": 0,
+              "settingList": [
+                "displayTimeAutoSync",
+                "weightUnit",
+                "beepSound",
+                "timeFormat",
+                "remindBeep"
+              ],
+              "featureList": [
+                ""
+              ],
+              "defaultMode": "MicroWave",
+              "modeSpecList": [
+                {
+                  "mode": "MicroWave",
+                  "remoteControlProperty": [
+                    "set"
+                  ],
+                  "time": {
+                    "min": 1,
+                    "max": 6039,
+                    "default": 30,
+                    "interval": 1
+                  },
+                  "microwavePowerLevel": {
+                    "unit": "percentage",
+                    "default": 100,
+                    "powerLevelList": [
+                      0,
+                      10,
+                      20,
+                      30,
+                      40,
+                      50,
+                      60,
+                      70,
+                      80,
+                      90,
+                      100
+                    ]
+                  }
+                },
+                {
+                  "mode": "Autocook",
+                  "remoteControlProperty": [
+                    "set"
+                  ]
+                },
+                {
+                  "mode": "KeepWarm",
+                  "remoteControlProperty": [
+                    "set"
+                  ],
+                  "time": {
+                    "min": 1,
+                    "max": 6039,
+                    "default": 0,
+                    "interval": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "href": "/oven/status/vs/0",
+      "rep": {
+        "sequenceNumber": 96,
+        "cavityName": "single",
+        "availableSettingList": [
+          "displayTimeAutoSync",
+          "weightUnit",
+          "beepSound",
+          "timeFormat",
+          "remindBeep"
+        ],
+        "door": {
+          "state": "closed"
+        },
+        "childLock": "off",
+        "availableModeList": [
+          "MicroWave",
+          "Autocook",
+          "KeepWarm"
+        ],
+        "operation": "ready",
+        "subOperation": "ready",
+        "mode": {
+          "name": "NoOperation",
+          "indexRecipe": "00000000000000"
+        },
+        "microwavePowerLevel": {
+          "unit": "percentage",
+          "setting": 0
+        },
+        "time": {
+          "operation": "ready",
+          "setting": 0,
+          "completion": "",
+          "remaining": 0
+        },
+        "ddms": "off"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "supportedVersion": "1.0"
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "America/New_York",
+        "offset": "-04:00",
+        "DST": "ON"
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**"
+      }
+    }
+  ]
+}
