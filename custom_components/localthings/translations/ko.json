@@ -141,6 +141,9 @@
       "start": {
         "name": "시작"
       },
+      "sync_clock": {
+        "name": "시계 동기화"
+      },
       "stop": {
         "name": "정지"
       }

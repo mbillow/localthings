@@ -1,5 +1,8 @@
-"""Capabilities for the cooktop half of range/combo appliances (issue #44,
-model TP1X_DA-KS-RANGE-0102X).
+"""Capabilities for range/combo appliances.
+
+Cooktop coverage comes from issue #44's TP1X_DA-KS-RANGE-0102X; the
+write-only clock resource was verified on issue #404's
+TP1X_DA-KS-RANGE-0101X.
 
 Not to be confused with registry/capabilities/cooktop.py, which covers an
 unrelated standalone-cooktop product (NA9300K-class) that encodes burner
@@ -16,18 +19,48 @@ hardcoded up to MAX_BURNERS and gated by exists_fn against whichever
 indices the device actually reports -- an index absent from burnerList
 just never binds.
 
-Write surfaces here are unproven (no live device to verify against, same
-caveat as oven.py's RMW writes) -- power level uses the same
+Cooktop write surfaces here are unproven (no live device to verify against,
+same caveat as oven.py's RMW writes) -- power level uses the same
 read-modify-write pattern already proven safe elsewhere in this codebase.
 """
 
+from datetime import datetime
+
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import normalize_temp_unit
 
 # Observed as high as 4; user-reported hardware with 5 burners exists.
 # Kept a little above both since exists_fn gates unused slots out.
 MAX_BURNERS = 6
+
+
+def _clock_sync_payload(now: datetime) -> str:
+    """Format Home Assistant's local wall clock for the range."""
+    return now.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def _clock_sync_write(payload, _rep, href=None):
+    """Write the generated wall clock to the range's write-only resource."""
+    return ["configuration", "vs", "0"], {"x.com.samsung.da.currentTime": payload}
+
+
+# The TP1X range family accepts a local wall-clock timestamp here but does not
+# echo it on GET. Keeping this as a button prevents arbitrary timestamps from
+# being supplied or cached and only generates the current timestamp on press.
+RANGE_CLOCK_SYNC = Capability(
+    href="/configuration/vs/0",
+    entities=(
+        ButtonDesc(
+            key="sync_clock",
+            icon="mdi:clock-check-outline",
+            entity_category="config",
+            payload_fn=_clock_sync_payload,
+            write_fn=_clock_sync_write,
+            write_only=True,
+        ),
+    ),
+)
 
 
 def _burner(burner_list, i):

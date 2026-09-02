@@ -2076,9 +2076,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         write_href = bound_entity.subdevice.to_actual("/" + "/".join(path_segs))
         path_segs = [s for s in write_href.strip("/").split("/") if s]
 
-        # Apply optimistically before starting the settle guard -- guard and
-        # apply share the same gate (mark_write_pending), so reversing the
-        # order would drop the very update it exists to protect (issue #27).
+        # Apply readable writes optimistically before starting the settle
+        # guard -- guard and apply share the same gate (mark_write_pending),
+        # so reversing the order would drop the very update it exists to
+        # protect (issue #27). A write-only button has no readable field to
+        # protect: merging its command body would manufacture state the
+        # appliance can never confirm, so it skips both operations.
         #
         # settle_s must outlast the PUT plus the confirming refresh, not
         # DEFAULT_SETTLE_S's fixed few seconds: the refresh is a full
@@ -2098,27 +2101,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # option/item for the settle window. Pre-merge here the way the
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
-        optimistic_body = body
-        new_options = body.get("x.com.samsung.da.options")
-        if isinstance(new_options, list):
-            cached_options = (self._cache.get(write_href) or {}).get("x.com.samsung.da.options")
-            optimistic_body = {
-                **optimistic_body,
-                "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
-            }
-        # Same fact, items[] shape (see airconditioner._climate_write's
-        # vendor temperature write).
-        new_items = body.get("x.com.samsung.da.items")
-        if isinstance(new_items, list):
-            cached_items = (self._cache.get(write_href) or {}).get("x.com.samsung.da.items")
-            optimistic_body = {
-                **optimistic_body,
-                "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
-            }
-        self._observe.apply(write_href, optimistic_body, source="optimistic")
-        self._observe.mark_write_pending(
-            write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
-        )
+        write_only = getattr(desc, "write_only", False)
+        if not write_only:
+            optimistic_body = body
+            new_options = body.get("x.com.samsung.da.options")
+            if isinstance(new_options, list):
+                cached_options = (self._cache.get(write_href) or {}).get("x.com.samsung.da.options")
+                optimistic_body = {
+                    **optimistic_body,
+                    "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
+                }
+            # Same fact, items[] shape (see airconditioner._climate_write's
+            # vendor temperature write).
+            new_items = body.get("x.com.samsung.da.items")
+            if isinstance(new_items, list):
+                cached_items = (self._cache.get(write_href) or {}).get("x.com.samsung.da.items")
+                optimistic_body = {
+                    **optimistic_body,
+                    "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
+                }
+            self._observe.apply(write_href, optimistic_body, source="optimistic")
+            self._observe.mark_write_pending(
+                write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+            )
 
         def _do_put():
             if self._session is None:
@@ -2163,9 +2168,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # revert-then-reapply symptom settle_s exists to prevent
                 # (issue #9). Re-arm it fresh now that the write actually
                 # landed.
-                self._observe.mark_write_pending(
-                    write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
-                )
+                if not write_only:
+                    self._observe.mark_write_pending(
+                        write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+                    )
         await self.async_request_refresh()
 
     # ------------------------------------------------------------------

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
@@ -20,6 +21,7 @@ WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
 # option list).
 ValidateFn = Callable[[Any, dict, dict], "str | None"] | None
 DisplayFn = Callable[[Any, dict], Any] | None
+ButtonPayloadFn = Callable[[datetime], Any] | None
 
 
 def _identity(v: Any) -> Any:
@@ -106,8 +108,14 @@ class SwitchDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class ButtonDesc(SamsungEntityDescription):
-    payload: str = ""
+    payload: Any = ""
+    # Optional press-time payload generation. The button platform supplies
+    # Home Assistant's current local time so registry modules stay HA-free.
+    payload_fn: ButtonPayloadFn = None
     write_fn: WriteFn = None
+    # The command field is accepted on POST but never appears in a readable
+    # representation. Skip the coordinator's optimistic cache merge for it.
+    write_only: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

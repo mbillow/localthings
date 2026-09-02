@@ -141,6 +141,9 @@
       "start": {
         "name": "Starten"
       },
+      "sync_clock": {
+        "name": "Klok synchroniseren"
+      },
       "stop": {
         "name": "Stoppen"
       }

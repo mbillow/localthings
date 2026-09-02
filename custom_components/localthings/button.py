@@ -6,6 +6,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
@@ -30,6 +31,8 @@ class LocalThingsButton(LocalThingsEntity, ButtonEntity):
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         self._payload = bound.desc.payload
+        self._payload_fn = bound.desc.payload_fn
 
     async def async_press(self) -> None:
-        await self.coordinator.async_send_command(self._bound, self._payload)
+        payload = self._payload_fn(dt_util.now()) if self._payload_fn else self._payload
+        await self.coordinator.async_send_command(self._bound, payload)

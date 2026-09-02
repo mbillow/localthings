@@ -47,7 +47,9 @@ IGNORED: list[Capability] = [
     Capability(href="/quickcontrol/info/vs/0"),
     Capability(href="/realtimenotiforclient/vs/0"),
     Capability(href="/file/information/vs/0"),
-    Capability(href="/configuration/vs/0"),  # region/countryCode
+    # Normally static region/countryCode metadata. The range registry replaces
+    # this entry with its hardware-verified write-only clock capability.
+    Capability(href="/configuration/vs/0"),
     Capability(href="/setting/vs/0"),  # supported/selected UI language
     Capability(href="/timezone/vs/0"),  # redundant with HA's own timezone
     Capability(href="/wm/setinfo/vs/0"),  # model/manufacturing metadata
@@ -125,3 +127,9 @@ IGNORED: list[Capability] = [
     # treatment as the microwave family's /recipe/cook/vs/0.
     Capability(href="/cooktop/recipe/status/vs/0"),
 ]
+
+
+def without(*hrefs: str) -> tuple[Capability, ...]:
+    """Return the ignored capabilities except for the supplied hrefs."""
+    excluded = set(hrefs)
+    return tuple(capability for capability in IGNORED if capability.href not in excluded)

@@ -1235,6 +1235,47 @@ async def test_send_command_applies_write_optimistically_before_settling(
     assert coordinator._cache.get("/some/path") == {"value": 5}
 
 
+async def test_write_only_button_does_not_manufacture_cache_state(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """A command-only field the appliance never returns must not survive as
+    optimistic cache state or gain a settle guard that blocks its empty GET."""
+    from custom_components.localthings.registry.capabilities import range as range_caps
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import ButtonDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        "/configuration/vs/0",
+        {"rt": ["x.com.samsung.da.configuration"]},
+        source="test",
+    )
+    desc = range_caps.RANGE_CLOCK_SYNC.entities[0]
+    assert isinstance(desc, ButtonDesc)
+    bound = BoundEntity(
+        href="/configuration/vs/0",
+        capability=range_caps.RANGE_CLOCK_SYNC,
+        desc=desc,
+    )
+
+    with (
+        patch.object(fake, "subscribe"),
+        patch.object(coordinator, "async_request_refresh", new_callable=AsyncMock),
+    ):
+        fake.post = lambda *a, **k: (0x44, b"")
+        await coordinator.async_send_command(bound, desc.payload)
+
+    assert coordinator._cache.get("/configuration/vs/0") == {
+        "rt": ["x.com.samsung.da.configuration"]
+    }
+    assert coordinator._observe._settle_until.get("/configuration/vs/0") is None
+
+
 async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:

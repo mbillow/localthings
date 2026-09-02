@@ -14,7 +14,7 @@ REGISTRY = DeviceRegistry(
     name="range",
     capabilities=_build(
         [
-            *ignored.IGNORED,
+            *ignored.without("/configuration/vs/0"),
             *common.UNIVERSAL,
             *common.POWER,
             oven.OVEN_CAVITY,
@@ -24,6 +24,7 @@ REGISTRY = DeviceRegistry(
             oven.OVEN_DOOR,
             oven.OVEN_CONNECTED,
             oven.OVEN_SPEC,
+            range_caps.RANGE_CLOCK_SYNC,
             range_caps.COOKTOP_STATUS,
             range_caps.COOKTOP_SPEC,
             range_caps.COOKTOP_SAFETY,
