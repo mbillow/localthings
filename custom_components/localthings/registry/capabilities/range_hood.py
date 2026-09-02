@@ -5,6 +5,19 @@ status, and particulate sensors as distinct local OCF resources.  Fan power
 and speed are combined into one HA fan entity by ``fan.py``; lamp power and
 brightness remain separate controls because the device advertises them as two
 independent fields.
+
+DAWIT 3.0 generation built-in vent hood (issue #433, combi microwave):
+a different board reports the vent fan/lamp/filter as one bare-field
+`/hood/status/vs/0` (no `x.com.samsung.da.` prefix, no `.hood.` namespace
+-- unrelated to `/hood/fanspeed/vs/0` above, which this board doesn't
+carry), with the static fan-speed/lamp-state vocabulary split into a
+sibling `/hood/spec/vs/0`. `HOOD_STATUS`/`HOOD_SPEC` below are that
+generation's capabilities. Modeled as selects rather than a composite
+FanDesc: unlike `HOOD_FAN`'s supportedFanSpeed (colocated on its own
+href), this board's full speed/lamp vocabularies live only on the sibling
+spec resource, and FanDesc/fan.py's LocalThingsRangeHoodFan has no hook
+for a cross-href option list -- same shape as range.py's
+`_power_level_options` reading `/cooktop/spec/vs/0` for a SelectDesc.
 """
 
 from ..batch import is_stub_rep
@@ -301,6 +314,99 @@ AUTO_VENTILATION = Capability(
         ),
     ),
 )
+
+
+# ---------------------------------------------------------------------------
+# DAWIT 3.0 generation (issue #433) -- see module docstring.
+# ---------------------------------------------------------------------------
+
+
+def _hood_status_fan_speed_options(resources):
+    """Live fanSpeedList from the sibling spec resource, minus whatever
+    unavailableFanSpeedList currently excludes. Issue #433's dump reports
+    unavailableFanSpeedList as [''] (nothing excluded) -- the empty-string
+    placeholder is filtered out so it can't accidentally exclude a real
+    speed code."""
+    spec = resources.get("/hood/spec/vs/0") or {}
+    status = resources.get("/hood/status/vs/0") or {}
+    unavailable = {str(v) for v in (status.get("unavailableFanSpeedList") or ()) if v}
+    return [s for s in (spec.get("fanSpeedList") or []) if s not in unavailable]
+
+
+def _hood_status_fan_speed_write(p, rep, href=None):
+    """Direct single-field PUT -- unconfirmed, no live device to verify
+    against (issue #433's reporter is asked to try this)."""
+    if not isinstance(p, str):
+        return None
+    return ["hood", "status", "vs", "0"], {"fanSpeed": p}
+
+
+def _hood_status_lamp_options(resources):
+    spec = resources.get("/hood/spec/vs/0") or {}
+    return list(spec.get("lampStateList") or [])
+
+
+def _hood_status_lamp_write(p, rep, href=None):
+    if not isinstance(p, str):
+        return None
+    return ["hood", "status", "vs", "0"], {"lamp": p}
+
+
+def _hood_status_filter_alarm(items):
+    for item in items or ():
+        if isinstance(item, dict) and str(item.get("alarm", "")).lower() not in ("off", ""):
+            return True
+    return False
+
+
+HOOD_STATUS = Capability(
+    href="/hood/status/vs/0",
+    poll_tier="hot",
+    entities=(
+        # No separate power resource on this board (same shape as
+        # HOOD_FAN's combi-appliance fallback) -- 'off' is itself a
+        # fanSpeedList option, so a select needs no dedicated off/on
+        # toggle.
+        SelectDesc(
+            key="hood_fan_speed",
+            field="fanSpeed",
+            icon="mdi:fan",
+            options=_hood_status_fan_speed_options,
+            write_fn=_hood_status_fan_speed_write,
+        ),
+        SelectDesc(
+            key="hood_lamp",
+            field="lamp",
+            icon="mdi:track-light",
+            options=_hood_status_lamp_options,
+            write_fn=_hood_status_lamp_write,
+        ),
+        BinarySensorDesc(
+            key="grease_filter_alarm",
+            field="filter",
+            device_class="problem",
+            entity_category="diagnostic",
+            icon="mdi:air-filter",
+            value_fn=_hood_status_filter_alarm,
+        ),
+        # Meaning not confirmed beyond the field name itself -- exposed as
+        # a plain raw on/off passthrough rather than an interpreted
+        # device_class, same caution as AUTO_VENTILATION's bare 'action'
+        # field above.
+        BinarySensorDesc(
+            key="front_vent_open",
+            field="frontVent",
+            entity_category="diagnostic",
+            icon="mdi:fan",
+            value_fn=lambda v: str(v).lower() == "on",
+        ),
+    ),
+)
+
+# Static fan-speed/lamp-state vocabulary + hood type metadata, read live by
+# HOOD_STATUS's two selects (options=<callable>) rather than exposed
+# through its own entity -- same pattern as range.py's COOKTOP_SPEC.
+HOOD_SPEC = Capability(href="/hood/spec/vs/0")
 
 
 # Resource plumbing and opaque feature-negotiation fields that are specific to

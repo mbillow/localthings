@@ -193,6 +193,7 @@ class TestForDeviceByOicType:
             ("oic.d.airpurifier", "air_purifier"),
             ("oic.d.dishwasher", "dishwasher"),
             ("oic.d.dryer", "dryer"),
+            ("oic.d.microwave", "microwave"),
             ("oic.d.oven", "oven"),
             ("oic.d.refrigerator", "refrigerator"),
             ("oic.d.washer", "washer"),

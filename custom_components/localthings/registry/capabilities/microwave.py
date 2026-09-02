@@ -27,10 +27,28 @@ different from an oven, and defined fresh here:
 
 Cooking-mode writes are unproven here, same caveat as oven.py's OVEN_MODE
 -- exposed as a SelectDesc for fidelity, first real-world write is the test.
+
+DAWIT 3.0 generation (issue #433, OT80H30-class over-the-range combi):
+this board answers none of the hrefs above -- no /oven/vs/0, /mode/vs/0,
+/temperatures/vs/0, /doors/vs/0, /operational/state/vs/0. Instead the
+whole cavity (mode, door, child lock, microwave power level, cook time) is
+one bare-field `/oven/status/vs/0` resource (no `x.com.samsung.da.`
+prefix, same plain-camelCase convention range.py's cooktop capabilities
+already document), with static per-mode bounds split into a sibling
+`/oven/spec/vs/0` and separate user-preference toggles in
+`/oven/settings/status/vs/0`. `MICROWAVE_STATUS`/`MICROWAVE_SETTINGS`
+below are this generation's fresh capabilities; `MICROWAVE_SPEC` is a bare
+coverage marker like oven.py's OVEN_SPEC -- its cavityInfo.modeSpecList
+(mode names, time bounds, microwavePowerLevel's powerLevelList) has no
+per-entity descriptor to read it live from (NumberDesc bounds only ever
+see their own href's rep, never a sibling's), so SETPOINT_MIN/MAX below
+are copied from this one dump's modeSpecList rather than read dynamically
+-- same "single-dump static bounds" caveat as SETPOINT_MIN_C above.
+Nothing here is confirmed by a live write; see each write_fn's comment.
 """
 
 from ..capability import Capability
-from ..entities import NumberDesc, SelectDesc, SensorDesc, SwitchDesc
+from ..entities import BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import int_or_none, normalize_temp_unit
 from .laundry import option_value, option_write
 
@@ -273,6 +291,226 @@ MICROWAVE_MODE = Capability(
             exists_fn=_remind_beep_exists,
             value_fn=lambda opts: option_value(opts, "RemindBeep") == "On",
             write_fn=_remind_beep_write,
+        ),
+    ),
+)
+
+# ---------------------------------------------------------------------------
+# DAWIT 3.0 generation (issue #433) -- see module docstring.
+# ---------------------------------------------------------------------------
+
+# Confirmed on issue #433's dump: MicroWave and KeepWarm's modeSpec both
+# report {min: 1, max: 6039, interval: 1} -- seconds (a 6039-second/100-ish
+# minute ceiling is plausible for a combi cook timer; a minutes reading
+# would imply a multi-day cook, which isn't). Single dump, no cross-check
+# -- see module docstring.
+COOK_TIME_MIN_S = 1
+COOK_TIME_MAX_S = 6039
+
+# powerLevelList on the same dump's MicroWave modeSpec: 0-100 step 10.
+POWER_LEVEL_MIN = 0
+POWER_LEVEL_MAX = 100
+POWER_LEVEL_STEP = 10
+
+_STATUS_STATE_TO_OCF = {
+    "ready": "idle",
+    "run": "active",
+    "running": "active",
+    "pause": "pause",
+    "paused": "pause",
+    "end": "idle",
+    "stop": "idle",
+}
+
+
+def _status_to_ocf(v):
+    if v is None:
+        return None
+    return _STATUS_STATE_TO_OCF.get(str(v).lower(), v)
+
+
+def _status_child_lock_write(p, rep, href=None):
+    """Direct single-field PUT, no RMW needed -- same shape as range.py's
+    cooktop_child_lock (issue #349: no device_class='lock' on a SwitchDesc,
+    HA's switch platform only knows 'outlet'/'switch')."""
+    if p not in ("On", "Off"):
+        return None
+    return ["oven", "status", "vs", "0"], {"childLock": p.lower()}
+
+
+def _status_mode_write(p, rep, href=None):
+    """RMW against the live availableModeList -- unconfirmed, same caveat
+    as oven.py's OVEN_MODE (issue #433's reporter is asked to try this)."""
+    valid = rep.get("availableModeList") or ()
+    if p not in valid:
+        return None
+    mode = dict(rep.get("mode") or {})
+    mode["name"] = p
+    return ["oven", "status", "vs", "0"], {"mode": mode}
+
+
+def _power_level_write(p, rep, href=None):
+    try:
+        level = int(round(float(p) / POWER_LEVEL_STEP) * POWER_LEVEL_STEP)
+    except (TypeError, ValueError):
+        return None
+    if not (POWER_LEVEL_MIN <= level <= POWER_LEVEL_MAX):
+        return None
+    setting = dict(rep.get("microwavePowerLevel") or {})
+    setting["setting"] = level
+    return ["oven", "status", "vs", "0"], {"microwavePowerLevel": setting}
+
+
+def _cook_time_write(p, rep, href=None):
+    try:
+        seconds = round(float(p))
+    except (TypeError, ValueError):
+        return None
+    if not (COOK_TIME_MIN_S <= seconds <= COOK_TIME_MAX_S):
+        return None
+    setting = dict(rep.get("time") or {})
+    setting["setting"] = seconds
+    return ["oven", "status", "vs", "0"], {"time": setting}
+
+
+MICROWAVE_STATUS = Capability(
+    href="/oven/status/vs/0",
+    poll_tier="hot",
+    entities=(
+        SensorDesc(
+            key="machine_state",
+            field="operation",
+            icon="mdi:stove",
+            device_class="enum",
+            options=("idle", "active", "pause"),
+            translation_key="machine_state",
+            value_fn=_status_to_ocf,
+        ),
+        BinarySensorDesc(
+            key="cycle_active",
+            field="operation",
+            device_class="running",
+            value_fn=lambda v: _status_to_ocf(v) == "active",
+        ),
+        BinarySensorDesc(
+            key="door_open",
+            field="door",
+            device_class="door",
+            value_fn=lambda door: (door or {}).get("state") == "open",
+        ),
+        SwitchDesc(
+            key="child_lock",
+            field="childLock",
+            entity_category="config",
+            icon="mdi:lock",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_status_child_lock_write,
+        ),
+        # SelectDesc first — options_field reads this same href live, no
+        # static fallback needed (availableModeList is always populated on
+        # the one dump seen).
+        SelectDesc(
+            key="cooking_mode",
+            field="mode",
+            icon="mdi:tune",
+            options_field="availableModeList",
+            value_fn=lambda mode: (mode or {}).get("name"),
+            write_fn=_status_mode_write,
+        ),
+        NumberDesc(
+            key="power_level",
+            field="microwavePowerLevel",
+            unit="%",
+            native_min=float(POWER_LEVEL_MIN),
+            native_max=float(POWER_LEVEL_MAX),
+            step=float(POWER_LEVEL_STEP),
+            icon="mdi:radar",
+            value_fn=lambda v: int_or_none((v or {}).get("setting")),
+            write_fn=_power_level_write,
+        ),
+        NumberDesc(
+            key="cook_time",
+            field="time",
+            unit="s",
+            native_min=float(COOK_TIME_MIN_S),
+            native_max=float(COOK_TIME_MAX_S),
+            step=1.0,
+            icon="mdi:timer",
+            value_fn=lambda v: int_or_none((v or {}).get("setting")),
+            write_fn=_cook_time_write,
+        ),
+        # subOperation ('ready' alongside operation='ready' on the only
+        # dump seen) -- raw diagnostic passthrough, meaning not confirmed
+        # beyond mirroring `operation` at idle.
+        SensorDesc(
+            key="sub_operation",
+            field="subOperation",
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
+# Per-mode setpoint/power-level bounds and the mode list itself
+# (cavityInfo.cavityList[*].modeSpecList) -- see module docstring for why
+# this stays a bare coverage marker instead of a live-read source.
+MICROWAVE_SPEC = Capability(href="/oven/spec/vs/0")
+
+
+def _settings_bool_write(field_name):
+    """Factory for a single-field on/off PUT against
+    /oven/settings/status/vs/0 -- unconfirmed writes, same "flagged guess"
+    caveat as the rest of this generation's contracts."""
+
+    def write(p, rep, href=None):
+        if p not in ("On", "Off"):
+            return None
+        return ["oven", "settings", "status", "vs", "0"], {field_name: p.lower()}
+
+    return write
+
+
+MICROWAVE_SETTINGS = Capability(
+    href="/oven/settings/status/vs/0",
+    poll_tier="warm",
+    entities=(
+        SwitchDesc(
+            key="beep",
+            field="beepSound",
+            entity_category="config",
+            icon="mdi:volume-high",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_settings_bool_write("beepSound"),
+        ),
+        SwitchDesc(
+            key="remind_beep",
+            field="remindBeep",
+            entity_category="config",
+            icon="mdi:bell-ring",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_settings_bool_write("remindBeep"),
+        ),
+        SwitchDesc(
+            key="display_time_auto_sync",
+            field="displayTimeAutoSync",
+            entity_category="config",
+            icon="mdi:clock-sync",
+            value_fn=lambda v: str(v).lower() == "on",
+            write_fn=_settings_bool_write("displayTimeAutoSync"),
+        ),
+        # No supportedWeightUnit/supportedTimeFormat field on this dump to
+        # read a select's options from (skill: don't invent a values list)
+        # -- read-only enum sensors until one surfaces.
+        SensorDesc(
+            key="weight_unit",
+            field="weightUnit",
+            entity_category="diagnostic",
+            icon="mdi:scale",
+        ),
+        SensorDesc(
+            key="time_format",
+            field="timeFormat",
+            entity_category="diagnostic",
+            icon="mdi:clock-outline",
         ),
     ),
 )

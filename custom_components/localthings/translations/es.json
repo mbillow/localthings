@@ -314,6 +314,12 @@
       },
       "stick_ble_connected": {
         "name": "Aspiradora conectada por BLE"
+      },
+      "grease_filter_alarm": {
+        "name": "Alarma del filtro de grasa"
+      },
+      "front_vent_open": {
+        "name": "Ventilación frontal"
       }
     },
     "button": {
@@ -422,6 +428,9 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura objetivo de zona"
+      },
+      "power_level": {
+        "name": "Nivel de potencia"
       }
     },
     "select": {
@@ -1058,6 +1067,24 @@
           "ventilation": "Ventilación",
           "smartventilation": "Ventilación inteligente"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Velocidad del ventilador",
+        "state": {
+          "off": "Apagado",
+          "low": "Baja",
+          "medium": "Media",
+          "high": "Alta",
+          "boost": "Turbo"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lámpara",
+        "state": {
+          "off": "Apagada",
+          "medium": "Media",
+          "on": "Encendida"
+        }
       }
     },
     "sensor": {
@@ -1458,6 +1485,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "Horas de uso del filtro PM1"
+      },
+      "sub_operation": {
+        "name": "Suboperación"
+      },
+      "weight_unit": {
+        "name": "Unidad de peso"
+      },
+      "time_format": {
+        "name": "Formato de hora"
       }
     },
     "switch": {
@@ -1673,6 +1709,9 @@
       },
       "windsleep": {
         "name": "Modo nocturno"
+      },
+      "display_time_auto_sync": {
+        "name": "Sincronización automática de la hora"
       }
     },
     "time": {

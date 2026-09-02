@@ -5,7 +5,7 @@ from custom_components.localthings.registry.by_type import (
     for_device_by_model,
     resolve,
 )
-from custom_components.localthings.registry.capabilities import microwave
+from custom_components.localthings.registry.capabilities import microwave, range_hood
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import NumberDesc, SelectDesc, SwitchDesc
 
@@ -427,3 +427,166 @@ def test_remind_beep_write_requires_existing_options():
     )
     assert desc.write_fn is not None
     assert desc.write_fn("On", {}) is None
+
+
+# ---------------------------------------------------------------------------
+# DAWIT 3.0 generation (issue #433) -- /oven/status/vs/0, /oven/spec/vs/0,
+# /oven/settings/status/vs/0, and the analogous built-in vent hood.
+# ---------------------------------------------------------------------------
+
+
+def test_me80h2160raa_fixture_resolves_and_has_no_unbound_hrefs():
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_me80h2160raa")
+    reg = resolve(resources, device_types=("oic.wk.d", "oic.d.microwave"))
+    assert reg is not None
+    assert reg.name == "microwave"
+
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+
+
+def _status_entity(key, cls=None):
+    return next(
+        e
+        for e in microwave.MICROWAVE_STATUS.entities
+        if e.key == key and (cls is None or isinstance(e, cls))
+    )
+
+
+def test_status_machine_state_maps_operation_to_ocf():
+    desc = _status_entity("machine_state")
+    assert desc.value_fn("ready") == "idle"
+    assert desc.value_fn("run") == "active"
+    assert desc.value_fn("pause") == "pause"
+
+
+def test_status_cycle_active_reflects_operation():
+    desc = _status_entity("cycle_active")
+    assert desc.value_fn("run") is True
+    assert desc.value_fn("ready") is False
+
+
+def test_status_door_open_reads_nested_state():
+    desc = _status_entity("door_open")
+    assert desc.value_fn({"state": "open"}) is True
+    assert desc.value_fn({"state": "closed"}) is False
+    assert desc.value_fn(None) is False
+
+
+def test_status_child_lock_write_is_single_field():
+    desc = _status_entity("child_lock", SwitchDesc)
+    assert desc.write_fn is not None
+    result = desc.write_fn("On", {})
+    assert result == (["oven", "status", "vs", "0"], {"childLock": "on"})
+
+
+def test_status_child_lock_write_rejects_unknown_value():
+    desc = _status_entity("child_lock", SwitchDesc)
+    assert desc.write_fn is not None
+    assert desc.write_fn("maybe", {}) is None
+
+
+def test_status_cooking_mode_options_field_reads_live_list():
+    desc = _status_entity("cooking_mode", SelectDesc)
+    assert desc.options_field == "availableModeList"
+    assert desc.value_fn({"name": "NoOperation"}) == "NoOperation"
+
+
+def test_status_cooking_mode_write_validates_against_available_modes_and_preserves_recipe():
+    desc = _status_entity("cooking_mode", SelectDesc)
+    assert desc.write_fn is not None
+    rep = {
+        "availableModeList": ["MicroWave", "Autocook", "KeepWarm"],
+        "mode": {"name": "NoOperation", "indexRecipe": "00000000000000"},
+    }
+    result = desc.write_fn("MicroWave", rep)
+    assert result == (
+        ["oven", "status", "vs", "0"],
+        {"mode": {"name": "MicroWave", "indexRecipe": "00000000000000"}},
+    )
+    assert desc.write_fn("Bake", rep) is None
+
+
+def test_status_power_level_write_snaps_to_step_and_clamps():
+    desc = _status_entity("power_level", NumberDesc)
+    assert desc.write_fn is not None
+    rep = {"microwavePowerLevel": {"unit": "percentage", "setting": 0}}
+    result = desc.write_fn(53, rep)
+    assert result == (
+        ["oven", "status", "vs", "0"],
+        {"microwavePowerLevel": {"unit": "percentage", "setting": 50}},
+    )
+    assert desc.write_fn(150, rep) is None
+    assert desc.write_fn(-10, rep) is None
+
+
+def test_status_cook_time_write_rejects_out_of_range():
+    desc = _status_entity("cook_time", NumberDesc)
+    assert desc.write_fn is not None
+    rep = {"time": {"setting": 0}}
+    result = desc.write_fn(90, rep)
+    assert result == (["oven", "status", "vs", "0"], {"time": {"setting": 90}})
+    assert desc.write_fn(0, rep) is None
+    assert desc.write_fn(6040, rep) is None
+
+
+def test_settings_beep_reads_and_writes():
+    desc = next(
+        e
+        for e in microwave.MICROWAVE_SETTINGS.entities
+        if e.key == "beep" and isinstance(e, SwitchDesc)
+    )
+    assert desc.value_fn("on") is True
+    assert desc.value_fn("off") is False
+    assert desc.write_fn is not None
+    result = desc.write_fn("Off", {})
+    assert result == (["oven", "settings", "status", "vs", "0"], {"beepSound": "off"})
+
+
+def test_hood_status_fan_speed_options_excludes_unavailable_and_placeholder():
+    resources = {
+        "/hood/spec/vs/0": {"fanSpeedList": ["off", "low", "medium", "high", "boost"]},
+        "/hood/status/vs/0": {"unavailableFanSpeedList": ["boost"]},
+    }
+    desc = next(
+        e
+        for e in range_hood.HOOD_STATUS.entities
+        if e.key == "hood_fan_speed" and isinstance(e, SelectDesc)
+    )
+    assert callable(desc.options)
+    assert desc.options(resources) == ["off", "low", "medium", "high"]
+
+    # The dump's own [''] placeholder must not exclude a real speed.
+    resources["/hood/status/vs/0"] = {"unavailableFanSpeedList": [""]}
+    assert desc.options(resources) == ["off", "low", "medium", "high", "boost"]
+
+
+def test_hood_status_fan_speed_write():
+    desc = next(
+        e
+        for e in range_hood.HOOD_STATUS.entities
+        if e.key == "hood_fan_speed" and isinstance(e, SelectDesc)
+    )
+    assert desc.write_fn is not None
+    assert desc.write_fn("high", {}) == (["hood", "status", "vs", "0"], {"fanSpeed": "high"})
+
+
+def test_hood_status_lamp_options_reads_spec():
+    resources = {"/hood/spec/vs/0": {"lampStateList": ["off", "medium", "on"]}}
+    desc = next(
+        e
+        for e in range_hood.HOOD_STATUS.entities
+        if e.key == "hood_lamp" and isinstance(e, SelectDesc)
+    )
+    assert callable(desc.options)
+    assert desc.options(resources) == ["off", "medium", "on"]
+
+
+def test_hood_status_grease_filter_alarm_detects_any_active_alarm():
+    desc = next(e for e in range_hood.HOOD_STATUS.entities if e.key == "grease_filter_alarm")
+    assert desc.value_fn([{"filterType": "greaseFilter", "alarm": "off"}]) is False
+    assert desc.value_fn([{"filterType": "greaseFilter", "alarm": "on"}]) is True
+    assert desc.value_fn(None) is False

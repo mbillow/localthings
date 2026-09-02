@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Steel via BLE verbonden"
+      },
+      "grease_filter_alarm": {
+        "name": "Vetfilter alarm"
+      },
+      "front_vent_open": {
+        "name": "Voorste ventilatie"
       }
     },
     "button": {
@@ -225,6 +231,9 @@
       },
       "zone_target_temperature": {
         "name": "Doeltemperatuur zone"
+      },
+      "power_level": {
+        "name": "Vermogensniveau"
       }
     },
     "select": {
@@ -861,6 +870,24 @@
           "ventilation": "Ventilatie",
           "smartventilation": "Slimme ventilatie"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Ventilatorsnelheid",
+        "state": {
+          "off": "Uit",
+          "low": "Laag",
+          "medium": "Gemiddeld",
+          "high": "Hoog",
+          "boost": "Boost"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lamp",
+        "state": {
+          "off": "Uit",
+          "medium": "Gemiddeld",
+          "on": "Aan"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1288,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "PM1-filtergebruik in uren"
+      },
+      "sub_operation": {
+        "name": "Subbewerking"
+      },
+      "weight_unit": {
+        "name": "Gewichtseenheid"
+      },
+      "time_format": {
+        "name": "Tijdnotatie"
       }
     },
     "switch": {
@@ -1476,6 +1512,9 @@
       },
       "windsleep": {
         "name": "Slaapmodus"
+      },
+      "display_time_auto_sync": {
+        "name": "Automatische tijdsynchronisatie weergave"
       }
     },
     "time": {

@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Tyč připojena přes BLE"
+      },
+      "grease_filter_alarm": {
+        "name": "Upozornění na tukový filtr"
+      },
+      "front_vent_open": {
+        "name": "Přední větrání"
       }
     },
     "button": {
@@ -225,6 +231,9 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
+      },
+      "power_level": {
+        "name": "Výkon"
       }
     },
     "select": {
@@ -861,6 +870,24 @@
           "ventilation": "Větrání",
           "smartventilation": "Chytré větrání"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Rychlost ventilátoru",
+        "state": {
+          "off": "Vypnuto",
+          "low": "Nízká",
+          "medium": "Střední",
+          "high": "Vysoká",
+          "boost": "Intenzivní"
+        }
+      },
+      "hood_lamp": {
+        "name": "Osvětlení",
+        "state": {
+          "off": "Vypnuto",
+          "medium": "Střední",
+          "on": "Zapnuto"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1288,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "Hodiny využití PM1 filtru"
+      },
+      "sub_operation": {
+        "name": "Dílčí operace"
+      },
+      "weight_unit": {
+        "name": "Jednotka hmotnosti"
+      },
+      "time_format": {
+        "name": "Formát času"
       }
     },
     "switch": {
@@ -1476,6 +1512,9 @@
       },
       "windsleep": {
         "name": "Noční režim"
+      },
+      "display_time_auto_sync": {
+        "name": "Automatická synchronizace času displeje"
       }
     },
     "time": {

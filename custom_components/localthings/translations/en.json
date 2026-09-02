@@ -117,6 +117,12 @@
       },
       "stick_ble_connected": {
         "name": "Stick BLE connected"
+      },
+      "grease_filter_alarm": {
+        "name": "Grease filter alarm"
+      },
+      "front_vent_open": {
+        "name": "Front vent"
       }
     },
     "button": {
@@ -225,6 +231,9 @@
       },
       "zone_target_temperature": {
         "name": "Zone target temperature"
+      },
+      "power_level": {
+        "name": "Power level"
       }
     },
     "select": {
@@ -861,6 +870,24 @@
           "ventilation": "Ventilation",
           "smartventilation": "Smart Ventilation"
         }
+      },
+      "hood_fan_speed": {
+        "name": "Fan speed",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "boost": "Boost"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lamp",
+        "state": {
+          "off": "Off",
+          "medium": "Medium",
+          "on": "On"
+        }
       }
     },
     "sensor": {
@@ -1261,6 +1288,15 @@
       },
       "air_filter_pm1_usage_hours": {
         "name": "PM1 filter usage hours"
+      },
+      "sub_operation": {
+        "name": "Sub-operation"
+      },
+      "weight_unit": {
+        "name": "Weight unit"
+      },
+      "time_format": {
+        "name": "Time format"
       }
     },
     "switch": {
@@ -1476,6 +1512,9 @@
       },
       "windsleep": {
         "name": "Sleep mode"
+      },
+      "display_time_auto_sync": {
+        "name": "Auto display time sync"
       }
     },
     "time": {
