@@ -354,7 +354,14 @@ def _hood_status_lamp_write(p, rep, href=None):
 
 def _hood_status_filter_alarm(items):
     for item in items or ():
-        if isinstance(item, dict) and str(item.get("alarm", "")).lower() not in ("off", ""):
+        if not isinstance(item, dict):
+            continue
+        alarm = item.get("alarm")
+        # Falsy (missing, '', explicit JSON null) all mean no alarm --
+        # str(None).lower() is 'none', which isn't 'off' either, so a
+        # bare `not in ("off", "")` check would misread a null alarm
+        # field as active.
+        if alarm and str(alarm).lower() != "off":
             return True
     return False
 
@@ -372,6 +379,11 @@ HOOD_STATUS = Capability(
             field="fanSpeed",
             icon="mdi:fan",
             options=_hood_status_fan_speed_options,
+            # Both option lists come only from the sibling spec resource
+            # (see the docstrings above) -- gate off rather than register
+            # a permanently empty, unusable select on a device reporting
+            # /hood/status/vs/0 without its /hood/spec/vs/0 counterpart.
+            exists_fn=lambda rep, resources: bool(_hood_status_fan_speed_options(resources)),
             write_fn=_hood_status_fan_speed_write,
         ),
         SelectDesc(
@@ -379,6 +391,7 @@ HOOD_STATUS = Capability(
             field="lamp",
             icon="mdi:track-light",
             options=_hood_status_lamp_options,
+            exists_fn=lambda rep, resources: bool(_hood_status_lamp_options(resources)),
             write_fn=_hood_status_lamp_write,
         ),
         BinarySensorDesc(

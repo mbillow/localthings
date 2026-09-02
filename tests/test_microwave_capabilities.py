@@ -489,10 +489,25 @@ def test_status_child_lock_write_rejects_unknown_value():
     assert desc.write_fn("maybe", {}) is None
 
 
-def test_status_cooking_mode_options_field_reads_live_list():
+def test_status_cooking_mode_options_reads_live_list_and_admits_current_value():
     desc = _status_entity("cooking_mode", SelectDesc)
-    assert desc.options_field == "availableModeList"
+    assert callable(desc.options)
     assert desc.value_fn({"name": "NoOperation"}) == "NoOperation"
+
+    # availableModeList never includes the idle sentinel 'NoOperation' --
+    # options must union it in, or HA's SelectEntity.state goes Unknown
+    # while resting (this device's normal idle state).
+    resources = {
+        "/oven/status/vs/0": {
+            "availableModeList": ["MicroWave", "Autocook", "KeepWarm"],
+            "mode": {"name": "NoOperation"},
+        }
+    }
+    assert desc.options(resources) == ["MicroWave", "Autocook", "KeepWarm", "NoOperation"]
+
+    # Already present: not duplicated.
+    resources["/oven/status/vs/0"]["mode"] = {"name": "MicroWave"}
+    assert desc.options(resources) == ["MicroWave", "Autocook", "KeepWarm"]
 
 
 def test_status_cooking_mode_write_validates_against_available_modes_and_preserves_recipe():
@@ -549,14 +564,63 @@ def test_status_power_level_write_is_direct_no_hardcoded_step():
     assert desc.write_fn("not a number", rep) is None
 
 
+def test_status_power_level_gated_off_without_a_live_options_list():
+    """Registering with zero options is a broken, permanently-unusable
+    select, not a harmless empty one -- gate the entity off entirely when
+    spec is missing or has no MicroWave modeSpec to read (issue #196's
+    established rule)."""
+    desc = _status_entity("power_level", SelectDesc)
+    assert desc.exists_fn is not None
+    assert desc.exists_fn({}, {}) is False
+    resources = {
+        "/oven/spec/vs/0": {
+            "cavityInfo": {
+                "cavityList": [
+                    {
+                        "modeSpecList": [
+                            {
+                                "mode": "MicroWave",
+                                "microwavePowerLevel": {"powerLevelList": [0, 100]},
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+    assert desc.exists_fn({}, resources) is True
+
+
+def test_status_power_level_value_is_none_not_the_string_none():
+    desc = _status_entity("power_level", SelectDesc)
+    assert desc.value_fn({"unit": "percentage", "setting": 50}) == "50"
+    assert desc.value_fn({"unit": "percentage"}) is None
+    assert desc.value_fn(None) is None
+
+
 def test_status_cook_time_write_rejects_out_of_range():
     desc = _status_entity("cook_time", NumberDesc)
     assert desc.write_fn is not None
     rep = {"time": {"setting": 0}}
     result = desc.write_fn(90, rep)
     assert result == (["oven", "status", "vs", "0"], {"time": {"setting": 90}})
-    assert desc.write_fn(0, rep) is None
+    # 0 is valid, not clamped to modeSpec's stated floor of 1 -- it's the
+    # device's own live idle value, and rejecting it would make the timer
+    # unclearable via this entity.
+    assert desc.write_fn(0, rep) == (["oven", "status", "vs", "0"], {"time": {"setting": 0}})
+    assert desc.write_fn(-1, rep) is None
     assert desc.write_fn(6040, rep) is None
+
+
+def test_status_cook_time_write_is_single_field_not_rmw():
+    """issue #54 convention: carry only the changed token. `time` also
+    carries device-computed operation/remaining/completion that a plain
+    RMW would echo back stale mid-cycle."""
+    desc = _status_entity("cook_time", NumberDesc)
+    assert desc.write_fn is not None
+    rep = {"time": {"setting": 5, "operation": "run", "remaining": 4, "completion": "x"}}
+    result = desc.write_fn(90, rep)
+    assert result == (["oven", "status", "vs", "0"], {"time": {"setting": 90}})
 
 
 def test_status_cook_time_remaining_reads_countdown():
@@ -615,6 +679,32 @@ def test_hood_status_fan_speed_options_excludes_unavailable_and_placeholder():
     assert desc.options(resources) == ["off", "low", "medium", "high", "boost"]
 
 
+def test_hood_status_fan_speed_and_lamp_gated_off_without_spec():
+    fan_desc = next(
+        e
+        for e in range_hood.HOOD_STATUS.entities
+        if e.key == "hood_fan_speed" and isinstance(e, SelectDesc)
+    )
+    lamp_desc = next(
+        e
+        for e in range_hood.HOOD_STATUS.entities
+        if e.key == "hood_lamp" and isinstance(e, SelectDesc)
+    )
+    assert fan_desc.exists_fn is not None
+    assert lamp_desc.exists_fn is not None
+    assert fan_desc.exists_fn({}, {}) is False
+    assert lamp_desc.exists_fn({}, {}) is False
+
+    resources = {
+        "/hood/spec/vs/0": {
+            "fanSpeedList": ["off", "low"],
+            "lampStateList": ["off", "on"],
+        }
+    }
+    assert fan_desc.exists_fn({}, resources) is True
+    assert lamp_desc.exists_fn({}, resources) is True
+
+
 def test_hood_status_fan_speed_write():
     desc = next(
         e
@@ -641,3 +731,7 @@ def test_hood_status_grease_filter_alarm_detects_any_active_alarm():
     assert desc.value_fn([{"filterType": "greaseFilter", "alarm": "off"}]) is False
     assert desc.value_fn([{"filterType": "greaseFilter", "alarm": "on"}]) is True
     assert desc.value_fn(None) is False
+    # An explicit JSON null alarm field must not read as active --
+    # str(None).lower() is 'none', which isn't 'off' either.
+    assert desc.value_fn([{"filterType": "greaseFilter", "alarm": None}]) is False
+    assert desc.value_fn([{"filterType": "greaseFilter"}]) is False

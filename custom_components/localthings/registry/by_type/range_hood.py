@@ -1,4 +1,11 @@
-"""Range-hood device registry."""
+"""Range-hood device registry.
+
+Includes HOOD_STATUS/HOOD_SPEC (the DAWIT 3.0 generation bare-field
+/hood/status/vs/0 + /hood/spec/vs/0 shape, added for the built-in vent
+fan on a combi microwave in by_type/microwave.py) so a standalone hood
+of the same board generation is covered too, not just when paired with a
+microwave -- no such dump exists yet, but the capabilities are generic
+vent-hood ones with nothing microwave-specific in them."""
 
 from ..capabilities import common, ignored, range_hood
 from ._base import DeviceRegistry, _build
@@ -23,6 +30,8 @@ REGISTRY = DeviceRegistry(
             range_hood.AIR_QUALITY,
             range_hood.AIR_LEVEL_CHECK,
             range_hood.AUTO_VENTILATION,
+            range_hood.HOOD_STATUS,
+            range_hood.HOOD_SPEC,
             *range_hood.COVERAGE,
         ]
     ),

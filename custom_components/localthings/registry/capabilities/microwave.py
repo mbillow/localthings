@@ -305,15 +305,20 @@ MICROWAVE_MODE = Capability(
 # DAWIT 3.0 generation (issue #433) -- see module docstring.
 # ---------------------------------------------------------------------------
 
-# Confirmed on issue #433's dump: MicroWave and KeepWarm's modeSpec both
-# report {min: 1, max: 6039, interval: 1} -- seconds (a 6039-second/100-ish
-# minute ceiling is plausible for a combi cook timer; a minutes reading
-# would imply a multi-day cook, which isn't). Unlike power_level below,
-# modeSpec has no discrete list for time -- min/max/interval is the only
-# shape it comes in, so a NumberDesc with bounds copied from this one
-# dump is the best available (same "single dump, no cross-check" caveat
-# as SETPOINT_MIN_C above; no NumberDesc hook reads a sibling href live).
-COOK_TIME_MIN_S = 1
+# modeSpec reports {min: 1, max: 6039, interval: 1} for both MicroWave and
+# KeepWarm -- seconds (a 6039-second/100-ish minute ceiling is plausible
+# for a combi cook timer; a minutes reading would imply a multi-day
+# cook, which isn't). The floor is relaxed to 0 rather than modeSpec's
+# stated 1: this dump's own live `time.setting` reads 0 while idle, and
+# a NumberDesc native_min above the device's own reported value would
+# make 0 -- the value the device itself sends -- unwritable, the same
+# failure shape as cooking_mode's NoOperation gap below. Unlike
+# power_level, modeSpec has no discrete list for time -- min/max/interval
+# is the only shape it comes in, so a NumberDesc with bounds copied from
+# this one dump is the best available (same "single dump, no cross-check"
+# caveat as SETPOINT_MIN_C above; no NumberDesc hook reads a sibling href
+# live).
+COOK_TIME_MIN_S = 0
 COOK_TIME_MAX_S = 6039
 
 _STATUS_STATE_TO_OCF = {
@@ -344,13 +349,32 @@ def _status_child_lock_write(p, rep, href=None):
 
 def _status_mode_write(p, rep, href=None):
     """RMW against the live availableModeList -- unconfirmed, same caveat
-    as oven.py's OVEN_MODE (issue #433's reporter is asked to try this)."""
+    as oven.py's OVEN_MODE (issue #433's reporter is asked to try this).
+    Deliberately not validated against _status_mode_options' wider,
+    current-value-inclusive list below: 'NoOperation' displays but was
+    never meant to be selected back."""
     valid = rep.get("availableModeList") or ()
     if p not in valid:
         return None
     mode = dict(rep.get("mode") or {})
     mode["name"] = p
     return ["oven", "status", "vs", "0"], {"mode": mode}
+
+
+def _status_mode_options(resources):
+    """availableModeList doesn't include this device's own idle sentinel
+    ('NoOperation', mode.name's value at rest) -- HA's SelectEntity.state
+    goes to Unknown whenever current_option isn't in options, so the
+    microwave's normal resting state would render blank without this
+    union. Same fix shape as sensor.py's enum `options` property
+    (PR #341); select.py has no equivalent platform-level safety net, so
+    it has to happen per-descriptor here."""
+    rep = resources.get("/oven/status/vs/0") or {}
+    options = list(rep.get("availableModeList") or ())
+    current = (rep.get("mode") or {}).get("name")
+    if current and current not in options:
+        options.append(current)
+    return options
 
 
 def _power_level_options(resources):
@@ -383,6 +407,16 @@ def _power_level_write(p, rep, href=None):
     return ["oven", "status", "vs", "0"], {"microwavePowerLevel": setting}
 
 
+def _power_level_value(v):
+    """str(int_or_none(...)) would render the literal string 'None' (never
+    a valid option, so unselectable-but-visible junk) when
+    microwavePowerLevel exists without a usable `setting` -- e.g. a mode
+    other than MicroWave, whose modeSpec doesn't carry this field at
+    all."""
+    setting = int_or_none((v or {}).get("setting"))
+    return str(setting) if setting is not None else None
+
+
 def _cook_time_write(p, rep, href=None):
     try:
         seconds = round(float(p))
@@ -390,9 +424,11 @@ def _cook_time_write(p, rep, href=None):
         return None
     if not (COOK_TIME_MIN_S <= seconds <= COOK_TIME_MAX_S):
         return None
-    setting = dict(rep.get("time") or {})
-    setting["setting"] = seconds
-    return ["oven", "status", "vs", "0"], {"time": setting}
+    # Single-field PUT, not RMW (issue #54 convention: carry only the
+    # changed token) -- `time` also carries device-computed `operation`/
+    # `remaining`/`completion`, and echoing those back mid-cycle would
+    # write a stale countdown over a live one.
+    return ["oven", "status", "vs", "0"], {"time": {"setting": seconds}}
 
 
 MICROWAVE_STATUS = Capability(
@@ -428,14 +464,11 @@ MICROWAVE_STATUS = Capability(
             value_fn=lambda v: str(v).lower() == "on",
             write_fn=_status_child_lock_write,
         ),
-        # SelectDesc first — options_field reads this same href live, no
-        # static fallback needed (availableModeList is always populated on
-        # the one dump seen).
         SelectDesc(
             key="cooking_mode",
             field="mode",
             icon="mdi:tune",
-            options_field="availableModeList",
+            options=_status_mode_options,
             value_fn=lambda mode: (mode or {}).get("name"),
             write_fn=_status_mode_write,
         ),
@@ -444,7 +477,8 @@ MICROWAVE_STATUS = Capability(
             field="microwavePowerLevel",
             icon="mdi:radar",
             options=_power_level_options,
-            value_fn=lambda v: str(int_or_none((v or {}).get("setting"))),
+            exists_fn=lambda rep, resources: bool(_power_level_options(resources)),
+            value_fn=_power_level_value,
             write_fn=_power_level_write,
         ),
         NumberDesc(
