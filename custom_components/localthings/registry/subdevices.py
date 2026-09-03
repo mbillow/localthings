@@ -343,6 +343,7 @@ def enumerate_subdevices(
             return
         probed_ids.add(sub_id.lower())
 
+        priority_hrefs = tuple(dict.fromkeys(href for href in preferred_hrefs if href in resources))
         ordered_hrefs = tuple(_flat_probe_hrefs())
         flat_hrefs = []
         attempted_hrefs: set[str] = set()
@@ -364,14 +365,21 @@ def enumerate_subdevices(
             return True
 
         # A live identity leaf proves this UUID's Property namespace routes.
-        # Read it, then the highest-priority primary/composite-entity leaf,
-        # before spending most of the shared deadline on a Collection that
-        # some firmware does not expose. If the Collection works below, its
-        # batch remains authoritative and these preflight reads are discarded.
-        if ordered_hrefs and ordered_hrefs[0] == "/information/vs/0":
-            _probe_flat(ordered_hrefs[0])
-            if flat_hrefs and len(ordered_hrefs) > 1:
-                _probe_flat(ordered_hrefs[1])
+        # If its highest-priority operational leaf also answers, read the rest
+        # of the registry-selected hot/warm and primary leaves before spending
+        # most of the shared deadline on a Collection that some firmware does
+        # not expose. Composite entities need those sibling resources even
+        # though they do not bind entities of their own (power, target
+        # temperature, wind, ...). If the Collection works below, its batch
+        # remains authoritative and these preflight reads are discarded.
+        if priority_hrefs and priority_hrefs[0] == "/information/vs/0":
+            _probe_flat(priority_hrefs[0])
+            if flat_hrefs and len(priority_hrefs) > 1:
+                _probe_flat(priority_hrefs[1])
+                if len(flat_hrefs) == 2:
+                    for href in priority_hrefs[2:]:
+                        if not _probe_flat(href):
+                            break
 
         seed = (sub_id, "device", "0")
         timeout = _next_timeout(collection_timeout)

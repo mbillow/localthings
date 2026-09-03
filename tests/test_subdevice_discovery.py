@@ -302,7 +302,20 @@ async def test_flat_probe_priority_puts_identity_then_climate_state_before_cold_
     priority = coordinator._subdevice_probe_priority(resources)
 
     assert priority[:2] == ("/information/vs/0", "/mode/vs/0")
+    for href in (
+        "/power/0",
+        "/power/vs/0",
+        "/mode/convenient/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+    ):
+        assert href in priority
     assert priority.index("/mode/vs/0") < priority.index("/energy/consumption/vs/0")
+    assert priority.index("/wind/strength/vs/0") < priority.index("/energy/consumption/vs/0")
 
 
 async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
@@ -320,6 +333,7 @@ async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
         "/power/0",
         "/power/vs/0",
         "/mode/vs/0",
+        "/mode/convenient/vs/0",
         "/temperature/current/0",
         "/temperature/desired/0",
         "/temperatures/vs/0",
@@ -337,6 +351,45 @@ async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
             "x.com.samsung.da.description": "ARTIK051_FAC_BORA_RAC_20K",
         }
     )
+    seeds[f"/{_SUB_UUID}/temperature/current/0"] = {
+        "range": [16.0, 30.0],
+        "units": "C",
+        "temperature": 27.0,
+    }
+    seeds[f"/{_SUB_UUID}/temperature/desired/0"] = {
+        "range": [16.0, 30.0],
+        "units": "C",
+        "temperature": 27.0,
+    }
+    seeds[f"/{_SUB_UUID}/wind/strength/vs/0"] = {
+        "x.com.samsung.da.modes": "0",
+        "x.com.samsung.da.supportedModes": ["0", "31", "32", "33", "34", "35"],
+        "x.com.samsung.da.modesName": ["Auto", "1", "2", "3", "4", "Max"],
+    }
+    seeds[f"/{_SUB_UUID}/wind/direction/vs/0"] = {
+        "x.com.samsung.da.modes": "Fix",
+        "x.com.samsung.da.supportedModes": [
+            "Off",
+            "Up_And_Low",
+            "Fix",
+            "Left_And_Right",
+            "All",
+        ],
+    }
+    seeds[f"/{_SUB_UUID}/humidity/vs/0"] = {
+        "x.com.samsung.da.fivepercentHumidity": "57",
+    }
+    seeds[f"/{_SUB_UUID}/mode/convenient/vs/0"] = {
+        "x.com.samsung.da.modes": "Off",
+        "x.com.samsung.da.supportedModes": [
+            "Off",
+            "Sleep",
+            "Quiet",
+            "Smart",
+            "Nano",
+            "NanoSleep",
+        ],
+    }
     coordinator = _coordinator(hass)
 
     await _discover_with(coordinator, resources, oic_res, seeds)
@@ -345,13 +398,45 @@ async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
     subdevice = coordinator.subdevices[0]
     assert subdevice.seed_path == ()
     assert subdevice.flat_hrefs[0] == "/information/vs/0"
-    assert list(coordinator._subdevice_probes)[:3] == [
+    critical_hrefs = {
+        "/power/0",
+        "/power/vs/0",
+        "/mode/vs/0",
+        "/mode/convenient/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+    }
+    assert critical_hrefs <= set(subdevice.flat_hrefs)
+    probes = list(coordinator._subdevice_probes)
+    collection_index = probes.index(f"/{_SUB_UUID}/device/0")
+    assert probes[:2] == [
         f"/{_SUB_UUID}/information/vs/0",
         f"/{_SUB_UUID}/mode/vs/0",
-        f"/{_SUB_UUID}/device/0",
     ]
+    assert all(probes.index(f"/{_SUB_UUID}{href}") < collection_index for href in critical_hrefs)
     assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
-    assert _climate_bound(coordinator, _SUB_UUID) is not None
+    sub_climate = _climate_bound(coordinator, _SUB_UUID)
+    assert sub_climate is not None
+
+    from custom_components.localthings.climate import LocalThingsClimate
+
+    climate = LocalThingsClimate(coordinator, sub_climate)
+    assert climate.current_temperature == 27.0
+    assert climate.target_temperature == 27.0
+    assert climate.fan_modes == ["auto", "1", "2", "3", "4", "max"]
+    assert climate.swing_modes == ["vertical", "off", "horizontal", "both"]
+    assert "nano" in climate.preset_modes
+    assert coordinator.canonical_resources(subdevice)["/humidity/vs/0"] == {
+        "x.com.samsung.da.fivepercentHumidity": "57"
+    }
+    assert any(
+        bound.subdevice.key == _SUB_UUID and bound.desc.key == "humidity"
+        for bound in coordinator.bound
+    )
 
     _register_master(hass, coordinator)
     info = coordinator.device_info_for(subdevice)

@@ -463,10 +463,10 @@ def test_enumeration_keeps_preferred_response_found_before_budget_expires(
     assert clock.now == 7.0
 
 
-def test_prefixed_identity_and_primary_leaf_are_probed_before_missing_collection(
+def test_prefixed_operational_leaves_are_probed_before_missing_collection(
     monkeypatch,
 ):
-    """A missing Collection cannot consume the budget before live leaves."""
+    """A missing Collection cannot consume the budget before operational leaves."""
 
     class Clock:
         now = 0.0
@@ -522,7 +522,8 @@ def test_prefixed_identity_and_primary_leaf_are_probed_before_missing_collection
     assert session.calls == [
         ((_UUID, "information", "vs", "0"), 1.0),
         ((_UUID, "mode", "vs", "0"), 1.0),
-        ((_UUID, "device", "0"), 4.0),
+        ((_UUID, "power", "vs", "0"), 1.0),
+        ((_UUID, "device", "0"), 3.0),
     ]
 
 

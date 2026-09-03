@@ -1109,14 +1109,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         resources: dict[str, dict],
     ) -> tuple[str, ...]:
-        """Return identity, then live primary-entity hrefs in probe order.
+        """Return identity, then live operational hrefs in probe order.
 
         A prefixed subdevice without a Collection endpoint has to be probed
         one Property href at a time. Its identity selects its own registry and
         device metadata, so probe it first; prefer a composite entity's binding
-        href next so one live response can materialize the useful device, then
-        retain the registry's hot/warm-first order. This remains device-type
-        agnostic, while unknown devices still get a useful first probe.
+        href next so one live response can materialize the useful device. Include
+        every hot/warm capability after that: composite entities such as climate
+        consume no-entity resources (power, target temperature, wind) from the
+        same snapshot. Cold primary entities remain useful late probes. This is
+        registry-driven and device-type agnostic.
         """
         identity = ("/information/vs/0",) if "/information/vs/0" in resources else ()
         registry = resolve_registry(
@@ -1129,23 +1131,24 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         tier_rank = {"hot": 0, "warm": 1, "cold": 2}
         ranked = []
         for order, href in enumerate(resources):
-            primary_caps = [
+            operational_caps = [
                 capability
                 for capability in registry.capabilities.get(href, ())
-                if any(desc.entity_category is None for desc in capability.entities)
+                if capability.poll_tier in ("hot", "warm")
+                or any(desc.entity_category is None for desc in capability.entities)
             ]
-            if not primary_caps:
+            if not operational_caps:
                 continue
             composite_rank = (
                 0
                 if any(
                     isinstance(desc, ClimateDesc)
-                    for capability in primary_caps
+                    for capability in operational_caps
                     for desc in capability.entities
                 )
                 else 1
             )
-            tier = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
+            tier = min(tier_rank.get(capability.poll_tier, 2) for capability in operational_caps)
             ranked.append((composite_rank, tier, order, href))
         return identity + tuple(href for _, _, _, href in sorted(ranked))
 
