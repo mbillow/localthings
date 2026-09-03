@@ -292,7 +292,7 @@ async def test_fac_bora_2in1_unique_ids_include_subdevice_prefix(hass: HomeAssis
 # ---------------------------------------------------------------------------
 
 
-async def test_flat_probe_priority_puts_live_climate_state_before_cold_metrics(
+async def test_flat_probe_priority_puts_identity_then_climate_state_before_cold_metrics(
     hass: HomeAssistant,
 ):
     """Registry metadata drives fallback order without a model-specific list."""
@@ -301,8 +301,148 @@ async def test_flat_probe_priority_puts_live_climate_state_before_cold_metrics(
 
     priority = coordinator._subdevice_probe_priority(resources)
 
-    assert "/mode/vs/0" in priority[:4]
+    assert priority[:2] == ("/information/vs/0", "/mode/vs/0")
+    for href in (
+        "/power/0",
+        "/power/vs/0",
+        "/mode/convenient/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+    ):
+        assert href in priority
     assert priority.index("/mode/vs/0") < priority.index("/energy/consumption/vs/0")
+    assert priority.index("/wind/strength/vs/0") < priority.index("/energy/consumption/vs/0")
+
+
+async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
+    hass: HomeAssistant,
+):
+    """A live UUID-prefixed AC does not require its own Collection endpoint."""
+    resources, oic_res, _collection_seeds = _load_device_full("airconditioner_fac_bora_2in1")
+    resources["/information/vs/0"] = {
+        **resources["/information/vs/0"],
+        "x.com.samsung.da.modelNum": "ARTIK051_FAC_BORA_20K|TEST",
+        "x.com.samsung.da.description": "ARTIK051_FAC_BORA_20K",
+    }
+    live_hrefs = (
+        "/information/vs/0",
+        "/power/0",
+        "/power/vs/0",
+        "/mode/vs/0",
+        "/mode/convenient/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+        "/option/autoclean/vs/0",
+        "/configuration/vs/0",
+        "/alarms/vs/0",
+    )
+    seeds = {f"/{_SUB_UUID}{href}": dict(resources[href]) for href in live_hrefs}
+    seeds[f"/{_SUB_UUID}/information/vs/0"].update(
+        {
+            "x.com.samsung.da.modelNum": "ARTIK051_FAC_BORA_RAC_20K|TEST",
+            "x.com.samsung.da.description": "ARTIK051_FAC_BORA_RAC_20K",
+        }
+    )
+    seeds[f"/{_SUB_UUID}/temperature/current/0"] = {
+        "range": [16.0, 30.0],
+        "units": "C",
+        "temperature": 27.0,
+    }
+    seeds[f"/{_SUB_UUID}/temperature/desired/0"] = {
+        "range": [16.0, 30.0],
+        "units": "C",
+        "temperature": 27.0,
+    }
+    seeds[f"/{_SUB_UUID}/wind/strength/vs/0"] = {
+        "x.com.samsung.da.modes": "0",
+        "x.com.samsung.da.supportedModes": ["0", "31", "32", "33", "34", "35"],
+        "x.com.samsung.da.modesName": ["Auto", "1", "2", "3", "4", "Max"],
+    }
+    seeds[f"/{_SUB_UUID}/wind/direction/vs/0"] = {
+        "x.com.samsung.da.modes": "Fix",
+        "x.com.samsung.da.supportedModes": [
+            "Off",
+            "Up_And_Low",
+            "Fix",
+            "Left_And_Right",
+            "All",
+        ],
+    }
+    seeds[f"/{_SUB_UUID}/humidity/vs/0"] = {
+        "x.com.samsung.da.fivepercentHumidity": "57",
+    }
+    seeds[f"/{_SUB_UUID}/mode/convenient/vs/0"] = {
+        "x.com.samsung.da.modes": "Off",
+        "x.com.samsung.da.supportedModes": [
+            "Off",
+            "Sleep",
+            "Quiet",
+            "Smart",
+            "Nano",
+            "NanoSleep",
+        ],
+    }
+    coordinator = _coordinator(hass)
+
+    await _discover_with(coordinator, resources, oic_res, seeds)
+
+    assert [subdevice.key for subdevice in coordinator.subdevices] == [_SUB_UUID]
+    subdevice = coordinator.subdevices[0]
+    assert subdevice.seed_path == ()
+    assert subdevice.flat_hrefs[0] == "/information/vs/0"
+    critical_hrefs = {
+        "/power/0",
+        "/power/vs/0",
+        "/mode/vs/0",
+        "/mode/convenient/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+    }
+    assert critical_hrefs <= set(subdevice.flat_hrefs)
+    probes = list(coordinator._subdevice_probes)
+    collection_index = probes.index(f"/{_SUB_UUID}/device/0")
+    assert probes[:2] == [
+        f"/{_SUB_UUID}/information/vs/0",
+        f"/{_SUB_UUID}/mode/vs/0",
+    ]
+    assert all(probes.index(f"/{_SUB_UUID}{href}") < collection_index for href in critical_hrefs)
+    assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
+    sub_climate = _climate_bound(coordinator, _SUB_UUID)
+    assert sub_climate is not None
+
+    from custom_components.localthings.climate import LocalThingsClimate
+
+    climate = LocalThingsClimate(coordinator, sub_climate)
+    assert climate.current_temperature == 27.0
+    assert climate.target_temperature == 27.0
+    assert climate.fan_modes == ["auto", "1", "2", "3", "4", "max"]
+    assert climate.swing_modes == ["vertical", "off", "horizontal", "both"]
+    assert "nano" in climate.preset_modes
+    assert coordinator.canonical_resources(subdevice)["/humidity/vs/0"] == {
+        "x.com.samsung.da.fivepercentHumidity": "57"
+    }
+    assert any(
+        bound.subdevice.key == _SUB_UUID and bound.desc.key == "humidity"
+        for bound in coordinator.bound
+    )
+
+    _register_master(hass, coordinator)
+    info = coordinator.device_info_for(subdevice)
+    assert info["identifiers"] == {(DOMAIN, f"{coordinator.device_key}_{_SUB_UUID}")}
+    assert info["model"] == "ARTIK051_FAC_BORA_RAC_20K"
+    assert linked_parent(hass, info) == (DOMAIN, coordinator.device_key)
 
 
 async def test_fac_bora_205_flat_fallback_finds_candidate_but_gate_holds_it_back(

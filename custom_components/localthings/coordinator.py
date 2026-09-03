@@ -1109,35 +1109,48 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         resources: dict[str, dict],
     ) -> tuple[str, ...]:
-        """Return live primary-entity hrefs in hot/warm-first order.
+        """Return identity, then live operational hrefs in probe order.
 
         A prefixed subdevice without a Collection endpoint has to be probed
-        one Property href at a time. Resolve the master through the same
-        registry used by discovery and put resources that produce primary
-        entities first. This is metadata-driven rather than an AC-specific
-        list: a future composite appliance gets the priority its own registry
-        declares, while unknown devices simply retain the normal href order.
+        one Property href at a time. Its identity selects its own registry and
+        device metadata, so probe it first; prefer a composite entity's binding
+        href next so one live response can materialize the useful device. Include
+        every hot/warm capability after that: composite entities such as climate
+        consume no-entity resources (power, target temperature, wind) from the
+        same snapshot. Cold primary entities remain useful late probes. This is
+        registry-driven and device-type agnostic.
         """
+        identity = ("/information/vs/0",) if "/information/vs/0" in resources else ()
         registry = resolve_registry(
             resources,
             device_types=self._identity.device_types if self._identity else (),
         )
         if registry is None:
-            return ()
+            return identity
 
         tier_rank = {"hot": 0, "warm": 1, "cold": 2}
         ranked = []
         for order, href in enumerate(resources):
-            primary_caps = [
+            operational_caps = [
                 capability
                 for capability in registry.capabilities.get(href, ())
-                if any(desc.entity_category is None for desc in capability.entities)
+                if capability.poll_tier in ("hot", "warm")
+                or any(desc.entity_category is None for desc in capability.entities)
             ]
-            if not primary_caps:
+            if not operational_caps:
                 continue
-            rank = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
-            ranked.append((rank, order, href))
-        return tuple(href for _, _, href in sorted(ranked))
+            composite_rank = (
+                0
+                if any(
+                    isinstance(desc, ClimateDesc)
+                    for capability in operational_caps
+                    for desc in capability.entities
+                )
+                else 1
+            )
+            tier = min(tier_rank.get(capability.poll_tier, 2) for capability in operational_caps)
+            ranked.append((composite_rank, tier, order, href))
+        return identity + tuple(href for _, _, _, href in sorted(ranked))
 
     def _enumerate_subdevices_blocking(self, resources: dict[str, dict]) -> dict[str, dict]:
         """One-time (first discovery only) probe for sibling indoor

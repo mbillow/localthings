@@ -342,14 +342,57 @@ def enumerate_subdevices(
         if sub_id.lower() in probed_ids:
             return
         probed_ids.add(sub_id.lower())
+
+        priority_hrefs = tuple(dict.fromkeys(href for href in preferred_hrefs if href in resources))
+        ordered_hrefs = tuple(_flat_probe_hrefs())
+        flat_hrefs = []
+        attempted_hrefs: set[str] = set()
+
+        def _probe_flat(href: str) -> bool:
+            """Probe one prefixed Property; return whether it was attempted."""
+            timeout = _next_timeout(property_timeout)
+            if timeout is None:
+                return False
+            if attempted_hrefs:
+                sess.pace()
+            attempted_hrefs.add(href)
+            actual = f"/{sub_id}{href}"
+            rep = _get_property(sess, tuple(actual.strip("/").split("/")), timeout)
+            _probed(actual, rep)
+            if rep:
+                flat_hrefs.append(href)
+                fetched[actual] = rep
+            return True
+
+        # A live identity leaf proves this UUID's Property namespace routes.
+        # If its highest-priority operational leaf also answers, read the rest
+        # of the registry-selected hot/warm and primary leaves before spending
+        # most of the shared deadline on a Collection that some firmware does
+        # not expose. Composite entities need those sibling resources even
+        # though they do not bind entities of their own (power, target
+        # temperature, wind, ...). If the Collection works below, its batch
+        # remains authoritative and these preflight reads are discarded.
+        if priority_hrefs and priority_hrefs[0] == "/information/vs/0":
+            _probe_flat(priority_hrefs[0])
+            if flat_hrefs and len(priority_hrefs) > 1:
+                _probe_flat(priority_hrefs[1])
+                if len(flat_hrefs) == 2:
+                    for href in priority_hrefs[2:]:
+                        if not _probe_flat(href):
+                            break
+
         seed = (sub_id, "device", "0")
         timeout = _next_timeout(collection_timeout)
-        if timeout is None:
-            return
-        batch = _get_batch(sess, seed, timeout)
-        _probed(_seed_href(seed), batch)
+        batch = {}
+        if timeout is not None:
+            if attempted_hrefs:
+                sess.pace()
+            batch = _get_batch(sess, seed, timeout)
+            _probed(_seed_href(seed), batch)
         if batch:
             subdevice = Subdevice(kind="prefixed", key=sub_id, seed_path=seed)
+            for href in flat_hrefs:
+                fetched.pop(f"/{sub_id}{href}", None)
             fetched.update(normalize_seed_batch(subdevice, batch))
             subdevices.append(subdevice)
             return
@@ -371,21 +414,11 @@ def enumerate_subdevices(
         # #205's unit answered only 1 of 31 probes), so this hasn't been
         # guarded against -- the fix would compare a candidate's confirmed
         # reps against the master's own values for the same hrefs.
-        flat_hrefs = []
-        first = True
-        for href in _flat_probe_hrefs():
-            if not first:
-                sess.pace()
-            first = False
-            timeout = _next_timeout(property_timeout)
-            if timeout is None:
+        for href in ordered_hrefs:
+            if href in attempted_hrefs:
+                continue
+            if not _probe_flat(href):
                 break
-            actual = f"/{sub_id}{href}"
-            rep = _get_property(sess, tuple(actual.strip("/").split("/")), timeout)
-            _probed(actual, rep)
-            if rep:
-                flat_hrefs.append(href)
-                fetched[actual] = rep
         if not flat_hrefs:
             return
         subdevices.append(
