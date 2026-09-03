@@ -292,7 +292,7 @@ async def test_fac_bora_2in1_unique_ids_include_subdevice_prefix(hass: HomeAssis
 # ---------------------------------------------------------------------------
 
 
-async def test_flat_probe_priority_puts_live_climate_state_before_cold_metrics(
+async def test_flat_probe_priority_puts_identity_then_climate_state_before_cold_metrics(
     hass: HomeAssistant,
 ):
     """Registry metadata drives fallback order without a model-specific list."""
@@ -301,8 +301,59 @@ async def test_flat_probe_priority_puts_live_climate_state_before_cold_metrics(
 
     priority = coordinator._subdevice_probe_priority(resources)
 
+    assert priority[0] == "/information/vs/0"
     assert "/mode/vs/0" in priority[:4]
     assert priority.index("/mode/vs/0") < priority.index("/energy/consumption/vs/0")
+
+
+async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
+    hass: HomeAssistant,
+):
+    """A live UUID-prefixed AC does not require its own Collection endpoint."""
+    resources, oic_res, _collection_seeds = _load_device_full("airconditioner_fac_bora_2in1")
+    resources["/information/vs/0"] = {
+        **resources["/information/vs/0"],
+        "x.com.samsung.da.modelNum": "ARTIK051_FAC_BORA_20K|TEST",
+        "x.com.samsung.da.description": "ARTIK051_FAC_BORA_20K",
+    }
+    live_hrefs = (
+        "/information/vs/0",
+        "/power/0",
+        "/power/vs/0",
+        "/mode/vs/0",
+        "/temperature/current/0",
+        "/temperature/desired/0",
+        "/temperatures/vs/0",
+        "/wind/strength/vs/0",
+        "/wind/direction/vs/0",
+        "/humidity/vs/0",
+        "/option/autoclean/vs/0",
+        "/configuration/vs/0",
+        "/alarms/vs/0",
+    )
+    seeds = {f"/{_SUB_UUID}{href}": dict(resources[href]) for href in live_hrefs}
+    seeds[f"/{_SUB_UUID}/information/vs/0"].update(
+        {
+            "x.com.samsung.da.modelNum": "ARTIK051_FAC_BORA_RAC_20K|TEST",
+            "x.com.samsung.da.description": "ARTIK051_FAC_BORA_RAC_20K",
+        }
+    )
+    coordinator = _coordinator(hass)
+
+    await _discover_with(coordinator, resources, oic_res, seeds)
+
+    assert [subdevice.key for subdevice in coordinator.subdevices] == [_SUB_UUID]
+    subdevice = coordinator.subdevices[0]
+    assert subdevice.seed_path == ()
+    assert subdevice.flat_hrefs[0] == "/information/vs/0"
+    assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
+    assert _climate_bound(coordinator, _SUB_UUID) is not None
+
+    _register_master(hass, coordinator)
+    info = coordinator.device_info_for(subdevice)
+    assert info["identifiers"] == {(DOMAIN, f"{coordinator.device_key}_{_SUB_UUID}")}
+    assert info["model"] == "ARTIK051_FAC_BORA_RAC_20K"
+    assert linked_parent(hass, info) == (DOMAIN, coordinator.device_key)
 
 
 async def test_fac_bora_205_flat_fallback_finds_candidate_but_gate_holds_it_back(

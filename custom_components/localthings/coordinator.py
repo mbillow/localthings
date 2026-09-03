@@ -1109,21 +1109,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         resources: dict[str, dict],
     ) -> tuple[str, ...]:
-        """Return live primary-entity hrefs in hot/warm-first order.
+        """Return identity, then live primary-entity hrefs in hot/warm-first order.
 
         A prefixed subdevice without a Collection endpoint has to be probed
-        one Property href at a time. Resolve the master through the same
-        registry used by discovery and put resources that produce primary
-        entities first. This is metadata-driven rather than an AC-specific
-        list: a future composite appliance gets the priority its own registry
-        declares, while unknown devices simply retain the normal href order.
+        one Property href at a time. Its identity selects its own registry and
+        device metadata, so probe it before the primary resources declared by
+        the master's registry. This remains device-type agnostic, while unknown
+        devices still get a useful first probe before retaining normal order.
         """
+        identity = ("/information/vs/0",) if "/information/vs/0" in resources else ()
         registry = resolve_registry(
             resources,
             device_types=self._identity.device_types if self._identity else (),
         )
         if registry is None:
-            return ()
+            return identity
 
         tier_rank = {"hot": 0, "warm": 1, "cold": 2}
         ranked = []
@@ -1137,7 +1137,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 continue
             rank = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
             ranked.append((rank, order, href))
-        return tuple(href for _, _, href in sorted(ranked))
+        return identity + tuple(href for _, _, href in sorted(ranked))
 
     def _enumerate_subdevices_blocking(self, resources: dict[str, dict]) -> dict[str, dict]:
         """One-time (first discovery only) probe for sibling indoor
