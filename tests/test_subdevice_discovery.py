@@ -301,8 +301,7 @@ async def test_flat_probe_priority_puts_identity_then_climate_state_before_cold_
 
     priority = coordinator._subdevice_probe_priority(resources)
 
-    assert priority[0] == "/information/vs/0"
-    assert "/mode/vs/0" in priority[:4]
+    assert priority[:2] == ("/information/vs/0", "/mode/vs/0")
     assert priority.index("/mode/vs/0") < priority.index("/energy/consumption/vs/0")
 
 
@@ -346,6 +345,11 @@ async def test_artik051_fac_bora_flat_subdevice_materializes_climate_and_device(
     subdevice = coordinator.subdevices[0]
     assert subdevice.seed_path == ()
     assert subdevice.flat_hrefs[0] == "/information/vs/0"
+    assert list(coordinator._subdevice_probes)[:3] == [
+        f"/{_SUB_UUID}/information/vs/0",
+        f"/{_SUB_UUID}/mode/vs/0",
+        f"/{_SUB_UUID}/device/0",
+    ]
     assert coordinator._subdevice_probes[f"/{_SUB_UUID}/device/0"] is False
     assert _climate_bound(coordinator, _SUB_UUID) is not None
 

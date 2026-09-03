@@ -1109,13 +1109,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         resources: dict[str, dict],
     ) -> tuple[str, ...]:
-        """Return identity, then live primary-entity hrefs in hot/warm-first order.
+        """Return identity, then live primary-entity hrefs in probe order.
 
         A prefixed subdevice without a Collection endpoint has to be probed
         one Property href at a time. Its identity selects its own registry and
-        device metadata, so probe it before the primary resources declared by
-        the master's registry. This remains device-type agnostic, while unknown
-        devices still get a useful first probe before retaining normal order.
+        device metadata, so probe it first; prefer a composite entity's binding
+        href next so one live response can materialize the useful device, then
+        retain the registry's hot/warm-first order. This remains device-type
+        agnostic, while unknown devices still get a useful first probe.
         """
         identity = ("/information/vs/0",) if "/information/vs/0" in resources else ()
         registry = resolve_registry(
@@ -1135,9 +1136,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ]
             if not primary_caps:
                 continue
-            rank = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
-            ranked.append((rank, order, href))
-        return identity + tuple(href for _, _, href in sorted(ranked))
+            composite_rank = (
+                0
+                if any(
+                    isinstance(desc, ClimateDesc)
+                    for capability in primary_caps
+                    for desc in capability.entities
+                )
+                else 1
+            )
+            tier = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
+            ranked.append((composite_rank, tier, order, href))
+        return identity + tuple(href for _, _, _, href in sorted(ranked))
 
     def _enumerate_subdevices_blocking(self, resources: dict[str, dict]) -> dict[str, dict]:
         """One-time (first discovery only) probe for sibling indoor
