@@ -861,6 +861,12 @@
           "ventilation": "Ventilazione",
           "smartventilation": "Ventilazione intelligente"
         }
+      },
+      "dry_level": {
+        "name": "Livello asciugatura"
+      },
+      "dry_time": {
+        "name": "Tempo di asciugatura"
       }
     },
     "sensor": {
@@ -1021,12 +1027,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Ultima pulizia cestello"
-      },
-      "dry_level": {
-        "name": "Livello asciugatura"
-      },
-      "dry_time": {
-        "name": "Tempo di asciugatura"
       },
       "dryer_type": {
         "name": "Tipo di asciugatrice",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "Modalità notte"
+      },
+      "auto_detergent": {
+        "name": "Detersivo automatico"
+      },
+      "auto_softener": {
+        "name": "Ammorbidente automatico"
       }
     },
     "time": {

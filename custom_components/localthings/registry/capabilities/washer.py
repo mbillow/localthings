@@ -78,6 +78,16 @@ from .laundry import (
 # path for different device families. Only one of the two ever binds for a
 # given device, since dryer and washer are separate by_type registries.
 
+
+def _enabled_write(field):
+    def write(p, rep, href=None):
+        if p not in ("On", "Off"):
+            return None
+        return ["washer", "vs", "0"], {field: p}
+
+    return write
+
+
 WASHER_SETTINGS = Capability(
     href="/washer/vs/0",
     entities=(
@@ -113,6 +123,28 @@ WASHER_SETTINGS = Capability(
                 ["washer", "vs", "0"],
                 {"x.com.samsung.da.rinseCycles": p},
             ),
+        ),
+        # Whether each reservoir auto-dispenses at all, as opposed to the
+        # dose selects on /course/vs/0 below that set how much (issue #437,
+        # whose washer reported detergent On and softener Off in one dump).
+        # Self-gated: only boards with an auto-dispenser report the fields.
+        SwitchDesc(
+            key="auto_detergent",
+            field="x.com.samsung.da.autoDetergentEnabled",
+            icon="mdi:cup-water",
+            entity_category="config",
+            exists_fn=lambda rep, resources: "x.com.samsung.da.autoDetergentEnabled" in rep,
+            value_fn=lambda v: v == "On",
+            write_fn=_enabled_write("x.com.samsung.da.autoDetergentEnabled"),
+        ),
+        SwitchDesc(
+            key="auto_softener",
+            field="x.com.samsung.da.autoSoftenerEnabled",
+            icon="mdi:flask-outline",
+            entity_category="config",
+            exists_fn=lambda rep, resources: "x.com.samsung.da.autoSoftenerEnabled" in rep,
+            value_fn=lambda v: v == "On",
+            write_fn=_enabled_write("x.com.samsung.da.autoSoftenerEnabled"),
         ),
         # Washer/dryer combo units carry a dryLevel field on the wash
         # resource itself (issue #22). Self-gates off on plain washers,

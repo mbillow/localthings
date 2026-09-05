@@ -1058,6 +1058,12 @@
           "ventilation": "Ventilación",
           "smartventilation": "Ventilación inteligente"
         }
+      },
+      "dry_level": {
+        "name": "Nivel de secado"
+      },
+      "dry_time": {
+        "name": "Tiempo de secado"
       }
     },
     "sensor": {
@@ -1215,12 +1221,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Última limpieza del tambor"
-      },
-      "dry_level": {
-        "name": "Nivel de secado"
-      },
-      "dry_time": {
-        "name": "Tiempo de secado"
       },
       "dryer_type": {
         "name": "Tipo de secadora",
@@ -1673,6 +1673,12 @@
       },
       "windsleep": {
         "name": "Modo nocturno"
+      },
+      "auto_detergent": {
+        "name": "Detergente automático"
+      },
+      "auto_softener": {
+        "name": "Suavizante automático"
       }
     },
     "time": {

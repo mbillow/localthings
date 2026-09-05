@@ -861,6 +861,12 @@
           "ventilation": "Ventilatie",
           "smartventilation": "Slimme ventilatie"
         }
+      },
+      "dry_level": {
+        "name": "Droogniveau"
+      },
+      "dry_time": {
+        "name": "Droogtijd"
       }
     },
     "sensor": {
@@ -1021,12 +1027,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel laatst gereinigd"
-      },
-      "dry_level": {
-        "name": "Droogniveau"
-      },
-      "dry_time": {
-        "name": "Droogtijd"
       },
       "dryer_type": {
         "name": "Type droger",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "Slaapmodus"
+      },
+      "auto_detergent": {
+        "name": "Automatisch wasmiddel"
+      },
+      "auto_softener": {
+        "name": "Automatische wasverzachter"
       }
     },
     "time": {

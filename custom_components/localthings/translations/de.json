@@ -861,6 +861,12 @@
           "ventilation": "Lüftung",
           "smartventilation": "Intelligente Lüftung"
         }
+      },
+      "dry_level": {
+        "name": "Trockenstufe"
+      },
+      "dry_time": {
+        "name": "Trockenzeit"
       }
     },
     "sensor": {
@@ -1015,12 +1021,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel zuletzt gereinigt"
-      },
-      "dry_level": {
-        "name": "Trockenstufe"
-      },
-      "dry_time": {
-        "name": "Trockenzeit"
       },
       "dryer_type": {
         "name": "Trocknertyp",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "Schlafmodus"
+      },
+      "auto_detergent": {
+        "name": "Automatische Waschmitteldosierung"
+      },
+      "auto_softener": {
+        "name": "Automatische Weichspülerdosierung"
       }
     },
     "time": {

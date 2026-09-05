@@ -861,6 +861,12 @@
           "ventilation": "환기",
           "smartventilation": "스마트환기"
         }
+      },
+      "dry_level": {
+        "name": "건조 단계"
+      },
+      "dry_time": {
+        "name": "건조 시간"
       }
     },
     "sensor": {
@@ -1021,12 +1027,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "마지막 통세척"
-      },
-      "dry_level": {
-        "name": "건조 단계"
-      },
-      "dry_time": {
-        "name": "건조 시간"
       },
       "dryer_type": {
         "name": "건조기 유형",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "취침 모드"
+      },
+      "auto_detergent": {
+        "name": "세제 자동 투입"
+      },
+      "auto_softener": {
+        "name": "섬유유연제 자동 투입"
       }
     },
     "time": {

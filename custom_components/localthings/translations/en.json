@@ -861,6 +861,12 @@
           "ventilation": "Ventilation",
           "smartventilation": "Smart Ventilation"
         }
+      },
+      "dry_level": {
+        "name": "Dry level"
+      },
+      "dry_time": {
+        "name": "Dry time"
       }
     },
     "sensor": {
@@ -1021,12 +1027,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Drum last cleaned"
-      },
-      "dry_level": {
-        "name": "Dry level"
-      },
-      "dry_time": {
-        "name": "Dry time"
       },
       "dryer_type": {
         "name": "Dryer type",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "Sleep mode"
+      },
+      "auto_detergent": {
+        "name": "Auto detergent"
+      },
+      "auto_softener": {
+        "name": "Auto softener"
       }
     },
     "time": {

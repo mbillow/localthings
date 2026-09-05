@@ -108,7 +108,11 @@ def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
     ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
     one segment before the actual last segment ('8600'). The old
     last-segment-only check missed it and fell back to 'unknown'; resolved
-    via _consumer_model_key scanning segments from the end."""
+    via _consumer_model_key scanning segments from the end.
+
+    This board reports supportedDryLevel but no dryTime/supportedDryTime at
+    all, so it lost its permanently-empty dry_time key when that descriptor
+    became a select gated on the supported list (issue #438)."""
     from tests.conftest import _load_device
 
     resources = _load_device("dryer_dve50a8600")
@@ -1572,6 +1576,45 @@ def test_registry_reproduces_golden_state_keys_for_dishwasher_dw5000c_cloud():
     resources = _load_device("dishwasher_dw5000c_cloud")
     golden = json.loads((GOLDEN / "dishwasher_dw5000c_cloud.json").read_text())
     state_keys = _new_state_keys("dishwasher_dw5000c_cloud", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_wf80h():
+    """A KR-market WF80H (DA_WM_TP1_21_COMMON, Table_02) captured mid-cycle
+    on a delayed start (issues #437/#438 came from the same reporter, a
+    washer and a dryer of the same board and firmware but two separate
+    appliances -- numofsubdevice 1 on both, no siblings).
+
+    It is the first dump to report /washer/vs/0's autoDetergentEnabled /
+    autoSoftenerEnabled, and it reports them in opposite states, which is
+    what makes the auto_detergent/auto_softener switches bindable rather
+    than a guess."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("washer_wf80h")
+    golden = json.loads((GOLDEN / "washer_wf80h.json").read_text())
+    state_keys = _new_state_keys("washer_wf80h", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_dryer_dv80h():
+    """The DV80H27H half of the same reporter's pair (issue #438), idle.
+
+    Guards the dry_level/dry_time move from read-only sensors to selects
+    driven by the board's own supportedDryLevel/supportedDryTime."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("dryer_dv80h")
+    golden = json.loads((GOLDEN / "dryer_dv80h.json").read_text())
+    state_keys = _new_state_keys("dryer_dv80h", resources)
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
