@@ -861,6 +861,12 @@
           "ventilation": "Větrání",
           "smartventilation": "Chytré větrání"
         }
+      },
+      "dry_level": {
+        "name": "Úroveň sušení"
+      },
+      "dry_time": {
+        "name": "Doba sušení"
       }
     },
     "sensor": {
@@ -1021,12 +1027,6 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Poslední čištění bubnu"
-      },
-      "dry_level": {
-        "name": "Úroveň sušení"
-      },
-      "dry_time": {
-        "name": "Doba sušení"
       },
       "dryer_type": {
         "name": "Typ sušičky",
@@ -1476,6 +1476,12 @@
       },
       "windsleep": {
         "name": "Noční režim"
+      },
+      "auto_detergent": {
+        "name": "Automatické dávkování pracího prostředku"
+      },
+      "auto_softener": {
+        "name": "Automatické dávkování aviváže"
       }
     },
     "time": {

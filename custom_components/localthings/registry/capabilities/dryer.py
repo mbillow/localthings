@@ -10,7 +10,7 @@ the /course/vs/0 cycle select -- lives in laundry.py.
 """
 
 from ..capability import Capability
-from ..entities import SensorDesc, SwitchDesc
+from ..entities import SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status
 from .laundry import cycle_select, drum_clean_cycles_remaining, drum_clean_last_cleaned
 
@@ -21,12 +21,38 @@ def _wrinkle_write(p, rep, href=None):
     return ["washer", "vs", "0"], {"x.com.samsung.da.wrinklePrevent": p}
 
 
+def _setting_write(field):
+    return lambda p, rep, href=None: (["washer", "vs", "0"], {field: p})
+
+
+# dryLevel/dryTime were read-only sensors until issue #438; both carry the
+# device's own supported-values list, so the options come from the board
+# rather than a hardcoded tuple, and washer.WASHER_SETTINGS already writes
+# dryLevel this way on combo units. The write itself is inferred from that
+# sibling contract, not yet confirmed on a plain dryer -- issue #438 asks
+# the reporter to exercise it. Moving these from sensor to select changes
+# their entity IDs (sensor.*_dry_level -> select.*_dry_level).
 DRYER_SETTINGS = Capability(
     href="/washer/vs/0",
     poll_tier="warm",
     entities=(
-        SensorDesc(key="dry_level", field="x.com.samsung.da.dryLevel", icon="mdi:water-percent"),
-        SensorDesc(key="dry_time", field="x.com.samsung.da.dryTime", icon="mdi:timer"),
+        SelectDesc(
+            key="dry_level",
+            field="x.com.samsung.da.dryLevel",
+            icon="mdi:water-percent",
+            entity_category="config",
+            options_field="x.com.samsung.da.supportedDryLevel",
+            write_fn=_setting_write("x.com.samsung.da.dryLevel"),
+        ),
+        SelectDesc(
+            key="dry_time",
+            field="x.com.samsung.da.dryTime",
+            icon="mdi:timer",
+            entity_category="config",
+            options_field="x.com.samsung.da.supportedDryTime",
+            exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.supportedDryTime")),
+            write_fn=_setting_write("x.com.samsung.da.dryTime"),
+        ),
         SensorDesc(
             key="dryer_type",
             field="x.com.samsung.da.dryerType",

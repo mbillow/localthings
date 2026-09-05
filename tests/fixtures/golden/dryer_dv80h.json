@@ -1,15 +1,21 @@
 {
   "state_keys": [
+    "ai_energy_level",
     "alarm_code",
+    "buzzer_sound",
     "child_lock",
     "completion_minutes",
     "cycle",
     "cycle_active",
     "delay_start_hours",
     "diagnosis",
+    "drum_clean_cycles_remaining",
     "dry_level",
+    "dry_time",
     "dryer_type",
     "energy_kwh",
+    "energy_saved_kwh",
+    "finish_sound",
     "finish_time",
     "firmware_update",
     "job_beginning_status",
@@ -18,6 +24,9 @@
     "progress",
     "progress_percentage",
     "remote_control",
+    "selfcheck_error",
+    "selfcheck_result",
+    "selfcheck_status",
     "wrinkle_prevent"
   ]
 }

@@ -1,0 +1,532 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/selfcheck/vs/0",
+      "rep": {
+        "x.com.samsung.da.status": "Ready",
+        "x.com.samsung.da.progress": "0",
+        "x.com.samsung.da.result": "NA",
+        "x.com.samsung.da.error": [
+          "DA_ERROR_NONE"
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.cumulativePower": "2000",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativeDate": "1788490800",
+        "x.com.samsung.da.cumulativeDateUTC": "1788458400",
+        "x.com.samsung.da.cumulativeSavedPower": "0"
+      }
+    },
+    {
+      "href": "/energy/consumption/0",
+      "rep": {}
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_0131",
+          "UpdateAllow_NotAllowed",
+          "Course_01",
+          "AiOption_On",
+          "MixedLoadBell_Disable",
+          "MixedLoadBellNoti_Nothing",
+          "LaundryOutTime_0",
+          "SeamlessControl_Disable",
+          "KidsLockBypass_On",
+          "FreezeProtectionAlarm_On",
+          "WashingTimes_3",
+          "DrumCleanProposal_10",
+          "DetergentOnce_1",
+          "DetergentLeft_0",
+          "DetergentBase_5",
+          "DetergentAlarm_Off",
+          "DetergentType_3",
+          "DetergentTotal_0",
+          "SpecialFunction_20",
+          "AvailableDelayTime_219",
+          "LaundryPlannerUserSetTime_0",
+          "ProgressTimeSet_B226ACB4012C",
+          "WrinklePreventRunning_Off",
+          "FreezeProtectionMode_Off",
+          "SendToDevice_On",
+          "GMT_12",
+          "DrumLight_Off",
+          "DryTimeSet_FF000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050016FE060016FE020016FE080009000000000000000000",
+          "EnergyLevelSet_05030405040502040202050202030204040202050203",
+          "WrinklePreventSet_0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0FF00F0F",
+          "MixedLoadBellSet_020202FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "EmptyingTheBucket_Nothing",
+          "TextureLevel_None",
+          "SavingModeCondition_01010204531D03380300",
+          "SavingMode_Off",
+          "AutoDoorSetting_0302",
+          "LaundryManageFinish_Custom",
+          "UserLocation_Indoor",
+          "SpecialProductContainer_01",
+          "CourseDefaultSetInfoDryTimeByDryOn_0000000000000000000000000000000609030E0000",
+          "WashDryButtonStatus_01FE0F53FE0F03FE0F4FFE0F1BFE0F3BFE0F1DFE0F19FE0F1AFE0F3AFE0F1CFE0F37FE0F3CFE0F3DFE0F38FE0F06FE0F0DFE0F24FE0F28FE0F2CFE0F0CFE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F01FE0F",
+          "GeoFenceAlarm",
+          "UsagesDB_ok",
+          "EnergyKW_396",
+          "DrumCleanLog_Empty",
+          "TimeSync_NotSupported"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "101D31E53D31E03D31E4FD3081BD3183BD0001DD31819D2041AD1023AD4101CD30837D2043CD2043DD20438D10206D0000DD00024D00028D0002CD0000CD000"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/cycleinterface/vs/0",
+      "rep": {
+        "x.com.samsung.da.cycleInterfaceEnabled": "On"
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.remainingTime": "03:39:00",
+        "x.com.samsung.da.progressPercentage": "1",
+        "x.com.samsung.da.progressPercentageDrying": "1",
+        "x.com.samsung.da.progress": "None",
+        "x.com.samsung.da.delayEndTime": "00:00:00",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Drying",
+          "Cooling",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "jobStates": [
+          "None",
+          "Drying",
+          "Cooling",
+          "Finish"
+        ],
+        "currentJobState": "None",
+        "remainingTime": "03:39:00",
+        "progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "DA_WM_TP1_21_COMMON|80014741|30010101001A1100CAC3039E00830200",
+        "x.com.samsung.da.description": "DA_WM_TP1_21_COMMON_DV80H27H/DC91-00145A_80DD",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "DRB",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagTsId": "DA01",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "DA_WM_TP1_21_COMMON|80014741|30010101001A1100CAC3039E00830200",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02986A260118(A182)",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Firmware_1_DB_80014741260526420FFFFFFFFFFFFFFFFFFFFFFFFFFF(813180014541FFFFFFFF_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00147A26052642,FFFFFFFFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Firmware_2_DB_800145412607023401FFFF80015641260202100AFFFF(813180014741FFFFFFFF_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00145A26070234,00156A26020210"
+          },
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "Firmware_3_DB_8000694125102104015FFF8000684125102104012FFF(813180014742FFFFFFFF_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00069A25102104,00068A25102104"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+09:00"
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.wrinklePrevent": "Off",
+        "x.com.samsung.da.dryLevel": "Normal",
+        "x.com.samsung.da.supportedDryLevel": [
+          "None",
+          "Damp",
+          "Less",
+          "Normal",
+          "More"
+        ],
+        "x.com.samsung.da.dryTime": "00:00:00",
+        "x.com.samsung.da.supportedDryTime": [
+          "00:00:00",
+          "00:20:00",
+          "00:30:00",
+          "00:40:00",
+          "00:50:00",
+          "01:00:00",
+          "01:30:00",
+          "02:00:00",
+          "02:20:00",
+          "02:30:00",
+          "03:00:00",
+          "03:50:00",
+          "04:00:00"
+        ],
+        "x.com.samsung.da.dryerType": "Electricity",
+        "x.com.samsung.da.currentAvailableDryLevel": "00",
+        "x.com.samsung.da.currentAvailableDryTime": "000000",
+        "x.com.samsung.da.currentAvailableSubOptions": "00"
+      }
+    },
+    {
+      "href": "/st/dryercourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.st.dryerMode": "Table_03_Course_01",
+        "x.com.samsung.da.st.courseTable": "Table_03"
+      }
+    },
+    {
+      "href": "/setting/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/wm/editcourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.editCourseList": "EditCourseList_0153034F1B3B1D191A3A1C373C3D38060D24282C0C",
+        "x.com.samsung.da.fixedCourseList": "FixedCourseList_01551628"
+      }
+    },
+    {
+      "href": "/wm/setinfo/vs/0",
+      "rep": {
+        "x.com.samsung.da.isModelSettingWithoutSC": "true",
+        "x.com.samsung.da.aiCourse": "false",
+        "x.com.samsung.da.autoDoorOpen": "Door_Open",
+        "x.com.samsung.da.isModelSettingPowerOnOff": "true",
+        "x.com.samsung.da.modelCode": "M(DV80H22CDW),W(DV80H22CDW)"
+      }
+    },
+    {
+      "href": "/wm/jobbeginingstatus/vs/0",
+      "rep": {
+        "x.com.samsung.da.currentStatus": "None"
+      }
+    },
+    {
+      "href": "/wm/personalcourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.courses": [
+          "F1_00",
+          "F2_00",
+          "F3_00",
+          "F4_00",
+          "F5_00",
+          "F6_00",
+          "F7_00",
+          "F8_00",
+          "F9_00",
+          "FA_00"
+        ],
+        "x.com.samsung.da.maxCourseNum": "10",
+        "x.com.samsung.da.labelScanCourse": "FB_00"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "otnStatus": "None",
+        "flashingProgress": "",
+        "otnTarget": "main",
+        "otnCompleteDate": "noHistory",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "DA_WM_TP1_21_COMMON",
+            "versions": [
+              "30260118"
+            ],
+            "visVersion": "260118"
+          },
+          {
+            "type": "Micom",
+            "modelId": "813180014541FFFFFFFF",
+            "versions": [
+              "26070234",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260702"
+          },
+          {
+            "type": "Micom",
+            "modelId": "813180014741FFFFFFFF",
+            "versions": [
+              "26052642",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260526"
+          },
+          {
+            "type": "Micom",
+            "modelId": "813180014742FFFFFFFF",
+            "versions": [
+              "26052642",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260526"
+          },
+          {
+            "type": "Micom",
+            "modelId": "013180014741FFFFFFFF",
+            "versions": [
+              "26052642",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260526"
+          },
+          {
+            "type": "Micom",
+            "modelId": "01318001454180015641",
+            "versions": [
+              "26070234",
+              "26020210"
+            ],
+            "visVersion": "260702"
+          },
+          {
+            "type": "Micom",
+            "modelId": "01318000694180006841",
+            "versions": [
+              "25102104",
+              "25102104"
+            ],
+            "visVersion": "251021"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/buzzersound/vs/0",
+      "rep": {
+        "supportedBuzzerSound": [
+          "Volume_Off",
+          "Volume_Low",
+          "Volume_Med",
+          "Volume_High"
+        ],
+        "setBuzzerSound": "Volume_High",
+        "supportedFinishSound": [
+          "FinishSound_1",
+          "FinishSound_2",
+          "FinishSound_3"
+        ],
+        "setFinishSound": "FinishSound_3"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "4117100000",
+        "x.com.samsung.da.countryCode": "KR"
+      }
+    },
+    {
+      "href": "/drlc/0",
+      "rep": {
+        "DRLevel": 0,
+        "start": "0000-00-00T00:00:00Z",
+        "duration": 0,
+        "override": false
+      }
+    },
+    {
+      "href": "/drlc/vs/0",
+      "rep": {
+        "x.com.samsung.da.drlcLevel": "0",
+        "x.com.samsung.da.durationminutes": "0",
+        "x.com.samsung.da.start": "0000-00-00T00:00:00Z",
+        "x.com.samsung.da.override": "Off",
+        "x.com.samsung.da.realSaving": "Off"
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "Asia/Seoul",
+        "offset": "+09:00",
+        "DST": "OFF"
+      }
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "TKIP",
+          "AES",
+          "WEP-64",
+          "WEP-128"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/energy/ailevel/vs/0",
+      "rep": {
+        "aiLevel": "1",
+        "supportedAiLevel": [
+          "1"
+        ],
+        "energySavingInfo": [
+          {
+            "aiLevel": "1",
+            "maxEnergySavingRate": "45"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/wm/displaymode/state/vs/0",
+      "rep": {
+        "detailUserMode": "USERMODE_NORMAL",
+        "entryMode": "STARTUP_DEFINED_NOT_YET",
+        "nonUsermodeOperationState": "Ready"
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "supportedVersion": "1.0"
+      }
+    }
+  ]
+}

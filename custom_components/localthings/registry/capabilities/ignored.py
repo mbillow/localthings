@@ -55,6 +55,11 @@ IGNORED: list[Capability] = [
     # milliseconds, issue #165's TP1X_REF_21K fridge) -- internal transport
     # plumbing, not appliance state.
     Capability(href="/rm/control/vs/0"),
+    # Its raw-data sibling: a fixed telemetry descriptor for the drum
+    # sensing/RPM control trace ("WMFrameMems"), identical on every laundry
+    # board that reports it (issue #437). Collection config for Samsung's
+    # own diagnostics, not appliance state.
+    Capability(href="/rm/framemems/vs/0"),
     # Demand Response Load Control — utility-company grid signals; requires
     # cloud registration with a utility program we don't support locally.
     Capability(href="/drlc/vs/0"),
@@ -106,11 +111,20 @@ IGNORED: list[Capability] = [
     # User-saved custom course slots (F1-FA). No controllable/observable
     # state without a multi-slot editor; revisit if that becomes valuable.
     Capability(href="/wm/personalcourse/vs/0"),
+    # Control-panel entry/user mode. Reads like a demo/showroom-mode
+    # indicator, but every dump carrying it (issues #241, #437, #438)
+    # reports detailUserMode USERMODE_NORMAL and nonUsermodeOperationState
+    # Ready -- no second value to interpret against, so there is nothing to
+    # expose yet. Revisit if a dump ever shows a non-normal mode.
+    Capability(href="/wm/displaymode/state/vs/0"),
     # OCF-native energy resource is empty ({}) on washer hardware seen so
     # far -- common.ENERGY_METER on /energy/consumption/vs/0 is the only
     # real source.
     Capability(href="/energy/consumption/0"),
-    # Empty ({}) on every washer dump seen so far -- nothing to expose.
+    # Empty ({}) on washers; dryers and air dressers report a lone
+    # cycleInterfaceEnabled flag (issue #438). Either way it gates
+    # SmartThings' own cycle-interface protocol rather than anything the
+    # appliance does.
     Capability(href="/cycleinterface/vs/0"),
     # OCF-native duplicate of /drlc/vs/0 above -- same utility-program
     # dependency this integration doesn't support locally.
