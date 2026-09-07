@@ -20,6 +20,32 @@ CONF_CA_KEY_PEM = "ca_key_pem"
 CONF_LEAF_CERT_PEM = "leaf_cert_pem"
 CONF_LEAF_KEY_PEM = "leaf_key_pem"
 
+# How a session authenticates, and -- for PSK -- what role the credential
+# plays (issue #435). These are two axes, not one: the carrier is what the
+# DTLS handshake uses, while the profile is what the key *is* on the
+# appliance. Both PSK profiles are modelled from the start because their
+# import contracts differ: an OwnerPSK identity can be suggested from
+# plaintext `devowneruuid` where the firmware serves it, while a pairwise
+# peer's identity is not in DOXM at all and can only arrive with its key.
+#
+# Absent means the legacy client-certificate path -- the only thing any
+# entry written before this existed can be -- so no migration is needed.
+# An unknown or incomplete combination is rejected rather than guessed.
+CONF_AUTH_CARRIER = "auth_carrier"
+AUTH_CERTIFICATE = "certificate"
+AUTH_PSK = "psk"
+
+CONF_PSK_PROFILE = "psk_profile"
+PSK_PROFILE_OWNER = "owner"
+PSK_PROFILE_PEER = "peer"
+
+# The PSK client identity (a 16-byte OCF UUID: the owner's for an OwnerPSK,
+# the peer's for a pairwise credential) and its key as lowercase hex.
+# Shared by both profiles deliberately -- the storage shape is identical
+# and only the provenance differs, so a second profile costs no migration.
+CONF_PSK_IDENTITY = "psk_identity"
+CONF_PSK_KEY = "psk_key"
+
 # Device identity, resolved once by the config flow's probe and persisted
 # on the entry (issue #236) -- what the coordinator mints registry keys
 # from at __init__ time, before any poll has happened. Without them,

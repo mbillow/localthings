@@ -34,8 +34,6 @@ from .const import (
     CONF_DEVICE_KEY,
     CONF_DEVICE_TYPE,
     CONF_HOST,
-    CONF_LEAF_CERT_PEM,
-    CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
     CONF_MANUFACTURER,
@@ -49,6 +47,12 @@ from .const import (
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
+)
+from .credentials import (
+    DeviceBinding,
+    DeviceIdentityMismatch,
+    check_device_binding,
+    requires_authenticated_device_id,
 )
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
@@ -86,6 +90,7 @@ from .registry.subdevices import (
     normalize_seed_batch,
 )
 from .rekey import rekey_entry
+from .session import create_entry_session
 
 # Sentinel for apply_cloud_courses: "leave this field as it is",
 # distinct from None which means "clear it".
@@ -817,26 +822,72 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _connect_session(self) -> None:
         host = self._entry.data[CONF_HOST]
         port = self._entry.data[CONF_PORT]
-        cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
-        key_pem = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsCoapSession(
-            host,
-            port,
-            cert_pem=cert_pem,
-            key_pem=key_pem,
+        # Which credential this entry uses is `session.py`'s decision, not
+        # this one's -- adding a carrier must not mean editing every place
+        # that opens a session (issue #435).
+        sess = create_entry_session(
+            self._entry.data,
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
         )
         sess.connect()
         sess.start_reader()
-        self._session = sess
-        self._log.debug("DTLS connected to %s:%d", host, port)
+        identity = None
         try:
-            self._identity = read_identity(sess, None)
+            identity = read_identity(sess, None)
         except Exception as e:
             self._log.debug("read_identity failed: %s", e)
-            self._identity = None
+        # Before publishing the session, not after: a session that reached
+        # the wrong appliance must never become the one polls and commands
+        # run against, and `_close_session` reads `self._session`.
+        try:
+            self._check_device_binding(identity)
+        except Exception:
+            with contextlib.suppress(Exception):
+                sess.close()
+            raise
+        self._session = sess
+        self._identity = identity
+        self._log.debug("DTLS connected to %s:%d", host, port)
+
+    def _check_device_binding(self, identity: DeviceIdentity | None) -> None:
+        """Refuse a session that authenticated against a different appliance.
+
+        Only the profiles that need it (issue #435): ECDHE-PSK has no server
+        certificate to pin during the handshake, so an authenticated
+        `/oic/d` read is the only binding available. The certificate path is
+        unchanged -- it has never done this, and the library offers it a
+        strictly better check via `SamsungServerProfile`.
+
+        Compared against `CONF_OCF_DEVICE_ID`, never `CONF_DEVICE_KEY`: the
+        key is resolved through a `di -> pi -> serial -> host` chain, so on
+        the boards that fall past the first branch it would compare a
+        platform UUID or a serial against a device UUID and report a
+        mismatch on a correctly configured appliance.
+
+        `UNPROVEN` proceeds. An entry connecting for the first time has
+        nothing stored yet, and a device that authenticated but served no
+        usable `di` has told us nothing either way -- neither is evidence of
+        the wrong device, and `_persist_identity` records the `di` once a
+        poll corroborates it.
+        """
+        if not requires_authenticated_device_id(self._entry.data):
+            return
+        binding = check_device_binding(
+            self._entry.data.get(CONF_OCF_DEVICE_ID),
+            proven_ocf_device_id(identity),
+        )
+        if binding is not DeviceBinding.MISMATCHED:
+            return
+        # The credential is fine -- it completed a handshake. What is wrong
+        # is which appliance answered, so this must not read as a rejected
+        # credential and must not start a reauthentication the user cannot
+        # fix by re-entering anything.
+        raise DeviceIdentityMismatch(
+            f"{self._entry.data[CONF_HOST]} authenticated as a different OCF device "
+            f"than this entry is bound to"
+        )
 
     def _close_session(self) -> None:
         # Blocking, run in an executor. As of smartthings-local 0.1.12,

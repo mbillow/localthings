@@ -275,6 +275,19 @@ class FakeSession:
         pass
 
 
+def _probe_sessions() -> list:
+    """Sessions the config flow's certificate probe opened.
+
+    The coordinator builds its session through `session.create_entry_session`
+    now, which resolves `DtlsCoapSession` off the library module at call
+    time -- so patching that class catches the coordinator's sessions as
+    well as the probe's. The probe passes `cert_pem`/`key_pem` directly
+    while every session built from an entry arrives with an `auth`
+    provider, which is what separates them here.
+    """
+    return [session for session in FakeSession.instances if session.cert_pem is not None]
+
+
 @pytest.fixture
 def fake_dtls(monkeypatch):
     """Wire the probe path up to FakeSession with no real network anywhere."""
@@ -349,7 +362,7 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     # The whole range is probed (cheaply, in parallel) but only the confirmed
     # port is handed a handshake.
     assert set(probed) == set(config_flow.PROBE_PORT_RANGE)
-    assert [s.port for s in FakeSession.instances] == [49153]
+    assert [s.port for s in _probe_sessions()] == [49153]
 
 
 async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, fake_dtls) -> None:
@@ -470,7 +483,7 @@ async def test_second_device_reuses_the_existing_leaf(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == MOCK_LEAF_CERT_PEM
-    assert FakeSession.instances[0].cert_pem == MOCK_LEAF_CERT_PEM
+    assert _probe_sessions()[0].cert_pem == MOCK_LEAF_CERT_PEM
 
 
 async def test_rejected_reused_leaf_is_reminted(
@@ -492,7 +505,7 @@ async def test_rejected_reused_leaf_is_reminted(
     assert result["type"] == FlowResultType.CREATE_ENTRY
     # Freshly minted, and it's the fresh one that got stored.
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [s.cert_pem for s in _probe_sessions()] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
 
 
 async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
@@ -529,7 +542,7 @@ async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [s.cert_pem for s in _probe_sessions()] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
     assert diagnosed == [49154]
 
 
@@ -597,7 +610,7 @@ async def test_unconfirmed_port_failure_is_not_reminted(
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "no_dtls_server"
-    assert len(FakeSession.instances) == 1
+    assert len(_probe_sessions()) == 1
 
 
 # ---------------------------------------------------------------------------
