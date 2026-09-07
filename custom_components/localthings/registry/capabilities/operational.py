@@ -116,15 +116,28 @@ def _format_delay(hours):
 
 
 def _delay_field(rep):
-    """Washer hardware reports the delay-until-start duration under
-    'delayEndTime' instead of 'delayStartTime' (both hold a duration, not a
-    wall-clock time -- see _delay_hours). Write back whichever key the
-    device itself is using; default to delayStartTime for hardware that
-    reports neither yet (matches prior behavior)."""
+    """The delay key this device actually uses, for reads and writes alike.
+
+    Dishwashers report `delayStartTime`, laundry reports `delayEndTime`, and
+    no dump carries both -- so the preference order only decides the
+    hypothetical overlap. It prefers delayStartTime because that is the field
+    whose meaning matches this entity: a delay until the cycle *starts*.
+
+    The two are not synonyms, which #427 asked about and this file used to
+    assert they were. `delayEndTime` counts down to the cycle's *end*: the
+    WF80H dump caught mid-`Delaywash` reports `delayEndTime` and
+    `remainingTime` as the same `09:26:00`, and remainingTime runs to
+    completion. That also explains #308, where a delay set to 1 h came back
+    as ~9 h -- an appliance cannot finish sooner than its cycle takes, so a
+    delay-until-end write clamps up to the cycle length.
+
+    Both still hold a duration rather than a wall-clock time (see
+    _delay_hours). See docs/investigations/laundry-delay-end.md.
+    """
     return (
-        "x.com.samsung.da.delayEndTime"
-        if "x.com.samsung.da.delayEndTime" in rep
-        else "x.com.samsung.da.delayStartTime"
+        "x.com.samsung.da.delayStartTime"
+        if "x.com.samsung.da.delayStartTime" in rep
+        else "x.com.samsung.da.delayEndTime"
     )
 
 
@@ -250,10 +263,9 @@ OPERATIONAL_STATE = Capability(
             native_min=0,
             native_max=24,
             step=1,
-            rep_fn=lambda rep: _delay_hours(
-                rep.get("x.com.samsung.da.delayStartTime")
-                or rep.get("x.com.samsung.da.delayEndTime")
-            ),
+            # Same field the write targets: reading one key while writing
+            # another would show a stale value after every set.
+            rep_fn=lambda rep: _delay_hours(rep.get(_delay_field(rep))),
             write_fn=lambda p, rep, href=None: (
                 ["operational", "state", "vs", "0"],
                 {_delay_field(rep): _format_delay(p)},
