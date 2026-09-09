@@ -1,5 +1,7 @@
 """Unit tests for operational state capabilities."""
 
+import pytest
+
 from custom_components.localthings.registry.capabilities.operational import (
     OPERATIONAL_STATE,
     _just_finished,
@@ -228,6 +230,43 @@ class TestDelayFieldFallback:
         assert path == ["operational", "state", "vs", "0"]
         assert body == {"x.com.samsung.da.delayEndTime": "01:30:00"}
 
+    @pytest.mark.parametrize(
+        "rep,expected",
+        [
+            ({"x.com.samsung.da.delayStartTime": "01:00:00"}, "x.com.samsung.da.delayStartTime"),
+            ({"x.com.samsung.da.delayEndTime": "02:00:00"}, "x.com.samsung.da.delayEndTime"),
+            (
+                {
+                    "x.com.samsung.da.delayStartTime": "01:00:00",
+                    "x.com.samsung.da.delayEndTime": "02:00:00",
+                },
+                "x.com.samsung.da.delayStartTime",
+            ),
+        ],
+    )
+    def test_read_and_write_agree_on_one_field(self, rep, expected):
+        """The number showed delayStartTime while writing delayEndTime, so a
+        device reporting both would display a value the write never touched --
+        the set would look like it did nothing. No dump carries both (#427), so
+        this was unreachable rather than broken, but the two keys mean
+        different things and must not be mixed within one entity."""
+        from custom_components.localthings.registry.capabilities.operational import (
+            OPERATIONAL_STATE,
+        )
+
+        desc = next(
+            e
+            for e in OPERATIONAL_STATE.entities
+            if e.key == "delay_start_hours" and isinstance(e, NumberDesc)
+        )
+        assert desc.rep_fn is not None and desc.write_fn is not None
+        result = desc.write_fn(1.5, rep)
+        assert result is not None
+        _path, body = result
+        assert list(body) == [expected]
+        # And the value the entity displays comes from that same key.
+        assert desc.rep_fn(rep) == _delay_hours_of(rep[expected])
+
     def test_write_targets_delay_start_time_by_default(self):
         from custom_components.localthings.registry.capabilities.operational import (
             OPERATIONAL_STATE,
@@ -244,3 +283,9 @@ class TestDelayFieldFallback:
         assert result is not None
         _path, body = result
         assert body == {"x.com.samsung.da.delayStartTime": "01:30:00"}
+
+
+def _delay_hours_of(raw):
+    """HH:MM:SS -> fractional hours, mirroring _delay_hours for assertions."""
+    h, m, s = (int(x) for x in raw.split(":"))
+    return (h * 3600 + m * 60 + s) / 3600.0
