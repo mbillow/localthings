@@ -1,12 +1,20 @@
 """Tests for legacy_http -- the 8888/HTTPS envelope translation (issue #168).
 
-The bodies below are hand-built from field names and values measured on a
-live TP6X_WW6500, small enough to read in one screen; they are not a device
-dump, and nothing here stands in for one. What they pin down is the shape
-of the translation -- the mechanical rule, and each of the three exceptions
-the table carries -- so that a second appliance either fits or shows
-exactly where it doesn't.
+Two levels. The small bodies below are hand-built from a live TP6X_WW6500
+and pin down the shape of the translation -- the mechanical rule and each
+of the three exceptions the table carries -- so a second appliance either
+fits or shows exactly where it doesn't.
+
+`TestAgainstTheDeviceDump` is the one that matters: it runs the real,
+redacted dump in tests/fixtures/washer_tp6x_ww6500_8888.json (all nine
+endpoints, captured in one pass) through the translation and then through
+this repository's own `resolve()` and `discover()`, unmodified. Redacted
+there: the serial, and the appliance's `uuid`, which on this board is its
+MAC address in UUID form.
 """
+
+import json
+from pathlib import Path
 
 from custom_components.localthings.legacy_http import (
     PREFIX,
@@ -14,7 +22,12 @@ from custom_components.localthings.legacy_http import (
     http_status_to_coap,
     to_resources,
     to_write,
+    unwrap,
 )
+from custom_components.localthings.registry.by_type import resolve
+from custom_components.localthings.registry.discovery import discover
+
+FIXTURE = Path(__file__).parent / "fixtures" / "washer_tp6x_ww6500_8888.json"
 
 # What `GET /devices/0` reports, plus the two resources that aggregate only
 # links to, merged the way a caller would hand them over.
@@ -26,7 +39,7 @@ BODIES = {
         "remainingTime": "00:10:00",
         "supportedProgress": ["None", "Wash", "Rinse", "Spin", "Finish"],
         "power": "On",
-        "kidsLock": "Off",
+        "kidsLock": "Ready",
     },
     "Mode": {
         "options": ["Course_5C", "LaundryOutTime_0", "DeviceType_0167"],
@@ -80,7 +93,7 @@ class TestToResources:
         resources = to_resources(BODIES, TP6X_WASHER)
 
         assert resources["/power/vs/0"] == {PREFIX + "power": "On"}
-        assert resources["/kidslock/vs/0"] == {PREFIX + "kidsLock": "Off"}
+        assert resources["/kidslock/vs/0"] == {PREFIX + "kidsLock": "Ready"}
         assert PREFIX + "power" not in resources["/operational/state/vs/0"]
 
     def test_operational_state_keeps_the_rest(self):
@@ -194,3 +207,91 @@ class TestHttpStatusToCoap:
     def test_unmapped_statuses_fall_back_by_class(self):
         assert http_status_to_coap(418) == 0x80
         assert http_status_to_coap(503) == 0xA0
+
+
+class TestAgainstTheDeviceDump:
+    """The real appliance, through this repository's own detection.
+
+    Deliberately asserts properties rather than counts: how many entities
+    the washer registry binds is yours to change, and a test that pins the
+    number would break on every capability you add. What must hold is that
+    the translation leaves nothing unaccounted for and that the entities
+    this family actually has still resolve.
+    """
+
+    @staticmethod
+    def _resources():
+        dump = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        return to_resources(
+            unwrap(
+                dump["/devices/0"],
+                dump["/devices/0/configuration"],
+                dump["/devices/0/information"],
+            )
+        )
+
+    def test_the_dump_produces_the_canonical_resource_set(self):
+        assert set(self._resources()) == {
+            "/alarms/vs/0",
+            "/course/vs/0",
+            "/diagnosis/vs/0",
+            "/information/vs/0",
+            "/kidslock/vs/0",
+            "/operational/state/vs/0",
+            "/power/vs/0",
+            "/remotectrl/vs/0",
+            "/washer/vs/0",
+        }
+
+    def test_the_device_types_as_a_washer(self):
+        """Through `description` ('TP6X_WASHER') and the consumer-prefix
+        rule, with no new board token and no change to by_type."""
+        registry = resolve(self._resources())
+
+        assert registry is not None
+        assert registry.name == "washer"
+
+    def test_nothing_is_left_unbound(self):
+        resources = self._resources()
+        registry = resolve(resources)
+        unbound: list[str] = []
+
+        discover(
+            resources,
+            registry.capabilities,
+            registry.pattern_capabilities,
+            log=unbound.append,
+        )
+
+        assert unbound == []
+
+    def test_the_entities_this_appliance_has_are_bound(self):
+        """Not an exhaustive list -- the ones whose absence would mean the
+        translation lost something, each on a different canonical href."""
+        resources = self._resources()
+        registry = resolve(resources)
+
+        bound = discover(resources, registry.capabilities, registry.pattern_capabilities)
+        keys = {b.key_override or b.desc.key for b in bound}
+
+        assert {
+            "cycle",  # /course/vs/0
+            "machine_state",  # /operational/state/vs/0
+            "progress_percentage",
+            "wash_temperature",  # /washer/vs/0
+            "spin_speed",
+            "rinse_cycles",
+            "power_switch",  # /power/vs/0 -- fanned out of Operation
+            "child_lock",  # /kidslock/vs/0 -- likewise
+            "remote_control",  # /remotectrl/vs/0
+            "alarm_code",  # /alarms/vs/0
+            "diagnosis_status",  # /diagnosis/vs/0
+        } <= keys
+
+    def test_the_cycle_select_offers_this_appliance_own_courses(self):
+        """The supportedOptions blob decodes through your own decoder, on a
+        board that publishes no editCourseList: 14 courses, which is what
+        the dial has."""
+        from custom_components.localthings.registry.capabilities.laundry import cycle_options
+
+        assert len(cycle_options(self._resources())) == 14
