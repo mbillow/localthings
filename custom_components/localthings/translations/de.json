@@ -1739,6 +1739,13 @@
       "confirm_unknown_type": {
         "title": "Gerätetyp nicht erkannt",
         "description": "Dieses Gerät hat das Modell \"{model}\" gemeldet, das LocalThings noch nicht als bekannten Typ erkennt. Es wird trotzdem hinzugefügt, jedoch nur mit allgemeinen Funktionen (z. B. Ein/Aus, Alarme, sofern vorhanden) und nicht mit dem vollständigen Funktionsumfang seiner Gerätefamilie. Sie können später helfen, die vollständige Unterstützung hinzuzufügen, indem Sie die Diagnosedaten für dieses Gerät herunterladen (Einstellungen > Geräte & Dienste > dieses Gerät > das Menü > Diagnose herunterladen) und sie in einem neuen Issue einreichen. Bestätigen Sie, um es trotzdem hinzuzufügen."
+      },
+      "legacy_token": {
+        "title": "Gerätetoken",
+        "description": "Dieses Gerät ({host}) nutzt Samsungs ältere lokale API, die neben dem Zertifikat auch einen Gerätetoken benötigt.\n\nLassen Sie das Feld leer und senden Sie ab, damit das Gerät selbst einen ausstellt: Es wird danach gefragt und schickt ihn an Home Assistant auf Port 8889 zurück. Schalten Sie zuvor am Gerät die Fernsteuerung (Smart Control) bei geschlossener Tür ein, sonst verlässt es binnen Minuten das WLAN und antwortet nicht mehr. Das dauert bis zu anderthalb Minuten.\n\nErreicht das Gerät Home Assistant auf Port 8889 nicht, besorgen Sie den Token anders und fügen Sie ihn hier ein.",
+        "data": {
+          "device_token": "Gerätetoken (leer lassen, um einen anzufordern)"
+        }
       }
     },
     "error": {
@@ -1753,7 +1760,8 @@
       "cannot_connect": "Verbindung zum Gerät nicht möglich. Prüfen Sie, ob die IP-Adresse korrekt ist und das Gerät eingeschaltet und mit Ihrem Netzwerk verbunden ist.",
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs.",
-      "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“."
+      "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“.",
+      "token_not_received": "Es ist kein Gerätetoken eingetroffen. Prüfen Sie, ob am Gerät die Fernsteuerung bei geschlossener Tür eingeschaltet ist und ob es Home Assistant auf Port 8889 erreicht – oder fügen Sie einen anders besorgten Token ein."
     },
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert",
