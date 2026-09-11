@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
@@ -34,23 +33,23 @@ ENTRY_DATA = {
 
 
 class _FakeRawWriteSession:
-    """Stand-in for DtlsCoapSession: records every POST verbatim and
-    answers the follow-up GET with a canned representation -- no real
+    """Stand-in for a Transport: records every write verbatim and answers
+    the follow-up read with a canned representation -- no real
     DTLS/network involved."""
 
     def __init__(self, post_code: int = 0x44, get_rep: dict | None = None):
-        self.post_calls: list[tuple[list[str], bytes]] = []
+        self.post_calls: list[tuple[list[str], dict]] = []
         self.get_calls: list[list[str]] = []
         self._post_code = post_code
         self._get_rep = {} if get_rep is None else get_rep
 
-    def post(self, path_segs, payload, timeout=None):
-        self.post_calls.append((list(path_segs), payload))
-        return self._post_code, b""
+    def write(self, path_segs, body, timeout=None):
+        self.post_calls.append((list(path_segs), body))
+        return self._post_code
 
-    def get(self, path_segs, timeout=None):
+    def read(self, path_segs, timeout=None):
         self.get_calls.append(list(path_segs))
-        return 0x45, cbor2.dumps(self._get_rep)
+        return 0x45, self._get_rep
 
     def pace(self):
         pass
@@ -80,9 +79,9 @@ async def test_raw_write_splits_href_and_posts_exact_body(coordinator) -> None:
     code, new_rep = await coordinator.async_raw_write("/course/vs/0", body)
 
     assert len(fake.post_calls) == 1
-    posted_path, posted_bytes = fake.post_calls[0]
+    posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["course", "vs", "0"]
-    assert cbor2.loads(posted_bytes) == body
+    assert posted_body == body
 
     assert code == 0x44
     assert new_rep == {"x.field": "after"}

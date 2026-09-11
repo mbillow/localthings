@@ -70,6 +70,7 @@ from .learned import persist as learned_persist
 from .learned import stored as learned_stored
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
+from .transport import DtlsTransport
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -645,7 +646,7 @@ def _mint_credentials(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
     return fullchain_pem, leaf_key_pem
 
 
-def _read_device(sess, host: str, port: int) -> dict:
+def _read_device(transport, host: str, port: int) -> dict:
     """Resolve this device's identity over an already-connected session.
 
     /oic/d before /device/0, deliberately: the device's own OCF device-type
@@ -660,8 +661,6 @@ def _read_device(sess, host: str, port: int) -> dict:
     so the coordinator never has to mint a registry key from a placeholder
     (issue #236).
     """
-    import cbor2
-
     from .registry.batch import parse_device0_batch
     from .registry.by_type import resolve as resolve_registry
     from .registry.identity import (
@@ -672,18 +671,16 @@ def _read_device(sess, host: str, port: int) -> dict:
         resolve_serial,
     )
 
-    identity = read_identity(sess, None)
+    identity = read_identity(transport, None)
 
-    code, payload = sess.get(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    if code != 0x45 or not payload:
+    code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
+    if code != 0x45 or body is None:
         # Authenticated fine, so this isn't a connectivity or credentials
         # problem -- whatever is on this port just isn't an appliance whose
         # /device/0 we understand.
         raise UnexpectedResponse(
-            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} "
-            f"({code:#04x}), payload {len(payload or b'')} bytes"
+            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} ({code:#04x})"
         )
-    body = cbor2.loads(payload)
     resources = parse_device0_batch(body) if isinstance(body, list) else {}
 
     info = resources.get("/information/vs/0", {})
@@ -748,16 +745,13 @@ def _diagnose_failures(
 
 def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
-    from smartthings_local.protocol.dtls_session import DtlsCoapSession
-
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
-        sess = None
+        transport = None
         try:
-            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
-            sess.connect()
-            sess.start_reader()
-            return _read_device(sess, host, port)
+            transport = DtlsTransport(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            transport.connect()
+            return _read_device(transport, host, port)
         except CannotConnect:
             # The device answered, just not with something we can use --
             # trying the remaining ports can't improve on that.
@@ -766,9 +760,9 @@ def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str)
             failures.append((port, exc))
             _LOGGER.debug("port %d failed: %s", port, exc)
         finally:
-            if sess is not None:
+            if transport is not None:
                 with contextlib.suppress(Exception):
-                    sess.close()
+                    transport.close()
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem)
     raise _classify_handshake_failure(host, scan, failures, alerts)
 

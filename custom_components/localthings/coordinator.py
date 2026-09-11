@@ -13,7 +13,6 @@ from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
 
-import cbor2
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -22,7 +21,6 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from smartthings_local.ocf.state_cache import StateCache
-from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
 from . import cloudcourse
 from .cloudcourse import CloudCourses
@@ -86,6 +84,7 @@ from .registry.subdevices import (
     normalize_seed_batch,
 )
 from .rekey import rekey_entry
+from .transport import DecodeError, DtlsTransport, Transport
 
 # Sentinel for apply_cloud_courses: "leave this field as it is",
 # distinct from None which means "clear it".
@@ -155,8 +154,8 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 
 
 def _href_to_path_segs(href: str) -> list[str]:
-    """'/mode/vs/0' -> ['mode', 'vs', '0'], the shape `sess.get`/`sess.post`
-    take. Shared by every raw debug read/write path."""
+    """'/mode/vs/0' -> ['mode', 'vs', '0'], the shape a transport's
+    `read`/`write` take. Shared by every raw debug read/write path."""
     return [s for s in str(href).strip("/").split("/") if s]
 
 
@@ -285,7 +284,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(seconds=SUMMARY_INTERVAL_S),
         )
         self._entry = entry
-        self._session: DtlsCoapSession | None = None
+        self._session: Transport | None = None
         self._identity: DeviceIdentity | None = None
         self._discovered = False
         self.bound = []
@@ -820,7 +819,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
         key_pem = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsCoapSession(
+        sess = DtlsTransport(
             host,
             port,
             cert_pem=cert_pem,
@@ -829,7 +828,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             local_port=_local_source_port(host),
         )
         sess.connect()
-        sess.start_reader()
         self._session = sess
         self._log.debug("DTLS connected to %s:%d", host, port)
         try:
@@ -912,19 +910,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             # 35s gives a slow blockwise transfer room to finish instead of
             # raising TimeoutError every cycle on an otherwise-fine device.
-            code, payload = sess.get(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
+            code, body = sess.read(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
         except TimeoutError:
             raise
+        except DecodeError as e:
+            # The device answered; its answer is what could not be read.
+            # Left open for the same reason a timeout is -- nothing about
+            # the session itself is in question.
+            raise RuntimeError(f"poll cbor decode: {e}") from e
         except Exception as e:
             self._close_session()
             raise RuntimeError(f"poll GET failed: {e}") from e
-        if code != 0x45 or not payload:
+        if code != 0x45 or body is None:
             self._close_session()
             raise RuntimeError(f"poll: unexpected code {code:#04x}")
-        try:
-            body = cbor2.loads(payload)
-        except Exception as e:
-            raise RuntimeError(f"poll cbor decode: {e}") from e
         result = parse_device0_batch(body) if isinstance(body, list) else {}
         # Refresh every enumerated sibling's seed on this same poll (issue
         # #177) so its state doesn't freeze at enumeration time.
@@ -944,11 +943,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if subdevice.flat_hrefs:
             return self._poll_subdevice_flat_hrefs(subdevice, sess)
         try:
-            code, payload = sess.get(list(subdevice.seed_path), timeout=10.0)
-            if code == 0x45 and payload:
-                body = cbor2.loads(payload)
-                if isinstance(body, list):
-                    return normalize_seed_batch(subdevice, parse_device0_batch(body))
+            code, body = sess.read(list(subdevice.seed_path), timeout=10.0)
+            if code == 0x45 and isinstance(body, list):
+                return normalize_seed_batch(subdevice, parse_device0_batch(body))
         except Exception as e:
             self._log.debug("subdevice %s seed poll failed: %s", subdevice.key, e)
         return {}
@@ -977,11 +974,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     sess.pace()
                 first = False
                 path = actual.strip("/").split("/")
-                code, payload = sess.get(path, timeout=10.0)
-                if code == 0x45 and payload:
-                    rep = cbor2.loads(payload)
-                    if isinstance(rep, dict):
-                        result[actual] = rep
+                code, rep = sess.read(path, timeout=10.0)
+                if code == 0x45 and isinstance(rep, dict):
+                    result[actual] = rep
             except Exception as e:
                 self._log.debug(
                     "subdevice %s flat href %s poll failed: %s",
@@ -1031,13 +1026,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             first = False
             try:
                 path = href.strip("/").split("/")
-                code, payload = self._session.get(path, timeout=timeout)
-                if code == 0x45 and payload:
-                    rep = cbor2.loads(payload)
-                    if isinstance(rep, dict):
-                        if apply:
-                            self._observe.apply(href, rep, source="poll")
-                        results[href] = rep
+                code, rep = self._session.read(path, timeout=timeout)
+                if code == 0x45 and isinstance(rep, dict):
+                    if apply:
+                        self._observe.apply(href, rep, source="poll")
+                    results[href] = rep
             except Exception as e:
                 self._log.debug("sub-poll %s: %s", href, e)
         return results
@@ -2162,7 +2155,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
+            code = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
 
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
@@ -2222,17 +2215,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = self._session
         if sess is None:
             raise RuntimeError("no session")
-        code, _ = sess.post(path_segs, cbor2.dumps(body), timeout=self._POST_TIMEOUT_S)
+        code = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
         self._log.warning("DEBUG raw write POST %s %r → code %#04x", href, body, code)
         new_rep: dict = {}
         try:
             sess.pace()
-            rcode, payload = sess.get(path_segs, timeout=10.0)
-            if rcode == 0x45 and payload:
-                rep = cbor2.loads(payload)
-                if isinstance(rep, dict):
-                    self._observe.apply(href, rep, source="poll")
-                    new_rep = rep
+            rcode, rep = sess.read(path_segs, timeout=10.0)
+            if rcode == 0x45 and isinstance(rep, dict):
+                self._observe.apply(href, rep, source="poll")
+                new_rep = rep
         except Exception as e:
             self._log.debug("raw write follow-up read failed: %s", e)
         return code, new_rep
@@ -2260,18 +2251,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = self._session
         if sess is None:
             raise RuntimeError("no session")
-        code, payload = sess.get(path_segs, timeout=10.0)
         rep: dict = {}
         body: Any = None
-        if code == 0x45 and payload:
-            try:
-                body = cbor2.loads(payload)
-            except Exception as e:
-                self._log.debug("raw read decode failed for %s: %s", href, e)
-                body = None
-            if isinstance(body, dict):
-                self._observe.apply(href, body, source="poll")
-                rep = body
+        try:
+            code, body = sess.read(path_segs, timeout=10.0)
+        except DecodeError as e:
+            # The one caller that reports a code rather than raising: a
+            # body that will not decode is itself the finding a debug read
+            # exists to surface.
+            self._log.debug("raw read decode failed for %s: %s", href, e)
+            code, body = 0x45, None
+        if code == 0x45 and isinstance(body, dict):
+            self._observe.apply(href, body, source="poll")
+            rep = body
         return code, rep, body
 
     async def async_raw_read(self, href: str) -> tuple[int, dict, Any]:

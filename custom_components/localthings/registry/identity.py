@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import cbor2
-
 
 @dataclass(frozen=True)
 class DeviceIdentity:
@@ -163,25 +161,23 @@ def device_display_name(device_type_name: str | None, model: str) -> str:
     return f"Samsung {device_type} ({model})" if model else f"Samsung {device_type}"
 
 
-def _get(sess, path) -> dict:
+def _get(transport, path) -> dict:
     try:
-        code, pl = sess.get(path, timeout=10.0)
-        if code == 0x45 and pl:
-            body = cbor2.loads(pl)
+        code, body = transport.read(path, timeout=10.0)
+        if code == 0x45:
             return body if isinstance(body, dict) else {}
     except Exception:
         pass
     return {}
 
 
-def _get_links(sess, path) -> list:
+def _get_links(transport, path) -> list:
     """Like _get, but for /oic/res: a baseline-Interface RETRIEVE on it
-    returns a CBOR array of Link objects (href/rt/if/di/...), not a single
+    returns an array of Link objects (href/rt/if/di/...), not a single
     Property map."""
     try:
-        code, pl = sess.get(path, timeout=10.0)
-        if code == 0x45 and pl:
-            body = cbor2.loads(pl)
+        code, body = transport.read(path, timeout=10.0)
+        if code == 0x45:
             return body if isinstance(body, list) else []
     except Exception:
         pass
@@ -207,9 +203,9 @@ def _device_types(d: dict) -> tuple[str, ...]:
     return tuple(t for t in rt if isinstance(t, str))
 
 
-def read_identity(sess, serial: str | None) -> DeviceIdentity:
-    p = _get(sess, ["oic", "p"])
-    d = _get(sess, ["oic", "d"])
+def read_identity(transport, serial: str | None) -> DeviceIdentity:
+    p = _get(transport, ["oic", "p"])
+    d = _get(transport, ["oic", "d"])
     # /oic/res is OCF's baseline resource-discovery endpoint: a unicast
     # RETRIEVE returns every Resource/Collection href this endpoint hosts,
     # not just /device/0. Relevant for the "Composite Device" model (issue
@@ -218,7 +214,7 @@ def read_identity(sess, serial: str | None) -> DeviceIdentity:
     # reads this to find a board's `/device/<n>` siblings -- that probing
     # used to run right here on every _connect_session/reconnect and moved
     # to that module so it only runs once, at first discovery.
-    res = _get_links(sess, ["oic", "res"])
+    res = _get_links(transport, ["oic", "res"])
     return DeviceIdentity(
         manufacturer=p.get("mnmn") or "Samsung",
         model=p.get("mnmo") or "",

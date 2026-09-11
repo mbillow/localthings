@@ -217,12 +217,13 @@ def mock_coordinator_session(fridge_resources):
 
 
 class FakeObserveSession:
-    """Stand-in for DtlsCoapSession that supports subscribe()/on_notification
+    """Stand-in for a Transport that supports subscribe()/on_notification
     for coordinator-level observe tests, without a real DTLS connection."""
 
     def __init__(self, on_notification=None):
         self.on_notification = on_notification
         self.subscribed: list[str] = []
+        self.writes: list[tuple[list[str], dict]] = []
         self.fail_hrefs: set[str] = set()
         self.closed = False
         # When set to a rep dict, subscribe() immediately delivers that rep
@@ -249,6 +250,16 @@ class FakeObserveSession:
 
     def refresh_observes(self, paths):
         return None
+
+    def read(self, path_segs, timeout=None):
+        return 0x45, {}
+
+    def write(self, path_segs, body, timeout=None):
+        self.writes.append((list(path_segs), body))
+        return 0x44
+
+    def pace(self):
+        pass
 
     def close(self):
         self.closed = True
