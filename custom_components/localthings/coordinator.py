@@ -32,8 +32,6 @@ from .const import (
     CONF_DEVICE_KEY,
     CONF_DEVICE_TYPE,
     CONF_HOST,
-    CONF_LEAF_CERT_PEM,
-    CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
     CONF_MANUFACTURER,
@@ -84,7 +82,7 @@ from .registry.subdevices import (
     normalize_seed_batch,
 )
 from .rekey import rekey_entry
-from .transport import DecodeError, DtlsTransport, Transport
+from .transport import DecodeError, Transport, create_transport
 
 # Sentinel for apply_cloud_courses: "leave this field as it is",
 # distinct from None which means "clear it".
@@ -816,20 +814,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _connect_session(self) -> None:
         host = self._entry.data[CONF_HOST]
         port = self._entry.data[CONF_PORT]
-        cert_pem = self._entry.data[CONF_LEAF_CERT_PEM]
-        key_pem = self._entry.data[CONF_LEAF_KEY_PEM]
 
-        sess = DtlsTransport(
-            host,
-            port,
-            cert_pem=cert_pem,
-            key_pem=key_pem,
+        sess = create_transport(
+            self._entry.data,
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
         )
         sess.connect()
         self._session = sess
-        self._log.debug("DTLS connected to %s:%d", host, port)
+        self._log.debug("connected to %s:%d", host, port)
         try:
             self._identity = read_identity(sess, None)
         except Exception as e:

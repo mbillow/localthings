@@ -28,11 +28,22 @@ Two things are deliberately behind the seam rather than above it:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
 import cbor2
 from smartthings_local.protocol.dtls_session import DtlsCoapSession
+
+from .const import (
+    CONF_DEVICE_TOKEN,
+    CONF_HOST,
+    CONF_LEAF_CERT_PEM,
+    CONF_LEAF_KEY_PEM,
+    CONF_LEGACY_FAMILY,
+    CONF_PORT,
+    CONF_TRANSPORT,
+    TRANSPORT_LEGACY_HTTP,
+)
 
 
 class DecodeError(ValueError):
@@ -152,3 +163,39 @@ class DtlsTransport:
 
     def refresh_observes(self, paths: Sequence[Sequence[str]]) -> None:
         self._live().refresh_observes(paths)
+
+
+def create_transport(
+    data: Mapping[str, Any],
+    *,
+    on_notification: Callable[[str, bytes], None] | None = None,
+    local_port: int | None = None,
+) -> Transport:
+    """The transport an entry's appliance speaks.
+
+    Keyed on what the config flow recorded rather than sniffed here: an
+    entry that predates a second transport carries no marker at all, and
+    the DTLS default is what it has always been. `legacy_http` is imported
+    lazily so an install with no such device never loads it.
+    """
+    if data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
+        from .legacy_http import FAMILIES, TP6X_WASHER
+        from .legacy_http_transport import LegacyHttpTransport
+
+        family = data.get(CONF_LEGACY_FAMILY)
+        return LegacyHttpTransport(
+            data[CONF_HOST],
+            data[CONF_PORT],
+            cert_pem=data[CONF_LEAF_CERT_PEM],
+            key_pem=data[CONF_LEAF_KEY_PEM],
+            token=data[CONF_DEVICE_TOKEN],
+            family=FAMILIES.get(family, TP6X_WASHER) if family else TP6X_WASHER,
+        )
+    return DtlsTransport(
+        data[CONF_HOST],
+        data[CONF_PORT],
+        cert_pem=data[CONF_LEAF_CERT_PEM],
+        key_pem=data[CONF_LEAF_KEY_PEM],
+        on_notification=on_notification,
+        local_port=local_port,
+    )

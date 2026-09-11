@@ -74,6 +74,11 @@ class Resource:
     # carries it as an ``items`` array of Property maps (see /alarms/vs/0
     # on any of this repository's fixtures).
     as_items: bool = False
+    # Fields this firmware accepts only in the same body as a start
+    # command, and answers 204 to -- then discards -- on their own. A write
+    # to one of them is refused rather than sent, so it fails loudly
+    # instead of appearing to work; see LegacyHttpTransport.write.
+    start_only: frozenset[str] = frozenset()
 
 
 # TP6X_WW6500 (EU), the one 8888 appliance measured end to end. Every row
@@ -92,8 +97,22 @@ TP6X_WASHER: tuple[Resource, ...] = (
         # resources, and this repository's capabilities read them there.
         fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
     ),
-    Resource(endpoint="mode", wrapper="Mode", href="/course/vs/0"),
-    Resource(endpoint="washer", wrapper="Washer", href="/washer/vs/0"),
+    # `options` carries both kinds of token: LaundryOutTime and the
+    # add-wash alarm mask are accepted on their own and hold, while
+    # `Course_` is not -- so the refusal is per field, and the array is
+    # named here because that is the field a cycle write lands in.
+    Resource(
+        endpoint="mode",
+        wrapper="Mode",
+        href="/course/vs/0",
+        start_only=frozenset({"Course"}),
+    ),
+    Resource(
+        endpoint="washer",
+        wrapper="Washer",
+        href="/washer/vs/0",
+        start_only=frozenset({"waterTemperature", "rinseCycles", "spinLevel"}),
+    ),
     Resource(
         endpoint="configuration",
         wrapper="Configuration",
@@ -257,6 +276,36 @@ def to_write(
             wrapper, wire_name = target
             device.setdefault(wrapper, {})[wire_name] = value
     return {"Device": device}
+
+
+def start_only_fields(aggregate: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
+    """What in this wire body the firmware would take and then discard.
+
+    Two shapes, because the firmware's rule is about fields rather than
+    resources: a plain field named in `start_only` (the washer's
+    temperature, rinses and spin), and a token in an `options` array whose
+    prefix is (the cycle). Measured on a TP6X_WW6500: each of those on its
+    own is answered `204` and has no effect, including in a body carrying a
+    second token that *did* apply -- so it is the field, not the request.
+
+    Returns the offending names, so a caller can say which.
+    """
+    by_wrapper = {resource.wrapper: resource for resource in table}
+    offenders: list[str] = []
+    for wrapper, fields in (aggregate.get("Device") or {}).items():
+        resource = by_wrapper.get(wrapper)
+        if resource is None or not resource.start_only or not isinstance(fields, Mapping):
+            continue
+        for name, value in fields.items():
+            if name in resource.start_only:
+                offenders.append(name)
+            elif isinstance(value, list):
+                offenders.extend(
+                    token
+                    for token in value
+                    if isinstance(token, str) and token.split("_", 1)[0] in resource.start_only
+                )
+    return offenders
 
 
 # HTTP status -> CoAP response code, so everything above the transport
