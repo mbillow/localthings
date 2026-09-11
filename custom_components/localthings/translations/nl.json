@@ -1709,6 +1709,13 @@
           "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
         }
       },
+      "legacy_token": {
+        "title": "Apparaattoken",
+        "description": "Dit apparaat ({host}) gebruikt Samsungs oudere lokale API, die naast het certificaat ook een apparaattoken nodig heeft.\n\nLaat dit leeg en verstuur het formulier om het apparaat er zelf een te laten afgeven: er wordt om een token gevraagd en het apparaat stuurt dat terug naar Home Assistant op poort 8889. Zet eerst de afstandsbediening (Smart Control) aan op het apparaat, met de deur dicht, anders verdwijnt het binnen enkele minuten van wifi en antwoordt het niet meer. Dit duurt tot anderhalve minuut.\n\nKan het apparaat Home Assistant niet bereiken op poort 8889, haal dan op een andere manier een token op en plak het hier.",
+        "data": {
+          "device_token": "Apparaattoken (leeg laten om er een aan te vragen)"
+        }
+      },
       "confirm_unknown_type": {
         "title": "Apparaattype niet herkend",
         "description": "Dit apparaat meldt model \"{model}\", een type dat LocalThings nog niet herkent. Het apparaat wordt toch toegevoegd, maar alleen met algemene mogelijkheden (zoals voeding en alarmen, voor zover aanwezig), in plaats van alle mogelijkheden voor deze apparaatfamilie. Je kunt daarna helpen volledige ondersteuning toe te voegen door diagnostische gegevens voor dit apparaat te downloaden (Instellingen > Apparaten & diensten > dit apparaat > het menu > Diagnostische gegevens downloaden) en deze bij een nieuw issue te voegen. Kies Verzenden om het apparaat toch toe te voegen."
@@ -1723,6 +1730,7 @@
       "handshake_failed": "Het apparaat weigerde de DTLS-handshake om een reden die niets met het certificaat te maken heeft, hoogstwaarschijnlijk een protocol- of cipher-mismatch. Het Home Assistant-logboek bevat de precieze alert die het stuurde.",
       "cloud_unreachable": "Kon de cloudgateway van Samsung niet bereiken om de UUID op te halen die nodig is om het certificaat van dit apparaat aan te maken. Controleer de internettoegang van Home Assistant en probeer het opnieuw.",
       "unexpected_response": "Verbinding met het apparaat is gelukt, maar het gaf geen bruikbare apparaatbeschrijving terug. Mogelijk is het geen apparaat dat deze integratie ondersteunt. Het Home Assistant-logboek bevat wat het stuurde.",
+      "token_not_received": "Er is geen apparaattoken binnengekomen. Controleer of de afstandsbediening op het apparaat aanstaat met de deur dicht en of het Home Assistant kan bereiken op poort 8889 - of plak een token dat je op een andere manier hebt opgehaald.",
       "cannot_connect": "Kan geen verbinding maken met het apparaat. Controleer of het IP-adres bereikbaar is en de CA-inloggegevens juist zijn.",
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie."

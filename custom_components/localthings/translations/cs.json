@@ -1709,6 +1709,13 @@
           "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
         }
       },
+      "legacy_token": {
+        "title": "Token zařízení",
+        "description": "Tento spotřebič ({host}) používá starší lokální API Samsungu, které kromě certifikátu potřebuje i token zařízení.\n\nNechte pole prázdné a odešlete formulář, aby token vydal sám spotřebič: bude o něj požádán a pošle jej zpět do Home Assistant na port 8889. Nejprve na spotřebiči zapněte dálkové ovládání (Smart Control) se zavřenými dvířky, jinak se během několika minut odpojí od Wi-Fi a neodpoví. Může to trvat až minutu a půl.\n\nPokud spotřebič na port 8889 do Home Assistant nedosáhne, získejte token jinak a vložte jej sem.",
+        "data": {
+          "device_token": "Token zařízení (prázdné = vyžádat si jej)"
+        }
+      },
       "confirm_unknown_type": {
         "title": "Typ spotřebiče nebyl rozpoznán",
         "description": "Tento spotřebič hlásí model „{model}“, což je typ, který LocalThings zatím nerozpoznává. Přesto bude přidán, ale pouze se společnými funkcemi (napájení, alarmy atd., pokud jsou k dispozici), nikoli s plnou sadou funkcí pro danou rodinu spotřebičů. Podporu můžete později pomoci rozšířit stažením diagnostiky pro toto zařízení (Nastavení > Zařízení a služby > toto zařízení > nabídka > Stáhnout diagnostiku) a jejím vložením do nového issue. Odesláním zařízení přidáte i tak."
@@ -1723,6 +1730,7 @@
       "handshake_failed": "Spotřebič odmítl DTLS handshake z důvodu, který nesouvisí s certifikátem — nejspíše kvůli neshodě protokolu nebo šifry. Přesný alert najdete v logu Home Assistanta.",
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
+      "token_not_received": "Nedorazil žádný token zařízení. Zkontrolujte, že je na spotřebiči zapnuté dálkové ovládání se zavřenými dvířky a že dosáhne na Home Assistant na port 8889 – nebo vložte token získaný jinak.",
       "cannot_connect": "Nelze se připojit k zařízení. Ověřte, že je IP adresa dostupná a že jsou přihlašovací údaje CA správné.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant."

@@ -25,6 +25,13 @@
           "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
         }
       },
+      "legacy_token": {
+        "title": "Token del dispositivo",
+        "description": "Este electrodoméstico ({host}) usa la API local antigua de Samsung, que además del certificado necesita un token de dispositivo.\n\nDeja el campo vacío y envía el formulario para que lo emita el propio electrodoméstico: se le pedirá un token y lo enviará de vuelta a Home Assistant por el puerto 8889. Activa antes el control remoto (Smart Control) en el electrodoméstico, con la puerta cerrada, o se desconectará del wifi en unos minutos y no responderá. Puede tardar hasta un minuto y medio.\n\nSi el electrodoméstico no puede alcanzar Home Assistant en el puerto 8889, consigue un token de otra forma y pégalo aquí.",
+        "data": {
+          "device_token": "Token del dispositivo (vacío para solicitarlo)"
+        }
+      },
       "confirm_unknown_type": {
         "title": "Tipo de electrodoméstico no reconocido",
         "description": "Este electrodoméstico informa del modelo «{model}», un tipo que LocalThings aún no reconoce. Se añadirá igualmente, pero solo con las capacidades comunes (alimentación, alarmas, etc. donde existan) en lugar del conjunto completo de su familia. Puedes ayudar a añadir soporte completo después descargando los diagnósticos de este dispositivo (Ajustes > Dispositivos y servicios > este dispositivo > el menú > Descargar diagnósticos) y reportándolos en una nueva incidencia. Envía para añadirlo de todos modos."
@@ -39,6 +46,7 @@
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
       "cloud_unreachable": "No se pudo contactar con la pasarela en la nube de Samsung para obtener el UUID necesario para emitir el certificado de este dispositivo. Comprueba el acceso a internet de Home Assistant e inténtalo de nuevo.",
       "unexpected_response": "La conexión con el dispositivo se estableció correctamente, pero no devolvió una descripción de dispositivo utilizable. Puede que no sea un electrodoméstico compatible con esta integración. El registro de Home Assistant recoge lo que envió.",
+      "token_not_received": "No llegó ningún token de dispositivo. Comprueba que el control remoto esté activado en el electrodoméstico con la puerta cerrada y que pueda alcanzar Home Assistant en el puerto 8889, o pega un token obtenido de otra forma.",
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP sea accesible y que las credenciales CA sean correctas.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles."

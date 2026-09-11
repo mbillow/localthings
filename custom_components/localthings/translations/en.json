@@ -1709,6 +1709,13 @@
           "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
         }
       },
+      "legacy_token": {
+        "title": "Device token",
+        "description": "This appliance ({host}) uses Samsung's older local API, which needs a device token as well as the certificate.\n\nLeave this empty and submit to have the appliance issue one: it will be asked for a token and will send it back to Home Assistant on port 8889. Switch Remote Control (Smart Control) on at the appliance first, with the door closed, or it drops off Wi-Fi within minutes and never answers. This takes up to a minute and a half.\n\nIf the appliance cannot reach Home Assistant on port 8889, obtain a token another way and paste it here instead.",
+        "data": {
+          "device_token": "Device token (leave empty to request one)"
+        }
+      },
       "confirm_unknown_type": {
         "title": "Appliance type not recognized",
         "description": "This appliance reported model \"{model}\", which isn't a type LocalThings recognizes yet. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
@@ -1723,6 +1730,7 @@
       "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
       "unexpected_response": "Connected to the device successfully, but it didn't return a usable device description. It may not be an appliance this integration supports. The Home Assistant log records what it sent.",
+      "token_not_received": "No device token arrived. Check that Remote Control is on at the appliance with the door closed, and that it can reach Home Assistant on port 8889 - or paste a token you obtained another way.",
       "cannot_connect": "Cannot connect to the device. Verify the IP address is reachable and the CA credentials are correct.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details."

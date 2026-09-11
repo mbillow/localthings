@@ -54,6 +54,19 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture(autouse=True)
+def _no_legacy_bridge():
+    """No appliance on TCP 8888 unless a test says otherwise.
+
+    The config flow checks for the legacy bridge before the DTLS scan
+    (issue #168), and that check is a real connect -- the same reason the
+    DTLS probe is patched out everywhere rather than left to reach the
+    network. Tests for that branch patch it themselves.
+    """
+    with patch("custom_components.localthings.config_flow._legacy_http_open", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _fast_coordinator_timers():
     """Shrink the coordinator's real-time delays for every localthings test.
 
