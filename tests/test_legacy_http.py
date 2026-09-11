@@ -251,9 +251,15 @@ class TestAgainstTheDeviceDump:
         assert registry is not None
         assert registry.name == "washer"
 
+    @staticmethod
+    def _registry(resources):
+        registry = resolve(resources)
+        assert registry is not None
+        return registry
+
     def test_nothing_is_left_unbound(self):
         resources = self._resources()
-        registry = resolve(resources)
+        registry = self._registry(resources)
         unbound: list[str] = []
 
         discover(
@@ -269,7 +275,7 @@ class TestAgainstTheDeviceDump:
         """Not an exhaustive list -- the ones whose absence would mean the
         translation lost something, each on a different canonical href."""
         resources = self._resources()
-        registry = resolve(resources)
+        registry = self._registry(resources)
 
         bound = discover(resources, registry.capabilities, registry.pattern_capabilities)
         keys = {b.key_override or b.desc.key for b in bound}
