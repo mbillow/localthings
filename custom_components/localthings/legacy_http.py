@@ -131,6 +131,39 @@ def _canonical_value(value: Any, rename: Mapping[str, str]) -> Any:
     return value
 
 
+def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
+    """The appliance's responses -> the wrapper-keyed mapping to_resources takes.
+
+    Three shapes turn up and all three are handled here rather than by every
+    caller: the aggregate ``{"Device": {...}}`` (``GET /devices/0``), its
+    plural ``{"Devices": [{...}]}`` (``GET /devices``), and a single
+    resource's own ``{"Configuration": {...}}``.
+
+    The aggregate carries more than resources -- ``connected``, ``id``,
+    ``name``, ``description``, ``resources``, a ``ConfigurationLink`` and
+    an ``InformationLink`` to the two it does not embed, and an
+    ``EnergyConsumption`` holding only a file path. None of those has a
+    canonical href, so none has a table row and all are dropped by
+    ``to_resources``. They are left in here rather than filtered, so a
+    board carrying something in one of them is visible to a caller that
+    goes looking.
+    """
+    out: dict[str, Any] = {}
+    for response in responses:
+        if not isinstance(response, Mapping):
+            continue
+        device = response.get("Device")
+        if device is None:
+            devices = response.get("Devices")
+            if isinstance(devices, list) and devices:
+                device = devices[0]
+        if isinstance(device, Mapping):
+            out.update(device)
+        else:
+            out.update(response)
+    return out
+
+
 def to_resources(
     bodies: Mapping[str, Any],
     table: tuple[Resource, ...] = TP6X_WASHER,

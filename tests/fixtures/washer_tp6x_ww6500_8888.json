@@ -1,0 +1,307 @@
+{
+  "/devices": {
+    "Devices": [
+      {
+        "Alarms": [],
+        "ConfigurationLink": {
+          "href": "/devices/0/configuration"
+        },
+        "Diagnosis": {
+          "diagnosisStart": "Ready"
+        },
+        "EnergyConsumption": {
+          "saveLocation": "/files/usage.db"
+        },
+        "InformationLink": {
+          "href": "/devices/0/information"
+        },
+        "Mode": {
+          "options": [
+            "EnergyKW_396",
+            "TimeSync_NotSupported",
+            "NoCheck_SC",
+            "Course_5B",
+            "DeviceType_0167",
+            "QuickWash_Off",
+            "UsagesDB_ok",
+            "LaundryOutTime_0",
+            "AddWashSet_0",
+            "AddWashAvailable_7",
+            "AddWashIndicator_Off",
+            "QuickWashSet_5B847E933FA53F"
+          ],
+          "supportedOptions": [
+            "35B847E933FA53F5C841E923FA53F5D8102923FA43F66841E930FA30F5E831E920FA2075F867E943FA53F60831E930FA43F61841E943FA43F6385209204A204648000913FA53F6C831E933FA30F65841E920FA30F67843E923FA43F688430923FA53F"
+          ]
+        },
+        "Operation": {
+          "kidsLock": "Ready",
+          "power": "On",
+          "progress": "None",
+          "progressPercentage": 1,
+          "remainingTime": "04:29:00",
+          "state": "Ready",
+          "supportedProgress": [
+            "None",
+            "Weightsensing",
+            "Wash",
+            "Rinse",
+            "Spin",
+            "Finish"
+          ]
+        },
+        "Washer": {
+          "rinseCycles": "2",
+          "spinLevel": "1400",
+          "supportedRinseCycles": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "supportedSpinLevel": [
+            "RinseHold",
+            "NoSpin",
+            "400",
+            "800",
+            "1200",
+            "1400"
+          ],
+          "supportedWaterTemperature": [
+            "None",
+            "Cold",
+            "20",
+            "30",
+            "40",
+            "60",
+            "95"
+          ],
+          "waterTemperature": "60"
+        },
+        "connected": true,
+        "description": "TP6X_WW6500(REDACTED)",
+        "id": "0",
+        "name": "Washer",
+        "resources": [
+          "Alarms",
+          "Configuration",
+          "Diagnosis",
+          "EnergyConsumption",
+          "Information",
+          "Mode",
+          "Operation",
+          "Washer"
+        ],
+        "type": "Washer",
+        "uuid": "REDACTED"
+      }
+    ]
+  },
+  "/devices/0": {
+    "Device": {
+      "Alarms": [],
+      "ConfigurationLink": {
+        "href": "/devices/0/configuration"
+      },
+      "Diagnosis": {
+        "diagnosisStart": "Ready"
+      },
+      "EnergyConsumption": {
+        "saveLocation": "/files/usage.db"
+      },
+      "InformationLink": {
+        "href": "/devices/0/information"
+      },
+      "Mode": {
+        "options": [
+          "EnergyKW_396",
+          "TimeSync_NotSupported",
+          "NoCheck_SC",
+          "Course_5B",
+          "DeviceType_0167",
+          "QuickWash_Off",
+          "UsagesDB_ok",
+          "LaundryOutTime_0",
+          "AddWashSet_0",
+          "AddWashAvailable_7",
+          "AddWashIndicator_Off",
+          "QuickWashSet_5B847E933FA53F"
+        ],
+        "supportedOptions": [
+          "35B847E933FA53F5C841E923FA53F5D8102923FA43F66841E930FA30F5E831E920FA2075F867E943FA53F60831E930FA43F61841E943FA43F6385209204A204648000913FA53F6C831E933FA30F65841E920FA30F67843E923FA43F688430923FA53F"
+        ]
+      },
+      "Operation": {
+        "kidsLock": "Ready",
+        "power": "On",
+        "progress": "None",
+        "progressPercentage": 1,
+        "remainingTime": "04:29:00",
+        "state": "Ready",
+        "supportedProgress": [
+          "None",
+          "Weightsensing",
+          "Wash",
+          "Rinse",
+          "Spin",
+          "Finish"
+        ]
+      },
+      "Washer": {
+        "rinseCycles": "2",
+        "spinLevel": "1400",
+        "supportedRinseCycles": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "supportedSpinLevel": [
+          "RinseHold",
+          "NoSpin",
+          "400",
+          "800",
+          "1200",
+          "1400"
+        ],
+        "supportedWaterTemperature": [
+          "None",
+          "Cold",
+          "20",
+          "30",
+          "40",
+          "60",
+          "95"
+        ],
+        "waterTemperature": "60"
+      },
+      "connected": true,
+      "description": "TP6X_WW6500(REDACTED)",
+      "id": "0",
+      "name": "Washer",
+      "resources": [
+        "Alarms",
+        "Configuration",
+        "Diagnosis",
+        "EnergyConsumption",
+        "Information",
+        "Mode",
+        "Operation",
+        "Washer"
+      ],
+      "type": "Washer",
+      "uuid": "REDACTED"
+    }
+  },
+  "/devices/0/mode": {
+    "Mode": {
+      "options": [
+        "EnergyKW_396",
+        "TimeSync_NotSupported",
+        "NoCheck_SC",
+        "Course_5B",
+        "DeviceType_0167",
+        "QuickWash_Off",
+        "UsagesDB_ok",
+        "LaundryOutTime_0",
+        "AddWashSet_0",
+        "AddWashAvailable_7",
+        "AddWashIndicator_Off",
+        "QuickWashSet_5B847E933FA53F"
+      ],
+      "supportedOptions": [
+        "35B847E933FA53F5C841E923FA53F5D8102923FA43F66841E930FA30F5E831E920FA2075F867E943FA53F60831E930FA43F61841E943FA43F6385209204A204648000913FA53F6C831E933FA30F65841E920FA30F67843E923FA43F688430923FA53F"
+      ]
+    }
+  },
+  "/devices/0/operation": {
+    "Operation": {
+      "kidsLock": "Ready",
+      "power": "On",
+      "progress": "None",
+      "progressPercentage": 1,
+      "remainingTime": "04:29:00",
+      "state": "Ready",
+      "supportedProgress": [
+        "None",
+        "Weightsensing",
+        "Wash",
+        "Rinse",
+        "Spin",
+        "Finish"
+      ]
+    }
+  },
+  "/devices/0/washer": {
+    "Washer": {
+      "rinseCycles": "2",
+      "spinLevel": "1400",
+      "supportedRinseCycles": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "supportedSpinLevel": [
+        "RinseHold",
+        "NoSpin",
+        "400",
+        "800",
+        "1200",
+        "1400"
+      ],
+      "supportedWaterTemperature": [
+        "None",
+        "Cold",
+        "20",
+        "30",
+        "40",
+        "60",
+        "95"
+      ],
+      "waterTemperature": "60"
+    }
+  },
+  "/devices/0/information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "02095A200308(C020)",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "00000000,00000000",
+          "type": "Firmware"
+        }
+      ],
+      "description": "TP6X_WASHER",
+      "deviceSubType": "Washer",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "TP6X_WW6500|FF18E000|20010102001011070000000000000000",
+      "serialNumber": "REDACTED"
+    }
+  },
+  "/devices/0/configuration": {
+    "Configuration": {
+      "remoteControlEnabled": true
+    }
+  },
+  "/devices/0/alarms": {
+    "Alarms": []
+  },
+  "/devices/0/diagnosis": {
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    }
+  }
+}
