@@ -15,7 +15,6 @@ import json
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
-import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
@@ -163,12 +162,12 @@ async def test_selecting_a_named_program_writes_both_tokens(hass: HomeAssistant)
     coordinator.apply_cloud_courses({"55": "Sports"}, "87")
     await _flush(hass)
 
-    sent: list[tuple[list[str], bytes]] = []
+    sent: list[tuple[list[str], dict]] = []
 
     class _FakeSession:
-        def post(self, path_segs, payload, timeout=None):
-            sent.append((path_segs, payload))
-            return 0x44, b""
+        def write(self, path_segs, body, timeout=None):
+            sent.append((path_segs, body))
+            return 0x44
 
         def pace(self):
             pass
@@ -184,7 +183,7 @@ async def test_selecting_a_named_program_writes_both_tokens(hass: HomeAssistant)
     assert len(sent) == 1
     path_segs, payload = sent[0]
     assert path_segs == ["course", "vs", "0"]
-    assert cbor2.loads(payload)["x.com.samsung.da.options"] == [
+    assert payload["x.com.samsung.da.options"] == [
         "Course_87",
         f"OneTimeCloudCourse_{SPORTS}",
     ]

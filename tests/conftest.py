@@ -68,14 +68,14 @@ def linked_parent(hass, info) -> tuple[str, str] | None:
 
 
 class FakeCoapSession:
-    """Minimal stand-in for smartthings_local's DtlsCoapSession, backed by a
-    fixture's `seeds` map (raw device0-batch-shaped lists keyed by seed
-    href -- plus any `probes` entries, which are plain Property maps rather
-    than batch lists; both are just CBOR bodies at this layer, and the two
-    readers in registry.subdevices already type-check what they get back).
-    Enough surface for registry.subdevices.enumerate_subdevices and
-    LocalThingsCoordinator's blocking subdevice polls to run against fixture
-    data without a live device -- same idea as test_identity.py's
+    """Minimal stand-in for a Transport, backed by a fixture's `seeds` map
+    (raw device0-batch-shaped lists keyed by seed href -- plus any `probes`
+    entries, which are plain Property maps rather than batch lists; a
+    transport hands both back decoded, and the two readers in
+    registry.subdevices already type-check what they get back). Enough
+    surface for registry.subdevices.enumerate_subdevices and
+    LocalThingsCoordinator's blocking subdevice polls to run against
+    fixture data without a live device -- same idea as test_identity.py's
     FakeSession, but keyed by href string (post path-join) rather than a
     path tuple, since callers here pass a `seed_path` tuple straight
     through.
@@ -84,14 +84,12 @@ class FakeCoapSession:
     def __init__(self, seeds: dict[str, list] | None = None):
         self.seeds = seeds or {}
 
-    def get(self, path, timeout=None):
+    def read(self, path, timeout=None):
         href = "/" + "/".join(path)
         body = self.seeds.get(href)
         if body is None:
-            return 0x84, b""  # 4.04 not found -- tolerated absence
-        import cbor2
-
-        return 0x45, cbor2.dumps(body)
+            return 0x84, None  # 4.04 not found -- tolerated absence
+        return 0x45, body
 
     def pace(self):
         pass

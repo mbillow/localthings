@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import cast
 
-import cbor2
-
 from custom_components.localthings.registry import subdevices as subdevices_module
 from custom_components.localthings.registry.by_type import DeviceRegistry
 from custom_components.localthings.registry.capability import Capability
@@ -214,11 +212,11 @@ class _FakeSession:
     def __init__(self, table):
         self.table = table
 
-    def get(self, path, timeout=10.0):
+    def read(self, path, timeout=10.0):
         body = self.table.get(tuple(path))
         if body is None:
-            return 0x84, b""
-        return 0x45, cbor2.dumps(body)
+            return 0x84, None
+        return 0x45, body
 
     def pace(self):
         pass
@@ -372,7 +370,7 @@ def test_enumeration_budget_bounds_silent_prefixed_fallback_and_uses_priority(
             self.clock = clock
             self.calls = []
 
-        def get(self, path, timeout=10.0):
+        def read(self, path, timeout=10.0):
             self.calls.append((tuple(path), timeout))
             self.clock.now += timeout
             raise TimeoutError
@@ -426,9 +424,9 @@ def test_enumeration_keeps_preferred_response_found_before_budget_expires(
         def __init__(self, clock):
             self.clock = clock
 
-        def get(self, path, timeout=10.0):
+        def read(self, path, timeout=10.0):
             if tuple(path) == (_UUID, "mode", "vs", "0"):
-                return 0x45, cbor2.dumps({"mode": "Cool"})
+                return 0x45, {"mode": "Cool"}
             self.clock.now += timeout
             raise TimeoutError
 
