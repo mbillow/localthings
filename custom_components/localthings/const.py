@@ -15,6 +15,28 @@ PLATFORMS = [
 
 CONF_HOST = "host"
 CONF_PORT = "port"
+
+# Which transport this entry's appliance speaks (issue #168). Absent on
+# every entry created before a second one existed, which is why the DTLS
+# value is also the default everywhere it is read.
+CONF_TRANSPORT = "transport"
+TRANSPORT_DTLS = "dtls"
+TRANSPORT_LEGACY_HTTP = "legacy_http"
+
+# The legacy 8888 bridge needs one credential the CoAP path does not: a
+# device token, which only the appliance can issue (see
+# legacy_http_token.py). Stored on the entry beside the leaf.
+CONF_DEVICE_TOKEN = "device_token"
+
+# Which envelope table that appliance's responses are read with -- the
+# `description` it reports for itself, e.g. 'TP6X_WASHER'. Recorded even
+# when it names no table this integration knows, so a diagnostics dump
+# from an unmapped family says which one it was.
+CONF_LEGACY_FAMILY = "legacy_family"
+
+# The only port these appliances open. Nothing to sweep, unlike the DTLS
+# range -- one TCP connect settles whether a host is one of them.
+LEGACY_HTTP_PORT = 8888
 CONF_CA_CERT_PEM = "ca_cert_pem"
 CONF_CA_KEY_PEM = "ca_key_pem"
 CONF_LEAF_CERT_PEM = "leaf_cert_pem"

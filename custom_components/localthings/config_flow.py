@@ -43,33 +43,40 @@ from .const import (
     CONF_CA_KEY_PEM,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
+    CONF_DEVICE_TOKEN,
     CONF_DEVICE_TYPE,
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
     CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
+    CONF_LEGACY_FAMILY,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_OCF_DEVICE_ID,
     CONF_PORT,
     CONF_SERIAL,
+    CONF_TRANSPORT,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
     DOMAIN,
+    LEGACY_HTTP_PORT,
     LIVENESS_PROBE_TIMEOUT_S,
     PREFERRED_PROBE_PORTS,
     PROBE_GET_TIMEOUT_S,
     PROBE_MAX_WORKERS,
     PROBE_PORT_RANGE,
     SERVICE_WRITE_RESOURCE,
+    TRANSPORT_LEGACY_HTTP,
 )
 from .devices import find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
+from .legacy_http_token import obtain_device_token
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
+from .transport import DtlsTransport
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -154,6 +161,17 @@ class UnexpectedResponse(CannotConnect):
     """We authenticated, but the device didn't return a usable description."""
 
     error_key = "unexpected_response"
+
+
+class TokenNotReceived(CannotConnect):
+    """The legacy bridge never sent a device token back (issue #168).
+
+    The appliance issues it through a callback to port 8889, so this is as
+    often a network or an appliance-asleep problem as a real failure -- and
+    the step it is raised from offers pasting a token instead.
+    """
+
+    error_key = "token_not_received"
 
 
 class InvalidCA(Exception):
@@ -439,6 +457,43 @@ def _clienthello_scan(host: str, ports: list[int]) -> list[int]:
     return _order_candidates(live)
 
 
+def _legacy_http_open(host: str, timeout: float = 2.0) -> bool:
+    """True if this host serves the legacy 8888 bridge (issue #168).
+
+    One TCP connect, ahead of the DTLS scan: these two families are
+    mutually exclusive -- a board with the bridge has no CoAP server at all
+    (proven on one by a ClientHello probe across the whole UDP range, plus
+    OCF multicast, with a second appliance on the same LAN answering as the
+    control) -- and an appliance that has it opens no other port. That
+    makes the cheap check the discriminator, so a user types an address and
+    the flow works out which lineage they own.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(timeout)
+        try:
+            return probe.connect_ex((host, LEGACY_HTTP_PORT)) == 0
+        except OSError:
+            return False
+
+
+def _probe_legacy(host: str, cert_pem: str, key_pem: str, token: str) -> dict:
+    """Read identity over the 8888 bridge, in the shape _create_entry wants.
+
+    The same `_read_device` the DTLS path uses: the transport hands back
+    canonical reps either way, which is the whole point of the seam.
+    """
+    from .legacy_http_transport import LegacyHttpTransport
+
+    transport = LegacyHttpTransport(
+        host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token
+    )
+    transport.connect()
+    try:
+        return _read_device(transport, host, LEGACY_HTTP_PORT)
+    finally:
+        transport.close()
+
+
 def _scan_ports(host: str) -> _PortScan:
     """Find the device's DTLS port, preferring proof over absence of evidence.
 
@@ -645,7 +700,7 @@ def _mint_credentials(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
     return fullchain_pem, leaf_key_pem
 
 
-def _read_device(sess, host: str, port: int) -> dict:
+def _read_device(transport, host: str, port: int) -> dict:
     """Resolve this device's identity over an already-connected session.
 
     /oic/d before /device/0, deliberately: the device's own OCF device-type
@@ -660,8 +715,6 @@ def _read_device(sess, host: str, port: int) -> dict:
     so the coordinator never has to mint a registry key from a placeholder
     (issue #236).
     """
-    import cbor2
-
     from .registry.batch import parse_device0_batch
     from .registry.by_type import resolve as resolve_registry
     from .registry.identity import (
@@ -672,18 +725,16 @@ def _read_device(sess, host: str, port: int) -> dict:
         resolve_serial,
     )
 
-    identity = read_identity(sess, None)
+    identity = read_identity(transport, None)
 
-    code, payload = sess.get(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    if code != 0x45 or not payload:
+    code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
+    if code != 0x45 or body is None:
         # Authenticated fine, so this isn't a connectivity or credentials
         # problem -- whatever is on this port just isn't an appliance whose
         # /device/0 we understand.
         raise UnexpectedResponse(
-            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} "
-            f"({code:#04x}), payload {len(payload or b'')} bytes"
+            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} ({code:#04x})"
         )
-    body = cbor2.loads(payload)
     resources = parse_device0_batch(body) if isinstance(body, list) else {}
 
     info = resources.get("/information/vs/0", {})
@@ -709,6 +760,9 @@ def _read_device(sess, host: str, port: int) -> dict:
         "manufacturer": identity.manufacturer or "Samsung",
         "device_type_name": registry.name if registry is not None else None,
         "device_type_recognized": registry is not None,
+        # What the appliance calls its own family ('TP6X_WASHER'), which is
+        # what selects the envelope table on the 8888 bridge (issue #168).
+        "description": info.get("x.com.samsung.da.description", ""),
     }
 
 
@@ -748,16 +802,13 @@ def _diagnose_failures(
 
 def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
-    from smartthings_local.protocol.dtls_session import DtlsCoapSession
-
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
-        sess = None
+        transport = None
         try:
-            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
-            sess.connect()
-            sess.start_reader()
-            return _read_device(sess, host, port)
+            transport = DtlsTransport(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            transport.connect()
+            return _read_device(transport, host, port)
         except CannotConnect:
             # The device answered, just not with something we can use --
             # trying the remaining ports can't improve on that.
@@ -766,9 +817,9 @@ def _handshake_and_read(host: str, scan: _PortScan, cert_pem: str, key_pem: str)
             failures.append((port, exc))
             _LOGGER.debug("port %d failed: %s", port, exc)
         finally:
-            if sess is not None:
+            if transport is not None:
                 with contextlib.suppress(Exception):
-                    sess.close()
+                    transport.close()
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem)
     raise _classify_handshake_failure(host, scan, failures, alerts)
 
@@ -827,6 +878,11 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._ca_cert_pem: str = ""
         self._ca_key_pem: str = ""
         self._pending_info: dict | None = None
+        # Set only on the 8888 branch (issue #168): the leaf minted before
+        # the token step, since that step's own requests need it, and the
+        # token once it is in hand.
+        self._legacy_leaf: tuple[str, str] | None = None
+        self._legacy_token: str = ""
 
     @staticmethod
     @callback
@@ -864,6 +920,15 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_MODEL: info["model"],
                 CONF_MANUFACTURER: info["manufacturer"],
                 CONF_DEVICE_TYPE: info["device_type_name"],
+                **(
+                    {
+                        CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
+                        CONF_DEVICE_TOKEN: self._legacy_token,
+                        CONF_LEGACY_FAMILY: info.get("description", ""),
+                    }
+                    if self._legacy_token
+                    else {}
+                ),
             },
         )
 
@@ -888,6 +953,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # what gets stored and reused to re-mint the leaf later.
                 self._ca_cert_pem = _normalize_pem(user_input[CONF_CA_CERT_PEM])
                 self._ca_key_pem = _normalize_pem(user_input[CONF_CA_KEY_PEM])
+
+            if await self.hass.async_add_executor_job(_legacy_http_open, self._host):
+                try:
+                    self._legacy_leaf = existing_leaf or await self.hass.async_add_executor_job(
+                        _mint_credentials, self._ca_cert_pem, self._ca_key_pem
+                    )
+                except (CannotConnect, InvalidCA) as exc:
+                    _LOGGER.warning(
+                        "Minting for %s failed [%s]: %s", self._host, exc.error_key, exc
+                    )
+                    errors["base"] = exc.error_key
+                else:
+                    return await self.async_step_legacy_token()
 
             try:
                 info = await self.hass.async_add_executor_job(
@@ -963,6 +1041,63 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the localized host-only form for additional appliances."""
         return await self.async_step_user(user_input)
+
+    async def async_step_legacy_token(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Get the device token the 8888 bridge needs (issue #168).
+
+        Submitting with the field empty runs the callback exchange: the
+        appliance is asked for a token and posts it back to a listener this
+        host runs on 8889. That needs the appliance awake -- Remote Control
+        on at the panel, door closed -- and inbound 8889 reaching Home
+        Assistant, which is not true on every network. So a token obtained
+        some other way can be pasted instead, and a failed exchange says so
+        rather than ending the flow.
+        """
+        assert self._legacy_leaf is not None
+        cert_pem, key_pem = self._legacy_leaf
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            token = (user_input.get(CONF_DEVICE_TOKEN) or "").strip()
+            try:
+                if not token:
+                    token = (
+                        await self.hass.async_add_executor_job(
+                            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
+                        )
+                        or ""
+                    )
+                if not token:
+                    raise TokenNotReceived(f"{self._host} issued no device token")
+                info = await self.hass.async_add_executor_job(
+                    _probe_legacy, self._host, cert_pem, key_pem, token
+                )
+            except (CannotConnect, InvalidCA) as exc:
+                _LOGGER.warning(
+                    "Setup of %s over 8888 failed [%s]: %s", self._host, exc.error_key, exc
+                )
+                errors["base"] = exc.error_key
+            except Exception:
+                _LOGGER.exception("Unexpected error setting up %s over 8888", self._host)
+                errors["base"] = "unknown"
+            else:
+                await self.async_set_unique_id(f"localthings_{info['device_key']}")
+                self._abort_if_unique_id_configured()
+                self._legacy_token = token
+                info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
+                if info["device_type_recognized"]:
+                    return self._create_entry(info)
+                self._pending_info = info
+                return await self.async_step_confirm_unknown_type()
+
+        return self.async_show_form(
+            step_id="legacy_token",
+            data_schema=vol.Schema({vol.Optional(CONF_DEVICE_TOKEN, default=""): _TEXT}),
+            errors=errors,
+            description_placeholders={"host": self._host},
+        )
 
     async def async_step_confirm_unknown_type(
         self, user_input: dict[str, Any] | None = None

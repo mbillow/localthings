@@ -17,11 +17,9 @@ from __future__ import annotations
 from typing import cast
 from unittest.mock import AsyncMock
 
-import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
 from custom_components.localthings.const import (
     CONF_HOST,
@@ -37,6 +35,7 @@ from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.discovery import BoundEntity
 from custom_components.localthings.registry.entities import ClimateDesc
 from custom_components.localthings.registry.subdevices import Subdevice
+from custom_components.localthings.transport import Transport
 
 ENTRY_DATA = {
     CONF_HOST: "10.0.0.199",
@@ -48,11 +47,11 @@ ENTRY_DATA = {
 
 class _FakeSendSession:
     def __init__(self):
-        self.post_calls: list[tuple[list[str], bytes]] = []
+        self.post_calls: list[tuple[list[str], dict]] = []
 
-    def post(self, path_segs, payload, timeout=None):
-        self.post_calls.append((list(path_segs), payload))
-        return 0x44, b""
+    def write(self, path_segs, body, timeout=None):
+        self.post_calls.append((list(path_segs), body))
+        return 0x44
 
     def pace(self):
         pass
@@ -68,7 +67,7 @@ def coordinator(hass: HomeAssistant) -> LocalThingsCoordinator:
     entry.add_to_hass(hass)
     coord = LocalThingsCoordinator(hass, entry)
     coord.async_request_refresh = AsyncMock()
-    coord._session = cast(DtlsCoapSession, _FakeSendSession())
+    coord._session = cast(Transport, _FakeSendSession())
     return coord
 
 
@@ -87,9 +86,9 @@ async def test_options_write_posts_only_the_changed_token(coordinator) -> None:
 
     await coordinator.async_send_command(bound, "1D")
 
-    posted_path, posted_bytes = coordinator._session.post_calls[0]
+    posted_path, posted_body = coordinator._session.post_calls[0]
     assert posted_path == ["course", "vs", "0"]
-    assert cbor2.loads(posted_bytes) == {"x.com.samsung.da.options": ["Course_1D"]}
+    assert posted_body == {"x.com.samsung.da.options": ["Course_1D"]}
 
 
 async def test_options_write_optimistic_cache_keeps_sibling_tokens(coordinator) -> None:
@@ -141,9 +140,9 @@ async def test_indexed_subdevice_write_posts_to_translated_path(coordinator) -> 
 
     await coordinator.async_send_command(bound, ("power", True))
 
-    posted_path, posted_bytes = coordinator._session.post_calls[0]
+    posted_path, posted_body = coordinator._session.post_calls[0]
     assert posted_path == ["power", "vs", "1"]
-    assert cbor2.loads(posted_bytes) == {"x.com.samsung.da.power": "On"}
+    assert posted_body == {"x.com.samsung.da.power": "On"}
 
 
 async def test_indexed_subdevice_write_applies_optimistic_value_to_translated_href(
@@ -181,9 +180,9 @@ async def test_prefixed_subdevice_write_posts_to_translated_path(coordinator) ->
 
     await coordinator.async_send_command(bound, ("power", True))
 
-    posted_path, posted_bytes = coordinator._session.post_calls[0]
+    posted_path, posted_body = coordinator._session.post_calls[0]
     assert posted_path == [sub_id, "power", "vs", "0"]
-    assert cbor2.loads(posted_bytes) == {"x.com.samsung.da.power": "On"}
+    assert posted_body == {"x.com.samsung.da.power": "On"}
     assert coordinator._cache.get(f"/{sub_id}/power/vs/0") == {
         "x.com.samsung.da.power": "On",
     }
@@ -228,6 +227,6 @@ async def test_indexed_subdevice_climate_write_quantizes_with_its_own_temperatur
 
     await coordinator.async_send_command(bound, ("temperature_ocf", 24.5))
 
-    posted_path, posted_bytes = coordinator._session.post_calls[0]
+    posted_path, posted_body = coordinator._session.post_calls[0]
     assert posted_path == ["temperature", "desired", "1"]
-    assert cbor2.loads(posted_bytes) == {"temperature": 24.5}
+    assert posted_body == {"temperature": 24.5}
