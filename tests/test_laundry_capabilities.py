@@ -632,15 +632,32 @@ class TestCourseOptionGroupsAcrossCorpus:
         policy = {}
         for code in laundry.cycle_options(resources):
             dry = laundry.course_option_mask(resources, laundry.OPTION_KIND_DRY, course=code)
-            timed = laundry.course_option_mask(resources, 0xE, course=code)
+            timed = laundry.course_option_mask(resources, laundry.OPTION_KIND_DRY_TIME, course=code)
             policy[code] = (
                 [levels[i] for i in dry[1]] if dry else [],
                 [times[i] for i in timed[1]] if timed else [],
             )
 
         # No course offers both -- the mutual exclusion the DV5000T owner
-        # described, corroborated here on a board they have never seen.
+        # described, corroborated here on a board they have never seen. It is
+        # also what OPTION_KIND_DRY_TIME's naming rests on, so the complement
+        # is pinned too: every course but Quick Dry offers exactly one of the
+        # two, which a kind unrelated to the dry dial would not do.
         assert [c for c, (lv, tm) in policy.items() if lv and tm] == []
+        assert [c for c, (lv, tm) in policy.items() if not lv and not tm] == ["98"]
+
+        # Both groups are present on every record regardless -- the exclusion
+        # is carried by an empty mask, not by a missing group. That is what
+        # lets course_narrowed_options collapse the dial that does not apply
+        # instead of reading its absence as "no opinion".
+        records = laundry._course_records(resources["/course/vs/0"])
+        assert len(records) == 14
+        for code in records:
+            assert laundry.course_option_mask(resources, laundry.OPTION_KIND_DRY, code) is not None
+            assert (
+                laundry.course_option_mask(resources, laundry.OPTION_KIND_DRY_TIME, code)
+                is not None
+            )
 
         assert policy["9A"][0] == ["1", "2", "3"]  # Cotton
         assert policy["B5"][0] == ["1"]  # Wool
