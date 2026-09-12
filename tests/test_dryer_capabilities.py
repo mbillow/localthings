@@ -185,3 +185,65 @@ def test_dv6800n_course_codes_read_from_dump():
     assert desc.translation_key(resources) == "dryer_cycle_table_00"
     confirmed = ["9A", "CA", "DB", "99", "93", "B5", "D7", "A5", "96", "97", "7F", "98", "EB", "B6"]
     assert desc.options(resources) == confirmed
+
+
+def _settings_desc(key):
+    return next(e for e in dryer.DRYER_SETTINGS.entities if e.key == key)
+
+
+def _on_course(resources, code):
+    """The same dump with a different course selected."""
+    rep = dict(resources["/course/vs/0"])
+    rep["x.com.samsung.da.options"] = [
+        f"Course_{code}" if o.startswith("Course_") else o for o in rep["x.com.samsung.da.options"]
+    ]
+    return {**resources, "/course/vs/0": rep}
+
+
+def test_dv6800n_dry_time_and_dry_level_narrow_to_complementary_courses():
+    """The two dials are mutually exclusive per course on this board (see
+    test_dv6800n_dry_policy_agrees_with_the_other_board_family), so narrowing
+    both collapses whichever one the selected course does not use down to its
+    live value -- rather than offering a dial the appliance will ignore.
+
+    Course 9A (Cotton) is a dry-level course and 7F (Time Dry) a timed one.
+    The live dryTime is 00:00:00 throughout this dump, which is why it
+    survives on 7F despite sitting outside that course's mask: the union
+    that keeps a live value addressable is what stops the entity reading as
+    unknown mid-course-change.
+    """
+    _, resources = _dv6800n()
+    level, timed = _settings_desc("dry_level"), _settings_desc("dry_time")
+
+    cotton = _on_course(resources, "9A")
+    assert level.options(cotton) == ["1", "2", "3"]
+    assert timed.options(cotton) == ["00:00:00"]
+
+    time_dry = _on_course(resources, "7F")
+    assert level.options(time_dry) == ["2"]
+    assert timed.options(time_dry) == [
+        "00:00:00",
+        "00:30:00",
+        "01:00:00",
+        "01:30:00",
+        "02:00:00",
+        "02:30:00",
+    ]
+
+
+def test_dry_time_keeps_its_full_list_where_the_board_carries_no_0xe_group():
+    """Every board here but the DV6800N reports a supportedDryTime with no
+    0xE group anywhere in supportedOptions. Absence there is not a refusal --
+    course_option_mask returns None and the full list stands, so naming 0xE
+    narrows nothing on a board that never spoke about it.
+
+    All four are checked rather than one, because they are also the boards
+    whose lists run past the eight entries a one-byte mask can address: if a
+    later dump pairs a long list with a 0xE group, this is where it surfaces.
+    """
+    desc = _settings_desc("dry_time")
+    for name in ("dryer", "dryer_dv80h", "dryer_tp1_21_drum_clean", "washer_dryer_onebody_awm"):
+        resources = _load_device(name)
+        supported = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryTime"]
+        assert len(supported) >= 11, name
+        assert desc.options(resources) == supported, name

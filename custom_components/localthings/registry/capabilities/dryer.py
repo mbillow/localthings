@@ -14,6 +14,7 @@ from ..entities import SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status
 from .laundry import (
     OPTION_KIND_DRY,
+    OPTION_KIND_DRY_TIME,
     course_narrowed_options,
     cycle_select,
     drum_clean_cycles_remaining,
@@ -74,12 +75,22 @@ DRYER_SETTINGS = Capability(
             ),
             write_fn=_setting_write("x.com.samsung.da.dryLevel"),
         ),
+        # Narrowed on 0xE, which pairs with dry_level's 0xD rather than
+        # duplicating it: on the DV6800N no course carries values for both,
+        # so a dry-level course collapses this dropdown to its live value and
+        # a timed course collapses dry_level's. The four boards reporting
+        # supportedDryTime without a 0xE group decode to "no opinion" and
+        # keep the full list.
         SelectDesc(
             key="dry_time",
             field="x.com.samsung.da.dryTime",
             icon="mdi:timer",
             entity_category="config",
-            options_field="x.com.samsung.da.supportedDryTime",
+            options=course_narrowed_options(
+                OPTION_KIND_DRY_TIME,
+                "x.com.samsung.da.dryTime",
+                "x.com.samsung.da.supportedDryTime",
+            ),
             exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.supportedDryTime")),
             write_fn=_setting_write("x.com.samsung.da.dryTime"),
         ),

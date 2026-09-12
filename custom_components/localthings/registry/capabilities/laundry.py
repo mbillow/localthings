@@ -266,15 +266,17 @@ def drum_clean_last_cleaned(rep):
 # The mask indexes that option's own supported<Option> list, and so does
 # the default nibble -- but into the list, not into the mask: a dishwasher
 # reports default 0 with a mask allowing only index 1. It is one byte, so
-# it cannot address past index 7: three boards carry an 11- or 13-entry
+# it cannot address past index 7: four boards carry an 11- or 13-entry
 # supportedDryTime, and none of them carries a group for it.
 #
-# Four kinds are named: 0x8 water temperature, 0x9 rinse and 0xA spin from a
+# Five kinds are named: 0x8 water temperature, 0x9 rinse and 0xA spin from a
 # WW6500 panel reading plus a list-length argument (the reading alone cannot
-# separate rinse from spin), 0xD dry from a DV5000T's. The rest stay unnamed,
-# 0xB included -- but 0xB, not 0xD, is the dry dial on the WW6600R combo,
-# which carries no 0xD at all, so a gate keyed on 0xD alone silently no-ops
-# there. Evidence for all of it in docs/investigations/course-option-groups.md.
+# separate rinse from spin), 0xD dry from a DV5000T's, and 0xE dry time from
+# the DV6800N, where it complements 0xD course for course. The rest stay
+# unnamed, 0xB included -- but 0xB, not 0xD, is the dry dial on the WW6600R
+# combo, which carries no 0xD at all, so a gate keyed on 0xD alone silently
+# no-ops there. Evidence for all of it in
+# docs/investigations/course-option-groups.md.
 #
 # A kind is not an entity name: dishwashers carry 0xD with no
 # supportedDryLevel at all (their dry setting is heated_dry), so callers key
@@ -297,11 +299,20 @@ OPTION_KIND_RINSE = 0x9
 OPTION_KIND_SPIN = 0xA
 OPTION_KIND_DRY = 0xD
 
+# Named on one board, but not on "it decodes against supportedDryTime"
+# alone: on the DV6800N -- the only dump carrying both -- every record holds
+# a 0xD and a 0xE group, no course carries values for both, and the only
+# one carrying values for neither is Quick Dry, which takes no dry setting
+# at all. A kind that was not the dry dial's timed counterpart would not
+# complement it that precisely. See the investigation doc; a second board
+# carrying 0xE would settle it outright.
+OPTION_KIND_DRY_TIME = 0xE
+
 # A mask is one byte, so it can only speak about the first eight entries of
-# the supported<Option> list it indexes. Three boards carry an 11- or
-# 13-entry supportedDryTime; none of them carries a group for it today, so
-# nothing currently relies on this, but a list longer than this is one the
-# mask only partially describes.
+# the supported<Option> list it indexes. Four boards carry an 11- or
+# 13-entry supportedDryTime and no group for it, so their dry time is not
+# narrowed at all; where a board carries both, this keeps the unaddressable
+# tail rather than reading its absence from the mask as a refusal.
 MASK_ADDRESSABLE = 8
 
 
