@@ -3,16 +3,24 @@
     "step": {
       "user": {
         "title": "Añadir electrodoméstico Samsung",
-        "description": "Introduce la dirección IP de tu electrodoméstico Samsung y las credenciales AC14K_M CA usadas para emitir los certificados de dispositivo.",
+        "description": "Introduce la dirección IP de tu electrodoméstico Samsung. Home Assistant comprobará si habla el protocolo local; no hace falta ejecutar nmap ni ninguna otra herramienta.",
         "data": {
-          "host": "Dirección IP",
-          "ca_cert_pem": "Certificado CA (PEM)",
-          "ca_key_pem": "Clave privada CA (PEM)"
+          "host": "Dirección IP"
         },
         "data_description": {
-          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
-          "ca_cert_pem": "Cadena de certificados CA AC14K_M codificada en PEM. Pega el contenido completo de tu PEM fullchain incluyendo todos los bloques BEGIN/END CERTIFICATE.",
-          "ca_key_pem": "Clave privada AC14K_M codificada en PEM. Pega el contenido completo incluyendo la cabecera y el pie BEGIN/END PRIVATE KEY."
+          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
+        }
+      },
+      "ca": {
+        "title": "Credenciales CA (una sola vez)",
+        "description": "Pega las credenciales CA AC14K_M. Un archivo PEM combinado sirve: pon el archivo entero en el primer campo y deja vacío el de la clave. Solo hace falta una vez; cada electrodoméstico que añadas después las reutiliza. Esta integración no descarga ni incluye la CA.",
+        "data": {
+          "ca_cert_pem": "Certificado CA o paquete combinado (PEM)",
+          "ca_key_pem": "Clave privada CA (PEM), si no está ya en el paquete"
+        },
+        "data_description": {
+          "ca_cert_pem": "Pega el PEM completo. Si el archivo incluye el certificado y la clave, este campo basta.",
+          "ca_key_pem": "Solo hace falta si el primer campo es solo el certificado, sin la clave."
         }
       },
       "user_reuse": {
@@ -41,6 +49,8 @@
       "unexpected_response": "La conexión con el dispositivo se estableció correctamente, pero no devolvió una descripción de dispositivo utilizable. Puede que no sea un electrodoméstico compatible con esta integración. El registro de Home Assistant recoge lo que envió.",
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP sea accesible y que las credenciales CA sean correctas.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
+      "encrypted_ca_key": "La clave privada de la CA está protegida con contraseña y Home Assistant no puede desbloquearla. Exporta o convierte la clave sin contraseña y pega esa.",
+      "legacy_firmware": "Esa dirección no tiene API DTLS local (UDP 49152-49160), pero responde en TCP 8888. Es firmware Samsung antiguo (aprox. 2018-2022), que esta integración no puede controlar.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles."
     },
     "abort": {

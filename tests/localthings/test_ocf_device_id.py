@@ -33,7 +33,14 @@ from custom_components.localthings.registry.identity import (
     proven_ocf_device_id,
 )
 
-from .conftest import LEGACY_ENTRY_DATA, MOCK_HOST, MOCK_SERIAL
+from .conftest import (
+    LEGACY_ENTRY_DATA,
+    MOCK_DEVICE_KEY,
+    MOCK_HOST,
+    MOCK_SERIAL,
+    _probe_result,
+)
+from .test_config_flow import _configure_host_then_ca
 from .test_identity_migration import UUID_A, UUID_B, _reachable, _unreachable
 
 _COORD = "custom_components.localthings.coordinator.LocalThingsCoordinator"
@@ -102,48 +109,26 @@ async def test_the_config_flow_records_it_when_the_probe_proved_one(
 ) -> None:
     """The probe already reads /oic/d, so a new entry starts with the value
     rather than waiting for its first poll to backfill it."""
-    from custom_components.localthings.const import CONF_CA_CERT_PEM, CONF_CA_KEY_PEM
-
-    from .conftest import MOCK_CA_CERT_PEM, MOCK_CA_KEY_PEM, MOCK_DEVICE_KEY
-
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_HOST: MOCK_HOST,
-            CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-            CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-        },
-    )
+    result = await _configure_host_then_ca(hass, result)
     await hass.async_block_till_done()
 
     assert result["data"][CONF_OCF_DEVICE_ID] == MOCK_DEVICE_KEY
 
 
 async def test_a_probe_that_proved_nothing_leaves_the_key_absent(
-    hass: HomeAssistant, mock_coordinator_session
+    hass: HomeAssistant, mock_coordinator_session, mock_compatible
 ) -> None:
     """A board answering with no usable `di` still gets a registry key from
     further down the chain, but records no proven device id -- absent is the
     honest state, not a placeholder."""
-    from custom_components.localthings.const import CONF_CA_CERT_PEM, CONF_CA_KEY_PEM
-
-    from .conftest import MOCK_CA_CERT_PEM, MOCK_CA_KEY_PEM, _probe_result
-
     unproven = {**_probe_result(recognized=True), "ocf_device_id": None}
     with patch(
         "custom_components.localthings.config_flow._probe_and_validate",
         return_value=unproven,
     ):
         result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_HOST: MOCK_HOST,
-                CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM,
-                CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM,
-            },
-        )
+        result = await _configure_host_then_ca(hass, result)
         await hass.async_block_till_done()
 
     assert CONF_DEVICE_KEY in result["data"]
