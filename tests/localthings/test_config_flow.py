@@ -234,7 +234,12 @@ WASHER_DEVICE0 = [
 
 
 class FakeSession:
-    """Stand-in for DtlsCoapSession that answers /device/0 for any path.
+    """Stand-in for the probe's transport, answering /device/0 for any path.
+
+    Patched in as `config_flow.DtlsTransport` rather than as the library
+    session underneath it: `instances` counts what the *probe* opened, and
+    patching the transport's own import of the library would also catch the
+    coordinator's session once the flow creates the entry.
 
     `reject_certs` models a device whose DTLS stack breaks the handshake off
     itself -- the library raises ConnectionError for that, as opposed to the
@@ -263,13 +268,8 @@ class FakeSession:
                 "DTLS handshake error: [('SSL routines', '', 'sslv3 alert bad certificate')]"
             )
 
-    def start_reader(self):
-        pass
-
-    def get(self, path, timeout=15.0):
-        import cbor2
-
-        return 0x45, cbor2.dumps(WASHER_DEVICE0)
+    def read(self, path, timeout=15.0):
+        return 0x45, WASHER_DEVICE0
 
     def close(self):
         pass
@@ -289,10 +289,7 @@ def fake_dtls(monkeypatch):
         "_mint_leaf_cert",
         lambda ca_cert, ca_key, uuid: ("FULLCHAIN", "LEAFKEY"),
     )
-    monkeypatch.setattr(
-        "smartthings_local.protocol.dtls_session.DtlsCoapSession",
-        FakeSession,
-    )
+    monkeypatch.setattr(config_flow, "DtlsTransport", FakeSession)
     return FakeSession
 
 
@@ -897,7 +894,7 @@ async def test_unusable_device0_is_reported_separately(
     neither a connectivity nor a credentials problem, and saying so saves a
     user checking both."""
     _patch_clienthello(monkeypatch, {49154})
-    monkeypatch.setattr(FakeSession, "get", lambda self, path, timeout=15.0: (0x84, b""))
+    monkeypatch.setattr(FakeSession, "read", lambda self, path, timeout=15.0: (0x84, None))
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     result = await hass.config_entries.flow.async_configure(
@@ -1202,7 +1199,7 @@ def test_probe_reads_the_device_key_from_oic_d_without_an_extra_round_trip(monke
         def __init__(self):
             self.paths = []
 
-        def get(self, path, timeout=10.0):
+        def read(self, path, timeout=10.0):
             self.paths.append(tuple(path))
             table = {
                 ("oic", "p"): {"mnmn": "Samsung Electronics", "pi": "PLATFORM-UUID"},
@@ -1211,10 +1208,8 @@ def test_probe_reads_the_device_key_from_oic_d_without_an_extra_round_trip(monke
             }
             body = table.get(tuple(path))
             if body is None:
-                return 0x84, b""
-            import cbor2
-
-            return 0x45, cbor2.dumps(body)
+                return 0x84, None
+            return 0x45, body
 
     sess = _Session()
     info = _read_device(sess, "192.168.0.3", MOCK_PORT)

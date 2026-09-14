@@ -105,14 +105,12 @@ class _ProbeSession:
     def pace(self):
         pass
 
-    def get(self, path, timeout=None):
-        import cbor2
-
+    def read(self, path, timeout=None):
         href = "/" + "/".join(path)
         self.gets.append(href)
         if href in self.answers:
-            return 0x45, cbor2.dumps(self.answers[href])
-        return 0x84, b""
+            return 0x45, self.answers[href]
+        return 0x84, None
 
 
 @pytest.fixture

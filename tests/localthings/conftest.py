@@ -54,6 +54,19 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture(autouse=True)
+def _no_legacy_bridge():
+    """No appliance on TCP 8888 unless a test says otherwise.
+
+    The config flow checks for the legacy bridge before the DTLS scan
+    (issue #168), and that check is a real connect -- the same reason the
+    DTLS probe is patched out everywhere rather than left to reach the
+    network. Tests for that branch patch it themselves.
+    """
+    with patch("custom_components.localthings.config_flow._legacy_http_open", return_value=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _fast_coordinator_timers():
     """Shrink the coordinator's real-time delays for every localthings test.
 
@@ -217,12 +230,13 @@ def mock_coordinator_session(fridge_resources):
 
 
 class FakeObserveSession:
-    """Stand-in for DtlsCoapSession that supports subscribe()/on_notification
+    """Stand-in for a Transport that supports subscribe()/on_notification
     for coordinator-level observe tests, without a real DTLS connection."""
 
     def __init__(self, on_notification=None):
         self.on_notification = on_notification
         self.subscribed: list[str] = []
+        self.writes: list[tuple[list[str], dict]] = []
         self.fail_hrefs: set[str] = set()
         self.closed = False
         # When set to a rep dict, subscribe() immediately delivers that rep
@@ -249,6 +263,16 @@ class FakeObserveSession:
 
     def refresh_observes(self, paths):
         return None
+
+    def read(self, path_segs, timeout=None):
+        return 0x45, {}
+
+    def write(self, path_segs, body, timeout=None):
+        self.writes.append((list(path_segs), body))
+        return 0x44
+
+    def pace(self):
+        pass
 
     def close(self):
         self.closed = True
