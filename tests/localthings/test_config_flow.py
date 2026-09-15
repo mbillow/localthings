@@ -233,6 +233,17 @@ WASHER_DEVICE0 = [
 ]
 
 
+class FakeCertificateAuth:
+    """Synthetic provider that keeps only the credential label tests need."""
+
+    def __init__(self, certificate_pem: str, private_key_pem: str) -> None:
+        self.certificate_pem = certificate_pem
+        self.private_key_pem = private_key_pem
+
+    def configure_context(self, _context) -> None:
+        """Satisfy the authentication-provider protocol."""
+
+
 class FakeSession:
     """Stand-in for DtlsCoapSession that answers /device/0 for any path.
 
@@ -242,6 +253,7 @@ class FakeSession:
     """
 
     instances: ClassVar[list[FakeSession]] = []
+    probe_instances: ClassVar[list[FakeSession]] = []
     reject_certs: ClassVar[set[str]] = set()
     # smartthings-local >= 0.1.3 ("redacted typed failures") no longer puts
     # the alert in connect()'s exception text -- set True to model that, so
@@ -249,8 +261,10 @@ class FakeSession:
     # instead of the legacy _alert_name text-parsing path.
     redact_rejection: ClassVar[bool] = False
 
-    def __init__(self, host, port, cert_pem=None, key_pem=None, **kwargs):
-        self.host, self.port, self.cert_pem = host, port, cert_pem
+    def __init__(self, host, port, cert_pem=None, key_pem=None, auth=None, **kwargs):
+        self.host, self.port = host, port
+        self.auth = auth
+        self.cert_pem = auth.certificate_pem if auth is not None else cert_pem
         FakeSession.instances.append(self)
 
     def connect(self):
@@ -275,12 +289,40 @@ class FakeSession:
         pass
 
 
+class FakeSessionFactory:
+    """Build config-flow sessions with inspectable synthetic providers."""
+
+    @staticmethod
+    def create_certificate_session(
+        host,
+        port,
+        *,
+        certificate_pem,
+        private_key_pem,
+        **kwargs,
+    ) -> FakeSession:
+        session = FakeSession(
+            host,
+            port,
+            auth=FakeCertificateAuth(certificate_pem, private_key_pem),
+            **kwargs,
+        )
+        FakeSession.probe_instances.append(session)
+        return session
+
+
+def _probe_sessions() -> list[FakeSession]:
+    """Sessions opened by the config flow, excluding the loaded coordinator."""
+    return list(FakeSession.probe_instances)
+
+
 @pytest.fixture
 def fake_dtls(monkeypatch):
     """Wire the probe path up to FakeSession with no real network anywhere."""
     from custom_components.localthings import config_flow
 
     FakeSession.instances = []
+    FakeSession.probe_instances = []
     FakeSession.reject_certs = set()
     FakeSession.redact_rejection = False
     monkeypatch.setattr(config_flow, "_fetch_samsung_uuid", lambda: "test-uuid")
@@ -293,6 +335,7 @@ def fake_dtls(monkeypatch):
         "smartthings_local.protocol.dtls_session.DtlsCoapSession",
         FakeSession,
     )
+    monkeypatch.setattr(config_flow, "session_factory", FakeSessionFactory())
     return FakeSession
 
 
@@ -349,7 +392,7 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     # The whole range is probed (cheaply, in parallel) but only the confirmed
     # port is handed a handshake.
     assert set(probed) == set(config_flow.PROBE_PORT_RANGE)
-    assert [s.port for s in FakeSession.instances] == [49153]
+    assert [session.port for session in _probe_sessions()] == [49153]
 
 
 async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, fake_dtls) -> None:
@@ -470,7 +513,7 @@ async def test_second_device_reuses_the_existing_leaf(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == MOCK_LEAF_CERT_PEM
-    assert FakeSession.instances[0].cert_pem == MOCK_LEAF_CERT_PEM
+    assert _probe_sessions()[0].cert_pem == MOCK_LEAF_CERT_PEM
 
 
 async def test_rejected_reused_leaf_is_reminted(
@@ -492,7 +535,10 @@ async def test_rejected_reused_leaf_is_reminted(
     assert result["type"] == FlowResultType.CREATE_ENTRY
     # Freshly minted, and it's the fresh one that got stored.
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [session.cert_pem for session in _probe_sessions()] == [
+        MOCK_LEAF_CERT_PEM,
+        "FULLCHAIN",
+    ]
 
 
 async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
@@ -529,11 +575,14 @@ async def test_rejected_reused_leaf_is_reminted_against_a_redacted_library(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_LEAF_CERT_PEM] == "FULLCHAIN"
-    assert [s.cert_pem for s in FakeSession.instances] == [MOCK_LEAF_CERT_PEM, "FULLCHAIN"]
+    assert [session.cert_pem for session in _probe_sessions()] == [
+        MOCK_LEAF_CERT_PEM,
+        "FULLCHAIN",
+    ]
     assert diagnosed == [49154]
 
 
-def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch) -> None:
+def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch, fake_dtls) -> None:
     """_diagnostic_alert commits association state on the device (see its
     own docstring) -- running it once per failing candidate instead of once
     overall would both add latency (each is its own bounded handshake) and
@@ -543,10 +592,8 @@ def test_diagnostic_handshake_runs_once_not_once_per_failing_port(monkeypatch) -
     port, not three times against every candidate in scan order."""
     from custom_components.localthings import config_flow
 
-    FakeSession.instances = []
     FakeSession.reject_certs = {MOCK_LEAF_CERT_PEM}
     FakeSession.redact_rejection = True
-    monkeypatch.setattr("smartthings_local.protocol.dtls_session.DtlsCoapSession", FakeSession)
 
     diagnosed: list[int] = []
 
@@ -597,7 +644,7 @@ async def test_unconfirmed_port_failure_is_not_reminted(
     errors = result["errors"]
     assert errors is not None
     assert errors["base"] == "no_dtls_server"
-    assert len(FakeSession.instances) == 1
+    assert len(_probe_sessions()) == 1
 
 
 # ---------------------------------------------------------------------------
