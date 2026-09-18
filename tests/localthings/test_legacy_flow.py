@@ -1,10 +1,15 @@
 """Config-flow tests for the legacy 8888 branch (issue #168).
 
 The user types an address and nothing else: the flow finds the bridge on
-TCP 8888, mints the same leaf the DTLS path mints, and then asks for the one
-credential that path never needs -- a device token the appliance itself
-issues through a callback. These cover that it routes there at all, both
-ways of getting a token, and what the entry ends up carrying.
+TCP 8888, mints the same self-signed leaf the DTLS path now mints by
+default, and then asks for the one credential that path never needs -- a
+device token the appliance itself issues through a callback. These cover
+that it routes there at all, both ways of getting a token, and what the
+entry ends up carrying.
+
+No AC14K_M CA is involved anywhere here: this family does not authenticate
+the certificate at all (see the comment in `async_step_user`), so the leaf
+is self-signed and the token is what authorizes.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ from custom_components.localthings.const import (
     TRANSPORT_LEGACY_HTTP,
 )
 
-from .conftest import MOCK_CA_CERT_PEM, MOCK_CA_KEY_PEM, MOCK_HOST
+from .conftest import MOCK_HOST
 
 LEGACY_DEVICE = {
     "port": 8888,
@@ -40,6 +45,9 @@ LEGACY_DEVICE = {
     "device_type_name": "washer",
     "device_type_recognized": True,
     "description": "TP6X_WASHER",
+    # The 8888 bridge exposes no /wirelessinfo/vs/0, so `resolve_mac` finds
+    # nothing -- the same None a DTLS board without that resource gives.
+    "mac": None,
 }
 
 
@@ -52,9 +60,9 @@ def legacy_bridge():
             return_value=True,
         ),
         patch(
-            "custom_components.localthings.config_flow._mint_credentials",
+            "custom_components.localthings.config_flow._mint_self_signed_credentials",
             return_value=("FULLCHAIN", "LEAFKEY"),
-        ),
+        ) as mint,
         patch(
             "custom_components.localthings.config_flow.obtain_device_token",
             return_value="tok123456",
@@ -64,17 +72,13 @@ def legacy_bridge():
             return_value=LEGACY_DEVICE,
         ) as probe,
     ):
-        yield token, probe
+        yield token, probe, mint
 
 
-async def _start(hass: HomeAssistant, *, with_ca: bool = True):
-    """Walk the first step. `with_ca` off is the shape the form takes once
-    an entry exists: the CA is reused and only an address is asked for."""
+async def _start(hass: HomeAssistant):
+    """Walk the first step, which asks for an address and nothing else."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    user_input = {CONF_HOST: MOCK_HOST}
-    if with_ca:
-        user_input |= {CONF_CA_CERT_PEM: MOCK_CA_CERT_PEM, CONF_CA_KEY_PEM: MOCK_CA_KEY_PEM}
-    return await hass.config_entries.flow.async_configure(result["flow_id"], user_input)
+    return await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: MOCK_HOST})
 
 
 async def test_a_bridge_on_8888_routes_to_the_token_step(
@@ -93,7 +97,7 @@ async def test_a_bridge_on_8888_routes_to_the_token_step(
 async def test_an_empty_field_asks_the_appliance_for_a_token(
     hass: HomeAssistant, legacy_bridge
 ) -> None:
-    token, _ = legacy_bridge
+    token, _, _mint = legacy_bridge
     result = await _start(hass)
 
     result = await hass.config_entries.flow.async_configure(
@@ -108,7 +112,7 @@ async def test_an_empty_field_asks_the_appliance_for_a_token(
 async def test_a_pasted_token_is_used_as_is(hass: HomeAssistant, legacy_bridge) -> None:
     """The callback needs the appliance awake and inbound 8889 reaching
     Home Assistant; neither is true on every network."""
-    token, _ = legacy_bridge
+    token, _, _mint = legacy_bridge
     result = await _start(hass)
 
     result = await hass.config_entries.flow.async_configure(
@@ -136,10 +140,31 @@ async def test_the_entry_records_the_transport_and_the_family(
     assert data[CONF_LEAF_CERT_PEM] == "FULLCHAIN"
 
 
+async def test_no_ca_is_asked_for_and_none_is_stored(hass: HomeAssistant, legacy_bridge) -> None:
+    """This family authenticates nothing about the certificate, so the leaf
+    is the self-signed one and the entry carries no CA.
+
+    Measured against a TP6X_WW6500 on 8888: a self-signed leaf, one bearing
+    a stranger's UUID and one with no `uuid:` RDN at all are each answered
+    200, while a wrong or absent device token is 401 even under an
+    AC14K_M-signed leaf. Storing a CA here would mean asking the user for
+    material that provably does nothing.
+    """
+    _, _, mint = legacy_bridge
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+    )
+
+    assert mint.called
+    assert result["data"][CONF_CA_CERT_PEM] == ""
+    assert result["data"][CONF_CA_KEY_PEM] == ""
+
+
 async def test_no_token_re_shows_the_form_with_advice(hass: HomeAssistant, legacy_bridge) -> None:
     """Rather than ending the flow: a token obtained another way still
     works, and the message says so."""
-    token, probe = legacy_bridge
+    token, probe, _mint = legacy_bridge
     token.return_value = None
     result = await _start(hass)
 
@@ -158,7 +183,7 @@ async def test_a_failed_probe_keeps_the_user_in_the_step(
 ) -> None:
     from custom_components.localthings.config_flow import UnexpectedResponse
 
-    _, probe = legacy_bridge
+    _, probe, _mint = legacy_bridge
     probe.side_effect = UnexpectedResponse("not a device we understand")
     result = await _start(hass)
 
@@ -174,7 +199,7 @@ async def test_the_same_appliance_is_not_added_twice(hass: HomeAssistant, legacy
     result = await _start(hass)
     await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_DEVICE_TOKEN: ""})
 
-    result = await _start(hass, with_ca=False)
+    result = await _start(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DEVICE_TOKEN: ""}
     )

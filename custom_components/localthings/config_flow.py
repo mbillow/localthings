@@ -772,6 +772,18 @@ def _mint_credentials(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
     return _mint_for_current_uuid(lambda uuid: _mint_leaf_cert(ca_cert_pem, ca_key_pem, uuid))
 
 
+def _mint_preferred(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
+    """Mint with an AC14K_M CA when one is stored, self-signed otherwise.
+
+    The credential choice is the same wherever a leaf is minted, so both
+    the DTLS probe and the legacy 8888 branch share it rather than each
+    deciding for itself.
+    """
+    if ca_cert_pem and ca_key_pem:
+        return _mint_credentials(ca_cert_pem, ca_key_pem)
+    return _mint_self_signed_credentials()
+
+
 def _mint_self_signed_credentials() -> tuple[str, str]:
     """Mint a self-signed leaf -- the no-credentials default.
 
@@ -940,16 +952,11 @@ def _probe_and_validate(
     """
     scan = _scan_ports(host)
 
-    def _mint() -> tuple[str, str]:
-        if ca_cert_pem and ca_key_pem:
-            return _mint_credentials(ca_cert_pem, ca_key_pem)
-        return _mint_self_signed_credentials()
-
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
         _LOGGER.debug("Reusing the leaf certificate from an existing entry")
     else:
-        cert_pem, key_pem = _mint()
+        cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
 
     try:
         info = _handshake_and_read(host, scan, cert_pem, key_pem)
@@ -959,7 +966,7 @@ def _probe_and_validate(
         if existing_leaf is None:
             raise
         _LOGGER.debug("Reused leaf rejected by %s; re-minting and retrying", host)
-        cert_pem, key_pem = _mint()
+        cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
         info = _handshake_and_read(host, scan, cert_pem, key_pem)
 
     return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
@@ -1070,9 +1077,18 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._ca_key_pem = ""
 
             if await self.hass.async_add_executor_job(_legacy_http_open, self._host):
+                # This family authenticates nothing about the certificate.
+                # Measured on a TP6X_WW6500: a self-signed leaf, one carrying
+                # a stranger's UUID, and one with no `uuid:` RDN anywhere are
+                # all answered 200, while a wrong or missing device token is
+                # 401 even with an AC14K_M-signed leaf. nginx only insists
+                # that some certificate be presented. So no CA is ever asked
+                # for here and there is no fallback_ca to fall through to --
+                # unlike the DTLS families, where the subject UUID is what
+                # the on-device ACL matches.
                 try:
                     self._legacy_leaf = existing_leaf or await self.hass.async_add_executor_job(
-                        _mint_credentials, self._ca_cert_pem, self._ca_key_pem
+                        _mint_preferred, self._ca_cert_pem, self._ca_key_pem
                     )
                 except (CannotConnect, InvalidCA) as exc:
                     _LOGGER.warning(
