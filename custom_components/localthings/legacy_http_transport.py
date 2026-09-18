@@ -200,6 +200,35 @@ class LegacyHttpTransport:
         status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
         return http_status_to_coap(status), response
 
+    def write_many(
+        self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float
+    ) -> tuple[int, Any]:
+        """Every step in one `PUT /devices/0`, which is the whole point.
+
+        This firmware takes a cycle only in the same body as
+        `Operation.state`: `Course_` sent on its own is answered `204` and
+        then discarded, measured in every shape tried -- including a
+        two-token body whose *other* token applied, so it is a rule about
+        that field and not a syntax problem. Sending the steps one after
+        another would therefore look like it worked and change nothing.
+
+        `start_only_fields` is not consulted here: its job is to refuse a
+        lone settings write, and a step that arrives as part of a composite
+        is exactly the case that makes such a field legal.
+        """
+        if not steps:
+            return 0x44, None
+        aggregate = to_write([("/" + "/".join(segs), patch) for segs, patch in steps], self._table)
+        if not aggregate.get("Device"):
+            _LOGGER.warning(
+                "%s: no 8888 resource for any of %s; write dropped",
+                self._host,
+                ", ".join("/" + "/".join(segs) for segs, _ in steps),
+            )
+            return 0x84, None
+        status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
+        return http_status_to_coap(status), response
+
     # ------------------------------------------------------------------
     # OBSERVE -- not available on this transport; `supports_observe` says
     # so, and these exist only so the protocol is satisfied.

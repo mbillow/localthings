@@ -180,3 +180,4 @@ DEVICE_SUPPORT_ISSUE_URL = (
 # from an automation (issue #300) -- one code path performs a raw write.
 SERVICE_WRITE_RESOURCE = "write_resource"
 SERVICE_READ_RESOURCE = "read_resource"
+SERVICE_START_CYCLE = "start_cycle"

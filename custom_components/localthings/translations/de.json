@@ -1921,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "Dieses Gerät ist noch nicht verbunden. Versuchen Sie es erneut, sobald es geladen wurde."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "Es muss ein Programm angegeben werden, das gestartet werden soll."
     }
   }
 }

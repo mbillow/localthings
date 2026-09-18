@@ -1921,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "This device isn't connected yet. Try again once it has loaded."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "A cycle to start is required."
     }
   }
 }

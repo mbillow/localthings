@@ -2236,6 +2236,59 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
         await self.async_request_refresh()
 
+    async def async_write_composite(
+        self, steps: list[tuple[list[str], dict]], *, action: str
+    ) -> Any:
+        """One action spanning several resources, as one write.
+
+        Not a sequence: the 8888 laundry boards take a cycle only in the
+        same body as `Operation.state` and answer `204` to one sent alone
+        before discarding it, so "several writes in order" would report
+        success and change nothing. `Transport.write_many` is where that
+        distinction lands -- a transport that needs them together sends one
+        body, one that does not sends them in order.
+
+        Shares the poll path's reconnect-and-retry (issue #294) with the
+        single-write path above, for the same reason: a write landing on a
+        session the firmware closed between polls must not be silently
+        lost. Returns whatever the device answered with, which on this
+        firmware carries its reason for refusing.
+        """
+        hrefs = ", ".join("/" + "/".join(segs) for segs, _ in steps)
+        result: dict[str, Any] = {}
+
+        def _do_put():
+            if self._session is None:
+                self._connect_session()
+            sess = self._session
+            if sess is None:
+                raise RuntimeError("no session")
+            code, body = sess.write_many(steps, timeout=self._POST_TIMEOUT_S)
+            self._log.info("PUT %s (%s) → code %#04x", hrefs, action, code)
+            result["code"], result["body"] = code, body
+
+        async with self._session_lock:
+            try:
+                await self.hass.async_add_executor_job(_do_put)
+            except Exception as e:
+                self._log.warning("%s failed for %s, reconnecting: %s", action, hrefs, e)
+                await self.hass.async_add_executor_job(self._close_session)
+                if self._observe.mode == MODE_OBSERVE:
+                    self._observe.downgrade_to_poll()
+                    self._resubscribe_due = True
+                await asyncio.sleep(self._RECONNECT_PAUSE_S)
+                try:
+                    await self.hass.async_add_executor_job(_do_put)
+                except Exception as e2:
+                    self._log.error("%s failed for %s after reconnect: %s", action, hrefs, e2)
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="command_failed",
+                        translation_placeholders={"href": hrefs, "error": str(e2)},
+                    ) from e2
+        await self.async_request_refresh()
+        return result
+
     # ------------------------------------------------------------------
     # Debug raw write/read (issue #54, extended for issue #300): a
     # power-user escape hatch shared by the options-flow debug panel and

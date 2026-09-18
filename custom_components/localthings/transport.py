@@ -45,6 +45,10 @@ from .const import (
     TRANSPORT_LEGACY_HTTP,
 )
 
+# 2.01 Created / 2.03 Valid / 2.04 Changed -- what a board answers a write
+# it accepted with.
+_ACCEPTED_CODES = frozenset({0x41, 0x43, 0x44})
+
 
 class DecodeError(ValueError):
     """A response arrived, but its body could not be decoded.
@@ -71,6 +75,14 @@ class Transport(Protocol):
     payload, but the laundry firmware puts its reason for refusing one in
     the response body (`"Control fail, <...>"`), so a transport that dropped
     it would throw away the only account the device gives of its own refusal.
+
+    `write_many` is one caller-level action spanning several resources.
+    Most firmware does not care and gets it as ordered writes; the 8888
+    laundry boards do -- they accept a cycle only in the same body as
+    `Operation.state`, and answer `204` to one sent alone before discarding
+    it. Expressing that as "one action, several resources" rather than as a
+    sequence is what lets a transport that needs them together put them
+    together, without every caller having to know which kind it faces.
     """
 
     supports_observe: bool
@@ -84,6 +96,10 @@ class Transport(Protocol):
     def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]: ...
 
     def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> tuple[int, Any]: ...
+
+    def write_many(
+        self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float
+    ) -> tuple[int, Any]: ...
 
     def subscribe(self, path_segs: Sequence[str]) -> Any: ...
 
@@ -167,6 +183,25 @@ class DtlsTransport:
             return code, cbor2.loads(payload)
         except Exception as err:
             raise DecodeError(str(err)) from err
+
+    def write_many(
+        self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float
+    ) -> tuple[int, Any]:
+        """Ordered writes, paced like any other burst.
+
+        CoAP has no atomic multi-resource write and no board here has been
+        shown to need one, so the steps go out one at a time and the first
+        refusal stops the rest -- a later step of an action whose earlier
+        step the device rejected has nothing to act on.
+        """
+        code, body = 0x44, None
+        for i, (path_segs, patch) in enumerate(steps):
+            if i:
+                self.pace()
+            code, body = self.write(path_segs, patch, timeout)
+            if code not in _ACCEPTED_CODES:
+                return code, body
+        return code, body
 
     def subscribe(self, path_segs: Sequence[str]) -> Any:
         return self._live().subscribe(list(path_segs))

@@ -31,6 +31,7 @@ class _FakeCoapSession:
         self.refreshed: list = []
         self.payload = cbor2.dumps({"x.com.samsung.da.power": "On"})
         self.code = 0x45
+        self.post_code = 0x44
 
     def connect(self):
         pass
@@ -43,7 +44,7 @@ class _FakeCoapSession:
 
     def post(self, path_segs, payload, timeout=None):
         self.posts.append((path_segs, payload))
-        return 0x44, b""
+        return self.post_code, b""
 
     def pace(self):
         self.paced += 1
@@ -149,6 +150,42 @@ class TestWrite:
         path_segs, payload = fake_of(transport).posts[0]
         assert path_segs == ["power", "vs", "0"]
         assert cbor2.loads(payload) == {"x.com.samsung.da.power": "Off"}
+
+
+class TestWriteMany:
+    def test_steps_go_out_in_order(self, transport):
+        """CoAP has no atomic multi-resource write, and no board here needs
+        one -- so this transport spends a request per step."""
+        code, _ = transport.write_many(
+            [
+                (["course", "vs", "0"], {"x.com.samsung.da.options": ["Course_63"]}),
+                (["operational", "state", "vs", "0"], {"x.com.samsung.da.state": "Run"}),
+            ],
+            timeout=1.0,
+        )
+
+        assert code == 0x44
+        posts = fake_of(transport).posts
+        assert [segs for segs, _ in posts] == [
+            ["course", "vs", "0"],
+            ["operational", "state", "vs", "0"],
+        ]
+
+    def test_a_refused_step_stops_the_rest(self, transport):
+        """A later step of an action whose earlier step the device rejected
+        has nothing to act on."""
+        fake_of(transport).post_code = 0x85
+
+        code, _ = transport.write_many(
+            [
+                (["course", "vs", "0"], {"x.com.samsung.da.options": ["Course_63"]}),
+                (["operational", "state", "vs", "0"], {"x.com.samsung.da.state": "Run"}),
+            ],
+            timeout=1.0,
+        )
+
+        assert code == 0x85
+        assert len(fake_of(transport).posts) == 1
 
 
 class TestObserve:

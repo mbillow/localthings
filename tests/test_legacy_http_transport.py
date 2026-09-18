@@ -209,6 +209,60 @@ class TestWrites:
         assert (method, path) == ("PUT", "/devices/0")
         assert body == {"Device": {"Operation": {"state": "Pause"}}}
 
+    def test_a_composite_write_is_one_body_not_several_requests(self, transport):
+        """The whole reason `write_many` exists: this firmware takes a cycle
+        only alongside `Operation.state`, so steps sent one after another
+        would each be acknowledged and the cycle then discarded."""
+        _FakeConnection.routes["/devices/0"] = (204, None)
+        before = len(_FakeConnection.log)
+
+        code, _ = transport.write_many(
+            [
+                (["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}),
+                (["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}),
+            ],
+            timeout=8.0,
+        )
+
+        assert code == 0x44
+        assert len(_FakeConnection.log) - before == 1
+        method, path, body, _ = _FakeConnection.log[-1]
+        assert (method, path) == ("PUT", "/devices/0")
+        assert body == {
+            "Device": {"Mode": {"options": ["Course_63"]}, "Operation": {"state": "Run"}}
+        }
+
+    def test_a_setting_rides_along_in_that_same_body(self, transport):
+        """A settings field refused on its own is legal as part of a start,
+        which is what `write_many` is expressing."""
+        _FakeConnection.routes["/devices/0"] = (204, None)
+
+        transport.write_many(
+            [
+                (["course", "vs", "0"], {PREFIX + "options": ["Course_5B"]}),
+                (["washer", "vs", "0"], {PREFIX + "waterTemperature": "60"}),
+                (["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}),
+            ],
+            timeout=8.0,
+        )
+
+        assert _FakeConnection.log[-1][2] == {
+            "Device": {
+                "Mode": {"options": ["Course_5B"]},
+                "Washer": {"waterTemperature": "60"},
+                "Operation": {"state": "Run"},
+            }
+        }
+
+    def test_a_composite_with_nowhere_to_land_is_refused(self, transport):
+        code, _ = transport.write_many(
+            [(["energy", "consumption", "vs", "0"], {PREFIX + "cumulativePower": "1"})],
+            timeout=8.0,
+        )
+
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
     def test_the_appliances_reason_for_refusing_comes_back(self, transport):
         """This firmware puts its own account of a rejected write in the
         body -- `Control fail, <...>` -- which is the only explanation the

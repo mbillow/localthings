@@ -1921,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "이 기기는 아직 연결되지 않았습니다. 로드된 후 다시 시도하세요."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "시작할 코스를 지정해야 합니다."
     }
   }
 }

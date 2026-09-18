@@ -1921,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "Dit apparaat is nog niet verbonden. Probeer het opnieuw zodra het is geladen."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "Er is een programma nodig om te starten."
     }
   }
 }

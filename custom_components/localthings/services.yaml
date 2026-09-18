@@ -92,3 +92,47 @@ read_resource:
       example: /mode/vs/0
       selector:
         text:
+
+start_cycle:
+  name: Start cycle
+  description: >-
+    Pick a programme and start it, in one command. Some appliances accept a
+    cycle only in the same message as the start itself -- sent separately it
+    is acknowledged and then discarded, which looks like a write that
+    worked. Use this rather than setting the Cycle select and pressing
+    Start on those. The appliance must have remote control switched on.
+  fields:
+    device_id:
+      name: Device
+      description: The appliance to start.
+      required: true
+      selector:
+        device:
+          integration: localthings
+    cycle:
+      name: Cycle
+      description: >-
+        The programme to run, as the Cycle select reports it (a course code
+        such as 5c). Required -- this service always sends a programme, so
+        the appliance never starts on whatever the dial happened to be on.
+      required: true
+      example: "63"
+      selector:
+        text:
+    water_temperature:
+      name: Water temperature
+      description: >-
+        Optional. Leave unset to let the appliance apply the programme's
+        own default, which is what it does when nothing is sent.
+      selector:
+        text:
+    rinse_cycles:
+      name: Rinse cycles
+      description: Optional, as for water temperature.
+      selector:
+        text:
+    spin_level:
+      name: Spin level
+      description: Optional, as for water temperature.
+      selector:
+        text:
