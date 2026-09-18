@@ -752,6 +752,7 @@
           "67": "Syntetika",
           "68": "Eko bavlna",
           "6b": "Pouze odstřeďování",
+          "6c": "Džíny",
           "70": "Intenzivní",
           "71": "Ložní prádlo",
           "72": "Dezinfekce",
@@ -1739,6 +1740,13 @@
       "confirm_unknown_type": {
         "title": "Typ spotřebiče nebyl rozpoznán",
         "description": "Tento spotřebič hlásí model „{model}“, což je typ, který LocalThings zatím nerozpoznává. Přesto bude přidán, ale pouze se společnými funkcemi (napájení, alarmy atd., pokud jsou k dispozici), nikoli s plnou sadou funkcí pro danou rodinu spotřebičů. Podporu můžete později pomoci rozšířit stažením diagnostiky pro toto zařízení (Nastavení > Zařízení a služby > toto zařízení > nabídka > Stáhnout diagnostiku) a jejím vložením do nového issue. Odesláním zařízení přidáte i tak."
+      },
+      "legacy_token": {
+        "title": "Token zařízení",
+        "description": "Tento spotřebič ({host}) používá starší lokální API Samsungu, které kromě certifikátu potřebuje i token zařízení.\n\nNechte pole prázdné a odešlete formulář, aby token vydal sám spotřebič: bude o něj požádán a pošle jej zpět do Home Assistant na port 8889. Nejprve na spotřebiči zapněte dálkové ovládání (Smart Control) se zavřenými dvířky, jinak se během několika minut odpojí od Wi-Fi a neodpoví. Může to trvat až minutu a půl.\n\nPokud spotřebič na port 8889 do Home Assistant nedosáhne, získejte token jinak a vložte jej sem.",
+        "data": {
+          "device_token": "Token zařízení (prázdné = vyžádat si jej)"
+        }
       }
     },
     "error": {
@@ -1753,7 +1761,8 @@
       "cannot_connect": "K zařízení se nelze připojit. Zkontrolujte, zda je IP adresa správná a zda je spotřebič zapnutý a připojený k vaší síti.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant.",
-      "wrong_device": "Na této adrese odpověděl spotřebič Samsung, ale není to tento — ohlásil jinou identitu. Zkontrolujte, že adresa patří tomuto spotřebiči. Chcete-li přidat ten druhý, použijte možnost Přidat zařízení."
+      "wrong_device": "Na této adrese odpověděl spotřebič Samsung, ale není to tento — ohlásil jinou identitu. Zkontrolujte, že adresa patří tomuto spotřebiči. Chcete-li přidat ten druhý, použijte možnost Přidat zařízení.",
+      "token_not_received": "Nedorazil žádný token zařízení. Zkontrolujte, že je na spotřebiči zapnuté dálkové ovládání se zavřenými dvířky a že dosáhne na Home Assistant na port 8889 – nebo vložte token získaný jinak."
     },
     "abort": {
       "already_configured": "Zařízení je již nakonfigurováno",
@@ -1912,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "Toto zařízení ještě není připojeno. Zkuste to znovu, až se načte."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "Je nutné zadat program, který se má spustit."
     }
   }
 }

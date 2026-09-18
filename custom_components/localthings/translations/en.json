@@ -752,6 +752,7 @@
           "67": "Synthetics",
           "68": "E Cotton",
           "6b": "Spin Only",
+          "6c": "Denim",
           "70": "Heavy Duty",
           "71": "Bedding",
           "72": "Sanitize",
@@ -1739,6 +1740,13 @@
       "confirm_unknown_type": {
         "title": "Appliance type not recognized",
         "description": "This appliance reported model \"{model}\", which isn't a type LocalThings recognizes yet. It'll still be added, but only with common capabilities (power, alarms, etc. where present) rather than the full set for its family. You can help add full support afterward by downloading diagnostics for this device (Settings > Devices & Services > this device > the menu > Download diagnostics) and filing them in a new issue. Submit to add it anyway."
+      },
+      "legacy_token": {
+        "title": "Device token",
+        "description": "This appliance ({host}) uses Samsung's older local API, which needs a device token as well as the certificate.\n\nLeave this empty and submit to have the appliance issue one: it will be asked for a token and will send it back to Home Assistant on port 8889. Switch Remote Control (Smart Control) on at the appliance first, with the door closed, or it drops off Wi-Fi within minutes and never answers. This takes up to a minute and a half.\n\nIf the appliance cannot reach Home Assistant on port 8889, obtain a token another way and paste it here instead.",
+        "data": {
+          "device_token": "Device token (leave empty to request one)"
+        }
       }
     },
     "error": {
@@ -1753,7 +1761,8 @@
       "cannot_connect": "Cannot connect to the device. Check that the IP address is correct and the appliance is switched on and connected to your network.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details.",
-      "wrong_device": "A Samsung appliance answered at that address, but it isn't this one — it reported a different identity. Check the address belongs to this appliance. To add the other one, use Add device instead."
+      "wrong_device": "A Samsung appliance answered at that address, but it isn't this one — it reported a different identity. Check the address belongs to this appliance. To add the other one, use Add device instead.",
+      "token_not_received": "No device token arrived. Check that Remote Control is on at the appliance with the door closed, and that it can reach Home Assistant on port 8889 - or paste a token you obtained another way."
     },
     "abort": {
       "already_configured": "Device is already configured",
@@ -1912,6 +1921,9 @@
     },
     "service_device_not_loaded": {
       "message": "This device isn't connected yet. Try again once it has loaded."
+    },
+    "start_cycle_needs_a_cycle": {
+      "message": "A cycle to start is required."
     }
   }
 }

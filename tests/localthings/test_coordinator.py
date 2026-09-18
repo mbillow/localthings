@@ -788,6 +788,26 @@ async def test_reconnect_from_observe_mode_resubscribes_immediately(
     assert coordinator.observe_mode == MODE_OBSERVE
 
 
+async def test_attempt_observe_mode_skips_a_transport_with_no_observe(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """The 8888 bridge is request/response and says so with
+    `supports_observe = False`. Before this, the subscribe burst still ran
+    every cycle and every href logged a warning for a capability the
+    transport had never claimed -- four of them every ten minutes, forever,
+    against a real appliance."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._session.supports_observe = False  # ty: ignore[invalid-assignment]
+
+    with patch.object(coordinator._observe, "subscribe_hrefs") as subscribe:
+        await coordinator._attempt_observe_mode()
+
+    assert subscribe.called is False
+    assert coordinator.observe_mode == MODE_POLL
+
+
 async def test_attempt_observe_mode_discards_stale_commit_after_session_swap(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
@@ -1182,7 +1202,7 @@ async def test_write_marks_href_pending_before_post(
     bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator._observe._settle_until.get("/some/path") is not None
@@ -1219,7 +1239,7 @@ async def test_send_command_applies_write_optimistically_before_settling(
     bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, 5)
 
     # The optimistic value is visible right away at the write's real
@@ -1267,7 +1287,7 @@ async def test_write_only_button_does_not_manufacture_cache_state(
         patch.object(fake, "subscribe"),
         patch.object(coordinator, "async_request_refresh", new_callable=AsyncMock),
     ):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, desc.payload)
 
     assert coordinator._cache.get("/configuration/vs/0") == {
@@ -1303,7 +1323,7 @@ async def test_climate_power_write_applies_to_its_own_href_not_bound_href(
     )
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, ("power", True))
 
     assert (coordinator._cache.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "On"
@@ -1358,7 +1378,7 @@ async def test_send_command_survives_stale_confirm_poll(
         patch.object(fake, "subscribe"),
         patch.object(LocalThingsCoordinator, "_poll_once", side_effect=_stale_confirm_poll),
     ):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, 5)
 
     # The optimistic value is visible right away and survived the stale
@@ -1409,7 +1429,7 @@ async def test_send_command_reconnects_and_retries_after_socket_closed(
         calls["n"] += 1
         if calls["n"] == 1:
             raise ConnectionError("socket closed")
-        return (0x44, b"")
+        return 0x44, None
 
     def _drop_session():
         coordinator._session = None
@@ -1429,7 +1449,7 @@ async def test_send_command_reconnects_and_retries_after_socket_closed(
             new=AsyncMock(),
         ),
     ):
-        fake.post = _post
+        fake.write = _post
         await coordinator.async_send_command(bound, 5)
 
     assert reconnects["n"] == 1
@@ -1490,7 +1510,7 @@ async def test_send_command_raises_after_reconnect_retry_also_fails(
         ),
         pytest.raises(HomeAssistantError),
     ):
-        fake.post = _post
+        fake.write = _post
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator.observe_mode == MODE_POLL
@@ -1538,7 +1558,7 @@ async def test_send_command_reconnect_downgrades_observe_mode(
         calls["n"] += 1
         if calls["n"] == 1:
             raise ConnectionError("socket closed")
-        return (0x44, b"")
+        return 0x44, None
 
     with (
         patch.object(fake, "subscribe") as mock_subscribe,
@@ -1547,7 +1567,7 @@ async def test_send_command_reconnect_downgrades_observe_mode(
             new=AsyncMock(),
         ),
     ):
-        fake.post = _post
+        fake.write = _post
         await coordinator.async_send_command(bound, 5)
 
         # _resubscribe_due is consumed by this same call's own trailing
@@ -1600,7 +1620,7 @@ async def test_second_write_to_same_href_lands_during_first_writes_settle_window
     )
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound_a, "Eco")
         assert coordinator._cache.get("/test/vs/0") == {"cycle": "Eco"}
 
@@ -1702,10 +1722,10 @@ async def test_send_command_blocked_when_remote_control_disabled(
     def _post(*a, **k):
         nonlocal posted
         posted = True
-        return (0x44, b"")
+        return 0x44, None
 
     with patch.object(fake, "subscribe"):
-        fake.post = _post
+        fake.write = _post
         with pytest.raises(ServiceValidationError) as exc_info:
             await coordinator.async_send_command(bound, 5)
 
@@ -1739,7 +1759,7 @@ async def test_send_command_allowed_when_remote_control_enabled(
     bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator._cache.get("/some/path") == {"value": 5}
@@ -1811,10 +1831,10 @@ async def test_send_command_select_validate_fn_rejects_idle_oven_mode(
 
     def _post(path_segs, body, *a, **k):
         posted.append((path_segs, body))
-        return (0x44, b"")
+        return 0x44, None
 
     with patch.object(fake, "subscribe"):
-        fake.post = _post
+        fake.write = _post
         with pytest.raises(ServiceValidationError) as exc_info:
             await coordinator.async_send_command(bound, "NoOperation")
         assert exc_info.value.translation_domain == DOMAIN
@@ -1862,7 +1882,7 @@ async def test_send_command_bypasses_remote_control_when_option_enabled(
     bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, 5)
 
     assert coordinator._cache.get("/some/path") == {"value": 5}
@@ -1902,7 +1922,7 @@ async def test_send_command_settings_allowed_when_without_sc(
     )
 
     with patch.object(fake, "subscribe"):
-        fake.post = lambda *a, **k: (0x44, b"")
+        fake.write = lambda *a, **k: (0x44, None)
         await coordinator.async_send_command(bound, "1000")
 
     assert coordinator._cache.get("/washer/vs/0") == {
@@ -1948,10 +1968,10 @@ async def test_send_command_operational_still_blocked_when_without_sc(
     def _post(*a, **k):
         nonlocal posted
         posted = True
-        return (0x44, b"")
+        return 0x44, None
 
     with patch.object(fake, "subscribe"):
-        fake.post = _post
+        fake.write = _post
         with pytest.raises(ServiceValidationError) as exc_info:
             await coordinator.async_send_command(bound, "Run")
 

@@ -41,8 +41,6 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-import cbor2
-
 from .batch import parse_device0_batch
 from .by_type._base import DeviceRegistry
 
@@ -218,37 +216,37 @@ def _iter_oic_res_hrefs(oic_res):
 def _seed_href(path_segs: tuple[str, ...]) -> str:
     """('device', '1') -> '/device/1' -- the leading-slash href form
     `probe_log` and diagnostics report, built from the path-segment form
-    `sess.get` takes."""
+    a transport's `read` takes."""
     return "/" + "/".join(path_segs)
 
 
-def _get_raw(sess, path_segs: tuple[str, ...], timeout: float = 10.0):
-    """GET `path_segs` and CBOR-decode the payload, or None on any
-    missing/malformed response (a 4.04, a timeout, an empty payload) --
-    shared tolerated-absence posture for both callers below."""
+def _get_raw(transport, path_segs: tuple[str, ...], timeout: float = 10.0):
+    """Read `path_segs`, or None on any missing/malformed response (a
+    4.04, a timeout, an empty or undecodable payload) -- shared
+    tolerated-absence posture for both callers below."""
     try:
-        code, pl = sess.get(list(path_segs), timeout=timeout)
-        if code == 0x45 and pl:
-            return cbor2.loads(pl)
+        code, body = transport.read(list(path_segs), timeout=timeout)
+        if code == 0x45:
+            return body
     except Exception:
         pass
     return None
 
 
 def _get_batch(
-    sess,
+    transport,
     path_segs: tuple[str, ...],
     timeout: float = 10.0,
 ) -> dict[str, dict]:
     """GET a Samsung Collection resource and parse it the same way
     /device/0 itself is parsed (parse_device0_batch): a [devcol-rep,
     {href, rep}, ...] CBOR list, not a bare Property map."""
-    body = _get_raw(sess, path_segs, timeout)
+    body = _get_raw(transport, path_segs, timeout)
     return parse_device0_batch(body) if isinstance(body, list) else {}
 
 
 def _get_property(
-    sess,
+    transport,
     path_segs: tuple[str, ...],
     timeout: float = 10.0,
 ) -> dict:
@@ -257,12 +255,12 @@ def _get_property(
     `/oic/res` on the Pattern A reporter's board but absent from
     `/device/0`'s batch, so it needs its own RETRIEVE, and it answers a
     single Property map, not a [devcol-rep, ...] list."""
-    body = _get_raw(sess, path_segs, timeout)
+    body = _get_raw(transport, path_segs, timeout)
     return body if isinstance(body, dict) else {}
 
 
 def enumerate_subdevices(
-    sess,
+    transport,
     resources: dict[str, dict],
     oic_res_links,
     probe_log: Callable[[str, bool], None] | None = None,
@@ -272,7 +270,7 @@ def enumerate_subdevices(
     collection_timeout: float = 10.0,
     property_timeout: float = 10.0,
 ) -> tuple[list[Subdevice], dict[str, dict]]:
-    """Discover every sibling indoor subdevice reachable over `sess`'s
+    """Discover every sibling indoor subdevice reachable over `transport`'s
     connection.
 
     Runs once, at first discovery, in an executor, under the coordinator's
@@ -346,7 +344,7 @@ def enumerate_subdevices(
         timeout = _next_timeout(collection_timeout)
         if timeout is None:
             return
-        batch = _get_batch(sess, seed, timeout)
+        batch = _get_batch(transport, seed, timeout)
         _probed(_seed_href(seed), batch)
         if batch:
             subdevice = Subdevice(kind="prefixed", key=sub_id, seed_path=seed)
@@ -375,13 +373,13 @@ def enumerate_subdevices(
         first = True
         for href in _flat_probe_hrefs():
             if not first:
-                sess.pace()
+                transport.pace()
             first = False
             timeout = _next_timeout(property_timeout)
             if timeout is None:
                 break
             actual = f"/{sub_id}{href}"
-            rep = _get_property(sess, tuple(actual.strip("/").split("/")), timeout)
+            rep = _get_property(transport, tuple(actual.strip("/").split("/")), timeout)
             _probed(actual, rep)
             if rep:
                 flat_hrefs.append(href)
@@ -457,7 +455,7 @@ def enumerate_subdevices(
         if timeout is None:
             break
         seed = ("device", str(n))
-        batch = _get_batch(sess, seed, timeout)
+        batch = _get_batch(transport, seed, timeout)
         _probed(_seed_href(seed), batch)
         if not batch:
             continue
@@ -481,7 +479,7 @@ def enumerate_subdevices(
     multidevice_seed = ("multidevice", "vs", "0")
     timeout = _next_timeout(property_timeout)
     if timeout is not None:
-        multidevice = _get_property(sess, multidevice_seed, timeout)
+        multidevice = _get_property(transport, multidevice_seed, timeout)
         _probed(_seed_href(multidevice_seed), multidevice)
         if multidevice:
             fetched["/multidevice/vs/0"] = multidevice
