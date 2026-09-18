@@ -51,7 +51,7 @@ class _FakeSendSession:
 
     def write(self, path_segs, body, timeout=None):
         self.post_calls.append((list(path_segs), body))
-        return 0x44
+        return 0x44, None
 
     def pace(self):
         pass

@@ -37,15 +37,21 @@ class _FakeRawWriteSession:
     the follow-up read with a canned representation -- no real
     DTLS/network involved."""
 
-    def __init__(self, post_code: int = 0x44, get_rep: dict | None = None):
+    def __init__(
+        self,
+        post_code: int = 0x44,
+        get_rep: dict | None = None,
+        post_response: object = None,
+    ):
         self.post_calls: list[tuple[list[str], dict]] = []
         self.get_calls: list[list[str]] = []
         self._post_code = post_code
         self._get_rep = {} if get_rep is None else get_rep
+        self._post_response = post_response
 
     def write(self, path_segs, body, timeout=None):
         self.post_calls.append((list(path_segs), body))
-        return self._post_code
+        return self._post_code, self._post_response
 
     def read(self, path_segs, timeout=None):
         self.get_calls.append(list(path_segs))

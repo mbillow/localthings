@@ -274,7 +274,7 @@ class FakeObserveSession:
 
     def write(self, path_segs, body, timeout=None):
         self.writes.append((list(path_segs), body))
-        return 0x44
+        return 0x44, None
 
     def pace(self):
         pass

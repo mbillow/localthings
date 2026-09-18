@@ -167,7 +167,7 @@ async def test_selecting_a_named_program_writes_both_tokens(hass: HomeAssistant)
     class _FakeSession:
         def write(self, path_segs, body, timeout=None):
             sent.append((path_segs, body))
-            return 0x44
+            return 0x44, None
 
         def pace(self):
             pass

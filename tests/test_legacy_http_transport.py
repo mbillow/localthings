@@ -15,6 +15,7 @@ from typing import ClassVar
 
 import pytest
 
+from custom_components.localthings.legacy_http import http_status_to_coap
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 
 AGGREGATE = {
@@ -186,7 +187,7 @@ class TestWrites:
     def test_a_write_goes_to_the_aggregate_in_the_appliance_envelope(self, transport):
         _FakeConnection.routes["/devices/0"] = (204, None)
 
-        code = transport.write(
+        code, _ = transport.write(
             ["operational", "state", "vs", "0"], {PREFIX + "state": "Pause"}, timeout=8.0
         )
 
@@ -195,11 +196,29 @@ class TestWrites:
         assert (method, path) == ("PUT", "/devices/0")
         assert body == {"Device": {"Operation": {"state": "Pause"}}}
 
+    def test_the_appliances_reason_for_refusing_comes_back(self, transport):
+        """This firmware puts its own account of a rejected write in the
+        body -- `Control fail, <...>` -- which is the only explanation the
+        device ever gives. A transport handing back the code alone would
+        drop it, so the pair travels together.
+        """
+        _FakeConnection.routes["/devices/0"] = (
+            400,
+            {"errorCode": "0", "errorDescription": "Control fail, <Mode.options=Course_63>"},
+        )
+
+        code, response = transport.write(
+            ["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, timeout=8.0
+        )
+
+        assert code == http_status_to_coap(400)
+        assert response["errorDescription"] == "Control fail, <Mode.options=Course_63>"
+
     def test_a_cycle_on_its_own_is_refused_rather_than_silently_dropped(self, transport):
         """Measured on the hardware: this firmware answers 204 to a
         `Course_` token sent without a start and then discards it -- which
         in Home Assistant reads as a write that worked."""
-        code = transport.write(
+        code, _ = transport.write(
             ["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, timeout=8.0
         )
 
@@ -211,7 +230,7 @@ class TestWrites:
         goes to the same options array and holds."""
         _FakeConnection.routes["/devices/0"] = (204, None)
 
-        code = transport.write(
+        code, _ = transport.write(
             ["course", "vs", "0"], {PREFIX + "options": ["LaundryOutTime_60"]}, timeout=8.0
         )
 
@@ -221,7 +240,7 @@ class TestWrites:
         }
 
     def test_a_settings_write_on_its_own_is_refused_too(self, transport):
-        code = transport.write(
+        code, _ = transport.write(
             ["washer", "vs", "0"], {PREFIX + "waterTemperature": "40"}, timeout=8.0
         )
 
@@ -229,7 +248,7 @@ class TestWrites:
         assert _FakeConnection.log == []
 
     def test_a_write_with_nowhere_to_land_is_refused_rather_than_guessed(self, transport):
-        code = transport.write(
+        code, _ = transport.write(
             ["energy", "consumption", "vs", "0"], {PREFIX + "cumulativePower": "1"}, timeout=8.0
         )
 

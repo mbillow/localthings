@@ -164,7 +164,7 @@ class LegacyHttpTransport:
     # Writes
     # ------------------------------------------------------------------
 
-    def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> int:
+    def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
         aggregate = to_write([(href, body)], self._table)
         if not aggregate.get("Device"):
@@ -172,7 +172,7 @@ class LegacyHttpTransport:
             # serves. Refusing is the honest answer: a guessed wrapper
             # would reach the appliance as a command nobody chose.
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
-            return 0x84
+            return 0x84, None
         offenders = start_only_fields(aggregate, self._table)
         if offenders:
             # The appliance would answer 204 and drop it, which reads as a
@@ -185,9 +185,12 @@ class LegacyHttpTransport:
                 self._host,
                 ", ".join(offenders),
             )
-            return 0x85
-        status, _ = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
-        return http_status_to_coap(status)
+            return 0x85, None
+        # The body is the appliance's own account of a refusal -- this
+        # firmware answers a rejected write `"Control fail, <...>"` -- so it
+        # travels back with the code rather than being dropped here.
+        status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
+        return http_status_to_coap(status), response
 
     # ------------------------------------------------------------------
     # OBSERVE -- not available on this transport; `supports_observe` says

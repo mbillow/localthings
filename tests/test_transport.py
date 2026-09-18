@@ -140,9 +140,12 @@ class TestRead:
 
 class TestWrite:
     def test_takes_a_body_and_returns_the_code(self, transport):
-        code = transport.write(["power", "vs", "0"], {"x.com.samsung.da.power": "Off"}, timeout=1.0)
+        code, response = transport.write(
+            ["power", "vs", "0"], {"x.com.samsung.da.power": "Off"}, timeout=1.0
+        )
 
         assert code == 0x44
+        assert response is None
         path_segs, payload = fake_of(transport).posts[0]
         assert path_segs == ["power", "vs", "0"]
         assert cbor2.loads(payload) == {"x.com.samsung.da.power": "Off"}
