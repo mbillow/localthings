@@ -128,8 +128,21 @@ class TestSeed:
             "/operational/state/vs/0",
             "/power/vs/0",
             "/remotectrl/vs/0",
+            "/st/washercourse/vs/0",
             "/washer/vs/0",
         }
+
+    def test_the_seed_carries_the_course_table(self, transport):
+        """Not served by the appliance, but the registry needs it to label a
+        cycle by name instead of by its raw code -- so the sweep carries it
+        for the family, and it costs no request."""
+        before = len(_FakeConnection.log)
+        code, body = transport.read(["device", "0"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert code == 0x45
+        assert reps["/st/washercourse/vs/0"] == {PREFIX + "st.courseTable": "Table_00"}
+        assert len(_FakeConnection.log) - before == 3
 
     def test_the_seed_costs_three_requests(self, transport):
         """The aggregate carries five resources; only the two it links to

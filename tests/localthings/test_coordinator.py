@@ -788,6 +788,26 @@ async def test_reconnect_from_observe_mode_resubscribes_immediately(
     assert coordinator.observe_mode == MODE_OBSERVE
 
 
+async def test_attempt_observe_mode_skips_a_transport_with_no_observe(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """The 8888 bridge is request/response and says so with
+    `supports_observe = False`. Before this, the subscribe burst still ran
+    every cycle and every href logged a warning for a capability the
+    transport had never claimed -- four of them every ten minutes, forever,
+    against a real appliance."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._session.supports_observe = False  # ty: ignore[invalid-assignment]
+
+    with patch.object(coordinator._observe, "subscribe_hrefs") as subscribe:
+        await coordinator._attempt_observe_mode()
+
+    assert subscribe.called is False
+    assert coordinator.observe_mode == MODE_POLL
+
+
 async def test_attempt_observe_mode_discards_stale_commit_after_session_swap(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:

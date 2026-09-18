@@ -98,6 +98,9 @@ def test_the_file_list_probe_binds_nothing():
 class _ProbeSession:
     """Answers PROBE_HREFS and 4.04s everything else, recording each GET."""
 
+    # The Transport protocol requires it.
+    supports_observe = True
+
     def __init__(self, answers=None):
         self.answers = PROBE_REPS if answers is None else answers
         self.gets: list[str] = []

@@ -224,6 +224,47 @@ def to_resources(
     return out
 
 
+# Where the registry looks for a washer's course-table id, and the field it
+# reads there. `cycle_select` suffixes its translation key with that id, so a
+# board whose id has no catalog entry keeps raw hex codes as labels.
+COURSE_TABLE_HREF = "/st/washercourse/vs/0"
+_COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
+
+# The course table each family's codes belong to. This family serves no
+# `/st/washercourse/vs/0` of its own -- the OCF URL space is absent here,
+# not merely unauthorised -- so without this the registry finds no table and
+# labels every cycle with its raw code (`5C`).
+#
+# TP6X_WASHER is Table_00, established rather than assumed. Its 14 codes were
+# mapped independently, by turning the dial through all 14 panel positions on
+# a WW6500 and reading `Course_` back at each, with five anchored
+# semantically (0x5F is the only 95 C + 4-rinse program, 0x5E the only
+# 400 rpm one, 0x5D the only cold one, 0x64 the only one with no temperature,
+# 0x63 60 C at 400 rpm). That map agrees with this repository's existing
+# `washer_cycle_table_00` catalog on 13 of its 14 codes, exactly -- including
+# every code the dial walk had placed positionally. The fourteenth, 0x6C, is
+# absent from the catalog and is Denim by elimination, every other panel
+# position being accounted for by that agreement.
+#
+# Declared per family rather than derived from `modelNum`: which codes a
+# board uses is not something its model string states, and a second family
+# should cost a row here and a look at its own hardware, not a guess.
+FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00"}
+
+
+def course_table(family: str) -> dict[str, dict]:
+    """A `/st/washercourse/vs/0` rep for a family whose board serves none.
+
+    Empty for a family with no entry, which lands the registry back on raw
+    course codes -- the same place an unrecognised table id lands it, and
+    the right place for a board nobody has walked the dial on.
+    """
+    table = FAMILY_COURSE_TABLES.get(family)
+    if not table:
+        return {}
+    return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
+
+
 def _wire_field(href: str, name: str, table: tuple[Resource, ...]) -> tuple[str, str] | None:
     """``(wrapper, wire field name)`` for one canonical field, or None when
     this table has nowhere to put it."""

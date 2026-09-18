@@ -1693,6 +1693,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hrefs = self._hot_hrefs + self._warm_hrefs
         if not hrefs:
             return
+        sess = self._session
+        if sess is not None and not sess.supports_observe:
+            # A request/response transport has no OBSERVE to attempt, and
+            # `supports_observe` is how it says so. Without this the burst
+            # below still runs every cycle and each href logs a warning for
+            # a capability the transport never claimed -- on the 8888 bridge
+            # that was four warnings every ten minutes, forever.
+            self._observe.abandon_observe_attempt()
+            return
         self._last_observe_attempt_ts = time.monotonic()
         async with self._session_lock:
             if self._session is None:

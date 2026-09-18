@@ -44,6 +44,7 @@ from .legacy_http import (
     FAMILIES,
     TP6X_WASHER,
     Resource,
+    course_table,
     http_status_to_coap,
     start_only_fields,
     to_resources,
@@ -90,6 +91,9 @@ class LegacyHttpTransport:
         self._key_pem = key_pem
         self._token = token
         self._table = FAMILIES[family] if isinstance(family, str) else family
+        # The course-table lookup is keyed by family name, so a caller that
+        # passed the table itself is resolved back to its name here.
+        self._family = family if isinstance(family, str) else _family_name(self._table)
         self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
 
@@ -158,6 +162,10 @@ class LegacyHttpTransport:
             else:
                 _LOGGER.debug("%s: /devices/0/%s answered %s", self._host, endpoint, linked_status)
         resources = to_resources(bodies, self._table)
+        # The course-table id the registry needs to label cycles by name.
+        # Derived from the device's own modelNum rather than served: this
+        # family has no /st/washercourse/vs/0 of its own.
+        resources.update(course_table(self._family))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     # ------------------------------------------------------------------
@@ -233,6 +241,15 @@ class LegacyHttpTransport:
             return response.status, json.loads(raw)
         except ValueError:
             return response.status, raw.decode("utf-8", "replace")
+
+
+def _family_name(table: tuple[Resource, ...]) -> str:
+    """The name a resource table is registered under, or "" when it is one
+    a caller built itself and no catalog entry can be keyed to it."""
+    for name, known in FAMILIES.items():
+        if known is table:
+            return name
+    return ""
 
 
 def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:

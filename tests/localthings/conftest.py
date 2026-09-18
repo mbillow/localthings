@@ -238,6 +238,9 @@ class FakeObserveSession:
     """Stand-in for a Transport that supports subscribe()/on_notification
     for coordinator-level observe tests, without a real DTLS connection."""
 
+    # The Transport protocol requires it; observe attempts are gated on it.
+    supports_observe = True
+
     def __init__(self, on_notification=None):
         self.on_notification = on_notification
         self.subscribed: list[str] = []

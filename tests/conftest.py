@@ -81,6 +81,9 @@ class FakeCoapSession:
     through.
     """
 
+    # The Transport protocol requires it; observe attempts are gated on it.
+    supports_observe = True
+
     def __init__(self, seeds: dict[str, list] | None = None):
         self.seeds = seeds or {}
 

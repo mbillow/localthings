@@ -17,8 +17,10 @@ import json
 from pathlib import Path
 
 from custom_components.localthings.legacy_http import (
+    COURSE_TABLE_HREF,
     PREFIX,
     TP6X_WASHER,
+    course_table,
     http_status_to_coap,
     to_resources,
     to_write,
@@ -193,6 +195,23 @@ class TestToWrite:
         body = to_write([(href, rep) for href, rep in resources.items() if href == "/washer/vs/0"])
 
         assert body["Device"]["Washer"] == BODIES["Washer"]
+
+
+class TestCourseTable:
+    """Without a course table the registry labels cycles with raw hex, and
+    this family serves no `/st/washercourse/vs/0` to read one from."""
+
+    def test_the_washer_family_is_table_00(self):
+        rep = course_table("TP6X_WASHER")[COURSE_TABLE_HREF]
+
+        assert rep[PREFIX + "st.courseTable"] == "Table_00"
+
+    def test_an_unknown_family_gets_none(self):
+        """Rather than a guessed one: course codes are not consistent across
+        board generations, so a board nobody has walked the dial on belongs
+        back on raw codes."""
+        assert course_table("SOME_OTHER_FAMILY") == {}
+        assert course_table("") == {}
 
 
 class TestHttpStatusToCoap:
