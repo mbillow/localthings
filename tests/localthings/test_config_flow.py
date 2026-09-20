@@ -131,108 +131,6 @@ def test_normalize_pem_strips_bom_crlf_and_blank_lines() -> None:
     assert _normalize_pem(clean) == clean
 
 
-def test_order_candidates_prefers_known_ports() -> None:
-    """Live ports are ordered with the historically known DTLS ports first,
-    then the rest ascending."""
-    from custom_components.localthings.config_flow import _order_candidates
-
-    assert _order_candidates([49160, 49153, 49155, 49154]) == [
-        49154,
-        49155,
-        49153,
-        49160,
-    ]
-    assert _order_candidates([49153]) == [49153]
-
-
-def test_find_live_ports_detects_silent_port(socket_enabled) -> None:
-    """The UDP liveness sweep flags a bound-but-silent port as live and drops
-    ports that refuse with ICMP port-unreachable.
-
-    A bound, never-recv'd UDP socket stands in for a device that listens but
-    stays silent (open|filtered), like the dishwasher in issue #13 on 49153.
-    Two sibling ports are reserved then closed so loopback refuses datagrams
-    to them, standing in for the closed ports the scan should discard.
-
-    `socket_enabled` lifts pytest-socket's default block (the HA test harness
-    disables real sockets); this test genuinely needs loopback UDP to exercise
-    the ICMP-unreachable path.
-    """
-    import socket
-
-    from custom_components.localthings.config_flow import _find_live_ports
-
-    reserve = [socket.socket(socket.AF_INET, socket.SOCK_DGRAM) for _ in range(3)]
-    for s in reserve:
-        s.bind(("127.0.0.1", 0))
-    ports = [s.getsockname()[1] for s in reserve]
-    live_sock, live_port = reserve[0], ports[0]
-    reserve[1].close()
-    reserve[2].close()
-    closed_ports = ports[1:]
-
-    try:
-        result = _find_live_ports(
-            "127.0.0.1",
-            [closed_ports[0], live_port, closed_ports[1]],
-            0.8,
-        )
-    finally:
-        live_sock.close()
-
-    assert result.live == [live_port]
-    # Refused, not unreachable: loopback is up and answered. That distinction
-    # is what stops a wrong-but-live IP and an address with nothing on it
-    # producing the same message.
-    assert result.refused == sorted(closed_ports)
-    assert result.unreachable == []
-
-
-def test_sweep_ports_rescues_preferred_ports_the_sweep_missed(
-    socket_enabled,
-    monkeypatch,
-) -> None:
-    """Issue #192: a segregated VLAN made the ICMP-based sweep call three
-    closed ports live while missing the one port (a historically confirmed
-    DTLS port) that nmap showed as genuinely open|filtered. The sweep's
-    verdict on a preferred port shouldn't be trusted blindly -- it must
-    always come back as a candidate even if the sweep marked it dead, so the
-    config flow gets a real handshake attempt against it.
-
-    Uses an OS-assigned port monkeypatched into PREFERRED_PROBE_PORTS rather
-    than the real 49154/49155, so this doesn't depend on those specific
-    system ports being free on whatever machine runs the suite.
-    """
-    import socket
-
-    from custom_components.localthings import config_flow
-    from custom_components.localthings.config_flow import _sweep_ports
-
-    # Bind an OS-assigned port and immediately close it, same technique
-    # test_find_live_ports_detects_silent_port uses for its "closed" ports --
-    # once closed, loopback refuses datagrams to it, standing in for the
-    # sweep wrongly ruling out a port we have strong prior evidence for.
-    reserved = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    reserved.bind(("127.0.0.1", 0))
-    preferred_port = reserved.getsockname()[1]
-    reserved.close()
-    monkeypatch.setattr(config_flow, "PREFERRED_PROBE_PORTS", [preferred_port])
-
-    live_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    live_sock.bind(("127.0.0.1", 0))
-    live_port = live_sock.getsockname()[1]
-
-    try:
-        sweep, candidates = _sweep_ports("127.0.0.1", [preferred_port, live_port], 0.8)
-    finally:
-        live_sock.close()
-
-    # The sweep's own verdict stays honest -- it really didn't see the
-    # preferred port -- and the rescue shows up only in the candidate list.
-    assert sweep.live == [live_port]
-    assert set(candidates) == {preferred_port, live_port}
-
-
 WASHER_DEVICE0 = [
     {"rt": ["x.com.samsung.devcol"]},
     {
@@ -329,7 +227,7 @@ class _FakeProbeResult:
 
 def _patch_clienthello(monkeypatch, live_ports):
     """Patch the library's ClientHello probe to report `live_ports` as DTLS."""
-    from custom_components.localthings import config_flow
+    from custom_components.localthings import probing
 
     calls: list[int] = []
 
@@ -337,7 +235,7 @@ def _patch_clienthello(monkeypatch, live_ports):
         calls.append(port)
         return _FakeProbeResult(port, port in live_ports)
 
-    monkeypatch.setattr(config_flow, "_clienthello_probe", _probe)
+    monkeypatch.setattr(probing, "_clienthello_probe", _probe)
     return calls
 
 
@@ -347,14 +245,14 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     """Issue #211: the stateless ClientHello probe identifies the real DTLS
     port, so exactly one port gets a full certificate handshake -- not every
     port the UDP sweep couldn't rule out, each costing 12s to time out."""
-    from custom_components.localthings import config_flow
+    from custom_components.localthings import probing
 
     probed = _patch_clienthello(monkeypatch, {49153})
 
     def _no_sweep(host, ports, timeout):
         raise AssertionError("UDP sweep must not run once a port is confirmed")
 
-    monkeypatch.setattr(config_flow, "_find_live_ports", _no_sweep)
+    monkeypatch.setattr(probing, "find_live_ports", _no_sweep)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     result = await hass.config_entries.flow.async_configure(
@@ -366,7 +264,7 @@ async def test_clienthello_probe_picks_the_confirmed_port(
     assert result["data"][CONF_PORT] == 49153
     # The whole range is probed (cheaply, in parallel) but only the confirmed
     # port is handed a handshake.
-    assert set(probed) == set(config_flow.PROBE_PORT_RANGE)
+    assert set(probed) == set(probing.PROBE_PORT_RANGE)
     assert [s.port for s in FakeSession.instances] == [49153]
 
 
@@ -379,12 +277,12 @@ async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, 
     nothing, which covers both a path that eats our ClientHello and an install
     still on smartthings-local < 0.1.2.
     """
-    from custom_components.localthings import config_flow
+    from custom_components.localthings import probing
 
     _patch_clienthello(monkeypatch, set())
     monkeypatch.setattr(
-        config_flow,
-        "_sweep_ports",
+        probing,
+        "sweep_ports",
         lambda host, ports, timeout: (_sweep_result(live=[49153]), [49153]),
     )
 
@@ -402,15 +300,15 @@ async def test_probe_falls_back_when_library_lacks_the_clienthello_probe(
 ) -> None:
     """An install whose smartthings-local predates the probe still adds
     devices -- port detection degrades to the UDP sweep rather than failing."""
-    from custom_components.localthings import config_flow
+    from custom_components.localthings import probing
 
     def _missing(host, port, **kwargs):
         raise ImportError("no module named dtls_probe")
 
-    monkeypatch.setattr(config_flow, "_clienthello_probe", _missing)
+    monkeypatch.setattr(probing, "_clienthello_probe", _missing)
     monkeypatch.setattr(
-        config_flow,
-        "_sweep_ports",
+        probing,
+        "sweep_ports",
         lambda host, ports, timeout: (_sweep_result(live=[49154]), [49154]),
     )
 
@@ -605,14 +503,14 @@ async def test_unconfirmed_port_failure_is_not_reminted(
     """A timeout means nothing answered, which a fresh certificate can't fix
     -- so the re-mint retry stays scoped to a device that proved it is there
     and broke the handshake off itself."""
-    from custom_components.localthings import config_flow
+    from custom_components.localthings import probing
 
     existing = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id="localthings_other")
     existing.add_to_hass(hass)
     _patch_clienthello(monkeypatch, set())
     monkeypatch.setattr(
-        config_flow,
-        "_sweep_ports",
+        probing,
+        "sweep_ports",
         lambda host, ports, timeout: (_sweep_result(live=[49154]), [49154]),
     )
 
@@ -639,15 +537,15 @@ async def test_unconfirmed_port_failure_is_not_reminted(
 
 
 def _sweep_result(live=(), refused=(), unreachable=()):
-    from custom_components.localthings.config_flow import _SweepResult
+    from custom_components.localthings.probing import SweepResult
 
-    return _SweepResult(list(live), list(refused), list(unreachable))
+    return SweepResult(list(live), list(refused), list(unreachable))
 
 
 def _scan(confirmed=(), swept=None, candidates=(49154,)):
-    from custom_components.localthings.config_flow import _PortScan
+    from custom_components.localthings.probing import HostProbe
 
-    return _PortScan(list(candidates), list(confirmed), swept)
+    return HostProbe(MOCK_HOST, list(candidates), list(confirmed), swept)
 
 
 def _openssl_alert(name: str) -> ConnectionError:
