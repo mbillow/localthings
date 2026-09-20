@@ -15,13 +15,19 @@ import logging
 import selectors
 import socket
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from .const import (
     CLIENTHELLO_PROBE_RETRIES,
     CLIENTHELLO_PROBE_TIMEOUT_S,
     LIVENESS_PROBE_TIMEOUT_S,
+    PLAINTEXT_DISCOVERY_PORTS,
+    PLAINTEXT_DISCOVERY_RETRIES,
+    PLAINTEXT_DISCOVERY_TIMEOUT_S,
+    PLAINTEXT_READ_TIMEOUT_S,
     PREFERRED_PROBE_PORTS,
+    PROBE_MAX_WORKERS,
     PROBE_PORT_RANGE,
 )
 
@@ -233,3 +239,91 @@ def look(host: str) -> HostProbe:
         candidates,
     )
     return HostProbe(host=host, candidates=candidates, confirmed=[], swept=sweep)
+
+
+@dataclass(frozen=True)
+class PlaintextIdentity:
+    """What the device said about itself before we authenticated to it.
+
+    Unauthenticated, so it is good for naming a port and quoting a board
+    string in a failure message -- never for keying an entry, which needs
+    the identity a handshake proved.
+    """
+
+    device_id: str | None
+    model: str
+    vendor_id: str
+    firmware: str
+    name: str
+
+
+def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
+    """Secure ports the device advertises, and the plaintext port that answered.
+
+    Both candidates go out at once: each lookup is bounded by
+    PLAINTEXT_DISCOVERY_TIMEOUT_S, so a silent host costs one budget rather
+    than two. Multicast would find the same socket and is deliberately not
+    used -- it is TTL 1, so it finds nothing on the routed or VLAN'd install
+    this integration keeps meeting (issues #192, #321), and since 5683 is
+    bound to INADDR_ANY there is nothing it would add (issue #482).
+    """
+    from smartthings_local.protocol.ocf_discovery import discover_ocf_secure_ports
+
+    def _ask(port: int):
+        return port, discover_ocf_secure_ports(
+            host,
+            discovery_port=port,
+            timeout=PLAINTEXT_DISCOVERY_TIMEOUT_S,
+            retries=PLAINTEXT_DISCOVERY_RETRIES,
+        )
+
+    with ThreadPoolExecutor(
+        max_workers=min(len(PLAINTEXT_DISCOVERY_PORTS), PROBE_MAX_WORKERS)
+    ) as ex:
+        results = list(ex.map(_ask, PLAINTEXT_DISCOVERY_PORTS))
+
+    ports: list[int] = []
+    answered: int | None = None
+    for port, result in results:
+        if result.response_received and answered is None:
+            answered = port
+        for advertised in result.ports:
+            if advertised not in ports:
+                ports.append(advertised)
+    _LOGGER.debug("Plaintext CoAP on %s: answered on %s, advertised %s", host, answered, ports)
+    return tuple(ports), answered
+
+
+def _read_plaintext_identity(host: str, port: int) -> PlaintextIdentity | None:
+    """/oic/d and /oic/p, unauthenticated, on the port that just answered."""
+    import cbor2
+    from smartthings_local.protocol.ocf_discovery import read_plaintext_ocf_resource
+
+    def _read(href: str) -> dict:
+        result = read_plaintext_ocf_resource(
+            host,
+            href,
+            port=port,
+            timeout=PLAINTEXT_READ_TIMEOUT_S,
+            retries=PLAINTEXT_DISCOVERY_RETRIES,
+        )
+        if not result.successful or not result.payload:
+            return {}
+        try:
+            body = cbor2.loads(result.payload)
+        except Exception:  # a malformed rep is just no answer, not an error
+            return {}
+        return body if isinstance(body, dict) else {}
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        device, platform = list(ex.map(_read, ["/oic/d", "/oic/p"]))
+
+    if not device and not platform:
+        return None
+    return PlaintextIdentity(
+        device_id=device.get("di"),
+        model=platform.get("mnmo", ""),
+        vendor_id=platform.get("vid", ""),
+        firmware=platform.get("mnfv", ""),
+        name=device.get("n", ""),
+    )

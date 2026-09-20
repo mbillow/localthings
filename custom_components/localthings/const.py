@@ -141,6 +141,24 @@ PROBE_MAX_WORKERS = 12
 # The slowest device observed returns a full dump in ~8s.
 PROBE_GET_TIMEOUT_S = 10.0
 
+# Plaintext CoAP ports to ask for the device's own secure-port advertisement.
+# 5683 is IoTivity classic's multicast plaintext socket, bound to INADDR_ANY,
+# so a unicast datagram lands on it on every board in this family (issue
+# #482). The device's unicast socket is kernel-assigned and moves, so the
+# advertisement is the only thing that names it -- and the only thing that
+# reaches a port outside PROBE_PORT_RANGE. 49153 is kept behind 5683 as one
+# extra datagram for a board that does not answer the standard port.
+PLAINTEXT_DISCOVERY_PORTS = [5683, 49153]
+
+# Budget for the advertisement lookup, and for the two identity reads behind
+# it. Retries are load-bearing and the budget barely is: at retries=1 a lost
+# datagram cost one run in five on the dishwasher, while retries=2 answered
+# 5/5 at every budget from 1.5s to 3.0s. A hit lands in ~0.1-0.6s; the budget
+# only bounds how long a silent host takes to give up.
+PLAINTEXT_DISCOVERY_TIMEOUT_S = 2.5
+PLAINTEXT_READ_TIMEOUT_S = 1.5
+PLAINTEXT_DISCOVERY_RETRIES = 2
+
 # Base for the local (client-side) DTLS source port, distinct from the
 # destination probe ports above -- see coordinator._local_source_port for
 # why a fixed per-device source port matters. Above Linux's default

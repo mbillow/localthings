@@ -189,3 +189,117 @@ def test_clienthello_scan_passes_the_preferred_port_through(monkeypatch) -> None
     monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
     assert probing._clienthello_scan("10.0.0.1", [46060, 49152], preferred=46060) == [46060]
     assert seen["preferred"] == 46060
+
+
+class _FakeDiscovery:
+    """Stands in for smartthings_local's OcfSecurePortDiscoveryResult."""
+
+    def __init__(self, ports=(), response_received=False, error_code=None) -> None:
+        self.ports = ports
+        self.response_received = response_received
+        self.error_code = error_code
+        self.attempts = 1
+
+    @property
+    def found(self) -> bool:
+        return bool(self.ports)
+
+
+class _FakeRead:
+    """Stands in for smartthings_local's PlaintextOcfResourceResult."""
+
+    def __init__(self, body=None) -> None:
+        import cbor2
+
+        self.payload = cbor2.dumps(body) if body is not None else b""
+        self.code = 0x45 if body is not None else None
+        self.error_code = None if body is not None else "no_ocf_response"
+
+    @property
+    def complete(self) -> bool:
+        return self.code is not None and self.error_code is None
+
+    @property
+    def successful(self) -> bool:
+        code = self.code
+        return self.complete and code is not None and code >> 5 == 2
+
+
+def test_discover_advertised_ports_reads_the_secure_port(monkeypatch) -> None:
+    """Measured on both appliances: 5683 and 49153 answer and both name 49154."""
+    from custom_components.localthings import probing
+
+    def _discover(host, *, discovery_port, **kwargs):
+        if discovery_port in (5683, 49153):
+            return _FakeDiscovery(ports=(49154,), response_received=True)
+        return _FakeDiscovery(error_code="no_ocf_response")
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports", _discover
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((49154,), 5683)
+
+
+def test_discover_advertised_ports_falls_through_to_the_second_candidate(monkeypatch) -> None:
+    """A board that does not answer 5683, for whatever reason, is still found
+    on the second candidate."""
+    from custom_components.localthings import probing
+
+    def _discover(host, *, discovery_port, **kwargs):
+        if discovery_port == 49153:
+            return _FakeDiscovery(ports=(49155,), response_received=True)
+        return _FakeDiscovery(error_code="no_ocf_response")
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports", _discover
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((49155,), 49153)
+
+
+def test_discover_advertised_ports_is_silent_on_a_non_appliance(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports",
+        lambda host, **kwargs: _FakeDiscovery(error_code="no_ocf_response"),
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((), None)
+
+
+def test_read_plaintext_identity_pulls_di_and_model(monkeypatch) -> None:
+    """The real /oic/d and /oic/p bodies from the refrigerator at 10.0.0.254."""
+    from custom_components.localthings import probing
+
+    bodies = {
+        "/oic/d": {
+            "rt": ["oic.wk.d", "oic.d.refrigerator"],
+            "di": "62304e1f-eb40-741d-4aee-99175ed16e81",
+            "n": "Samsung-Refrigerator",
+        },
+        "/oic/p": {
+            "vid": "DA-REF-NORMAL-01011",
+            "mnfv": "A-RFWW-TP1-24-T4-COM_20260617",
+            "mnmo": "TP1X_REF_21K|00176141|00000850031813294103010041030000",
+            "mnmn": "Samsung Electronics",
+        },
+    }
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.read_plaintext_ocf_resource",
+        lambda host, href, **kwargs: _FakeRead(bodies.get(href)),
+    )
+    identity = probing._read_plaintext_identity("10.0.0.254", 5683)
+    assert identity is not None
+    assert identity.device_id == "62304e1f-eb40-741d-4aee-99175ed16e81"
+    assert identity.model.startswith("TP1X_REF_21K|")
+    assert identity.vendor_id == "DA-REF-NORMAL-01011"
+    assert identity.name == "Samsung-Refrigerator"
+
+
+def test_read_plaintext_identity_is_none_when_nothing_answers(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.read_plaintext_ocf_resource",
+        lambda host, href, **kwargs: _FakeRead(None),
+    )
+    assert probing._read_plaintext_identity("10.0.0.1", 5683) is None
