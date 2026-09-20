@@ -3,6 +3,38 @@
 from __future__ import annotations
 
 
+class _FakeLiveness:
+    """Stands in for smartthings_local's DtlsLivenessResult."""
+
+    def __init__(self, port: int, responder_port: int | None) -> None:
+        self.port = port
+        self.responder_port = responder_port
+        self.is_dtls_server = responder_port is not None
+
+
+class _FakeProbeSet:
+    """Stands in for smartthings_local's DtlsPortProbeResult."""
+
+    def __init__(self, outcome: str, selected_port: int | None, results: tuple) -> None:
+        self.outcome = outcome
+        self.selected_port = selected_port
+        self.results = results
+
+    @property
+    def live_ports(self) -> tuple[int, ...]:
+        return tuple(r.port for r in self.results if r.is_dtls_server)
+
+    @property
+    def responder_ports(self) -> tuple[int, ...]:
+        return tuple(
+            dict.fromkeys(
+                r.responder_port
+                for r in self.results
+                if r.is_dtls_server and r.responder_port is not None
+            )
+        )
+
+
 def test_order_candidates_prefers_known_ports() -> None:
     """Live ports are ordered with the historically known DTLS ports first,
     then the rest ascending."""
@@ -103,3 +135,57 @@ def test_sweep_ports_rescues_preferred_ports_the_sweep_missed(
     # preferred port -- and the rescue shows up only in the candidate list.
     assert sweep.live == [live_port]
     assert set(candidates) == {preferred_port, live_port}
+
+
+def test_clienthello_scan_selects_the_port_that_answered(monkeypatch) -> None:
+    """Issue #486: an OCF stack answers a first flight from its own ephemeral
+    DTLS socket whatever port was addressed, so every port dialled looks live.
+    The port to dial is the one a reply came *from*."""
+    from custom_components.localthings import probing
+
+    dialled = [49152, 49153, 49154]
+
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        # Every dialled port "answers", all from 49155 -- the shape that made
+        # the old scan return the whole range.
+        results = tuple(_FakeLiveness(port=p, responder_port=49155) for p in ports)
+        return _FakeProbeSet(outcome="selected", selected_port=49155, results=results)
+
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
+    assert probing._clienthello_scan("10.0.0.1", dialled) == [49155]
+
+
+def test_clienthello_scan_returns_every_responder_when_ambiguous(monkeypatch) -> None:
+    """Two distinct responder ports and no preferred port: the library declines
+    to choose, and both are still proven servers worth a handshake."""
+    from custom_components.localthings import probing
+
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        results = (
+            _FakeLiveness(port=49152, responder_port=49155),
+            _FakeLiveness(port=49153, responder_port=49154),
+        )
+        return _FakeProbeSet(outcome="ambiguous", selected_port=None, results=results)
+
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
+    assert probing._clienthello_scan("10.0.0.1", [49152, 49153]) == [49154, 49155]
+
+
+def test_clienthello_scan_passes_the_preferred_port_through(monkeypatch) -> None:
+    """The advertised port is the tie-breaker the library selects on."""
+    from custom_components.localthings import probing
+
+    seen: dict = {}
+
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        seen["ports"] = list(ports)
+        seen["preferred"] = preferred_port
+        return _FakeProbeSet(
+            outcome="selected",
+            selected_port=46060,
+            results=(_FakeLiveness(port=46060, responder_port=46060),),
+        )
+
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
+    assert probing._clienthello_scan("10.0.0.1", [46060, 49152], preferred=46060) == [46060]
+    assert seen["preferred"] == 46060

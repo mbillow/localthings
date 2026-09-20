@@ -6,7 +6,7 @@ pytest-homeassistant-custom-component>=0.13.316
 
 # Integration runtime deps, needed to import the component under test
 # (also declared in custom_components/localthings/manifest.json).
-smartthings-local>=0.1.12
+smartthings-local>=0.1.18
 cbor2>=5.4.6
 pyOpenSSL>=23.0
 cryptography>=41.0

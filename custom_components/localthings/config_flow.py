@@ -375,7 +375,7 @@ def _diagnostic_alert(host: str, port: int, cert_pem: str, key_pem: str):
     one more orphaned association is a fair trade for a message that says
     why, on a path the user is about to retry regardless.
 
-    Imported lazily, like `_clienthello_probe`, so an install whose
+    Imported lazily, like `_clienthello_scan`, so an install whose
     smartthings-local predates this API degrades to a generic message
     instead of failing to load the config flow at all.
     """

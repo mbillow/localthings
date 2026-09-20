@@ -15,7 +15,6 @@ import logging
 import selectors
 import socket
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from .const import (
@@ -23,7 +22,6 @@ from .const import (
     CLIENTHELLO_PROBE_TIMEOUT_S,
     LIVENESS_PROBE_TIMEOUT_S,
     PREFERRED_PROBE_PORTS,
-    PROBE_MAX_WORKERS,
     PROBE_PORT_RANGE,
 )
 
@@ -157,46 +155,44 @@ class HostProbe:
     swept: SweepResult | None = None
 
 
-def _clienthello_probe(host: str, port: int):
-    """One stateless DTLS ClientHello against `host:port`. Imported lazily
-    so an install whose smartthings-local predates the probe (< 0.1.2)
-    degrades to the UDP sweep at scan time rather than failing to load the
-    config flow at all."""
-    from smartthings_local.protocol.dtls_probe import probe
+def _clienthello_scan(host: str, ports: list[int], preferred: int | None = None) -> list[int]:
+    """Ports on `host` a DTLS server is proven to be listening on (issues #211, #486).
 
-    return probe(
+    Selection is on the port a reply came *from*, not the port dialled: an
+    OCF stack binds its DTLS socket to port 0 and answers a first flight
+    from that ephemeral port whatever port was addressed, so "a reply
+    arrived after dialling N" says nothing about N. `probe_dtls_ports` does
+    that selection; `preferred` is the device's own advertisement, which is
+    what breaks a tie when several ports answer.
+
+    Imported lazily so an install on a wheel older than 0.1.18 degrades to
+    the UDP sweep at scan time rather than failing to load the config flow.
+    """
+    from smartthings_local.protocol.dtls_probe import probe_dtls_ports
+
+    # probe_dtls_ports refuses more than 32 ports; the caller's list is far
+    # under that, but the cap is the library's to set, not ours to assume.
+    result = probe_dtls_ports(
         host,
-        port,
-        stateless=True,
+        ports[:32],
+        preferred_port=preferred,
         timeout=CLIENTHELLO_PROBE_TIMEOUT_S,
         retries=CLIENTHELLO_PROBE_RETRIES,
     )
-
-
-def _clienthello_scan(host: str, ports: list[int]) -> list[int]:
-    """Ports on `host` that answered a DTLS ClientHello -- i.e. ports a real
-    DTLS server is listening on (issue #211).
-
-    smartthings-local's stateless probe sends one ClientHello and stops the
-    moment the server proves itself with a HelloVerifyRequest, which per RFC
-    6347 §4.2.1 the server answers without allocating association state --
-    identifies the device's real port in ~1 RTT, far cheaper than throwing N
-    full certificate handshakes at it.
-
-    The whole range goes out at once, safely: each probe is bounded by
-    CLIENTHELLO_PROBE_TIMEOUT_S rather than DtlsCoapSession's 12s handshake
-    timeout, so the pool's shutdown-and-wait on exit costs one probe's
-    budget, not the sum of the range.
-    """
-    with ThreadPoolExecutor(max_workers=min(len(ports), PROBE_MAX_WORKERS)) as ex:
-        results = list(ex.map(lambda port: _clienthello_probe(host, port), ports))
-
-    live = []
-    for result in results:
-        if result.is_dtls_server:
-            live.append(result.port)
-            _LOGGER.debug("DTLS server on %s:%d (%s)", host, result.port, result)
-    return order_candidates(live)
+    _LOGGER.debug(
+        "DTLS probe of %s: outcome=%s selected=%s responders=%s dialled_live=%s",
+        host,
+        result.outcome,
+        result.selected_port,
+        result.responder_ports,
+        result.live_ports,
+    )
+    if result.selected_port is not None:
+        return [result.selected_port]
+    # Ambiguous: several distinct responders, all proven servers. Handing
+    # back every one keeps the try-each-in-turn behaviour the candidate
+    # list has always had.
+    return order_candidates(list(result.responder_ports))
 
 
 def look(host: str) -> HostProbe:

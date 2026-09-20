@@ -38,6 +38,7 @@ from .conftest import (
     MOCK_SERIAL,
     _probe_result,
 )
+from .test_probing import _FakeLiveness, _FakeProbeSet
 
 
 async def test_form_first_device(hass: HomeAssistant) -> None:
@@ -216,26 +217,28 @@ def fake_dtls(monkeypatch):
     return FakeSession
 
 
-class _FakeProbeResult:
-    def __init__(self, port, live):
-        self.port, self.outcome = port, "live" if live else "dead"
-        self.is_dtls_server = live
-
-    def __repr__(self):
-        return f"<ProbeResult {self.port} {self.outcome}>"
-
-
 def _patch_clienthello(monkeypatch, live_ports):
-    """Patch the library's ClientHello probe to report `live_ports` as DTLS."""
-    from custom_components.localthings import probing
-
+    """Patch the library's DTLS probe so `live_ports` answer, each from itself."""
     calls: list[int] = []
 
-    def _probe(host, port, **kwargs):
-        calls.append(port)
-        return _FakeProbeResult(port, port in live_ports)
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        calls.extend(ports)
+        live = [p for p in ports if p in live_ports]
+        if preferred_port in live:
+            selected = preferred_port
+        elif len(live) == 1:
+            selected = live[0]
+        else:
+            selected = None
+        return _FakeProbeSet(
+            outcome="selected" if selected else ("ambiguous" if live else "unreachable"),
+            selected_port=selected,
+            results=tuple(
+                _FakeLiveness(port=p, responder_port=p if p in live_ports else None) for p in ports
+            ),
+        )
 
-    monkeypatch.setattr(probing, "_clienthello_probe", _probe)
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
     return calls
 
 
@@ -302,10 +305,10 @@ async def test_probe_falls_back_when_library_lacks_the_clienthello_probe(
     devices -- port detection degrades to the UDP sweep rather than failing."""
     from custom_components.localthings import probing
 
-    def _missing(host, port, **kwargs):
+    def _missing(host, ports, *, preferred_port=None, **kwargs):
         raise ImportError("no module named dtls_probe")
 
-    monkeypatch.setattr(probing, "_clienthello_probe", _missing)
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _missing)
     monkeypatch.setattr(
         probing,
         "sweep_ports",
