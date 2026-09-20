@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from .const import (
     CLIENTHELLO_PROBE_RETRIES,
     CLIENTHELLO_PROBE_TIMEOUT_S,
+    LEGACY_HTTP_PORT,
+    LEGACY_HTTP_PROBE_TIMEOUT_S,
     LIVENESS_PROBE_TIMEOUT_S,
     PLAINTEXT_DISCOVERY_PORTS,
     PLAINTEXT_DISCOVERY_RETRIES,
@@ -163,6 +165,22 @@ class HostProbe:
     advertised: tuple[int, ...] = ()
     plaintext: PlaintextIdentity | None = None
     plaintext_port: int | None = None
+    legacy_http: bool = False
+
+
+def _legacy_http_open(host: str) -> bool:
+    """True if this host serves the legacy HTTPS bridge (issue #168).
+
+    A board with the bridge has no CoAP server at all -- proven on a
+    TP6X_WW6500 in PR #467 -- so one TCP connect tells the two lineages
+    apart and the user only ever types an address.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(LEGACY_HTTP_PROBE_TIMEOUT_S)
+        try:
+            return probe.connect_ex((host, LEGACY_HTTP_PORT)) == 0
+        except OSError:
+            return False
 
 
 def _clienthello_scan(host: str, ports: list[int], preferred: int | None = None) -> list[int]:
@@ -226,10 +244,19 @@ def look(host: str) -> HostProbe:
     keeps its preferred-port rescue -- issue #192's segregated-VLAN device
     is why it exists.
     """
-    advertised, plaintext_port = _discover_advertised_ports(host)
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        advertised_future = ex.submit(_discover_advertised_ports, host)
+        legacy_future = ex.submit(_legacy_http_open, host)
+        advertised, plaintext_port = advertised_future.result()
+        legacy_http = legacy_future.result()
+
     plaintext = (
         _read_plaintext_identity(host, plaintext_port) if plaintext_port is not None else None
     )
+
+    if legacy_http and plaintext_port is None and not advertised:
+        # Nothing to scan for: this lineage serves no CoAP at all.
+        return HostProbe(host=host, candidates=[], confirmed=[], legacy_http=True)
 
     try:
         confirmed = _clienthello_scan(
@@ -247,6 +274,7 @@ def look(host: str) -> HostProbe:
             advertised=advertised,
             plaintext=plaintext,
             plaintext_port=plaintext_port,
+            legacy_http=legacy_http,
         )
 
     sweep, candidates = sweep_ports(host, PROBE_PORT_RANGE, LIVENESS_PROBE_TIMEOUT_S)
@@ -271,6 +299,7 @@ def look(host: str) -> HostProbe:
         advertised=advertised,
         plaintext=plaintext,
         plaintext_port=plaintext_port,
+        legacy_http=legacy_http,
     )
 
 

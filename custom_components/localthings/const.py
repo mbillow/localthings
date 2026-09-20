@@ -159,6 +159,11 @@ PLAINTEXT_DISCOVERY_TIMEOUT_S = 2.5
 PLAINTEXT_READ_TIMEOUT_S = 1.5
 PLAINTEXT_DISCOVERY_RETRIES = 2
 
+# The legacy HTTPS bridge (issue #168). A board that serves it has no CoAP
+# server at all, so one TCP connect discriminates the two lineages.
+LEGACY_HTTP_PORT = 8888
+LEGACY_HTTP_PROBE_TIMEOUT_S = 2.0
+
 # Base for the local (client-side) DTLS source port, distinct from the
 # destination probe ports above -- see coordinator._local_source_port for
 # why a fixed per-device source port matters. Above Linux's default

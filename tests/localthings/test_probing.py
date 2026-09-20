@@ -305,14 +305,17 @@ def test_read_plaintext_identity_is_none_when_nothing_answers(monkeypatch) -> No
     assert probing._read_plaintext_identity("10.0.0.1", 5683) is None
 
 
-def _patch_tier(monkeypatch, *, advertised=(), plaintext_port=None, identity=None):
-    """Stand in for the whole plaintext tier."""
+def _patch_tier(
+    monkeypatch, *, advertised=(), plaintext_port=None, identity=None, legacy_http=False
+):
+    """Stand in for the whole plaintext tier, plus the concurrent legacy-bridge check."""
     from custom_components.localthings import probing
 
     monkeypatch.setattr(
         probing, "_discover_advertised_ports", lambda host: (advertised, plaintext_port)
     )
     monkeypatch.setattr(probing, "_read_plaintext_identity", lambda host, port: identity)
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: legacy_http)
 
 
 def test_look_dials_an_advertised_port_outside_the_range(monkeypatch) -> None:
@@ -366,6 +369,7 @@ def test_look_skips_the_identity_read_when_no_plaintext_port_answered(monkeypatc
     from custom_components.localthings import probing
 
     monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((), None))
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: False)
 
     def _never(host, port):
         raise AssertionError("no plaintext port answered; nothing to read")
@@ -377,3 +381,44 @@ def test_look_skips_the_identity_read_when_no_plaintext_port_answered(monkeypatc
     )
 
     assert probing.look("10.0.0.1").plaintext is None
+
+
+def test_look_reports_the_legacy_bridge_and_skips_the_dtls_scan(monkeypatch) -> None:
+    """8888 open and nothing on CoAP: the families are mutually exclusive, so
+    scanning for DTLS is a guaranteed-empty wait (issue #168, PR #467)."""
+    from custom_components.localthings import probing
+
+    _patch_tier(monkeypatch)
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: True)
+
+    def _never(*args, **kwargs):
+        raise AssertionError("no DTLS scan when the legacy bridge answered")
+
+    monkeypatch.setattr(probing, "_clienthello_scan", _never)
+    monkeypatch.setattr(probing, "sweep_ports", _never)
+
+    probe = probing.look("10.0.0.1")
+    assert probe.legacy_http is True
+    assert probe.candidates == []
+
+
+def test_coap_wins_when_both_answer(monkeypatch) -> None:
+    """PR #467 measured the families to be mutually exclusive; if both ever
+    answer, the CoAP path is the one this integration can actually use."""
+    from custom_components.localthings import probing
+
+    _patch_tier(monkeypatch, advertised=(49154,), plaintext_port=5683)
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: True)
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [49154])
+
+    probe = probing.look("10.0.0.1")
+    assert probe.legacy_http is True
+    assert probe.candidates == [49154]
+
+
+def test_legacy_http_open_is_false_for_a_closed_port(monkeypatch, socket_enabled) -> None:
+    from custom_components.localthings import probing
+
+    # Port 1 on loopback: nothing listens, and the connect is refused at once.
+    monkeypatch.setattr(probing, "LEGACY_HTTP_PORT", 1)
+    assert probing._legacy_http_open("127.0.0.1") is False

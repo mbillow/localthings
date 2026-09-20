@@ -222,6 +222,9 @@ def fake_dtls(monkeypatch):
         "custom_components.localthings.probing._read_plaintext_identity",
         lambda host, port: None,
     )
+    monkeypatch.setattr(
+        "custom_components.localthings.probing._legacy_http_open", lambda host: False
+    )
     return FakeSession
 
 
