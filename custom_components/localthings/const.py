@@ -143,9 +143,11 @@ PROBE_GET_TIMEOUT_S = 10.0
 
 # Base for the local (client-side) DTLS source port, distinct from the
 # destination probe ports above -- see coordinator._local_source_port for
-# why a fixed per-device source port matters. Mirrors the upstream
-# smartthings-local reference bridge. Requires smartthings-local >= 0.1.1.
-DTLS_LOCAL_PORT_BASE = 49700
+# why a fixed per-device source port matters. Above Linux's default
+# ip_local_port_range (32768-60999): the previous 49700 sat inside it, so
+# an unrelated process could hold the port and the bind failed EADDRINUSE
+# on a host-networked install (issue #486). Requires smartthings-local >= 0.1.1.
+DTLS_LOCAL_PORT_BASE = 61000
 
 SUMMARY_INTERVAL_S = 30.0
 
