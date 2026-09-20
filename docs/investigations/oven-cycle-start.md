@@ -1,17 +1,86 @@
-# Starting an oven or microwave cycle: still open, and how to attack it next
+# Starting an oven or microwave cycle
 
-Nothing in this integration starts a cook. `oven.py`'s docstring has said
-"local-OCF cycle start isn't reproducible on this firmware" since the
-NV7000BS work, and three boards have since been measured saying the same
-thing in three different ways. This file collects those results, states
-what the boards themselves tell us about whether a remote start is even in
-the contract, and turns `docs/investigations/filter-reset.md`'s method into
-a ladder of `localthings.write_resource` probes somebody with hardware can
-actually run.
+A cook start has been measured working on one board. The cook parameters
+and the run command go to the device collection in a single write, not to
+each resource separately, which is the one shape none of the attempts
+below used.
+
+This file keeps the earlier results, because they still bound what the
+answer can be, and revises what they mean. The probe ladder at the end is
+no longer aimed at "what value starts a cycle" -- that is answered -- but
+at the part still open, which is whether the batch is *required* or only
+the collection href matters.
 
 Issues: #176 (the feature request), #183 (TP1X range), #300 (TP2X wall
 oven), #473 (NE63A6111SS, "can't start preheating"), #470 (same board
 family).
+
+## What starts a cook
+
+Measured 2026-09-20 on an NV7000BS/EUI wall oven, single cavity, Remote
+Control on at the panel, with no other session open:
+
+```
+POST /device/0        CoAP UPDATE, Content-Format 60 (CBOR)
+
+[
+  {"href": "/devices/0"},
+  {"href": "/mode/vs/0",
+   "rep": {"x.com.samsung.da.modes": ["Defrost"]}},
+  {"href": "/temperatures/vs/0",
+   "rep": {"x.com.samsung.da.items": [{"x.com.samsung.da.desired": "30",
+                                       "x.com.samsung.da.id":      "0",
+                                       "x.com.samsung.da.unit":    "Celsius"}]}},
+  {"href": "/operational/state/vs/0",
+   "rep": {"x.com.samsung.da.operationTime": "00:01:00",
+           "x.com.samsung.da.state":         "Run"}}
+]
+
+  ->  2.04, empty body
+
+t+4s    /operational/state/vs/0   state = "Run", opTime = "00:01:00"
+        /oven/vs/0                state = "Cooking"
+        /temperatures/vs/0        desired = "30", current = "28"
+```
+
+Stopping is an ordinary single-resource write of `state: "Ready"`, which
+is why stop has always worked while start has not.
+
+**Remote Control has to be on at the panel, and is worth checking before
+reading anything into a result.** With it off, the cook parameters are
+still accepted and held -- mode, setpoint and cook time all stick -- and
+only `state: "Run"` is silently dropped, both answering `2.04`. A batch
+that "does not start" under those conditions says nothing about the
+payload. That is this family's per-field gate reproducible on demand
+rather than inferred, and it is worth knowing before spending a
+reporter's hardware time: `/remotectrl/vs/0` must read `true`, and it
+does not survive a power cycle.
+
+Four things about that payload are easy to get wrong:
+
+- **`Run` is not a separate step.** It rides inside the payload's own
+  `/operational/state/vs/0` element, next to the cook time. Every attempt
+  in the table below sent it on its own.
+- **The write goes to `/device/0`, singular**, while the payload's first
+  element is a bare `{"href": "/devices/0"}` marker, plural, carrying no
+  `rep`. It is **not required**: the identical batch with that element
+  deleted started the cook first time (2026-09-20). That is one oven
+  though, so sending it is still the safer default -- it costs nothing
+  and it is the payload that has been measured working.
+- **Zero-pad the hour.** `0:10:00` for a ten-minute cook produced a
+  roughly 609-minute one on hardware; `00:10:00` is correct.
+- **Send no option tokens the mode does not support.** `Defrost` on this
+  board has neither fast preheat nor steam, so the run above sent none.
+
+The set duration *includes* preheat: the countdown runs from the moment of
+Start rather than from reaching temperature, so a short cook at a high
+setpoint is mostly preheat. `progressPercentage` is the same clock at
+finer resolution -- its granularity is the duration over 100, against
+`remainingTime`'s fixed 60s -- so it is the better field to drive a UI
+from on any cook under 100 minutes.
+
+Full write-up, including what a single run does not establish:
+https://github.com/QuiteYellow/SmartThings-Local/blob/main/docs/oven-cook-start.md
 
 ## What is measured
 
@@ -43,6 +112,26 @@ It is a **per-field gate conditioned on a job already existing**. It is
 probably not an OCF access-control denial either -- that would be a `4.03`,
 not an accepted-then-reverted write -- but "probably" is doing work there,
 and probe 12 settles it with one read.
+
+**These results are confounded, and less damning than they look.** Cross
+the table above against what each board declares in its own `modeSpec`:
+
+| Board | What was tried | Modes it declares startable |
+|---|---|---|
+| NE9801T-/AA0 (#183) | `state` plus `operationTime`, no mode or setpoint write | 9 of 15 |
+| NW9000KD/AA1 (#300) | mode, setpoint and `Run` separately, both orders | no `modeSpec` at all |
+| NX9302T-/AA0, gas (#176) | mode, then setpoint, then `Run` | 0 of 8 |
+
+The two boards that received the full sequence are the two that declare
+nothing startable, so neither result says anything about payload shape --
+nothing would have started them. The board that *does* declare startable
+modes was never given a mode write: it was told to run without being told
+what to cook. **The full separate-write sequence has never been run on a
+board that declares a startable mode**, so the leaf path is not refuted by
+anything here; it is untested where it matters.
+
+That also means the batch is not yet shown to be *necessary*. It is shown
+to be *sufficient*, on one board.
 
 ## The board tells you whether a remote start is in the contract at all
 
@@ -227,6 +316,30 @@ statement the Replica readme cites is community.smartthings.com thread
 251558.
 
 ## The probe ladder
+
+**Re-aimed.** These were written to find what value starts a cycle, which
+is answered above. What is still open is narrower: whether the batch is
+required, or whether `/device/N` is simply a handler the leaf resources do
+not reach. Note that **no rung below writes `/device/N`** -- that path was
+never exercised by any of them.
+
+The rung worth running first is now a new one:
+
+### Probe A -- is the batch required, or only the collection href?
+
+On a board that declares a `Start&Setting` mode, from `Ready`, write mode,
+then setpoint, then `operationTime` with `state: "Run"`, as three separate
+`localthings.write_resource` calls two seconds apart in one session. This
+is probe 11's shape on a board that can actually start, which is the
+combination nobody has run.
+
+- It starts the oven: the collection href was never the variable, and the
+  earlier failures were board-specific.
+- It does not: the batch is the mechanism, and the leaf path can be
+  dropped from this investigation.
+
+Everything below remains useful for a board that will not start by either
+route, and for the microwave case.
 
 Rules for whoever runs these:
 
@@ -628,11 +741,23 @@ The gate has to be per *mode*, not per device, because the same board
 declares `Start&Setting` for Bake and `Setting` for Broil. On microwaves
 that is what keeps a start control off every `MicroWave*` mode.
 
+One wrinkle the shape above forces: the three cook parameters cannot write
+through on change, because the appliance will not take them individually
+from `Ready`. They have to be staged and sent together. A worked version of
+that -- staged program entities plus a Start button that assembles the
+batch, with the bounds read from `modeSpec` and a refusal carrying a reason
+rather than a bare `4.xx` -- is in
+https://github.com/QuiteYellow/SmartThings-Local/blob/main/docs/bridge-demo.md
+if it is useful as a reference.
+
 ## Not the answer, and why
 
 - **`state: "Run"` alone, from `Ready`** -- `2.04` and reverted on three
   boards across two generations. It is what every other family uses, and it
-  is not enough here.
+  is not enough here. The measurement above says why: on this firmware
+  `Run` is not a separate step at all. It travels inside the collection
+  write, alongside the mode and the cook time, and a job is created by
+  that write or not at all.
 - **Ordering.** #300 ran settings-then-`Run` and `Run`-then-settings with
   5 s settles under one session lock. Neither order changed anything.
 - **`state` + times in one POST.** Same result (#300 sequence D).
