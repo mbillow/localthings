@@ -149,16 +149,20 @@ def order_candidates(ports: list[int]) -> list[int]:
 class HostProbe:
     """What one bounded look at `host` established.
 
-    `candidates` is what gets a full DTLS handshake. The other two are the
-    evidence behind a failure message: `confirmed` names ports a DTLS
-    server was proven on, `swept` is the UDP sweep's own verdict (None
-    when the sweep never had to run).
+    `candidates` is what gets a full DTLS handshake. The rest is evidence
+    behind a failure message: `confirmed` names ports a DTLS server was
+    proven on, `swept` is the UDP sweep's own verdict (None when the sweep
+    never had to run), and `advertised`/`plaintext` are what the device
+    said about itself before we authenticated.
     """
 
     host: str
     candidates: list[int]
     confirmed: list[int]
     swept: SweepResult | None = None
+    advertised: tuple[int, ...] = ()
+    plaintext: PlaintextIdentity | None = None
+    plaintext_port: int | None = None
 
 
 def _clienthello_scan(host: str, ports: list[int], preferred: int | None = None) -> list[int]:
@@ -201,28 +205,49 @@ def _clienthello_scan(host: str, ports: list[int], preferred: int | None = None)
     return order_candidates(list(result.responder_ports))
 
 
+def _probe_ports(advertised: tuple[int, ...]) -> list[int]:
+    """Advertised ports first, then the conventional range behind them.
+
+    Not order_candidates: that sorts by the historical priors, which would
+    bury an advertised 46060 behind 49154 (issue #435). The device's own
+    answer about itself outranks a prior.
+    """
+    ports = list(advertised)
+    ports += [port for port in PROBE_PORT_RANGE if port not in ports]
+    return ports
+
+
 def look(host: str) -> HostProbe:
     """Find the device's DTLS port, preferring proof over absence of evidence.
 
-    The ClientHello probe is authoritative when it finds something: exactly
-    one port gets the expensive certificate handshake instead of every port
-    the old UDP sweep couldn't rule out (issue #211's 30-40s of 12s handshake
-    timeouts).
-
-    It's a gate, not a replacement: when it confirms nothing, we fall back
-    to the ICMP-based sweep, which still surfaces a device the probe
-    couldn't reach (a network path dropping the ClientHello, or an install
-    on smartthings-local < 0.1.2). Issue #192's segregated-VLAN device is
-    why that fallback keeps its own preferred-port rescue.
+    Tiered, cheapest and most authoritative first: the device's own
+    plaintext advertisement, then a stateless ClientHello that proves it,
+    then the ICMP-based UDP sweep for a device neither reached. The sweep
+    keeps its preferred-port rescue -- issue #192's segregated-VLAN device
+    is why it exists.
     """
+    advertised, plaintext_port = _discover_advertised_ports(host)
+    plaintext = (
+        _read_plaintext_identity(host, plaintext_port) if plaintext_port is not None else None
+    )
+
     try:
-        confirmed = _clienthello_scan(host, PROBE_PORT_RANGE)
-    except Exception as exc:
+        confirmed = _clienthello_scan(
+            host, _probe_ports(advertised), advertised[0] if advertised else None
+        )
+    except Exception as exc:  # an older wheel degrades to the sweep
         _LOGGER.debug("ClientHello probe unavailable (%s); falling back to UDP sweep", exc)
         confirmed = []
     if confirmed:
         _LOGGER.debug("DTLS port(s) confirmed on %s: %s", host, confirmed)
-        return HostProbe(host=host, candidates=confirmed, confirmed=confirmed)
+        return HostProbe(
+            host=host,
+            candidates=confirmed,
+            confirmed=confirmed,
+            advertised=advertised,
+            plaintext=plaintext,
+            plaintext_port=plaintext_port,
+        )
 
     sweep, candidates = sweep_ports(host, PROBE_PORT_RANGE, LIVENESS_PROBE_TIMEOUT_S)
     # No early "nothing here" fast-fail on an empty sweep: the rescue always
@@ -238,7 +263,15 @@ def look(host: str) -> HostProbe:
         sweep.unreachable,
         candidates,
     )
-    return HostProbe(host=host, candidates=candidates, confirmed=[], swept=sweep)
+    return HostProbe(
+        host=host,
+        candidates=candidates,
+        confirmed=[],
+        swept=sweep,
+        advertised=advertised,
+        plaintext=plaintext,
+        plaintext_port=plaintext_port,
+    )
 
 
 @dataclass(frozen=True)

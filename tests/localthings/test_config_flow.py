@@ -214,6 +214,14 @@ def fake_dtls(monkeypatch):
         "smartthings_local.protocol.dtls_session.DtlsCoapSession",
         FakeSession,
     )
+    monkeypatch.setattr(
+        "custom_components.localthings.probing._discover_advertised_ports",
+        lambda host: ((), None),
+    )
+    monkeypatch.setattr(
+        "custom_components.localthings.probing._read_plaintext_identity",
+        lambda host, port: None,
+    )
     return FakeSession
 
 

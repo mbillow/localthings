@@ -303,3 +303,77 @@ def test_read_plaintext_identity_is_none_when_nothing_answers(monkeypatch) -> No
         lambda host, href, **kwargs: _FakeRead(None),
     )
     assert probing._read_plaintext_identity("10.0.0.1", 5683) is None
+
+
+def _patch_tier(monkeypatch, *, advertised=(), plaintext_port=None, identity=None):
+    """Stand in for the whole plaintext tier."""
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        probing, "_discover_advertised_ports", lambda host: (advertised, plaintext_port)
+    )
+    monkeypatch.setattr(probing, "_read_plaintext_identity", lambda host, port: identity)
+
+
+def test_look_dials_an_advertised_port_outside_the_range(monkeypatch) -> None:
+    """Issue #435: a Family Hub was seen at 46060, then 39181. No sweep of
+    49152-49160 reaches either; the device's own advertisement does."""
+    from custom_components.localthings import probing
+
+    identity = probing.PlaintextIdentity(
+        device_id="abc", model="TP1X_REF_21K|x", vendor_id="", firmware="", name=""
+    )
+    _patch_tier(monkeypatch, advertised=(46060,), plaintext_port=5683, identity=identity)
+
+    seen: dict = {}
+
+    def _scan(host, ports, preferred=None):
+        seen["ports"], seen["preferred"] = list(ports), preferred
+        return [46060]
+
+    monkeypatch.setattr(probing, "_clienthello_scan", _scan)
+
+    probe = probing.look("10.0.0.1")
+    assert seen["ports"][0] == 46060
+    assert seen["preferred"] == 46060
+    assert probe.candidates == [46060]
+    assert probe.advertised == (46060,)
+    assert probe.plaintext is identity
+    assert probe.plaintext_port == 5683
+
+
+def test_look_falls_back_to_the_range_when_nothing_is_advertised(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    _patch_tier(monkeypatch)
+
+    seen: dict = {}
+
+    def _scan(host, ports, preferred=None):
+        seen["ports"], seen["preferred"] = list(ports), preferred
+        return [49154]
+
+    monkeypatch.setattr(probing, "_clienthello_scan", _scan)
+
+    probe = probing.look("10.0.0.1")
+    assert seen["ports"] == list(probing.PROBE_PORT_RANGE)
+    assert seen["preferred"] is None
+    assert probe.advertised == ()
+    assert probe.plaintext is None
+
+
+def test_look_skips_the_identity_read_when_no_plaintext_port_answered(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((), None))
+
+    def _never(host, port):
+        raise AssertionError("no plaintext port answered; nothing to read")
+
+    monkeypatch.setattr(probing, "_read_plaintext_identity", _never)
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [])
+    monkeypatch.setattr(
+        probing, "sweep_ports", lambda host, ports, timeout: (probing.SweepResult([], [], []), [])
+    )
+
+    assert probing.look("10.0.0.1").plaintext is None
