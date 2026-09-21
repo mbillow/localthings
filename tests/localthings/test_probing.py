@@ -4,7 +4,14 @@ from __future__ import annotations
 
 
 class _FakeLiveness:
-    """Stands in for smartthings_local's DtlsLivenessResult."""
+    """Stands in for smartthings_local's DtlsLivenessResult.
+
+    The real `is_dtls_server` keys on `response_kind is not None`; this fake
+    keys on `responder_port is not None` instead. Harmless for the code
+    under test here (both are set together in every fixture below), but it
+    is drift from the contract the fake stands in for -- don't read this as
+    the real semantics.
+    """
 
     def __init__(self, port: int, responder_port: int | None) -> None:
         self.port = port
@@ -240,6 +247,33 @@ def test_probe_ports_does_not_duplicate_an_advertised_band_port() -> None:
     assert len(ports) == len(set(ports))
 
 
+def test_probe_ports_does_not_let_an_advertised_5684_lead_the_list() -> None:
+    """A portless advertisement defaults to 5684 in the library
+    (_secure_endpoint_for_source), so a board that advertises exactly that
+    must not get to skip the "5684 dialled last" invariant on its own say-so
+    (issue #482) -- it still goes out once, at the end."""
+    from custom_components.localthings import probing
+
+    ports = probing._probe_ports((5684,))
+    assert ports[0] != 5684
+    assert ports[:-1] == list(probing.PROBE_PORT_RANGE)
+    assert ports[-1] == 5684
+    assert ports.count(5684) == 1
+
+
+def test_preferred_port_never_picks_the_multicast_secure_port() -> None:
+    """5684 must never win the ClientHello tie-break: `probe_dtls_ports`
+    selects on `preferred_port` unconditionally when it's among the
+    responders, and 5684 answers on every board without being the socket
+    that serves a session (issue #482)."""
+    from custom_components.localthings import probing
+
+    assert probing._preferred_port((5684,)) is None
+    assert probing._preferred_port((5684, 46060)) == 46060
+    assert probing._preferred_port((46060, 5684)) == 46060
+    assert probing._preferred_port(()) is None
+
+
 class _FakeDiscovery:
     """Stands in for smartthings_local's OcfSecurePortDiscoveryResult."""
 
@@ -394,6 +428,31 @@ def test_look_dials_an_advertised_port_outside_the_range(monkeypatch) -> None:
     assert probe.plaintext_port == 5683
 
 
+def test_look_dials_a_5684_only_advertisement_last_and_never_prefers_it(monkeypatch) -> None:
+    """A board whose portless advertisement defaults to 5684 in the library
+    must still get a real handshake attempt at that port (it's dialled, just
+    last) but must not skip the queue or win the ClientHello tie-break on
+    the strength of its own advertisement (issue #482). HostProbe.advertised
+    still records what the device actually said."""
+    from custom_components.localthings import probing
+
+    _patch_tier(monkeypatch, advertised=(5684,), plaintext_port=5683)
+
+    seen: dict = {}
+
+    def _scan(host, ports, preferred=None):
+        seen["ports"], seen["preferred"] = list(ports), preferred
+        return [5684]
+
+    monkeypatch.setattr(probing, "_clienthello_scan", _scan)
+
+    probe = probing.look("10.0.0.1")
+    assert seen["ports"][0] != 5684
+    assert seen["ports"][-1] == 5684
+    assert seen["preferred"] is None
+    assert probe.advertised == (5684,)
+
+
 def test_look_falls_back_to_the_range_when_nothing_is_advertised(monkeypatch) -> None:
     from custom_components.localthings import probing
 
@@ -432,6 +491,54 @@ def test_look_skips_the_identity_read_when_no_plaintext_port_answered(monkeypatc
     assert probing.look("10.0.0.1").plaintext is None
 
 
+def test_look_degrades_to_sweep_when_advertised_port_lookup_raises(monkeypatch) -> None:
+    """Reproduces the review finding: on a wheel older than 0.1.18,
+    _discover_advertised_ports' lazy `ocf_discovery` import raises before
+    tier 2 is ever reached (`look() RAISED: ImportError no module named
+    ocf_discovery`). look() must degrade to advertised=(), plaintext_port=
+    None and keep going into tier 2/3, not propagate the exception."""
+    from custom_components.localthings import probing
+
+    def _raise(host):
+        raise ImportError("No module named 'smartthings_local.protocol.ocf_discovery'")
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", _raise)
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: False)
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [])
+    monkeypatch.setattr(
+        probing,
+        "sweep_ports",
+        lambda host, ports, timeout: (probing.SweepResult([49154], [], []), [49154]),
+    )
+
+    probe = probing.look("10.0.0.1")
+    assert probe.candidates == [49154]
+    assert probe.advertised == ()
+    assert probe.plaintext is None
+    assert probe.plaintext_port is None
+
+
+def test_look_degrades_when_plaintext_identity_read_raises(monkeypatch) -> None:
+    """_read_plaintext_identity carries the same lazy `ocf_discovery` import
+    as _discover_advertised_ports and is guarded independently at its own
+    call site -- an install where that read fails must not crash look()
+    even though the port advertisement itself succeeded."""
+    from custom_components.localthings import probing
+
+    def _raise(host, port):
+        raise ImportError("No module named 'smartthings_local.protocol.ocf_discovery'")
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((49154,), 5683))
+    monkeypatch.setattr(probing, "_read_plaintext_identity", _raise)
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: False)
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [49154])
+
+    probe = probing.look("10.0.0.1")
+    assert probe.plaintext is None
+    assert probe.plaintext_port == 5683
+    assert probe.candidates == [49154]
+
+
 def test_look_reports_the_legacy_bridge_and_skips_the_dtls_scan(monkeypatch) -> None:
     """8888 open and nothing on CoAP: the families are mutually exclusive, so
     scanning for DTLS is a guaranteed-empty wait (issue #168, PR #467)."""
@@ -451,18 +558,23 @@ def test_look_reports_the_legacy_bridge_and_skips_the_dtls_scan(monkeypatch) -> 
     assert probe.candidates == []
 
 
-def test_coap_wins_when_both_answer(monkeypatch) -> None:
+def test_coap_wins_when_both_answer(monkeypatch, caplog) -> None:
     """PR #467 measured the families to be mutually exclusive; if both ever
-    answer, the CoAP path is the one this integration can actually use."""
+    answer, the CoAP path is the one this integration can actually use --
+    and the conflict is unusual enough to be worth a log line about it."""
+    import logging
+
     from custom_components.localthings import probing
 
     _patch_tier(monkeypatch, advertised=(49154,), plaintext_port=5683)
     monkeypatch.setattr(probing, "_legacy_http_open", lambda host: True)
     monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [49154])
 
-    probe = probing.look("10.0.0.1")
+    with caplog.at_level(logging.DEBUG, logger="custom_components.localthings.probing"):
+        probe = probing.look("10.0.0.1")
     assert probe.legacy_http is True
     assert probe.candidates == [49154]
+    assert "legacy 8888" in caplog.text and "CoAP wins" in caplog.text
 
 
 def test_legacy_http_open_is_false_for_a_closed_port(monkeypatch, socket_enabled) -> None:

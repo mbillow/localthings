@@ -131,10 +131,9 @@ LIVENESS_PROBE_TIMEOUT_S = 1.5
 CLIENTHELLO_PROBE_TIMEOUT_S = 3.0
 CLIENTHELLO_PROBE_RETRIES = 2
 
-# The whole port range is probed at once: each stateless probe is bounded
-# by CLIENTHELLO_PROBE_TIMEOUT_S (unlike a full handshake's 12s), so the
-# sweep costs one probe's wall clock, not the sum of the range. Capped so a
-# widened PROBE_PORT_RANGE can't spawn an unbounded thread pool.
+# Bounds the plaintext-discovery pool that asks every PLAINTEXT_DISCOVERY_PORTS
+# entry at once (_discover_advertised_ports). The ClientHello fan-out this
+# used to size is now `probe_dtls_ports`'s own pool to size.
 PROBE_MAX_WORKERS = 12
 
 # Deadline for the blockwise /device/0 GET during the config-flow probe.

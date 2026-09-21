@@ -241,13 +241,27 @@ def _probe_ports(advertised: tuple[int, ...]) -> list[int]:
     Not order_candidates: that sorts by the historical priors, which would
     bury an advertised 46060 behind 49154 (issue #435). The device's own
     answer about itself outranks a prior. 5684 goes last for the opposite
-    reason -- it answers everywhere and proves least (issue #482).
+    reason -- it answers everywhere and proves least (issue #482), so a
+    board that advertises exactly 5684 (a portless endpoint defaults to it
+    in the library, see _secure_endpoint_for_source) must not get to skip
+    the queue on its own advertisement.
     """
-    ports = list(advertised)
+    ports = [port for port in advertised if port != MULTICAST_SECURE_PORT]
     ports += [port for port in PROBE_PORT_RANGE if port not in ports]
     if MULTICAST_SECURE_PORT not in ports:
         ports.append(MULTICAST_SECURE_PORT)
     return ports
+
+
+def _preferred_port(advertised: tuple[int, ...]) -> int | None:
+    """The advertised port to break a tie with, never 5684 (issue #482).
+
+    A portless advertisement defaults to 5684 in the library, so trusting
+    `advertised[0]` unconditionally would hand the tie-break -- and thus
+    `probe_dtls_ports`'s unconditional selection -- to the one port the
+    design deliberately proves least.
+    """
+    return next((port for port in advertised if port != MULTICAST_SECURE_PORT), None)
 
 
 def look(host: str) -> HostProbe:
@@ -262,21 +276,39 @@ def look(host: str) -> HostProbe:
     with ThreadPoolExecutor(max_workers=2) as ex:
         advertised_future = ex.submit(_discover_advertised_ports, host)
         legacy_future = ex.submit(_legacy_http_open, host)
-        advertised, plaintext_port = advertised_future.result()
+        try:
+            advertised, plaintext_port = advertised_future.result()
+        except Exception as exc:  # an older wheel lacks ocf_discovery entirely
+            _LOGGER.debug(
+                "Plaintext CoAP discovery unavailable on %s (%s); degrading to tier 2/3",
+                host,
+                exc,
+            )
+            advertised, plaintext_port = (), None
         legacy_http = legacy_future.result()
 
-    plaintext = (
-        _read_plaintext_identity(host, plaintext_port) if plaintext_port is not None else None
-    )
+    plaintext = None
+    if plaintext_port is not None:
+        try:
+            plaintext = _read_plaintext_identity(host, plaintext_port)
+        except Exception as exc:  # same lazy import as above, guarded independently
+            _LOGGER.debug(
+                "Plaintext identity read unavailable on %s (%s); degrading to tier 2/3",
+                host,
+                exc,
+            )
+            plaintext = None
 
     if legacy_http and plaintext_port is None and not advertised:
         # Nothing to scan for: this lineage serves no CoAP at all.
         return HostProbe(host=host, candidates=[], confirmed=[], legacy_http=True)
+    if legacy_http and (plaintext_port is not None or advertised):
+        # Both answered: CoAP wins and the flow proceeds as an ordinary
+        # device, but the 8888 answer is unusual enough to want in the log.
+        _LOGGER.debug("%s answered both legacy 8888 and plaintext CoAP; CoAP wins", host)
 
     try:
-        confirmed = _clienthello_scan(
-            host, _probe_ports(advertised), advertised[0] if advertised else None
-        )
+        confirmed = _clienthello_scan(host, _probe_ports(advertised), _preferred_port(advertised))
     except Exception as exc:  # an older wheel degrades to the sweep
         _LOGGER.debug("ClientHello probe unavailable (%s); falling back to UDP sweep", exc)
         confirmed = []
