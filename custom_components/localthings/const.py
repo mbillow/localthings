@@ -131,22 +131,26 @@ LIVENESS_PROBE_TIMEOUT_S = 1.5
 CLIENTHELLO_PROBE_TIMEOUT_S = 3.0
 CLIENTHELLO_PROBE_RETRIES = 2
 
-# Bounds the plaintext-discovery pool that asks every PLAINTEXT_DISCOVERY_PORTS
-# entry at once (_discover_advertised_ports). The ClientHello fan-out this
-# used to size is now `probe_dtls_ports`'s own pool to size.
+# No longer sizes a plaintext-discovery pool: _discover_advertised_ports asks
+# PLAINTEXT_DISCOVERY_PORTS one at a time now (concurrent Block2 reads against
+# one device corrupt each other -- see that function's docstring). The
+# ClientHello fan-out this used to size is `probe_dtls_ports`'s own pool to
+# size; kept for the controller to rule on rather than deleted outright.
 PROBE_MAX_WORKERS = 12
 
 # Deadline for the blockwise /device/0 GET during the config-flow probe.
 # The slowest device observed returns a full dump in ~8s.
 PROBE_GET_TIMEOUT_S = 10.0
 
-# Plaintext CoAP ports to ask for the device's own secure-port advertisement.
-# 5683 is IoTivity classic's multicast plaintext socket, bound to INADDR_ANY,
-# so a unicast datagram lands on it on every board in this family (issue
-# #482). The device's unicast socket is kernel-assigned and moves, so the
-# advertisement is the only thing that names it -- and the only thing that
-# reaches a port outside PROBE_PORT_RANGE. 49153 is kept behind 5683 as one
-# extra datagram for a board that does not answer the standard port.
+# Plaintext CoAP ports to ask, in order, for the device's own secure-port
+# advertisement. 5683 is IoTivity classic's multicast plaintext socket, bound
+# to INADDR_ANY, so a unicast datagram lands on it on every board in this
+# family (issue #482). The device's unicast socket is kernel-assigned and
+# moves, so the advertisement is the only thing that names it -- and the only
+# thing that reaches a port outside PROBE_PORT_RANGE. 49153 is asked only
+# when 5683 advertised nothing, as one extra datagram for a board that does
+# not answer the standard port -- asking both at once corrupts the device's
+# per-peer transfer state (see _discover_advertised_ports).
 PLAINTEXT_DISCOVERY_PORTS = [5683, 49153]
 
 # Budget for the advertisement lookup, and for the two identity reads behind

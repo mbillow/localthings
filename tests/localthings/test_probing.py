@@ -349,6 +349,61 @@ def test_discover_advertised_ports_is_silent_on_a_non_appliance(monkeypatch) -> 
     assert probing._discover_advertised_ports("10.0.0.1") == ((), None)
 
 
+def test_discover_advertised_ports_stops_at_5683_and_never_asks_49153(monkeypatch) -> None:
+    """The dishwasher measurement (issue: 10/12 parallel vs 12/12 sequential)
+    is why 49153 must not be asked once 5683 has already named a port."""
+    from custom_components.localthings import probing
+
+    calls: list[int] = []
+
+    def _discover(host, *, discovery_port, **kwargs):
+        calls.append(discovery_port)
+        return _FakeDiscovery(ports=(49154,), response_received=True)
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports", _discover
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((49154,), 5683)
+    assert calls == [5683]
+
+
+def test_discover_advertised_ports_asks_49153_only_when_5683_is_silent(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    calls: list[int] = []
+
+    def _discover(host, *, discovery_port, **kwargs):
+        calls.append(discovery_port)
+        if discovery_port == 49153:
+            return _FakeDiscovery(ports=(49155,), response_received=True)
+        return _FakeDiscovery(error_code="no_ocf_response")
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports", _discover
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((49155,), 49153)
+    assert calls == [5683, 49153]
+
+
+def test_discover_advertised_ports_answered_stays_5683_when_only_49153_advertises(
+    monkeypatch,
+) -> None:
+    """A device that answers 5683 with a malformed body still answered on
+    5683 -- `_read_plaintext_identity` needs a port that responds, which is
+    not the same question as which port advertised (see requirement 3)."""
+    from custom_components.localthings import probing
+
+    def _discover(host, *, discovery_port, **kwargs):
+        if discovery_port == 5683:
+            return _FakeDiscovery(response_received=True)
+        return _FakeDiscovery(ports=(49155,), response_received=True)
+
+    monkeypatch.setattr(
+        "smartthings_local.protocol.ocf_discovery.discover_ocf_secure_ports", _discover
+    )
+    assert probing._discover_advertised_ports("10.0.0.1") == ((49155,), 5683)
+
+
 def test_read_plaintext_identity_pulls_di_and_model(monkeypatch) -> None:
     """The real /oic/d and /oic/p bodies from the refrigerator at 10.0.0.254."""
     from custom_components.localthings import probing

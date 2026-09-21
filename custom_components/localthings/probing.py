@@ -30,7 +30,6 @@ from .const import (
     PLAINTEXT_DISCOVERY_TIMEOUT_S,
     PLAINTEXT_READ_TIMEOUT_S,
     PREFERRED_PROBE_PORTS,
-    PROBE_MAX_WORKERS,
     PROBE_PORT_RANGE,
 )
 
@@ -369,36 +368,34 @@ class PlaintextIdentity:
 def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
     """Secure ports the device advertises, and the plaintext port that answered.
 
-    Both candidates go out at once: each lookup is bounded by
-    PLAINTEXT_DISCOVERY_TIMEOUT_S, so a silent host costs one budget rather
-    than two. Multicast would find the same socket and is deliberately not
-    used -- it is TTL 1, so it finds nothing on the routed or VLAN'd install
-    this integration keeps meeting (issues #192, #321), and since 5683 is
-    bound to INADDR_ANY there is nothing it would add (issue #482).
+    Candidates go out one at a time, stopping at the first port that
+    advertises something: two concurrent blockwise reads against one device
+    corrupt each other -- IoTivity classic appears to key transfer state per
+    peer address, not per port -- which measured as 10/12 malformed
+    responses in parallel vs 12/12 clean sequentially on a real dishwasher.
+    Multicast would find the same socket and is deliberately not used -- it
+    is TTL 1, so it finds nothing on the routed or VLAN'd install this
+    integration keeps meeting (issues #192, #321), and since 5683 is bound
+    to INADDR_ANY there is nothing it would add (issue #482).
     """
     from smartthings_local.protocol.ocf_discovery import discover_ocf_secure_ports
 
-    def _ask(port: int):
-        return port, discover_ocf_secure_ports(
+    ports: list[int] = []
+    answered: int | None = None
+    for port in PLAINTEXT_DISCOVERY_PORTS:
+        result = discover_ocf_secure_ports(
             host,
             discovery_port=port,
             timeout=PLAINTEXT_DISCOVERY_TIMEOUT_S,
             retries=PLAINTEXT_DISCOVERY_RETRIES,
         )
-
-    with ThreadPoolExecutor(
-        max_workers=min(len(PLAINTEXT_DISCOVERY_PORTS), PROBE_MAX_WORKERS)
-    ) as ex:
-        results = list(ex.map(_ask, PLAINTEXT_DISCOVERY_PORTS))
-
-    ports: list[int] = []
-    answered: int | None = None
-    for port, result in results:
         if result.response_received and answered is None:
             answered = port
         for advertised in result.ports:
             if advertised not in ports:
                 ports.append(advertised)
+        if ports:
+            break
     _LOGGER.debug("Plaintext CoAP on %s: answered on %s, advertised %s", host, answered, ports)
     return tuple(ports), answered
 
