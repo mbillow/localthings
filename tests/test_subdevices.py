@@ -463,6 +463,116 @@ def test_enumeration_keeps_preferred_response_found_before_budget_expires(
     assert clock.now == 7.0
 
 
+def test_prefixed_operational_leaves_are_probed_before_missing_collection(
+    monkeypatch,
+):
+    """A missing Collection cannot consume the budget before operational leaves."""
+
+    class Clock:
+        now = 0.0
+
+        def monotonic(self):
+            return self.now
+
+    class LeafFirstSession:
+        def __init__(self, clock):
+            self.clock = clock
+            self.calls = []
+
+        def get(self, path, timeout=10.0):
+            path = tuple(path)
+            self.calls.append((path, timeout))
+            if path == (_UUID, "information", "vs", "0"):
+                return 0x45, cbor2.dumps({"model": "subdevice"})
+            if path == (_UUID, "mode", "vs", "0"):
+                return 0x45, cbor2.dumps({"mode": "Cool"})
+            self.clock.now += timeout
+            raise TimeoutError
+
+        def pace(self):
+            pass
+
+    clock = Clock()
+    session = LeafFirstSession(clock)
+    monkeypatch.setattr(subdevices_module.time, "monotonic", clock.monotonic)
+    resources = {
+        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
+        "/information/vs/0": {"model": "main"},
+        "/mode/vs/0": {"mode": "Cool"},
+        "/power/vs/0": {"power": "On"},
+    }
+
+    found, extra = enumerate_subdevices(
+        session,
+        resources,
+        oic_res_links=[],
+        preferred_hrefs=("/information/vs/0", "/mode/vs/0", "/power/vs/0"),
+        time_budget=4.0,
+        collection_timeout=4.0,
+        property_timeout=1.0,
+    )
+
+    assert len(found) == 1
+    assert found[0].seed_path == ()
+    assert found[0].flat_hrefs == ("/information/vs/0", "/mode/vs/0")
+    assert extra == {
+        f"/{_UUID}/information/vs/0": {"model": "subdevice"},
+        f"/{_UUID}/mode/vs/0": {"mode": "Cool"},
+    }
+    assert session.calls == [
+        ((_UUID, "information", "vs", "0"), 1.0),
+        ((_UUID, "mode", "vs", "0"), 1.0),
+        ((_UUID, "power", "vs", "0"), 1.0),
+        ((_UUID, "device", "0"), 3.0),
+    ]
+
+
+def test_prefixed_preflight_keeps_working_collection_authoritative():
+    """Preflight does not switch an existing Collection subdevice to flat mode."""
+
+    class RecordingSession(_FakeSession):
+        def __init__(self, table):
+            super().__init__(table)
+            self.calls = []
+
+        def get(self, path, timeout=10.0):
+            self.calls.append(tuple(path))
+            return super().get(path, timeout)
+
+    resources = {
+        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_UUID]},
+        "/information/vs/0": {"model": "main"},
+        "/mode/vs/0": {"mode": "Cool"},
+    }
+    sess = RecordingSession(
+        {
+            (_UUID, "information", "vs", "0"): {"model": "subdevice"},
+            (_UUID, "mode", "vs", "0"): {"mode": "preflight"},
+            (_UUID, "device", "0"): [
+                _DEVCOL_REP,
+                {"href": "/mode/vs/0", "rep": {"mode": "collection"}},
+            ],
+        }
+    )
+
+    found, extra = enumerate_subdevices(
+        sess,
+        resources,
+        oic_res_links=[],
+        preferred_hrefs=("/information/vs/0", "/mode/vs/0"),
+    )
+
+    assert len(found) == 1
+    assert found[0].seed_path == (_UUID, "device", "0")
+    assert found[0].flat_hrefs == ()
+    assert extra == {f"/{_UUID}/mode/vs/0": {"mode": "collection"}}
+    assert sess.calls[:3] == [
+        (_UUID, "information", "vs", "0"),
+        (_UUID, "mode", "vs", "0"),
+        (_UUID, "device", "0"),
+    ]
+
+
 def test_enumerate_prefixed_flat_fallback_with_no_master_hrefs_to_probe_is_a_no_op():
     """The master itself having nothing but /subdevices/vs/0 in its own
     resources this cycle (e.g. a very first, mostly-empty poll) must not
