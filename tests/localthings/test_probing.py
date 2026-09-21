@@ -58,8 +58,10 @@ def test_order_candidates_prefers_known_ports() -> None:
 
 def test_order_candidates_puts_the_multicast_secure_port_last() -> None:
     """5684 is IoTivity classic's m4s, bound to INADDR_ANY, so it answers on
-    every board in this family (issue #482). Useful as a rescue, wrong as a
-    first guess -- the unicast socket is the one that serves a session."""
+    every board in this family (issue #482). It does serve a full session
+    (measured on two boards, 2026-09-21), but the advertised unicast port is
+    still the device's own answer about itself, so 5684 stays a rescue, not
+    a first guess."""
     from custom_components.localthings.probing import order_candidates
 
     assert order_candidates([5684, 46060]) == [46060, 5684]
@@ -210,7 +212,9 @@ def test_clienthello_scan_passes_the_preferred_port_through(monkeypatch) -> None
 
 def test_clienthello_scan_tries_the_real_port_before_the_multicast_one(monkeypatch) -> None:
     """Both sockets answered and neither is preferred, so the library declines
-    to choose. Both are proven; only one of them serves a session."""
+    to choose. Both are proven and both serve a full session (measured on two
+    boards, 2026-09-21), but 5684 still doesn't outrank the device's own
+    advertised port."""
     from custom_components.localthings import probing
 
     def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
@@ -264,8 +268,9 @@ def test_probe_ports_does_not_let_an_advertised_5684_lead_the_list() -> None:
 def test_preferred_port_never_picks_the_multicast_secure_port() -> None:
     """5684 must never win the ClientHello tie-break: `probe_dtls_ports`
     selects on `preferred_port` unconditionally when it's among the
-    responders, and 5684 answers on every board without being the socket
-    that serves a session (issue #482)."""
+    responders, and 5684 answers on every board as a wildcard socket, so a
+    reply from it says nothing about the device's own endpoint (issue
+    #482)."""
     from custom_components.localthings import probing
 
     assert probing._preferred_port((5684,)) is None

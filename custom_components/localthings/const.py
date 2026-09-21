@@ -164,9 +164,11 @@ PLAINTEXT_DISCOVERY_RETRIES = 2
 
 # IoTivity classic's multicast secure socket, bound to INADDR_ANY, so a
 # ClientHello to it draws a first flight on any board in this family (issue
-# #482). Dialled last: it reaches a board whose kernel-assigned unicast
-# secure port falls outside PROBE_PORT_RANGE, but the unicast socket is the
-# one that serves a session.
+# #482). It does serve a full session -- measured byte-identical to the
+# unicast port on two boards, 2026-09-21 -- but the advertised unicast port
+# is still the device's own answer about itself and stays canonical; 5684
+# is dialled last as a fallback rescue for a board whose unicast port falls
+# outside PROBE_PORT_RANGE.
 MULTICAST_SECURE_PORT = 5684
 
 # The legacy HTTPS bridge (issue #168). A board that serves it has no CoAP

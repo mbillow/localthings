@@ -143,10 +143,12 @@ def sweep_ports(host: str, ports: list[int], timeout: float) -> tuple[SweepResul
 def order_candidates(ports: list[int]) -> list[int]:
     """Order live ports: historically known DTLS ports first, 5684 last.
 
-    5684 answers on every board in this family without being the socket
-    that serves a session (issue #482), so it sorts behind everything --
-    including an advertised port like 46060, which would otherwise lose to
-    it on a numeric sort.
+    5684 is a wildcard multicast socket that answers on every board in this
+    family (issue #482) and does serve a full session (measured on two
+    boards, 2026-09-21) -- but answering everywhere is not the device's own
+    claim about its endpoint, so it still sorts behind everything, including
+    an advertised port like 46060 that would otherwise lose to it on a
+    numeric sort.
     """
     preferred = [port for port in PREFERRED_PROBE_PORTS if port in ports]
     trailing = [port for port in ports if port == MULTICAST_SECURE_PORT]
@@ -240,10 +242,12 @@ def _probe_ports(advertised: tuple[int, ...]) -> list[int]:
     Not order_candidates: that sorts by the historical priors, which would
     bury an advertised 46060 behind 49154 (issue #435). The device's own
     answer about itself outranks a prior. 5684 goes last for the opposite
-    reason -- it answers everywhere and proves least (issue #482), so a
-    board that advertises exactly 5684 (a portless endpoint defaults to it
-    in the library, see _secure_endpoint_for_source) must not get to skip
-    the queue on its own advertisement.
+    reason -- it's a wildcard socket that answers everywhere, so a reply
+    from it proves nothing about the device's own endpoint (issue #482),
+    even though it does serve a full session (measured on two boards,
+    2026-09-21). A board that advertises exactly 5684 (a portless endpoint
+    defaults to it in the library, see _secure_endpoint_for_source) must not
+    get to skip the queue on its own advertisement.
     """
     ports = [port for port in advertised if port != MULTICAST_SECURE_PORT]
     ports += [port for port in PROBE_PORT_RANGE if port not in ports]
@@ -257,8 +261,9 @@ def _preferred_port(advertised: tuple[int, ...]) -> int | None:
 
     A portless advertisement defaults to 5684 in the library, so trusting
     `advertised[0]` unconditionally would hand the tie-break -- and thus
-    `probe_dtls_ports`'s unconditional selection -- to the one port the
-    design deliberately proves least.
+    `probe_dtls_ports`'s unconditional selection -- to the one port whose
+    reply proves nothing about the device's own endpoint, even though it
+    does serve a full session (measured on two boards, 2026-09-21).
     """
     return next((port for port in advertised if port != MULTICAST_SECURE_PORT), None)
 
