@@ -131,13 +131,6 @@ LIVENESS_PROBE_TIMEOUT_S = 1.5
 CLIENTHELLO_PROBE_TIMEOUT_S = 3.0
 CLIENTHELLO_PROBE_RETRIES = 2
 
-# No longer sizes a plaintext-discovery pool: _discover_advertised_ports asks
-# PLAINTEXT_DISCOVERY_PORTS one at a time now (concurrent Block2 reads against
-# one device corrupt each other -- see that function's docstring). The
-# ClientHello fan-out this used to size is `probe_dtls_ports`'s own pool to
-# size; kept for the controller to rule on rather than deleted outright.
-PROBE_MAX_WORKERS = 12
-
 # Deadline for the blockwise /device/0 GET during the config-flow probe.
 # The slowest device observed returns a full dump in ~8s.
 PROBE_GET_TIMEOUT_S = 10.0
