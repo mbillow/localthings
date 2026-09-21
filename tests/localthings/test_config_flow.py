@@ -276,9 +276,9 @@ async def test_clienthello_probe_picks_the_confirmed_port(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_PORT] == 49153
-    # The whole range is probed (cheaply, in parallel) but only the confirmed
-    # port is handed a handshake.
-    assert set(probed) == set(probing.PROBE_PORT_RANGE)
+    # The whole range plus the multicast rescue port is probed (cheaply, in
+    # parallel) but only the confirmed port is handed a handshake.
+    assert set(probed) == {*probing.PROBE_PORT_RANGE, probing.MULTICAST_SECURE_PORT}
     assert [s.port for s in FakeSession.instances] == [49153]
 
 

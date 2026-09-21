@@ -49,6 +49,16 @@ def test_order_candidates_prefers_known_ports() -> None:
     assert order_candidates([49153]) == [49153]
 
 
+def test_order_candidates_puts_the_multicast_secure_port_last() -> None:
+    """5684 is IoTivity classic's m4s, bound to INADDR_ANY, so it answers on
+    every board in this family (issue #482). Useful as a rescue, wrong as a
+    first guess -- the unicast socket is the one that serves a session."""
+    from custom_components.localthings.probing import order_candidates
+
+    assert order_candidates([5684, 46060]) == [46060, 5684]
+    assert order_candidates([5684, 49155, 49152]) == [49155, 49152, 5684]
+
+
 def test_find_live_ports_detects_silent_port(socket_enabled) -> None:
     """The UDP liveness sweep flags a bound-but-silent port as live and drops
     ports that refuse with ICMP port-unreachable.
@@ -189,6 +199,45 @@ def test_clienthello_scan_passes_the_preferred_port_through(monkeypatch) -> None
     monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
     assert probing._clienthello_scan("10.0.0.1", [46060, 49152], preferred=46060) == [46060]
     assert seen["preferred"] == 46060
+
+
+def test_clienthello_scan_tries_the_real_port_before_the_multicast_one(monkeypatch) -> None:
+    """Both sockets answered and neither is preferred, so the library declines
+    to choose. Both are proven; only one of them serves a session."""
+    from custom_components.localthings import probing
+
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        results = (
+            _FakeLiveness(port=5684, responder_port=5684),
+            _FakeLiveness(port=46060, responder_port=46060),
+        )
+        return _FakeProbeSet(outcome="ambiguous", selected_port=None, results=results)
+
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
+    assert probing._clienthello_scan("10.0.0.1", [46060, 5684]) == [46060, 5684]
+
+
+def test_probe_ports_appends_the_multicast_secure_port() -> None:
+    from custom_components.localthings import probing
+
+    ports = probing._probe_ports(())
+    assert ports[-1] == 5684
+    assert ports[:-1] == list(probing.PROBE_PORT_RANGE)
+
+    advertised = probing._probe_ports((46060,))
+    assert advertised[0] == 46060
+    assert advertised[-1] == 5684
+
+
+def test_probe_ports_does_not_duplicate_an_advertised_band_port() -> None:
+    """An advertised port already inside the conventional band is dialled once,
+    at the front, not twice."""
+    from custom_components.localthings import probing
+
+    ports = probing._probe_ports((49155,))
+    assert ports[0] == 49155
+    assert ports.count(49155) == 1
+    assert len(ports) == len(set(ports))
 
 
 class _FakeDiscovery:
@@ -359,7 +408,7 @@ def test_look_falls_back_to_the_range_when_nothing_is_advertised(monkeypatch) ->
     monkeypatch.setattr(probing, "_clienthello_scan", _scan)
 
     probe = probing.look("10.0.0.1")
-    assert seen["ports"] == list(probing.PROBE_PORT_RANGE)
+    assert seen["ports"] == [*probing.PROBE_PORT_RANGE, 5684]
     assert seen["preferred"] is None
     assert probe.advertised == ()
     assert probe.plaintext is None

@@ -159,6 +159,13 @@ PLAINTEXT_DISCOVERY_TIMEOUT_S = 2.5
 PLAINTEXT_READ_TIMEOUT_S = 1.5
 PLAINTEXT_DISCOVERY_RETRIES = 2
 
+# IoTivity classic's multicast secure socket, bound to INADDR_ANY, so a
+# ClientHello to it draws a first flight on any board in this family (issue
+# #482). Dialled last: it reaches a board whose kernel-assigned unicast
+# secure port falls outside PROBE_PORT_RANGE, but the unicast socket is the
+# one that serves a session.
+MULTICAST_SECURE_PORT = 5684
+
 # The legacy HTTPS bridge (issue #168). A board that serves it has no CoAP
 # server at all, so one TCP connect discriminates the two lineages.
 LEGACY_HTTP_PORT = 8888

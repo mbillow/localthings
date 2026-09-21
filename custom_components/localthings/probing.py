@@ -24,6 +24,7 @@ from .const import (
     LEGACY_HTTP_PORT,
     LEGACY_HTTP_PROBE_TIMEOUT_S,
     LIVENESS_PROBE_TIMEOUT_S,
+    MULTICAST_SECURE_PORT,
     PLAINTEXT_DISCOVERY_PORTS,
     PLAINTEXT_DISCOVERY_RETRIES,
     PLAINTEXT_DISCOVERY_TIMEOUT_S,
@@ -141,10 +142,21 @@ def sweep_ports(host: str, ports: list[int], timeout: float) -> tuple[SweepResul
 
 
 def order_candidates(ports: list[int]) -> list[int]:
-    """Order live ports so the historically known DTLS ports are tried first."""
-    preferred = [p for p in PREFERRED_PROBE_PORTS if p in ports]
-    rest = sorted(p for p in ports if p not in PREFERRED_PROBE_PORTS)
-    return preferred + rest
+    """Order live ports: historically known DTLS ports first, 5684 last.
+
+    5684 answers on every board in this family without being the socket
+    that serves a session (issue #482), so it sorts behind everything --
+    including an advertised port like 46060, which would otherwise lose to
+    it on a numeric sort.
+    """
+    preferred = [port for port in PREFERRED_PROBE_PORTS if port in ports]
+    trailing = [port for port in ports if port == MULTICAST_SECURE_PORT]
+    rest = sorted(
+        port
+        for port in ports
+        if port not in PREFERRED_PROBE_PORTS and port != MULTICAST_SECURE_PORT
+    )
+    return preferred + rest + trailing
 
 
 @dataclass(frozen=True)
@@ -224,14 +236,17 @@ def _clienthello_scan(host: str, ports: list[int], preferred: int | None = None)
 
 
 def _probe_ports(advertised: tuple[int, ...]) -> list[int]:
-    """Advertised ports first, then the conventional range behind them.
+    """Advertised ports first, then the conventional range, then 5684.
 
     Not order_candidates: that sorts by the historical priors, which would
     bury an advertised 46060 behind 49154 (issue #435). The device's own
-    answer about itself outranks a prior.
+    answer about itself outranks a prior. 5684 goes last for the opposite
+    reason -- it answers everywhere and proves least (issue #482).
     """
     ports = list(advertised)
     ports += [port for port in PROBE_PORT_RANGE if port not in ports]
+    if MULTICAST_SECURE_PORT not in ports:
+        ports.append(MULTICAST_SECURE_PORT)
     return ports
 
 
