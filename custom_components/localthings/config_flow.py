@@ -159,6 +159,16 @@ class InvalidCA(Exception):
     error_key = "invalid_ca"
 
 
+class LegacyHttpFamily(Exception):
+    """The appliance serves the legacy HTTPS bridge, not CoAP/DTLS (issue #168).
+
+    Raised before any credential work: there is nothing at this address to
+    handshake with, so the flow ends with an explanation instead of a
+    failure the user can't act on. PR #467 replaces the abort with its
+    device-token step at this same branch point.
+    """
+
+
 def _fetch_samsung_uuid() -> str:
     """Connect to Samsung's cloud gateway and extract the UUID from its TLS
     cert. Verification is disabled: Samsung's chain has a self-signed cert,
@@ -672,6 +682,8 @@ def _probe_and_validate(
     so the retry is worthwhile solely for a reused leaf.
     """
     scan = probing.look(host)
+    if scan.legacy_http and not scan.candidates:
+        raise LegacyHttpFamily(f"{host} serves the legacy bridge on TCP 8888")
 
     def _mint() -> tuple[str, str]:
         if ca_cert_pem and ca_key_pem:
@@ -796,6 +808,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._ca_key_pem,
                     existing_leaf,
                 )
+            except LegacyHttpFamily:
+                _LOGGER.debug("%s is the legacy 8888 family; support is pending", self._host)
+                return await self.async_step_legacy_unsupported()
             except CertRejected:
                 # The self-signed leaf (or a reused one, re-minted and refused
                 # again) didn't authenticate: this device validates the
@@ -866,6 +881,15 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self._create_entry(info)
         self._pending_info = info
         return await self.async_step_confirm_unknown_type()
+
+    async def async_step_legacy_unsupported(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """End the flow for a legacy-bridge appliance with an explanation."""
+        return self.async_abort(
+            reason="legacy_http_unsupported",
+            description_placeholders={"host": self._host},
+        )
 
     async def async_step_fallback_ca(
         self, user_input: dict[str, Any] | None = None

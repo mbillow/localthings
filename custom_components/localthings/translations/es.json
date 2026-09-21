@@ -66,7 +66,8 @@
       "already_configured": "El dispositivo ya está configurado",
       "already_in_progress": "La configuración ya está en curso",
       "reconfigure_successful": "Dirección actualizada",
-      "no_entry_for_mac": "Ningún electrodoméstico configurado guarda esa dirección MAC"
+      "no_entry_for_mac": "Ningún electrodoméstico configurado guarda esa dirección MAC",
+      "legacy_http_unsupported": "{host} es un electrodoméstico Samsung de la familia más antigua, que habla HTTPS por el puerto TCP 8888 en lugar de la API local CoAP/DTLS que usa esta integración. El soporte para él está en desarrollo: consulta la incidencia #467 en GitHub. No hay nada que arreglar por tu parte."
     }
   },
   "options": {

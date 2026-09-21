@@ -1759,7 +1759,8 @@
       "already_configured": "Zařízení je již nakonfigurováno",
       "already_in_progress": "Konfigurace již probíhá",
       "reconfigure_successful": "Adresa byla aktualizována",
-      "no_entry_for_mac": "Žádný nakonfigurovaný spotřebič neuchovává tuto MAC adresu"
+      "no_entry_for_mac": "Žádný nakonfigurovaný spotřebič neuchovává tuto MAC adresu",
+      "legacy_http_unsupported": "{host} je spotřebič Samsung ze starší rodiny, který komunikuje přes HTTPS na portu TCP 8888 místo lokálního API CoAP/DTLS, které tato integrace používá. Podpora pro něj se připravuje — viz issue #467 na GitHubu. Na vaší straně není co opravovat."
     }
   },
   "options": {

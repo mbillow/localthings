@@ -1759,7 +1759,8 @@
       "already_configured": "기기가 이미 구성되어 있습니다",
       "already_in_progress": "구성이 이미 진행 중입니다",
       "reconfigure_successful": "주소가 업데이트되었습니다",
-      "no_entry_for_mac": "해당 MAC 주소를 저장한 가전제품이 없습니다"
+      "no_entry_for_mac": "해당 MAC 주소를 저장한 가전제품이 없습니다",
+      "legacy_http_unsupported": "{host}은(는) 이 통합 구성요소가 사용하는 로컬 CoAP/DTLS API 대신 TCP 8888에서 HTTPS로 통신하는 구형 삼성 가전제품입니다. 지원 작업이 진행 중입니다 — GitHub의 이슈 #467을 참고하세요. 사용자가 조치할 사항은 없습니다."
     }
   },
   "options": {

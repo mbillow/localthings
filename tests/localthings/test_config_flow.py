@@ -964,6 +964,26 @@ async def test_cannot_connect(hass: HomeAssistant) -> None:
     assert errors["base"] == "cannot_connect"
 
 
+async def test_legacy_bridge_aborts_with_coming_soon(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """A board serving TCP 8888 is the legacy family (issue #168). It gets a
+    message naming it, not a cannot-connect the user can't act on."""
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        probing,
+        "look",
+        lambda host: probing.HostProbe(host=host, candidates=[], confirmed=[], legacy_http=True),
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "legacy_http_unsupported"
+
+
 def test_mint_self_signed_is_self_signed_sha256_and_carries_the_uuid() -> None:
     """The default leaf signs itself (no CA), keeps the UUID in the subject
     RDNs TizenRT scans, and is a single-cert chain -- the properties two live

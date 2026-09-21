@@ -1759,7 +1759,8 @@
       "already_configured": "Device is already configured",
       "already_in_progress": "Configuration flow is already in progress",
       "reconfigure_successful": "Address updated",
-      "no_entry_for_mac": "No configured appliance stores that MAC address"
+      "no_entry_for_mac": "No configured appliance stores that MAC address",
+      "legacy_http_unsupported": "{host} is a Samsung appliance from the older family that speaks HTTPS on TCP 8888 rather than the CoAP/DTLS local API this integration uses. Support for it is being worked on — see issue #467 on GitHub. There is nothing to fix at your end."
     }
   },
   "options": {

@@ -1759,7 +1759,8 @@
       "already_configured": "Gerät ist bereits konfiguriert",
       "already_in_progress": "Die Konfiguration läuft bereits",
       "reconfigure_successful": "Adresse aktualisiert",
-      "no_entry_for_mac": "Kein konfiguriertes Gerät speichert diese MAC-Adresse"
+      "no_entry_for_mac": "Kein konfiguriertes Gerät speichert diese MAC-Adresse",
+      "legacy_http_unsupported": "{host} ist ein Samsung-Gerät der älteren Baureihe, das HTTPS über TCP 8888 verwendet statt der lokalen CoAP/DTLS-API, die diese Integration nutzt. Die Unterstützung dafür wird gerade entwickelt — siehe Issue #467 auf GitHub. Auf Ihrer Seite gibt es nichts zu beheben."
     }
   },
   "options": {

@@ -1759,7 +1759,8 @@
       "already_configured": "Il dispositivo è già configurato",
       "already_in_progress": "La configurazione è già in corso",
       "reconfigure_successful": "Indirizzo aggiornato",
-      "no_entry_for_mac": "Nessun dispositivo configurato conserva quell'indirizzo MAC"
+      "no_entry_for_mac": "Nessun dispositivo configurato conserva quell'indirizzo MAC",
+      "legacy_http_unsupported": "{host} è un apparecchio Samsung della famiglia più vecchia, che parla HTTPS sulla porta TCP 8888 invece dell'API locale CoAP/DTLS usata da questa integrazione. Il supporto per questa famiglia è in lavorazione — vedi la segnalazione #467 su GitHub. Non c'è nulla da correggere da parte tua."
     }
   },
   "options": {
