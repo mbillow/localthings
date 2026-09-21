@@ -780,6 +780,45 @@ def test_partially_open_range_is_reported_as_no_dtls_server() -> None:
     assert err.error_key == "no_dtls_server"
 
 
+async def test_identified_appliance_that_refuses_dtls_says_so(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """The device named itself over plaintext CoAP, so 'check the IP belongs
+    to the appliance' is the one thing we know is not the problem."""
+    from custom_components.localthings import probing
+
+    identity = probing.PlaintextIdentity(
+        device_id="62304e1f-eb40-741d-4aee-99175ed16e81",
+        model="TP1X_REF_21K|00176141|0000085003181329",
+        vendor_id="DA-REF-NORMAL-01011",
+        firmware="A-RFWW-TP1-24-T4-COM_20260617",
+        name="Samsung-Refrigerator",
+    )
+    monkeypatch.setattr(
+        probing,
+        "look",
+        lambda host: probing.HostProbe(
+            host=host,
+            candidates=[],
+            confirmed=[],
+            swept=probing.SweepResult([], [], []),
+            advertised=(49154,),
+            plaintext=identity,
+            plaintext_port=5683,
+        ),
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "appliance_no_dtls"}
+    placeholders = result["description_placeholders"]
+    assert placeholders is not None
+    assert placeholders["model"].startswith("TP1X_REF_21K")
+    assert placeholders["port"] == "49154"
+
+
 async def test_self_signed_default_stores_empty_ca_and_leaf(
     hass: HomeAssistant, monkeypatch, fake_dtls
 ) -> None:

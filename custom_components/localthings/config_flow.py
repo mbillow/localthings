@@ -125,6 +125,20 @@ class NoDtlsServer(CannotConnect):
     error_key = "no_dtls_server"
 
 
+class ApplianceNoDtls(CannotConnect):
+    """The device identified itself over plaintext CoAP, and no DTLS answered.
+
+    Distinct from NoDtlsServer because the advice differs: there is no
+    question left about whether the address belongs to an appliance.
+    """
+
+    error_key = "appliance_no_dtls"
+
+    def __init__(self, message: str, model: str, port: str) -> None:
+        super().__init__(message)
+        self.placeholders = {"model": model, "port": port}
+
+
 class HandshakeTimeout(CannotConnect):
     """A DTLS server is confirmed present but never finished the handshake."""
 
@@ -457,6 +471,16 @@ def _classify_handshake_failure(
             f"DTLS server confirmed on {host}:{scan.confirmed} but the handshake never completed"
         )
 
+    if scan.plaintext is not None:
+        # It told us its model over plaintext CoAP, so the address is not in
+        # doubt and neither is what kind of device it is.
+        advertised = ", ".join(str(port) for port in scan.advertised) or "none advertised"
+        return ApplianceNoDtls(
+            f"{host} answered plaintext CoAP but no DTLS handshake completed",
+            model=scan.plaintext.model or scan.plaintext.vendor_id or "unknown",
+            port=advertised,
+        )
+
     sweep = scan.swept
     if sweep is None:
         return CannotConnect(f"no port on {host} completed a handshake")
@@ -724,6 +748,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._ca_cert_pem: str = ""
         self._ca_key_pem: str = ""
         self._pending_info: dict | None = None
+        self._error_placeholders: dict[str, str] = {}
 
     @staticmethod
     @callback
@@ -825,6 +850,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # CannotConnect); the log line is where the specifics live.
                 _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
                 errors["base"] = exc.error_key
+                self._error_placeholders = getattr(exc, "placeholders", {})
             except Exception:
                 _LOGGER.exception("Unexpected error during device probe")
                 errors["base"] = "unknown"
@@ -841,6 +867,11 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id=step_id,
             data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
+            description_placeholders={
+                "model": "unknown",
+                "port": "unknown",
+                **self._error_placeholders,
+            },
         )
 
     async def _finish_probe(
@@ -924,6 +955,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # form with cert_rejected rather than looping back to host.
                 _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
                 errors["base"] = exc.error_key
+                self._error_placeholders = getattr(exc, "placeholders", {})
             except Exception:
                 _LOGGER.exception("Unexpected error during device probe")
                 errors["base"] = "unknown"
@@ -940,7 +972,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="fallback_ca",
             data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
-            description_placeholders={"host": self._host},
+            description_placeholders={
+                "host": self._host,
+                "model": "unknown",
+                "port": "unknown",
+                **self._error_placeholders,
+            },
         )
 
     async def async_step_user_reuse(
