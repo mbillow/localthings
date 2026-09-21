@@ -312,9 +312,22 @@ async def test_probe_uses_discovered_low_port(hass: HomeAssistant, monkeypatch, 
 async def test_probe_falls_back_when_library_lacks_the_clienthello_probe(
     hass: HomeAssistant, monkeypatch, fake_dtls
 ) -> None:
-    """An install whose smartthings-local predates the probe still adds
-    devices -- port detection degrades to the UDP sweep rather than failing."""
+    """An install whose smartthings-local predates 0.1.18 lacks both
+    ocf_discovery (tier 1) and dtls_probe.probe_dtls_ports (tier 2) -- port
+    detection degrades all the way to the UDP sweep rather than raising out
+    of look() before tier 2's own already-guarded import is ever reached.
+
+    `fake_dtls` patches _discover_advertised_ports/_read_plaintext_identity
+    to trivial no-ops; those are overridden below to actually raise the way
+    an unguarded lazy import on an old wheel does, so tier 1's guard in
+    look() is the thing under test, not bypassed by it.
+    """
     from custom_components.localthings import probing
+
+    def _no_ocf_discovery(host):
+        raise ImportError("No module named 'smartthings_local.protocol.ocf_discovery'")
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", _no_ocf_discovery)
 
     def _missing(host, ports, *, preferred_port=None, **kwargs):
         raise ImportError("no module named dtls_probe")
@@ -704,6 +717,33 @@ def test_confirmed_port_that_times_out_is_reported_as_a_stuck_session() -> None:
     assert err.error_key == "handshake_timeout"
 
 
+def test_advertised_only_host_is_reported_as_appliance_no_dtls() -> None:
+    """A host that named its secure port over plaintext CoAP but whose
+    /oic/d and /oic/p reads both failed has scan.plaintext=None -- it must
+    still be reported as appliance_no_dtls, not fall through to
+    ports_closed, whose wording ("answered nothing on the discovery
+    channel") would be exactly backwards for a host that just did."""
+    from custom_components.localthings import probing
+    from custom_components.localthings.config_flow import (
+        ApplianceNoDtls,
+        _classify_handshake_failure,
+    )
+
+    scan = probing.HostProbe(
+        host=MOCK_HOST,
+        candidates=[],
+        confirmed=[],
+        swept=_sweep_result(),
+        advertised=(49154,),
+        plaintext=None,
+        plaintext_port=5683,
+    )
+    err = _classify_handshake_failure(MOCK_HOST, scan, [])
+    assert isinstance(err, ApplianceNoDtls)
+    assert err.error_key == "appliance_no_dtls"
+    assert err.placeholders == {"model": "unknown", "port": "49154"}
+
+
 def test_every_port_refused_is_reported_as_closed_ports() -> None:
     """ICMP port-unreachable on the whole range means the host is up and
     answering -- it just isn't exposing a local API. Cloud-only firmware and
@@ -812,6 +852,54 @@ async def test_identified_appliance_that_refuses_dtls_says_so(
         result["flow_id"], {CONF_HOST: MOCK_HOST}
     )
     assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "appliance_no_dtls"}
+    placeholders = result["description_placeholders"]
+    assert placeholders is not None
+    assert placeholders["model"].startswith("TP1X_REF_21K")
+    assert placeholders["port"] == "49154"
+
+
+async def test_reconfigure_identified_appliance_that_refuses_dtls_has_placeholders(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """Same failure as test_identified_appliance_that_refuses_dtls_says_so, but
+    reached via reconfigure: an appliance moved address, answered plaintext
+    CoAP at the new one, and refuses DTLS (Remote Control off at its panel).
+    async_step_reconfigure's async_show_form must pass appliance_no_dtls's
+    {model}/{port} description_placeholders, or HA renders "Translation
+    error" instead of the message."""
+    from custom_components.localthings import probing
+
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA)
+    entry.add_to_hass(hass)
+
+    identity = probing.PlaintextIdentity(
+        device_id="62304e1f-eb40-741d-4aee-99175ed16e81",
+        model="TP1X_REF_21K|00176141|0000085003181329",
+        vendor_id="DA-REF-NORMAL-01011",
+        firmware="A-RFWW-TP1-24-T4-COM_20260617",
+        name="Samsung-Refrigerator",
+    )
+    monkeypatch.setattr(
+        probing,
+        "look",
+        lambda host: probing.HostProbe(
+            host=host,
+            candidates=[],
+            confirmed=[],
+            swept=probing.SweepResult([], [], []),
+            advertised=(49154,),
+            plaintext=identity,
+            plaintext_port=5683,
+        ),
+    )
+
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "10.0.0.99"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
     assert result["errors"] == {"base": "appliance_no_dtls"}
     placeholders = result["description_placeholders"]
     assert placeholders is not None

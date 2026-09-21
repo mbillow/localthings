@@ -471,13 +471,17 @@ def _classify_handshake_failure(
             f"DTLS server confirmed on {host}:{scan.confirmed} but the handshake never completed"
         )
 
-    if scan.plaintext is not None:
-        # It told us its model over plaintext CoAP, so the address is not in
-        # doubt and neither is what kind of device it is.
+    if scan.plaintext is not None or scan.advertised:
+        # It answered the discovery channel -- named its secure port, its
+        # identity, or both -- so the address is not in doubt and neither is
+        # what kind of device it is, even if /oic/d and /oic/p both failed.
         advertised = ", ".join(str(port) for port in scan.advertised) or "none advertised"
+        model = "unknown"
+        if scan.plaintext is not None:
+            model = scan.plaintext.model or scan.plaintext.vendor_id or "unknown"
         return ApplianceNoDtls(
             f"{host} answered plaintext CoAP but no DTLS handshake completed",
-            model=scan.plaintext.model or scan.plaintext.vendor_id or "unknown",
+            model=model,
             port=advertised,
         )
 
@@ -1076,6 +1080,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except (CannotConnect, InvalidCA) as exc:
                 _LOGGER.warning("Probe of %s failed [%s]: %s", host, exc.error_key, exc)
                 errors["base"] = exc.error_key
+                self._error_placeholders = getattr(exc, "placeholders", {})
             except Exception:
                 _LOGGER.exception("Unexpected error during device probe")
                 errors["base"] = "unknown"
@@ -1110,6 +1115,11 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input or {CONF_HOST: entry.data.get(CONF_HOST)},
             ),
             errors=errors,
+            description_placeholders={
+                "model": "unknown",
+                "port": "unknown",
+                **self._error_placeholders,
+            },
         )
 
 
