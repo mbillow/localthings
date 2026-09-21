@@ -34,3 +34,6 @@ local-tools/
 
 # HA dev instance — persisted config and secrets
 ha_config/
+
+# Subagent-driven development scratch (ledger, briefs, review packages)
+.superpowers/

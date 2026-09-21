@@ -50,8 +50,9 @@
     },
     "error": {
       "no_response": "No hubo respuesta de esa dirección IP: no llegó nada por ningún puerto del rango de la API local del electrodoméstico (UDP 49152-49160). Comprueba que la dirección IP sea correcta, que el electrodoméstico esté encendido y en la misma red que Home Assistant, y que ningún cortafuegos esté descartando el tráfico UDP hacia él.",
-      "ports_closed": "Esa dirección IP es accesible, pero rechazó activamente todos los puertos del rango de la API local (UDP 49152-49160). O no es un electrodoméstico Samsung, o tiene un firmware antiguo que solo se comunica con la nube de Samsung por TCP 8888, que esta integración no puede usar.",
+      "ports_closed": "Esa dirección IP es accesible, pero rechazó activamente todos los puertos del rango de la API local (UDP 49152-49160) y no respondió nada por el canal de descubrimiento. Lo más probable es que no sea un electrodoméstico Samsung, o que sea uno sin la API local activada.",
       "no_dtls_server": "Los puertos del rango de la API local son accesibles en esa dirección, pero nada respondió a un saludo DTLS. Comprueba que la dirección IP pertenezca al electrodoméstico y no a otro dispositivo de tu red.",
+      "appliance_no_dtls": "Esa dirección es un electrodoméstico Samsung: se identificó como {model} por el canal de descubrimiento sin cifrar y anunció {port} como su puerto seguro, pero nunca completó un saludo DTLS en él. La dirección no es el problema. Comprueba si el Control remoto u otro ajuste similar está desactivado en el panel del electrodoméstico, y consulta el registro de Home Assistant para ver el fallo exacto.",
       "handshake_timeout": "El electrodoméstico respondió en su puerto de API local, pero no completó el saludo DTLS. Normalmente todavía mantiene la sesión de un intento anterior: espera alrededor de un minuto e inténtalo de nuevo.",
       "cert_rejected": "El electrodoméstico rechazó el certificado. Lo más probable es que el certificado y la clave de la CA no sean los de la CA AC14K_M en la que confía este electrodoméstico, o que no se correspondan entre sí. El registro de Home Assistant recoge la alerta exacta que envió el electrodoméstico.",
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
@@ -66,7 +67,8 @@
       "already_configured": "El dispositivo ya está configurado",
       "already_in_progress": "La configuración ya está en curso",
       "reconfigure_successful": "Dirección actualizada",
-      "no_entry_for_mac": "Ningún electrodoméstico configurado guarda esa dirección MAC"
+      "no_entry_for_mac": "Ningún electrodoméstico configurado guarda esa dirección MAC",
+      "legacy_http_unsupported": "{host} es un electrodoméstico Samsung de la familia más antigua, que habla HTTPS por el puerto TCP 8888 en lugar de la API local CoAP/DTLS que usa esta integración. El soporte para él está en desarrollo: consulta la incidencia #467 en GitHub. No hay nada que arreglar por tu parte."
     }
   },
   "options": {

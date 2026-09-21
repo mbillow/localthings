@@ -137,9 +137,12 @@ def _mac_connections(mac: str | None) -> set[tuple[str, str]]:
 def _local_source_port(host: str) -> int:
     """Deterministic UDP source port for this device's DTLS socket.
 
-    Binding the same source port across reconnects lets the appliance evict
-    an orphaned session (unclean shutdown, no close_notify) at handshake
-    time per RFC 6347 §4.2.8, instead of holding it 5-15 min. See
+    This firmware's peer table has no cap, no idle timeout and no LRU, so
+    reconnecting from a fresh ephemeral port each time leaves the old entry
+    live and accumulates contexts. Reconnecting over an entry the device
+    still holds destroys the stale peer instead, because a ClientHello is
+    not application data it can read (issue #486, correcting an earlier
+    RFC 6347 §4.2.8 rationale that does not apply to this stack). See
     DTLS_LOCAL_PORT_BASE. Requires smartthings-local >= 0.1.1.
 
     Must stay unique per device on this host too. That used to be load-

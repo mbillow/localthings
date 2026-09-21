@@ -6,4 +6,4 @@ FROM ghcr.io/home-assistant/home-assistant:stable
 # repeats the install attempt on every container recreate. Baking
 # smartthings-local into the image keeps the dev container usable
 # offline and avoids relying on that runtime install path.
-RUN pip3 install --no-cache-dir "smartthings-local>=0.1.12"
+RUN pip3 install --no-cache-dir "smartthings-local>=0.1.18"
