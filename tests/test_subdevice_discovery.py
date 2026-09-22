@@ -630,3 +630,16 @@ async def test_a_subdevice_with_no_cavity_keeps_its_model_label(hass: HomeAssist
     coordinator._canonical_cache.clear()
 
     assert (coordinator.device_info_for(sub)["name"] or "").endswith("Artik051 Gb Wo 003")
+
+
+async def test_the_cavity_label_also_covers_the_flex_range(hass: HomeAssistant) -> None:
+    """The rule is not scoped to issue #490's wall oven: the flex range
+    (issue #183) reports Upper/LowerConvectionBake and has cavities in the
+    same sense, so its second one renames off the model label too. Pinned
+    because that is a user-visible rename on an already-shipped device."""
+    coordinator = _coordinator(hass)
+    _register_master(hass, coordinator)
+    await _discover(coordinator, "range_tp1x_da_ks_range_0101x")
+
+    labels = [(coordinator.device_info_for(s)["name"] or "") for s in coordinator.subdevices]
+    assert any(label.endswith("Lower oven") for label in labels), labels

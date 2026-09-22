@@ -204,17 +204,10 @@ def _coap_accepted(code: int) -> bool:
 def _validate_debug_batch_payload(payload: list) -> None:
     """Shape checks for a Collection batch payload (issue #473).
 
-    An element's `rep` is optional: the cook start measured on an NV7000BS
-    leads with a bare `{"href": "/devices/0"}` marker carrying none, and
-    whether that marker is load-bearing is one of the things a caller is
-    here to test.
-
-    Deliberately no check that the hrefs exist, and no rewriting of them --
-    not even a subdevice's canonical->actual translation, which every
-    *outer* href gets. The payload is the experiment: which spelling a
-    board accepts inside a batch is exactly what a caller is varying, and
-    a helpful correction here would silently discard the permutation they
-    asked for.
+    `rep` is optional, since the measured cook start leads with a bare
+    `{"href": "/devices/0"}` marker. Hrefs are neither validated nor
+    rewritten: the payload is the experiment, and correcting a spelling
+    the caller is deliberately varying would discard the permutation.
     """
     if not payload or len(payload) > _DEBUG_MAX_BATCH_ELEMENTS:
         raise ServiceValidationError(
@@ -241,15 +234,19 @@ def _validate_debug_batch_payload(payload: list) -> None:
 
 
 def _batch_element_reps(payload: list) -> dict[str, dict]:
-    """`{href: rep}` for the elements of a batch payload that carry one.
+    """`{href: rep}` for the elements of a batch payload that wrote
+    something, for verification only -- the payload itself goes on the wire
+    whole.
 
-    The marker elements drop out here, which is what makes them free to
-    send: nothing downstream tries to verify a write that wasn't one.
+    An empty rep drops out alongside the rep-less markers: neither wrote a
+    field, and "every field I sent is present" is vacuously true of both.
+    Two elements sharing an href keep the last, the same way `verified`
+    already reports only the last payload written to a href.
     """
     return {
         element["href"]: element["rep"]
         for element in payload
-        if isinstance(element.get("rep"), dict)
+        if isinstance(element.get("rep"), dict) and element["rep"]
     }
 
 
@@ -2417,9 +2414,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._observe.apply(href, rep, source="poll")
                         new_rep = rep
                     elif isinstance(rep, list):
+                        # Reported, never applied. A prefixed subdevice's
+                        # batch may omit its own prefix (see
+                        # subdevices.normalize_seed_batch), and this
+                        # primitive has no subdevice to normalize against,
+                        # so applying would land a sibling's reps on the
+                        # master's hrefs. The sequence's own refresh picks
+                        # them up correctly a moment later.
                         new_rep = parse_device0_batch(rep)
-                        for element_href, element_rep in new_rep.items():
-                            self._observe.apply(element_href, element_rep, source="poll")
             except Exception as e:
                 self._log.debug("raw write follow-up read failed: %s", e)
         return code, new_rep, response_body

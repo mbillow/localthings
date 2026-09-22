@@ -387,17 +387,11 @@ _PROBE_ITEM_ID = "1"
 def _probe_item(rep):
     """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
 
-    Keyed by the reported id rather than by position: items[0] is the
-    cavity on every dump in the corpus, and a board that ever listed them
-    the other way round would otherwise silently swap the two readings.
-
-    Which id the probe takes is inferred, not confirmed end-to-end (issue
-    #490): on the dual-cavity dump the upper cavity reports two items where
-    the lower reports one, the second carries `increment` 1 against the
-    cavity's 5, and only the upper cavity carries a
-    `/temperature/*/prob/0` pair and a `meatprobe_` token. Three signals
-    agreeing is why this ships; a dump taken with a probe actually plugged
-    in is what would settle it.
+    Keyed by reported id, not position, so a board listing them the other
+    way round can't swap the two readings. That id 1 is the probe is
+    inferred from issue #490's dump, not confirmed: only the cavity with a
+    probe socket reports a second item, and it carries `increment` 1
+    against the cavity's 5.
     """
     for item in rep.get("x.com.samsung.da.items") or []:
         if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
@@ -433,14 +427,17 @@ def _probe_connected(rep, resources):
     return state is not None and state.lower() != "disconnected"
 
 
-def _setpoint_bounds(rep):
-    """(min, max, step) for the live unit -- see the SETPOINT_*_C/_F
-    constants above for provenance. Bounds must track the unit shown by
-    unit_fn (both read the same live rep), or the HA slider's range would
-    silently mismatch its own displayed unit."""
-    if _oven_temp_unit(rep) == "°F":
+def _bounds_for_unit(unit):
+    """(min, max, step) for `unit` -- see the SETPOINT_*_C/_F constants
+    above for provenance. Bounds must track the unit shown by unit_fn, or
+    the HA slider's range silently mismatches its own displayed unit."""
+    if unit == "°F":
         return SETPOINT_MIN_F, SETPOINT_MAX_F, SETPOINT_STEP_F
     return SETPOINT_MIN_C, SETPOINT_MAX_C, SETPOINT_STEP_C
+
+
+def _setpoint_bounds(rep):
+    return _bounds_for_unit(_oven_temp_unit(rep))
 
 
 OVEN_SETPOINT = Capability(
@@ -497,23 +494,16 @@ OVEN_SETPOINT = Capability(
 )
 
 # OCF-standard temperature pair, as a fallback behind the vendor array
-# above (issue #490). Newer firmware advertises both -- the ARTIK051 wall
-# oven reports `/temperature/{current,desired}/{cook,prob}/N` carrying
-# OCF's `{units, temperature}` alongside a fully populated
-# `/temperatures/vs/0`. The vendor array is the superset there: it carries
-# the unit, the setpoint `increment`, the cavity and the probe in one rep,
-# and it is the href with a proven write contract. So these bind the hrefs
-# (which is what keeps them out of `unbound_hrefs`) but stand down
-# whenever the vendor array is present, exactly like common.py's
-# POWER_VS_FALLBACK does in the opposite direction.
+# above (issue #490): the ARTIK051 wall oven reports both, and the vendor
+# array is the superset there (unit, setpoint increment, cavity and probe
+# in one rep, and the only proven write contract). So these bind the hrefs
+# -- which is what keeps them out of `unbound_hrefs` -- but stand down
+# while it is present, as common.py's POWER_VS_FALLBACK does in reverse.
 #
-# Same `key`s as the vendor entities on purpose: at most one of the two
-# ever materializes, so a board with only the OCF pair gets the same
-# entities under the same unique_ids as one with only the vendor array.
-#
-# Hrefs are canonical: a second cavity answers `/temperature/current/cook/1`
-# on the wire, but binding runs against each subdevice's canonical view, so
-# the `/0` spelling covers both (see the adding-device-support skill's §8).
+# Exact hrefs, not an href_prefix pattern: `discover()` only clears an
+# href that an exact-href capability claims, so a declining pattern cap
+# would leave the gap open. They share the vendor entities' keys, so at
+# most one materializes and the unique_ids match either way.
 
 _VENDOR_TEMPS_HREF = "/temperatures/vs/0"
 
@@ -525,6 +515,20 @@ def _no_vendor_temps(rep, resources):
 def _ocf_temp_unit(rep):
     """OCF's own `units` field ('C'/'F'), not the vendor `unit` spelling."""
     return normalize_temp_unit(rep.get("units"), default="°C")
+
+
+def _ocf_setpoint_bounds(rep):
+    return _bounds_for_unit(_ocf_temp_unit(rep))
+
+
+def _ocf_probe_connected(rep, resources):
+    """The same socket gate `_probe_connected` applies to the vendor array,
+    read here off `/mode/vs/0` alone -- an empty socket reports a live 0 on
+    these hrefs too, and a permanent 0 degree probe is what the gate is
+    for."""
+    mode = resources.get("/mode/vs/0") or {}
+    state = _option_value(mode.get("x.com.samsung.da.options"), "meatprobe")
+    return state is not None and state.lower() != "disconnected"
 
 
 def _ocf_setpoint_write(p, rep, href=None):
@@ -566,6 +570,9 @@ OVEN_TEMP_DESIRED_OCF = Capability(
             native_min=float(SETPOINT_MIN_C),
             native_max=float(SETPOINT_MAX_C),
             step=float(SETPOINT_STEP_C),
+            native_min_fn=lambda rep: float(_ocf_setpoint_bounds(rep)[0]),
+            native_max_fn=lambda rep: float(_ocf_setpoint_bounds(rep)[1]),
+            step_fn=lambda rep: float(_ocf_setpoint_bounds(rep)[2]),
             icon="mdi:thermometer-chevron-up",
             write_fn=_ocf_setpoint_write,
         ),
@@ -583,6 +590,7 @@ OVEN_PROBE_CURRENT_OCF = Capability(
             device_class="temperature",
             state_class="measurement",
             unit_fn=_ocf_temp_unit,
+            exists_fn=_ocf_probe_connected,
         ),
     ),
 )
@@ -598,6 +606,7 @@ OVEN_PROBE_DESIRED_OCF = Capability(
             device_class="temperature",
             entity_category="diagnostic",
             unit_fn=_ocf_temp_unit,
+            exists_fn=_ocf_probe_connected,
         ),
     ),
 )

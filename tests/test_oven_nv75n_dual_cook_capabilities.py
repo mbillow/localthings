@@ -7,11 +7,13 @@ populated vendor `/temperatures/vs/0`. Those six hrefs were the reporter's
 unbound-coverage gap.
 """
 
+from typing import cast
+
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SensorDesc
+from custom_components.localthings.registry.entities import NumberDesc, SensorDesc
 from custom_components.localthings.registry.subdevices import MAIN, canonical_view
 from tests.conftest import _discover_full, _load_device_full
 
@@ -89,9 +91,9 @@ def test_the_ocf_pair_takes_over_when_the_vendor_array_is_absent():
     assert gaps == []
     assert state["current_temp_c"] == 0.0
     assert state["oven_setpoint"] == 0.0
-    # The probe pair is not gated on the mode token -- that gate belongs to
-    # the vendor items[] reading, which isn't what answered here.
-    assert state["food_probe_temp"] == 0.0
+    # The socket gate applies on this path too: an empty socket reports a
+    # live 0 here exactly as it does in the vendor array.
+    assert "food_probe_temp" not in state
 
 
 def test_the_food_probe_stays_hidden_while_it_is_unplugged():
@@ -152,3 +154,19 @@ def test_the_lower_cavity_has_no_probe_of_its_own():
     assert "food_probe_temp" not in state
     assert "/temperature/current/prob/0" not in view
     assert len(view["/temperatures/vs/0"]["x.com.samsung.da.items"]) == 1
+
+
+def test_the_ocf_setpoint_bounds_follow_the_unit_the_board_reports():
+    """The vendor setpoint derives its range from the live unit; the OCF
+    one has to as well, or a Fahrenheit board gets a 30-270 slider under an
+    F label and rejects every real oven temperature."""
+    desc = cast(
+        NumberDesc,
+        next(e for e in oven.OVEN_TEMP_DESIRED_OCF.entities if e.key == "oven_setpoint"),
+    )
+    assert desc.native_min_fn is not None and desc.native_max_fn is not None
+
+    fahrenheit = {"units": "F", "temperature": 350.0}
+    assert (desc.native_min_fn(fahrenheit), desc.native_max_fn(fahrenheit)) == (175.0, 550.0)
+    celsius = {"units": "C", "temperature": 175.0}
+    assert (desc.native_min_fn(celsius), desc.native_max_fn(celsius)) == (30.0, 270.0)
