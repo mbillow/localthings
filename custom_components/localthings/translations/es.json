@@ -1360,6 +1360,12 @@
       "current_temp_c": {
         "name": "Temperatura"
       },
+      "food_probe_temp": {
+        "name": "Sonda de alimentos"
+      },
+      "food_probe_setpoint": {
+        "name": "Objetivo de la sonda"
+      },
       "current_temperature_c": {
         "name": "Temperatura"
       },

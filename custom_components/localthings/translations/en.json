@@ -1133,6 +1133,12 @@
       "current_temp_c": {
         "name": "Temperature"
       },
+      "food_probe_temp": {
+        "name": "Food probe"
+      },
+      "food_probe_setpoint": {
+        "name": "Food probe target"
+      },
       "current_temperature_c": {
         "name": "Temperature"
       },

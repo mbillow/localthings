@@ -67,12 +67,27 @@ def test_probe_hrefs_are_exactly_the_capabilities_that_asked_for_it():
     assert set(PROBE_HREFS) == {FILE_LIST, FILE_TRANSFER}
 
 
-def test_probe_hrefs_are_absent_from_every_batch_fixture(all_device_fixtures):
-    """The premise of the whole tier. If a batch ever starts carrying one of
-    these, it no longer needs probing and this tier's cost is unjustified."""
+def test_the_usage_blob_is_absent_from_every_batch_fixture(all_device_fixtures):
+    """The premise of the whole tier, for the href it actually exists to
+    reach. `/file/transfer/vs/0` is the one that binds an entity, and if a
+    batch ever starts carrying it, probing for it is unjustified."""
     for name, resources in all_device_fixtures.items():
-        for href in PROBE_HREFS:
-            assert href not in resources, f"{name} carries {href} in its batch"
+        assert FILE_TRANSFER not in resources, f"{name} carries {FILE_TRANSFER} in its batch"
+
+
+def test_the_file_list_is_batched_only_by_the_board_known_to_send_it(all_device_fixtures):
+    """`/file/list/vs/0` is the weaker half: it binds nothing and is probed
+    only so the rep reaches diagnostics without becoming a coverage gap.
+
+    The ARTIK051 wall oven (issue #490) puts it in the batch already,
+    populated, which costs that board one redundant GET per probe cycle and
+    nothing else -- the capability is registered either way, so it is not a
+    gap. Pinned rather than dropped from the invariant so the next board
+    that batches it is still noticed, and so this one can't quietly become
+    the reason the whole tier looks unnecessary.
+    """
+    batched = {name for name, res in all_device_fixtures.items() if FILE_LIST in res}
+    assert batched == {"oven_nv75n_dual_cook"}
 
 
 def test_a_probed_href_is_registered_so_it_is_not_a_coverage_gap():

@@ -1133,6 +1133,12 @@
       "current_temp_c": {
         "name": "온도"
       },
+      "food_probe_temp": {
+        "name": "온도 프로브"
+      },
+      "food_probe_setpoint": {
+        "name": "온도 프로브 목표"
+      },
       "current_temperature_c": {
         "name": "온도"
       },

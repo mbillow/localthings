@@ -381,6 +381,58 @@ def _oven_temp_unit(rep):
     return normalize_temp_unit(unit, default="°C")
 
 
+_PROBE_ITEM_ID = "1"
+
+
+def _probe_item(rep):
+    """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
+
+    Keyed by the reported id rather than by position: items[0] is the
+    cavity on every dump in the corpus, and a board that ever listed them
+    the other way round would otherwise silently swap the two readings.
+
+    Which id the probe takes is inferred, not confirmed end-to-end (issue
+    #490): on the dual-cavity dump the upper cavity reports two items where
+    the lower reports one, the second carries `increment` 1 against the
+    cavity's 5, and only the upper cavity carries a
+    `/temperature/*/prob/0` pair and a `meatprobe_` token. Three signals
+    agreeing is why this ships; a dump taken with a probe actually plugged
+    in is what would settle it.
+    """
+    for item in rep.get("x.com.samsung.da.items") or []:
+        if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
+            return item
+    return None
+
+
+def _probe_field(rep, field):
+    item = _probe_item(rep)
+    return _int(item.get(field)) if item else None
+
+
+def _probe_temp_unit(rep):
+    item = _probe_item(rep)
+    unit = item.get("x.com.samsung.da.unit") if item else None
+    return normalize_temp_unit(unit, default="°C")
+
+
+def _probe_connected(rep, resources):
+    """True only while a probe is actually plugged in.
+
+    The socket's state lives on a different resource -- `/mode/vs/0`'s
+    options[] carries a `meatprobe_<state>` token -- so an oven with a
+    socket and nothing in it reports a full items[1] reading 0, which as a
+    permanent entity is worse than no entity. Gated on "reports a state and
+    it isn't disconnected" rather than on the connected spelling, which no
+    dump has shown yet.
+    """
+    if _probe_item(rep) is None:
+        return False
+    mode = resources.get("/mode/vs/0") or {}
+    state = _option_value(mode.get("x.com.samsung.da.options"), "meatprobe")
+    return state is not None and state.lower() != "disconnected"
+
+
 def _setpoint_bounds(rep):
     """(min, max, step) for the live unit -- see the SETPOINT_*_C/_F
     constants above for provenance. Bounds must track the unit shown by
@@ -419,6 +471,133 @@ OVEN_SETPOINT = Capability(
             state_class="measurement",
             unit_fn=_oven_temp_unit,
             rep_fn=_current_temp,
+        ),
+        # The food probe rides in the same items[] array as items[1], which
+        # was being dropped (issue #490 -- only items[0] was ever read).
+        # Read-only on purpose: nothing in the corpus shows a probe target
+        # write being accepted, and this family discards even ordinary
+        # setpoint writes from idle (docs/investigations/oven-cycle-start.md).
+        SensorDesc(
+            key="food_probe_temp",
+            device_class="temperature",
+            state_class="measurement",
+            unit_fn=_probe_temp_unit,
+            exists_fn=_probe_connected,
+            rep_fn=lambda rep: _probe_field(rep, "x.com.samsung.da.current"),
+        ),
+        SensorDesc(
+            key="food_probe_setpoint",
+            device_class="temperature",
+            unit_fn=_probe_temp_unit,
+            entity_category="diagnostic",
+            exists_fn=_probe_connected,
+            rep_fn=lambda rep: _probe_field(rep, "x.com.samsung.da.desired"),
+        ),
+    ),
+)
+
+# OCF-standard temperature pair, as a fallback behind the vendor array
+# above (issue #490). Newer firmware advertises both -- the ARTIK051 wall
+# oven reports `/temperature/{current,desired}/{cook,prob}/N` carrying
+# OCF's `{units, temperature}` alongside a fully populated
+# `/temperatures/vs/0`. The vendor array is the superset there: it carries
+# the unit, the setpoint `increment`, the cavity and the probe in one rep,
+# and it is the href with a proven write contract. So these bind the hrefs
+# (which is what keeps them out of `unbound_hrefs`) but stand down
+# whenever the vendor array is present, exactly like common.py's
+# POWER_VS_FALLBACK does in the opposite direction.
+#
+# Same `key`s as the vendor entities on purpose: at most one of the two
+# ever materializes, so a board with only the OCF pair gets the same
+# entities under the same unique_ids as one with only the vendor array.
+#
+# Hrefs are canonical: a second cavity answers `/temperature/current/cook/1`
+# on the wire, but binding runs against each subdevice's canonical view, so
+# the `/0` spelling covers both (see the adding-device-support skill's §8).
+
+_VENDOR_TEMPS_HREF = "/temperatures/vs/0"
+
+
+def _no_vendor_temps(rep, resources):
+    return _VENDOR_TEMPS_HREF not in resources
+
+
+def _ocf_temp_unit(rep):
+    """OCF's own `units` field ('C'/'F'), not the vendor `unit` spelling."""
+    return normalize_temp_unit(rep.get("units"), default="°C")
+
+
+def _ocf_setpoint_write(p, rep, href=None):
+    """Write the OCF resource directly -- reached only on a board with no
+    vendor array to RMW, so there is no `/temperatures/vs/0` fallback to
+    prefer the way fridge.py's `_temp_setpoint_write` has. Unconfirmed on
+    hardware: no dump in the corpus has this pair without the vendor one.
+    """
+    if not href:
+        return None
+    return ([s for s in href.strip("/").split("/") if s], {"temperature": round(float(p))})
+
+
+OVEN_TEMP_CURRENT_OCF = Capability(
+    href="/temperature/current/cook/0",
+    match_fn=_no_vendor_temps,
+    poll_tier="hot",
+    entities=(
+        SensorDesc(
+            key="current_temp_c",
+            field="temperature",
+            device_class="temperature",
+            state_class="measurement",
+            unit_fn=_ocf_temp_unit,
+        ),
+    ),
+)
+
+OVEN_TEMP_DESIRED_OCF = Capability(
+    href="/temperature/desired/cook/0",
+    match_fn=_no_vendor_temps,
+    poll_tier="hot",
+    entities=(
+        NumberDesc(
+            key="oven_setpoint",
+            field="temperature",
+            device_class="temperature",
+            unit_fn=_ocf_temp_unit,
+            native_min=float(SETPOINT_MIN_C),
+            native_max=float(SETPOINT_MAX_C),
+            step=float(SETPOINT_STEP_C),
+            icon="mdi:thermometer-chevron-up",
+            write_fn=_ocf_setpoint_write,
+        ),
+    ),
+)
+
+OVEN_PROBE_CURRENT_OCF = Capability(
+    href="/temperature/current/prob/0",
+    match_fn=_no_vendor_temps,
+    poll_tier="hot",
+    entities=(
+        SensorDesc(
+            key="food_probe_temp",
+            field="temperature",
+            device_class="temperature",
+            state_class="measurement",
+            unit_fn=_ocf_temp_unit,
+        ),
+    ),
+)
+
+OVEN_PROBE_DESIRED_OCF = Capability(
+    href="/temperature/desired/prob/0",
+    match_fn=_no_vendor_temps,
+    poll_tier="hot",
+    entities=(
+        SensorDesc(
+            key="food_probe_setpoint",
+            field="temperature",
+            device_class="temperature",
+            entity_category="diagnostic",
+            unit_fn=_ocf_temp_unit,
         ),
     ),
 )

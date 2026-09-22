@@ -1133,6 +1133,12 @@
       "current_temp_c": {
         "name": "Teplota"
       },
+      "food_probe_temp": {
+        "name": "Teplotní sonda"
+      },
+      "food_probe_setpoint": {
+        "name": "Cílová teplota sondy"
+      },
       "current_temperature_c": {
         "name": "Teplota"
       },

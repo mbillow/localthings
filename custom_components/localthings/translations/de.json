@@ -1127,6 +1127,12 @@
       "current_temp_c": {
         "name": "Temperatur"
       },
+      "food_probe_temp": {
+        "name": "Bratenthermometer"
+      },
+      "food_probe_setpoint": {
+        "name": "Bratenthermometer-Zieltemperatur"
+      },
       "current_temperature_c": {
         "name": "Temperatur"
       },

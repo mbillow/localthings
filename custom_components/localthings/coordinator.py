@@ -253,6 +253,31 @@ def _batch_element_reps(payload: list) -> dict[str, dict]:
     }
 
 
+# An oven cavity names itself in /mode/vs/0's defaultMode, which prefixes
+# the cavity onto the mode ('UpperConvection'/'LowerConvection' on the
+# dual-cavity board in issue #490). Only the prefix is a cavity; the rest
+# is a cooking mode and must not reach a device name.
+_CAVITY_PREFIXES = ("Upper", "Lower")
+
+
+def _cavity_label(resources: dict[str, dict]) -> str | None:
+    """'Upper oven'/'Lower oven' when this subdevice says which cavity it
+    is, else None.
+
+    Deliberately a two-entry table rather than a general camel-case split:
+    every other defaultMode in the corpus is a plain cooking mode, and
+    naming somebody's appliance 'Samsung Oven Convection Bake' would be a
+    worse outcome than the model label this falls back to.
+    """
+    mode = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.defaultMode")
+    if not isinstance(mode, str):
+        return None
+    for prefix in _CAVITY_PREFIXES:
+        if mode.startswith(prefix):
+            return f"{prefix} oven"
+    return None
+
+
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     """Whether everything `payload` wrote is present in `readback`.
 
@@ -886,12 +911,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         if subdevice.kind == "main":
             return self.device_info
-        info = self.canonical_resources(subdevice).get("/information/vs/0", {})
+        resources = self.canonical_resources(subdevice)
+        info = resources.get("/information/vs/0", {})
         model_num = info.get("x.com.samsung.da.modelNum", "")
         model = model_num.split("|", 1)[0] if model_num else ""
         serial = info.get("x.com.samsung.da.serialNum") or None
         base_name = self.device_info.get("name") or "Samsung Appliance"
-        if model:
+        if cavity := _cavity_label(resources):
+            # A dual-cavity oven reports the same modelNum on both cavities
+            # (issue #490), so the model label below names them identically
+            # and the two are indistinguishable in HA. The cavity says which
+            # is which, and the device is the one saying it.
+            label = cavity
+        elif model:
             label = model.replace("_", " ").title()
         else:
             # No identity resource yet (or ever) for this subdevice -- fall
