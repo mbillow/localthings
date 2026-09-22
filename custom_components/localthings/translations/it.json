@@ -759,7 +759,21 @@
           "74": "Abbigliamento sportivo",
           "75": "Delicati",
           "77": "Pronto da stirare",
-          "78": "Lavaggio rapido"
+          "78": "Lavaggio rapido",
+          "ba": "Scarico/Centrifuga",
+          "d0": "Cotone",
+          "d1": "Cotone E",
+          "d2": "Sintetici",
+          "d3": "Delicati",
+          "d4": "Risciacquo+Centrifuga",
+          "d5": "Pulizia cestello",
+          "d6": "Biancheria da letto",
+          "d7": "Cura outdoor",
+          "d8": "Lana",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "Rapido 15'",
+          "e4": "Anti-allergia"
         }
       },
       "washer_cycle_table_02": {

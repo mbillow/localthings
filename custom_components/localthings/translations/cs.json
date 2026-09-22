@@ -759,7 +759,21 @@
           "74": "Sportovní oblečení",
           "75": "Jemné prádlo",
           "77": "Nežehlivé prádlo",
-          "78": "Rychlé praní"
+          "78": "Rychlé praní",
+          "ba": "Vypuštění/odstřeďování",
+          "d0": "Bavlna",
+          "d1": "Eko bavlna",
+          "d2": "Syntetika",
+          "d3": "Jemné prádlo",
+          "d4": "Máchání + odstřeďování",
+          "d5": "Čištění bubnu",
+          "d6": "Ložní prádlo",
+          "d7": "Outdoor péče",
+          "d8": "Vlna",
+          "da": "Super Eco",
+          "db": "Super rychlé",
+          "dc": "15min rychlé praní",
+          "e4": "Antialergenní"
         }
       },
       "washer_cycle_table_02": {

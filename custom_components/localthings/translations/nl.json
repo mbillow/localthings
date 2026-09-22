@@ -759,7 +759,21 @@
           "74": "Sportkleding",
           "75": "Fijne was",
           "77": "Strijkvrij",
-          "78": "Snelle was"
+          "78": "Snelle was",
+          "ba": "Afpompen/centrifugeren",
+          "d0": "Katoen",
+          "d1": "Eco katoen",
+          "d2": "Synthetisch",
+          "d3": "Fijne was",
+          "d4": "Spoelen + centrifugeren",
+          "d5": "Trommel reinigen",
+          "d6": "Beddengoed",
+          "d7": "Outdoorverzorging",
+          "d8": "Wol",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "15' Snelle was",
+          "e4": "Anti-allergie"
         }
       },
       "washer_cycle_table_02": {

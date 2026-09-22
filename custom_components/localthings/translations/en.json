@@ -759,7 +759,21 @@
           "74": "Active Wear",
           "75": "Delicates",
           "77": "Perm Press",
-          "78": "Quick Wash"
+          "78": "Quick Wash",
+          "ba": "Drain/Spin",
+          "d0": "Cotton",
+          "d1": "E Cotton",
+          "d2": "Synthetics",
+          "d3": "Delicates",
+          "d4": "Rinse + Spin",
+          "d5": "Drum Clean",
+          "d6": "Bedding",
+          "d7": "Outdoor Care",
+          "d8": "Wool",
+          "da": "Super Eco Wash",
+          "db": "Super Speed",
+          "dc": "15' Quick Wash",
+          "e4": "Anti Allergen"
         }
       },
       "washer_cycle_table_02": {

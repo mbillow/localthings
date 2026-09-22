@@ -722,7 +722,21 @@
           "74": "Sportkleidung",
           "75": "Feinwäsche",
           "77": "Pflegeleicht",
-          "78": "Schnellwäsche"
+          "78": "Schnellwäsche",
+          "ba": "Abpumpen + Schleudern",
+          "d0": "Baumwolle",
+          "d1": "Eco Baumwolle",
+          "d2": "Pflegeleicht",
+          "d3": "Feinwäsche",
+          "d4": "Spülen + Schleudern",
+          "d5": "Trommelreinigung",
+          "d6": "Bettwäsche",
+          "d7": "Outdoor-Pflege",
+          "d8": "Wolle",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "Schnelle Wäsche 15'",
+          "e4": "Anti-Allergie"
         }
       },
       "washer_cycle_table_02": {

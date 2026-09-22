@@ -983,7 +983,21 @@
           "74": "Ropa deportiva",
           "75": "Delicados",
           "77": "Planchado fácil",
-          "78": "Lavado rápido"
+          "78": "Lavado rápido",
+          "ba": "Solo centrifugar",
+          "d0": "Algodón",
+          "d1": "Algodón E",
+          "d2": "Sintéticos",
+          "d3": "Delicados",
+          "d4": "Aclarar + Centrifugar",
+          "d5": "Limpieza de Tambor",
+          "d6": "Ropa de cama",
+          "d7": "Cuidado para exterior",
+          "d8": "Lana",
+          "da": "Super Eco",
+          "db": "Súper velocidad",
+          "dc": "Lavado rápido 15'",
+          "e4": "Antialérgico"
         }
       },
       "washer_cycle_table_02": {
