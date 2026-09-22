@@ -1291,6 +1291,7 @@
         "name": "진행률",
         "state": {
           "idle": "대기",
+          "delaywash": "예약 시작",
           "weightsensing": "세탁물 감지",
           "wash": "세탁",
           "rinse": "헹굼",

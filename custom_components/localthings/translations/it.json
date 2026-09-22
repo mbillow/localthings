@@ -1291,6 +1291,7 @@
         "name": "Avanzamento",
         "state": {
           "idle": "Inattivo",
+          "delaywash": "Ritardo di avvio",
           "weightsensing": "Rilevamento del carico",
           "wash": "Lavaggio",
           "rinse": "Risciacquo",

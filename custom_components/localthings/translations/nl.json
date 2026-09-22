@@ -1291,6 +1291,7 @@
         "name": "Voortgang",
         "state": {
           "idle": "Inactief",
+          "delaywash": "Uitgestelde start",
           "weightsensing": "Beladingsdetectie",
           "wash": "Wassen",
           "rinse": "Spoelen",

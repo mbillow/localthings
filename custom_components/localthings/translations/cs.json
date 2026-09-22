@@ -1291,6 +1291,7 @@
         "name": "Průběh",
         "state": {
           "idle": "Nečinný",
+          "delaywash": "Odložený start",
           "weightsensing": "Detekce náplně",
           "wash": "Praní",
           "rinse": "Máchání",

@@ -1291,6 +1291,7 @@
         "name": "Priebeh",
         "state": {
           "idle": "Nečinnosť",
+          "delaywash": "Odložený štart",
           "weightsensing": "Zisťovanie hmotnosti",
           "wash": "Pranie",
           "rinse": "Plákanie",

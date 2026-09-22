@@ -1291,6 +1291,7 @@
         "name": "Progress",
         "state": {
           "idle": "Idle",
+          "delaywash": "Delayed start",
           "weightsensing": "Weight sensing",
           "wash": "Washing",
           "rinse": "Rinsing",

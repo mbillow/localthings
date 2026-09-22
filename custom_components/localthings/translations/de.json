@@ -1285,6 +1285,7 @@
         "name": "Fortschritt",
         "state": {
           "idle": "Leerlauf",
+          "delaywash": "Startverzögerung",
           "weightsensing": "Beladungserkennung",
           "wash": "Waschen",
           "rinse": "Spülen",
