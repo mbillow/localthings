@@ -373,7 +373,8 @@
           "88": "Samočištění",
           "85": "Jemné",
           "0c": "Express",
-          "0d": "Samočištění"
+          "0d": "Samočištění",
+          "87": "Pouze máchání"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Režim flexibilní zóny",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Chlazení",
           "cv_ttype_rf9000a_freeze": "Mražení",
           "cv_ttype_rf9000a_softfreeze": "Mírné mražení",
           "cv_ttype_rf9000a_meat_fish": "Maso/Ryby",

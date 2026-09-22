@@ -373,7 +373,8 @@
           "88": "Selbstreinigung",
           "85": "Schonprogramm",
           "0c": "Express",
-          "0d": "Selbstreinigung"
+          "0d": "Selbstreinigung",
+          "87": "Nur Spülen"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Flex-Zonen-Modus",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Kühlen",
           "cv_ttype_rf9000a_freeze": "Gefrieren",
           "cv_ttype_rf9000a_softfreeze": "Sanftgefrieren",
           "cv_ttype_rf9000a_meat_fish": "Fleisch/Fisch",

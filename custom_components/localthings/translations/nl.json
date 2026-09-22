@@ -373,7 +373,8 @@
           "88": "Zelfreiniging",
           "85": "Delicaat",
           "0c": "Express",
-          "0d": "Zelfreiniging"
+          "0d": "Zelfreiniging",
+          "87": "Alleen spoelen"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Modus FlexZone",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Koelen",
           "cv_ttype_rf9000a_freeze": "Vriezen",
           "cv_ttype_rf9000a_softfreeze": "Zachtvriezen",
           "cv_ttype_rf9000a_meat_fish": "Vlees/vis",

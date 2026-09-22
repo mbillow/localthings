@@ -597,7 +597,8 @@
           "88": "Autolimpieza",
           "85": "Delicado",
           "0c": "Express",
-          "0d": "Autolimpieza"
+          "0d": "Autolimpieza",
+          "87": "Solo aclarado"
         }
       },
       "dispense_type": {
@@ -727,6 +728,7 @@
       "flex_zone_mode": {
         "name": "Modo de zona flexible",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Refrigerar",
           "cv_ttype_rf9000a_freeze": "Congelar",
           "cv_ttype_rf9000a_softfreeze": "Congelación suave",
           "cv_ttype_rf9000a_meat_fish": "Carne/Pescado",

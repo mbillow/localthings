@@ -373,7 +373,8 @@
           "a7": "Heavy",
           "a8": "Express",
           "8c": "Extra Silence",
-          "88": "Self Clean"
+          "88": "Self Clean",
+          "87": "Rinse Only"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Flex zone mode",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Fridge",
           "cv_ttype_rf9000a_freeze": "Freeze",
           "cv_ttype_rf9000a_softfreeze": "Soft freeze",
           "cv_ttype_rf9000a_meat_fish": "Meat/Fish",

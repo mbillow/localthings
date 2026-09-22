@@ -373,7 +373,8 @@
           "88": "내부 세척",
           "85": "섬세",
           "0c": "급속",
-          "0d": "내부 세척"
+          "0d": "내부 세척",
+          "87": "헹굼단독"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "맞춤 보관실 모드",
         "state": {
+          "cv_ttype_rf9000a_fridge": "냉장",
           "cv_ttype_rf9000a_freeze": "냉동",
           "cv_ttype_rf9000a_softfreeze": "소프트 냉동",
           "cv_ttype_rf9000a_meat_fish": "육류/생선",

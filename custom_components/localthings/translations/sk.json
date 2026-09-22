@@ -373,7 +373,8 @@
           "a7": "Intenzívny",
           "a8": "Expresný",
           "8c": "Extra tichý",
-          "88": "Samočistenie"
+          "88": "Samočistenie",
+          "87": "Iba plákanie"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Režim flexibilnej zóny",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Chladenie",
           "cv_ttype_rf9000a_freeze": "Mrazenie",
           "cv_ttype_rf9000a_softfreeze": "Mierne mrazenie",
           "cv_ttype_rf9000a_meat_fish": "Mäso/ryby",
