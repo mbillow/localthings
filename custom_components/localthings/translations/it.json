@@ -1896,6 +1896,12 @@
     "debug_payload_empty": {
       "message": "Il payload di scrittura di debug deve essere un oggetto non vuoto."
     },
+    "debug_batch_too_many_elements": {
+      "message": "Un payload batch deve avere da 1 a {max} elementi."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Ogni elemento del batch deve essere un oggetto con href e, se presente, un rep che sia un oggetto."
+    },
     "resource_href_required": {
       "message": "E' richiesta una risorsa href."
     },

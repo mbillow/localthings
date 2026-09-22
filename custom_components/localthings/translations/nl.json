@@ -1896,6 +1896,12 @@
     "debug_payload_empty": {
       "message": "De payload voor de schrijfbewerking voor foutopsporing moet een niet-leeg object zijn."
     },
+    "debug_batch_too_many_elements": {
+      "message": "Een batchpayload moet tussen 1 en {max} elementen bevatten."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Elk batch-element moet een object met href zijn, en een rep die een object is indien aanwezig."
+    },
     "resource_href_required": {
       "message": "Een resource-href is vereist."
     },

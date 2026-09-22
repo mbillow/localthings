@@ -1896,6 +1896,12 @@
     "debug_payload_empty": {
       "message": "디버그 쓰기 페이로드는 비어 있지 않은 객체여야 합니다."
     },
+    "debug_batch_too_many_elements": {
+      "message": "배치 페이로드는 1~{max}개의 요소여야 합니다."
+    },
+    "debug_batch_element_invalid": {
+      "message": "각 배치 요소는 href를 가진 객체여야 하며, rep이 있다면 객체여야 합니다."
+    },
     "resource_href_required": {
       "message": "리소스 href가 필요합니다."
     },

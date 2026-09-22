@@ -168,6 +168,10 @@ def _local_source_port(host: str) -> int:
 _DEBUG_MAX_WRITES = 10
 _DEBUG_MAX_SETTLE_S = 30.0
 _DEBUG_MAX_VERIFY_AFTER_S = 60.0
+# Elements in one Collection batch payload. The cook start measured on an
+# NV7000BS is four; the headroom is for permutation testing, not for
+# writing a whole device at once.
+_DEBUG_MAX_BATCH_ELEMENTS = 16
 
 
 def _href_to_path_segs(href: str) -> list[str]:
@@ -197,14 +201,92 @@ def _coap_accepted(code: int) -> bool:
     return (code >> 5) == 2
 
 
-def _validate_debug_write_item(item: dict) -> tuple[list[str], str, dict, float, bool]:
+def _validate_debug_batch_payload(payload: list) -> None:
+    """Shape checks for a Collection batch payload (issue #473).
+
+    An element's `rep` is optional: the cook start measured on an NV7000BS
+    leads with a bare `{"href": "/devices/0"}` marker carrying none, and
+    whether that marker is load-bearing is one of the things a caller is
+    here to test.
+
+    Deliberately no check that the hrefs exist, and no rewriting of them --
+    not even a subdevice's canonical->actual translation, which every
+    *outer* href gets. The payload is the experiment: which spelling a
+    board accepts inside a batch is exactly what a caller is varying, and
+    a helpful correction here would silently discard the permutation they
+    asked for.
+    """
+    if not payload or len(payload) > _DEBUG_MAX_BATCH_ELEMENTS:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="debug_batch_too_many_elements",
+            translation_placeholders={"max": str(_DEBUG_MAX_BATCH_ELEMENTS)},
+        )
+    for element in payload:
+        if not isinstance(element, dict) or not isinstance(element.get("href"), str):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="debug_batch_element_invalid",
+            )
+        if not element["href"].strip():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="debug_batch_element_invalid",
+            )
+        if "rep" in element and not isinstance(element["rep"], dict):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="debug_batch_element_invalid",
+            )
+
+
+def _batch_element_reps(payload: list) -> dict[str, dict]:
+    """`{href: rep}` for the elements of a batch payload that carry one.
+
+    The marker elements drop out here, which is what makes them free to
+    send: nothing downstream tries to verify a write that wasn't one.
+    """
+    return {
+        element["href"]: element["rep"]
+        for element in payload
+        if isinstance(element.get("rep"), dict)
+    }
+
+
+def _payload_present_in(payload: dict | list, readback: dict) -> bool:
+    """Whether everything `payload` wrote is present in `readback`.
+
+    For a Property map that is the field-by-field comparison this has
+    always made. For a batch it is the same comparison per element,
+    against that element's own href in the parsed readback -- so a batch
+    reports held/changed for the resources it actually named, not for the
+    Collection it was posted to, which no useful claim can be made about.
+    """
+    if isinstance(payload, dict):
+        return all(readback.get(k) == v for k, v in payload.items())
+    return all(
+        all((readback.get(element_href) or {}).get(k) == v for k, v in rep.items())
+        for element_href, rep in _batch_element_reps(payload).items()
+    )
+
+
+def _validate_debug_write_item(item: dict) -> tuple[list[str], str, dict | list, float, bool]:
     """The checks `async_raw_write` has always applied to a single write
     (issue #54), reused per-item by `async_raw_write_sequence` (issue
     #300). Payload is checked before href, matching the original
     single-write order -- not load-bearing for any test, just avoiding a
-    silent behavior change in the refactor."""
+    silent behavior change in the refactor.
+
+    A payload may also be a *list*, which is an OCF Collection batch --
+    the `[{href, rep}, ...]` shape `/device/0` answers on a read and the
+    one shape measured to start a cook (issue #473). Nothing here inspects
+    the href to decide: a board that takes a batch on some other
+    collection is a board this should work on too.
+    """
     payload = item.get("payload")
-    if not isinstance(payload, dict) or not payload:
+    if isinstance(payload, list):
+        _validate_debug_batch_payload(payload)
+    elif not isinstance(payload, dict) or not payload:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="debug_payload_empty",
@@ -225,7 +307,7 @@ def _validate_debug_write_item(item: dict) -> tuple[list[str], str, dict, float,
     # nothing about the key (the options-flow debug panel) keeps the old
     # readback-always behavior.
     readback = item.get("readback") is not False
-    return path_segs, "/" + "/".join(path_segs), payload, settle, readback
+    return path_segs, "/" + "/".join(path_segs), cast(dict | list, payload), settle, readback
 
 
 class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -2254,7 +2336,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ------------------------------------------------------------------
 
     def _raw_write_blocking(
-        self, path_segs: list[str], body: dict, href: str, readback: bool = True
+        self, path_segs: list[str], body: dict | list, href: str, readback: bool = True
     ) -> tuple[int, dict, Any]:
         """Debug primitive: POST an arbitrary patch, then read the href
         back for ground truth. Blocking -- runs in executor.
@@ -2271,6 +2353,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         deliberately, on the grounds that the fetch-back is itself what
         triggers some boards' revert -- so on a resource that reverts, the
         readback is a variable in the experiment and has to be removable.
+
+        On a Collection the readback answers a batch list rather than a
+        Property map, so `new_rep` is that batch parsed to `{href: rep}` --
+        the state of the resources the write named, which is the only
+        reading of "after" a batch has. A caller tells the two apart by the
+        payload it sent, the same way it already tells apart which fields
+        to look for.
         """
         if self._session is None:
             self._connect_session()
@@ -2295,6 +2384,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if isinstance(rep, dict):
                         self._observe.apply(href, rep, source="poll")
                         new_rep = rep
+                    elif isinstance(rep, list):
+                        new_rep = parse_device0_batch(rep)
+                        for element_href, element_rep in new_rep.items():
+                            self._observe.apply(element_href, element_rep, source="poll")
             except Exception as e:
                 self._log.debug("raw write follow-up read failed: %s", e)
         return code, new_rep, response_body
@@ -2398,7 +2491,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         `writes` are already on-the-wire hrefs: subdevice translation
         (canonical -> actual) is services.py's job, not this method's --
         this primitive has no notion of subdevices, same as the original
-        single-write async_raw_write never did.
+        single-write async_raw_write never did. That applies to the *write's
+        own* href only: a batch payload's inner hrefs are never translated
+        by anyone, since which spelling a board accepts inside a batch is
+        itself under test (issue #473).
 
         `async_raw_write` below delegates here with a one-item sequence, so
         its signature/return and tests/test_coordinator_raw_write.py stay
@@ -2421,7 +2517,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         parsed = [_validate_debug_write_item(w) for w in writes]
 
         results: list[dict[str, Any]] = []
-        last_payload_by_href: dict[str, dict] = {}
+        last_payload_by_href: dict[str, dict | list] = {}
         # Exactly one of these is the real lock, never both -- asyncio.Lock
         # isn't reentrant, so nesting the same one would deadlock.
         outer_lock = self._session_lock if hold_session_lock else contextlib.nullcontext()
@@ -2450,11 +2546,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             # None, not False, without a readback: nothing
                             # was compared. Same "couldn't verify" posture
                             # `held` already takes below.
-                            "changed": (
-                                all(after.get(k) == v for k, v in payload.items())
-                                if readback
-                                else None
-                            ),
+                            "changed": _payload_present_in(payload, after) if readback else None,
                         }
                     )
                     # Under the default this wait happens inside the lock, so
@@ -2492,9 +2584,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 for href in dict.fromkeys(r["href"] for r in results):
                     read_error: str | None = None
                     try:
-                        vcode, vrep, _vbody = await self.hass.async_add_executor_job(
+                        vcode, vrep, vbody = await self.hass.async_add_executor_job(
                             self._raw_read_blocking, _href_to_path_segs(href), href
                         )
+                        # A Collection answers a batch list, which
+                        # `_raw_read_blocking` reports as `body` and leaves
+                        # out of `rep` -- one GET of it verifies every
+                        # element the batch named.
+                        if isinstance(vbody, list):
+                            vrep = parse_device0_batch(vbody)
                     except Exception as e:
                         # The write already landed -- see `results` above,
                         # built before this wait ever started. A failed
@@ -2515,17 +2613,28 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # False, which would report a 4.04 as a revert -- the one
                     # distinction verify_after exists to draw.
                     read_ok = _coap_accepted(vcode) and bool(vrep)
-                    verified[href] = {
+                    last_payload = last_payload_by_href[href]
+                    entry: dict[str, Any] = {
                         "code": _coap_code_str(vcode),
                         "raw_code": vcode,
                         "rep": vrep,
-                        "held": (
-                            all(vrep.get(k) == v for k, v in last_payload_by_href[href].items())
-                            if read_ok
-                            else None
-                        ),
+                        "held": (_payload_present_in(last_payload, vrep) if read_ok else None),
                         "read_error": read_error,
                     }
+                    if isinstance(last_payload, list):
+                        # Which element held, not just whether all of them
+                        # did: a batch whose mode stuck and whose run
+                        # command didn't is the result this whole path
+                        # exists to tell apart from a flat refusal.
+                        entry["elements"] = {
+                            element_href: (
+                                _payload_present_in(rep, vrep.get(element_href) or {})
+                                if read_ok
+                                else None
+                            )
+                            for element_href, rep in _batch_element_reps(last_payload).items()
+                        }
+                    verified[href] = entry
             response["verified"] = verified
 
         # Hasten a summary poll so entities on other resources catch up

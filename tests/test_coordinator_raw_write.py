@@ -117,9 +117,15 @@ async def test_raw_write_rejects_empty_dict(coordinator) -> None:
         await coordinator.async_raw_write("/washer/vs/0", {})
 
 
-async def test_raw_write_rejects_non_dict_payload(coordinator) -> None:
+async def test_raw_write_rejects_a_payload_that_is_neither_rep_nor_batch(coordinator) -> None:
+    """A list is a Collection batch now (issue #473), but only one whose
+    elements are `{href, rep}` -- a list of bare strings is still nothing
+    this can send."""
     with pytest.raises(ServiceValidationError):
         await coordinator.async_raw_write("/washer/vs/0", ["not", "a", "dict"])  # type: ignore[arg-type]
+
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_raw_write("/washer/vs/0", "a string")  # type: ignore[arg-type]
 
 
 async def test_raw_write_rejects_empty_href(coordinator) -> None:
@@ -139,6 +145,65 @@ async def test_raw_write_validation_errors_do_not_touch_the_session(coordinator)
 
     with pytest.raises(ServiceValidationError):
         await coordinator.async_raw_write("/washer/vs/0", {})
+
+    assert coordinator._session is None
+    coordinator.async_request_refresh.assert_not_awaited()
+
+
+# ----------------------------------------------------------------------
+# Collection batch payloads (issue #473)
+# ----------------------------------------------------------------------
+
+
+async def test_raw_write_accepts_a_batch_with_a_rep_less_marker(coordinator) -> None:
+    """The measured cook start leads with a bare `{"href": "/devices/0"}`.
+    Whether that marker is load-bearing is one of the things a caller runs
+    this path to find out, so a payload carrying it has to be sendable."""
+    fake = _FakeRawWriteSession(post_code=0x44)
+    coordinator._session = fake
+    body = [{"href": "/devices/0"}, {"href": "/mode/vs/0", "rep": {"x.modes": ["Bake"]}}]
+
+    await coordinator.async_raw_write_sequence(
+        [{"href": "/device/0", "payload": body, "readback": False}]
+    )
+
+    assert cbor2.loads(fake.post_calls[0][1]) == body
+
+
+async def test_raw_write_rejects_an_empty_batch(coordinator) -> None:
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_raw_write_sequence([{"href": "/device/0", "payload": []}])
+
+
+async def test_raw_write_rejects_an_oversized_batch(coordinator) -> None:
+    body = [{"href": f"/mode/vs/{i}", "rep": {"x": i}} for i in range(17)]
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_raw_write_sequence([{"href": "/device/0", "payload": body}])
+
+
+@pytest.mark.parametrize(
+    "element",
+    [
+        "not-an-object",
+        {"rep": {"x": 1}},  # no href
+        {"href": "  ", "rep": {"x": 1}},  # blank href
+        {"href": "/mode/vs/0", "rep": "not-an-object"},
+        {"href": "/mode/vs/0", "rep": [{"x": 1}]},
+    ],
+)
+async def test_raw_write_rejects_a_malformed_batch_element(coordinator, element) -> None:
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_raw_write_sequence([{"href": "/device/0", "payload": [element]}])
+
+
+async def test_raw_write_batch_validation_does_not_touch_the_session(coordinator) -> None:
+    """Same posture as every other rejected write: nothing goes out."""
+    assert coordinator._session is None
+
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_raw_write_sequence(
+            [{"href": "/device/0", "payload": [{"no": "href"}]}]
+        )
 
     assert coordinator._session is None
     coordinator.async_request_refresh.assert_not_awaited()

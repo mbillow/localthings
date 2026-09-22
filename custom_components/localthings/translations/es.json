@@ -186,6 +186,12 @@
     "debug_payload_empty": {
       "message": "El contenido de la escritura de depuración debe ser un objeto no vacío."
     },
+    "debug_batch_too_many_elements": {
+      "message": "Una carga por lotes debe tener entre 1 y {max} elementos."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Cada elemento del lote debe ser un objeto con href, y un rep que sea un objeto si está presente."
+    },
     "resource_href_required": {
       "message": "Se requiere un recurso (href)."
     },

@@ -1896,6 +1896,12 @@
     "debug_payload_empty": {
       "message": "Debug write payload must be a non-empty object."
     },
+    "debug_batch_too_many_elements": {
+      "message": "A batch payload must have between 1 and {max} elements."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Each batch element must be an object with an href, and a rep that is an object if present."
+    },
     "resource_href_required": {
       "message": "A resource href is required."
     },

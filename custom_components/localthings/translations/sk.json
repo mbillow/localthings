@@ -1896,6 +1896,12 @@
     "debug_payload_empty": {
       "message": "Obsah ladiaceho zápisu musí byť neprázdny objekt."
     },
+    "debug_batch_too_many_elements": {
+      "message": "Dávkový payload musí mať 1 až {max} prvkov."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Každý prvok dávky musí byť objekt s href a s rep ako objektom, ak je uvedený."
+    },
     "resource_href_required": {
       "message": "Vyžaduje sa href prostriedku."
     },
