@@ -320,10 +320,56 @@ statement the Replica readme cites is community.smartthings.com thread
 **Re-aimed.** These were written to find what value starts a cycle, which
 is answered above. What is still open is narrower: whether the batch is
 required, or whether `/device/N` is simply a handler the leaf resources do
-not reach. Note that **no rung below writes `/device/N`** -- that path was
-never exercised by any of them.
+not reach.
 
-The rung worth running first is now a new one:
+`write_resource` now sends a Collection batch (issue #473), so the
+measured payload itself is runnable rather than only its leaf
+decomposition -- probe A0 below. Its inner hrefs are **never** rewritten,
+not even a subdevice's canonical -> actual translation, which the write's
+own href still gets: which spelling a board wants inside a batch is under
+test, and a helpful correction would discard the permutation. On a
+composite oven that means you write the cavity's hrefs yourself.
+
+### Probe A0 -- the measured payload, on other hardware
+
+The first thing to run, because it is the only sequence known to have
+started a cook. Verbatim from "What starts a cook" above; swap the mode,
+setpoint and time for ones your board's own `modeSpec` declares.
+
+```yaml
+action: localthings.write_resource
+data:
+  device_id: PUT_YOUR_DEVICE_ID_HERE
+  verify_after: 30
+  writes:
+    - href: /device/0
+      readback: false
+      payload:
+        - href: /devices/0
+        - href: /mode/vs/0
+          rep:
+            x.com.samsung.da.modes: ["Defrost"]
+        - href: /temperatures/vs/0
+          rep:
+            x.com.samsung.da.items:
+              - x.com.samsung.da.desired: "30"
+                x.com.samsung.da.id: "0"
+                x.com.samsung.da.unit: "Celsius"
+        - href: /operational/state/vs/0
+          rep:
+            x.com.samsung.da.operationTime: "00:01:00"
+            x.com.samsung.da.state: "Run"
+```
+
+`verified` reports this one per element as well as overall, under
+`elements` -- a batch whose mode stuck and whose `Run` was discarded is a
+different finding from a flat refusal, and that distinction is the whole
+value of running it.
+
+The `{"href": "/devices/0"}` marker is plural and carries no `rep`. It is
+not required (the identical batch without it started the cook first time)
+but it is what was measured, so send it first and drop it on a second run
+if the first works -- that settles a question one line of payload wide.
 
 ### Probe A -- is the batch required, or only the collection href?
 
@@ -333,10 +379,14 @@ then setpoint, then `operationTime` with `state: "Run"`, as three separate
 is probe 11's shape on a board that can actually start, which is the
 combination nobody has run.
 
-- It starts the oven: the collection href was never the variable, and the
+Run it *after* A0, and it means something either way:
+
+- A0 starts the oven and A does not: the batch is the mechanism, and the
+  leaf path can be dropped from this investigation.
+- Both start it: the collection href was never the variable, and the
   earlier failures were board-specific.
-- It does not: the batch is the mechanism, and the leaf path can be
-  dropped from this investigation.
+- Neither: this board is not startable by any route found so far, and the
+  rungs below are what is left.
 
 Everything below remains useful for a board that will not start by either
 route, and for the microwave case.
@@ -356,7 +406,9 @@ Rules for whoever runs these:
   `held` for the second one only. For the near-miss pairs, read the
   per-write `code` out of `results[]` and ignore `verified`.
 - Everything below writes canonical hrefs; if your oven has two cavities,
-  pick the cavity's device and keep the hrefs as written.
+  pick the cavity's device and keep the hrefs as written. The exception is
+  a batch payload (probe A0), whose inner hrefs are sent exactly as typed
+  -- on a second cavity those are yours to get right.
 
 ### Probe 0 -- ask the board before touching it
 
@@ -775,10 +827,19 @@ if it is useful as a reference.
   `oic.if.s` and answers `4.05` to a write. There is no local write path to
   find there; none of the probes above apply.
 
-## Two knobs the probes above rely on
+## Three knobs the probes above rely on
 
-Both were added for this investigation, and both change what a probe can
+All were added for this investigation, and each changes what a probe can
 see.
+
+**A list payload** -- `write_resource`'s `payload` takes the
+`[{href, rep}, ...]` Collection batch as well as a single resource's
+Property map, so the one sequence measured to start a cook is runnable
+instead of only describable (probe A0). It goes on the wire verbatim:
+element order, the rep-less marker, and the inner hrefs, which nothing
+rewrites. `after`, `changed` and `held` decompose per element against the
+batch the collection reads back, so the answer names which resource held
+rather than making an unfalsifiable claim about the collection.
 
 **`response_body`** -- every write result now carries the POST's own decoded
 body. The fridge answers with a verbatim echo worth nothing

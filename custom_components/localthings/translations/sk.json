@@ -373,7 +373,8 @@
           "a7": "Intenzívny",
           "a8": "Expresný",
           "8c": "Extra tichý",
-          "88": "Samočistenie"
+          "88": "Samočistenie",
+          "87": "Iba plákanie"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Režim flexibilnej zóny",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Chladenie",
           "cv_ttype_rf9000a_freeze": "Mrazenie",
           "cv_ttype_rf9000a_softfreeze": "Mierne mrazenie",
           "cv_ttype_rf9000a_meat_fish": "Mäso/ryby",
@@ -759,7 +761,21 @@
           "74": "Športové oblečenie",
           "75": "Jemná bielizeň",
           "77": "Nekrčivá bielizeň",
-          "78": "Rýchle pranie"
+          "78": "Rýchle pranie",
+          "ba": "Vypustenie/odstreďovanie",
+          "d0": "Bavlna",
+          "d1": "Eko bavlna",
+          "d2": "Syntetika",
+          "d3": "Jemná bielizeň",
+          "d4": "Plákanie + odstreďovanie",
+          "d5": "Čistenie bubna",
+          "d6": "Posteľná bielizeň",
+          "d7": "Starostlivosť o outdoorové oblečenie",
+          "d8": "Vlna",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "15-minútové rýchle pranie",
+          "e4": "Antialergénny"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "Teplota"
       },
+      "food_probe_temp": {
+        "name": "Teplotná sonda"
+      },
+      "food_probe_setpoint": {
+        "name": "Cieľová teplota sondy"
+      },
       "current_temperature_c": {
         "name": "Teplota"
       },
@@ -1277,6 +1299,7 @@
         "name": "Priebeh",
         "state": {
           "idle": "Nečinnosť",
+          "delaywash": "Odložený štart",
           "weightsensing": "Zisťovanie hmotnosti",
           "wash": "Pranie",
           "rinse": "Plákanie",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "Obsah ladiaceho zápisu musí byť neprázdny objekt."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Dávkový payload musí mať 1 až {max} prvkov."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Každý prvok dávky musí byť objekt s href a s rep ako objektom, ak je uvedený."
     },
     "resource_href_required": {
       "message": "Vyžaduje sa href prostriedku."

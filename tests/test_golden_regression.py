@@ -1744,3 +1744,19 @@ def test_registry_reproduces_golden_state_keys_for_air_purifier_avt_ww_touchotn(
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_oven_nv75n_dual_cook():
+    """The issue #490 Dual Cook Flex wall oven: two cavities over one
+    connection, and the first board in the corpus advertising the
+    OCF-standard temperature pair alongside the vendor array. The golden
+    carries exactly one temperature/setpoint key per cavity -- if the OCF
+    fallback ever stops standing down, duplicates show up here first."""
+    name = "oven_nv75n_dual_cook"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.oven"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )

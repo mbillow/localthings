@@ -373,7 +373,8 @@
           "a7": "Heavy",
           "a8": "Express",
           "8c": "Extra Silence",
-          "88": "Self Clean"
+          "88": "Self Clean",
+          "87": "Rinse Only"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Flex zone mode",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Fridge",
           "cv_ttype_rf9000a_freeze": "Freeze",
           "cv_ttype_rf9000a_softfreeze": "Soft freeze",
           "cv_ttype_rf9000a_meat_fish": "Meat/Fish",
@@ -759,7 +761,21 @@
           "74": "Active Wear",
           "75": "Delicates",
           "77": "Perm Press",
-          "78": "Quick Wash"
+          "78": "Quick Wash",
+          "ba": "Drain/Spin",
+          "d0": "Cotton",
+          "d1": "E Cotton",
+          "d2": "Synthetics",
+          "d3": "Delicates",
+          "d4": "Rinse + Spin",
+          "d5": "Drum Clean",
+          "d6": "Bedding",
+          "d7": "Outdoor Care",
+          "d8": "Wool",
+          "da": "Super Eco Wash",
+          "db": "Super Speed",
+          "dc": "15' Quick Wash",
+          "e4": "Anti Allergen"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "Temperature"
       },
+      "food_probe_temp": {
+        "name": "Food probe"
+      },
+      "food_probe_setpoint": {
+        "name": "Food probe target"
+      },
       "current_temperature_c": {
         "name": "Temperature"
       },
@@ -1277,6 +1299,7 @@
         "name": "Progress",
         "state": {
           "idle": "Idle",
+          "delaywash": "Delayed start",
           "weightsensing": "Weight sensing",
           "wash": "Washing",
           "rinse": "Rinsing",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "Debug write payload must be a non-empty object."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "A batch payload must have between 1 and {max} elements."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Each batch element must be an object with an href, and a rep that is an object if present."
     },
     "resource_href_required": {
       "message": "A resource href is required."

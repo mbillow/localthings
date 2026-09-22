@@ -373,7 +373,8 @@
           "88": "Zelfreiniging",
           "85": "Delicaat",
           "0c": "Express",
-          "0d": "Zelfreiniging"
+          "0d": "Zelfreiniging",
+          "87": "Alleen spoelen"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Modus FlexZone",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Koelen",
           "cv_ttype_rf9000a_freeze": "Vriezen",
           "cv_ttype_rf9000a_softfreeze": "Zachtvriezen",
           "cv_ttype_rf9000a_meat_fish": "Vlees/vis",
@@ -759,7 +761,21 @@
           "74": "Sportkleding",
           "75": "Fijne was",
           "77": "Strijkvrij",
-          "78": "Snelle was"
+          "78": "Snelle was",
+          "ba": "Afpompen/centrifugeren",
+          "d0": "Katoen",
+          "d1": "Eco katoen",
+          "d2": "Synthetisch",
+          "d3": "Fijne was",
+          "d4": "Spoelen + centrifugeren",
+          "d5": "Trommel reinigen",
+          "d6": "Beddengoed",
+          "d7": "Outdoorverzorging",
+          "d8": "Wol",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "15' Snelle was",
+          "e4": "Anti-allergie"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "Temperatuur"
       },
+      "food_probe_temp": {
+        "name": "Voedselsonde"
+      },
+      "food_probe_setpoint": {
+        "name": "Doeltemperatuur voedselsonde"
+      },
       "current_temperature_c": {
         "name": "Temperatuur"
       },
@@ -1277,6 +1299,7 @@
         "name": "Voortgang",
         "state": {
           "idle": "Inactief",
+          "delaywash": "Uitgestelde start",
           "weightsensing": "Beladingsdetectie",
           "wash": "Wassen",
           "rinse": "Spoelen",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "De payload voor de schrijfbewerking voor foutopsporing moet een niet-leeg object zijn."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Een batchpayload moet tussen 1 en {max} elementen bevatten."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Elk batch-element moet een object met href zijn, en een rep die een object is indien aanwezig."
     },
     "resource_href_required": {
       "message": "Een resource-href is vereist."

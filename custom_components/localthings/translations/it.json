@@ -373,7 +373,8 @@
           "88": "Autopulizia",
           "85": "Delicato",
           "0c": "Express",
-          "0d": "Autopulizia"
+          "0d": "Autopulizia",
+          "87": "Solo risciacquo"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Modalità zona flessibile",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Refrigerazione",
           "cv_ttype_rf9000a_freeze": "Congelamento",
           "cv_ttype_rf9000a_softfreeze": "Congelamento leggero",
           "cv_ttype_rf9000a_meat_fish": "Carne/Pesce",
@@ -759,7 +761,21 @@
           "74": "Abbigliamento sportivo",
           "75": "Delicati",
           "77": "Pronto da stirare",
-          "78": "Lavaggio rapido"
+          "78": "Lavaggio rapido",
+          "ba": "Scarico/Centrifuga",
+          "d0": "Cotone",
+          "d1": "Cotone E",
+          "d2": "Sintetici",
+          "d3": "Delicati",
+          "d4": "Risciacquo+Centrifuga",
+          "d5": "Pulizia cestello",
+          "d6": "Biancheria da letto",
+          "d7": "Cura outdoor",
+          "d8": "Lana",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "Rapido 15'",
+          "e4": "Anti-allergia"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "Temperatura"
       },
+      "food_probe_temp": {
+        "name": "Sonda per alimenti"
+      },
+      "food_probe_setpoint": {
+        "name": "Target sonda"
+      },
       "current_temperature_c": {
         "name": "Temperatura"
       },
@@ -1277,6 +1299,7 @@
         "name": "Avanzamento",
         "state": {
           "idle": "Inattivo",
+          "delaywash": "Ritardo di avvio",
           "weightsensing": "Rilevamento del carico",
           "wash": "Lavaggio",
           "rinse": "Risciacquo",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "Il payload di scrittura di debug deve essere un oggetto non vuoto."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Un payload batch deve avere da 1 a {max} elementi."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Ogni elemento del batch deve essere un oggetto con href e, se presente, un rep che sia un oggetto."
     },
     "resource_href_required": {
       "message": "E' richiesta una risorsa href."

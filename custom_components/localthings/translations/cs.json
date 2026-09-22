@@ -373,7 +373,8 @@
           "88": "Samočištění",
           "85": "Jemné",
           "0c": "Express",
-          "0d": "Samočištění"
+          "0d": "Samočištění",
+          "87": "Pouze máchání"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Režim flexibilní zóny",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Chlazení",
           "cv_ttype_rf9000a_freeze": "Mražení",
           "cv_ttype_rf9000a_softfreeze": "Mírné mražení",
           "cv_ttype_rf9000a_meat_fish": "Maso/Ryby",
@@ -759,7 +761,21 @@
           "74": "Sportovní oblečení",
           "75": "Jemné prádlo",
           "77": "Nežehlivé prádlo",
-          "78": "Rychlé praní"
+          "78": "Rychlé praní",
+          "ba": "Vypuštění/odstřeďování",
+          "d0": "Bavlna",
+          "d1": "Eko bavlna",
+          "d2": "Syntetika",
+          "d3": "Jemné prádlo",
+          "d4": "Máchání + odstřeďování",
+          "d5": "Čištění bubnu",
+          "d6": "Ložní prádlo",
+          "d7": "Outdoor péče",
+          "d8": "Vlna",
+          "da": "Super Eco",
+          "db": "Super rychlé",
+          "dc": "15min rychlé praní",
+          "e4": "Antialergenní"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "Teplota"
       },
+      "food_probe_temp": {
+        "name": "Teplotní sonda"
+      },
+      "food_probe_setpoint": {
+        "name": "Cílová teplota sondy"
+      },
       "current_temperature_c": {
         "name": "Teplota"
       },
@@ -1277,6 +1299,7 @@
         "name": "Průběh",
         "state": {
           "idle": "Nečinný",
+          "delaywash": "Odložený start",
           "weightsensing": "Detekce náplně",
           "wash": "Praní",
           "rinse": "Máchání",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "Obsah ladicího zápisu musí být neprázdný objekt."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Dávkový payload musí mít 1 až {max} prvků."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Každý prvek dávky musí být objekt s href a s rep jako objektem, pokud je uveden."
     },
     "resource_href_required": {
       "message": "Je vyžadován href prostředku."

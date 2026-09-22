@@ -437,6 +437,44 @@ def test_confirmed_dryer_dry_level_labels():
         assert digit not in states
 
 
+def test_confirmed_ww7800m_table_00_d_family_course_names():
+    """A WW7800M owner (DA_WM_A51_20_COMMON, the same controller as #409's
+    WW6500) read all fourteen of their Table_00 courses off the appliance's
+    own option list and panel -- the D-family, disjoint from both slices the
+    table already carried, so every option rendered as raw hex (issue #489).
+
+    Thirteen reuse an existing string, pinned here to the twin they reuse so
+    a locale can't reword one half of a shared meaning -- the #343 gap the
+    #409 test above covers the same way. DB ('Super rapide') takes the
+    *washer* Super Speed, not the dryer's identically-coded DB: Korean words
+    that one as quick *drying*. Only E4 is new wording.
+    """
+    shared = {
+        "ba": ("washer_cycle_table_02", "28"),  # Drain/Spin
+        "d0": ("washer_cycle_table_00", "5b"),  # Cotton
+        "d1": ("washer_cycle_table_00", "68"),  # E Cotton
+        "d2": ("washer_cycle_table_00", "67"),  # Synthetics
+        "d3": ("washer_cycle_table_00", "5e"),  # Delicates
+        "d4": ("washer_cycle_table_00", "64"),  # Rinse + Spin
+        "d5": ("washer_cycle_table_00", "63"),  # Drum Clean
+        "d6": ("washer_cycle_table_00", "66"),  # Bedding
+        "d7": ("dryer_cycle_table_00", "d7"),  # Outdoor Care
+        "d8": ("washer_cycle_table_00", "65"),  # Wool
+        "da": ("washer_cycle_table_00", "5d"),  # Super Eco Wash
+        "db": ("washer_cycle_table_02", "1d"),  # Super Speed
+        "dc": ("washer_cycle_table_02", "1e"),  # 15' Quick Wash
+    }
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t00 = select["washer_cycle_table_00"]["state"]
+        for code, (table, twin) in shared.items():
+            assert t00[code] == select[table]["state"][twin], (language, code, twin)
+        assert t00["e4"], language
+
+    english = _load("en")["entity"]["select"]["washer_cycle_table_00"]["state"]
+    assert english["e4"] == "Anti Allergen"
+
+
 def test_reported_washer_standard_courses_all_have_table_02_labels():
     """Every non-personal code in the reported washer's live course list
     must resolve through the Table_02 catalog instead of appearing as raw

@@ -1,0 +1,417 @@
+{
+  "seeds_note": "Verbatim from the issue #490 reporter's diagnostics download, with the serial and the /oic/d device name replaced. Diagnostics renders the coordinator's cache under `resources`, not the raw batch, so the probe tier's own reads arrive mixed in with it -- /file/list/vs/0 is one of those and lives in `probes` here, not in device0. device0 is the master (upper cavity); seeds['/device/1'] is the lower cavity, de-canonicalized back to the '/vs/1' hrefs it answers on the wire so enumeration exercises the real transform. oic_res is constructed -- the dump records the two /device/N links that enumeration found (subdevice_probes: /device/1 true, /multidevice/vs/0 false) but not the raw link array.",
+  "device0": [
+    {
+      "x.com.samsung.devcol": "collection"
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "OV_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-09-21T18:36:57"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.currentTime": "2026-09-21T18:36:37"
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Open",
+            "x.com.samsung.da.lock": "Unlock"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "ARTIK051_GB_WO_003|40423141|50030018001211410200000000000000",
+        "x.com.samsung.da.description": "ARTIK051_GLOBAL_OVEN",
+        "x.com.samsung.da.serialNum": "FIXTURE-SERIAL",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "01056A200913",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "19041100,18110600",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/mode/0",
+      "rep": {
+        "supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "modes": [
+          "NoOperation"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.defaultMode": "UpperConvection",
+        "x.com.samsung.da.modes": [
+          "NoOperation"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_NE7000NW/EU0",
+          "SettingPossible_0",
+          "meatprobe_disconnected",
+          "fastpreheat_Off",
+          "UpperTimerCurrent_000000",
+          "UpperTimerSet_000000",
+          "UpperTimerState_Ready",
+          "Sound_On"
+        ]
+      }
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "remainingTime": "00:00:00",
+        "progressPercentage": "0"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.operationTime": "00:00:00",
+        "x.com.samsung.da.remainingTime": "00:00:00",
+        "x.com.samsung.da.progressPercentage": "0",
+        "x.com.samsung.da.defaultTime": "01:00:00"
+      }
+    },
+    {
+      "href": "/oven/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.recipe": "00000000000000"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": true
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    },
+    {
+      "href": "/temperature/current/cook/0",
+      "rep": {
+        "units": "C",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/current/prob/0",
+      "rep": {
+        "units": "C",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/desired/cook/0",
+      "rep": {
+        "units": "C",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/desired/prob/0",
+      "rep": {
+        "units": "C",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "0",
+            "x.com.samsung.da.increment": "5",
+            "x.com.samsung.da.unit": "Celsius"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "0",
+            "x.com.samsung.da.increment": "1",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ]
+      }
+    }
+  ],
+  "oic_res": [
+    {
+      "href": "/device/0"
+    },
+    {
+      "href": "/device/1"
+    }
+  ],
+  "seeds": {
+    "/device/1": [
+      {
+        "x.com.samsung.devcol": "collection"
+      },
+      {
+        "href": "/alarms/vs/1",
+        "rep": {
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.description": "Alarm",
+              "x.com.samsung.da.alarmType": "Device",
+              "x.com.samsung.da.code": "OV_E_OFF",
+              "x.com.samsung.da.triggeredTime": "2026-09-21T18:36:53"
+            }
+          ]
+        }
+      },
+      {
+        "href": "/configuration/vs/1",
+        "rep": {
+          "x.com.samsung.da.currentTime": "2026-09-21T18:36:38"
+        }
+      },
+      {
+        "href": "/connected/vs/1",
+        "rep": {
+          "x.com.samsung.da.connected": "On"
+        }
+      },
+      {
+        "href": "/doors/vs/1",
+        "rep": {
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "1",
+              "x.com.samsung.da.description": "Door",
+              "x.com.samsung.da.openState": "Open",
+              "x.com.samsung.da.lock": "Unlock"
+            }
+          ]
+        }
+      },
+      {
+        "href": "/information/vs/1",
+        "rep": {
+          "x.com.samsung.da.modelNum": "ARTIK051_GB_WO_003|40423141|50030018001211410200000000000000",
+          "x.com.samsung.da.description": "ARTIK051_GLOBAL_OVEN",
+          "x.com.samsung.da.serialNum": "FIXTURE-SERIAL"
+        }
+      },
+      {
+        "href": "/kidslock/1",
+        "rep": {
+          "value": false
+        }
+      },
+      {
+        "href": "/kidslock/vs/1",
+        "rep": {
+          "x.com.samsung.da.kidsLock": "Ready"
+        }
+      },
+      {
+        "href": "/mode/1",
+        "rep": {
+          "supportedModes": [
+            "HOMECARE_WIZARD_V2"
+          ],
+          "modes": [
+            "NoOperation"
+          ]
+        }
+      },
+      {
+        "href": "/mode/vs/1",
+        "rep": {
+          "x.com.samsung.da.supportedModes": [
+            "HOMECARE_WIZARD_V2"
+          ],
+          "x.com.samsung.da.defaultMode": "LowerConvection",
+          "x.com.samsung.da.modes": [
+            "NoOperation"
+          ],
+          "x.com.samsung.da.options": [
+            "DeviceType_NE7000NW/EU0",
+            "Sound_On"
+          ]
+        }
+      },
+      {
+        "href": "/operational/state/1",
+        "rep": {
+          "currentMachineState": "**REDACTED**",
+          "machineStates": "**REDACTED**",
+          "remainingTime": "00:00:00",
+          "progressPercentage": "0"
+        }
+      },
+      {
+        "href": "/operational/state/vs/1",
+        "rep": {
+          "x.com.samsung.da.state": "Ready",
+          "x.com.samsung.da.operationTime": "00:00:00",
+          "x.com.samsung.da.remainingTime": "00:00:00",
+          "x.com.samsung.da.progressPercentage": "0",
+          "x.com.samsung.da.defaultTime": "01:00:00"
+        }
+      },
+      {
+        "href": "/oven/vs/1",
+        "rep": {
+          "x.com.samsung.da.state": "Ready",
+          "x.com.samsung.da.recipe": "00000000000000"
+        }
+      },
+      {
+        "href": "/power/1",
+        "rep": {
+          "value": true
+        }
+      },
+      {
+        "href": "/power/vs/1",
+        "rep": {
+          "x.com.samsung.da.power": "On"
+        }
+      },
+      {
+        "href": "/remotectrl/1",
+        "rep": {
+          "value": false
+        }
+      },
+      {
+        "href": "/remotectrl/vs/1",
+        "rep": {
+          "x.com.samsung.da.remoteControlEnabled": "false"
+        }
+      },
+      {
+        "href": "/temperature/current/cook/1",
+        "rep": {
+          "units": "C",
+          "temperature": 0.0
+        }
+      },
+      {
+        "href": "/temperature/desired/cook/1",
+        "rep": {
+          "units": "C",
+          "temperature": 0.0
+        }
+      },
+      {
+        "href": "/temperatures/vs/1",
+        "rep": {
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.description": "Temperature",
+              "x.com.samsung.da.desired": "0",
+              "x.com.samsung.da.current": "0",
+              "x.com.samsung.da.increment": "5",
+              "x.com.samsung.da.unit": "Celsius"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "probes": {
+    "/file/list/vs/0": {
+      "x.com.samsung.items": [
+        {
+          "x.com.samsung.id": "0",
+          "x.com.samsung.name": "/opt/data/energy.db"
+        },
+        {
+          "x.com.samsung.id": "1",
+          "x.com.samsung.name": "/opt/data/hass.db"
+        }
+      ]
+    }
+  }
+}

@@ -373,7 +373,8 @@
           "88": "내부 세척",
           "85": "섬세",
           "0c": "급속",
-          "0d": "내부 세척"
+          "0d": "내부 세척",
+          "87": "헹굼단독"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "맞춤 보관실 모드",
         "state": {
+          "cv_ttype_rf9000a_fridge": "냉장",
           "cv_ttype_rf9000a_freeze": "냉동",
           "cv_ttype_rf9000a_softfreeze": "소프트 냉동",
           "cv_ttype_rf9000a_meat_fish": "육류/생선",
@@ -759,7 +761,21 @@
           "74": "운동복",
           "75": "섬세의류",
           "77": "구김방지",
-          "78": "쾌속세탁"
+          "78": "쾌속세탁",
+          "ba": "배수/탈수",
+          "d0": "면",
+          "d1": "에코 면",
+          "d2": "합성섬유",
+          "d3": "섬세의류",
+          "d4": "헹굼+탈수",
+          "d5": "무세제통세척",
+          "d6": "이불",
+          "d7": "아웃도어케어",
+          "d8": "울",
+          "da": "초절약세탁",
+          "db": "쾌속세탁",
+          "dc": "15분 쾌속세탁",
+          "e4": "알레르기 케어"
         }
       },
       "washer_cycle_table_02": {
@@ -1117,6 +1133,12 @@
       "current_temp_c": {
         "name": "온도"
       },
+      "food_probe_temp": {
+        "name": "온도 프로브"
+      },
+      "food_probe_setpoint": {
+        "name": "온도 프로브 목표"
+      },
       "current_temperature_c": {
         "name": "온도"
       },
@@ -1277,6 +1299,7 @@
         "name": "진행률",
         "state": {
           "idle": "대기",
+          "delaywash": "예약 시작",
           "weightsensing": "세탁물 감지",
           "wash": "세탁",
           "rinse": "헹굼",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "디버그 쓰기 페이로드는 비어 있지 않은 객체여야 합니다."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "배치 페이로드는 1~{max}개의 요소여야 합니다."
+    },
+    "debug_batch_element_invalid": {
+      "message": "각 배치 요소는 href를 가진 객체여야 하며, rep이 있다면 객체여야 합니다."
     },
     "resource_href_required": {
       "message": "리소스 href가 필요합니다."

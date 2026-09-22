@@ -373,7 +373,8 @@
           "88": "Selbstreinigung",
           "85": "Schonprogramm",
           "0c": "Express",
-          "0d": "Selbstreinigung"
+          "0d": "Selbstreinigung",
+          "87": "Nur Spülen"
         }
       },
       "dispense_type": {
@@ -503,6 +504,7 @@
       "flex_zone_mode": {
         "name": "Flex-Zonen-Modus",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Kühlen",
           "cv_ttype_rf9000a_freeze": "Gefrieren",
           "cv_ttype_rf9000a_softfreeze": "Sanftgefrieren",
           "cv_ttype_rf9000a_meat_fish": "Fleisch/Fisch",
@@ -722,7 +724,21 @@
           "74": "Sportkleidung",
           "75": "Feinwäsche",
           "77": "Pflegeleicht",
-          "78": "Schnellwäsche"
+          "78": "Schnellwäsche",
+          "ba": "Abpumpen + Schleudern",
+          "d0": "Baumwolle",
+          "d1": "Eco Baumwolle",
+          "d2": "Pflegeleicht",
+          "d3": "Feinwäsche",
+          "d4": "Spülen + Schleudern",
+          "d5": "Trommelreinigung",
+          "d6": "Bettwäsche",
+          "d7": "Outdoor-Pflege",
+          "d8": "Wolle",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "Schnelle Wäsche 15'",
+          "e4": "Anti-Allergie"
         }
       },
       "washer_cycle_table_02": {
@@ -1111,6 +1127,12 @@
       "current_temp_c": {
         "name": "Temperatur"
       },
+      "food_probe_temp": {
+        "name": "Bratenthermometer"
+      },
+      "food_probe_setpoint": {
+        "name": "Bratenthermometer-Zieltemperatur"
+      },
       "current_temperature_c": {
         "name": "Temperatur"
       },
@@ -1271,6 +1293,7 @@
         "name": "Fortschritt",
         "state": {
           "idle": "Leerlauf",
+          "delaywash": "Startverzögerung",
           "weightsensing": "Beladungserkennung",
           "wash": "Waschen",
           "rinse": "Spülen",
@@ -1878,6 +1901,12 @@
     },
     "debug_payload_empty": {
       "message": "Die Debug-Schreibdaten müssen ein nicht leeres Objekt sein."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Eine Batch-Nutzlast muss zwischen 1 und {max} Elemente enthalten."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Jedes Batch-Element muss ein Objekt mit href sein; ein vorhandenes rep muss ein Objekt sein."
     },
     "resource_href_required": {
       "message": "Ein Ressourcen-href ist erforderlich."

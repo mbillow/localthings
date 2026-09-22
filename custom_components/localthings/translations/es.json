@@ -186,6 +186,12 @@
     "debug_payload_empty": {
       "message": "El contenido de la escritura de depuración debe ser un objeto no vacío."
     },
+    "debug_batch_too_many_elements": {
+      "message": "Una carga por lotes debe tener entre 1 y {max} elementos."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Cada elemento del lote debe ser un objeto con href, y un rep que sea un objeto si está presente."
+    },
     "resource_href_required": {
       "message": "Se requiere un recurso (href)."
     },
@@ -597,7 +603,8 @@
           "88": "Autolimpieza",
           "85": "Delicado",
           "0c": "Express",
-          "0d": "Autolimpieza"
+          "0d": "Autolimpieza",
+          "87": "Solo aclarado"
         }
       },
       "dispense_type": {
@@ -727,6 +734,7 @@
       "flex_zone_mode": {
         "name": "Modo de zona flexible",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Refrigerar",
           "cv_ttype_rf9000a_freeze": "Congelar",
           "cv_ttype_rf9000a_softfreeze": "Congelación suave",
           "cv_ttype_rf9000a_meat_fish": "Carne/Pescado",
@@ -983,7 +991,21 @@
           "74": "Ropa deportiva",
           "75": "Delicados",
           "77": "Planchado fácil",
-          "78": "Lavado rápido"
+          "78": "Lavado rápido",
+          "ba": "Solo centrifugar",
+          "d0": "Algodón",
+          "d1": "Algodón E",
+          "d2": "Sintéticos",
+          "d3": "Delicados",
+          "d4": "Aclarar + Centrifugar",
+          "d5": "Limpieza de Tambor",
+          "d6": "Ropa de cama",
+          "d7": "Cuidado para exterior",
+          "d8": "Lana",
+          "da": "Super Eco",
+          "db": "Súper velocidad",
+          "dc": "Lavado rápido 15'",
+          "e4": "Antialérgico"
         }
       },
       "washer_cycle_table_02": {
@@ -1338,6 +1360,12 @@
       "current_temp_c": {
         "name": "Temperatura"
       },
+      "food_probe_temp": {
+        "name": "Sonda de alimentos"
+      },
+      "food_probe_setpoint": {
+        "name": "Objetivo de la sonda"
+      },
       "current_temperature_c": {
         "name": "Temperatura"
       },
@@ -1498,6 +1526,7 @@
         "name": "Progreso",
         "state": {
           "idle": "Inactiva",
+          "delaywash": "Inicio diferido",
           "weightsensing": "Detección de carga",
           "wash": "Lavado",
           "rinse": "Aclarado",
