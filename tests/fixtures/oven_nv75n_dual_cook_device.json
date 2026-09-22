@@ -1,5 +1,5 @@
 {
-  "seeds_note": "Verbatim from the issue #490 reporter's diagnostics download, with the serial and the /oic/d device name replaced. device0 is the master (upper cavity); seeds['/device/1'] is the lower cavity, de-canonicalized back to the '/vs/1' hrefs it answers on the wire so enumeration exercises the real transform. oic_res is constructed -- the dump records the two /device/N links that enumeration found (subdevice_probes: /device/1 true, /multidevice/vs/0 false) but not the raw link array itself.",
+  "seeds_note": "Verbatim from the issue #490 reporter's diagnostics download, with the serial and the /oic/d device name replaced. Diagnostics renders the coordinator's cache under `resources`, not the raw batch, so the probe tier's own reads arrive mixed in with it -- /file/list/vs/0 is one of those and lives in `probes` here, not in device0. device0 is the master (upper cavity); seeds['/device/1'] is the lower cavity, de-canonicalized back to the '/vs/1' hrefs it answers on the wire so enumeration exercises the real transform. oic_res is constructed -- the dump records the two /device/N links that enumeration found (subdevice_probes: /device/1 true, /multidevice/vs/0 false) but not the raw link array.",
   "device0": [
     {
       "x.com.samsung.devcol": "collection"
@@ -45,21 +45,6 @@
             "x.com.samsung.da.description": "Door",
             "x.com.samsung.da.openState": "Open",
             "x.com.samsung.da.lock": "Unlock"
-          }
-        ]
-      }
-    },
-    {
-      "href": "/file/list/vs/0",
-      "rep": {
-        "x.com.samsung.items": [
-          {
-            "x.com.samsung.id": "0",
-            "x.com.samsung.name": "/opt/data/energy.db"
-          },
-          {
-            "x.com.samsung.id": "1",
-            "x.com.samsung.name": "/opt/data/hass.db"
           }
         ]
       }
@@ -414,5 +399,19 @@
         }
       }
     ]
+  },
+  "probes": {
+    "/file/list/vs/0": {
+      "x.com.samsung.items": [
+        {
+          "x.com.samsung.id": "0",
+          "x.com.samsung.name": "/opt/data/energy.db"
+        },
+        {
+          "x.com.samsung.id": "1",
+          "x.com.samsung.name": "/opt/data/hass.db"
+        }
+      ]
+    }
   }
 }
