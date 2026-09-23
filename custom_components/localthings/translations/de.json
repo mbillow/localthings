@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "Vordere Lüftung"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Doppelter Sollwert aktiviert"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "Mittel",
           "on": "Ein"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Doppelter Sollwert Kühlen"
+      },
+      "dual_setpoint_heating": {
+        "name": "Doppelter Sollwert Heizen"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Automatische Umschaltung Kühlen primärer Versatz"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Automatische Umschaltung Kühlen sekundärer Versatz"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Automatische Umschaltung Heizen primärer Versatz"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Automatische Umschaltung Heizen sekundärer Versatz"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "Booster-Schwenken"
+      },
+      "auto_changeover": {
+        "name": "Automatische Umschaltung"
       }
     },
     "time": {

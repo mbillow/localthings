@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "Presa d'aria anteriore"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Doppio setpoint attivo"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "Media",
           "on": "Accesa"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Doppio setpoint raffreddamento"
+      },
+      "dual_setpoint_heating": {
+        "name": "Doppio setpoint riscaldamento"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Commutazione automatica offset primario raffreddamento"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Commutazione automatica offset secondario raffreddamento"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Commutazione automatica offset primario riscaldamento"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Commutazione automatica offset secondario riscaldamento"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "Oscillazione booster"
+      },
+      "auto_changeover": {
+        "name": "Commutazione automatica"
       }
     },
     "time": {

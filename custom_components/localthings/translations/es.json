@@ -389,6 +389,9 @@
       },
       "front_vent_open": {
         "name": "Ventilación frontal"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Doble consigna activada"
       }
     },
     "button": {
@@ -1701,6 +1704,24 @@
           "medium": "Media",
           "on": "Encendida"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Doble consigna refrigeración"
+      },
+      "dual_setpoint_heating": {
+        "name": "Doble consigna calefacción"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Cambio automático desfase primario de refrigeración"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Cambio automático desfase secundario de refrigeración"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Cambio automático desfase primario de calefacción"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Cambio automático desfase secundario de calefacción"
       }
     },
     "switch": {
@@ -1937,6 +1958,9 @@
       },
       "booster_oscillation": {
         "name": "Oscilación del booster"
+      },
+      "auto_changeover": {
+        "name": "Cambio automático"
       }
     },
     "time": {

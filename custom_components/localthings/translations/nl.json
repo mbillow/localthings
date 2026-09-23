@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "Voorste ventilatie"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Dubbel setpoint ingeschakeld"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "Gemiddeld",
           "on": "Aan"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Dubbel setpoint koelen"
+      },
+      "dual_setpoint_heating": {
+        "name": "Dubbel setpoint verwarmen"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Automatisch omschakelen primaire offset koelen"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Automatisch omschakelen secundaire offset koelen"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Automatisch omschakelen primaire offset verwarmen"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Automatisch omschakelen secundaire offset verwarmen"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "Booster-oscillatie"
+      },
+      "auto_changeover": {
+        "name": "Automatisch omschakelen"
       }
     },
     "time": {

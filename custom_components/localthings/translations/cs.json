@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "Přední ventilace"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Dvojí žádaná teplota zapnuta"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "Střední",
           "on": "Zapnuto"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Dvojí žádaná teplota chlazení"
+      },
+      "dual_setpoint_heating": {
+        "name": "Dvojí žádaná teplota topení"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Automatické přepínání primární odchylka chlazení"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Automatické přepínání sekundární odchylka chlazení"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Automatické přepínání primární odchylka topení"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Automatické přepínání sekundární odchylka topení"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "Oscilace boosteru"
+      },
+      "auto_changeover": {
+        "name": "Automatické přepínání"
       }
     },
     "time": {
