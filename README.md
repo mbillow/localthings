@@ -286,6 +286,14 @@ Appliances that report their own Wi-Fi MAC (roughly half of them do, on the `/wi
 
 For everything else — a board that reports no MAC, an entry set up before this existed and already broken by a moved lease, or an appliance you deliberately moved — use **Reconfigure** on the entry (Settings > Devices & Services > LocalThings > the entry's menu). It asks only for the new address, checks that the appliance answering there is the one the entry belongs to before writing anything, and keeps the device's entities, history and automations. Deleting and re-adding the device loses all three; reconfiguring doesn't.
 
+### Older appliances on TCP 8888
+
+Some 2018–2022 appliances (so far a TP6X_WW6500 washer) have no CoAP/DTLS API at all, only an HTTPS bridge on TCP 8888. Setup detects this from the IP address alone and then asks for a **device token**. Leave the field empty and the appliance issues one: it posts it back to Home Assistant on port 8889. For that, switch Remote Control on at the appliance with the door closed, and make sure port 8889 on Home Assistant is reachable from it. If the appliance later refuses its token, Home Assistant asks for a new one.
+
+On these appliances a chosen cycle, temperature, rinse count or spin speed only takes effect when the cycle starts, so the selects hold your choice and the **Start** button sends it. Turning the dial at the appliance replaces what was held. A model whose resources haven't been mapped yet sets up like any unrecognized appliance: the Repairs notice asks for a diagnostics download, which carries the bridge's raw responses.
+
+The bridge only speaks TLS 1.0 and presents a certificate nothing can verify, so this one connection accepts both. Nothing else in the integration relaxes TLS.
+
 ### Multi-subdevice ("2-in-1") air conditioner systems
 
 Some Samsung installs run more than one indoor subdevice off a single outdoor unit, all reachable over the *one* IP/DTLS session your config entry connects to (a floor-standing + wall-mounted 2-in-1 is a common shape). The integration discovers any sibling subdevices automatically, once, right after the first successful poll — there's nothing to configure. Each discovered subdevice gets its own HA device (linked to the main one via "via device") and its own `climate` card, so it lands in its own room in the dashboard instead of being invisible or mixed into the master's state.
