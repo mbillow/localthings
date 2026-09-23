@@ -81,26 +81,31 @@ class Resource:
     start_only: frozenset[str] = frozenset()
 
 
-# TP6X_WW6500 (EU), the one 8888 appliance measured end to end. Every row
-# here was read off the hardware, not inferred: the codes in `Mode` are the
-# same `Course_XX` tokens /course/vs/0 carries -- note it is *not*
-# /mode/vs/0, which this firmware 404s -- and the fields in `Washer` are
-# the same waterTemperature/rinseCycles/spinLevel this repository's washer
-# registry already binds.
+# Every family serves its own identity here -- it is how the family is told
+# apart in the first place -- so this row is the one thing an unmapped
+# family can still be read with.
+INFORMATION = Resource(
+    endpoint="information",
+    wrapper="Information",
+    href="/information/vs/0",
+    rename={"modelID": "modelNum", "serialNumber": "serialNum"},
+)
+
+# What an unmapped family is read with: identity only, so it sets up the way
+# an unrecognized DTLS device does rather than borrowing another family's
+# field map.
+IDENTITY: tuple[Resource, ...] = (INFORMATION,)
+
+# TP6X_WW6500 (EU), the one 8888 appliance measured end to end. `Mode` is
+# /course/vs/0, not /mode/vs/0 (which this firmware 404s).
 TP6X_WASHER: tuple[Resource, ...] = (
     Resource(
         endpoint="operation",
         wrapper="Operation",
         href="/operational/state/vs/0",
-        # This firmware lumps the power state and the child lock in with
-        # the operational state; on the OCF side they are their own
-        # resources, and this repository's capabilities read them there.
+        # The OCF side keeps power and the child lock on their own hrefs.
         fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
     ),
-    # `options` carries both kinds of token: LaundryOutTime and the
-    # add-wash alarm mask are accepted on their own and hold, while
-    # `Course_` is not -- so the refusal is per field, and the array is
-    # named here because that is the field a cycle write lands in.
     Resource(
         endpoint="mode",
         wrapper="Mode",
@@ -118,22 +123,24 @@ TP6X_WASHER: tuple[Resource, ...] = (
         wrapper="Configuration",
         href="/remotectrl/vs/0",
     ),
-    Resource(
-        endpoint="information",
-        wrapper="Information",
-        href="/information/vs/0",
-        rename={"modelID": "modelNum", "serialNumber": "serialNum"},
-    ),
+    INFORMATION,
     Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
     Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
 )
 
 
-# Keyed by the appliance's own `description` (/devices/0/information's, e.g.
-# 'TP6X_WASHER'). One family so far; a second one either fits this table or
-# shows exactly where it doesn't, which is the point of keeping the
-# translation declarative.
+# Keyed by the appliance's own `description` (/devices/0/information's,
+# e.g. 'TP6X_WASHER'). A family not listed here is read with IDENTITY.
 FAMILIES: dict[str, tuple[Resource, ...]] = {"TP6X_WASHER": TP6X_WASHER}
+
+
+def table_for(family: str | None) -> tuple[Resource, ...]:
+    """The envelope table for `family`, or IDENTITY when it is unmapped."""
+    return FAMILIES.get(family or "", IDENTITY)
+
+
+def is_mapped(family: str | None) -> bool:
+    return (family or "") in FAMILIES
 
 
 def _canonical_name(name: str, rename: Mapping[str, str]) -> str:
@@ -183,10 +190,7 @@ def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
-def to_resources(
-    bodies: Mapping[str, Any],
-    table: tuple[Resource, ...] = TP6X_WASHER,
-) -> dict[str, dict]:
+def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict[str, dict]:
     """8888 responses -> ``{canonical href: rep}``.
 
     ``bodies`` is keyed by wrapper name, which is how the appliance itself
@@ -283,8 +287,7 @@ def _wire_field(href: str, name: str, table: tuple[Resource, ...]) -> tuple[str,
 
 
 def to_write(
-    steps: list[tuple[str, Mapping[str, Any]]],
-    table: tuple[Resource, ...] = TP6X_WASHER,
+    steps: list[tuple[str, Mapping[str, Any]]], table: tuple[Resource, ...]
 ) -> dict[str, Any]:
     """``[(canonical href, canonical patch), ...]`` -> one aggregate body.
 

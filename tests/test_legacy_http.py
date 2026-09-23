@@ -18,10 +18,13 @@ from pathlib import Path
 
 from custom_components.localthings.legacy_http import (
     COURSE_TABLE_HREF,
+    IDENTITY,
     PREFIX,
     TP6X_WASHER,
     course_table,
     http_status_to_coap,
+    is_mapped,
+    table_for,
     to_resources,
     to_write,
     unwrap,
@@ -135,7 +138,7 @@ class TestToResources:
         """Absent, not empty: an empty rep is a board's confirmed answer
         that it has none of this, which callers already read differently
         (registry.batch.is_stub_rep)."""
-        resources = to_resources({k: v for k, v in BODIES.items() if k != "Diagnosis"})
+        resources = to_resources({k: v for k, v in BODIES.items() if k != "Diagnosis"}, TP6X_WASHER)
 
         assert "/diagnosis/vs/0" not in resources
 
@@ -152,7 +155,9 @@ class TestToResources:
 
 class TestToWrite:
     def test_one_step_wraps_the_resource_the_appliance_expects(self):
-        body = to_write([("/course/vs/0", {PREFIX + "options": ["LaundryOutTime_60"]})])
+        body = to_write(
+            [("/course/vs/0", {PREFIX + "options": ["LaundryOutTime_60"]})], TP6X_WASHER
+        )
 
         assert body == {"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}
 
@@ -163,7 +168,8 @@ class TestToWrite:
             [
                 ("/course/vs/0", {PREFIX + "options": ["Course_63"]}),
                 ("/operational/state/vs/0", {PREFIX + "state": "Run"}),
-            ]
+            ],
+            TP6X_WASHER,
         )
 
         assert body == {
@@ -174,25 +180,27 @@ class TestToWrite:
         }
 
     def test_a_fanned_out_field_writes_back_into_its_own_wrapper(self):
-        body = to_write([("/power/vs/0", {PREFIX + "power": "Off"})])
+        body = to_write([("/power/vs/0", {PREFIX + "power": "Off"})], TP6X_WASHER)
 
         assert body == {"Device": {"Operation": {"power": "Off"}}}
 
     def test_a_renamed_field_writes_under_its_wire_name(self):
-        body = to_write([("/information/vs/0", {PREFIX + "modelNum": "X"})])
+        body = to_write([("/information/vs/0", {PREFIX + "modelNum": "X"})], TP6X_WASHER)
 
         assert body == {"Device": {"Information": {"modelID": "X"}}}
 
     def test_an_href_this_table_has_no_row_for_is_dropped(self):
         """Rather than inventing a wrapper for it: a write nobody can place
         must not reach the appliance as a guess."""
-        assert to_write([("/energy/consumption/vs/0", {PREFIX + "cumulativePower": "1"})]) == {
-            "Device": {}
-        }
+        assert to_write(
+            [("/energy/consumption/vs/0", {PREFIX + "cumulativePower": "1"})], TP6X_WASHER
+        ) == {"Device": {}}
 
     def test_writes_round_trip_through_the_table(self):
         resources = to_resources(BODIES, TP6X_WASHER)
-        body = to_write([(href, rep) for href, rep in resources.items() if href == "/washer/vs/0"])
+        body = to_write(
+            [(href, rep) for href, rep in resources.items() if href == "/washer/vs/0"], TP6X_WASHER
+        )
 
         assert body["Device"]["Washer"] == BODIES["Washer"]
 
@@ -246,7 +254,8 @@ class TestAgainstTheDeviceDump:
                 dump["/devices/0"],
                 dump["/devices/0/configuration"],
                 dump["/devices/0/information"],
-            )
+            ),
+            TP6X_WASHER,
         )
 
     def test_the_dump_produces_the_canonical_resource_set(self):
@@ -320,3 +329,15 @@ class TestAgainstTheDeviceDump:
         from custom_components.localthings.registry.capabilities.laundry import cycle_options
 
         assert len(cycle_options(self._resources())) == 14
+
+
+class TestFamilies:
+    def test_a_mapped_family_gets_its_own_table(self):
+        assert table_for("TP6X_WASHER") is TP6X_WASHER
+        assert is_mapped("TP6X_WASHER")
+
+    def test_an_unmapped_family_gets_identity_only(self):
+        assert table_for("TP6X_DRYER") == IDENTITY
+        assert table_for(None) == IDENTITY
+        assert not is_mapped("TP6X_DRYER")
+        assert not is_mapped(None)

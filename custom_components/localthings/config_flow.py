@@ -367,19 +367,29 @@ def _mint_self_signed(uuid: str) -> tuple[str, str]:
 def _probe_legacy(host: str, cert_pem: str, key_pem: str, token: str) -> dict:
     """Read identity over the 8888 bridge, in the shape _create_entry wants.
 
-    The same `_read_device` the DTLS path uses: the transport hands back
-    canonical reps either way, which is the whole point of the seam.
+    Two passes, because the family that picks the envelope table is itself
+    read from the appliance: identity first, then the device through its
+    family's table. An unmapped family stops at identity and goes on as an
+    unrecognized device type, the same as a DTLS board nothing routes.
     """
+    from .legacy_http import is_mapped
     from .legacy_http_transport import LegacyHttpTransport
 
-    transport = LegacyHttpTransport(
-        host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token
-    )
-    transport.connect()
-    try:
-        return _read_device(transport, host, LEGACY_HTTP_PORT)
-    finally:
-        transport.close()
+    def _read(family: str | None) -> dict:
+        transport = LegacyHttpTransport(
+            host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token, family=family
+        )
+        transport.connect()
+        try:
+            return _read_device(transport, host, LEGACY_HTTP_PORT)
+        finally:
+            transport.close()
+
+    info = _read(None)
+    family = info.get("description", "")
+    if is_mapped(family):
+        return _read(family)
+    return {**info, "device_type_name": None, "device_type_recognized": False}
 
 
 # TLS alerts (RFC 5246 §7.2) that mean "I looked at your certificate and

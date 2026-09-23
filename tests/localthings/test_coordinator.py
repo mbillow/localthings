@@ -19,10 +19,14 @@ from smartthings_local.errors import SessionClosedError, SessionError, SessionTi
 
 from custom_components.localthings.const import (
     CONF_BYPASS_REMOTE_CONTROL,
+    CONF_DEVICE_TOKEN,
     CONF_HOST,
+    CONF_LEGACY_FAMILY,
+    CONF_TRANSPORT,
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
+    TRANSPORT_LEGACY_HTTP,
 )
 from custom_components.localthings.coordinator import (
     _RECOVERY_RETRY_S,
@@ -151,6 +155,37 @@ def test_run_discovery_detects_washer_via_model_fallback(hass: HomeAssistant, mo
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     coordinator._run_discovery(resources)
     assert coordinator.device_type_name == "washer"
+
+
+def test_run_discovery_treats_an_unmapped_legacy_family_as_unrecognized(
+    hass: HomeAssistant,
+) -> None:
+    """Its identity alone must not route it: the description below would
+    type as a washer, but nothing of the device beyond identity was read."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            **ENTRY_DATA,
+            CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
+            CONF_LEGACY_FAMILY: "TP6X_WASHER_NEXT",
+            CONF_DEVICE_TOKEN: "tok",
+        },
+        unique_id="localthings_unmapped",
+        version=4,
+    )
+    entry.add_to_hass(hass)
+    resources = {
+        "/information/vs/0": {
+            "x.com.samsung.da.modelNum": "TP6X_WW9000|FF18E000|2001",
+            "x.com.samsung.da.description": "TP6X_WASHER_NEXT",
+            "x.com.samsung.da.serialNum": "TEST-SERIAL",
+        },
+    }
+    coordinator = LocalThingsCoordinator(hass, entry)
+    coordinator._run_discovery(resources)
+    assert coordinator.device_type_name is None
 
 
 def test_run_discovery_falls_back_to_host_for_placeholder_serial(

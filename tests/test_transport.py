@@ -229,3 +229,20 @@ class TestObserve:
         transport.pace()
 
         assert fake_of(transport).paced == 1
+
+
+class TestTranslatesResources:
+    def test_a_dtls_entry_does(self):
+        from custom_components.localthings.transport import translates_resources
+
+        assert translates_resources({}) is True
+
+    def test_a_mapped_legacy_family_does(self):
+        from custom_components.localthings.transport import translates_resources
+
+        assert translates_resources({"transport": "legacy_http", "legacy_family": "TP6X_WASHER"})
+
+    def test_an_unmapped_legacy_family_does_not(self):
+        from custom_components.localthings.transport import translates_resources
+
+        assert not translates_resources({"transport": "legacy_http", "legacy_family": "TP6X_DRYER"})

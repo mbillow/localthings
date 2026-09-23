@@ -117,6 +117,8 @@ class Transport(Protocol):
 
     def refresh_observes(self, paths: Sequence[Sequence[str]]) -> None: ...
 
+    def diagnostics(self) -> dict[str, Any]: ...
+
 
 class DtlsTransport:
     """CoAP over DTLS -- the transport every supported device speaks.
@@ -225,6 +227,10 @@ class DtlsTransport:
     def refresh_observes(self, paths: Sequence[Sequence[str]]) -> None:
         self._live().refresh_observes(paths)
 
+    def diagnostics(self) -> dict[str, Any]:
+        # Everything this transport sees is already in the resource dump.
+        return {}
+
 
 def create_transport(
     data: Mapping[str, Any],
@@ -240,17 +246,15 @@ def create_transport(
     lazily so an install with no such device never loads it.
     """
     if data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
-        from .legacy_http import FAMILIES, TP6X_WASHER
         from .legacy_http_transport import LegacyHttpTransport
 
-        family = data.get(CONF_LEGACY_FAMILY)
         return LegacyHttpTransport(
             data[CONF_HOST],
             data[CONF_PORT],
             cert_pem=data[CONF_LEAF_CERT_PEM],
             key_pem=data[CONF_LEAF_KEY_PEM],
             token=data[CONF_DEVICE_TOKEN],
-            family=FAMILIES.get(family, TP6X_WASHER) if family else TP6X_WASHER,
+            family=data.get(CONF_LEGACY_FAMILY),
         )
     return DtlsTransport(
         data[CONF_HOST],
@@ -260,3 +264,18 @@ def create_transport(
         on_notification=on_notification,
         local_port=local_port,
     )
+
+
+def translates_resources(data: Mapping[str, Any]) -> bool:
+    """Whether this entry's transport can present the device's own resources.
+
+    False only for an 8888 family with no envelope table, which is read for
+    its identity alone; discovery treats that like any unrecognized device
+    type rather than routing on the identity. Decided from the entry, not a
+    live session, so a discovery replayed from the snapshot agrees.
+    """
+    if data.get(CONF_TRANSPORT) != TRANSPORT_LEGACY_HTTP:
+        return True
+    from .legacy_http import is_mapped
+
+    return is_mapped(data.get(CONF_LEGACY_FAMILY))

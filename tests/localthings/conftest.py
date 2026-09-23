@@ -269,6 +269,9 @@ class FakeObserveSession:
     def pace(self):
         pass
 
+    def diagnostics(self):
+        return {}
+
     def close(self):
         self.closed = True
 

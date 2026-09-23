@@ -105,7 +105,7 @@ def transport(monkeypatch):
         lambda cert_pem, key_pem: object(),
     )
     device = LegacyHttpTransport(
-        "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456"
+        "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_WASHER"
     )
     device.connect()
     return device
@@ -338,7 +338,9 @@ class TestCapabilities:
             "custom_components.localthings.legacy_http_transport.http.client.HTTPSConnection",
             _FakeConnection,
         )
-        never = LegacyHttpTransport("10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t")
+        never = LegacyHttpTransport(
+            "10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t", family="TP6X_WASHER"
+        )
 
         with pytest.raises(RuntimeError, match="no session"):
             never.read(["washer", "vs", "0"], timeout=1.0)
@@ -349,3 +351,38 @@ class TestCapabilities:
         transport.read(["washer", "vs", "0"], timeout=10.0)
 
         assert _FakeConnection.log[-1][3]["Authorization"] == "Bearer tok123456"
+
+
+class TestUnmappedFamily:
+    """A family with no envelope table is read for its identity alone, so it
+    sets up like an unrecognized DTLS device rather than borrowing another
+    family's field map."""
+
+    @pytest.fixture
+    def unmapped(self, transport):
+        device = LegacyHttpTransport(
+            "10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t", family="TP6X_DRYER"
+        )
+        device.connect()
+        return device
+
+    def test_the_seed_carries_identity_and_nothing_else(self, unmapped):
+        code, body = unmapped.read(["device", "0"], timeout=10.0)
+
+        assert code == 0x45
+        assert [entry["href"] for entry in body] == ["/information/vs/0"]
+
+    def test_a_washer_href_is_not_served(self, unmapped):
+        assert unmapped.read(["washer", "vs", "0"], timeout=10.0) == (0x84, None)
+
+    def test_diagnostics_carry_the_untranslated_bodies(self, unmapped):
+        unmapped.read(["device", "0"], timeout=10.0)
+
+        diag = unmapped.diagnostics()
+
+        assert diag["family"] == "TP6X_DRYER"
+        assert diag["family_mapped"] is False
+        assert diag["bodies"]["Washer"] == AGGREGATE["Device"]["Washer"]
+        # The aggregate's description can carry the serial; name is user-set.
+        assert "description" not in diag["bodies"]
+        assert "name" not in diag["bodies"]

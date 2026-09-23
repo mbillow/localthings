@@ -97,6 +97,9 @@ class FakeCoapSession:
     def pace(self):
         pass
 
+    def diagnostics(self):
+        return {}
+
 
 def _discover_full(resources: dict[str, dict], oic_res, seeds: dict[str, list], device_types=()):
     """Run the *whole* subdevice-aware discovery pipeline against fixture

@@ -41,14 +41,15 @@ from collections.abc import Sequence
 from typing import Any
 
 from .legacy_http import (
-    FAMILIES,
-    TP6X_WASHER,
     Resource,
     course_table,
     http_status_to_coap,
+    is_mapped,
     start_only_fields,
+    table_for,
     to_resources,
     to_write,
+    unwrap,
 )
 from .legacy_http_tls import client_context
 
@@ -83,19 +84,20 @@ class LegacyHttpTransport:
         cert_pem: str,
         key_pem: str,
         token: str,
-        family: str | tuple[Resource, ...] = TP6X_WASHER,
+        family: str | None = None,
     ) -> None:
         self._host = host
         self._port = port
         self._cert_pem = cert_pem
         self._key_pem = key_pem
         self._token = token
-        self._table = FAMILIES[family] if isinstance(family, str) else family
-        # The course-table lookup is keyed by family name, so a caller that
-        # passed the table itself is resolved back to its name here.
-        self._family = family if isinstance(family, str) else _family_name(self._table)
+        self._family = family or ""
+        self._table = table_for(family)
         self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
+        # The last sweep's bodies as the appliance sent them, before
+        # translation -- what diagnostics needs to map a family that isn't.
+        self._last_bodies: dict[str, Any] = {}
 
     @property
     def host(self) -> str:
@@ -139,7 +141,7 @@ class LegacyHttpTransport:
         status, body = self._request("GET", f"/devices/0/{resource.endpoint}", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        return 0x45, to_resources(_unwrap_one(body), self._table).get(href, {})
+        return 0x45, to_resources(unwrap(body), self._table).get(href, {})
 
     def _read_seed(self, timeout: float) -> tuple[int, Any]:
         """The whole device in the shape a /device/0 batch arrives in.
@@ -154,17 +156,16 @@ class LegacyHttpTransport:
         status, body = self._request("GET", "/devices/0", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        bodies = _unwrap_one(body)
+        bodies = unwrap(body)
         for endpoint in _LINKED_ENDPOINTS:
             linked_status, linked = self._request("GET", f"/devices/0/{endpoint}", timeout=timeout)
             if linked_status == 200 and isinstance(linked, dict):
-                bodies.update(_unwrap_one(linked))
+                bodies.update(unwrap(linked))
             else:
                 _LOGGER.debug("%s: /devices/0/%s answered %s", self._host, endpoint, linked_status)
+        self._last_bodies = bodies
         resources = to_resources(bodies, self._table)
-        # The course-table id the registry needs to label cycles by name.
-        # Derived from the device's own modelNum rather than served: this
-        # family has no /st/washercourse/vs/0 of its own.
+        # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
         resources.update(course_table(self._family))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
@@ -234,6 +235,20 @@ class LegacyHttpTransport:
         status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
         return http_status_to_coap(status), response
 
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            "transport": "legacy_http",
+            "family": self._family,
+            "family_mapped": is_mapped(self._family),
+            # Resource bodies only: the aggregate's own scalars include a
+            # `description` that can carry the serial and a user-set `name`.
+            "bodies": {
+                key: value
+                for key, value in self._last_bodies.items()
+                if isinstance(value, (dict, list)) or key == "type"
+            },
+        }
+
     # ------------------------------------------------------------------
     # OBSERVE -- not available on this transport; `supports_observe` says
     # so, and these exist only so the protocol is satisfied.
@@ -277,15 +292,6 @@ class LegacyHttpTransport:
             return response.status, raw.decode("utf-8", "replace")
 
 
-def _family_name(table: tuple[Resource, ...]) -> str:
-    """The name a resource table is registered under, or "" when it is one
-    a caller built itself and no catalog entry can be keyed to it."""
-    for name, known in FAMILIES.items():
-        if known is table:
-            return name
-    return ""
-
-
 def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:
     """Canonical href -> the resource serving it, fanned-out hrefs included,
     so the two directions can never name different endpoints."""
@@ -294,9 +300,3 @@ def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:
         for href in resource.fan_out.values():
             index[href] = resource
     return index
-
-
-def _unwrap_one(body: dict) -> dict[str, Any]:
-    from .legacy_http import unwrap
-
-    return unwrap(body)
