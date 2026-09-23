@@ -22,6 +22,7 @@ import logging
 import ssl
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from .legacy_http import (
@@ -66,6 +67,21 @@ _START_SETTLE_S = 3.0
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 
 
+@dataclass
+class _ApplianceState:
+    """What must outlive one transport object: the coordinator replaces its
+    transport on every reconnect, and a held cycle has to survive that."""
+
+    # The last sweep's bodies as the appliance sent them, before translation.
+    last_bodies: dict[str, Any] = field(default_factory=dict)
+    # Values held for the next start, each with what the appliance reported
+    # for it when it was chosen (None until first read).
+    staged: dict[StagedKey, tuple[Any, Any]] = field(default_factory=dict)
+
+
+_STATE: dict[tuple[str, int], _ApplianceState] = {}
+
+
 class LegacyHttpTransport:
     """`Transport` over the 8888 bridge. Blocking, like the seam it implements."""
 
@@ -90,12 +106,7 @@ class LegacyHttpTransport:
         self._table = table_for(family)
         self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
-        # The last sweep's bodies as the appliance sent them, before
-        # translation -- what diagnostics needs to map a family that isn't.
-        self._last_bodies: dict[str, Any] = {}
-        # Values held for the next start, each with what the appliance
-        # reported for it when it was chosen (None until first read).
-        self._staged: dict[StagedKey, tuple[Any, Any]] = {}
+        self._state = _STATE.setdefault((host, port), _ApplianceState())
 
     @property
     def host(self) -> str:
@@ -145,7 +156,7 @@ class LegacyHttpTransport:
                 bodies.update(unwrap(linked))
             else:
                 _LOGGER.debug("%s: /devices/0/%s answered %s", self._host, endpoint, linked_status)
-        self._last_bodies = bodies
+        self._state.last_bodies = bodies
         resources = to_resources(self._with_staged(bodies), self._table)
         # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
         resources.update(course_table(self._family))
@@ -166,9 +177,9 @@ class LegacyHttpTransport:
             return 0x84, None
         sendable, staged = split_start_only(aggregate, self._table)
         for key, value in staged.items():
-            self._staged[key] = (value, staged_current(self._last_bodies, key))
+            self._state.staged[key] = (value, staged_current(self._state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and self._staged and self._idle():
+        if is_start(sendable) and self._state.staged and self._idle():
             return self._start(sendable, timeout)
         if not sendable["Device"]:
             return 0x44, None
@@ -178,7 +189,7 @@ class LegacyHttpTransport:
         return http_status_to_coap(status), response
 
     def _idle(self) -> bool:
-        operation = self._last_bodies.get("Operation") or {}
+        operation = self._state.last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
 
     def _start(self, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
@@ -190,11 +201,11 @@ class LegacyHttpTransport:
         That second `Run` is sent only when a fresh read says it isn't
         running.
         """
-        body = add_staged(aggregate, {key: value for key, (value, _) in self._staged.items()})
+        body = add_staged(aggregate, {key: value for key, (value, _) in self._state.staged.items()})
         status, response = self._request("PUT", "/devices/0", body=body, timeout=timeout)
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
-        self._staged.clear()
+        self._state.staged.clear()
         time.sleep(_START_SETTLE_S)
         state_status, state = self._request("GET", "/devices/0/operation", timeout=timeout)
         operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
@@ -213,19 +224,19 @@ class LegacyHttpTransport:
         """
         operation = bodies.get("Operation")
         if isinstance(operation, dict) and operation.get("state") not in (None, "Ready"):
-            self._staged.clear()
-        for key, (value, base) in list(self._staged.items()):
+            self._state.staged.clear()
+        for key, (value, base) in list(self._state.staged.items()):
             if key[0] not in bodies:
                 continue
             current = staged_current(bodies, key)
             if base is None:
-                self._staged[key] = (value, current)
+                self._state.staged[key] = (value, current)
             elif current != base:
                 _LOGGER.info(
                     "%s: %s changed at the appliance; dropping %s", self._host, key[1], value
                 )
-                del self._staged[key]
-        return with_staged(bodies, {key: value for key, (value, _) in self._staged.items()})
+                del self._state.staged[key]
+        return with_staged(bodies, {key: value for key, (value, _) in self._state.staged.items()})
 
     def diagnostics(self) -> dict[str, Any]:
         return {
@@ -236,7 +247,7 @@ class LegacyHttpTransport:
             # `description` that can carry the serial and a user-set `name`.
             "bodies": {
                 key: value
-                for key, value in self._last_bodies.items()
+                for key, value in self._state.last_bodies.items()
                 if isinstance(value, (dict, list)) or key == "type"
             },
         }

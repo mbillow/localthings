@@ -89,6 +89,13 @@ class _FakeConnection:
         pass
 
 
+@pytest.fixture(autouse=True)
+def _fresh_appliance_state(monkeypatch):
+    """Held values outlive a transport object by design, so each test starts
+    from none."""
+    monkeypatch.setattr("custom_components.localthings.legacy_http_transport._STATE", {})
+
+
 @pytest.fixture
 def transport(monkeypatch):
     _FakeConnection.log = []
@@ -361,6 +368,22 @@ class TestStartOnlyWrites:
         idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
 
         assert self._puts() == [{"Device": {"Operation": {"state": "Run"}}}]
+
+    def test_a_held_cycle_survives_a_reconnect(self, idle):
+        """The coordinator builds a new transport after a failed poll; the
+        cycle chosen before it must still go out with Start."""
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Run"}})
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        reconnected = LegacyHttpTransport(
+            "10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t", family="TP6X_WASHER"
+        )
+        reconnected.connect()
+
+        reconnected.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert self._puts()[0] == {
+            "Device": {"Operation": {"state": "Run"}, "Mode": {"options": ["Course_63"]}}
+        }
 
     def test_a_running_appliance_drops_what_was_held(self, idle):
         idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
