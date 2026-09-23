@@ -323,6 +323,66 @@ def test_lamp_reads_any_non_off_level_as_true():
     assert desc.value_fn(["Lamp_High"]) is True
 
 
+def test_upper_lamp_gated_present_and_reads_state():
+    """Oven-class combis (NQ7000B, issue #496) spell the token 'UpperLamp'."""
+    desc = next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if e.key == "lamp" and isinstance(e, SwitchDesc)
+    )
+    rep = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
+    assert desc.exists_fn is not None
+    assert desc.exists_fn(rep, {}) is True
+    assert desc.value_fn(["UpperLamp_Off"]) is False
+    assert desc.value_fn(["UpperLamp_On"]) is True
+
+
+def test_upper_lamp_write_uses_oven_on_off_values():
+    desc = next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if e.key == "lamp" and isinstance(e, SwitchDesc)
+    )
+    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
+    assert desc.write_fn is not None
+    assert desc.write_fn("On", rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_On"]},
+    )
+    assert desc.write_fn("Off", rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
+    )
+
+
+def test_nq7000b_fixture_resolves_as_microwave_with_lamp_and_clock_sync():
+    """Issue #496: NQ7000B declares oic.d.oven but has the microwave
+    surface; it binds fully, with the UpperLamp switch and clock sync."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_nq7000b")
+    reg = resolve(resources, device_types=("oic.wk.d", "oic.d.oven"))
+
+    assert reg is not None
+    assert reg.name == "microwave"
+    unbound = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+    keys = {entity.desc.key for entity in bound}
+    assert {"cooking_mode", "power_level", "lamp", "sync_clock"} <= keys
+    assert "oven_mode" not in keys
+
+
+def test_microwave_without_configuration_has_no_clock_sync():
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    assert all(entity.desc.key != "sync_clock" for entity in bound)
+
+
 # ---------------------------------------------------------------------------
 # MICROWAVE_MODE — filter_remind/remind_beep options-array writes (issue #181)
 # ---------------------------------------------------------------------------

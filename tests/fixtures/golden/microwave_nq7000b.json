@@ -1,0 +1,24 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "cavity_state",
+    "child_lock",
+    "cloud_connected",
+    "cook_time",
+    "cooking_mode",
+    "current_temp_c",
+    "cycle_active",
+    "door_open",
+    "finish_time",
+    "firmware_update",
+    "lamp",
+    "machine_state",
+    "operation_time_minutes",
+    "power_level",
+    "power_switch",
+    "progress_percentage",
+    "remote_control",
+    "setpoint",
+    "sound"
+  ]
+}

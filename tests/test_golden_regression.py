@@ -968,6 +968,25 @@ def test_registry_reproduces_golden_state_keys_for_microwave_me80h2160raa():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_microwave_nq7000b():
+    """TP1X_DA-KS-OVEN-01061 compact oven with microwave (NQ7000B-/EU4,
+    issue #496). Declares oic.d.oven, but routes to the microwave registry
+    on its MicroWave-mode + /oven/vs/0 surface like the Qooker; its lamp is
+    the oven-style 'UpperLamp' token."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_nq7000b")
+    golden = json.loads((GOLDEN / "microwave_nq7000b.json").read_text())
+    state_keys = _new_state_keys(
+        "microwave_nq7000b", resources, device_types=("oic.wk.d", "oic.d.oven")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_air_purifier_tp1x_da_ac_air():
     """TP1X_DA-AC-AIR-01031_0000 (issue #130) self-reports oneUiVersion
     '7.0 Air purifier' (unused for routing) and resolves via its 'AIR'
