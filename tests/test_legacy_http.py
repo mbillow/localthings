@@ -241,6 +241,12 @@ class TestHttpStatusToCoap:
         assert http_status_to_coap(418) == 0x80
         assert http_status_to_coap(503) == 0xA0
 
+    def test_a_redirect_is_not_a_success(self):
+        assert http_status_to_coap(302) == 0x80
+
+    def test_an_unmapped_success_claims_no_content(self):
+        assert http_status_to_coap(202) == 0x44
+
 
 class TestAgainstTheDeviceDump:
     """The real appliance, through this repository's own detection.

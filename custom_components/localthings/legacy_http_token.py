@@ -1,25 +1,16 @@
 """Device-token bootstrap for the 8888 bridge (issue #168).
 
-The CA step is unchanged from the DTLS path: the user supplies the CA, a
-leaf is minted from it. This family wants one thing more, and it is the
-only part of setup that has no counterpart on a CoAP device: a *device
-token*, which cannot be minted locally because the appliance issues it.
+This family authorizes with a device token the appliance issues, not with
+the certificate. The exchange is a callback: we ask on 8888, the appliance
+POSTs the token to an HTTPS listener here on 8889. Two things decide whether
+it arrives:
 
-The exchange is a callback. We ask for a token on port 8888; the appliance
-then connects back and POSTs it to an HTTPS listener on port 8889. Two
-things about that decide whether it ever arrives:
+* The appliance takes the callback address from the request's `Host`
+  header, not its source address -- the default would make it call itself.
+* A pending request blocks the next for about a minute (`403 "... until
+  completing the process of a previous request"`), so retries are paced.
 
-* **The appliance takes the callback address from the `Host` header**, not
-  from the source address of the request. Python's default `Host` is the
-  appliance's own address, so the default makes it call itself and nothing
-  is ever delivered.
-* **A request in flight blocks the next one.** While one is pending the
-  appliance answers `403 "This request is not able to be processed until
-  completing the process of a previous request"` for roughly a minute, so
-  retries are paced rather than immediate.
-
-Blocking throughout, like everything else behind the transport seam; the
-config flow runs it in an executor.
+Blocking throughout; the config flow runs it in an executor.
 """
 
 from __future__ import annotations

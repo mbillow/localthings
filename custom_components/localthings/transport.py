@@ -1,29 +1,13 @@
 """What this integration needs from a connection to an appliance (issue #168).
 
 The coordinator, the config flow's probe, `registry.identity` and
-`registry.subdevices` all talk to a device through the same handful of
-operations: connect, read a resource, write a patch to one, pace a burst of
-them, close. `DtlsTransport` below is that surface over CoAP-DTLS -- the
-only transport today, and the one every device this integration supports
-speaks.
+`registry.subdevices` reach a device only through `Transport`: connect, read,
+write, pace, close, and OBSERVE where the transport has it. `DtlsTransport`
+is CoAP-DTLS; `legacy_http_transport.LegacyHttpTransport` is the 8888 bridge.
 
-It exists as an interface because a 2018-2022 appliance family speaks the
-same vocabulary over a different transport entirely (nginx on TCP 8888,
-JSON over TLS 1.0, no OCF URL space at all), and `legacy_http` translates
-that envelope into the reps the rest of this integration already reads. An
-HTTP transport implementing this protocol is what would connect the two;
-none is proposed here.
-
-Two things are deliberately behind the seam rather than above it:
-
-* **Decoding.** `read` returns the decoded body, so nothing upstream knows
-  the wire is CBOR. That is what keeps a second transport from adding a
-  parallel code path to every caller.
-* **OBSERVE.** `subscribe`/`refresh_observes` are CoAP-specific and a
-  request/response transport has no equivalent, so `supports_observe`
-  says whether they mean anything. `observe.py` needs no notion of any of
-  this: `ObserveRefreshTask` only ever calls `refresh_observes`, which
-  this class forwards.
+Decoding sits behind the seam, so nothing above it knows the wire format,
+and `supports_observe` says whether `subscribe`/`refresh_observes` mean
+anything.
 """
 
 from __future__ import annotations

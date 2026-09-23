@@ -1,35 +1,17 @@
 """The 8888/HTTPS transport for the legacy appliance family (issue #168).
 
-A 2018-2022 Samsung appliance has no OCF server: nothing answers on UDP
-49152-49160, and TCP 8888 serves a small REST bridge instead -- nginx over
-TLS 1.0, a mandatory client certificate, and a device token. `legacy_http`
-translates that envelope into the reps the registry already reads; this is
-the transport that fetches them, implementing the same `Transport` protocol
-`DtlsTransport` does, so the coordinator, the registry and the entity layer
-need no notion of which one they are talking to.
+`Transport` over the bridge these appliances serve instead of OCF, with
+`legacy_http` doing the envelope translation. What the firmware forces:
 
-Four things about this firmware shape the code, all measured rather than
-assumed:
-
-* **The response is not valid HTTP.** It emits `X-API-Version : v1.0.0`,
-  with a space before the colon; `aiohttp` rejects the entire response over
-  it. `http.client` is lenient about header lines, which is why this is
-  written on top of it -- and it suits the seam, which is blocking and runs
-  in an executor anyway.
-* **TLS 1.0 only**, and a modern OpenSSL needs `DEFAULT@SECLEVEL=0` to
-  speak to it at all.
-* **There is no OBSERVE.** The bridge is request/response, so this
-  transport declares `supports_observe = False` and the coordinator stays
-  on its poll cadence.
-* **A cycle and the washer's settings are accepted only with a start.**
-  Sent alone they are answered `204` and discarded. So choosing one holds
-  it here, reads show the held value, and the Start button's write carries
-  everything held in one `PUT /devices/0`.
-
-The appliance is also absent by design: it leaves the network minutes after
-going idle unless Remote Control is on, and answers `403 SHE-001` to every
-request while that is switched off. Both surface as ordinary failed reads,
-which the coordinator already treats as an outage rather than an error.
+* Its responses aren't valid HTTP (`X-API-Version : v1.0.0`, a space before
+  the colon), which `aiohttp` rejects; `http.client` tolerates it.
+* TLS 1.0 only (see legacy_http_tls). No OBSERVE, so the coordinator polls.
+* A cycle and the washer's settings are taken only in the same body as a
+  start; sent alone they are answered `204` and discarded. Choosing one is
+  held here and shown on reads, and the Start button's write carries it.
+* The appliance leaves the network soon after going idle unless Remote
+  Control is on, and answers `403 SHE-001` while it is off -- both read as
+  an ordinary outage.
 """
 
 from __future__ import annotations
@@ -67,9 +49,8 @@ _LOGGER = logging.getLogger(__name__)
 # this is the only port these appliances open.
 LEGACY_HTTP_PORT = 8888
 
-# The href the coordinator polls for a whole-device sweep. This firmware has
-# no Collection resource; the aggregate plus the two resources it only links
-# to are assembled into the same batch shape `parse_device0_batch` reads.
+# The coordinator's whole-device sweep; assembled here, since this firmware
+# has no Collection resource.
 _SEED_HREF = "/device/0"
 
 # Served by their own endpoint rather than embedded in the aggregate.
@@ -124,12 +105,8 @@ class LegacyHttpTransport:
     def port(self) -> int:
         return self._port
 
-    # ------------------------------------------------------------------
-    # Lifetime. There is no session to hold: the appliance closes the
-    # connection after every response (`Connection: close` is its own
-    # behavior, not a choice here), so each request stands alone and
-    # "connect" is only the TLS context.
-    # ------------------------------------------------------------------
+    # The appliance closes the connection after every response, so there is
+    # no session to hold: "connect" is only the TLS context.
 
     def connect(self) -> None:
         self._ctx = client_context(self._cert_pem, self._key_pem)
@@ -138,12 +115,7 @@ class LegacyHttpTransport:
         self._ctx = None
 
     def pace(self) -> None:
-        """Nothing to pace: each request opens its own connection, and the
-        rate limiter the DTLS session needs has no counterpart here."""
-
-    # ------------------------------------------------------------------
-    # Reads
-    # ------------------------------------------------------------------
+        """Nothing to pace: each request is its own connection."""
 
     def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
@@ -151,9 +123,7 @@ class LegacyHttpTransport:
             return self._read_seed(timeout)
         resource = self._by_href.get(href)
         if resource is None:
-            # Every OCF href this firmware does not serve, including
-            # /oic/p and /oic/d -- nginx answers its own HTML 404 for
-            # those, and read_identity is defensive about it.
+            # Including /oic/p and /oic/d, which nginx answers with HTML.
             return 0x84, None
         status, body = self._request("GET", f"/devices/0/{resource.endpoint}", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
@@ -162,15 +132,9 @@ class LegacyHttpTransport:
         return 0x45, to_resources(bodies, self._table).get(href, {})
 
     def _read_seed(self, timeout: float) -> tuple[int, Any]:
-        """The whole device in the shape a /device/0 batch arrives in.
-
-        Three requests, not one per resource: the aggregate carries
-        Operation, Washer, Mode, Alarms and Diagnosis together, and only
-        Configuration and Information need fetching separately. A linked
-        resource that fails is left out rather than failing the sweep --
-        the same posture the DTLS path takes for a resource that goes
-        quiet.
-        """
+        """The whole device in the shape a /device/0 batch arrives in: the
+        aggregate plus the two resources it only links to. A linked resource
+        that fails is left out rather than failing the sweep."""
         status, body = self._request("GET", "/devices/0", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), body if isinstance(body, str) else None
@@ -186,10 +150,6 @@ class LegacyHttpTransport:
         # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
         resources.update(course_table(self._family))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
-
-    # ------------------------------------------------------------------
-    # Writes
-    # ------------------------------------------------------------------
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
@@ -281,18 +241,11 @@ class LegacyHttpTransport:
             },
         }
 
-    # ------------------------------------------------------------------
-    # OBSERVE -- not available on this transport; `supports_observe` says
-    # so, and these exist only so the protocol is satisfied.
-    # ------------------------------------------------------------------
-
     def subscribe(self, path_segs: Sequence[str]) -> Any:
         raise NotImplementedError("the 8888 bridge has no OBSERVE")
 
     def refresh_observes(self, paths: Sequence[Sequence[str]]) -> None:
         raise NotImplementedError("the 8888 bridge has no OBSERVE")
-
-    # ------------------------------------------------------------------
 
     def _request(
         self, method: str, path: str, *, body: dict | None = None, timeout: float

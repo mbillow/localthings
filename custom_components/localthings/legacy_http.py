@@ -1,43 +1,15 @@
 """Envelope translation for the legacy 8888/HTTPS appliance family (issue #168).
 
-Some 2018-2022 Samsung appliances have nothing on UDP 49152-49160 and only
-TCP 8888: nginx over TLS 1.0 with a mandatory client certificate, serving a
-small REST bridge instead of an OCF server. The OCF URL space is not merely
-unauthorised there, it is absent -- ``/oic/res``, ``/oic/d`` and
-``/mode/vs/0`` all come back as nginx's own HTML 404, while an unknown path
-*inside* the served space answers ``{"errorCode": "0", "errorDescription":
-"Invalid resource"}`` from the application.
+Some 2018-2022 Samsung appliances serve no OCF at all -- only a small REST
+bridge on TCP 8888. It speaks the same vocabulary (the same `options` arrays
+and `Course_XX` tokens) with bare field names and `/devices/0/<resource>`
+paths, so this module translates it to the `{href: rep}` shape
+`parse_device0_batch` produces and `registry/` works on it unchanged.
 
-What that bridge serves, though, is the same vocabulary in a different
-envelope: the same ``options``/``supportedOptions`` arrays, the same
-``Course_5C`` tokens, the same single-token merge semantics on writes. Only
-the spelling differs -- bare field names instead of ``x.com.samsung.da.*``,
-and ``/devices/0/<resource>`` instead of ``/<resource>/vs/0``.
-
-So this module is a table and four pure functions over it. Given one of
-those appliances' responses it produces exactly the ``{href: rep}`` shape
-``registry.batch.parse_device0_batch`` produces, which is what lets
-``registry/``, ``discovery.py`` and ``adapter.py`` work on such a device
-unchanged -- the expensive part, and the part this repository has already
-solved.
-
-Deliberately pure: no I/O, no Home Assistant, no session. Nothing imports it
-at runtime yet; it is the half of issue #168's proposal that can be reviewed
-and tested without a transport existing, and without any of the coordinator
-churn a transport would need. See that issue for the staging.
-
-Two rules carry the whole translation, and both are mechanical:
-
-* a resource's fields take the ``x.com.samsung.da.`` prefix and keep their
-  names;
-* a resource maps onto the canonical href whose rep those fields belong in.
-
-Everything that is *not* mechanical lives in the table as data, so an
-appliance that disagrees costs a row rather than a branch. On the one
-family measured so far that is three exceptions: ``Operation`` carries
-power and the child lock alongside the operational state, ``Information``
-spells two fields differently, and ``Alarms`` arrives as a bare list where
-the OCF side carries an ``items`` array.
+Pure: no I/O, no Home Assistant. Two mechanical rules carry the translation
+-- a field takes the `x.com.samsung.da.` prefix, a resource maps onto the
+canonical href its fields belong in -- and everything else is a table row,
+so a family that disagrees costs a row rather than a branch.
 """
 
 from __future__ import annotations
@@ -159,19 +131,10 @@ def _canonical_value(value: Any, rename: Mapping[str, str]) -> Any:
 def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
     """The appliance's responses -> the wrapper-keyed mapping to_resources takes.
 
-    Three shapes turn up and all three are handled here rather than by every
-    caller: the aggregate ``{"Device": {...}}`` (``GET /devices/0``), its
-    plural ``{"Devices": [{...}]}`` (``GET /devices``), and a single
-    resource's own ``{"Configuration": {...}}``.
-
-    The aggregate carries more than resources -- ``connected``, ``id``,
-    ``name``, ``description``, ``resources``, a ``ConfigurationLink`` and
-    an ``InformationLink`` to the two it does not embed, and an
-    ``EnergyConsumption`` holding only a file path. None of those has a
-    canonical href, so none has a table row and all are dropped by
-    ``to_resources``. They are left in here rather than filtered, so a
-    board carrying something in one of them is visible to a caller that
-    goes looking.
+    Handles the aggregate `{"Device": {...}}`, its plural `{"Devices":
+    [{...}]}`, and a single resource's own `{"Configuration": {...}}`. The
+    aggregate's non-resource keys (`connected`, `description`, links, ...) are
+    kept; to_resources drops them since no table row names them.
     """
     out: dict[str, Any] = {}
     for response in responses:
@@ -190,20 +153,10 @@ def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict[str, dict]:
-    """8888 responses -> ``{canonical href: rep}``.
+    """Wrapper-keyed 8888 bodies (see unwrap) -> `{canonical href: rep}`.
 
-    ``bodies`` is keyed by wrapper name, which is how the appliance itself
-    reports them: ``GET /devices/0`` answers ``{"Device": {"Operation":
-    {...}, "Washer": {...}, ...}}``, and the two resources that aggregate
-    carries only links to answer ``{"Configuration": {...}}`` and
-    ``{"Information": {...}}`` on their own endpoints. A caller therefore
-    merges what it read and hands the wrapper-keyed mapping here.
-
-    A wrapper the appliance didn't report is simply absent from the result,
-    the same as an href a ``/device/0`` batch didn't carry -- callers
-    already treat that as "this board doesn't have it" rather than as an
-    empty rep (see ``registry.batch.is_stub_rep`` for why the distinction
-    matters).
+    A wrapper the appliance didn't report is absent from the result, the same
+    as an href a `/device/0` batch didn't carry.
     """
     out: dict[str, dict] = {}
     for resource in table:
@@ -227,41 +180,20 @@ def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict
     return out
 
 
-# Where the registry looks for a washer's course-table id, and the field it
-# reads there. `cycle_select` suffixes its translation key with that id, so a
-# board whose id has no catalog entry keeps raw hex codes as labels.
+# Where cycle_select reads a washer's course-table id to pick its labels.
 COURSE_TABLE_HREF = "/st/washercourse/vs/0"
 _COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
 
-# The course table each family's codes belong to. This family serves no
-# `/st/washercourse/vs/0` of its own -- the OCF URL space is absent here,
-# not merely unauthorised -- so without this the registry finds no table and
-# labels every cycle with its raw code (`5C`).
-#
-# TP6X_WASHER is Table_00, established rather than assumed. Its 14 codes were
-# mapped independently, by turning the dial through all 14 panel positions on
-# a WW6500 and reading `Course_` back at each, with five anchored
-# semantically (0x5F is the only 95 C + 4-rinse program, 0x5E the only
-# 400 rpm one, 0x5D the only cold one, 0x64 the only one with no temperature,
-# 0x63 60 C at 400 rpm). That map agrees with this repository's existing
-# `washer_cycle_table_00` catalog on 13 of its 14 codes, exactly -- including
-# every code the dial walk had placed positionally. The fourteenth, 0x6C, is
-# absent from the catalog and is Denim by elimination, every other panel
-# position being accounted for by that agreement.
-#
-# Declared per family rather than derived from `modelNum`: which codes a
-# board uses is not something its model string states, and a second family
-# should cost a row here and a look at its own hardware, not a guess.
+# This family serves no /st/washercourse/vs/0, so its table is declared per
+# family. TP6X_WASHER is Table_00: a dial walk through all 14 panel positions
+# on a WW6500 matched the existing washer_cycle_table_00 catalog on 13 codes,
+# and the fourteenth (0x6C) is Denim by elimination.
 FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00"}
 
 
 def course_table(family: str) -> dict[str, dict]:
-    """A `/st/washercourse/vs/0` rep for a family whose board serves none.
-
-    Empty for a family with no entry, which lands the registry back on raw
-    course codes -- the same place an unrecognised table id lands it, and
-    the right place for a board nobody has walked the dial on.
-    """
+    """A `/st/washercourse/vs/0` rep for `family`; empty (raw course codes)
+    for a family nobody has walked the dial on."""
     table = FAMILY_COURSE_TABLES.get(family)
     if not table:
         return {}
@@ -288,27 +220,10 @@ def _wire_field(href: str, name: str, table: tuple[Resource, ...]) -> tuple[str,
 def to_write(
     steps: list[tuple[str, Mapping[str, Any]]], table: tuple[Resource, ...]
 ) -> dict[str, Any]:
-    """``[(canonical href, canonical patch), ...]`` -> one aggregate body.
+    """`[(canonical href, canonical patch), ...]` -> one `PUT /devices/0` body.
 
-    Several steps coalesce into a single ``PUT /devices/0`` rather than
-    becoming several requests, because on this firmware some writes are
-    only accepted together: the washer takes a cycle **only** in the same
-    body as ``Operation.state``. A ``Course_`` token sent on its own is
-    answered ``204`` and discarded in every shape tried -- including a
-    two-token body alongside ``LaundryOutTime``, which applied the other
-    token in the same call, so it is a firmware rule about that field
-    rather than a syntax problem.
-
-    That is not exotic to this transport: ``async_raw_write_sequence``
-    exists in this repository (issue #300) because a wall oven discards
-    settings writes while idle and keeps them only once a cycle is running.
-    Same fact, different family, over CoAP.
-
-    Returns the body only; the endpoint is always ``/devices/0``. The
-    alternative -- a bare body on the resource endpoint, e.g.
-    ``PUT /devices/0/mode {"options": [...]}`` -- is what two other public
-    clients for this port use, but it has never been tested here, so
-    nothing in this module produces it.
+    Always the aggregate endpoint: a bare body on a resource endpoint
+    (`PUT /devices/0/mode`) has never been tested on this hardware.
     """
     device: dict[str, dict] = {}
     for href, patch in steps:
@@ -416,16 +331,9 @@ def is_start(aggregate: Mapping[str, Any]) -> bool:
     return operation.get("state") == "Run"
 
 
-# HTTP status -> CoAP response code, so everything above the transport
-# keeps speaking one vocabulary: _coap_accepted, _coap_code_str, the
-# diagnostics dump and the debug services all work unchanged.
-#
-# 204 mapping onto 2.04 Changed is exact in both senses, including the
-# unwelcome one: on this family a 204 means the request was accepted, not
-# that anything changed -- and a CoAP 2.04 means no more than that either
-# (an ARTIK051 air conditioner answers 2.04 to `FilterTime_0`, echoes the
-# token, and has discarded it a poll later). The read-back in
-# _raw_write_blocking is the right answer on both transports.
+# HTTP status -> CoAP response code, so everything above the transport keeps
+# one vocabulary. 204 -> 2.04 is exact in the unwelcome sense too: accepted,
+# not necessarily applied, on either transport.
 _HTTP_TO_COAP: dict[int, int] = {
     200: 0x45,  # 2.05 Content
     201: 0x41,  # 2.01 Created
@@ -439,17 +347,13 @@ _HTTP_TO_COAP: dict[int, int] = {
 
 
 def http_status_to_coap(status: int) -> int:
-    """A CoAP response code for an HTTP status.
-
-    Anything unmapped becomes 5.00 or 4.00 by class, so an unfamiliar
-    status still reads as a failure of the right kind rather than as a
-    success.
-    """
+    """A CoAP response code for an HTTP status; an unmapped one keeps its
+    class, and anything outside 2xx reads as a failure."""
     mapped = _HTTP_TO_COAP.get(status)
     if mapped is not None:
         return mapped
+    if 200 <= status < 300:
+        return 0x44  # 2.04 Changed -- accepted, nothing more claimed
     if status >= 500:
         return 0xA0  # 5.00 Internal Server Error
-    if status >= 400:
-        return 0x80  # 4.00 Bad Request
-    return 0x45
+    return 0x80  # 4.00 Bad Request
