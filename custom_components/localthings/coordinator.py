@@ -2494,11 +2494,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             code, body = sess.read(path_segs, timeout=10.0)
         except DecodeError as e:
-            # The one caller that reports a code rather than raising: a
-            # body that will not decode is itself the finding a debug read
-            # exists to surface.
+            # A body that will not decode is itself what a debug read exists
+            # to surface, so it is reported raw rather than raised.
             self._log.debug("raw read decode failed for %s: %s", href, e)
-            code, body = 0x45, None
+            code, body = e.code, e.payload
         if code == 0x45 and isinstance(body, dict):
             self._observe.apply(href, body, source="poll")
             rep = body

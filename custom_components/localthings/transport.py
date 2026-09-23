@@ -51,14 +51,23 @@ _ACCEPTED_CODES = frozenset({0x41, 0x43, 0x44})
 
 
 class DecodeError(ValueError):
-    """A response arrived, but its body could not be decoded.
+    """A success response arrived, but its body could not be decoded.
 
-    Distinct from a transport failure: the device answered. Callers that
-    already tolerate a resource going quiet (a sibling subdevice, a probe
-    href) treat it the same as any other failed read; the summary poll
-    reports it as its own thing, since a device whose /device/0 doesn't
-    decode is a different problem from one that isn't answering.
+    Distinct from a transport failure: the device answered. Carries the
+    response code and the raw payload so a debug read can still report what
+    arrived.
     """
+
+    def __init__(self, message: str, *, code: int, payload: bytes) -> None:
+        super().__init__(message)
+        self.code = code
+        self.payload = payload
+
+
+def _is_success(code: int) -> bool:
+    """A 2.xx response class -- the only one whose body is CBOR by contract.
+    An error response often carries a plain diagnostic string instead."""
+    return code >> 5 == 2
 
 
 class Transport(Protocol):
@@ -69,7 +78,8 @@ class Transport(Protocol):
     `legacy_http.http_status_to_coap`), so `_coap_accepted`,
     `_coap_code_str`, diagnostics and the debug services stay transport-
     agnostic. `body` is whatever the payload decoded to: a Property map for
-    a Resource, a list for a Collection, `None` for an empty payload.
+    a Resource, a list for a Collection, `None` for an empty payload. An
+    error response's body is left undecoded.
 
     `write` returns the same pair. Most boards answer a write with an empty
     payload, but the laundry firmware puts its reason for refusing one in
@@ -172,19 +182,23 @@ class DtlsTransport:
         code, payload = self._live().get(list(path_segs), timeout=timeout)
         if not payload:
             return code, None
+        if not _is_success(code):
+            return code, payload
         try:
             return code, cbor2.loads(payload)
         except Exception as err:
-            raise DecodeError(str(err)) from err
+            raise DecodeError(str(err), code=code, payload=payload) from err
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         code, payload = self._live().post(list(path_segs), cbor2.dumps(body), timeout=timeout)
         if not payload:
             return code, None
+        # Never raised: the write has already been sent, and an exception
+        # here would reach the caller's reconnect-and-retry and send it twice.
         try:
             return code, cbor2.loads(payload)
-        except Exception as err:
-            raise DecodeError(str(err)) from err
+        except Exception:
+            return code, payload
 
     def write_many(
         self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float

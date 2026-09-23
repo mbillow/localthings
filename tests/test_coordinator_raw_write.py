@@ -212,3 +212,19 @@ async def test_raw_write_batch_validation_does_not_touch_the_session(coordinator
 
     assert coordinator._session is None
     coordinator.async_request_refresh.assert_not_awaited()
+
+
+async def test_raw_read_reports_an_undecodable_body_raw_with_its_real_code(coordinator) -> None:
+    """Undecodable bytes are what a debug read exists to surface, so they
+    come back as-is under the code the device actually sent."""
+    from custom_components.localthings.transport import DecodeError
+
+    class _Undecodable(_FakeRawWriteSession):
+        def read(self, path_segs, timeout=None):
+            raise DecodeError("truncated", code=0x45, payload=b"\x18")
+
+    coordinator._session = _Undecodable()
+
+    code, rep, body = await coordinator.async_raw_read("/mode/vs/0")
+
+    assert (code, rep, body) == (0x45, {}, b"\x18")

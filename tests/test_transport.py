@@ -32,6 +32,7 @@ class _FakeCoapSession:
         self.payload = cbor2.dumps({"x.com.samsung.da.power": "On"})
         self.code = 0x45
         self.post_code = 0x44
+        self.post_payload = b""
 
     def connect(self):
         pass
@@ -44,7 +45,7 @@ class _FakeCoapSession:
 
     def post(self, path_segs, payload, timeout=None):
         self.posts.append((path_segs, payload))
-        return self.post_code, b""
+        return self.post_code, self.post_payload
 
     def pace(self):
         self.paced += 1
@@ -135,8 +136,17 @@ class TestRead:
             _FakeCoapSession, transport._session
         ).payload = b"\x18"  # a uint8 head with no byte after it
 
-        with pytest.raises(DecodeError):
+        with pytest.raises(DecodeError) as caught:
             transport.read(["power", "vs", "0"], timeout=1.0)
+        assert (caught.value.code, caught.value.payload) == (0x45, b"\x18")
+
+    def test_an_error_response_is_not_decoded(self, transport):
+        """A 4.xx body is often a plain diagnostic string, not CBOR; it is
+        handed back raw rather than turned into a decode failure."""
+        fake_of(transport).code = 0x80
+        fake_of(transport).payload = b"bad option"
+
+        assert transport.read(["power", "vs", "0"], timeout=1.0) == (0x80, b"bad option")
 
 
 class TestWrite:
@@ -150,6 +160,20 @@ class TestWrite:
         path_segs, payload = fake_of(transport).posts[0]
         assert path_segs == ["power", "vs", "0"]
         assert cbor2.loads(payload) == {"x.com.samsung.da.power": "Off"}
+
+    def test_an_undecodable_response_is_returned_raw_not_raised(self, transport):
+        """Raising here would send an already-accepted write a second time
+        through the caller's reconnect-and-retry."""
+        fake_of(transport).post_payload = b"\x18"
+
+        assert transport.write(["power", "vs", "0"], {"x": 1}, timeout=1.0) == (0x44, b"\x18")
+
+    def test_a_batch_list_goes_on_the_wire_in_order(self, transport):
+        body = [{"href": "/devices/0"}, {"href": "/mode/vs/0", "rep": {"x": 1}}]
+
+        transport.write(["device", "0"], body, timeout=1.0)
+
+        assert cbor2.loads(fake_of(transport).posts[0][1]) == body
 
 
 class TestWriteMany:
