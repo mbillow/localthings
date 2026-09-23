@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Auto door open timer"
       },
+      "auto_door_mode": {
+        "name": "Auto door open mode",
+        "state": {
+          "easy_open": "Easy open",
+          "wide_open": "Wide open"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Beverage zone mode",
         "state": {

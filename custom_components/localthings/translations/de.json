@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Timer für automatischen Türöffner"
       },
+      "auto_door_mode": {
+        "name": "Modus des automatischen Türöffners",
+        "state": {
+          "easy_open": "Leicht öffnen",
+          "wide_open": "Weit öffnen"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Getränkezonen-Modus",
         "state": {

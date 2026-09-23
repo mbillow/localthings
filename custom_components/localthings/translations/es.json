@@ -518,6 +518,13 @@
       "auto_door_timer": {
         "name": "Temporizador de apertura automática de puerta"
       },
+      "auto_door_mode": {
+        "name": "Modo de apertura automática de puerta",
+        "state": {
+          "easy_open": "Apertura fácil",
+          "wide_open": "Apertura amplia"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Modo de zona de bebidas",
         "state": {

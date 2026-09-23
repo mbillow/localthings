@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "오토 오픈 도어 타이머"
       },
+      "auto_door_mode": {
+        "name": "오토 오픈 도어 모드",
+        "state": {
+          "easy_open": "살짝 열기",
+          "wide_open": "활짝 열기"
+        }
+      },
       "beverage_zone_mode": {
         "name": "음료 보관 모드",
         "state": {

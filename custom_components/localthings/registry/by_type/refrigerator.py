@@ -1,6 +1,6 @@
 """Refrigerator device registry."""
 
-from ..capabilities import common, dishwasher, fridge, ignored
+from ..capabilities import common, dishwasher, fridge, ignored, water_purifier
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -12,6 +12,13 @@ REGISTRY = DeviceRegistry(
             *common.POWER,
             fridge.STATUS_LOCK,
             fridge.DOOR_ALERT,
+            # Issue #495's AILITE_REF_25K: same voice/fixedTone/mute sound
+            # mode, alarmInMute output and min/max/resolution volume shapes
+            # the water purifier reports -- each reads its own live
+            # supported list/range, so it's reused rather than copied.
+            water_purifier.SOUND_MODE,
+            water_purifier.SOUND_OUTPUT,
+            water_purifier.SOUND_VOLUME,
             common.WATER_FILTER,
             fridge.AIR_FILTER,
             fridge.DEODOR_FILTER,

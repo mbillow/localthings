@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Timer automatische deuropener"
       },
+      "auto_door_mode": {
+        "name": "Modus automatische deuropener",
+        "state": {
+          "easy_open": "Makkelijk openen",
+          "wide_open": "Wijd openen"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Modus drankenzone",
         "state": {

@@ -1364,6 +1364,24 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_artik051_krac_
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_refrigerator_ailite_ref_25k():
+    """RS80F66KCFEF French-door fridge on the AILITE_REF_25K board (issue
+    #495). Its /settings/sound/{mode,output,volume}/vs/0 were unbound --
+    now the water purifier's sound capabilities -- and /status/lock/vs/0
+    carries Auto Door Open's ado.mode against its own ado.supportedModes.
+    Binds cleanly with zero unbound hrefs."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("refrigerator_ailite_ref_25k")
+    golden = json.loads((GOLDEN / "refrigerator_ailite_ref_25k.json").read_text())
+    state_keys = _new_state_keys("refrigerator_ailite_ref_25k", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_refrigerator_definite_cooler():
     """RT42DG6630B1FZ (issue #186) -- a single-door "cooler only" fridge whose
     /temperature/definite/cooler/vs/0 doesn't match either
