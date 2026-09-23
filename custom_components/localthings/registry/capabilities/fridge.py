@@ -327,6 +327,9 @@ STATUS_LOCK = Capability(
             entity_category="config",
             value_fn=lambda v: v == "On",
             write_fn=_status_lock_write("x.com.samsung.da.device.sound"),
+            # Absent on the winecellar and AILITE_REF_25K (issue #495) boards;
+            # ungated, it read as a permanently-off switch that did nothing.
+            exists_fn=lambda rep, resources: "x.com.samsung.da.device.sound" in rep,
         ),
         # Auto Door Open's own voice/sound feedback toggles (issue #328,
         # TP1X_REF_21K family) -- siblings of auto_door_opener above, not
@@ -352,6 +355,23 @@ STATUS_LOCK = Capability(
             value_fn=lambda v: v == "On",
             write_fn=_status_lock_write("x.com.samsung.da.ado.soundcontrol"),
             exists_fn=lambda rep, resources: "x.com.samsung.da.ado.soundcontrol" in rep,
+        ),
+        # How far Auto Door Open swings the door (issue #495, AILITE_REF_25K):
+        # ado.mode against the board's own ado.supportedModes
+        # (EASY_OPEN/WIDE_OPEN). The write contract is guessed as a plain
+        # partial-rep POST of the same field, the shape every other
+        # /status/lock/vs/0 toggle above uses -- needs live confirmation.
+        SelectDesc(
+            key="auto_door_mode",
+            field="x.com.samsung.da.ado.mode",
+            icon="mdi:door-open",
+            entity_category="config",
+            options_field="x.com.samsung.da.ado.supportedModes",
+            exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.ado.supportedModes")),
+            write_fn=lambda p, rep, href=None: (
+                ["status", "lock", "vs", "0"],
+                {"x.com.samsung.da.ado.mode": p},
+            ),
         ),
     ),
 )
@@ -387,11 +407,9 @@ AUTO_DOOR_TIMER = Capability(
 # /autodoor/<variant>/vs/0 -- one per fridge sub-type sharing the Auto Door
 # Open feature (single-door, kimchi, winecellar seen so far; issue #328).
 # Each reports only x.com.samsung.da.ado.openOptions, declaring which open
-# styles that variant supports -- every dump seen so far carries exactly
-# one option ('Single') with no paired desired/current field to make a
-# choice against, the same "no real choice to expose yet" shape as
-# ignored.py's /mode/0. Bound with no entities to record coverage; revisit
-# if a device ever reports more than one option.
+# styles that variant supports ('Single', or issue #495's ['Right', 'All']
+# per French-door compartment). No desired/current field or confirmed write
+# accompanies it, so it's bound with no entities to record coverage.
 #
 # A pattern cap rather than one entry per variant: match_fn (not just the
 # prefix) is what actually gates this, so a future variant href needs no

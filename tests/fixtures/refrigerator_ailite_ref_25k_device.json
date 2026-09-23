@@ -1,0 +1,834 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "href": "/alarms/vs/0"
+      }
+    },
+    {
+      "href": "/autodoor/freezer/vs/0",
+      "rep": {
+        "x.com.samsung.da.ado.openOptions": [
+          "Left",
+          "All"
+        ],
+        "href": "/autodoor/freezer/vs/0"
+      }
+    },
+    {
+      "href": "/autodoor/cooler/vs/0",
+      "rep": {
+        "x.com.samsung.da.ado.openOptions": [
+          "Right",
+          "All"
+        ],
+        "href": "/autodoor/cooler/vs/0"
+      }
+    },
+    {
+      "href": "/cabinet/light/total/vs/0",
+      "rep": {
+        "x.com.samsung.da.lightLevel": "100",
+        "x.com.samsung.da.lightResolution": "3",
+        "x.com.samsung.da.lightControl": "Off",
+        "x.com.samsung.da.lightControl.hide": "true",
+        "light.dimming.status": "On",
+        "href": "/cabinet/light/total/vs/0",
+        "rt": [
+          "x.com.samsung.da.cabinetlight"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/settings/sound/alert/door/vs/0",
+      "rep": {
+        "alert.door": "1",
+        "supportedAlert.door": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "href": "/settings/sound/alert/door/vs/0",
+        "rt": [
+          "x.com.samsung.alert.door"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/cabinet/light/enhanced/vs/0",
+      "rep": {
+        "light.control.status": "Off",
+        "level.brightness.daytime": "100",
+        "level.brightness.nighttime": "100",
+        "night.starttime": "N/A",
+        "night.duration.minute": "N/A",
+        "timezone.offset": "+02:00",
+        "href": "/cabinet/light/enhanced/vs/0",
+        "rt": [
+          "x.com.samsung.da.light.enhanced"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "",
+        "x.com.samsung.da.countryCode": "",
+        "href": "/configuration/vs/0"
+      }
+    },
+    {
+      "href": "/door/freezer/0",
+      "rep": {
+        "openState": "Close",
+        "href": "/door/freezer/0",
+        "rt": [
+          "oic.r.door"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/door/cooler/0",
+      "rep": {
+        "openState": "Close",
+        "href": "/door/cooler/0",
+        "rt": [
+          "oic.r.door"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.openState": "Close",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door"
+          },
+          {
+            "x.com.samsung.da.openState": "Open",
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Door"
+          }
+        ],
+        "href": "/doors/vs/0"
+      }
+    },
+    {
+      "href": "/drlc/vs/0",
+      "rep": {
+        "x.com.samsung.da.drlcLevel": "0",
+        "x.com.samsung.da.override": "Off",
+        "x.com.samsung.da.durationminutes": "0",
+        "x.com.samsung.da.realSaving": "Off",
+        "href": "/drlc/vs/0"
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.cumulativeConsumption": "2229",
+        "x.com.samsung.da.instantaneousPower": "58",
+        "x.com.samsung.da.cumulativePower": "7491",
+        "x.com.samsung.da.cumulativeSavedPower": "0",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "href": "/energy/consumption/vs/0",
+        "x.com.samsung.da.cumulativeDateUTC": "1790061360"
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+00:00",
+        "x.com.samsung.supprtedtype": 1,
+        "href": "/file/information/vs/0"
+      }
+    },
+    {
+      "href": "/filter/waterfilter/vs/0",
+      "rep": {
+        "x.com.samsung.da.filterUsage": "3",
+        "x.com.samsung.da.filterUsageResolution": "1",
+        "x.com.samsung.da.filterResetType": [
+          "replaceable"
+        ],
+        "x.com.samsung.da.filterStatus": "normal",
+        "href": "/filter/waterfilter/vs/0"
+      }
+    },
+    {
+      "href": "/refrigeration/vs/0",
+      "rep": {
+        "x.com.samsung.da.rapidFridge": "Off",
+        "x.com.samsung.da.rapidFreezing": "Off",
+        "href": "/refrigeration/vs/0",
+        "rt": [
+          "x.com.samsung.da.fridge"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/icemaker/status/vs/0",
+      "rep": {
+        "x.com.samsung.da.iceMaker": "On",
+        "href": "/icemaker/status/vs/0"
+      }
+    },
+    {
+      "href": "/icemaker/one/vs/0",
+      "rep": {
+        "x.com.samsung.da.iceMaker.name": "ICE_MAKER",
+        "x.com.samsung.da.iceMaker.state": "On",
+        "x.com.samsung.da.iceType.desired": "NORMAL",
+        "x.com.samsung.da.iceMaker.iceMakingStatus": "ICESTATUS_STOP",
+        "x.com.samsung.da.iceMaker.type": "toggle",
+        "href": "/icemaker/one/vs/0",
+        "rt": [
+          "x.com.samsung.da.icemaker"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/icemaker/nighttime/vs/0",
+      "rep": {
+        "ice.night.status": "Off",
+        "ice.night.starttime": "N/A",
+        "ice.night.duration": "N/A",
+        "ice.night.timezone": "+02:00",
+        "href": "/icemaker/nighttime/vs/0",
+        "rt": [
+          "x.com.samsung.da.ice.night"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/energy/ailevel/vs/0",
+      "rep": {
+        "aiLevel": "1",
+        "supportedAiLevel": [
+          "1",
+          "2"
+        ],
+        "href": "/energy/ailevel/vs/0"
+      }
+    },
+    {
+      "href": "/defrost/prediction/vs/0",
+      "rep": {
+        "ai.cooling.care": "On",
+        "href": "/defrost/prediction/vs/0"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "AILITE_REF_25K|70671441|0004014104191134C104000030FB2E00",
+        "x.com.samsung.da.description": "AILITE_REF_25K",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "RA3",
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagTsId": "DA01",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "WiFi Module",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "250824",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Micom",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "26020921, FFFFFFFF, 24120600, FFFFFFFF, 25082208, FFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Bixby",
+            "x.com.samsung.da.type": "Bixby",
+            "x.com.samsung.da.number": "1.2.0-rc.20.hotfix-ref.11",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "href": "/information/vs/0"
+      }
+    },
+    {
+      "href": "/status/lock/vs/0",
+      "rep": {
+        "x.com.samsung.da.device.microphone": "On",
+        "x.com.samsung.da.ado.devicecontrol": "On",
+        "x.com.samsung.da.ado.mode": "WIDE_OPEN",
+        "x.com.samsung.da.ado.supportedModes": [
+          "EASY_OPEN",
+          "WIDE_OPEN"
+        ],
+        "href": "/status/lock/vs/0",
+        "rt": [
+          "x.com.samsung.da.lockstatus"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": [
+          "RVACATION_OFF",
+          "FCONVERT_FREEZER",
+          "WATERFILTER_DISABLE"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2",
+          "ENERGY_REPORT_MODEL",
+          "18K_REF_OUTDOOR_CONTROL_V2",
+          "VACATION_MODE_CONTROL"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "FCONVERT_FREEZER",
+          "FCONVERT_FRIDGE",
+          "FCONVERT_OFF"
+        ],
+        "href": "/mode/vs/0",
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true",
+        "href": "/realtimenotiforclient/vs/0"
+      }
+    },
+    {
+      "href": "/runningmode/vs/0",
+      "rep": {
+        "x.com.samsung.da.runningMode": 0,
+        "href": "/runningmode/vs/0"
+      }
+    },
+    {
+      "href": "/selfcheck/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedActions": [
+          "Start"
+        ],
+        "x.com.samsung.da.status": "Ready",
+        "x.com.samsung.da.result": "Success",
+        "x.com.samsung.da.error": [
+          "ErrorCode_None"
+        ],
+        "href": "/selfcheck/vs/0"
+      }
+    },
+    {
+      "href": "/temperature/desired/freezer/0",
+      "rep": {
+        "temperature": -18.0,
+        "range": [
+          -23.0,
+          -15.0
+        ],
+        "units": "C",
+        "href": "/temperature/desired/freezer/0",
+        "rt": [
+          "oic.r.temperature"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/temperature/desired/cooler/0",
+      "rep": {
+        "temperature": 4.0,
+        "range": [
+          1.0,
+          7.0
+        ],
+        "units": "C",
+        "href": "/temperature/desired/cooler/0",
+        "rt": [
+          "oic.r.temperature"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/temperature/current/freezer/0",
+      "rep": {
+        "temperature": -18.0,
+        "range": [
+          -23.0,
+          -15.0
+        ],
+        "units": "C",
+        "href": "/temperature/current/freezer/0",
+        "rt": [
+          "oic.r.temperature"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/temperature/current/cooler/0",
+      "rep": {
+        "temperature": 4.0,
+        "range": [
+          1.0,
+          7.0
+        ],
+        "units": "C",
+        "href": "/temperature/current/cooler/0",
+        "rt": [
+          "oic.r.temperature"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "temperature.unit.control": "true",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.desired": "-18",
+            "x.com.samsung.da.current": "-18",
+            "x.com.samsung.da.maximum": "-15",
+            "x.com.samsung.da.minimum": "-23",
+            "x.com.samsung.da.unit": "Celsius"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.desired": "4",
+            "x.com.samsung.da.current": "4",
+            "x.com.samsung.da.maximum": "7",
+            "x.com.samsung.da.minimum": "1",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ],
+        "href": "/temperatures/vs/0"
+      }
+    },
+    {
+      "href": "/rm/control/vs/0",
+      "rep": {
+        "minPeriod": "9000",
+        "href": "/rm/control/vs/0"
+      }
+    },
+    {
+      "href": "/settings/sound/volume/vs/0",
+      "rep": {
+        "level": "10",
+        "minLevel": "0",
+        "maxLevel": "15",
+        "resolution": "5",
+        "href": "/settings/sound/volume/vs/0"
+      }
+    },
+    {
+      "href": "/settings/sound/mode/vs/0",
+      "rep": {
+        "mode": "voice",
+        "supportedModes": [
+          "voice",
+          "fixedTone",
+          "mute"
+        ],
+        "href": "/settings/sound/mode/vs/0"
+      }
+    },
+    {
+      "href": "/settings/sound/output/vs/0",
+      "rep": {
+        "deviceType": "speaker",
+        "alarmInMute": "true",
+        "href": "/settings/sound/output/vs/0"
+      }
+    },
+    {
+      "href": "/setting/vs/0",
+      "rep": {
+        "x.com.samsung.da.setLanguage": "en_US",
+        "x.com.samsung.da.supportedSetLanguage": [
+          "en_US",
+          "ko_KR",
+          "es_MX",
+          "pt_BR",
+          "fr_FR",
+          "de_DE",
+          "it_IT",
+          "en_GB",
+          "es_ES",
+          "zh_CN",
+          "en_IN"
+        ],
+        "href": "/setting/vs/0"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "Micom",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "20250822",
+        "x.com.samsung.da.currentVersionInfo": "10000000",
+        "otnStatus": "None",
+        "flashingProgress": "0",
+        "otnTarget": "sub",
+        "otnCompleteDate": "noHistory",
+        "scheduledTime": "None",
+        "swVersionInfo": {
+          "platform": "Tizen Lite",
+          "oneUiVersion": "7.0 Refrigerator",
+          "osVersion": "5.0"
+        },
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "A-RFWW-AIL-25-COMMON",
+            "versions": [
+              "20250824"
+            ],
+            "visVersion": "250824"
+          },
+          {
+            "type": "Micom",
+            "modelId": "822270671441FFFFFFFF",
+            "versions": [
+              "26020921",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260209"
+          },
+          {
+            "type": "Micom",
+            "modelId": "022270671441FFFFFFFF",
+            "versions": [
+              "26020921",
+              "FFFFFFFF"
+            ],
+            "visVersion": "260209"
+          },
+          {
+            "type": "Micom",
+            "modelId": "022270661841FFFFFFFF",
+            "versions": [
+              "24120600",
+              "FFFFFFFF"
+            ],
+            "visVersion": "241206"
+          },
+          {
+            "type": "Micom",
+            "modelId": "022270668841FFFFFFFF",
+            "versions": [
+              "25082208",
+              "FFFFFFFF"
+            ],
+            "visVersion": "250822"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "Europe/Berlin",
+        "offset": "+02:00",
+        "DST": "ON"
+      }
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "TKIP",
+          "AES",
+          "WEP-64",
+          "WEP-128"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G",
+          "5G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "supportedVersion": "1.0"
+      }
+    },
+    {
+      "href": "/bixbyuservalidate/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.loginId": "**REDACTED**",
+            "x.com.samsung.da.isExpired": "false"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/bixby/status/vs/0",
+      "rep": {
+        "x.com.samsung.da.enable": "true"
+      }
+    },
+    {
+      "href": "/bixbyterms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "AudioReview",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/deu/1.0.1/1773704680415/deu/deu_deu_AudioRecordingReview.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "Personalization",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/deu/1.0.2/1773644167282/deu/deu_deu_PersonalizationAgreement.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "PrivacyPolicy",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/deu/2.1.2/1789362928370/deu/deu_deu_pp.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "BixbyPrivacy",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": ""
+          }
+        ],
+        "x.com.samsung.da.lastCheckedTime": "1790095228"
+      }
+    },
+    {
+      "href": "/bixby/vs/0",
+      "rep": {
+        "x.com.samsung.da.voiceWakeup": "Disable",
+        "x.com.samsung.da.multidevWakeup": "true"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audio/vs/0",
+      "rep": {
+        "volume": "7",
+        "mute": "false",
+        "maxVolume": "15",
+        "timestamp": "0"
+      }
+    },
+    {
+      "href": "/voice/feature/vs/0",
+      "rep": {
+        "voice.feature": {
+          "ContinuousConversation": {
+            "support": "true",
+            "value": "false",
+            "supportedValues": [
+              "true",
+              "false"
+            ]
+          },
+          "DiscoverBixby": {
+            "support": "false"
+          },
+          "LLMBixby": {
+            "support": "true"
+          },
+          "Wakeupless": {
+            "support": "true",
+            "value": "false",
+            "supportedValues": [
+              "true",
+              "false"
+            ],
+            "supportedLanguageList": [
+              "ko_KR",
+              "en_US"
+            ],
+            "description": [
+              "냉장고 문 열어줘"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "href": "/voice/provisioning/vs/0",
+      "rep": {
+        "voice.provisioning.headers": {
+          "login_id": "**REDACTED**",
+          "voice.provisioning.headers.bixbyLanguage": "en_US",
+          "voice.provisioning.headers.bixbyType": "BixbyAgent",
+          "voice.provisioning.headers.bixbyVersion": "1.2.0-rc.20.hotfix-ref.11",
+          "voice.provisioning.headers.companioncountry": "",
+          "voice.provisioning.headers.csc": "920",
+          "voice.provisioning.headers.csciso": "DE",
+          "voice.provisioning.headers.deviceLanguage": "en-US",
+          "voice.provisioning.headers.deviceModelNameAsh": "Tizen Lite Device",
+          "voice.provisioning.headers.deviceModelNamePro": "BIXBY-LITE",
+          "voice.provisioning.headers.deviceSubType": "screenless_fridge_lite",
+          "voice.provisioning.headers.deviceTypeAsh": "appliance",
+          "voice.provisioning.headers.deviceTypePro": "appliance",
+          "voice.provisioning.headers.mcc": "262",
+          "voice.provisioning.headers.osType": "Tizen Lite",
+          "voice.provisioning.headers.osVersion": "Tizen Lite",
+          "voice.provisioning.headers.requestTrackId": "1790095228937",
+          "voice.provisioning.headers.sspServerUrl": "eu-auth2.samsungosp.com",
+          "voice.provisioning.headers.storecountry": "DE",
+          "voice.provisioning.headers.userType": "COMMERCIAL"
+        },
+        "voice.provisioning.termsstatechange": {
+          "voice.provisioning.termsstatechange.refresh": "",
+          "voice.provisioning.termsstatechange.state": "Unchecked",
+          "voice.provisioning.termsstatechange.terms": ""
+        },
+        "voice.provisioning.deviceinfo": {
+          "voice.provisioning.deviceinfo.accesstoken": "**REDACTED**",
+          "voice.provisioning.deviceinfo.bixbyserver": "bxb3PrdUS",
+          "voice.provisioning.deviceinfo.bixbyserviceid": " ",
+          "voice.provisioning.deviceinfo.deviceid": "**REDACTED**",
+          "voice.provisioning.deviceinfo.gdprcountry": "true",
+          "voice.provisioning.deviceinfo.isSupportedCountry": "true",
+          "voice.provisioning.deviceinfo.userid": "**REDACTED**"
+        }
+      }
+    },
+    {
+      "href": "/dginformation/vs/0",
+      "rep": {
+        "enrolmentstatus": "Unknown",
+        "devicestate": "Unknown",
+        "lockstatus": "Normal",
+        "nextduedate": "",
+        "workingminutes": 0,
+        "paymentinfo": {
+          "emiplan": "Unknown",
+          "currency": "Unknown",
+          "totalemi": 0,
+          "totalemipaid": 0
+        }
+      }
+    }
+  ]
+}

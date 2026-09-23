@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Časovač automatického otvárania dvierok"
       },
+      "auto_door_mode": {
+        "name": "Režim automatického otvárania dvierok",
+        "state": {
+          "easy_open": "Jednoduché otvorenie",
+          "wide_open": "Široké otvorenie"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Režim nápojovej zóny",
         "state": {

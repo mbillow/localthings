@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Timer apertura automatica sportello"
       },
+      "auto_door_mode": {
+        "name": "Modalità apertura automatica sportello",
+        "state": {
+          "easy_open": "Apertura facile",
+          "wide_open": "Apertura ampia"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Modalità zona bevande",
         "state": {
