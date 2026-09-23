@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime
+import http.client
 import ipaddress
 import json
 import logging
@@ -12,12 +13,12 @@ import re
 import socket
 import ssl
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
@@ -44,31 +45,38 @@ from .const import (
     CONF_CA_KEY_PEM,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
+    CONF_DEVICE_TOKEN,
     CONF_DEVICE_TYPE,
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
     CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
+    CONF_LEGACY_FAMILY,
     CONF_MAC,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_OCF_DEVICE_ID,
     CONF_PORT,
     CONF_SERIAL,
+    CONF_TRANSPORT,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
     DOMAIN,
+    LEGACY_HTTP_PORT,
     PROBE_GET_TIMEOUT_S,
     PROBE_PORT_RANGE,
     SERVICE_WRITE_RESOURCE,
+    TRANSPORT_LEGACY_HTTP,
 )
 from .devices import find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
+from .legacy_http_token import CallbackPortUnavailable, obtain_device_token
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
+from .transport import AuthRejected, DtlsTransport
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -169,6 +177,17 @@ class UnexpectedResponse(CannotConnect):
     error_key = "unexpected_response"
 
 
+class TokenNotReceived(CannotConnect):
+    """The legacy bridge never sent a device token back (issue #168).
+
+    The appliance issues it through a callback to port 8889, so this is as
+    often a network or an appliance-asleep problem as a real failure -- and
+    the step it is raised from offers pasting a token instead.
+    """
+
+    error_key = "token_not_received"
+
+
 class InvalidCA(Exception):
     error_key = "invalid_ca"
 
@@ -177,9 +196,7 @@ class LegacyHttpFamily(Exception):
     """The appliance serves the legacy HTTPS bridge, not CoAP/DTLS (issue #168).
 
     Raised before any credential work: there is nothing at this address to
-    handshake with, so the flow ends with an explanation instead of a
-    failure the user can't act on. PR #467 replaces the abort with its
-    device-token step at this same branch point.
+    handshake with; the flow takes the device-token step instead.
     """
 
 
@@ -346,6 +363,36 @@ def _mint_self_signed(uuid: str) -> tuple[str, str]:
         serialization.NoEncryption(),
     ).decode()
     return fullchain_pem, leaf_key_pem
+
+
+def _probe_legacy(host: str, cert_pem: str, key_pem: str, token: str) -> dict:
+    """Read identity over the 8888 bridge, in the shape _create_entry wants.
+
+    Two passes, because the family that picks the envelope table is itself
+    read from the appliance: identity first, then the device through its
+    family's table. An unmapped family stops at identity and goes on as an
+    unrecognized device type, the same as a DTLS board nothing routes.
+    """
+    from .legacy_http import is_mapped
+    from .legacy_http_transport import LegacyHttpTransport
+
+    def _read(family: str | None) -> dict:
+        transport = LegacyHttpTransport(
+            host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token, family=family
+        )
+        transport.connect()
+        try:
+            return _read_device(transport, host, LEGACY_HTTP_PORT)
+        except (OSError, http.client.HTTPException) as err:
+            raise CannotConnect(f"{host}:{LEGACY_HTTP_PORT} did not answer: {err}") from err
+        finally:
+            transport.close()
+
+    info = _read(None)
+    family = info.get("description", "")
+    if is_mapped(family):
+        return _read(family)
+    return {**info, "device_type_name": None, "device_type_recognized": False}
 
 
 # TLS alerts (RFC 5246 §7.2) that mean "I looked at your certificate and
@@ -539,6 +586,18 @@ def _mint_credentials(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
     return _mint_for_current_uuid(lambda uuid: _mint_leaf_cert(ca_cert_pem, ca_key_pem, uuid))
 
 
+def _mint_preferred(ca_cert_pem: str, ca_key_pem: str) -> tuple[str, str]:
+    """Mint with an AC14K_M CA when one is stored, self-signed otherwise.
+
+    The credential choice is the same wherever a leaf is minted, so both
+    the DTLS probe and the legacy 8888 branch share it rather than each
+    deciding for itself.
+    """
+    if ca_cert_pem and ca_key_pem:
+        return _mint_credentials(ca_cert_pem, ca_key_pem)
+    return _mint_self_signed_credentials()
+
+
 def _mint_self_signed_credentials() -> tuple[str, str]:
     """Mint a self-signed leaf -- the no-credentials default.
 
@@ -548,7 +607,7 @@ def _mint_self_signed_credentials() -> tuple[str, str]:
     return _mint_for_current_uuid(_mint_self_signed)
 
 
-def _read_device(sess, host: str, port: int) -> dict:
+def _read_device(transport, host: str, port: int) -> dict:
     """Resolve this device's identity over an already-connected session.
 
     /oic/d before /device/0, deliberately: the device's own OCF device-type
@@ -563,8 +622,6 @@ def _read_device(sess, host: str, port: int) -> dict:
     so the coordinator never has to mint a registry key from a placeholder
     (issue #236).
     """
-    import cbor2
-
     from .registry.batch import parse_device0_batch
     from .registry.by_type import resolve as resolve_registry
     from .registry.identity import (
@@ -576,18 +633,16 @@ def _read_device(sess, host: str, port: int) -> dict:
         resolve_serial,
     )
 
-    identity = read_identity(sess, None)
+    identity = read_identity(transport, None)
 
-    code, payload = sess.get(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    if code != 0x45 or not payload:
+    code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
+    if code != 0x45 or body is None:
         # Authenticated fine, so this isn't a connectivity or credentials
         # problem -- whatever is on this port just isn't an appliance whose
         # /device/0 we understand.
         raise UnexpectedResponse(
-            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} "
-            f"({code:#04x}), payload {len(payload or b'')} bytes"
+            f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} ({code:#04x})"
         )
-    body = cbor2.loads(payload)
     resources = parse_device0_batch(body) if isinstance(body, list) else {}
 
     info = resources.get("/information/vs/0", {})
@@ -616,6 +671,9 @@ def _read_device(sess, host: str, port: int) -> dict:
         "manufacturer": identity.manufacturer or "Samsung",
         "device_type_name": registry.name if registry is not None else None,
         "device_type_recognized": registry is not None,
+        # What the appliance calls its own family ('TP6X_WASHER'), which is
+        # what selects the envelope table on the 8888 bridge (issue #168).
+        "description": info.get("x.com.samsung.da.description", ""),
     }
 
 
@@ -655,16 +713,13 @@ def _diagnose_failures(
 
 def _handshake_and_read(host: str, scan: probing.HostProbe, cert_pem: str, key_pem: str) -> dict:
     """Handshake each candidate in turn, returning the first device that answers."""
-    from smartthings_local.protocol.dtls_session import DtlsCoapSession
-
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
-        sess = None
+        transport = None
         try:
-            sess = DtlsCoapSession(host, port, cert_pem=cert_pem, key_pem=key_pem)
-            sess.connect()
-            sess.start_reader()
-            return _read_device(sess, host, port)
+            transport = DtlsTransport(host, port, cert_pem=cert_pem, key_pem=key_pem)
+            transport.connect()
+            return _read_device(transport, host, port)
         except CannotConnect:
             # The device answered, just not with something we can use --
             # trying the remaining ports can't improve on that.
@@ -673,9 +728,9 @@ def _handshake_and_read(host: str, scan: probing.HostProbe, cert_pem: str, key_p
             failures.append((port, exc))
             _LOGGER.debug("port %d failed: %s", port, exc)
         finally:
-            if sess is not None:
+            if transport is not None:
                 with contextlib.suppress(Exception):
-                    sess.close()
+                    transport.close()
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem)
     raise _classify_handshake_failure(host, scan, failures, alerts)
 
@@ -713,16 +768,11 @@ def _probe_and_validate(
     if scan.legacy_http and not scan.candidates:
         raise LegacyHttpFamily(f"{host} serves the legacy bridge on TCP 8888")
 
-    def _mint() -> tuple[str, str]:
-        if ca_cert_pem and ca_key_pem:
-            return _mint_credentials(ca_cert_pem, ca_key_pem)
-        return _mint_self_signed_credentials()
-
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
         _LOGGER.debug("Reusing the leaf certificate from an existing entry")
     else:
-        cert_pem, key_pem = _mint()
+        cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
 
     try:
         info = _handshake_and_read(host, scan, cert_pem, key_pem)
@@ -732,7 +782,7 @@ def _probe_and_validate(
         if existing_leaf is None:
             raise
         _LOGGER.debug("Reused leaf rejected by %s; re-minting and retrying", host)
-        cert_pem, key_pem = _mint()
+        cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
         info = _handshake_and_read(host, scan, cert_pem, key_pem)
 
     return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
@@ -753,6 +803,15 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._ca_key_pem: str = ""
         self._pending_info: dict | None = None
         self._error_placeholders: dict[str, str] = {}
+        # Set only on the 8888 branch (issue #168): the leaf minted before
+        # the token step, since that step's own requests need it, and the
+        # token once it is in hand.
+        self._legacy_leaf: tuple[str, str] | None = None
+        self._legacy_token: str = ""
+        # The form a token exchange returns to: "legacy_token" when adding
+        # an appliance, "reauth_confirm" when its token stopped working.
+        self._legacy_step: str = "legacy_token"
+        self._token_task: asyncio.Task[str | None] | None = None
 
     @staticmethod
     @callback
@@ -791,6 +850,15 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_MODEL: info["model"],
                 CONF_MANUFACTURER: info["manufacturer"],
                 CONF_DEVICE_TYPE: info["device_type_name"],
+                **(
+                    {
+                        CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
+                        CONF_DEVICE_TOKEN: self._legacy_token,
+                        CONF_LEGACY_FAMILY: info.get("description", ""),
+                    }
+                    if self._legacy_token
+                    else {}
+                ),
             },
         )
 
@@ -838,8 +906,21 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     existing_leaf,
                 )
             except LegacyHttpFamily:
-                _LOGGER.debug("%s is the legacy 8888 family; support is pending", self._host)
-                return await self.async_step_legacy_unsupported()
+                # This family authenticates nothing about the certificate
+                # (measured on a TP6X_WW6500: any leaf is answered 200, a
+                # wrong device token is 401), so there is no fallback_ca to
+                # fall through to -- the token step is the whole credential.
+                try:
+                    self._legacy_leaf = existing_leaf or await self.hass.async_add_executor_job(
+                        _mint_preferred, self._ca_cert_pem, self._ca_key_pem
+                    )
+                except (CannotConnect, InvalidCA) as exc:
+                    _LOGGER.warning(
+                        "Minting for %s failed [%s]: %s", self._host, exc.error_key, exc
+                    )
+                    errors["base"] = exc.error_key
+                else:
+                    return await self.async_step_legacy_token()
             except CertRejected:
                 # The self-signed leaf (or a reused one, re-minted and refused
                 # again) didn't authenticate: this device validates the
@@ -917,15 +998,6 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._pending_info = info
         return await self.async_step_confirm_unknown_type()
 
-    async def async_step_legacy_unsupported(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """End the flow for a legacy-bridge appliance with an explanation."""
-        return self.async_abort(
-            reason="legacy_http_unsupported",
-            description_placeholders={"host": self._host},
-        )
-
     async def async_step_fallback_ca(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -989,6 +1061,118 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the localized host-only form for additional appliances."""
         return await self.async_step_user(user_input)
+
+    async def async_step_legacy_token(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Get the device token the 8888 bridge needs (issue #168).
+
+        A pasted token is used as-is. An empty field asks the appliance to
+        issue one, which it posts back to a listener on port 8889 -- see
+        async_step_legacy_token_exchange.
+        """
+        if user_input is not None:
+            return await self._legacy_submit(user_input)
+        return self._legacy_token_form()
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        """The 8888 bridge refused this entry's device token (a 401)."""
+        if entry_data.get(CONF_TRANSPORT) != TRANSPORT_LEGACY_HTTP:
+            return self.async_abort(reason="reauth_unsupported")
+        self._host = entry_data[CONF_HOST]
+        self._legacy_leaf = (entry_data[CONF_LEAF_CERT_PEM], entry_data[CONF_LEAF_KEY_PEM])
+        self._legacy_step = "reauth_confirm"
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return await self._legacy_submit(user_input)
+        return self._legacy_token_form()
+
+    async def async_step_legacy_token_exchange(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask the appliance for a token and wait for its callback.
+
+        Up to a minute and a half, so it runs as a progress step rather than
+        holding the form's submit open.
+        """
+        if self._token_task is None:
+            assert self._legacy_leaf is not None
+            cert_pem, key_pem = self._legacy_leaf
+            self._token_task = self.hass.async_create_task(self._request_token(cert_pem, key_pem))
+        if not self._token_task.done():
+            return self.async_show_progress(
+                step_id="legacy_token_exchange",
+                progress_action="legacy_token",
+                progress_task=self._token_task,
+                description_placeholders={"host": self._host},
+            )
+        return self.async_show_progress_done(next_step_id="legacy_token_received")
+
+    async def _request_token(self, cert_pem: str, key_pem: str) -> str | None:
+        return await self.hass.async_add_executor_job(
+            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
+        )
+
+    async def async_step_legacy_token_received(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        task, self._token_task = self._token_task, None
+        try:
+            token = task.result() if task is not None else None
+        except CallbackPortUnavailable as err:
+            _LOGGER.warning("Token callback port for %s unavailable: %s", self._host, err)
+            return self._legacy_token_form({"base": "callback_port_in_use"})
+        except OSError as err:
+            _LOGGER.warning("Token request to %s failed: %s", self._host, err)
+            return self._legacy_token_form({"base": "cannot_connect"})
+        if not token:
+            return self._legacy_token_form({"base": TokenNotReceived.error_key})
+        return await self._finish_legacy(token)
+
+    async def _legacy_submit(self, user_input: dict[str, Any]) -> ConfigFlowResult:
+        token = (user_input.get(CONF_DEVICE_TOKEN) or "").strip()
+        if not token:
+            return await self.async_step_legacy_token_exchange()
+        return await self._finish_legacy(token)
+
+    async def _finish_legacy(self, token: str) -> ConfigFlowResult:
+        """Read the appliance with `token`, then add it or update its entry."""
+        assert self._legacy_leaf is not None
+        cert_pem, key_pem = self._legacy_leaf
+        try:
+            info = await self.hass.async_add_executor_job(
+                _probe_legacy, self._host, cert_pem, key_pem, token
+            )
+        except AuthRejected:
+            return self._legacy_token_form({"base": "invalid_token"})
+        except (CannotConnect, InvalidCA) as exc:
+            _LOGGER.warning("Setup of %s over 8888 failed [%s]: %s", self._host, exc.error_key, exc)
+            return self._legacy_token_form({"base": exc.error_key})
+        except Exception:
+            _LOGGER.exception("Unexpected error setting up %s over 8888", self._host)
+            return self._legacy_token_form({"base": "unknown"})
+        if self.source == SOURCE_REAUTH:
+            entry = self._get_reauth_entry()
+            if not _identity_matches(entry, info, self._host):
+                return self._legacy_token_form({"base": "wrong_device"})
+            return self.async_update_reload_and_abort(
+                entry, data_updates={CONF_DEVICE_TOKEN: token}
+            )
+        self._legacy_token = token
+        info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
+        return await self._finish_probe(info, self.hass.config_entries.async_entries(DOMAIN))
+
+    def _legacy_token_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
+        return self.async_show_form(
+            step_id=self._legacy_step,
+            data_schema=vol.Schema({vol.Optional(CONF_DEVICE_TOKEN, default=""): _TEXT}),
+            errors=errors or {},
+            description_placeholders={"host": self._host},
+        )
 
     async def async_step_confirm_unknown_type(
         self, user_input: dict[str, Any] | None = None
@@ -1070,13 +1254,29 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             leaf_cert = entry.data.get(CONF_LEAF_CERT_PEM)
             leaf_key = entry.data.get(CONF_LEAF_KEY_PEM)
             try:
-                info = await self.hass.async_add_executor_job(
-                    _probe_and_validate,
-                    host,
-                    entry.data.get(CONF_CA_CERT_PEM, ""),
-                    entry.data.get(CONF_CA_KEY_PEM, ""),
-                    (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
-                )
+                if entry.data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
+                    info = await self.hass.async_add_executor_job(
+                        _probe_legacy, host, leaf_cert, leaf_key, entry.data[CONF_DEVICE_TOKEN]
+                    )
+                    info = {
+                        **info,
+                        "port": LEGACY_HTTP_PORT,
+                        "leaf_cert_pem": leaf_cert,
+                        "leaf_key_pem": leaf_key,
+                    }
+                else:
+                    info = await self.hass.async_add_executor_job(
+                        _probe_and_validate,
+                        host,
+                        entry.data.get(CONF_CA_CERT_PEM, ""),
+                        entry.data.get(CONF_CA_KEY_PEM, ""),
+                        (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
+                    )
+            except (LegacyHttpFamily, AuthRejected):
+                # An 8888 appliance where a DTLS one was, or one that refuses
+                # this entry's token: either way not this entry's appliance
+                # as it knows it.
+                errors["base"] = "wrong_device"
             except (CannotConnect, InvalidCA) as exc:
                 _LOGGER.warning("Probe of %s failed [%s]: %s", host, exc.error_key, exc)
                 errors["base"] = exc.error_key

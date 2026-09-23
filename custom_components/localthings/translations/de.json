@@ -724,6 +724,7 @@
           "67": "Pflegeleicht",
           "68": "Eco Baumwolle",
           "6b": "Nur Schleudern",
+          "6c": "Jeansstoff",
           "70": "Intensiv",
           "71": "Bettwäsche",
           "72": "Hygienespülung",
@@ -1769,6 +1770,20 @@
       "confirm_unknown_type": {
         "title": "Gerätetyp nicht erkannt",
         "description": "Dieses Gerät hat das Modell \"{model}\" gemeldet, das LocalThings noch nicht als bekannten Typ erkennt. Es wird trotzdem hinzugefügt, jedoch nur mit allgemeinen Funktionen (z. B. Ein/Aus, Alarme, sofern vorhanden) und nicht mit dem vollständigen Funktionsumfang seiner Gerätefamilie. Sie können später helfen, die vollständige Unterstützung hinzuzufügen, indem Sie die Diagnosedaten für dieses Gerät herunterladen (Einstellungen > Geräte & Dienste > dieses Gerät > das Menü > Diagnose herunterladen) und sie in einem neuen Issue einreichen. Bestätigen Sie, um es trotzdem hinzuzufügen."
+      },
+      "legacy_token": {
+        "title": "Gerätetoken",
+        "description": "Dieses Gerät ({host}) nutzt Samsungs ältere lokale API, die neben dem Zertifikat auch einen Gerätetoken benötigt.\n\nLassen Sie das Feld leer und senden Sie ab, damit das Gerät selbst einen ausstellt: Es wird danach gefragt und schickt ihn an Home Assistant auf Port 8889 zurück. Schalten Sie zuvor am Gerät die Fernsteuerung (Smart Control) bei geschlossener Tür ein, sonst verlässt es binnen Minuten das WLAN und antwortet nicht mehr. Das dauert bis zu anderthalb Minuten.\n\nErreicht das Gerät Home Assistant auf Port 8889 nicht, besorgen Sie den Token anders und fügen Sie ihn hier ein.",
+        "data": {
+          "device_token": "Gerätetoken (leer lassen, um einen anzufordern)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Gerätetoken abgelehnt",
+        "description": "{host} akzeptiert sein Gerätetoken nicht mehr. Lassen Sie das Feld leer und senden Sie ab, damit das Gerät ein neues ausstellt (Fernsteuerung an, Tür geschlossen, Port 8889 auf Home Assistant erreichbar), oder fügen Sie ein anderweitig beschafftes Token ein.",
+        "data": {
+          "device_token": "Gerätetoken (leer lassen, um eines anzufordern)"
+        }
       }
     },
     "error": {
@@ -1784,14 +1799,21 @@
       "cannot_connect": "Verbindung zum Gerät nicht möglich. Prüfen Sie, ob die IP-Adresse korrekt ist und das Gerät eingeschaltet und mit Ihrem Netzwerk verbunden ist.",
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs.",
-      "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“."
+      "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“.",
+      "token_not_received": "Es ist kein Gerätetoken eingetroffen. Prüfen Sie, ob am Gerät die Fernsteuerung bei geschlossener Tür eingeschaltet ist und ob es Home Assistant auf Port 8889 erreicht – oder fügen Sie einen anders besorgten Token ein.",
+      "invalid_token": "Das Gerät hat dieses Gerätetoken abgelehnt. Lassen Sie das Feld leer, um ein neues anzufordern.",
+      "callback_port_in_use": "Port 8889 ist auf Home Assistant bereits belegt, meist durch eine noch wartende Token-Anfrage. Versuchen Sie es in anderthalb Minuten erneut."
     },
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert",
       "already_in_progress": "Die Konfiguration läuft bereits",
       "reconfigure_successful": "Adresse aktualisiert",
       "no_entry_for_mac": "Kein konfiguriertes Gerät speichert diese MAC-Adresse",
-      "legacy_http_unsupported": "{host} ist ein Samsung-Gerät der älteren Baureihe, das HTTPS über TCP 8888 verwendet statt der lokalen CoAP/DTLS-API, die diese Integration nutzt. Die Unterstützung dafür wird gerade entwickelt — siehe Issue #467 auf GitHub. Auf Ihrer Seite gibt es nichts zu beheben."
+      "reauth_successful": "Das neue Gerätetoken funktioniert; das Gerät verbindet sich neu.",
+      "reauth_unsupported": "Für dieses Gerät gibt es hier keine Zugangsdaten zu erneuern. Wenn es nicht mehr antwortet, entfernen Sie es und fügen Sie es erneut hinzu."
+    },
+    "progress": {
+      "legacy_token": "Warte darauf, dass {host} ein Gerätetoken an Home Assistant auf Port 8889 sendet. Das dauert bis zu anderthalb Minuten."
     }
   },
   "options": {

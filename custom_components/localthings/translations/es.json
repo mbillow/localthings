@@ -46,6 +46,20 @@
       "confirm_unknown_type": {
         "title": "Tipo de electrodoméstico no reconocido",
         "description": "Este electrodoméstico informa del modelo «{model}», un tipo que LocalThings aún no reconoce. Se añadirá igualmente, pero solo con las capacidades comunes (alimentación, alarmas, etc. donde existan) en lugar del conjunto completo de su familia. Puedes ayudar a añadir soporte completo después descargando los diagnósticos de este dispositivo (Ajustes > Dispositivos y servicios > este dispositivo > el menú > Descargar diagnósticos) y reportándolos en una nueva incidencia. Envía para añadirlo de todos modos."
+      },
+      "legacy_token": {
+        "title": "Token del dispositivo",
+        "description": "Este electrodoméstico ({host}) usa la API local antigua de Samsung, que además del certificado necesita un token de dispositivo.\n\nDeja el campo vacío y envía el formulario para que lo emita el propio electrodoméstico: se le pedirá un token y lo enviará de vuelta a Home Assistant por el puerto 8889. Activa antes el control remoto (Smart Control) en el electrodoméstico, con la puerta cerrada, o se desconectará del wifi en unos minutos y no responderá. Puede tardar hasta un minuto y medio.\n\nSi el electrodoméstico no puede alcanzar Home Assistant en el puerto 8889, consigue un token de otra forma y pégalo aquí.",
+        "data": {
+          "device_token": "Token del dispositivo (vacío para solicitarlo)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Token del dispositivo rechazado",
+        "description": "{host} ya no acepta su token de dispositivo. Deja este campo vacío y envía para que el electrodoméstico emita uno nuevo (control remoto activado, puerta cerrada y puerto 8889 accesible en Home Assistant), o pega un token que hayas obtenido de otra forma.",
+        "data": {
+          "device_token": "Token del dispositivo (déjalo vacío para solicitar uno)"
+        }
       }
     },
     "error": {
@@ -61,14 +75,21 @@
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP es correcta y que el electrodoméstico está encendido y conectado a tu red.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles.",
-      "wrong_device": "Un electrodoméstico Samsung respondió en esa dirección, pero no es este: informó de una identidad distinta. Comprueba que la dirección corresponde a este electrodoméstico. Para añadir el otro, usa Añadir dispositivo."
+      "wrong_device": "Un electrodoméstico Samsung respondió en esa dirección, pero no es este: informó de una identidad distinta. Comprueba que la dirección corresponde a este electrodoméstico. Para añadir el otro, usa Añadir dispositivo.",
+      "token_not_received": "No llegó ningún token de dispositivo. Comprueba que el control remoto esté activado en el electrodoméstico con la puerta cerrada y que pueda alcanzar Home Assistant en el puerto 8889, o pega un token obtenido de otra forma.",
+      "invalid_token": "El electrodoméstico rechazó ese token. Deja el campo vacío para solicitar uno nuevo.",
+      "callback_port_in_use": "El puerto 8889 ya está en uso en Home Assistant, normalmente por una solicitud de token que sigue esperando. Vuelve a intentarlo en un minuto y medio."
     },
     "abort": {
       "already_configured": "El dispositivo ya está configurado",
       "already_in_progress": "La configuración ya está en curso",
       "reconfigure_successful": "Dirección actualizada",
       "no_entry_for_mac": "Ningún electrodoméstico configurado guarda esa dirección MAC",
-      "legacy_http_unsupported": "{host} es un electrodoméstico Samsung de la familia más antigua, que habla HTTPS por el puerto TCP 8888 en lugar de la API local CoAP/DTLS que usa esta integración. El soporte para él está en desarrollo: consulta la incidencia #467 en GitHub. No hay nada que arreglar por tu parte."
+      "reauth_successful": "El nuevo token funciona; el electrodoméstico se está reconectando.",
+      "reauth_unsupported": "Este electrodoméstico no tiene aquí ninguna credencial que renovar. Si dejó de responder, elimínalo y vuelve a añadirlo."
+    },
+    "progress": {
+      "legacy_token": "Esperando a que {host} envíe un token de dispositivo a Home Assistant por el puerto 8889. Tarda hasta un minuto y medio."
     }
   },
   "options": {
@@ -991,6 +1012,7 @@
           "67": "Sintéticos",
           "68": "Algodón E",
           "6b": "Solo centrifugar",
+          "6c": "Denim",
           "70": "Servicio intensivo",
           "71": "Ropa de cama",
           "72": "Desinfección",

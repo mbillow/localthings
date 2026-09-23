@@ -98,6 +98,9 @@ def test_the_file_list_probe_binds_nothing():
 class _ProbeSession:
     """Answers PROBE_HREFS and 4.04s everything else, recording each GET."""
 
+    # The Transport protocol requires it.
+    supports_observe = True
+
     def __init__(self, answers=None):
         self.answers = PROBE_REPS if answers is None else answers
         self.gets: list[str] = []
@@ -105,14 +108,12 @@ class _ProbeSession:
     def pace(self):
         pass
 
-    def get(self, path, timeout=None):
-        import cbor2
-
+    def read(self, path, timeout=None):
         href = "/" + "/".join(path)
         self.gets.append(href)
         if href in self.answers:
-            return 0x45, cbor2.dumps(self.answers[href])
-        return 0x84, b""
+            return 0x45, self.answers[href]
+        return 0x84, None
 
 
 @pytest.fixture

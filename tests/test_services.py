@@ -13,7 +13,6 @@ import hashlib
 import json
 from unittest.mock import AsyncMock, patch
 
-import cbor2
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -46,7 +45,7 @@ _SLEEP_TARGET = "custom_components.localthings.coordinator.asyncio.sleep"
 
 
 class _FakeSession:
-    """Stand-in for DtlsCoapSession: records every POST verbatim and answers
+    """Stand-in for a Transport: records every write verbatim and answers
     GET from a per-href queue of canned representations, so a test can model
     a value that changes across successive reads of the same href (the
     write's own follow-up GET vs. a later verify_after re-read) -- no real
@@ -72,20 +71,19 @@ class _FakeSession:
         """
         self._get_reps.setdefault(href.strip("/"), []).append(rep)
 
-    def post(self, path_segs, payload, timeout=None):
-        self.post_calls.append((list(path_segs), payload))
-        if self._post_response is None:
-            return self._post_code, b""
-        return self._post_code, cbor2.dumps(self._post_response)
+    def write(self, path_segs, body, timeout=None):
+        self.post_calls.append((list(path_segs), body))
+        # The transport decodes, so the double hands back the decoded body.
+        return self._post_code, self._post_response
 
-    def get(self, path_segs, timeout=None):
+    def read(self, path_segs, timeout=None):
         self.get_calls.append(list(path_segs))
         key = "/".join(path_segs)
         queue = self._get_reps.get(key)
         if not queue:
-            return 0x45, cbor2.dumps({})
+            return 0x45, {}
         rep = queue.pop(0) if len(queue) > 1 else queue[0]
-        return 0x45, cbor2.dumps(rep)
+        return 0x45, rep
 
     def pace(self):
         pass
@@ -165,7 +163,7 @@ async def test_write_resource_posts_in_order_with_exact_bodies(hass, coordinator
         ["washer", "vs", "0"],
         ["mode", "vs", "0"],
     ]
-    assert [cbor2.loads(body) for _, body in fake.post_calls] == [
+    assert [body for _, body in fake.post_calls] == [
         {"a": 1},
         {"b": 2},
         {"a": 3},
@@ -595,10 +593,10 @@ async def test_write_resource_failure_midway_names_the_writes_that_landed(
     tell what state the device is in without starting over blind."""
 
     class _DropsOnSecondWrite(_FakeSession):
-        def post(self, path_segs, payload, timeout=None):
+        def write(self, path_segs, body, timeout=None):
             if len(self.post_calls) == 1:
                 raise OSError("session dropped")
-            return super().post(path_segs, payload, timeout)
+            return super().write(path_segs, body, timeout)
 
     coordinator._session = _DropsOnSecondWrite()
 
@@ -631,13 +629,13 @@ async def test_write_resource_held_is_none_when_the_verify_read_fails(hass, coor
     """
 
     class _FailingVerifyRead(_FakeSession):
-        def get(self, path_segs, timeout=None):
+        def read(self, path_segs, timeout=None):
             self.get_calls.append(list(path_segs))
-            # The write's own follow-up GET succeeds; the later verify
+            # The write's own follow-up read succeeds; the later verify
             # re-read of the same href is the one that fails.
             if len(self.get_calls) == 1:
-                return 0x45, cbor2.dumps({"x": 1})
-            return 0x84, b""
+                return 0x45, {"x": 1}
+            return 0x84, None
 
     coordinator._session = _FailingVerifyRead()
 
@@ -867,12 +865,12 @@ async def test_options_flow_debug_write_goes_through_write_resource_service(
     assert len(fake.post_calls) == 1
     posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["course", "vs", "0"]
-    assert cbor2.loads(posted_body) == {"x.com.samsung.da.field": "value"}
+    assert posted_body == {"x.com.samsung.da.field": "value"}
 
     assert len(fake.post_calls) == 1
     posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["course", "vs", "0"]
-    assert cbor2.loads(posted_body) == {"x.com.samsung.da.field": "value"}
+    assert posted_body == {"x.com.samsung.da.field": "value"}
 
 
 # ----------------------------------------------------------------------
@@ -922,9 +920,9 @@ async def test_write_resource_posts_a_collection_batch_byte_for_byte(hass, coord
         writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START, "readback": False}],
     )
 
-    posted_path, posted_bytes = fake.post_calls[0]
+    posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["device", "0"]
-    assert cbor2.loads(posted_bytes) == _MEASURED_COOK_START
+    assert posted_body == _MEASURED_COOK_START
 
 
 async def test_write_resource_never_rewrites_a_batchs_inner_hrefs_for_a_subdevice(
@@ -953,9 +951,9 @@ async def test_write_resource_never_rewrites_a_batchs_inner_hrefs_for_a_subdevic
         writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START, "readback": False}],
     )
 
-    posted_path, posted_bytes = fake.post_calls[0]
+    posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["device", "1"]
-    assert cbor2.loads(posted_bytes) == _MEASURED_COOK_START
+    assert posted_body == _MEASURED_COOK_START
     assert response["results"][0]["actual_href"] == "/device/1"
 
 

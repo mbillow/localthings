@@ -103,6 +103,10 @@ async def async_get_config_entry_diagnostics(
             # resources in `subdevices` below instead. For a device with no
             # subdevices, this is byte-identical to `last_resources`.
             "resources": redact_resources(coordinator.device_resources(MAIN)),
+            # The transport's own view where it has one the dump above lacks
+            # -- an 8888 appliance's bodies before translation, which is what
+            # mapping an unmapped family takes. Empty over DTLS.
+            "transport": redact_resources(coordinator.transport_diagnostics()),
             # Sibling indoor subdevices discovered on this connection (issue
             # #177). subdeviceIdList (the UUID a prefixed subdevice's key comes
             # from) is deliberately NOT redacted here, unlike elsewhere in

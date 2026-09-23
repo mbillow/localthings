@@ -761,6 +761,7 @@
           "67": "Syntetika",
           "68": "Eko bavlna",
           "6b": "Pouze odstřeďování",
+          "6c": "Džíny",
           "70": "Intenzivní",
           "71": "Ložní prádlo",
           "72": "Dezinfekce",
@@ -1769,6 +1770,20 @@
       "confirm_unknown_type": {
         "title": "Typ spotřebiče nebyl rozpoznán",
         "description": "Tento spotřebič hlásí model „{model}“, což je typ, který LocalThings zatím nerozpoznává. Přesto bude přidán, ale pouze se společnými funkcemi (napájení, alarmy atd., pokud jsou k dispozici), nikoli s plnou sadou funkcí pro danou rodinu spotřebičů. Podporu můžete později pomoci rozšířit stažením diagnostiky pro toto zařízení (Nastavení > Zařízení a služby > toto zařízení > nabídka > Stáhnout diagnostiku) a jejím vložením do nového issue. Odesláním zařízení přidáte i tak."
+      },
+      "legacy_token": {
+        "title": "Token zařízení",
+        "description": "Tento spotřebič ({host}) používá starší lokální API Samsungu, které kromě certifikátu potřebuje i token zařízení.\n\nNechte pole prázdné a odešlete formulář, aby token vydal sám spotřebič: bude o něj požádán a pošle jej zpět do Home Assistant na port 8889. Nejprve na spotřebiči zapněte dálkové ovládání (Smart Control) se zavřenými dvířky, jinak se během několika minut odpojí od Wi-Fi a neodpoví. Může to trvat až minutu a půl.\n\nPokud spotřebič na port 8889 do Home Assistant nedosáhne, získejte token jinak a vložte jej sem.",
+        "data": {
+          "device_token": "Token zařízení (prázdné = vyžádat si jej)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Token zařízení odmítnut",
+        "description": "{host} už nepřijímá svůj token zařízení. Nechte pole prázdné a odešlete, aby spotřebič vydal nový (dálkové ovládání zapnuté, dvířka zavřená a port 8889 na Home Assistant dosažitelný), nebo vložte token získaný jinak.",
+        "data": {
+          "device_token": "Token zařízení (nechte prázdné a vyžádá se nový)"
+        }
       }
     },
     "error": {
@@ -1784,14 +1799,21 @@
       "cannot_connect": "K zařízení se nelze připojit. Zkontrolujte, zda je IP adresa správná a zda je spotřebič zapnutý a připojený k vaší síti.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant.",
-      "wrong_device": "Na této adrese odpověděl spotřebič Samsung, ale není to tento — ohlásil jinou identitu. Zkontrolujte, že adresa patří tomuto spotřebiči. Chcete-li přidat ten druhý, použijte možnost Přidat zařízení."
+      "wrong_device": "Na této adrese odpověděl spotřebič Samsung, ale není to tento — ohlásil jinou identitu. Zkontrolujte, že adresa patří tomuto spotřebiči. Chcete-li přidat ten druhý, použijte možnost Přidat zařízení.",
+      "token_not_received": "Nedorazil žádný token zařízení. Zkontrolujte, že je na spotřebiči zapnuté dálkové ovládání se zavřenými dvířky a že dosáhne na Home Assistant na port 8889 – nebo vložte token získaný jinak.",
+      "invalid_token": "Spotřebič tento token zařízení odmítl. Nechte pole prázdné a vyžádejte si nový.",
+      "callback_port_in_use": "Port 8889 je v Home Assistant už obsazený, obvykle ještě čekající žádostí o token. Zkuste to znovu za minutu a půl."
     },
     "abort": {
       "already_configured": "Zařízení je již nakonfigurováno",
       "already_in_progress": "Konfigurace již probíhá",
       "reconfigure_successful": "Adresa byla aktualizována",
       "no_entry_for_mac": "Žádný nakonfigurovaný spotřebič neuchovává tuto MAC adresu",
-      "legacy_http_unsupported": "{host} je spotřebič Samsung ze starší rodiny, který komunikuje přes HTTPS na portu TCP 8888 místo lokálního API CoAP/DTLS, které tato integrace používá. Podpora pro něj se připravuje — viz issue #467 na GitHubu. Na vaší straně není co opravovat."
+      "reauth_successful": "Nový token zařízení funguje; spotřebič se znovu připojuje.",
+      "reauth_unsupported": "Tento spotřebič tu nemá žádné přihlašovací údaje k obnovení. Pokud přestal odpovídat, odeberte ho a přidejte znovu."
+    },
+    "progress": {
+      "legacy_token": "Čeká se, až {host} pošle token zařízení do Home Assistant na port 8889. Trvá to až minutu a půl."
     }
   },
   "options": {

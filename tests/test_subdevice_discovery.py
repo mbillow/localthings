@@ -13,7 +13,6 @@ from typing import Any, cast
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
 from custom_components.localthings.const import (
     CONF_HOST,
@@ -25,6 +24,7 @@ from custom_components.localthings.const import (
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.entities import ClimateDesc
 from custom_components.localthings.registry.identity import DeviceIdentity
+from custom_components.localthings.transport import Transport
 from tests.conftest import FakeCoapSession, _load_device_full, linked_parent
 
 ENTRY_DATA = {
@@ -67,7 +67,7 @@ async def _discover_with(
     without the polling/reconnect machinery around it -- see coordinator.py's
     _enumerate_subdevices_blocking/_run_discovery. `_discover` below is the
     fixture-file-backed convenience wrapper most tests want."""
-    coordinator._session = cast(DtlsCoapSession, FakeCoapSession(seeds))
+    coordinator._session = cast(Transport, FakeCoapSession(seeds))
     # _connect_session (skipped here -- the session is pre-set) is what
     # normally populates _identity via read_identity; set it directly with
     # the fixture's real /oic/res so enumeration sees the same links a live
@@ -440,14 +440,12 @@ class _FakeCollectionSession:
         self.table = table
         self.calls: list[tuple[str, ...]] = []
 
-    def get(self, path, timeout=10.0):
+    def read(self, path, timeout=10.0):
         self.calls.append(tuple(path))
         body = self.table.get(tuple(path))
         if body is None:
-            return 0x84, b""
-        import cbor2
-
-        return 0x45, cbor2.dumps(body)
+            return 0x84, None
+        return 0x45, body
 
     def pace(self):
         pass
@@ -471,7 +469,7 @@ def test_poll_subdevice_seed_collection_mode_unaffected_by_flat_fallback(
             ],
         }
     )
-    coordinator._session = cast(DtlsCoapSession, sess)
+    coordinator._session = cast(Transport, sess)
     subdevice = Subdevice(kind="prefixed", key=_SUB_UUID, seed_path=(_SUB_UUID, "device", "0"))
 
     result = coordinator._poll_subdevice_seed(subdevice)
@@ -497,7 +495,7 @@ def test_poll_subdevice_seed_flat_mode_polls_each_href_individually(
             # (_SUB_UUID, 'power', 'vs', '0') deliberately absent -> drops out.
         }
     )
-    coordinator._session = cast(DtlsCoapSession, sess)
+    coordinator._session = cast(Transport, sess)
     subdevice = Subdevice(
         kind="prefixed",
         key=_SUB_UUID,
@@ -530,7 +528,7 @@ def test_poll_subdevice_seed_flat_mode_skips_hrefs_covered_by_hot_warm_subpolls(
             (_SUB_UUID, "power", "vs", "0"): {"power": "On"},
         }
     )
-    coordinator._session = cast(DtlsCoapSession, sess)
+    coordinator._session = cast(Transport, sess)
     coordinator._warm_hrefs = [f"/{_SUB_UUID}/mode/vs/0"]
     subdevice = Subdevice(
         kind="prefixed",
@@ -566,7 +564,7 @@ async def test_multidevice_probe_never_reaches_discovery_or_the_cache(
     # FakeCoapSession's own docstring on the two shapes its `seeds` values can
     # take; its `seeds` param type only names the more common (list) shape.
     coordinator._session = cast(
-        DtlsCoapSession,
+        Transport,
         FakeCoapSession(
             cast(
                 "dict[str, list]",
