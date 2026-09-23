@@ -1777,6 +1777,13 @@
         "data": {
           "device_token": "Gerätetoken (leer lassen, um einen anzufordern)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Gerätetoken abgelehnt",
+        "description": "{host} akzeptiert sein Gerätetoken nicht mehr. Lassen Sie das Feld leer und senden Sie ab, damit das Gerät ein neues ausstellt (Fernsteuerung an, Tür geschlossen, Port 8889 auf Home Assistant erreichbar), oder fügen Sie ein anderweitig beschafftes Token ein.",
+        "data": {
+          "device_token": "Gerätetoken (leer lassen, um eines anzufordern)"
+        }
       }
     },
     "error": {
@@ -1793,13 +1800,20 @@
       "invalid_ca": "Das CA-Zertifikat oder der Privatschlüssel konnte nicht geladen werden. Prüfen Sie, ob der PEM-Inhalt korrekt ist und der Schlüssel zum Zertifikat passt.",
       "unknown": "Unerwarteter Fehler. Weitere Informationen in den Logs.",
       "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“.",
-      "token_not_received": "Es ist kein Gerätetoken eingetroffen. Prüfen Sie, ob am Gerät die Fernsteuerung bei geschlossener Tür eingeschaltet ist und ob es Home Assistant auf Port 8889 erreicht – oder fügen Sie einen anders besorgten Token ein."
+      "token_not_received": "Es ist kein Gerätetoken eingetroffen. Prüfen Sie, ob am Gerät die Fernsteuerung bei geschlossener Tür eingeschaltet ist und ob es Home Assistant auf Port 8889 erreicht – oder fügen Sie einen anders besorgten Token ein.",
+      "invalid_token": "Das Gerät hat dieses Gerätetoken abgelehnt. Lassen Sie das Feld leer, um ein neues anzufordern.",
+      "callback_port_in_use": "Port 8889 ist auf Home Assistant bereits belegt, meist durch eine noch wartende Token-Anfrage. Versuchen Sie es in anderthalb Minuten erneut."
     },
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert",
       "already_in_progress": "Die Konfiguration läuft bereits",
       "reconfigure_successful": "Adresse aktualisiert",
-      "no_entry_for_mac": "Kein konfiguriertes Gerät speichert diese MAC-Adresse"
+      "no_entry_for_mac": "Kein konfiguriertes Gerät speichert diese MAC-Adresse",
+      "reauth_successful": "Das neue Gerätetoken funktioniert; das Gerät verbindet sich neu.",
+      "reauth_unsupported": "Für dieses Gerät gibt es hier keine Zugangsdaten zu erneuern. Wenn es nicht mehr antwortet, entfernen Sie es und fügen Sie es erneut hinzu."
+    },
+    "progress": {
+      "legacy_token": "Warte darauf, dass {host} ein Gerätetoken an Home Assistant auf Port 8889 sendet. Das dauert bis zu anderthalb Minuten."
     }
   },
   "options": {

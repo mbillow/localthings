@@ -59,6 +59,7 @@ from .legacy_http import (
     with_staged,
 )
 from .legacy_http_tls import client_context
+from .transport import AuthRejected
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -172,7 +173,7 @@ class LegacyHttpTransport:
         """
         status, body = self._request("GET", "/devices/0", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
-            return http_status_to_coap(status), None
+            return http_status_to_coap(status), body if isinstance(body, str) else None
         bodies = unwrap(body)
         for endpoint in _LINKED_ENDPOINTS:
             linked_status, linked = self._request("GET", f"/devices/0/{endpoint}", timeout=timeout)
@@ -315,12 +316,19 @@ class LegacyHttpTransport:
             raw = response.read()
         finally:
             conn.close()
+        if response.status == 401:
+            raise AuthRejected(f"{self._host} refused the device token")
         if not raw:
             return response.status, None
         try:
-            return response.status, json.loads(raw)
+            body = json.loads(raw)
         except ValueError:
             return response.status, raw.decode("utf-8", "replace")
+        if response.status == 403 and isinstance(body, dict) and body.get("errorCode") == "SHE-001":
+            # What every request gets while Remote Control is off at the
+            # panel -- the everyday case, so it reads as a reason, not a code.
+            return response.status, "Remote Control is off at the appliance"
+        return response.status, body
 
 
 def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:

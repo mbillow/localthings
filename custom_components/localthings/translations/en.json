@@ -1777,6 +1777,13 @@
         "data": {
           "device_token": "Device token (leave empty to request one)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Device token rejected",
+        "description": "{host} no longer accepts its device token. Leave this empty and submit to have the appliance issue a new one (Remote Control on, door closed, and port 8889 reachable on Home Assistant), or paste a token you obtained another way.",
+        "data": {
+          "device_token": "Device token (leave empty to request one)"
+        }
       }
     },
     "error": {
@@ -1793,13 +1800,20 @@
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details.",
       "wrong_device": "A Samsung appliance answered at that address, but it isn't this one — it reported a different identity. Check the address belongs to this appliance. To add the other one, use Add device instead.",
-      "token_not_received": "No device token arrived. Check that Remote Control is on at the appliance with the door closed, and that it can reach Home Assistant on port 8889 - or paste a token you obtained another way."
+      "token_not_received": "No device token arrived. Check that Remote Control is on at the appliance with the door closed, and that it can reach Home Assistant on port 8889 - or paste a token you obtained another way.",
+      "invalid_token": "The appliance rejected that device token. Leave the field empty to request a new one.",
+      "callback_port_in_use": "Port 8889 is already in use on Home Assistant, usually by a token request still waiting. Try again in a minute and a half."
     },
     "abort": {
       "already_configured": "Device is already configured",
       "already_in_progress": "Configuration flow is already in progress",
       "reconfigure_successful": "Address updated",
-      "no_entry_for_mac": "No configured appliance stores that MAC address"
+      "no_entry_for_mac": "No configured appliance stores that MAC address",
+      "reauth_successful": "The new device token works; the appliance is reconnecting.",
+      "reauth_unsupported": "This appliance has no credential to renew here. If it stopped answering, remove and re-add it."
+    },
+    "progress": {
+      "legacy_token": "Waiting for {host} to send a device token to Home Assistant on port 8889. This takes up to a minute and a half."
     }
   },
   "options": {

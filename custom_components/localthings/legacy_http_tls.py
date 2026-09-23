@@ -18,6 +18,7 @@ import contextlib
 import os
 import ssl
 import tempfile
+import warnings
 from collections.abc import Iterator
 
 
@@ -39,7 +40,11 @@ def _pem_files(cert_pem: str, key_pem: str) -> Iterator[tuple[str, str]]:
 
 
 def _relaxed(context: ssl.SSLContext, cert_pem: str, key_pem: str) -> ssl.SSLContext:
-    context.minimum_version = ssl.TLSVersion.TLSv1
+    # The appliance speaks TLS 1.0 and nothing newer; the deprecation is
+    # known and has no alternative on this link.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        context.minimum_version = ssl.TLSVersion.TLSv1
     context.set_ciphers("DEFAULT@SECLEVEL=0")
     with _pem_files(cert_pem, key_pem) as (cert_path, key_path):
         context.load_cert_chain(cert_path, key_path)

@@ -169,12 +169,25 @@ class TestSeed:
         assert "/information/vs/0" not in {entry["href"] for entry in body}
         assert "/washer/vs/0" in {entry["href"] for entry in body}
 
-    def test_an_unreachable_appliance_reports_its_status_as_a_coap_code(self, transport):
-        """403 SHE-001 -- what it answers while Remote Control is off -- is
-        the everyday case, and reads as a failed poll rather than an error."""
+    def test_remote_control_off_reads_as_a_failed_poll_with_its_reason(self, transport):
+        """403 SHE-001 is what every request gets while Remote Control is off
+        at the panel -- the everyday case, so it carries a reason, not a code."""
         _FakeConnection.routes["/devices/0"] = (403, {"errorCode": "SHE-001"})
 
-        assert transport.read(["device", "0"], timeout=10.0) == (0x83, None)
+        assert transport.read(["device", "0"], timeout=10.0) == (
+            0x83,
+            "Remote Control is off at the appliance",
+        )
+
+    def test_a_rejected_token_raises_rather_than_reading_as_an_outage(self, transport):
+        """Only a new token helps, so this is the coordinator's cue to ask
+        for one rather than to keep retrying."""
+        from custom_components.localthings.transport import AuthRejected
+
+        _FakeConnection.routes["/devices/0"] = (401, {"errorDescription": "Token is not valid"})
+
+        with pytest.raises(AuthRejected):
+            transport.read(["device", "0"], timeout=10.0)
 
 
 class TestResourceReads:

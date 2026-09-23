@@ -1777,6 +1777,13 @@
         "data": {
           "device_token": "Apparaattoken (leeg laten om er een aan te vragen)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Apparaattoken geweigerd",
+        "description": "{host} accepteert zijn apparaattoken niet meer. Laat dit veld leeg en verstuur om het apparaat een nieuw token te laten uitgeven (afstandsbediening aan, deur dicht en poort 8889 op Home Assistant bereikbaar), of plak een token dat je op een andere manier hebt verkregen.",
+        "data": {
+          "device_token": "Apparaattoken (leeg laten om er een aan te vragen)"
+        }
       }
     },
     "error": {
@@ -1793,13 +1800,20 @@
       "invalid_ca": "Het CA-certificaat of de privésleutel kon niet worden geladen. Controleer of de PEM-inhoud juist is en of de sleutel bij het certificaat hoort.",
       "unknown": "Onverwachte fout. Raadpleeg de Home Assistant-logboeken voor meer informatie.",
       "wrong_device": "Op dat adres antwoordde een Samsung-apparaat, maar niet dit apparaat — het meldde een andere identiteit. Controleer of het adres bij dit apparaat hoort. Gebruik Apparaat toevoegen om het andere toe te voegen.",
-      "token_not_received": "Er is geen apparaattoken binnengekomen. Controleer of de afstandsbediening op het apparaat aanstaat met de deur dicht en of het Home Assistant kan bereiken op poort 8889 - of plak een token dat je op een andere manier hebt opgehaald."
+      "token_not_received": "Er is geen apparaattoken binnengekomen. Controleer of de afstandsbediening op het apparaat aanstaat met de deur dicht en of het Home Assistant kan bereiken op poort 8889 - of plak een token dat je op een andere manier hebt opgehaald.",
+      "invalid_token": "Het apparaat heeft dat token geweigerd. Laat het veld leeg om een nieuw token aan te vragen.",
+      "callback_port_in_use": "Poort 8889 is al in gebruik op Home Assistant, meestal door een tokenaanvraag die nog wacht. Probeer het over anderhalve minuut opnieuw."
     },
     "abort": {
       "already_configured": "Apparaat is al geconfigureerd",
       "already_in_progress": "De configuratie is al bezig",
       "reconfigure_successful": "Adres bijgewerkt",
-      "no_entry_for_mac": "Geen enkel geconfigureerd apparaat bewaart dat MAC-adres"
+      "no_entry_for_mac": "Geen enkel geconfigureerd apparaat bewaart dat MAC-adres",
+      "reauth_successful": "Het nieuwe apparaattoken werkt; het apparaat maakt opnieuw verbinding.",
+      "reauth_unsupported": "Dit apparaat heeft hier geen inloggegevens om te vernieuwen. Reageert het niet meer, verwijder het dan en voeg het opnieuw toe."
+    },
+    "progress": {
+      "legacy_token": "Wachten tot {host} een apparaattoken naar Home Assistant stuurt op poort 8889. Dit duurt tot anderhalve minuut."
     }
   },
   "options": {

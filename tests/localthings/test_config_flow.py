@@ -1055,6 +1055,7 @@ def test_every_error_key_the_flow_can_raise_has_a_message() -> None:
     keys.add("unknown")
     source = Path(config_flow.__file__).read_text()
     keys |= set(re.findall(r'errors\["base"\] = "(\w+)"', source))
+    keys |= set(re.findall(r'_legacy_token_form\(\{"base": "(\w+)"\}\)', source))
 
     catalog = json.loads(
         (

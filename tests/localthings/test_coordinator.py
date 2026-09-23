@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import time
 from datetime import timedelta
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 import cbor2
@@ -2169,3 +2170,25 @@ def test_local_source_port_sits_above_the_ephemeral_range() -> None:
     # The offset is the last IPv4 octet, so these two are the span's ends.
     assert _local_source_port("10.0.0.0") > 60999
     assert _local_source_port("10.0.0.255") <= 65535
+
+
+async def test_a_rejected_token_asks_for_reauth(hass: HomeAssistant, mock_entry) -> None:
+    """Retrying can't fix a token the appliance refuses; a new one can."""
+    from homeassistant.exceptions import ConfigEntryAuthFailed
+
+    from custom_components.localthings.transport import AuthRejected
+
+    class _Refusing:
+        supports_observe = False
+
+        def read(self, path_segs, timeout=None):
+            raise AuthRejected("401")
+
+        def close(self):
+            pass
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._session = cast(Any, _Refusing())
+
+    with pytest.raises(ConfigEntryAuthFailed):
+        await coordinator._async_update_data()

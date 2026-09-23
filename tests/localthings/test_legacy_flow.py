@@ -287,3 +287,132 @@ def test_probe_reads_a_mapped_family_through_its_table(monkeypatch) -> None:
 
     assert families == [None, "TP6X_WASHER"]
     assert info["device_type_recognized"] is True
+
+
+def _legacy_entry(hass: HomeAssistant, **extra):
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.localthings.const import CONF_DEVICE_KEY, CONF_LEAF_KEY_PEM, CONF_SERIAL
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_HOST: MOCK_HOST,
+            CONF_PORT: 8888,
+            CONF_LEAF_CERT_PEM: "FULLCHAIN",
+            CONF_LEAF_KEY_PEM: "LEAFKEY",
+            CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
+            CONF_LEGACY_FAMILY: "TP6X_WASHER",
+            CONF_DEVICE_TOKEN: "old-token",
+            CONF_DEVICE_KEY: LEGACY_DEVICE["device_key"],
+            CONF_SERIAL: LEGACY_DEVICE["serial"],
+            **extra,
+        },
+        unique_id=f"localthings_{LEGACY_DEVICE['device_key']}",
+        version=4,
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def test_a_pasted_token_the_appliance_rejects_says_so(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    from custom_components.localthings.transport import AuthRejected
+
+    _, probe, _mint = legacy_bridge
+    probe.side_effect = AuthRejected("401")
+    result = await _start(hass)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: "stale"}
+    )
+
+    assert result["step_id"] == "legacy_token"
+    assert result["errors"] == {"base": "invalid_token"}
+
+
+async def test_a_busy_callback_port_says_so(hass: HomeAssistant, legacy_bridge) -> None:
+    """Usually an earlier exchange still waiting out its ninety seconds."""
+    from custom_components.localthings.legacy_http_token import CallbackPortUnavailable
+
+    token, _, _mint = legacy_bridge
+    token.side_effect = CallbackPortUnavailable("Address already in use")
+    result = await _start(hass)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+    )
+
+    assert result["step_id"] == "legacy_token"
+    assert result["errors"] == {"base": "callback_port_in_use"}
+
+
+async def test_reauth_stores_the_new_token(hass: HomeAssistant, legacy_bridge) -> None:
+    entry = _legacy_entry(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    assert result["step_id"] == "reauth_confirm"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: "new-token"}
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_DEVICE_TOKEN] == "new-token"
+
+
+async def test_reauth_refuses_a_token_from_a_different_appliance(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    _, probe, _mint = legacy_bridge
+    probe.return_value = {**LEGACY_DEVICE, "device_key": "someone-else", "serial": "OTHER"}
+    entry = _legacy_entry(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: "new-token"}
+    )
+
+    assert result["errors"] == {"base": "wrong_device"}
+    assert entry.data[CONF_DEVICE_TOKEN] == "old-token"
+
+
+async def test_reauth_is_only_for_the_legacy_family(hass: HomeAssistant) -> None:
+    entry = _legacy_entry(hass, **{CONF_TRANSPORT: "dtls"})
+
+    result = await entry.start_reauth_flow(hass)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reauth_unsupported"
+
+
+async def test_reconfigure_moves_a_legacy_entry_with_its_own_token(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    _, probe, _mint = legacy_bridge
+    entry = _legacy_entry(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "10.0.0.99"}
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert probe.call_args.args == ("10.0.0.99", "FULLCHAIN", "LEAFKEY", "old-token")
+    assert entry.data[CONF_HOST] == "10.0.0.99"
+    assert entry.data[CONF_PORT] == 8888
+
+
+async def test_reconfigure_of_a_dtls_entry_onto_an_8888_appliance_is_the_wrong_device(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    entry = _legacy_entry(hass, **{CONF_TRANSPORT: "dtls"})
+
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "10.0.0.99"}
+    )
+
+    assert result["errors"] == {"base": "wrong_device"}

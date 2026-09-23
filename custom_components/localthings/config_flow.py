@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime
+import http.client
 import ipaddress
 import json
 import logging
@@ -12,12 +13,12 @@ import re
 import socket
 import ssl
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
@@ -72,10 +73,10 @@ from .const import (
 from .devices import find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
-from .legacy_http_token import obtain_device_token
+from .legacy_http_token import CallbackPortUnavailable, obtain_device_token
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
-from .transport import DtlsTransport
+from .transport import AuthRejected, DtlsTransport
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -382,6 +383,8 @@ def _probe_legacy(host: str, cert_pem: str, key_pem: str, token: str) -> dict:
         transport.connect()
         try:
             return _read_device(transport, host, LEGACY_HTTP_PORT)
+        except (OSError, http.client.HTTPException) as err:
+            raise CannotConnect(f"{host}:{LEGACY_HTTP_PORT} did not answer: {err}") from err
         finally:
             transport.close()
 
@@ -805,6 +808,10 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # token once it is in hand.
         self._legacy_leaf: tuple[str, str] | None = None
         self._legacy_token: str = ""
+        # The form a token exchange returns to: "legacy_token" when adding
+        # an appliance, "reauth_confirm" when its token stopped working.
+        self._legacy_step: str = "legacy_token"
+        self._token_task: asyncio.Task[str | None] | None = None
 
     @staticmethod
     @callback
@@ -1060,55 +1067,110 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Get the device token the 8888 bridge needs (issue #168).
 
-        Submitting with the field empty runs the callback exchange: the
-        appliance is asked for a token and posts it back to a listener this
-        host runs on 8889. That needs the appliance awake -- Remote Control
-        on at the panel, door closed -- and inbound 8889 reaching Home
-        Assistant, which is not true on every network. So a token obtained
-        some other way can be pasted instead, and a failed exchange says so
-        rather than ending the flow.
+        A pasted token is used as-is. An empty field asks the appliance to
+        issue one, which it posts back to a listener on port 8889 -- see
+        async_step_legacy_token_exchange.
         """
+        if user_input is not None:
+            return await self._legacy_submit(user_input)
+        return self._legacy_token_form()
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        """The 8888 bridge refused this entry's device token (a 401)."""
+        if entry_data.get(CONF_TRANSPORT) != TRANSPORT_LEGACY_HTTP:
+            return self.async_abort(reason="reauth_unsupported")
+        self._host = entry_data[CONF_HOST]
+        self._legacy_leaf = (entry_data[CONF_LEAF_CERT_PEM], entry_data[CONF_LEAF_KEY_PEM])
+        self._legacy_step = "reauth_confirm"
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return await self._legacy_submit(user_input)
+        return self._legacy_token_form()
+
+    async def async_step_legacy_token_exchange(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask the appliance for a token and wait for its callback.
+
+        Up to a minute and a half, so it runs as a progress step rather than
+        holding the form's submit open.
+        """
+        if self._token_task is None:
+            assert self._legacy_leaf is not None
+            cert_pem, key_pem = self._legacy_leaf
+            self._token_task = self.hass.async_create_task(self._request_token(cert_pem, key_pem))
+        if not self._token_task.done():
+            return self.async_show_progress(
+                step_id="legacy_token_exchange",
+                progress_action="legacy_token",
+                progress_task=self._token_task,
+                description_placeholders={"host": self._host},
+            )
+        return self.async_show_progress_done(next_step_id="legacy_token_received")
+
+    async def _request_token(self, cert_pem: str, key_pem: str) -> str | None:
+        return await self.hass.async_add_executor_job(
+            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
+        )
+
+    async def async_step_legacy_token_received(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        task, self._token_task = self._token_task, None
+        try:
+            token = task.result() if task is not None else None
+        except CallbackPortUnavailable as err:
+            _LOGGER.warning("Token callback port for %s unavailable: %s", self._host, err)
+            return self._legacy_token_form({"base": "callback_port_in_use"})
+        except OSError as err:
+            _LOGGER.warning("Token request to %s failed: %s", self._host, err)
+            return self._legacy_token_form({"base": "cannot_connect"})
+        if not token:
+            return self._legacy_token_form({"base": TokenNotReceived.error_key})
+        return await self._finish_legacy(token)
+
+    async def _legacy_submit(self, user_input: dict[str, Any]) -> ConfigFlowResult:
+        token = (user_input.get(CONF_DEVICE_TOKEN) or "").strip()
+        if not token:
+            return await self.async_step_legacy_token_exchange()
+        return await self._finish_legacy(token)
+
+    async def _finish_legacy(self, token: str) -> ConfigFlowResult:
+        """Read the appliance with `token`, then add it or update its entry."""
         assert self._legacy_leaf is not None
         cert_pem, key_pem = self._legacy_leaf
-        errors: dict[str, str] = {}
+        try:
+            info = await self.hass.async_add_executor_job(
+                _probe_legacy, self._host, cert_pem, key_pem, token
+            )
+        except AuthRejected:
+            return self._legacy_token_form({"base": "invalid_token"})
+        except (CannotConnect, InvalidCA) as exc:
+            _LOGGER.warning("Setup of %s over 8888 failed [%s]: %s", self._host, exc.error_key, exc)
+            return self._legacy_token_form({"base": exc.error_key})
+        except Exception:
+            _LOGGER.exception("Unexpected error setting up %s over 8888", self._host)
+            return self._legacy_token_form({"base": "unknown"})
+        if self.source == SOURCE_REAUTH:
+            entry = self._get_reauth_entry()
+            if not _identity_matches(entry, info, self._host):
+                return self._legacy_token_form({"base": "wrong_device"})
+            return self.async_update_reload_and_abort(
+                entry, data_updates={CONF_DEVICE_TOKEN: token}
+            )
+        self._legacy_token = token
+        info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
+        return await self._finish_probe(info, self.hass.config_entries.async_entries(DOMAIN))
 
-        if user_input is not None:
-            token = (user_input.get(CONF_DEVICE_TOKEN) or "").strip()
-            try:
-                if not token:
-                    token = (
-                        await self.hass.async_add_executor_job(
-                            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
-                        )
-                        or ""
-                    )
-                if not token:
-                    raise TokenNotReceived(f"{self._host} issued no device token")
-                info = await self.hass.async_add_executor_job(
-                    _probe_legacy, self._host, cert_pem, key_pem, token
-                )
-            except (CannotConnect, InvalidCA) as exc:
-                _LOGGER.warning(
-                    "Setup of %s over 8888 failed [%s]: %s", self._host, exc.error_key, exc
-                )
-                errors["base"] = exc.error_key
-            except Exception:
-                _LOGGER.exception("Unexpected error setting up %s over 8888", self._host)
-                errors["base"] = "unknown"
-            else:
-                await self.async_set_unique_id(f"localthings_{info['device_key']}")
-                self._abort_if_unique_id_configured()
-                self._legacy_token = token
-                info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
-                if info["device_type_recognized"]:
-                    return self._create_entry(info)
-                self._pending_info = info
-                return await self.async_step_confirm_unknown_type()
-
+    def _legacy_token_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
         return self.async_show_form(
-            step_id="legacy_token",
+            step_id=self._legacy_step,
             data_schema=vol.Schema({vol.Optional(CONF_DEVICE_TOKEN, default=""): _TEXT}),
-            errors=errors,
+            errors=errors or {},
             description_placeholders={"host": self._host},
         )
 
@@ -1192,13 +1254,29 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             leaf_cert = entry.data.get(CONF_LEAF_CERT_PEM)
             leaf_key = entry.data.get(CONF_LEAF_KEY_PEM)
             try:
-                info = await self.hass.async_add_executor_job(
-                    _probe_and_validate,
-                    host,
-                    entry.data.get(CONF_CA_CERT_PEM, ""),
-                    entry.data.get(CONF_CA_KEY_PEM, ""),
-                    (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
-                )
+                if entry.data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
+                    info = await self.hass.async_add_executor_job(
+                        _probe_legacy, host, leaf_cert, leaf_key, entry.data[CONF_DEVICE_TOKEN]
+                    )
+                    info = {
+                        **info,
+                        "port": LEGACY_HTTP_PORT,
+                        "leaf_cert_pem": leaf_cert,
+                        "leaf_key_pem": leaf_key,
+                    }
+                else:
+                    info = await self.hass.async_add_executor_job(
+                        _probe_and_validate,
+                        host,
+                        entry.data.get(CONF_CA_CERT_PEM, ""),
+                        entry.data.get(CONF_CA_KEY_PEM, ""),
+                        (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
+                    )
+            except (LegacyHttpFamily, AuthRejected):
+                # An 8888 appliance where a DTLS one was, or one that refuses
+                # this entry's token: either way not this entry's appliance
+                # as it knows it.
+                errors["base"] = "wrong_device"
             except (CannotConnect, InvalidCA) as exc:
                 _LOGGER.warning("Probe of %s failed [%s]: %s", host, exc.error_key, exc)
                 errors["base"] = exc.error_key

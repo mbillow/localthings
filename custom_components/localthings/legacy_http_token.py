@@ -47,6 +47,10 @@ CALLBACK_PORT = 8889
 _PLACEHOLDER_TOKEN = "xxxxxxxxxxx"
 
 _TOKEN_RE = re.compile(rb'"DeviceToken"\s*:\s*"([^"]+)"')
+_CONTENT_LENGTH_RE = re.compile(rb"^content-length:\s*(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
+
+# A callback is a small JSON body; anything past this is not one.
+_MAX_CALLBACK_BYTES = 64 * 1024
 
 # One request, then wait: the appliance refuses a second while the first is
 # still pending, and it answers within a few seconds when it answers at all.
@@ -54,12 +58,23 @@ _RETRY_INTERVAL_S = 15.0
 _ACCEPT_POLL_S = 1.0
 
 
+class CallbackPortUnavailable(OSError):
+    """Port 8889 could not be bound -- usually an earlier exchange still
+    holding it for the rest of its wait."""
+
+
 class TokenListener:
     """The HTTPS listener the appliance POSTs the token to. Start it before
-    asking for a token, stop it when you have one."""
+    asking for a token, stop it when you have one.
 
-    def __init__(self, cert_pem: str, key_pem: str) -> None:
+    Accepts a callback only from `peer`, the appliance's own address: the
+    listener is open on every interface for the length of the exchange, and
+    a token posted by anything else would be stored as this entry's.
+    """
+
+    def __init__(self, cert_pem: str, key_pem: str, peer: str) -> None:
         self._context = server_context(cert_pem, key_pem)
+        self._peer = peer
         self._socket: socket.socket | None = None
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
@@ -71,9 +86,13 @@ class TokenListener:
 
     def start(self) -> None:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind(("0.0.0.0", CALLBACK_PORT))
-        server.listen(5)
+        try:
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server.bind(("0.0.0.0", CALLBACK_PORT))
+            server.listen(5)
+        except OSError as err:
+            server.close()
+            raise CallbackPortUnavailable(str(err)) from err
         server.settimeout(_ACCEPT_POLL_S)
         self._socket = server
         self._thread = threading.Thread(
@@ -102,6 +121,10 @@ class TokenListener:
             except OSError as err:
                 _LOGGER.debug("token listener: %s", err)
                 return
+            if address[0] != self._peer:
+                _LOGGER.debug("token callback from %s ignored; expected %s", address[0], self._peer)
+                raw.close()
+                continue
             try:
                 self._handle(raw, address[0])
             except Exception as err:  # one bad callback must not kill the listener
@@ -116,18 +139,33 @@ class TokenListener:
         except ssl.SSLError as err:
             _LOGGER.debug("token callback TLS handshake from %s failed: %s", peer, err)
             return
-        data = b""
-        while b"\r\n\r\n" not in data:
-            chunk = connection.recv(4096)
-            if not chunk:
-                break
-            data += chunk
+        data = _read_request(connection)
         match = _TOKEN_RE.search(data)
         if match:
             self._token = match.group(1).decode()
             _LOGGER.debug("device token received from %s", peer)
         connection.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
         connection.close()
+
+
+def _read_request(connection) -> bytes:
+    """Headers and the whole body -- the token is in the JSON body, which
+    need not arrive in the same segment as the headers."""
+    data = b""
+    while b"\r\n\r\n" not in data and len(data) < _MAX_CALLBACK_BYTES:
+        chunk = connection.recv(4096)
+        if not chunk:
+            return data
+        data += chunk
+    head, _, body = data.partition(b"\r\n\r\n")
+    match = _CONTENT_LENGTH_RE.search(head)
+    length = min(int(match.group(1)), _MAX_CALLBACK_BYTES) if match else 0
+    while len(body) < length:
+        chunk = connection.recv(4096)
+        if not chunk:
+            break
+        body += chunk
+    return head + b"\r\n\r\n" + body
 
 
 def local_address_for(host: str) -> str:
@@ -183,7 +221,7 @@ def obtain_device_token(
     config flow offers a pasted token as the fallback, so a user whose
     network makes the callback impossible is not locked out.
     """
-    listener = TokenListener(cert_pem, key_pem)
+    listener = TokenListener(cert_pem, key_pem, peer=socket.gethostbyname(host))
     listener.start()
     try:
         address = listen_address or local_address_for(host)

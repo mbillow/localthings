@@ -1777,6 +1777,13 @@
         "data": {
           "device_token": "Token zariadenia (nechajte prázdne a požiada sa o nový)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Token zariadenia odmietnutý",
+        "description": "{host} už neprijíma svoj token zariadenia. Nechajte pole prázdne a odošlite, aby spotrebič vydal nový (diaľkové ovládanie zapnuté, dvierka zatvorené a port 8889 na Home Assistant dosiahnuteľný), alebo vložte token získaný inak.",
+        "data": {
+          "device_token": "Token zariadenia (nechajte prázdne a požiada sa o nový)"
+        }
       }
     },
     "error": {
@@ -1793,13 +1800,20 @@
       "invalid_ca": "Certifikát CA alebo súkromný kľúč sa nepodarilo načítať. Overte, či je obsah PEM správny a či kľúč zodpovedá certifikátu.",
       "unknown": "Neočakávaná chyba. Podrobnosti nájdete v protokoloch Home Assistant.",
       "wrong_device": "Na tejto adrese odpovedal spotrebič Samsung, ale nie je to tento spotrebič – nahlásil inú identitu. Skontrolujte, či adresa patrí tomuto spotrebiču. Ak chcete pridať ten druhý, použite možnosť Pridať zariadenie.",
-      "token_not_received": "Nedorazil žiadny token zariadenia. Skontrolujte, či je na spotrebiči zapnuté diaľkové ovládanie so zatvorenými dvierkami a či sa spotrebič dostane k Home Assistant na port 8889 – alebo vložte token, ktorý ste získali inak."
+      "token_not_received": "Nedorazil žiadny token zariadenia. Skontrolujte, či je na spotrebiči zapnuté diaľkové ovládanie so zatvorenými dvierkami a či sa spotrebič dostane k Home Assistant na port 8889 – alebo vložte token, ktorý ste získali inak.",
+      "invalid_token": "Spotrebič tento token zariadenia odmietol. Nechajte pole prázdne a požiadajte o nový.",
+      "callback_port_in_use": "Port 8889 je v Home Assistant už obsadený, zvyčajne ešte čakajúcou žiadosťou o token. Skúste to znova o minútu a pol."
     },
     "abort": {
       "already_configured": "Zariadenie je už nakonfigurované",
       "already_in_progress": "Konfigurácia už prebieha",
       "reconfigure_successful": "Adresa bola aktualizovaná",
-      "no_entry_for_mac": "Žiadny nakonfigurovaný spotrebič nemá uloženú túto MAC adresu"
+      "no_entry_for_mac": "Žiadny nakonfigurovaný spotrebič nemá uloženú túto MAC adresu",
+      "reauth_successful": "Nový token zariadenia funguje; spotrebič sa znova pripája.",
+      "reauth_unsupported": "Tento spotrebič tu nemá žiadne prihlasovacie údaje na obnovenie. Ak prestal odpovedať, odstráňte ho a pridajte znova."
+    },
+    "progress": {
+      "legacy_token": "Čaká sa, kým {host} pošle token zariadenia do Home Assistant na port 8889. Trvá to až minútu a pol."
     }
   },
   "options": {

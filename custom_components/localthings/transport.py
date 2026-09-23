@@ -60,6 +60,13 @@ class DecodeError(ValueError):
         self.payload = payload
 
 
+class AuthRejected(Exception):
+    """The device refused this entry's credentials outright -- the 8888
+    bridge's 401 for a device token it no longer accepts. Only new
+    credentials help, so the coordinator raises Home Assistant's reauth
+    rather than retrying."""
+
+
 def _is_success(code: int) -> bool:
     """A 2.xx response class -- the only one whose body is CBOR by contract.
     An error response often carries a plain diagnostic string instead."""

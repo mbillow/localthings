@@ -1777,6 +1777,13 @@
         "data": {
           "device_token": "Token del dispositivo (vuoto per richiederlo)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Token del dispositivo rifiutato",
+        "description": "{host} non accetta più il suo token del dispositivo. Lascia vuoto il campo e invia per far emettere un nuovo token all'apparecchio (controllo remoto attivo, sportello chiuso e porta 8889 raggiungibile su Home Assistant), oppure incolla un token ottenuto in altro modo.",
+        "data": {
+          "device_token": "Token del dispositivo (lascia vuoto per richiederne uno)"
+        }
       }
     },
     "error": {
@@ -1793,13 +1800,20 @@
       "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
       "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli.",
       "wrong_device": "A quell'indirizzo ha risposto un elettrodomestico Samsung, ma non è questo: ha dichiarato un'identità diversa. Verifica che l'indirizzo appartenga a questo dispositivo. Per aggiungere l'altro, usa Aggiungi dispositivo.",
-      "token_not_received": "Non è arrivato alcun token del dispositivo. Verifica che il controllo remoto sia attivo sull'elettrodomestico con lo sportello chiuso e che riesca a raggiungere Home Assistant sulla porta 8889, oppure incolla un token ottenuto in altro modo."
+      "token_not_received": "Non è arrivato alcun token del dispositivo. Verifica che il controllo remoto sia attivo sull'elettrodomestico con lo sportello chiuso e che riesca a raggiungere Home Assistant sulla porta 8889, oppure incolla un token ottenuto in altro modo.",
+      "invalid_token": "L'apparecchio ha rifiutato quel token. Lascia vuoto il campo per richiederne uno nuovo.",
+      "callback_port_in_use": "La porta 8889 è già in uso su Home Assistant, di solito da una richiesta di token ancora in attesa. Riprova tra un minuto e mezzo."
     },
     "abort": {
       "already_configured": "Il dispositivo è già configurato",
       "already_in_progress": "La configurazione è già in corso",
       "reconfigure_successful": "Indirizzo aggiornato",
-      "no_entry_for_mac": "Nessun dispositivo configurato conserva quell'indirizzo MAC"
+      "no_entry_for_mac": "Nessun dispositivo configurato conserva quell'indirizzo MAC",
+      "reauth_successful": "Il nuovo token funziona; l'apparecchio si sta riconnettendo.",
+      "reauth_unsupported": "Questo apparecchio non ha credenziali da rinnovare qui. Se ha smesso di rispondere, rimuovilo e aggiungilo di nuovo."
+    },
+    "progress": {
+      "legacy_token": "In attesa che {host} invii un token del dispositivo a Home Assistant sulla porta 8889. Richiede fino a un minuto e mezzo."
     }
   },
   "options": {

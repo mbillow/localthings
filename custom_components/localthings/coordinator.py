@@ -15,7 +15,11 @@ from typing import Any, cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    HomeAssistantError,
+    ServiceValidationError,
+)
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.storage import Store
@@ -84,7 +88,13 @@ from .registry.subdevices import (
     normalize_seed_batch,
 )
 from .rekey import rekey_entry
-from .transport import DecodeError, Transport, create_transport, translates_resources
+from .transport import (
+    AuthRejected,
+    DecodeError,
+    Transport,
+    create_transport,
+    translates_resources,
+)
 
 # Sentinel for apply_cloud_courses: "leave this field as it is",
 # distinct from None which means "clear it".
@@ -1045,7 +1055,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # 35s gives a slow blockwise transfer room to finish instead of
             # raising TimeoutError every cycle on an otherwise-fine device.
             code, body = sess.read(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
-        except TimeoutError:
+        except (TimeoutError, AuthRejected):
             raise
         except DecodeError as e:
             # The device answered; its answer is what could not be read.
@@ -1057,7 +1067,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise RuntimeError(f"poll GET failed: {e}") from e
         if code != 0x45 or body is None:
             self._close_session()
-            raise RuntimeError(f"poll: unexpected code {code:#04x}")
+            reason = f" ({body})" if isinstance(body, str) else ""
+            raise RuntimeError(f"poll: unexpected code {code:#04x}{reason}")
         result = parse_device0_batch(body) if isinstance(body, list) else {}
         # Refresh every enumerated sibling's seed on this same poll (issue
         # #177) so its state doesn't freeze at enumeration time.
@@ -2008,6 +2019,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
                 self._mark_device_answered()
+            except AuthRejected as e:
+                await self.hass.async_add_executor_job(self._close_session)
+                raise ConfigEntryAuthFailed(str(e)) from e
             except Exception as e:
                 if self._defer_reconnect_for(e):
                     self._log.debug(
