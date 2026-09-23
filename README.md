@@ -129,8 +129,8 @@ A diagnostics download can't show whether a command sticks or what order command
 
 We welcome patches, especially:
 
-- Support for appliance types LocalThings doesn't cover yet, or for models that don't fully work. Start from a diagnostics download. [docs/development.md](docs/development.md) covers adding a type.
+- Support for appliance types LocalThings doesn't cover yet, or for models that don't fully work. Start from a diagnostics download. [CONTRIBUTING.md](CONTRIBUTING.md) covers adding a type.
 - Reports that confirm or rule out more models of a supported type.
 - Protocol-level fixes. These belong upstream in [`smartthings-local`](https://github.com/QuiteYellow/SmartThings-Local). Fixes to entities, setup, the coordinator or the registry belong here.
 
-Please don't include real device UUIDs, MAC addresses, serial numbers, IP addresses or private keys in a pull request. [docs/development.md](docs/development.md) has the dev environment, test setup and repo layout.
+Please don't include real device UUIDs, MAC addresses, serial numbers, IP addresses or private keys in a pull request. [CONTRIBUTING.md](CONTRIBUTING.md) covers the dev environment, the checks to run, the repo layout, and the rules for comments and commits.
