@@ -2123,3 +2123,14 @@ async def test_close_notify_sent_on_homeassistant_stop(
         await hass.async_block_till_done()
 
     mock_close.assert_awaited_once()
+
+
+def test_local_source_port_sits_above_the_ephemeral_range() -> None:
+    """49700-49955 sat inside Linux's default ip_local_port_range of
+    32768-60999, so an unrelated process could hold the port and the bind
+    failed EADDRINUSE on a host-networked install (issue #486)."""
+    from custom_components.localthings.coordinator import _local_source_port
+
+    # The offset is the last IPv4 octet, so these two are the span's ends.
+    assert _local_source_port("10.0.0.0") > 60999
+    assert _local_source_port("10.0.0.255") <= 65535

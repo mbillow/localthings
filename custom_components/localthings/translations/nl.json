@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Timer automatische deuropener"
       },
+      "auto_door_mode": {
+        "name": "Modus automatische deuropener",
+        "state": {
+          "easy_open": "Makkelijk openen",
+          "wide_open": "Wijd openen"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Modus drankenzone",
         "state": {
@@ -373,7 +380,8 @@
           "88": "Zelfreiniging",
           "85": "Delicaat",
           "0c": "Express",
-          "0d": "Zelfreiniging"
+          "0d": "Zelfreiniging",
+          "87": "Alleen spoelen"
         }
       },
       "dispense_type": {
@@ -503,6 +511,7 @@
       "flex_zone_mode": {
         "name": "Modus FlexZone",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Koelen",
           "cv_ttype_rf9000a_freeze": "Vriezen",
           "cv_ttype_rf9000a_softfreeze": "Zachtvriezen",
           "cv_ttype_rf9000a_meat_fish": "Vlees/vis",
@@ -760,7 +769,21 @@
           "74": "Sportkleding",
           "75": "Fijne was",
           "77": "Strijkvrij",
-          "78": "Snelle was"
+          "78": "Snelle was",
+          "ba": "Afpompen/centrifugeren",
+          "d0": "Katoen",
+          "d1": "Eco katoen",
+          "d2": "Synthetisch",
+          "d3": "Fijne was",
+          "d4": "Spoelen + centrifugeren",
+          "d5": "Trommel reinigen",
+          "d6": "Beddengoed",
+          "d7": "Outdoorverzorging",
+          "d8": "Wol",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "15' Snelle was",
+          "e4": "Anti-allergie"
         }
       },
       "washer_cycle_table_02": {
@@ -1118,6 +1141,12 @@
       "current_temp_c": {
         "name": "Temperatuur"
       },
+      "food_probe_temp": {
+        "name": "Voedselsonde"
+      },
+      "food_probe_setpoint": {
+        "name": "Doeltemperatuur voedselsonde"
+      },
       "current_temperature_c": {
         "name": "Temperatuur"
       },
@@ -1278,6 +1307,7 @@
         "name": "Voortgang",
         "state": {
           "idle": "Inactief",
+          "delaywash": "Uitgestelde start",
           "weightsensing": "Beladingsdetectie",
           "wash": "Wassen",
           "rinse": "Spoelen",
@@ -1751,8 +1781,9 @@
     },
     "error": {
       "no_response": "Geen reactie van dat IP-adres — er kwam niets terug op enige poort in het bereik van de lokale API van het apparaat (UDP 49152-49160). Controleer of het IP-adres klopt, of het apparaat aanstaat en op hetzelfde netwerk zit als Home Assistant, en of geen firewall het UDP-verkeer ernaartoe blokkeert.",
-      "ports_closed": "Dat IP-adres is bereikbaar, maar weigerde actief elke poort in het bereik van de lokale API (UDP 49152-49160). Het is óf geen Samsung-apparaat, óf het draait oudere firmware die alleen via TCP 8888 met de cloud van Samsung praat, wat deze integratie niet kan gebruiken.",
+      "ports_closed": "Dat IP-adres is bereikbaar, maar weigerde actief elke poort in het bereik van de lokale API (UDP 49152-49160) en gaf geen enkele reactie op het ontdekkingskanaal. Het is hoogstwaarschijnlijk geen Samsung-apparaat, of een apparaat waarop de lokale API niet is ingeschakeld.",
       "no_dtls_server": "De poorten in het bereik van de lokale API zijn bereikbaar op dat adres, maar niets daar beantwoordde een DTLS-handshake. Controleer of het IP-adres bij het apparaat hoort en niet bij een ander apparaat in je netwerk.",
+      "appliance_no_dtls": "Dat adres is van een Samsung-apparaat — het heeft zich via het onversleutelde ontdekkingskanaal geïdentificeerd als {model} en {port} als zijn beveiligde poort opgegeven — maar daar is nooit een DTLS-handshake voltooid. Het adres is niet het probleem. Controleer of Afstandsbediening of een vergelijkbare instelling op het bedieningspaneel van het apparaat is uitgeschakeld, en bekijk het Home Assistant-logboek voor de exacte fout.",
       "handshake_timeout": "Het apparaat antwoordde op zijn lokale API-poort, maar voltooide de DTLS-handshake niet. Meestal houdt het de sessie van een eerdere poging nog vast — wacht ongeveer een minuut en probeer het opnieuw.",
       "cert_rejected": "Het apparaat heeft het certificaat geweigerd. Het CA-certificaat en de sleutel zijn waarschijnlijk niet van de AC14K_M-CA die dit apparaat vertrouwt, of ze horen niet bij elkaar. Het Home Assistant-logboek bevat de precieze alert die het apparaat stuurde.",
       "handshake_failed": "Het apparaat weigerde de DTLS-handshake om een reden die niets met het certificaat te maken heeft, hoogstwaarschijnlijk een protocol- of cipher-mismatch. Het Home Assistant-logboek bevat de precieze alert die het stuurde.",
@@ -1885,6 +1916,12 @@
     },
     "debug_payload_empty": {
       "message": "De payload voor de schrijfbewerking voor foutopsporing moet een niet-leeg object zijn."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Een batchpayload moet tussen 1 en {max} elementen bevatten."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Elk batch-element moet een object met href zijn, en een rep die een object is indien aanwezig."
     },
     "resource_href_required": {
       "message": "Een resource-href is vereist."

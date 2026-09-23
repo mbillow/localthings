@@ -52,6 +52,12 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
             return desc.unit_fn(self.coordinator.resource(self._bound.href))
         return self._attr_native_unit_of_measurement
 
+    def _live_bounds(self) -> tuple[float, float, float] | None:
+        desc = cast(NumberDesc, self._bound.desc)
+        if desc.bounds_fn is None:
+            return None
+        return desc.bounds_fn(self.coordinator.resource(self._bound.href), self._resources)
+
     def _range_from_resource(self) -> list | None:
         desc = cast(NumberDesc, self._bound.desc)
         if not desc.range_field:
@@ -61,6 +67,9 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_min_value(self) -> float:
+        bounds = self._live_bounds()
+        if bounds is not None:
+            return bounds[0]
         desc = cast(NumberDesc, self._bound.desc)
         if desc.native_min_fn is not None:
             return desc.native_min_fn(self.coordinator.resource(self._bound.href))
@@ -73,6 +82,9 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_max_value(self) -> float:
+        bounds = self._live_bounds()
+        if bounds is not None:
+            return bounds[1]
         desc = cast(NumberDesc, self._bound.desc)
         if desc.native_max_fn is not None:
             return desc.native_max_fn(self.coordinator.resource(self._bound.href))
@@ -85,6 +97,9 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_step(self) -> float | None:
+        bounds = self._live_bounds()
+        if bounds is not None:
+            return bounds[2]
         desc = cast(NumberDesc, self._bound.desc)
         if desc.step_fn is not None:
             return desc.step_fn(self.coordinator.resource(self._bound.href))

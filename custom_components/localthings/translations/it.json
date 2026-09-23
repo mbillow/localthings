@@ -288,6 +288,13 @@
       "auto_door_timer": {
         "name": "Timer apertura automatica sportello"
       },
+      "auto_door_mode": {
+        "name": "Modalità apertura automatica sportello",
+        "state": {
+          "easy_open": "Apertura facile",
+          "wide_open": "Apertura ampia"
+        }
+      },
       "beverage_zone_mode": {
         "name": "Modalità zona bevande",
         "state": {
@@ -373,7 +380,8 @@
           "88": "Autopulizia",
           "85": "Delicato",
           "0c": "Express",
-          "0d": "Autopulizia"
+          "0d": "Autopulizia",
+          "87": "Solo risciacquo"
         }
       },
       "dispense_type": {
@@ -503,6 +511,7 @@
       "flex_zone_mode": {
         "name": "Modalità zona flessibile",
         "state": {
+          "cv_ttype_rf9000a_fridge": "Refrigerazione",
           "cv_ttype_rf9000a_freeze": "Congelamento",
           "cv_ttype_rf9000a_softfreeze": "Congelamento leggero",
           "cv_ttype_rf9000a_meat_fish": "Carne/Pesce",
@@ -760,7 +769,21 @@
           "74": "Abbigliamento sportivo",
           "75": "Delicati",
           "77": "Pronto da stirare",
-          "78": "Lavaggio rapido"
+          "78": "Lavaggio rapido",
+          "ba": "Scarico/Centrifuga",
+          "d0": "Cotone",
+          "d1": "Cotone E",
+          "d2": "Sintetici",
+          "d3": "Delicati",
+          "d4": "Risciacquo+Centrifuga",
+          "d5": "Pulizia cestello",
+          "d6": "Biancheria da letto",
+          "d7": "Cura outdoor",
+          "d8": "Lana",
+          "da": "Super Eco",
+          "db": "Super Speed",
+          "dc": "Rapido 15'",
+          "e4": "Anti-allergia"
         }
       },
       "washer_cycle_table_02": {
@@ -1118,6 +1141,12 @@
       "current_temp_c": {
         "name": "Temperatura"
       },
+      "food_probe_temp": {
+        "name": "Sonda per alimenti"
+      },
+      "food_probe_setpoint": {
+        "name": "Target sonda"
+      },
       "current_temperature_c": {
         "name": "Temperatura"
       },
@@ -1278,6 +1307,7 @@
         "name": "Avanzamento",
         "state": {
           "idle": "Inattivo",
+          "delaywash": "Ritardo di avvio",
           "weightsensing": "Rilevamento del carico",
           "wash": "Lavaggio",
           "rinse": "Risciacquo",
@@ -1751,8 +1781,9 @@
     },
     "error": {
       "no_response": "Nessuna risposta da quell'indirizzo IP: non è arrivato nulla su nessuna porta dell'intervallo dell'API locale dell'apparecchio (UDP 49152-49160). Verifica che l'indirizzo IP sia corretto, che l'apparecchio sia acceso e sulla stessa rete di Home Assistant e che nessun firewall stia scartando il traffico UDP diretto a esso.",
-      "ports_closed": "Quell'indirizzo IP è raggiungibile, ma ha rifiutato attivamente tutte le porte dell'intervallo dell'API locale (UDP 49152-49160). O non è un apparecchio Samsung, oppure ha un firmware più vecchio che comunica solo con il cloud Samsung su TCP 8888, che questa integrazione non può usare.",
+      "ports_closed": "Quell'indirizzo IP è raggiungibile, ma ha rifiutato attivamente tutte le porte dell'intervallo dell'API locale (UDP 49152-49160) e non ha risposto nulla sul canale discovery. Molto probabilmente non è un apparecchio Samsung, oppure è un apparecchio senza l'API locale attivata.",
       "no_dtls_server": "Le porte dell'intervallo dell'API locale sono raggiungibili a quell'indirizzo, ma nulla ha risposto a un handshake DTLS. Verifica che l'indirizzo IP appartenga all'apparecchio e non a un altro dispositivo della rete.",
+      "appliance_no_dtls": "Quell'indirizzo è un apparecchio Samsung: si è identificato come {model} sul canale discovery non cifrato e ha dichiarato {port} come sua porta sicura, ma non ha mai completato un handshake DTLS su di essa. L'indirizzo non è il problema. Verifica che il Controllo remoto o un'impostazione simile non sia disattivata sul pannello dell'apparecchio, e consulta il log di Home Assistant per l'errore esatto.",
       "handshake_timeout": "L'apparecchio ha risposto sulla sua porta dell'API locale ma non ha completato l'handshake DTLS. Di solito sta ancora mantenendo la sessione di un tentativo precedente: attendi circa un minuto e riprova.",
       "cert_rejected": "L'apparecchio ha rifiutato il certificato. Con ogni probabilità il certificato e la chiave della CA non sono quelli della CA AC14K_M di cui questo apparecchio si fida, oppure non corrispondono tra loro. Il log di Home Assistant riporta l'alert esatto inviato dall'apparecchio.",
       "handshake_failed": "L'apparecchio ha rifiutato l'handshake DTLS per un motivo non legato al certificato, molto probabilmente un'incompatibilità di protocollo o di cifratura. Il log di Home Assistant riporta l'alert esatto inviato.",
@@ -1885,6 +1916,12 @@
     },
     "debug_payload_empty": {
       "message": "Il payload di scrittura di debug deve essere un oggetto non vuoto."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Un payload batch deve avere da 1 a {max} elementi."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Ogni elemento del batch deve essere un oggetto con href e, se presente, un rep che sia un oggetto."
     },
     "resource_href_required": {
       "message": "E' richiesta una risorsa href."

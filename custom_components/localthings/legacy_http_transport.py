@@ -172,8 +172,13 @@ class LegacyHttpTransport:
     # Writes
     # ------------------------------------------------------------------
 
-    def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> tuple[int, Any]:
+    def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
+        if not isinstance(body, dict):
+            # A Collection batch (issue #473) has no counterpart on a bridge
+            # with no Collections.
+            _LOGGER.warning("%s: no batch writes over 8888; write to %s refused", self._host, href)
+            return 0x85, None
         aggregate = to_write([(href, body)], self._table)
         if not aggregate.get("Device"):
             # Nothing in the patch belongs to a resource this family

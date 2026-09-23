@@ -13,7 +13,7 @@ goldens run without device_types, which is the weaker of the two.
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SelectDesc, SwitchDesc
+from custom_components.localthings.registry.entities import SelectDesc, SensorDesc, SwitchDesc
 from tests.conftest import _load_device
 
 WASHER = "washer_wf80h"
@@ -142,3 +142,12 @@ def test_washer_delay_start_is_reported_separately_from_the_wash():
     assert state["machine_state"] == "active"
     assert state["progress"] == "delaywash"
     assert state["delay_start_hours"] > 0
+
+
+def test_delaywash_progress_is_one_of_the_sensors_own_options():
+    """`progress` is an enum sensor whose options come from the catalog, so
+    a state missing there isn't merely untranslated -- HA rejects it. This
+    washer's armed-delay `DelayWash` was the gap (issue #462)."""
+    _reg, resources, bound, _unbound = _bind(WASHER)
+    desc = _desc(bound, "progress", SensorDesc)
+    assert flatten(bound, resources)["progress"] in desc.options

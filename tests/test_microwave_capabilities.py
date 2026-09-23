@@ -140,6 +140,54 @@ def test_microwave_setpoint_rejects_missing_items():
     assert desc.write_fn(180, {}) is None
 
 
+def _nq7000b_resources(mode=None):
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_nq7000b")
+    if mode is not None:
+        resources["/mode/vs/0"] = {**resources["/mode/vs/0"], "x.com.samsung.da.modes": [mode]}
+    return resources
+
+
+def test_microwave_setpoint_bounds_follow_active_mode_spec():
+    """Issue #496: the NQ7000B's modeSpec goes to 230°C in its oven modes,
+    past the 200°C the fixed bounds allowed."""
+    desc = _microwave_setpoint_desc()
+    assert desc.bounds_fn is not None
+    assert desc.bounds_fn({}, _nq7000b_resources("Convection")) == (40.0, 230.0, 5.0)
+    assert desc.bounds_fn({}, _nq7000b_resources("KeepWarm")) == (60.0, 100.0, 5.0)
+    assert desc.bounds_fn({}, _nq7000b_resources("MicroWaveGrill")) == (40.0, 200.0, 5.0)
+
+
+def test_microwave_setpoint_bounds_widen_across_modes_without_active_range():
+    desc = _microwave_setpoint_desc()
+    assert desc.bounds_fn is not None
+    # Idle ('NoOperation') and plain MicroWave report no temperature range.
+    assert desc.bounds_fn({}, _nq7000b_resources()) == (40.0, 230.0, 5.0)
+    assert desc.bounds_fn({}, _nq7000b_resources("MicroWave")) == (40.0, 230.0, 5.0)
+
+
+def test_microwave_setpoint_bounds_fall_back_without_mode_spec():
+    desc = _microwave_setpoint_desc()
+    assert desc.bounds_fn is not None
+    assert desc.bounds_fn({}, {}) == (40.0, 200.0, 5.0)
+    garbled = {"/mode/vs/0": {"x.com.samsung.da.modeSpec": "not json"}}
+    assert desc.bounds_fn({}, garbled) == (40.0, 200.0, 5.0)
+
+
+def test_microwave_setpoint_write_validates_against_mode_spec():
+    desc = _microwave_setpoint_desc()
+    rep = {"x.com.samsung.da.items": [{"x.com.samsung.da.desired": "0"}]}
+    assert desc.write_fn is not None
+    convection = _nq7000b_resources("Convection")
+    result = desc.write_fn(230, rep, "/temperatures/vs/0", convection)
+    assert result is not None
+    assert result[1]["x.com.samsung.da.items"][0]["x.com.samsung.da.desired"] == "230"
+    assert desc.write_fn(235, rep, "/temperatures/vs/0", convection) is None
+    keep_warm = _nq7000b_resources("KeepWarm")
+    assert desc.write_fn(150, rep, "/temperatures/vs/0", keep_warm) is None
+
+
 def test_microwave_setpoint_exists_only_for_celsius():
     """No Fahrenheit dump exists for this family (unlike oven.py's, verified
     against issue #44) -- the writable setpoint stays hidden rather than
@@ -321,6 +369,66 @@ def test_lamp_reads_any_non_off_level_as_true():
     just a literal 'On'."""
     desc = next(e for e in microwave.MICROWAVE_MODE.entities if e.key == "lamp")
     assert desc.value_fn(["Lamp_High"]) is True
+
+
+def test_upper_lamp_gated_present_and_reads_state():
+    """Oven-class combis (NQ7000B, issue #496) spell the token 'UpperLamp'."""
+    desc = next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if e.key == "lamp" and isinstance(e, SwitchDesc)
+    )
+    rep = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
+    assert desc.exists_fn is not None
+    assert desc.exists_fn(rep, {}) is True
+    assert desc.value_fn(["UpperLamp_Off"]) is False
+    assert desc.value_fn(["UpperLamp_On"]) is True
+
+
+def test_upper_lamp_write_uses_oven_on_off_values():
+    desc = next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if e.key == "lamp" and isinstance(e, SwitchDesc)
+    )
+    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
+    assert desc.write_fn is not None
+    assert desc.write_fn("On", rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_On"]},
+    )
+    assert desc.write_fn("Off", rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
+    )
+
+
+def test_nq7000b_fixture_resolves_as_microwave_with_lamp_and_clock_sync():
+    """Issue #496: NQ7000B declares oic.d.oven but has the microwave
+    surface; it binds fully, with the UpperLamp switch and clock sync."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_nq7000b")
+    reg = resolve(resources, device_types=("oic.wk.d", "oic.d.oven"))
+
+    assert reg is not None
+    assert reg.name == "microwave"
+    unbound = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+    keys = {entity.desc.key for entity in bound}
+    assert {"cooking_mode", "power_level", "lamp", "sync_clock"} <= keys
+    assert "oven_mode" not in keys
+
+
+def test_microwave_without_configuration_has_no_clock_sync():
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    assert all(entity.desc.key != "sync_clock" for entity in bound)
 
 
 # ---------------------------------------------------------------------------

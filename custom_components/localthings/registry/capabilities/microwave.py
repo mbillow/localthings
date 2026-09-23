@@ -11,8 +11,9 @@ different from an oven, and defined fresh here:
     KeepWarm never appear on an oven's /mode/vs/0, and some shared-sounding
     modes are spelled differently (e.g. 'AirFryer', not oven.py's
     'AirFry') -- a distinct SelectDesc and mode list, not oven.OVEN_MODE.
-  * Setpoint bounds: this family's Convection/MicroWaveConvection modeSpec
-    (issue #121) reports 40-200°C / step 5, not oven.py's 30-270°C range.
+  * Setpoint bounds: read per mode from /mode/vs/0's modeSpec -- 40-200°C
+    on issue #121's combi, up to 230°C on the NQ7000B (issue #496) -- not
+    oven.py's fixed 30-270°C range.
   * Cavity: /oven/vs/0 here also carries a `powerLevel` field (100W-900W)
     that plain ovens don't report -- exposed as its own sensor.
   * Lamp: this family's option-array token is bare 'Lamp' (issue #137), not
@@ -20,7 +21,9 @@ different from an oven, and defined fresh here:
     #121), so it's exists_fn-gated rather than assumed universal. 'On' has
     never been observed as a value; the only confirmed non-Off token is
     'High' (issue #152) -- the switch treats any non-Off/non-None value as
-    "on" for reads and writes back 'High'/'Off'.
+    "on" for reads and writes back 'High'/'Off'. Oven-class combis (NQ7000B,
+    issue #496) spell it 'UpperLamp' instead, with oven.py's proven 'On'/'Off'
+    values.
   * Filter reminder / end signal reminder: bare 'FilterRemind'/'RemindBeep'
     option-array tokens (issue #181), gated with exists_fn like Lamp since
     the MW7300B combi dump has neither.
@@ -49,6 +52,8 @@ path, not permission. Same call as common.py's KIDS_LOCK_VS_FALLBACK
 always error.
 """
 
+import json
+
 from ..capability import Capability
 from ..entities import BinarySensorDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import int_or_none, normalize_temp_unit, parse_iso_utc
@@ -76,10 +81,11 @@ _MICROWAVE_MODES = (
     "KeepWarm",
 )
 
-# Convection/MicroWaveConvection modeSpec on issue #121's dump: 40-200°C,
-# step 5. No Fahrenheit dump exists for this family, unlike oven.py's own
-# independently-verified F bounds, so this module only exposes the
-# setpoint control when the live unit is Celsius (see _microwave_temp_unit).
+# Fallback bounds for a board with no modeSpec -- issue #121's
+# Convection/MicroWaveConvection range. No Fahrenheit dump exists for this
+# family, unlike oven.py's own independently-verified F bounds, so this
+# module only exposes the setpoint control when the live unit is Celsius
+# (see _microwave_temp_unit).
 SETPOINT_MIN_C = 40
 SETPOINT_MAX_C = 200
 SETPOINT_STEP_C = 5
@@ -93,15 +99,60 @@ def _microwave_temp_unit(rep):
     return normalize_temp_unit(unit, default="°C")
 
 
-def _setpoint_write(p, rep, href=None):
+def _mode_temp_ranges(resources):
+    """{mode: (min, max, step)} in °C for every modeSpec entry with a
+    temperature range; modes without one report 'NotSupported'."""
+    spec = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.modeSpec")
+    if isinstance(spec, str):
+        try:
+            spec = json.loads(spec)
+        except ValueError:
+            return {}
+    ranges = {}
+    for entry in spec if isinstance(spec, list) else ():
+        if not isinstance(entry, dict):
+            continue
+        lo = int_or_none(entry.get("tempMinC"))
+        hi = int_or_none(entry.get("tempMaxC"))
+        if lo is None or hi is None or lo > hi:
+            continue
+        step = int_or_none(entry.get("tempIntervalC")) or SETPOINT_STEP_C
+        ranges[entry.get("mode")] = (lo, hi, step)
+    return ranges
+
+
+def _setpoint_bounds(resources):
+    """The active mode's range, or the widest range across all modes when
+    the active one has none (idle, plain MicroWave)."""
+    ranges = _mode_temp_ranges(resources or {})
+    if not ranges:
+        return SETPOINT_MIN_C, SETPOINT_MAX_C, SETPOINT_STEP_C
+    modes = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.modes") or ()
+    active = ranges.get(modes[0]) if modes else None
+    if active is not None:
+        return active
+    return (
+        min(lo for lo, _, _ in ranges.values()),
+        max(hi for _, hi, _ in ranges.values()),
+        min(step for _, _, step in ranges.values()),
+    )
+
+
+def _setpoint_bounds_fn(rep, resources):
+    lo, hi, step = _setpoint_bounds(resources)
+    return float(lo), float(hi), float(step)
+
+
+def _setpoint_write(p, rep, href=None, resources=None):
     """RMW write to /temperatures/vs/0 items array -- unproven for this
     family, same "exposed for fidelity" caveat as the mode select."""
     try:
         temp = float(p)
     except (TypeError, ValueError):
         return None
-    temp_i = int(round(temp / SETPOINT_STEP_C) * SETPOINT_STEP_C)
-    if not (SETPOINT_MIN_C <= temp_i <= SETPOINT_MAX_C):
+    lo, hi, step = _setpoint_bounds(resources)
+    temp_i = int(round(temp / step) * step)
+    if not (lo <= temp_i <= hi):
         return None
     items = rep.get("x.com.samsung.da.items")
     if not items:
@@ -149,8 +200,24 @@ def _sound_write(p, rep, href=None):
     }
 
 
+# Token -> the value written for "on" (see module docstring).
+_LAMP_ON_VALUE = {"Lamp": "High", "UpperLamp": "On"}
+
+
+def _lamp_token(opts):
+    for token in _LAMP_ON_VALUE:
+        if option_value(opts, token) is not None:
+            return token
+    return None
+
+
 def _lamp_exists(rep, resources):
-    return option_value(rep.get("x.com.samsung.da.options"), "Lamp") is not None
+    return _lamp_token(rep.get("x.com.samsung.da.options")) is not None
+
+
+def _lamp_is_on(opts):
+    token = _lamp_token(opts)
+    return token is not None and option_value(opts, token) != "Off"
 
 
 def _filter_remind_exists(rep, resources):
@@ -164,13 +231,12 @@ def _remind_beep_exists(rep, resources):
 def _lamp_write(p, rep, href=None):
     if p not in ("On", "Off"):
         return None
-    if not rep.get("x.com.samsung.da.options"):
+    token = _lamp_token(rep.get("x.com.samsung.da.options"))
+    if token is None:
         return None
-    # 'High'/'Off' are the two confirmed tokens (see module docstring);
-    # 'On' has never been observed and likely isn't recognized.
-    token = "High" if p == "On" else "Off"
+    value = _LAMP_ON_VALUE[token] if p == "On" else "Off"
     return ["mode", "vs", "0"], {
-        "x.com.samsung.da.options": option_write("Lamp", token),
+        "x.com.samsung.da.options": option_write(token, value),
     }
 
 
@@ -221,9 +287,7 @@ MICROWAVE_SETPOINT = Capability(
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_microwave_temp_unit,
-            native_min=float(SETPOINT_MIN_C),
-            native_max=float(SETPOINT_MAX_C),
-            step=float(SETPOINT_STEP_C),
+            bounds_fn=_setpoint_bounds_fn,
             icon="mdi:thermometer-chevron-up",
             exists_fn=lambda rep, resources: _microwave_temp_unit(rep) == "°C",
             value_fn=lambda items: int_or_none(
@@ -270,7 +334,7 @@ MICROWAVE_MODE = Capability(
             field="x.com.samsung.da.options",
             icon="mdi:track-light",
             exists_fn=_lamp_exists,
-            value_fn=lambda opts: option_value(opts, "Lamp") not in (None, "Off"),
+            value_fn=_lamp_is_on,
             write_fn=_lamp_write,
         ),
         # issue #181: Filter Reminder / End Signal Reminder toggles, only on

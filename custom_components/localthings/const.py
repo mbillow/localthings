@@ -34,9 +34,6 @@ CONF_DEVICE_TOKEN = "device_token"
 # from an unmapped family says which one it was.
 CONF_LEGACY_FAMILY = "legacy_family"
 
-# The only port these appliances open. Nothing to sweep, unlike the DTLS
-# range -- one TCP connect settles whether a host is one of them.
-LEGACY_HTTP_PORT = 8888
 CONF_CA_CERT_PEM = "ca_cert_pem"
 CONF_CA_KEY_PEM = "ca_key_pem"
 CONF_LEAF_CERT_PEM = "leaf_cert_pem"
@@ -153,21 +150,51 @@ LIVENESS_PROBE_TIMEOUT_S = 1.5
 CLIENTHELLO_PROBE_TIMEOUT_S = 3.0
 CLIENTHELLO_PROBE_RETRIES = 2
 
-# The whole port range is probed at once: each stateless probe is bounded
-# by CLIENTHELLO_PROBE_TIMEOUT_S (unlike a full handshake's 12s), so the
-# sweep costs one probe's wall clock, not the sum of the range. Capped so a
-# widened PROBE_PORT_RANGE can't spawn an unbounded thread pool.
-PROBE_MAX_WORKERS = 12
-
 # Deadline for the blockwise /device/0 GET during the config-flow probe.
 # The slowest device observed returns a full dump in ~8s.
 PROBE_GET_TIMEOUT_S = 10.0
 
+# Plaintext CoAP ports to ask, in order, for the device's own secure-port
+# advertisement. 5683 is IoTivity classic's multicast plaintext socket, bound
+# to INADDR_ANY, so a unicast datagram lands on it on every board in this
+# family (issue #482). The device's unicast socket is kernel-assigned and
+# moves, so the advertisement is the only thing that names it -- and the only
+# thing that reaches a port outside PROBE_PORT_RANGE. 49153 is asked only
+# when 5683 advertised nothing, as one extra datagram for a board that does
+# not answer the standard port -- asking both at once corrupts the device's
+# per-peer transfer state (see _discover_advertised_ports).
+PLAINTEXT_DISCOVERY_PORTS = [5683, 49153]
+
+# Budget for the advertisement lookup, and for the two identity reads behind
+# it. Retries are load-bearing and the budget barely is: at retries=1 a lost
+# datagram cost one run in five on the dishwasher, while retries=2 answered
+# 5/5 at every budget from 1.5s to 3.0s. A hit lands in ~0.1-0.6s; the budget
+# only bounds how long a silent host takes to give up.
+PLAINTEXT_DISCOVERY_TIMEOUT_S = 2.5
+PLAINTEXT_READ_TIMEOUT_S = 1.5
+PLAINTEXT_DISCOVERY_RETRIES = 2
+
+# IoTivity classic's multicast secure socket, bound to INADDR_ANY, so a
+# ClientHello to it draws a first flight on any board in this family (issue
+# #482). It does serve a full session -- measured byte-identical to the
+# unicast port on two boards, 2026-09-21 -- but the advertised unicast port
+# is still the device's own answer about itself and stays canonical; 5684
+# is dialled last as a fallback rescue for a board whose unicast port falls
+# outside PROBE_PORT_RANGE.
+MULTICAST_SECURE_PORT = 5684
+
+# The legacy HTTPS bridge (issue #168). A board that serves it has no CoAP
+# server at all, so one TCP connect discriminates the two lineages.
+LEGACY_HTTP_PORT = 8888
+LEGACY_HTTP_PROBE_TIMEOUT_S = 2.0
+
 # Base for the local (client-side) DTLS source port, distinct from the
 # destination probe ports above -- see coordinator._local_source_port for
-# why a fixed per-device source port matters. Mirrors the upstream
-# smartthings-local reference bridge. Requires smartthings-local >= 0.1.1.
-DTLS_LOCAL_PORT_BASE = 49700
+# why a fixed per-device source port matters. Above Linux's default
+# ip_local_port_range (32768-60999): the previous 49700 sat inside it, so
+# an unrelated process could hold the port and the bind failed EADDRINUSE
+# on a host-networked install (issue #486). Requires smartthings-local >= 0.1.1.
+DTLS_LOCAL_PORT_BASE = 61000
 
 SUMMARY_INTERVAL_S = 30.0
 

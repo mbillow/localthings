@@ -23,7 +23,11 @@ write_resource:
       description: >-
         1-10 writes to perform in order. Each item needs href (the
         canonical resource, e.g. /mode/vs/0) and payload (a non-empty
-        object sent verbatim as a partial-rep POST); settle is how many
+        object sent verbatim as a partial-rep POST, or a list of
+        {href, rep} elements sent verbatim as an OCF Collection batch --
+        the shape /device/0 answers on a read, and the one measured to
+        start an oven cook; an element may omit rep, and a batch's inner
+        hrefs are never rewritten, not even for a subdevice); settle is how many
         seconds to wait after that write before starting the next one
         (0-30, default 0); readback (default true) is whether to read the
         resource straight back for the "after"/"changed" fields. Set it

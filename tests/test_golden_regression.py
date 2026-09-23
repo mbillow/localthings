@@ -968,6 +968,25 @@ def test_registry_reproduces_golden_state_keys_for_microwave_me80h2160raa():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_microwave_nq7000b():
+    """TP1X_DA-KS-OVEN-01061 compact oven with microwave (NQ7000B-/EU4,
+    issue #496). Declares oic.d.oven, but routes to the microwave registry
+    on its MicroWave-mode + /oven/vs/0 surface like the Qooker; its lamp is
+    the oven-style 'UpperLamp' token."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_nq7000b")
+    golden = json.loads((GOLDEN / "microwave_nq7000b.json").read_text())
+    state_keys = _new_state_keys(
+        "microwave_nq7000b", resources, device_types=("oic.wk.d", "oic.d.oven")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_air_purifier_tp1x_da_ac_air():
     """TP1X_DA-AC-AIR-01031_0000 (issue #130) self-reports oneUiVersion
     '7.0 Air purifier' (unused for routing) and resolves via its 'AIR'
@@ -1364,6 +1383,24 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_artik051_krac_
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_refrigerator_ailite_ref_25k():
+    """RS80F66KCFEF French-door fridge on the AILITE_REF_25K board (issue
+    #495). Its /settings/sound/{mode,output,volume}/vs/0 were unbound --
+    now the water purifier's sound capabilities -- and /status/lock/vs/0
+    carries Auto Door Open's ado.mode against its own ado.supportedModes.
+    Binds cleanly with zero unbound hrefs."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("refrigerator_ailite_ref_25k")
+    golden = json.loads((GOLDEN / "refrigerator_ailite_ref_25k.json").read_text())
+    state_keys = _new_state_keys("refrigerator_ailite_ref_25k", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_refrigerator_definite_cooler():
     """RT42DG6630B1FZ (issue #186) -- a single-door "cooler only" fridge whose
     /temperature/definite/cooler/vs/0 doesn't match either
@@ -1739,6 +1776,22 @@ def test_registry_reproduces_golden_state_keys_for_air_purifier_avt_ww_touchotn(
         resources,
         device_types=("oic.wk.d", "oic.d.airpurifier"),
     )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_oven_nv75n_dual_cook():
+    """The issue #490 Dual Cook Flex wall oven: two cavities over one
+    connection, and the first board in the corpus advertising the
+    OCF-standard temperature pair alongside the vendor array. The golden
+    carries exactly one temperature/setpoint key per cavity -- if the OCF
+    fallback ever stops standing down, duplicates show up here first."""
+    name = "oven_nv75n_dual_cook"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.oven"))
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

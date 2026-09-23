@@ -95,7 +95,9 @@ class Transport(Protocol):
 
     def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]: ...
 
-    def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> tuple[int, Any]: ...
+    def write(
+        self, path_segs: Sequence[str], body: dict | list, timeout: float
+    ) -> tuple[int, Any]: ...
 
     def write_many(
         self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float
@@ -175,7 +177,7 @@ class DtlsTransport:
         except Exception as err:
             raise DecodeError(str(err)) from err
 
-    def write(self, path_segs: Sequence[str], body: dict, timeout: float) -> tuple[int, Any]:
+    def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         code, payload = self._live().post(list(path_segs), cbor2.dumps(body), timeout=timeout)
         if not payload:
             return code, None

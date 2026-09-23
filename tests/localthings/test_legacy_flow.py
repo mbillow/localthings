@@ -20,6 +20,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
+from custom_components.localthings import probing
 from custom_components.localthings.const import (
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
@@ -56,8 +57,10 @@ def legacy_bridge():
     """An appliance that answers on 8888 and issues a token when asked."""
     with (
         patch(
-            "custom_components.localthings.config_flow._legacy_http_open",
-            return_value=True,
+            "custom_components.localthings.probing.look",
+            return_value=probing.HostProbe(
+                host=MOCK_HOST, candidates=[], confirmed=[], legacy_http=True
+            ),
         ),
         patch(
             "custom_components.localthings.config_flow._mint_self_signed_credentials",
@@ -84,9 +87,9 @@ async def _start(hass: HomeAssistant):
 async def test_a_bridge_on_8888_routes_to_the_token_step(
     hass: HomeAssistant, legacy_bridge
 ) -> None:
-    """And gets there without the DTLS probe running at all: the two
-    families are mutually exclusive, and that probe is the expensive one."""
-    with patch("custom_components.localthings.config_flow._probe_and_validate") as dtls:
+    """And gets there without a DTLS handshake: probing.look already found
+    no CoAP server, so there is nothing to handshake with."""
+    with patch("custom_components.localthings.config_flow._handshake_and_read") as dtls:
         result = await _start(hass)
 
     assert result["type"] == FlowResultType.FORM

@@ -871,3 +871,193 @@ async def test_options_flow_debug_write_goes_through_write_resource_service(
     posted_path, posted_body = fake.post_calls[0]
     assert posted_path == ["course", "vs", "0"]
     assert posted_body == {"x.com.samsung.da.field": "value"}
+
+
+# ----------------------------------------------------------------------
+# write_resource: OCF Collection batch payloads (issue #473)
+# ----------------------------------------------------------------------
+
+# The cook start measured on an NV7000BS wall oven -- see
+# docs/investigations/oven-cycle-start.md. Kept whole rather than reduced
+# to a minimal example: the point of the batch path is that this exact
+# payload can be reproduced on other hardware, and a test that writes a
+# simplified stand-in would not catch a regression that mangles the
+# marker element or reorders the rest.
+_MEASURED_COOK_START = [
+    {"href": "/devices/0"},
+    {"href": "/mode/vs/0", "rep": {"x.com.samsung.da.modes": ["Defrost"]}},
+    {
+        "href": "/temperatures/vs/0",
+        "rep": {
+            "x.com.samsung.da.items": [
+                {
+                    "x.com.samsung.da.desired": "30",
+                    "x.com.samsung.da.id": "0",
+                    "x.com.samsung.da.unit": "Celsius",
+                }
+            ]
+        },
+    },
+    {
+        "href": "/operational/state/vs/0",
+        "rep": {
+            "x.com.samsung.da.operationTime": "00:01:00",
+            "x.com.samsung.da.state": "Run",
+        },
+    },
+]
+
+
+async def test_write_resource_posts_a_collection_batch_byte_for_byte(hass, coordinator, device_id):
+    """The payload is the experiment, so it goes on the wire exactly as
+    given -- element order, the rep-less `/devices/0` marker and all."""
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    await _call_write(
+        hass,
+        device_id,
+        writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START, "readback": False}],
+    )
+
+    posted_path, posted_body = fake.post_calls[0]
+    assert posted_path == ["device", "0"]
+    assert posted_body == _MEASURED_COOK_START
+
+
+async def test_write_resource_never_rewrites_a_batchs_inner_hrefs_for_a_subdevice(
+    hass, coordinator
+):
+    """A subdevice rewrites the write's own href and nothing else.
+
+    Translating the inner ones would be indistinguishable from the caller
+    having typed them that way, which destroys the permutation being
+    tested: whether a composite board wants its cavity's index inside the
+    batch, or the canonical spelling, is the open question.
+    """
+    sub = Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
+    coordinator.subdevices = [sub]
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_or_create(
+        config_entry_id=coordinator._entry.entry_id,
+        identifiers=coordinator.device_info_for(sub)["identifiers"],
+    )
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    response = await _call_write(
+        hass,
+        device.id,
+        writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START, "readback": False}],
+    )
+
+    posted_path, posted_body = fake.post_calls[0]
+    assert posted_path == ["device", "1"]
+    assert posted_body == _MEASURED_COOK_START
+    assert response["results"][0]["actual_href"] == "/device/1"
+
+
+async def test_write_resource_batch_readback_reports_the_named_resources(
+    hass, coordinator, device_id
+):
+    """A Collection answers a batch, not a Property map, so `after` is that
+    batch parsed to {href: rep} -- the state of what the write named."""
+    fake = _FakeSession()
+    fake.queue_get(
+        "device/0",
+        [
+            {"x.com.samsung.devcol": "collection"},
+            {"href": "/mode/vs/0", "rep": {"x.com.samsung.da.modes": ["Defrost"]}},
+            {
+                "href": "/operational/state/vs/0",
+                "rep": {
+                    "x.com.samsung.da.operationTime": "00:01:00",
+                    "x.com.samsung.da.state": "Run",
+                },
+            },
+        ],
+    )
+    coordinator._session = fake
+
+    response = await _call_write(
+        hass,
+        device_id,
+        writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START}],
+    )
+
+    result = response["results"][0]
+    assert result["after"]["/mode/vs/0"] == {"x.com.samsung.da.modes": ["Defrost"]}
+    # The temperatures element is missing from the readback, so not
+    # everything the batch wrote is present.
+    assert result["changed"] is False
+
+
+async def test_write_resource_batch_changed_true_when_every_element_reads_back(
+    hass, coordinator, device_id
+):
+    fake = _FakeSession()
+    fake.queue_get(
+        "device/0", [{"href": e["href"], "rep": e["rep"]} for e in _MEASURED_COOK_START[1:]]
+    )
+    coordinator._session = fake
+
+    response = await _call_write(
+        hass,
+        device_id,
+        writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START}],
+    )
+
+    assert response["results"][0]["changed"] is True
+
+
+async def test_write_resource_batch_verify_after_reports_held_per_element(
+    hass, coordinator, device_id
+):
+    """The result this path exists for: a batch whose mode stuck and whose
+    run command was discarded is a different finding from a flat refusal,
+    and only a per-element answer tells them apart."""
+    fake = _FakeSession()
+    fake.queue_get(
+        "device/0",
+        [
+            {"href": "/mode/vs/0", "rep": {"x.com.samsung.da.modes": ["Defrost"]}},
+            {
+                "href": "/operational/state/vs/0",
+                "rep": {
+                    "x.com.samsung.da.operationTime": "00:00:00",
+                    "x.com.samsung.da.state": "Ready",
+                },
+            },
+            {
+                "href": "/temperatures/vs/0",
+                "rep": {
+                    "x.com.samsung.da.items": [
+                        {
+                            "x.com.samsung.da.desired": "30",
+                            "x.com.samsung.da.id": "0",
+                            "x.com.samsung.da.unit": "Celsius",
+                        }
+                    ]
+                },
+            },
+        ],
+    )
+    coordinator._session = fake
+
+    with patch(_SLEEP_TARGET, new_callable=AsyncMock):
+        response = await _call_write(
+            hass,
+            device_id,
+            writes=[{"href": "/device/0", "payload": _MEASURED_COOK_START, "readback": False}],
+            verify_after=20,
+        )
+
+    verified = response["verified"]["/device/0"]
+    assert verified["held"] is False
+    assert verified["elements"] == {
+        "/mode/vs/0": True,
+        "/temperatures/vs/0": True,
+        "/operational/state/vs/0": False,
+    }
+    # The rep-less marker is not a write, so nothing claims anything about it.
+    assert "/devices/0" not in verified["elements"]
