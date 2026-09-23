@@ -142,6 +142,9 @@ class NumberDesc(SamsungEntityDescription):
     native_min_fn: Callable[[dict], float] | None = None
     native_max_fn: Callable[[dict], float] | None = None
     step_fn: Callable[[dict], float] | None = None
+    # (rep, resources) -> (min, max, step), or None to fall through to the
+    # per-rep overrides above -- for bounds that live on a sibling href.
+    bounds_fn: Callable[[dict, dict], tuple[float, float, float] | None] | None = None
     range_field: str | None = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
 

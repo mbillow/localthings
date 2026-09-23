@@ -835,10 +835,11 @@ class TestResolve:
     def test_prefers_resource_signatures_over_model_strings(self, all_device_fixtures):
         """A strong live-resource signature wins over model metadata.
 
-        Across the fixture corpus Qooker is the only intentional disagreement:
-        its OVEN model token says oven while its /oven + MicroWave surface says
-        microwave. Locking the disagreement set keeps resource-first routing
-        from silently becoming greedy as new signatures or fixtures land.
+        Across the fixture corpus the only intentional disagreements are
+        oven-badged microwaves (Qooker, NQ7000B): an OVEN model token says oven
+        while the /oven + MicroWave surface says microwave. Locking the
+        disagreement set keeps resource-first routing from silently becoming
+        greedy as new signatures or fixtures land.
         """
         from custom_components.localthings.registry.by_type import (
             for_device_by_model,
@@ -861,6 +862,7 @@ class TestResolve:
                 disagreements[name] = (by_resources.name, by_model.name)
 
         assert disagreements == {
+            "microwave_nq7000b": ("microwave", "oven"),  # issue #496
             "qooker_mw7500a": ("microwave", "oven"),
         }
 
