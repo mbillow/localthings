@@ -21,13 +21,19 @@ from custom_components.localthings.legacy_http import (
     IDENTITY,
     PREFIX,
     TP6X_WASHER,
+    StagedKey,
+    add_staged,
     course_table,
     http_status_to_coap,
     is_mapped,
+    is_start,
+    split_start_only,
+    staged_current,
     table_for,
     to_resources,
     to_write,
     unwrap,
+    with_staged,
 )
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
@@ -341,3 +347,61 @@ class TestFamilies:
         assert table_for(None) == IDENTITY
         assert not is_mapped("TP6X_DRYER")
         assert not is_mapped(None)
+
+
+class TestStaging:
+    """The pure half of holding start-only values for the Start button; the
+    transport tests cover when it happens."""
+
+    def test_a_cycle_token_is_split_off_and_other_tokens_stay(self):
+        body = to_write(
+            [("/course/vs/0", {PREFIX + "options": ["Course_63", "LaundryOutTime_60"]})],
+            TP6X_WASHER,
+        )
+
+        sendable, staged = split_start_only(body, TP6X_WASHER)
+
+        assert sendable == {"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}
+        assert staged == {("Mode", "options", "Course"): "Course_63"}
+
+    def test_a_setting_is_split_off_whole(self):
+        body = to_write([("/washer/vs/0", {PREFIX + "spinLevel": "800"})], TP6X_WASHER)
+
+        sendable, staged = split_start_only(body, TP6X_WASHER)
+
+        assert sendable == {"Device": {}}
+        assert staged == {("Washer", "spinLevel", None): "800"}
+
+    def test_held_values_replace_what_the_appliance_reports(self):
+        bodies = {
+            "Mode": {"options": ["Course_5B", "QuickWash_Off"]},
+            "Washer": {"spinLevel": "1400"},
+        }
+        staged: dict[StagedKey, str] = {
+            ("Mode", "options", "Course"): "Course_63",
+            ("Washer", "spinLevel", None): "800",
+        }
+
+        out = with_staged(bodies, staged)
+
+        assert out["Mode"]["options"] == ["QuickWash_Off", "Course_63"]
+        assert out["Washer"]["spinLevel"] == "800"
+        assert bodies["Mode"]["options"] == ["Course_5B", "QuickWash_Off"]
+
+    def test_what_the_appliance_reports_for_a_key(self):
+        bodies = {"Mode": {"options": ["Course_5B"]}, "Washer": {"spinLevel": "1400"}}
+
+        assert staged_current(bodies, ("Mode", "options", "Course")) == "Course_5B"
+        assert staged_current(bodies, ("Washer", "spinLevel", None)) == "1400"
+        assert staged_current(bodies, ("Diagnosis", "x", None)) is None
+
+    def test_a_start_body_carries_the_held_values(self):
+        start = {"Device": {"Operation": {"state": "Run"}}}
+
+        body = add_staged(start, {("Mode", "options", "Course"): "Course_63"})
+
+        assert body == {
+            "Device": {"Operation": {"state": "Run"}, "Mode": {"options": ["Course_63"]}}
+        }
+        assert is_start(body)
+        assert not is_start({"Device": {"Operation": {"state": "Pause"}}})

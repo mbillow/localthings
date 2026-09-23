@@ -176,42 +176,6 @@ class TestWrite:
         assert cbor2.loads(fake_of(transport).posts[0][1]) == body
 
 
-class TestWriteMany:
-    def test_steps_go_out_in_order(self, transport):
-        """CoAP has no atomic multi-resource write, and no board here needs
-        one -- so this transport spends a request per step."""
-        code, _ = transport.write_many(
-            [
-                (["course", "vs", "0"], {"x.com.samsung.da.options": ["Course_63"]}),
-                (["operational", "state", "vs", "0"], {"x.com.samsung.da.state": "Run"}),
-            ],
-            timeout=1.0,
-        )
-
-        assert code == 0x44
-        posts = fake_of(transport).posts
-        assert [segs for segs, _ in posts] == [
-            ["course", "vs", "0"],
-            ["operational", "state", "vs", "0"],
-        ]
-
-    def test_a_refused_step_stops_the_rest(self, transport):
-        """A later step of an action whose earlier step the device rejected
-        has nothing to act on."""
-        fake_of(transport).post_code = 0x85
-
-        code, _ = transport.write_many(
-            [
-                (["course", "vs", "0"], {"x.com.samsung.da.options": ["Course_63"]}),
-                (["operational", "state", "vs", "0"], {"x.com.samsung.da.state": "Run"}),
-            ],
-            timeout=1.0,
-        )
-
-        assert code == 0x85
-        assert len(fake_of(transport).posts) == 1
-
-
 class TestObserve:
     def test_this_transport_supports_push(self, transport):
         assert DtlsTransport.supports_observe is True

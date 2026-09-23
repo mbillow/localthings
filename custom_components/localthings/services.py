@@ -22,12 +22,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from .const import (
-    DOMAIN,
-    SERVICE_READ_RESOURCE,
-    SERVICE_START_CYCLE,
-    SERVICE_WRITE_RESOURCE,
-)
+from .const import DOMAIN, SERVICE_READ_RESOURCE, SERVICE_WRITE_RESOURCE
 from .coordinator import LocalThingsCoordinator, normalize_href
 from .registry.encode import json_safe
 from .registry.subdevices import MAIN, Subdevice
@@ -38,14 +33,6 @@ ATTR_SETTLE = "settle"
 ATTR_READBACK = "readback"
 ATTR_WRITES = "writes"
 ATTR_VERIFY_AFTER = "verify_after"
-ATTR_CYCLE = "cycle"
-# The three settings this firmware also takes only alongside a start,
-# mapped to the canonical field each belongs to.
-_SETTING_FIELDS = {
-    "water_temperature": "x.com.samsung.da.waterTemperature",
-    "rinse_cycles": "x.com.samsung.da.rinseCycles",
-    "spin_level": "x.com.samsung.da.spinLevel",
-}
 ATTR_HOLD_SESSION_LOCK = "hold_session_lock"
 ATTR_DEVICE_ID = "device_id"
 
@@ -76,14 +63,6 @@ _WRITE_RESOURCE_SCHEMA = vol.Schema(
         vol.Required(ATTR_WRITES): vol.All(cv.ensure_list, [_WRITE_ITEM_SCHEMA]),
         vol.Optional(ATTR_VERIFY_AFTER): vol.Coerce(float),
         vol.Optional(ATTR_HOLD_SESSION_LOCK): cv.boolean,
-    }
-)
-
-_START_CYCLE_SCHEMA = vol.Schema(
-    {
-        **cv.TARGET_SERVICE_FIELDS,
-        vol.Required(ATTR_CYCLE): str,
-        **{vol.Optional(name): str for name in _SETTING_FIELDS},
     }
 )
 
@@ -227,72 +206,6 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
     return cast(ServiceResponse, json_safe(read_result))
 
 
-async def _async_start_cycle(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    """Programme and start, as one write.
-
-    The cycle is always sent, never left to the dial: a service that
-    started whatever the panel happened to be set to would be a Start
-    button with extra steps, and the whole reason this exists is that the
-    two cannot be sent apart on this firmware.
-
-    Settings are sent only when given. The appliance applies a programme's
-    own defaults to anything absent, and a start body carrying settings has
-    been measured to load the programme and then *not* run it on at least
-    one board -- so the fewer fields, the closer this is to the shape known
-    to work.
-    """
-    coordinator, subdevice, _device_id = _resolve_target(hass, call)
-
-    cycle = call.data[ATTR_CYCLE].strip()
-    if not cycle:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN, translation_key="start_cycle_needs_a_cycle"
-        )
-
-    def _segs(canonical: str) -> list[str]:
-        """Canonical href -> the path segments this device actually serves.
-
-        Same two hops the write_resource service takes: normalize, then
-        translate through the subdevice, so a composite aimed at a
-        subdevice lands there rather than slipping onto the master.
-        """
-        return subdevice.to_actual(normalize_href(canonical)).strip("/").split("/")
-
-    steps: list[tuple[list[str], dict]] = [
-        (_segs("/course/vs/0"), {"x.com.samsung.da.options": [f"Course_{cycle.upper()}"]})
-    ]
-    settings = {
-        field: call.data[name] for name, field in _SETTING_FIELDS.items() if name in call.data
-    }
-    if settings:
-        steps.append((_segs("/washer/vs/0"), settings))
-    steps.append((_segs("/operational/state/vs/0"), {"x.com.samsung.da.state": "Run"}))
-
-    result = await coordinator.async_write_composite(steps, action=SERVICE_START_CYCLE)
-
-    # Measured on a TP6X_WW6500: the composite loads the programme -- the
-    # appliance switches to it and reports its duration -- and then does not
-    # run it, leaving `Ready`. A plain `Operation.state = Run` on its own
-    # afterwards does start it, which is the same write the Start button
-    # sends and is known to work from `Ready`.
-    #
-    # Sent only when the device itself says it isn't running, never blind:
-    # a second Run against an appliance that did start is a write nobody
-    # asked for. `async_write_composite` has already refreshed, so the
-    # cache below is post-write.
-    state_href = normalize_href("/operational/state/vs/0")
-    started = coordinator.entity_rep(subdevice.to_actual(state_href)).get("x.com.samsung.da.state")
-    if started is not None and started != "Run":
-        result = await coordinator.async_write_composite(
-            [(_segs("/operational/state/vs/0"), {"x.com.samsung.da.state": "Run"})],
-            action=f"{SERVICE_START_CYCLE} (follow-up run)",
-        )
-
-    return cast(
-        ServiceResponse, {"code": result.get("code"), "response": json_safe(result.get("body"))}
-    )
-
-
 def async_setup_services(hass: HomeAssistant) -> None:
     """Register the write_resource/read_resource services (issue #300).
 
@@ -309,9 +222,6 @@ def async_setup_services(hass: HomeAssistant) -> None:
     async def _handle_read(call: ServiceCall) -> ServiceResponse:
         return await _async_read_resource(hass, call)
 
-    async def _handle_start_cycle(call: ServiceCall) -> ServiceResponse:
-        return await _async_start_cycle(hass, call)
-
     hass.services.async_register(
         DOMAIN,
         SERVICE_WRITE_RESOURCE,
@@ -325,11 +235,4 @@ def async_setup_services(hass: HomeAssistant) -> None:
         _handle_read,
         schema=_READ_RESOURCE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_START_CYCLE,
-        _handle_start_cycle,
-        schema=_START_CYCLE_SCHEMA,
-        supports_response=SupportsResponse.OPTIONAL,
     )

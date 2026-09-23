@@ -57,7 +57,9 @@ class _FakeConnection:
     """Stand-in for http.client.HTTPSConnection, recording every request."""
 
     log: ClassVar[list[tuple[str, str, dict | None, dict]]] = []
-    routes: ClassVar[dict[str, tuple[int, dict | None]]] = {}
+    # Keyed by path, or by (method, path) where a GET and a PUT to the same
+    # path must answer differently.
+    routes: ClassVar[dict] = {}
 
     def __init__(self, host, port, context=None, timeout=None):
         self.host, self.port, self.timeout = host, port, timeout
@@ -67,7 +69,8 @@ class _FakeConnection:
     def request(self, method, path, body=None, headers=None):
         payload = json.loads(body) if body else None
         _FakeConnection.log.append((method, path, payload, dict(headers or {})))
-        self._status, self._body = _FakeConnection.routes.get(path, (404, None))
+        routes = _FakeConnection.routes
+        self._status, self._body = routes.get((method, path), routes.get(path, (404, None)))
 
     def getresponse(self):
         status, body = self._status, self._body
@@ -209,60 +212,6 @@ class TestWrites:
         assert (method, path) == ("PUT", "/devices/0")
         assert body == {"Device": {"Operation": {"state": "Pause"}}}
 
-    def test_a_composite_write_is_one_body_not_several_requests(self, transport):
-        """The whole reason `write_many` exists: this firmware takes a cycle
-        only alongside `Operation.state`, so steps sent one after another
-        would each be acknowledged and the cycle then discarded."""
-        _FakeConnection.routes["/devices/0"] = (204, None)
-        before = len(_FakeConnection.log)
-
-        code, _ = transport.write_many(
-            [
-                (["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}),
-                (["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}),
-            ],
-            timeout=8.0,
-        )
-
-        assert code == 0x44
-        assert len(_FakeConnection.log) - before == 1
-        method, path, body, _ = _FakeConnection.log[-1]
-        assert (method, path) == ("PUT", "/devices/0")
-        assert body == {
-            "Device": {"Mode": {"options": ["Course_63"]}, "Operation": {"state": "Run"}}
-        }
-
-    def test_a_setting_rides_along_in_that_same_body(self, transport):
-        """A settings field refused on its own is legal as part of a start,
-        which is what `write_many` is expressing."""
-        _FakeConnection.routes["/devices/0"] = (204, None)
-
-        transport.write_many(
-            [
-                (["course", "vs", "0"], {PREFIX + "options": ["Course_5B"]}),
-                (["washer", "vs", "0"], {PREFIX + "waterTemperature": "60"}),
-                (["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}),
-            ],
-            timeout=8.0,
-        )
-
-        assert _FakeConnection.log[-1][2] == {
-            "Device": {
-                "Mode": {"options": ["Course_5B"]},
-                "Washer": {"waterTemperature": "60"},
-                "Operation": {"state": "Run"},
-            }
-        }
-
-    def test_a_composite_with_nowhere_to_land_is_refused(self, transport):
-        code, _ = transport.write_many(
-            [(["energy", "consumption", "vs", "0"], {PREFIX + "cumulativePower": "1"})],
-            timeout=8.0,
-        )
-
-        assert code == 0x84
-        assert _FakeConnection.log == []
-
     def test_the_appliances_reason_for_refusing_comes_back(self, transport):
         """This firmware puts its own account of a rejected write in the
         body -- `Control fail, <...>` -- which is the only explanation the
@@ -281,17 +230,6 @@ class TestWrites:
         assert code == http_status_to_coap(400)
         assert response["errorDescription"] == "Control fail, <Mode.options=Course_63>"
 
-    def test_a_cycle_on_its_own_is_refused_rather_than_silently_dropped(self, transport):
-        """Measured on the hardware: this firmware answers 204 to a
-        `Course_` token sent without a start and then discards it -- which
-        in Home Assistant reads as a write that worked."""
-        code, _ = transport.write(
-            ["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, timeout=8.0
-        )
-
-        assert code == 0x85  # 4.05 Method Not Allowed
-        assert _FakeConnection.log == []
-
     def test_the_other_tokens_in_that_same_array_still_write(self, transport):
         """The rule is about the field, not the resource: LaundryOutTime
         goes to the same options array and holds."""
@@ -306,14 +244,6 @@ class TestWrites:
             "Device": {"Mode": {"options": ["LaundryOutTime_60"]}}
         }
 
-    def test_a_settings_write_on_its_own_is_refused_too(self, transport):
-        code, _ = transport.write(
-            ["washer", "vs", "0"], {PREFIX + "waterTemperature": "40"}, timeout=8.0
-        )
-
-        assert code == 0x85
-        assert _FakeConnection.log == []
-
     def test_a_write_with_nowhere_to_land_is_refused_rather_than_guessed(self, transport):
         code, _ = transport.write(
             ["energy", "consumption", "vs", "0"], {PREFIX + "cumulativePower": "1"}, timeout=8.0
@@ -321,6 +251,114 @@ class TestWrites:
 
         assert code == 0x84
         assert _FakeConnection.log == []
+
+
+class TestStartOnlyWrites:
+    """A cycle and the washer's settings are taken by this firmware only in
+    the same body as a start. Sent alone they are answered 204 and dropped,
+    so the transport holds them for the Start button instead."""
+
+    @pytest.fixture
+    def idle(self, transport, monkeypatch):
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", lambda s: None
+        )
+        _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
+        transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+        return transport
+
+    @staticmethod
+    def _puts():
+        return [body for method, _, body, _ in _FakeConnection.log if method == "PUT"]
+
+    def test_choosing_a_cycle_sends_nothing(self, idle):
+        code, _ = idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        assert code == 0x44
+        assert self._puts() == []
+
+    def test_the_held_cycle_is_what_the_select_reads(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        _, body = idle.read(["device", "0"], timeout=10.0)
+        course = next(e["rep"] for e in body if e["href"] == "/course/vs/0")
+
+        assert "Course_63" in course[PREFIX + "options"]
+        assert "Course_5B" not in course[PREFIX + "options"]
+
+    def test_a_held_setting_is_what_a_single_read_returns(self, idle):
+        idle.write(["washer", "vs", "0"], {PREFIX + "waterTemperature": "40"}, 8.0)
+
+        _, rep = idle.read(["washer", "vs", "0"], timeout=10.0)
+
+        assert rep[PREFIX + "waterTemperature"] == "40"
+
+    def test_turning_the_dial_drops_the_held_cycle(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        turned = json.loads(json.dumps(AGGREGATE))
+        turned["Device"]["Mode"]["options"] = ["Course_5C"]
+        _FakeConnection.routes["/devices/0"] = (200, turned)
+
+        _, body = idle.read(["device", "0"], timeout=10.0)
+        course = next(e["rep"] for e in body if e["href"] == "/course/vs/0")
+
+        assert course[PREFIX + "options"] == ["Course_5C"]
+
+    def test_start_carries_everything_held_in_one_body(self, idle):
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Run"}})
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        idle.write(["washer", "vs", "0"], {PREFIX + "spinLevel": "800"}, 8.0)
+
+        code, _ = idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert code == 0x44
+        assert self._puts() == [
+            {
+                "Device": {
+                    "Operation": {"state": "Run"},
+                    "Mode": {"options": ["Course_63"]},
+                    "Washer": {"spinLevel": "800"},
+                }
+            }
+        ]
+
+    def test_a_programme_loaded_but_not_running_gets_a_plain_run(self, idle):
+        """Measured: the composed body loads the programme and leaves the
+        appliance in Ready; a Run on its own then starts it."""
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Ready"}})
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert self._puts()[-1] == {"Device": {"Operation": {"state": "Run"}}}
+        assert len(self._puts()) == 2
+
+    def test_start_with_nothing_held_is_a_plain_run(self, idle):
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert self._puts() == [{"Device": {"Operation": {"state": "Run"}}}]
+
+    def test_a_started_programme_clears_what_was_held(self, idle):
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Run"}})
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+        _FakeConnection.log.clear()
+
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert self._puts() == [{"Device": {"Operation": {"state": "Run"}}}]
+
+    def test_a_running_appliance_drops_what_was_held(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        running = json.loads(json.dumps(AGGREGATE))
+        running["Device"]["Operation"]["state"] = "Run"
+        _FakeConnection.routes["/devices/0"] = (200, running)
+
+        _, body = idle.read(["device", "0"], timeout=10.0)
+        course = next(e["rep"] for e in body if e["href"] == "/course/vs/0")
+
+        assert course[PREFIX + "options"] == ["Course_5B"]
 
 
 class TestCapabilities:

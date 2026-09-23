@@ -1958,9 +1958,6 @@
     },
     "service_device_not_loaded": {
       "message": "Toto zařízení ještě není připojeno. Zkuste to znovu, až se načte."
-    },
-    "start_cycle_needs_a_cycle": {
-      "message": "Je nutné zadat program, který se má spustit."
     }
   }
 }

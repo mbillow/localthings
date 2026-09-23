@@ -234,9 +234,6 @@
     },
     "service_device_not_loaded": {
       "message": "Este dispositivo aún no está conectado. Vuelve a intentarlo cuando se haya cargado."
-    },
-    "start_cycle_needs_a_cycle": {
-      "message": "Se requiere un programa para iniciar."
     }
   },
   "entity": {

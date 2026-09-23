@@ -74,10 +74,9 @@ class Resource:
     # carries it as an ``items`` array of Property maps (see /alarms/vs/0
     # on any of this repository's fixtures).
     as_items: bool = False
-    # Fields this firmware accepts only in the same body as a start
-    # command, and answers 204 to -- then discards -- on their own. A write
-    # to one of them is refused rather than sent, so it fails loudly
-    # instead of appearing to work; see LegacyHttpTransport.write.
+    # Fields this firmware accepts only in the same body as a start and
+    # answers 204 to, then discards, on their own; the transport holds them
+    # for the next start (see split_start_only).
     start_only: frozenset[str] = frozenset()
 
 
@@ -322,34 +321,99 @@ def to_write(
     return {"Device": device}
 
 
-def start_only_fields(aggregate: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
-    """What in this wire body the firmware would take and then discard.
+# One value held for a start: (wrapper, wire field, option-token prefix). The
+# prefix is set for a token inside an `options` array (the cycle's
+# `Course_XX`) and None for a plain field (the washer's temperature).
+StagedKey = tuple[str, str, str | None]
 
-    Two shapes, because the firmware's rule is about fields rather than
-    resources: a plain field named in `start_only` (the washer's
-    temperature, rinses and spin), and a token in an `options` array whose
-    prefix is (the cycle). Measured on a TP6X_WW6500: each of those on its
-    own is answered `204` and has no effect, including in a body carrying a
-    second token that *did* apply -- so it is the field, not the request.
 
-    Returns the offending names, so a caller can say which.
+def split_start_only(
+    aggregate: Mapping[str, Any], table: tuple[Resource, ...]
+) -> tuple[dict[str, Any], dict[StagedKey, Any]]:
+    """Split a wire body into what can be sent now and what only a start
+    carries.
+
+    This family takes a cycle and the washer's settings only in the same
+    body as `Operation.state = Run`; sent alone they are answered `204` and
+    discarded (measured on a TP6X_WW6500, including in a body whose other
+    token did apply). Returns `(sendable body, {key: value})`.
     """
     by_wrapper = {resource.wrapper: resource for resource in table}
-    offenders: list[str] = []
+    device: dict[str, dict] = {}
+    staged: dict[StagedKey, Any] = {}
     for wrapper, fields in (aggregate.get("Device") or {}).items():
         resource = by_wrapper.get(wrapper)
-        if resource is None or not resource.start_only or not isinstance(fields, Mapping):
-            continue
+        start_only = resource.start_only if resource is not None else frozenset()
         for name, value in fields.items():
-            if name in resource.start_only:
-                offenders.append(name)
-            elif isinstance(value, list):
-                offenders.extend(
-                    token
-                    for token in value
-                    if isinstance(token, str) and token.split("_", 1)[0] in resource.start_only
-                )
-    return offenders
+            if name in start_only:
+                staged[(wrapper, name, None)] = value
+                continue
+            if isinstance(value, list):
+                kept = []
+                for token in value:
+                    prefix = token.split("_", 1)[0] if isinstance(token, str) else None
+                    if prefix in start_only:
+                        staged[(wrapper, name, prefix)] = token
+                    else:
+                        kept.append(token)
+                if not kept:
+                    continue
+                value = kept
+            device.setdefault(wrapper, {})[name] = value
+    return {"Device": device}, staged
+
+
+def staged_current(bodies: Mapping[str, Any], key: StagedKey) -> Any:
+    """What the appliance itself reports for a staged key, or None."""
+    wrapper, name, prefix = key
+    fields = bodies.get(wrapper)
+    if not isinstance(fields, Mapping):
+        return None
+    value = fields.get(name)
+    if prefix is None:
+        return value
+    if isinstance(value, list):
+        for token in value:
+            if isinstance(token, str) and token.split("_", 1)[0] == prefix:
+                return token
+    return None
+
+
+def with_staged(bodies: Mapping[str, Any], staged: Mapping[StagedKey, Any]) -> dict[str, Any]:
+    """`bodies` (wrapper-keyed, the appliance's own spelling) with every
+    staged value in place of the reported one."""
+    out = {k: (dict(v) if isinstance(v, Mapping) else v) for k, v in bodies.items()}
+    for (wrapper, name, prefix), value in staged.items():
+        fields = out.get(wrapper)
+        if not isinstance(fields, dict):
+            continue
+        if prefix is None:
+            fields[name] = value
+            continue
+        tokens = fields.get(name)
+        tokens = list(tokens) if isinstance(tokens, list) else []
+        rest = [t for t in tokens if not (isinstance(t, str) and t.split("_", 1)[0] == prefix)]
+        fields[name] = [*rest, value]
+    return out
+
+
+def add_staged(aggregate: Mapping[str, Any], staged: Mapping[StagedKey, Any]) -> dict[str, Any]:
+    """A start body carrying every staged value alongside what it already
+    had. Tokens go in as single-token writes, the merge this firmware
+    applies to an `options` array."""
+    device = {k: dict(v) for k, v in (aggregate.get("Device") or {}).items()}
+    for (wrapper, name, prefix), value in staged.items():
+        fields = device.setdefault(wrapper, {})
+        if prefix is None:
+            fields[name] = value
+        else:
+            fields[name] = [*fields.get(name, []), value]
+    return {"Device": device}
+
+
+def is_start(aggregate: Mapping[str, Any]) -> bool:
+    operation = (aggregate.get("Device") or {}).get("Operation") or {}
+    return operation.get("state") == "Run"
 
 
 # HTTP status -> CoAP response code, so everything above the transport

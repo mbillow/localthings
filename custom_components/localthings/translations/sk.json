@@ -1958,9 +1958,6 @@
     },
     "service_device_not_loaded": {
       "message": "Toto zariadenie ešte nie je pripojené. Skúste to znova, keď sa načíta."
-    },
-    "start_cycle_needs_a_cycle": {
-      "message": "Je potrebné zadať cyklus, ktorý sa má spustiť."
     }
   }
 }

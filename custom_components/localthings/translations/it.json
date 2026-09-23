@@ -1958,9 +1958,6 @@
     },
     "service_device_not_loaded": {
       "message": "Questo dispositivo non è ancora connesso. Riprova una volta caricato."
-    },
-    "start_cycle_needs_a_cycle": {
-      "message": "È necessario indicare un programma da avviare."
     }
   }
 }

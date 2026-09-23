@@ -21,9 +21,10 @@ assumed:
 * **There is no OBSERVE.** The bridge is request/response, so this
   transport declares `supports_observe = False` and the coordinator stays
   on its poll cadence.
-* **A cycle is accepted only together with `Operation.state`.** Writes are
-  therefore composed into one aggregate `PUT /devices/0` body -- see
-  `legacy_http.to_write` -- rather than one request per resource.
+* **A cycle and the washer's settings are accepted only with a start.**
+  Sent alone they are answered `204` and discarded. So choosing one holds
+  it here, reads show the held value, and the Start button's write carries
+  everything held in one `PUT /devices/0`.
 
 The appliance is also absent by design: it leaves the network minutes after
 going idle unless Remote Control is on, and answers `403 SHE-001` to every
@@ -37,19 +38,25 @@ import http.client
 import json
 import logging
 import ssl
+import time
 from collections.abc import Sequence
 from typing import Any
 
 from .legacy_http import (
     Resource,
+    StagedKey,
+    add_staged,
     course_table,
     http_status_to_coap,
     is_mapped,
-    start_only_fields,
+    is_start,
+    split_start_only,
+    staged_current,
     table_for,
     to_resources,
     to_write,
     unwrap,
+    with_staged,
 )
 from .legacy_http_tls import client_context
 
@@ -69,6 +76,12 @@ _LINKED_ENDPOINTS = ("configuration", "information")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
+
+# How long a start is given to take before its state is read back. The
+# composed start has been measured loading the programme without running it.
+_START_SETTLE_S = 3.0
+
+_RUN = {"Device": {"Operation": {"state": "Run"}}}
 
 
 class LegacyHttpTransport:
@@ -98,6 +111,9 @@ class LegacyHttpTransport:
         # The last sweep's bodies as the appliance sent them, before
         # translation -- what diagnostics needs to map a family that isn't.
         self._last_bodies: dict[str, Any] = {}
+        # Values held for the next start, each with what the appliance
+        # reported for it when it was chosen (None until first read).
+        self._staged: dict[StagedKey, tuple[Any, Any]] = {}
 
     @property
     def host(self) -> str:
@@ -141,7 +157,8 @@ class LegacyHttpTransport:
         status, body = self._request("GET", f"/devices/0/{resource.endpoint}", timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        return 0x45, to_resources(unwrap(body), self._table).get(href, {})
+        bodies = self._with_staged(unwrap(body))
+        return 0x45, to_resources(bodies, self._table).get(href, {})
 
     def _read_seed(self, timeout: float) -> tuple[int, Any]:
         """The whole device in the shape a /device/0 batch arrives in.
@@ -164,7 +181,7 @@ class LegacyHttpTransport:
             else:
                 _LOGGER.debug("%s: /devices/0/%s answered %s", self._host, endpoint, linked_status)
         self._last_bodies = bodies
-        resources = to_resources(bodies, self._table)
+        resources = to_resources(self._with_staged(bodies), self._table)
         # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
         resources.update(course_table(self._family))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
@@ -182,58 +199,72 @@ class LegacyHttpTransport:
             return 0x85, None
         aggregate = to_write([(href, body)], self._table)
         if not aggregate.get("Device"):
-            # Nothing in the patch belongs to a resource this family
-            # serves. Refusing is the honest answer: a guessed wrapper
-            # would reach the appliance as a command nobody chose.
+            # A guessed wrapper would reach the appliance as a command nobody
+            # chose, so a patch this family has no resource for is refused.
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
-        offenders = start_only_fields(aggregate, self._table)
-        if offenders:
-            # The appliance would answer 204 and drop it, which reads as a
-            # write that worked. Refusing says so instead -- and 4.05 is
-            # what it means: the resource is there, this write is not
-            # allowed on its own.
-            _LOGGER.warning(
-                "%s: %s is only accepted as part of a start command on this firmware; "
-                "write refused rather than silently dropped",
-                self._host,
-                ", ".join(offenders),
-            )
-            return 0x85, None
-        # The body is the appliance's own account of a refusal -- this
-        # firmware answers a rejected write `"Control fail, <...>"` -- so it
-        # travels back with the code rather than being dropped here.
-        status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
-        return http_status_to_coap(status), response
-
-    def write_many(
-        self, steps: Sequence[tuple[Sequence[str], dict]], timeout: float
-    ) -> tuple[int, Any]:
-        """Every step in one `PUT /devices/0`, which is the whole point.
-
-        This firmware takes a cycle only in the same body as
-        `Operation.state`: `Course_` sent on its own is answered `204` and
-        then discarded, measured in every shape tried -- including a
-        two-token body whose *other* token applied, so it is a rule about
-        that field and not a syntax problem. Sending the steps one after
-        another would therefore look like it worked and change nothing.
-
-        `start_only_fields` is not consulted here: its job is to refuse a
-        lone settings write, and a step that arrives as part of a composite
-        is exactly the case that makes such a field legal.
-        """
-        if not steps:
+        sendable, staged = split_start_only(aggregate, self._table)
+        for key, value in staged.items():
+            self._staged[key] = (value, staged_current(self._last_bodies, key))
+            _LOGGER.info("%s: %s held until the next start", self._host, value)
+        if is_start(sendable) and self._staged and self._idle():
+            return self._start(sendable, timeout)
+        if not sendable["Device"]:
             return 0x44, None
-        aggregate = to_write([("/" + "/".join(segs), patch) for segs, patch in steps], self._table)
-        if not aggregate.get("Device"):
-            _LOGGER.warning(
-                "%s: no 8888 resource for any of %s; write dropped",
-                self._host,
-                ", ".join("/" + "/".join(segs) for segs, _ in steps),
-            )
-            return 0x84, None
-        status, response = self._request("PUT", "/devices/0", body=aggregate, timeout=timeout)
+        # The body is the appliance's own account of a refusal (`"Control
+        # fail, <...>"`), so it travels back with the code.
+        status, response = self._request("PUT", "/devices/0", body=sendable, timeout=timeout)
         return http_status_to_coap(status), response
+
+    def _idle(self) -> bool:
+        operation = self._last_bodies.get("Operation") or {}
+        return operation.get("state") == "Ready"
+
+    def _start(self, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
+        """Start with every held value in the same body -- the only way this
+        firmware takes them -- then make sure it actually runs.
+
+        Measured on a TP6X_WW6500: the composed body loads the programme and
+        leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
+        That second `Run` is sent only when a fresh read says it isn't
+        running.
+        """
+        body = add_staged(aggregate, {key: value for key, (value, _) in self._staged.items()})
+        status, response = self._request("PUT", "/devices/0", body=body, timeout=timeout)
+        if not 200 <= status < 300:
+            return http_status_to_coap(status), response
+        self._staged.clear()
+        time.sleep(_START_SETTLE_S)
+        state_status, state = self._request("GET", "/devices/0/operation", timeout=timeout)
+        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
+        if state_status == 200 and isinstance(operation, dict) and operation.get("state") == "Run":
+            return http_status_to_coap(status), response
+        _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
+        status, response = self._request("PUT", "/devices/0", body=_RUN, timeout=timeout)
+        return http_status_to_coap(status), response
+
+    def _with_staged(self, bodies: dict[str, Any]) -> dict[str, Any]:
+        """`bodies` as the next start would leave them.
+
+        A held value is dropped once the appliance reports something else
+        for it than when it was chosen (the dial was turned), and all of them
+        once it is no longer idle -- the appliance's own choice wins.
+        """
+        operation = bodies.get("Operation")
+        if isinstance(operation, dict) and operation.get("state") not in (None, "Ready"):
+            self._staged.clear()
+        for key, (value, base) in list(self._staged.items()):
+            if key[0] not in bodies:
+                continue
+            current = staged_current(bodies, key)
+            if base is None:
+                self._staged[key] = (value, current)
+            elif current != base:
+                _LOGGER.info(
+                    "%s: %s changed at the appliance; dropping %s", self._host, key[1], value
+                )
+                del self._staged[key]
+        return with_staged(bodies, {key: value for key, (value, _) in self._staged.items()})
 
     def diagnostics(self) -> dict[str, Any]:
         return {
