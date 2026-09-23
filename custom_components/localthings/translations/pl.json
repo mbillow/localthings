@@ -435,27 +435,27 @@
           "18": "Syntetyki",
           "19": "Delikatne",
           "20": "Do prasowania",
-          "21": "Higieniczna pielęgnacja",
+          "21": "Higiena",
           "22": "Ciche suszenie",
-          "23": "Szybkie suszenie 35'",
-          "24": "Chłodne powietrze",
+          "23": "Suszenie 35'",
+          "24": "Zimne powietrze",
           "25": "Ciepłe powietrze",
           "26": "Air Wash",
-          "27": "Suszenie czasowe",
-          "29": "AI Dry",
-          "2a": "Higieniczna pielęgnacja+",
+          "27": "Czas suszenia",
+          "29": "Suszenie AI",
+          "2a": "Higiena+",
           "1a": "Wełna",
           "1b": "Pościel",
           "1c": "Koszule",
           "1d": "Ręczniki",
-          "1e": "Outdoor",
+          "1e": "Odzież wierzchnia",
           "1f": "Pranie mieszane",
           "2b": "Osuszanie bębna",
-          "4c": "Odświeżanie powietrzem",
-          "51": "Eko bawełna",
-          "53": "AI Dry+",
-          "4e": "Samoosuszanie",
-          "02": "AI Dry",
+          "4c": "Odświeżanie",
+          "51": "Eko Bawełna",
+          "53": "Suszenie AI+",
+          "4e": "Autosuszenie",
+          "02": "Suszenie AI",
           "03": "Super szybki",
           "05": "Pościel",
           "07": "Delikatne",
@@ -464,7 +464,7 @@
           "0c": "Pielęgnacja odzieży wodoodpornej",
           "0e": "Ręczniki",
           "0f": "Wełna",
-          "11": "Chłodne powietrze",
+          "11": "Zimne powietrze",
           "28": "Dezynfekcja wnętrza gorącym powietrzem",
           "37": "Bluzki",
           "38": "Do prasowania",
@@ -823,7 +823,7 @@
           "20": "Higieniczna para",
           "21": "Tkaniny kolorowe",
           "22": "Wełna",
-          "23": "Outdoor",
+          "23": "Odzież wierzchnia",
           "24": "Pościel",
           "25": "Syntetyki",
           "26": "Delikatne",
@@ -831,7 +831,7 @@
           "28": "Odpompowanie/wirowanie",
           "29": "Czyszczenie bębna+",
           "2a": "Jeansy",
-          "2b": "AI Wash",
+          "2b": "Pranie optymalne",
           "2d": "Ciche pranie",
           "2e": "Dziecięce",
           "2f": "Odzież sportowa",
@@ -879,7 +879,7 @@
           "87": "Pobrany program",
           "88": "Dla zwierząt",
           "8f": "Intensywne pranie na zimno",
-          "96": "Mniej mikrowłókien",
+          "96": "Mniej włókien",
           "a0": "Szybkie pranie 15'",
           "b0": "Pranie mieszane"
         }
@@ -1625,7 +1625,7 @@
         "name": "Przypomnienie o sygnale końca"
       },
       "sabbath_mode": {
-        "name": "Tryb szabasowy"
+        "name": "Tryb szabatowy"
       },
       "sanitize": {
         "name": "Dezynfekcja"
@@ -1643,7 +1643,7 @@
         "name": "Oświetlenie powitalne"
       },
       "wrinkle_prevent": {
-        "name": "Zapobieganie zagnieceniom"
+        "name": "Bez zagnieceń"
       },
       "zone_power": {
         "name": "Zasilanie strefy"
