@@ -917,6 +917,17 @@
           "03": "Alta"
         }
       },
+      "soil_level": {
+        "name": "Nivel de suciedad",
+        "state": {
+          "none": "Ninguno",
+          "extra_light": "Extra ligero",
+          "light": "Ligero",
+          "normal": "Normal",
+          "heavy": "Intenso",
+          "extra_heavy": "Extra intenso"
+        }
+      },
       "sound_mode": {
         "name": "Modo de sonido",
         "state": {

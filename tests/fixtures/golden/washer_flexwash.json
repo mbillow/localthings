@@ -20,6 +20,7 @@
     "progress_percentage",
     "remote_control",
     "rinse_cycles",
+    "soil_level",
     "spin_speed",
     "wash_temperature"
   ]

@@ -653,6 +653,17 @@
           "03": "Hoch"
         }
       },
+      "soil_level": {
+        "name": "Verschmutzungsgrad",
+        "state": {
+          "none": "Keine",
+          "extra_light": "Extra leicht",
+          "light": "Leicht",
+          "normal": "Normal",
+          "heavy": "Stark",
+          "extra_heavy": "Extra stark"
+        }
+      },
       "sound_mode": {
         "name": "Tonmodus",
         "state": {

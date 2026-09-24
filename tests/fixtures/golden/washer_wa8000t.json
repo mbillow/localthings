@@ -22,6 +22,7 @@
     "remote_control",
     "rinse_cycles",
     "softener_low",
-    "spin_speed"
+    "spin_speed",
+    "wash_temperature"
   ]
 }

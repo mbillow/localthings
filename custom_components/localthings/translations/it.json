@@ -687,6 +687,17 @@
           "03": "Alta"
         }
       },
+      "soil_level": {
+        "name": "Livello di sporco",
+        "state": {
+          "none": "Nessuno",
+          "extra_light": "Extra leggero",
+          "light": "Leggero",
+          "normal": "Normale",
+          "heavy": "Molto sporco",
+          "extra_heavy": "Extra sporco"
+        }
+      },
       "sound_mode": {
         "name": "Modalità audio",
         "state": {
