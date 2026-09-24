@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Jas osvětlení skříně"
+      },
       "cook_time": {
         "name": "Doba vaření"
       },

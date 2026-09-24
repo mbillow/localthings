@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Helderheid kastverlichting"
+      },
       "cook_time": {
         "name": "Bereidingstijd"
       },

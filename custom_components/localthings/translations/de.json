@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Helligkeit der Schrankbeleuchtung"
+      },
       "cook_time": {
         "name": "Kochzeit"
       },

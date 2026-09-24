@@ -486,6 +486,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Brillo de la luz del armario"
+      },
       "cook_time": {
         "name": "Tiempo de cocción"
       },

@@ -870,6 +870,28 @@ CABINET_LIGHT = Capability(
                 {"light.dimming.status": "On" if p == "On" else "Off"},
             ),
         ),
+        # lightResolution read as a step on a 1-based scale (1, 4, ... 100 for
+        # "3"): every dump reports lightLevel 100, which sits on that grid, and
+        # the resource gives no min/max. Inferred, not confirmed by a live write
+        # (issue #506).
+        NumberDesc(
+            key="cabinet_light_level",
+            field="x.com.samsung.da.lightLevel",
+            icon="mdi:brightness-6",
+            entity_category="config",
+            unit="%",
+            exists_fn=lambda rep, resources: (
+                (int_or_none(rep.get("x.com.samsung.da.lightResolution")) or 0) > 0
+            ),
+            native_min=1,
+            native_max=100,
+            step_fn=lambda rep: int_or_none(rep.get("x.com.samsung.da.lightResolution")) or 1,
+            value_fn=int_or_none,
+            write_fn=lambda p, rep, href=None: (
+                ["cabinet", "light", "total", "vs", "0"],
+                {"x.com.samsung.da.lightLevel": str(int(p))},
+            ),
+        ),
     ),
 )
 

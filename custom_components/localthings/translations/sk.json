@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Jas osvetlenia skrine"
+      },
       "cook_time": {
         "name": "Čas varenia"
       },

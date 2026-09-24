@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Luminosità luce vano"
+      },
       "cook_time": {
         "name": "Tempo di cottura"
       },

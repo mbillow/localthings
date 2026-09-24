@@ -5,6 +5,7 @@
     "auto_door_opener",
     "brightness_level",
     "cabinet_light_dim",
+    "cabinet_light_level",
     "cabinet_light_switch",
     "cooler_setpoint",
     "cooler_temperature",

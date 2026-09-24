@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "Cabinet light brightness"
+      },
       "cook_time": {
         "name": "Cook time"
       },

@@ -701,3 +701,33 @@ class TestSwitchOffIsNotInverted:
         for desc, key in self.CASES:
             _segs, payload = desc.write_fn("On", {})
             assert payload[key] == "On", f"{desc.key}: ON must send 'On', got {payload[key]!r}"
+
+
+class TestCabinetLightLevel:
+    """Issue #506: lightLevel as a 1-based slider stepped by lightResolution
+    (1, 4, ... 100 for "3") -- an inferred contract, not yet live-confirmed."""
+
+    DESC = cast(NumberDesc, _entity_by_key(fridge.CABINET_LIGHT, "cabinet_light_level"))
+    REP: ClassVar[dict] = {
+        "x.com.samsung.da.lightLevel": "100",
+        "x.com.samsung.da.lightResolution": "3",
+    }
+
+    def test_step_reads_resolution_and_grid_reaches_reported_level(self):
+        assert self.DESC.step_fn is not None
+        step = self.DESC.step_fn(self.REP)
+        assert step == 3
+        assert self.DESC.native_min is not None and self.DESC.native_max is not None
+        assert (self.DESC.native_max - self.DESC.native_min) % step == 0
+
+    def test_writes_level_as_string(self):
+        assert self.DESC.write_fn is not None
+        assert self.DESC.write_fn(4.0, self.REP) == (
+            ["cabinet", "light", "total", "vs", "0"],
+            {"x.com.samsung.da.lightLevel": "4"},
+        )
+
+    def test_absent_without_resolution(self):
+        assert self.DESC.exists_fn is not None
+        assert self.DESC.exists_fn(self.REP, {})
+        assert not self.DESC.exists_fn({"x.com.samsung.da.lightLevel": "100"}, {})

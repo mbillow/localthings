@@ -235,6 +235,9 @@
       }
     },
     "number": {
+      "cabinet_light_level": {
+        "name": "내부 조명 밝기"
+      },
       "cook_time": {
         "name": "조리 시간"
       },

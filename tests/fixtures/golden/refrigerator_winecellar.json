@@ -6,6 +6,7 @@
     "auto_door_timer",
     "auto_door_voice_control",
     "cabinet_light_dim",
+    "cabinet_light_level",
     "cabinet_light_switch",
     "deodor_filter_status",
     "deodor_filter_usage",
