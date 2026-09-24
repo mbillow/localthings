@@ -1479,6 +1479,23 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_fac_time_
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_duct():
+    """TP1X_DA-AC-DUCT slim duct (issue #501): adds the auto-changeover and
+    dual-setpoint resources; routes on /oic/d's oic.d.airconditioner."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("airconditioner_tp1x_duct")
+    golden = json.loads((GOLDEN / "airconditioner_tp1x_duct.json").read_text())
+    state_keys = _new_state_keys(
+        "airconditioner_tp1x_duct", resources, device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer_tp1_21_drum_clean():
     """DA_WM_TP1_21_COMMON/DV9400B (issue #258) is the first dryer dump with
     live DrumCleanProposal_/WashingTimes_ tokens (dryer's default fixture

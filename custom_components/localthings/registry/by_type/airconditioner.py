@@ -68,6 +68,9 @@ REGISTRY = DeviceRegistry(
             air_purifier.HEPA_FILTER,
             air_purifier.DEVICE_ACTIVE,
             air_purifier.AIR_LEVEL_CHECK,
+            # TP1X_DA-AC-DUCT slim duct (issue #501).
+            airconditioner.AUTO_CHANGEOVER,
+            airconditioner.DUAL_SETPOINT,
             *airconditioner.COVERAGE,
         ]
     ),

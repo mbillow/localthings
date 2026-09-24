@@ -1,0 +1,30 @@
+{
+  "state_keys": [
+    "air_filter_status",
+    "air_filter_usage",
+    "air_filter_usage_hours",
+    "alarm_code",
+    "auto_changeover",
+    "auto_changeover_cool_primary_offset",
+    "auto_changeover_cool_secondary_offset",
+    "auto_changeover_heat_primary_offset",
+    "auto_changeover_heat_secondary_offset",
+    "auto_clean",
+    "auto_clean_progress",
+    "auto_clean_running",
+    "beep",
+    "climate",
+    "current_temperature_c",
+    "display_light",
+    "dual_setpoint_cooling",
+    "dual_setpoint_enabled",
+    "dual_setpoint_heating",
+    "energy_kwh",
+    "energy_saved_kwh",
+    "firmware_update",
+    "humidity",
+    "mute_once",
+    "power_watts",
+    "tropical_night_mode"
+  ]
+}

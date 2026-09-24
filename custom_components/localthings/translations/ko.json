@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "전면 배기구"
+      },
+      "dual_setpoint_enabled": {
+        "name": "이중 설정 온도 사용"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "중",
           "on": "켜짐"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "이중 설정 온도 냉방"
+      },
+      "dual_setpoint_heating": {
+        "name": "이중 설정 온도 난방"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "자동 전환 냉방 1차 편차"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "자동 전환 냉방 2차 편차"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "자동 전환 난방 1차 편차"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "자동 전환 난방 2차 편차"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "부스터 회전"
+      },
+      "auto_changeover": {
+        "name": "자동 전환"
       }
     },
     "time": {

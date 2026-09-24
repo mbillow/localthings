@@ -1613,6 +1613,82 @@ AIR_QUALITY = Capability(
     ),
 )
 
+# Auto-changeover between cooling and heating (issue #501, TP1X_DA-AC-DUCT).
+# `status` is the same bare On/Off shape as ABSENCE_POWER_SAVING, so it's a
+# switch without a live-confirmed write. The offsets carry no unit field, so
+# they stay unitless read-only diagnostics.
+AUTO_CHANGEOVER = Capability(
+    href="/autochangeover/vs/0",
+    poll_tier="cold",
+    entities=(
+        SwitchDesc(
+            key="auto_changeover",
+            field="status",
+            icon="mdi:sun-snowflake-variant",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["autochangeover", "vs", "0"],
+                {"status": "On" if p == "On" else "Off"},
+            ),
+        ),
+        *tuple(
+            SensorDesc(
+                key=f"auto_changeover_{key}",
+                field=field,
+                icon="mdi:thermometer-lines",
+                entity_category="diagnostic",
+                enabled_default=False,
+                value_fn=_num,
+            )
+            for key, field in (
+                ("cool_primary_offset", "coolPrimaryOffset"),
+                ("cool_secondary_offset", "coolSecondaryOffset"),
+                ("heat_primary_offset", "heatPrimaryOffset"),
+                ("heat_secondary_offset", "heatSecondaryOffset"),
+            )
+        ),
+    ),
+)
+
+
+def _dual_setpoint_unit(rep):
+    return normalize_temp_unit(rep.get("x.com.samsung.da.unit"), "°C")
+
+
+# Separate cooling/heating setpoints (issue #501, TP1X_DA-AC-DUCT). The dump
+# has status Off, so there's no evidence yet for how the climate entity's
+# heat_cool range would be written; read-only until a dump with it on shows up.
+DUAL_SETPOINT = Capability(
+    href="/temperatures/dualsetpoint/vs/0",
+    poll_tier="cold",
+    entities=(
+        BinarySensorDesc(
+            key="dual_setpoint_enabled",
+            field="status",
+            icon="mdi:thermometer-auto",
+            entity_category="diagnostic",
+            value_fn=lambda v: v == "On",
+        ),
+        SensorDesc(
+            key="dual_setpoint_cooling",
+            field="x.com.samsung.da.desired",
+            device_class="temperature",
+            entity_category="diagnostic",
+            unit_fn=_dual_setpoint_unit,
+            value_fn=_num,
+        ),
+        SensorDesc(
+            key="dual_setpoint_heating",
+            field="x.com.samsung.da.desiredHeat",
+            device_class="temperature",
+            entity_category="diagnostic",
+            unit_fn=_dual_setpoint_unit,
+            value_fn=_num,
+        ),
+    ),
+)
+
 
 # AC-scoped coverage: CLIMATE_CONSUMED_HREFS (read by the climate entity)
 # plus vendor-duplicate / ambiguous / plumbing resources. These stay out of

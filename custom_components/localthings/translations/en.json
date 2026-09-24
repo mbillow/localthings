@@ -138,6 +138,9 @@
       },
       "front_vent_open": {
         "name": "Front vent"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Dual setpoint enabled"
       }
     },
     "button": {
@@ -1450,6 +1453,24 @@
           "medium": "Medium",
           "on": "On"
         }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Dual setpoint cooling"
+      },
+      "dual_setpoint_heating": {
+        "name": "Dual setpoint heating"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Auto changeover cooling primary offset"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Auto changeover cooling secondary offset"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Auto changeover heating primary offset"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Auto changeover heating secondary offset"
       }
     },
     "switch": {
@@ -1686,6 +1707,9 @@
       },
       "booster_oscillation": {
         "name": "Booster oscillation"
+      },
+      "auto_changeover": {
+        "name": "Auto changeover"
       }
     },
     "time": {
