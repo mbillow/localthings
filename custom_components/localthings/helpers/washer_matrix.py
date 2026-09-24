@@ -1,7 +1,6 @@
 """Helper module to parse Samsung OCF washer cycle capability matrices.
 
 Handles capability decoding for:
-Handles capability decoding for:
     - Table_02: Dynamic tokenized bitmask matrices on /course/vs/0 supportedOptions.
     - Table_00: Active-course positional hex-pair availability strings.
     - Hybrid Table_02: Dynamic fall-through from matrix lookups to positional hex sets

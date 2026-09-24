@@ -89,7 +89,14 @@ def _enabled_write(field):
     return write
 
 
-def _washer_control_present(rep, resources, option_type: str, *, field: str, supported_field: str) -> bool:
+def _washer_control_present(
+    rep,
+    resources,
+    option_type: str,
+    *,
+    field: str,
+    supported_field: str,
+) -> bool:
     """True when the device either reports the value directly or the active
     course matrix exposes that option type. This matters for top-load washers
     such as WA8000T, which can advertise a valid temperature/spin/rinse
