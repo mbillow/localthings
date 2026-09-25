@@ -12,6 +12,8 @@ anything.
 
 from __future__ import annotations
 
+import ipaddress
+import zlib
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
@@ -26,8 +28,39 @@ from .const import (
     CONF_LEGACY_FAMILY,
     CONF_PORT,
     CONF_TRANSPORT,
+    DTLS_LOCAL_PORT_BASE,
     TRANSPORT_LEGACY_HTTP,
 )
+
+
+def local_source_port(host: str) -> int:
+    """Deterministic UDP source port for this device's DTLS socket.
+
+    This firmware's peer table has no cap, no idle timeout and no LRU, so
+    reconnecting from a fresh ephemeral port each time leaves the old entry
+    live and accumulates contexts. Reconnecting over an entry the device
+    still holds destroys the stale peer instead, because a ClientHello is
+    not application data it can read (issue #486, correcting an earlier
+    RFC 6347 §4.2.8 rationale that does not apply to this stack). See
+    DTLS_LOCAL_PORT_BASE. Requires smartthings-local >= 0.1.1. Shared by the
+    coordinator and the config flow, so setup attempts land on the same peer
+    entry the entry's session later replaces (issue #504).
+
+    Must stay unique per device on this host too. That used to be load-
+    bearing for demuxing: an unconnected socket handed every device's
+    datagrams to whichever recvfrom() happened to be listening on their
+    shared port. smartthings-local >= 0.1.3 connect()s its UDP socket
+    instead (see endpoint.py's open_connected_udp_socket), so the kernel
+    already filters incoming datagrams to each session's own resolved peer
+    -- but a distinct port per device keeps that guarantee from ever
+    depending on it, and keeps captures/logs unambiguous. Last IPv4 octet
+    as offset for the common case; a stable CRC32 fold otherwise.
+    """
+    try:
+        offset = int(ipaddress.IPv4Address(host)) & 0xFF
+    except (ipaddress.AddressValueError, ValueError):
+        offset = zlib.crc32(host.encode()) & 0xFF
+    return DTLS_LOCAL_PORT_BASE + offset
 
 
 class DecodeError(ValueError):

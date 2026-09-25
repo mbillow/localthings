@@ -35,6 +35,7 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 
 from . import cloudcourse, probing
 from .const import (
@@ -76,7 +77,7 @@ from .learned import stored as learned_stored
 from .legacy_http_token import CallbackPortUnavailable, obtain_device_token
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
-from .transport import AuthRejected, DtlsTransport
+from .transport import AuthRejected, DtlsTransport, local_source_port
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -495,8 +496,8 @@ def _classify_handshake_failure(
     """Turn "no port worked" into the most specific thing we can honestly
     say, in rough order of how much the evidence tells us: an alert means
     the appliance refused us on purpose (and says whether it was our
-    certificate); a confirmed DTLS port that then timed out is likely still
-    holding a session from a previous attempt; otherwise the sweep's own
+    certificate); a confirmed DTLS port that then timed out, even after
+    _worth_retrying's retry, is a handshake timeout; otherwise the sweep's own
     shape is the evidence.
 
     `alerts` is the per-port classification `_handshake_and_read` already
@@ -711,26 +712,77 @@ def _diagnose_failures(
     return {port: alert} if alert is not None else {}
 
 
-def _handshake_and_read(host: str, scan: probing.HostProbe, cert_pem: str, key_pem: str) -> dict:
-    """Handshake each candidate in turn, returning the first device that answers."""
+def _worth_retrying(exc: Exception, confirmed: bool, local_port: int | None) -> bool:
+    """One immediate retry on the same port, for the two failures a second
+    handshake is known to clear.
+
+    A peer-initiated collision clears the appliance's peer, so the library
+    says an immediate retry normally succeeds. A timeout on a confirmed port
+    is worth one only from the fixed source port: that ClientHello replaces
+    the half-open peer the first attempt left, where one from a fresh port
+    would just add a second to a table this firmware never prunes (#504).
+    """
+    if isinstance(exc, PeerInitiatedHandshakeError):
+        return True
+    return isinstance(exc, TimeoutError) and confirmed and local_port is not None
+
+
+def _connect_and_read(
+    host: str, port: int, cert_pem: str, key_pem: str, local_port: int | None
+) -> dict:
+    transport = None
+    try:
+        transport = DtlsTransport(
+            host, port, cert_pem=cert_pem, key_pem=key_pem, local_port=local_port
+        )
+        transport.connect()
+        return _read_device(transport, host, port)
+    finally:
+        if transport is not None:
+            with contextlib.suppress(Exception):
+                transport.close()
+
+
+def _handshake_and_read(
+    host: str,
+    scan: probing.HostProbe,
+    cert_pem: str,
+    key_pem: str,
+    local_port: int | None = None,
+) -> dict:
+    """Handshake each candidate in turn, returning the first device that answers.
+
+    `local_port` is the fixed source port the entry's coordinator will dial
+    from (transport.local_source_port), or None for an ephemeral one -- see
+    LocalThingsConfigFlow._setup_source_port for when each applies.
+    """
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
-        transport = None
-        try:
-            transport = DtlsTransport(host, port, cert_pem=cert_pem, key_pem=key_pem)
-            transport.connect()
-            return _read_device(transport, host, port)
-        except CannotConnect:
-            # The device answered, just not with something we can use --
-            # trying the remaining ports can't improve on that.
-            raise
-        except Exception as exc:
-            failures.append((port, exc))
-            _LOGGER.debug("port %d failed: %s", port, exc)
-        finally:
-            if transport is not None:
-                with contextlib.suppress(Exception):
-                    transport.close()
+        retried = False
+        while True:
+            try:
+                return _connect_and_read(host, port, cert_pem, key_pem, local_port)
+            except CannotConnect:
+                # The device answered, just not with something we can use --
+                # trying the remaining ports can't improve on that.
+                raise
+            except EndpointError as exc:
+                if local_port is None:
+                    failures.append((port, exc))
+                    _LOGGER.debug("port %d failed: %s", port, exc)
+                    break
+                _LOGGER.debug(
+                    "source port %d unavailable (%s); using an ephemeral one", local_port, exc
+                )
+                local_port = None
+            except Exception as exc:
+                if not retried and _worth_retrying(exc, port in scan.confirmed, local_port):
+                    retried = True
+                    _LOGGER.debug("port %d failed (%s); retrying once", port, exc)
+                    continue
+                failures.append((port, exc))
+                _LOGGER.debug("port %d failed: %s", port, exc)
+                break
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem)
     raise _classify_handshake_failure(host, scan, failures, alerts)
 
@@ -740,6 +792,7 @@ def _probe_and_validate(
     ca_cert_pem: str = "",
     ca_key_pem: str = "",
     existing_leaf: tuple[str, str] | None = None,
+    local_port: int | None = None,
 ) -> dict:
     """Find the device's port, authenticate to it, and resolve its identity.
 
@@ -775,7 +828,7 @@ def _probe_and_validate(
         cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
 
     try:
-        info = _handshake_and_read(host, scan, cert_pem, key_pem)
+        info = _handshake_and_read(host, scan, cert_pem, key_pem, local_port)
     except CertRejected:
         # The only failure a fresh certificate can fix, and only worth a
         # second pass when the certificate wasn't freshly minted already.
@@ -783,7 +836,7 @@ def _probe_and_validate(
             raise
         _LOGGER.debug("Reused leaf rejected by %s; re-minting and retrying", host)
         cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
-        info = _handshake_and_read(host, scan, cert_pem, key_pem)
+        info = _handshake_and_read(host, scan, cert_pem, key_pem, local_port)
 
     return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
 
@@ -812,6 +865,21 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # an appliance, "reauth_confirm" when its token stopped working.
         self._legacy_step: str = "legacy_token"
         self._token_task: asyncio.Task[str | None] | None = None
+
+    def _setup_source_port(self, host: str) -> int | None:
+        """The fixed source port to handshake from, or None for an ephemeral one.
+
+        Fixed whenever no entry exists for `host`, so repeated setup attempts
+        replace one peer on the appliance instead of each leaving another
+        behind (issue #504). An existing entry's coordinator may be dialling
+        from that same port, and the library binds it with SO_REUSEADDR, so a
+        second socket there would share its address pair and our ClientHello
+        would tear down its live session.
+        """
+        entries = self.hass.config_entries.async_entries(DOMAIN)
+        if any(entry.data.get(CONF_HOST) == host for entry in entries):
+            return None
+        return local_source_port(host)
 
     @staticmethod
     @callback
@@ -904,6 +972,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._ca_cert_pem,
                     self._ca_key_pem,
                     existing_leaf,
+                    self._setup_source_port(self._host),
                 )
             except LegacyHttpFamily:
                 # This family authenticates nothing about the certificate
@@ -1024,6 +1093,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._ca_cert_pem,
                     self._ca_key_pem,
                     None,
+                    self._setup_source_port(self._host),
                 )
             except (CannotConnect, InvalidCA) as exc:
                 # CertRejected lands here too (it is a CannotConnect): the CA
@@ -1271,6 +1341,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         entry.data.get(CONF_CA_CERT_PEM, ""),
                         entry.data.get(CONF_CA_KEY_PEM, ""),
                         (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
+                        self._setup_source_port(host),
                     )
             except (LegacyHttpFamily, AuthRejected):
                 # An 8888 appliance where a DTLS one was, or one that refuses

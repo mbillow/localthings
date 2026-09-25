@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import ipaddress
 import logging
 import threading
 import time
-import zlib
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
@@ -48,7 +46,6 @@ from .const import (
     DEFAULT_LEARN_MODES,
     DEVICE_SUPPORT_ISSUE_URL,
     DOMAIN,
-    DTLS_LOCAL_PORT_BASE,
     SUMMARY_INTERVAL_S,
 )
 from .devices import set_via_device
@@ -95,6 +92,7 @@ from .transport import (
     create_transport,
     translates_resources,
 )
+from .transport import local_source_port as _local_source_port
 
 # Sentinel for apply_cloud_courses: "leave this field as it is",
 # distinct from None which means "clear it".
@@ -139,34 +137,6 @@ def _mac_connections(mac: str | None) -> set[tuple[str, str]]:
     (issue #469).
     """
     return {(CONNECTION_NETWORK_MAC, mac)} if mac else set()
-
-
-def _local_source_port(host: str) -> int:
-    """Deterministic UDP source port for this device's DTLS socket.
-
-    This firmware's peer table has no cap, no idle timeout and no LRU, so
-    reconnecting from a fresh ephemeral port each time leaves the old entry
-    live and accumulates contexts. Reconnecting over an entry the device
-    still holds destroys the stale peer instead, because a ClientHello is
-    not application data it can read (issue #486, correcting an earlier
-    RFC 6347 §4.2.8 rationale that does not apply to this stack). See
-    DTLS_LOCAL_PORT_BASE. Requires smartthings-local >= 0.1.1.
-
-    Must stay unique per device on this host too. That used to be load-
-    bearing for demuxing: an unconnected socket handed every device's
-    datagrams to whichever recvfrom() happened to be listening on their
-    shared port. smartthings-local >= 0.1.3 connect()s its UDP socket
-    instead (see endpoint.py's open_connected_udp_socket), so the kernel
-    already filters incoming datagrams to each session's own resolved peer
-    -- but a distinct port per device keeps that guarantee from ever
-    depending on it, and keeps captures/logs unambiguous. Last IPv4 octet
-    as offset for the common case; a stable CRC32 fold otherwise.
-    """
-    try:
-        offset = int(ipaddress.IPv4Address(host)) & 0xFF
-    except (ipaddress.AddressValueError, ValueError):
-        offset = zlib.crc32(host.encode()) & 0xFF
-    return DTLS_LOCAL_PORT_BASE + offset
 
 
 # Debug raw write/read caps (issue #300) -- generous enough for a real
