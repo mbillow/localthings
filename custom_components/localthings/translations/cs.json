@@ -1043,6 +1043,9 @@
       "burner_state": {
         "name": "Stav hořáku {number}"
       },
+      "burner_power_level": {
+        "name": "Úroveň výkonu hořáku {number}"
+      },
       "clean_level": {
         "name": "Úroveň čištění"
       },
@@ -1815,7 +1818,7 @@
       "ports_closed": "Tato IP adresa je dostupná, ale aktivně odmítla všechny porty v rozsahu lokálního API (UDP 49152-49160) a na discovery kanálu vůbec neodpověděla. Nejspíš nejde o spotřebič Samsung, nebo jde o spotřebič bez zapnutého lokálního API.",
       "no_dtls_server": "Porty v rozsahu lokálního API jsou na této adrese dostupné, ale nic na nich neodpovědělo na DTLS handshake. Ověřte, že IP adresa patří spotřebiči, a ne jinému zařízení ve vaší síti.",
       "appliance_no_dtls": "Na této adrese je spotřebič Samsung — přes nešifrovaný discovery kanál se představil jako {model} a jako svůj zabezpečený port uvedl {port} — ale handshake DTLS na něm nikdy nedokončil. Adresa tedy není problém. Zkontrolujte, zda spotřebič nemá na panelu vypnuté dálkové ovládání nebo podobné nastavení, a přesný důvod selhání najdete v logu Home Assistanta.",
-      "handshake_timeout": "Spotřebič odpověděl na portu lokálního API, ale nedokončil DTLS handshake. Obvykle stále drží relaci z předchozího pokusu — počkejte přibližně minutu a zkuste to znovu.",
+      "handshake_timeout": "Spotřebič odpověděl na portu lokálního API, ale nedokončil DTLS handshake ani po opakovaném pokusu. Zkuste to znovu. Pokud to stále selhává, restart spotřebiče uvolní připojení, která stále drží; přesnou chybu najdete v logu Home Assistantu.",
       "cert_rejected": "Spotřebič odmítl certifikát. Certifikát CA a klíč pravděpodobně nepatří CA AC14K_M, které spotřebič důvěřuje, nebo k sobě nepasují. Přesný alert, který spotřebič odeslal, najdete v logu Home Assistanta.",
       "handshake_failed": "Spotřebič odmítl DTLS handshake z důvodu, který nesouvisí s certifikátem — nejspíše kvůli neshodě protokolu nebo šifry. Přesný alert najdete v logu Home Assistanta.",
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",

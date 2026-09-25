@@ -1,7 +1,8 @@
-"""Tests for the standalone induction-cooktop registry (issue #86)."""
+"""Tests for the TP1X_DA-KS-COOKTOP induction boards (issue #86), which share
+the cooktop registry with the /mode/vs/0 options-array boards."""
 
 from custom_components.localthings.registry.adapter import flatten
-from custom_components.localthings.registry.by_type import for_device_by_model, induction_cooktop
+from custom_components.localthings.registry.by_type import cooktop, for_device_by_model
 from custom_components.localthings.registry.discovery import discover
 from tests.conftest import _load_device
 
@@ -22,10 +23,10 @@ def _state(name="induction_cooktop"):
     return flatten(bound, resources)
 
 
-def test_model_resolves_to_induction_cooktop_registry():
+def test_model_resolves_to_cooktop_registry():
     reg, _ = _cooktop()
-    assert reg is not None and reg.name == "induction_cooktop"
-    assert reg is induction_cooktop.REGISTRY
+    assert reg is not None and reg.name == "cooktop"
+    assert reg is cooktop.REGISTRY
 
 
 def test_no_unbound_hrefs():
@@ -80,7 +81,7 @@ def test_nv9000d_resolves_with_complete_coverage():
     omits the optional Bluetooth probe and paired-hood resources while adding
     the read-only hot-surface auto-shutoff status."""
     reg, resources = _cooktop("induction_cooktop_nv9000d")
-    assert reg is induction_cooktop.REGISTRY
+    assert reg is cooktop.REGISTRY
 
     unbound = []
     discover(

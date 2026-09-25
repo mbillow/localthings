@@ -1043,6 +1043,9 @@
       "burner_state": {
         "name": "Stav varnej zóny {number}"
       },
+      "burner_power_level": {
+        "name": "Úroveň výkonu varnej zóny {number}"
+      },
       "clean_level": {
         "name": "Úroveň čistoty"
       },
@@ -1815,7 +1818,7 @@
       "ports_closed": "Táto IP adresa je dostupná, ale aktívne odmietla spojenie na každom porte v rozsahu lokálneho API (UDP 49152-49160) a na kanáli zisťovania vôbec neodpovedala. Najskôr nejde o spotrebič Samsung, alebo ide o taký, ktorý nemá zapnuté lokálne API.",
       "no_dtls_server": "Porty v rozsahu lokálneho API sú na tejto adrese dostupné, ale žiadny neodpovedal na nadviazanie spojenia DTLS. Skontrolujte, či IP adresa patrí spotrebiču a nie inému zariadeniu vo vašej sieti.",
       "appliance_no_dtls": "Na tejto adrese je spotrebič Samsung — cez nešifrovaný kanál zisťovania sa predstavil ako {model} a ako svoj zabezpečený port uviedol {port} — no nadviazanie spojenia DTLS na ňom nikdy nedokončil. Adresa teda nie je problém. Skontrolujte, či spotrebič nemá na paneli vypnuté diaľkové ovládanie alebo podobné nastavenie, a presnú príčinu zlyhania nájdete v protokole Home Assistant.",
-      "handshake_timeout": "Spotrebič odpovedal na porte lokálneho API, ale nedokončil nadviazanie spojenia DTLS. Zvyčajne ešte udržiava reláciu z predchádzajúceho pokusu – počkajte približne minútu a skúste to znova.",
+      "handshake_timeout": "Spotrebič odpovedal na porte lokálneho API, ale nedokončil nadviazanie spojenia DTLS ani po opakovanom pokuse. Skúste to znova. Ak to stále zlyháva, reštart spotrebiča uvoľní spojenia, ktoré ešte drží; presnú chybu nájdete v logu Home Assistantu.",
       "cert_rejected": "Spotrebič odmietol certifikát. Certifikát a kľúč CA pravdepodobne nepatria CA AC14K_M, ktorej tento spotrebič dôveruje, alebo sa navzájom nezhodujú. Presné upozornenie odoslané spotrebičom nájdete v protokole Home Assistant.",
       "handshake_failed": "Spotrebič odmietol nadviazanie spojenia DTLS z dôvodu nesúvisiaceho s certifikátom, pravdepodobne pre nezhodu protokolu alebo šifry. Presné upozornenie, ktoré odoslal, nájdete v protokole Home Assistant.",
       "cloud_unreachable": "Nepodarilo sa spojiť s cloudovou bránou Samsung a získať UUID potrebné na vytvorenie certifikátu tohto zariadenia. Skontrolujte prístup Home Assistant na internet a skúste to znova.",

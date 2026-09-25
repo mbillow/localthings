@@ -1,5 +1,7 @@
 """Tests for the read-only cooktop capability profile."""
 
+import pytest
+
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import cooktop
 from custom_components.localthings.registry.capabilities.cooktop import (
@@ -45,17 +47,19 @@ def test_run_operation_marks_any_burner_active():
     assert state["any_burner_active"] is True
 
 
-def test_cooktop_profile_has_no_write_functions():
-    """A local integration must never expose unverified remote ignition."""
-    descriptions = [
-        desc
-        for capabilities in cooktop.REGISTRY.capabilities.values()
-        for capability in capabilities
-        for desc in capability.entities
-    ]
+@pytest.mark.parametrize("name", ["cooktop", "cooktop_nv8000t", "cooktop_nv9300k"])
+def test_options_array_boards_bind_no_write_functions(name):
+    """A local integration must never expose unverified remote ignition.
 
-    assert descriptions
-    assert all(not hasattr(desc, "write_fn") or desc.write_fn is None for desc in descriptions)
+    The registry is shared with the TP1X burnerList boards, whose writes are
+    verified; what binds on an options-array board must stay read-only."""
+    resources = _load_device(name)
+    bound = discover(
+        resources, cooktop.REGISTRY.capabilities, cooktop.REGISTRY.pattern_capabilities
+    )
+
+    assert bound
+    assert all(getattr(b.desc, "write_fn", None) is None for b in bound)
 
 
 def test_static_slot_superset_has_headroom_for_other_layouts():

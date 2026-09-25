@@ -35,7 +35,7 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 | Air dresser | Microwave |
 | Air monitor | Oven |
 | Air purifier | Range and range hood |
-| Cooktop, with gas cooktops read-only | Refrigerator, kimchi refrigerator, wine cellar |
+| Cooktop, gas and induction; some models read-only | Refrigerator, kimchi refrigerator, wine cellar |
 | Dehumidifier | Vacuum clean station |
 | Dishwasher | Washer and washer-dryer |
 | Dryer | Water purifier |

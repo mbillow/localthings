@@ -231,18 +231,13 @@ class TestForDeviceByOicType:
 
         assert for_device_by_oic_type(("oic.d.robotcleaner",)) is None
 
-    def test_cooktop_is_not_mapped_to_either_cooktop_registry(self):
-        """'oic.d.cooktop' cannot tell the two cooktop families apart.
-
-        A TP1X_DA-KS-COOKTOP induction reports it, but `cooktop` is the
-        unrelated NA9300K gas family (burner state in /mode/vs/0's options
-        array, a different OCF surface -- see by_type/cooktop.py). Mapping the
-        type to either key would misroute the other, and as the primary signal
-        it would override a board token that had it right.
-        """
+    def test_cooktop_maps_to_the_one_cooktop_registry(self):
+        """Both cooktop board generations report 'oic.d.cooktop' and share one
+        registry, each binding only its own surface (see by_type/cooktop.py)."""
         from custom_components.localthings.registry.by_type import for_device_by_oic_type
 
-        assert for_device_by_oic_type(("oic.d.cooktop",)) is None
+        reg = for_device_by_oic_type(("oic.d.cooktop",))
+        assert reg is not None and reg.name == "cooktop"
 
     def test_empty_returns_none(self):
         from custom_components.localthings.registry.by_type import for_device_by_oic_type
@@ -561,7 +556,7 @@ class TestForDeviceByModel:
             "ARTIK051_GLOBAL_COOKTOP",
         )
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_range_hood_via_ahd_model(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -623,9 +618,7 @@ class TestForDeviceByModel:
     def test_induction_cooktop_via_hyphenated_cooktop_token(self):
         """Issue #86: a standalone induction cooktop (NV8500T-/KO4) reports
         no oneUiVersion and an unrecognized consumer token ('NV'); it falls
-        back to the hyphenated '-COOKTOP-' token in modelNum -- distinct
-        from the underscore-delimited '_COOKTOP'/'_GB_CT_' check, which is
-        the unrelated older NA9300K gas-cooktop family."""
+        back to the hyphenated '-COOKTOP-' token in modelNum."""
         from custom_components.localthings.registry.by_type import for_device_by_model
 
         reg = for_device_by_model(
@@ -633,7 +626,7 @@ class TestForDeviceByModel:
             "NV8500T-/KO4",
         )
         assert reg is not None
-        assert reg.name == "induction_cooktop"
+        assert reg.name == "cooktop"
 
     def test_hyphenated_cooktop_token_not_confused_with_range(self):
         """'-COOKTOP-' and '-RANGE-' must route to distinct registries even
@@ -681,7 +674,7 @@ class TestForDeviceByModel:
 
         reg = for_device_by_model("ARTIK051_GB_CT_001", "ARTIK051_GLOBAL_COOKTOP")
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_board_token_in_description_used_when_model_num_has_none(self):
         """Some units report a placeholder modelNum and carry the board token
@@ -916,7 +909,7 @@ class TestForDeviceByResources:
         reg = for_device_by_resources(_load_device("cooktop"))
 
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_unrelated_mode_options_are_not_cooktop(self):
         from custom_components.localthings.registry.by_type import for_device_by_resources

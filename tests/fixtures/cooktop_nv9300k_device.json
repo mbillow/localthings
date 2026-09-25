@@ -1,0 +1,169 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP2X_DA-KS-COOKTOP-000001|40442241|50000204001011000100000000000000",
+        "x.com.samsung.da.description": "NV9300K-/AA3",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "230515",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "DE92-04422A_20082500",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "800",
+        "x.com.samsung.da.diagMinVersion": "1.0"
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off",
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "DeviceType_NV9300K-/AA3",
+          "Pause_Off",
+          "SyncFlex_Off",
+          "FlexCoil_0",
+          "MainTimerCurrent_0",
+          "MainTimerSet_0",
+          "MainTimerState_Ready",
+          "OperationState0_Ready",
+          "HotSurface0_Normal",
+          "PowerLevel0_Off",
+          "OperationState1_Ready",
+          "HotSurface1_Normal",
+          "PowerLevel1_Off",
+          "OperationState3_Ready",
+          "HotSurface3_Normal",
+          "PowerLevel3_Off",
+          "OperationState4_Ready",
+          "HotSurface4_Normal",
+          "PowerLevel4_Off",
+          "OperationState5_Ready",
+          "HotSurface5_Normal",
+          "PowerLevel5_Off"
+        ],
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "CT_E",
+            "x.com.samsung.da.triggeredTime": "2026-09-24T03:39:16"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On",
+        "rt": [
+          "x.com.samsung.da.connected"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/bluetooth/hood/status/vs/0",
+      "rep": {
+        "connectionState": "disconnected",
+        "micomModelId": "",
+        "firmwareVersion": "",
+        "power": "off",
+        "fanSpeed": 0,
+        "lampState": "off",
+        "timer": {},
+        "rt": [
+          "bluetoothHoodStatus"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    }
+  ]
+}

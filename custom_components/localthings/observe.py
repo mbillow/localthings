@@ -210,6 +210,8 @@ class ObserveManager:
             return
         if not isinstance(rep, dict):
             return
+        if self._resource_type_mismatch(href, rep):
+            return
         with self._notify_cond:
             self._notified.add(href)
             # Snapshot in enter_observe_mode is at the 80% quorum, not the
@@ -220,6 +222,28 @@ class ObserveManager:
             self._notify_cond.notify_all()
         self.log.debug("observe notify: %s", href)
         self.apply(href, rep, source="observe")
+
+    def _resource_type_mismatch(self, href: str, rep: dict) -> bool:
+        """True when a notify's `rt` names a different resource type than the
+        one already cached for `href`, so it was filed under the wrong href.
+
+        Observe tokens are one byte and appliances appear to keep observers
+        across sessions, so a stale relation can likely share a token with a
+        new one -- the best explanation for a CAC cassette logging its
+        /wind/direction/vs/0 modes against /mode/vs/0 (issue #509). Such a
+        notify says nothing about `href`, so it is dropped before it counts
+        as that href's push. Either side lacking `rt` is no evidence.
+        """
+        rt = rep.get("rt")
+        cached_rt = (self.cache.get(href) or {}).get("rt")
+        if not isinstance(rt, list) or not isinstance(cached_rt, list):
+            return False
+        if set(rt) == set(cached_rt):
+            return False
+        self.log.debug(
+            "observe %s: dropping notify with rt %s, cached rt is %s", href, rt, cached_rt
+        )
+        return True
 
     def recently_notified(self, window_s: float = PUSH_HEALTH_WINDOW_S) -> bool:
         """True if any OBSERVE notify has arrived within `window_s`.

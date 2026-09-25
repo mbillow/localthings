@@ -609,3 +609,46 @@ def test_try_enter_observe_mode_waits_full_ceiling_when_fraction_not_reached():
         assert elapsed >= 0.18
     finally:
         mgr.close()
+
+
+def test_on_notification_drops_rep_whose_rt_names_another_resource():
+    """Issue #509: a /wind/direction/vs/0 rep filed under /mode/vs/0 (a
+    shared Observe token) must not overwrite the mode rep, nor count as
+    /mode/vs/0 having pushed."""
+    mgr = _manager()
+    mode = {
+        "x.com.samsung.da.modes": ["Cool"],
+        "x.com.samsung.da.supportedModes": ["Auto", "Cool", "Dry", "Fan", "Heat"],
+        "rt": ["x.com.samsung.da.mode"],
+    }
+    mgr.apply("/mode/vs/0", mode, source="poll")
+    mgr.fallback_hrefs = {"/mode/vs/0"}
+
+    wind = {
+        "x.com.samsung.da.modes": "Fix",
+        "x.com.samsung.da.supportedModes": ["Up_And_Low", "Fix", "Individual"],
+        "rt": ["x.com.samsung.da.wind.direction"],
+    }
+    mgr.on_notification("/mode/vs/0", cbor2.dumps(wind))
+
+    assert mgr.cache.get("/mode/vs/0") == mode
+    assert mgr.fallback_hrefs == {"/mode/vs/0"}
+    assert not mgr.recently_notified()
+
+
+def test_on_notification_applies_rep_when_rt_matches_or_is_absent():
+    mgr = _manager()
+    mgr.apply(
+        "/mode/vs/0",
+        {"x.com.samsung.da.modes": ["Cool"], "rt": ["x.com.samsung.da.mode"]},
+        source="poll",
+    )
+
+    mgr.on_notification(
+        "/mode/vs/0",
+        cbor2.dumps({"x.com.samsung.da.modes": ["Heat"], "rt": ["x.com.samsung.da.mode"]}),
+    )
+    assert (mgr.cache.get("/mode/vs/0") or {}).get("x.com.samsung.da.modes") == ["Heat"]
+
+    mgr.on_notification("/mode/vs/0", cbor2.dumps({"x.com.samsung.da.modes": ["Dry"]}))
+    assert (mgr.cache.get("/mode/vs/0") or {}).get("x.com.samsung.da.modes") == ["Dry"]

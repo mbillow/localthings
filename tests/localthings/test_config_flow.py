@@ -166,12 +166,18 @@ class FakeSession:
     # a test can check the diagnostic-handshake fallback (_resolve_alert)
     # instead of the legacy _alert_name text-parsing path.
     redact_rejection: ClassVar[bool] = False
+    # Raised by successive connect() calls, oldest first, before any of the
+    # behaviour above -- a queued timeout models one failed handshake.
+    connect_errors: ClassVar[list[Exception]] = []
 
-    def __init__(self, host, port, cert_pem=None, key_pem=None, **kwargs):
+    def __init__(self, host, port, cert_pem=None, key_pem=None, local_port=None, **kwargs):
         self.host, self.port, self.cert_pem = host, port, cert_pem
+        self.local_port = local_port
         FakeSession.instances.append(self)
 
     def connect(self):
+        if FakeSession.connect_errors:
+            raise FakeSession.connect_errors.pop(0)
         if self.cert_pem in FakeSession.reject_certs:
             if FakeSession.redact_rejection:
                 from smartthings_local.errors import SessionError
@@ -196,6 +202,8 @@ def fake_dtls(monkeypatch):
     FakeSession.instances = []
     FakeSession.reject_certs = set()
     FakeSession.redact_rejection = False
+    FakeSession.connect_errors = []
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: True)
     monkeypatch.setattr(config_flow, "_fetch_samsung_uuid", lambda: "test-uuid")
     monkeypatch.setattr(
         config_flow,
@@ -1779,3 +1787,144 @@ def test_resolve_serial_falls_back_to_host():
     assert resolve_serial("Nothing(SVC)", "10.0.0.5") == "10.0.0.5"
     assert resolve_serial("", "10.0.0.5") == "10.0.0.5"
     assert resolve_serial(None, "10.0.0.5") == "10.0.0.5"
+
+
+# -- issue #504: fixed source port and one immediate retry -------------------
+
+
+def _handshake_fixture(monkeypatch):
+    from custom_components.localthings import config_flow
+
+    FakeSession.instances = []
+    FakeSession.reject_certs = set()
+    FakeSession.redact_rejection = False
+    FakeSession.connect_errors = []
+    monkeypatch.setattr(config_flow, "DtlsTransport", FakeSession)
+
+    class _NoAlert:
+        alert = None
+
+    monkeypatch.setattr(config_flow, "_diagnostic_alert", lambda *a: _NoAlert())
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: True)
+    return config_flow
+
+
+def test_confirmed_port_timeout_is_retried_once_from_the_fixed_port(monkeypatch) -> None:
+    """The retry's ClientHello replaces the half-open peer the first attempt
+    left, because it comes from the same source port."""
+    from smartthings_local.errors import SessionTimeoutError
+
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [SessionTimeoutError()]
+
+    info = config_flow._handshake_and_read(
+        MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", 61042
+    )
+
+    assert info["port"] == 49154
+    assert [(s.port, s.local_port) for s in FakeSession.instances] == [
+        (49154, 61042),
+        (49154, 61042),
+    ]
+
+
+def test_timeout_is_not_retried_from_an_ephemeral_port(monkeypatch) -> None:
+    """From a fresh port a retry would only leave a second peer behind."""
+    from smartthings_local.errors import SessionTimeoutError
+
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [SessionTimeoutError()]
+
+    with pytest.raises(config_flow.HandshakeTimeout):
+        config_flow._handshake_and_read(
+            MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", None
+        )
+    assert len(FakeSession.instances) == 1
+
+
+def test_timeout_is_retried_only_once(monkeypatch) -> None:
+    from smartthings_local.errors import SessionTimeoutError
+
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [SessionTimeoutError(), SessionTimeoutError()]
+
+    with pytest.raises(config_flow.HandshakeTimeout):
+        config_flow._handshake_and_read(
+            MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", 61042
+        )
+    assert len(FakeSession.instances) == 2
+
+
+def test_peer_initiated_handshake_is_retried_even_from_an_ephemeral_port(monkeypatch) -> None:
+    """The library documents an immediate retry as the fix for this one."""
+    from smartthings_local.errors import PeerInitiatedHandshakeError
+
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [PeerInitiatedHandshakeError()]
+
+    info = config_flow._handshake_and_read(
+        MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", None
+    )
+    assert info["port"] == 49154
+    assert len(FakeSession.instances) == 2
+
+
+def test_unbindable_fixed_port_falls_back_to_an_ephemeral_one(monkeypatch) -> None:
+    config_flow = _handshake_fixture(monkeypatch)
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: False)
+
+    info = config_flow._handshake_and_read(
+        MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", 61042
+    )
+    assert info["port"] == 49154
+    assert [s.local_port for s in FakeSession.instances] == [None]
+
+
+def test_endpoint_error_on_one_port_keeps_the_fixed_port_for_the_next(monkeypatch) -> None:
+    """The library raises EndpointError for a refused or failed send too, so
+    one port's failure says nothing about whether the source port binds."""
+    from smartthings_local.errors import EndpointError
+
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [EndpointError()]
+
+    info = config_flow._handshake_and_read(
+        MOCK_HOST,
+        _scan(confirmed=[49155], candidates=[49154, 49155]),
+        MOCK_LEAF_CERT_PEM,
+        "KEY",
+        61042,
+    )
+    assert info["port"] == 49155
+    assert [(s.port, s.local_port) for s in FakeSession.instances] == [
+        (49154, 61042),
+        (49155, 61042),
+    ]
+
+
+async def test_new_device_handshakes_from_its_fixed_source_port(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    from custom_components.localthings.transport import local_source_port
+
+    _patch_clienthello(monkeypatch, {49154})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert FakeSession.instances[0].local_port == local_source_port(MOCK_HOST)
+
+
+async def test_host_with_an_entry_handshakes_from_an_ephemeral_port(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """That entry's coordinator may hold the fixed port; sharing it would
+    tear down its live session."""
+    MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id="localthings_other").add_to_hass(hass)
+    _patch_clienthello(monkeypatch, {49154})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: MOCK_HOST})
+
+    assert FakeSession.instances[0].local_port is None

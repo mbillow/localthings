@@ -1043,6 +1043,9 @@
       "burner_state": {
         "name": "Stato fornello {number}"
       },
+      "burner_power_level": {
+        "name": "Livello di potenza fornello {number}"
+      },
       "clean_level": {
         "name": "Livello di pulizia"
       },
@@ -1815,7 +1818,7 @@
       "ports_closed": "Quell'indirizzo IP è raggiungibile, ma ha rifiutato attivamente tutte le porte dell'intervallo dell'API locale (UDP 49152-49160) e non ha risposto nulla sul canale discovery. Molto probabilmente non è un apparecchio Samsung, oppure è un apparecchio senza l'API locale attivata.",
       "no_dtls_server": "Le porte dell'intervallo dell'API locale sono raggiungibili a quell'indirizzo, ma nulla ha risposto a un handshake DTLS. Verifica che l'indirizzo IP appartenga all'apparecchio e non a un altro dispositivo della rete.",
       "appliance_no_dtls": "Quell'indirizzo è un apparecchio Samsung: si è identificato come {model} sul canale discovery non cifrato e ha dichiarato {port} come sua porta sicura, ma non ha mai completato un handshake DTLS su di essa. L'indirizzo non è il problema. Verifica che il Controllo remoto o un'impostazione simile non sia disattivata sul pannello dell'apparecchio, e consulta il log di Home Assistant per l'errore esatto.",
-      "handshake_timeout": "L'apparecchio ha risposto sulla sua porta dell'API locale ma non ha completato l'handshake DTLS. Di solito sta ancora mantenendo la sessione di un tentativo precedente: attendi circa un minuto e riprova.",
+      "handshake_timeout": "L'apparecchio ha risposto sulla sua porta dell'API locale ma non ha completato l'handshake DTLS, nemmeno dopo un nuovo tentativo. Riprova. Se continua a non riuscire, riavviare l'apparecchio libera le connessioni che sta ancora mantenendo; il log di Home Assistant riporta l'errore esatto.",
       "cert_rejected": "L'apparecchio ha rifiutato il certificato. Con ogni probabilità il certificato e la chiave della CA non sono quelli della CA AC14K_M di cui questo apparecchio si fida, oppure non corrispondono tra loro. Il log di Home Assistant riporta l'alert esatto inviato dall'apparecchio.",
       "handshake_failed": "L'apparecchio ha rifiutato l'handshake DTLS per un motivo non legato al certificato, molto probabilmente un'incompatibilità di protocollo o di cifratura. Il log di Home Assistant riporta l'alert esatto inviato.",
       "cloud_unreachable": "Impossibile raggiungere il gateway cloud di Samsung per ottenere l'UUID necessario a emettere il certificato di questo dispositivo. Verifica l'accesso a internet di Home Assistant e riprova.",
