@@ -112,6 +112,12 @@
       "add_wash_indicator": {
         "name": "AddWash bereit"
       },
+      "pre_wash_selected": {
+        "name": "Vorwäsche gewählt"
+      },
+      "delay_wash_set": {
+        "name": "Startverzögerung eingestellt"
+      },
       "pouring": {
         "name": "Ausgabe läuft"
       },
@@ -637,6 +643,15 @@
       },
       "rinse_cycles": {
         "name": "Spülgänge"
+      },
+      "laundry_out_time": {
+        "name": "Erinnerung Wäsche entnehmen",
+        "state": {
+          "0": "Aus",
+          "30": "Alle 30 Min.",
+          "60": "Alle 60 Min.",
+          "90": "Alle 90 Min."
+        }
       },
       "sensing_mode": {
         "name": "KI-Reinigungsaktion",
@@ -1167,6 +1182,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel zuletzt gereinigt"
+      },
+      "quick_wash": {
+        "name": "Schnellwäsche",
+        "state": {
+          "not_used": "Nicht verfügbar",
+          "off": "Aus",
+          "on": "Ein"
+        }
       },
       "dryer_type": {
         "name": "Trocknertyp",

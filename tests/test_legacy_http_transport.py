@@ -396,6 +396,38 @@ class TestStartOnlyWrites:
 
         assert course[PREFIX + "options"] == ["Course_5B"]
 
+    def test_choosing_another_cycle_drops_the_settings_held_for_the_last(self, idle):
+        """Cotton at 95C, then Extra Speed, which tops out at 40C: the 95 must
+        not go out with the new course."""
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Run"}})
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_5B"]}, 8.0)
+        idle.write(["washer", "vs", "0"], {PREFIX + "waterTemperature": "95"}, 8.0)
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_5C"]}, 8.0)
+
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert self._puts() == [
+            {"Device": {"Operation": {"state": "Run"}, "Mode": {"options": ["Course_5C"]}}}
+        ]
+
+    def test_a_setting_chosen_after_the_cycle_is_kept(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_5C"]}, 8.0)
+        idle.write(["washer", "vs", "0"], {PREFIX + "waterTemperature": "30"}, 8.0)
+
+        _, rep = idle.read(["washer", "vs", "0"], timeout=10.0)
+
+        assert rep[PREFIX + "waterTemperature"] == "30"
+
+    def test_the_laundry_out_reminder_is_written_at_once(self, idle):
+        """Measured on a WW6500: LaundryOutTime applies on its own, unlike
+        the cycle beside it in the same options array."""
+        code, _ = idle.write(
+            ["course", "vs", "0"], {PREFIX + "options": ["LaundryOutTime_60"]}, 8.0
+        )
+
+        assert code == 0x44
+        assert self._puts() == [{"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}]
+
 
 class TestCapabilities:
     def test_this_transport_has_no_push(self):

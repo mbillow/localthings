@@ -1,6 +1,6 @@
 """Washer device registry."""
 
-from ..capabilities import common, dishwasher, ignored, laundry, operational, washer
+from ..capabilities import common, dishwasher, ignored, laundry, washer
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -21,7 +21,7 @@ REGISTRY = DeviceRegistry(
             # either href.
             common.WATER_FILTER,
             common.FILTER_STATUS,
-            operational.OPERATIONAL_STATE,
+            washer.WASHER_OPERATIONAL_STATE,
             dishwasher.DIAGNOSIS,
         ]
     ),

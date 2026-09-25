@@ -118,6 +118,12 @@
       "add_wash_indicator": {
         "name": "애드워시 가능"
       },
+      "pre_wash_selected": {
+        "name": "애벌빨래 선택됨"
+      },
+      "delay_wash_set": {
+        "name": "예약 시작 설정됨"
+      },
       "stick_ble_connected": {
         "name": "스틱 BLE 연결됨"
       },
@@ -672,6 +678,15 @@
       "rinse_cycles": {
         "name": "헹굼 횟수"
       },
+      "laundry_out_time": {
+        "name": "세탁물 꺼내기 알림",
+        "state": {
+          "0": "끄기",
+          "30": "30분마다",
+          "60": "60분마다",
+          "90": "90분마다"
+        }
+      },
       "sensing_mode": {
         "name": "AI Purify 동작",
         "state": {
@@ -1173,6 +1188,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "마지막 통세척"
+      },
+      "quick_wash": {
+        "name": "빠른 세탁",
+        "state": {
+          "not_used": "사용 안 함",
+          "off": "끄기",
+          "on": "켜기"
+        }
       },
       "dryer_type": {
         "name": "건조기 유형",

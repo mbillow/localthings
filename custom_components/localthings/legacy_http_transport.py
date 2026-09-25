@@ -66,6 +66,9 @@ _START_SETTLE_S = 3.0
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 
+# The option-token prefix a course is held under (see legacy_http.StagedKey).
+_COURSE_PREFIX = "Course"
+
 
 @dataclass
 class _ApplianceState:
@@ -176,6 +179,12 @@ class LegacyHttpTransport:
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
         sendable, staged = split_start_only(aggregate, self._table)
+        if any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
+            # A new course brings its own settings, on the panel as well, so
+            # one held for the previous course would be sent to a course that
+            # may not take it.
+            for key in [k for k in self._state.staged if k[2] is None and k not in staged]:
+                del self._state.staged[key]
         for key, value in staged.items():
             self._state.staged[key] = (value, staged_current(self._state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
