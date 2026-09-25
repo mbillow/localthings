@@ -47,15 +47,18 @@ encodes dry time on them is not an 8-bit-mask group of this shape. The dryer's
 board that carried both a long list and a group for it would be the first to
 need more than a byte.
 
-## The five named kinds
+## The six named kinds
 
 | Kind | Named | Evidence |
 | --- | --- | --- |
 | `0x8` | water temperature | WW6500 panel reading; the only kind reaching bit 6 on that table, and `supportedWaterTemperature` its only seven-entry list |
 | `0x9` | rinse | the same reading pins the set; `0xA` is ruled out as rinse below |
 | `0xA` | spin | as above — the only one of the two that can address index 6 |
+| `0xC` | soil level | mask ranges match `supportedSoilLevel` on `flexwash` and `wa55a7700av` |
 | `0xD` | dry | DV5000T owner's per-course panel report, corroborated by the DV6800N on a different board and code space |
 | `0xE` | dry time | the DV6800N again: it complements `0xD` course for course, and decodes against `supportedDryTime` |
+
+**`0xC`.** Validated on `flexwash` and `wa55a7700av` devices. The bitmask values match the indices inside `supportedSoilLevel` for active washer courses.
 
 **`0xD`.** A DV5000T owner reported what their panel offers per course, and
 its fourteen records reproduce that exactly. The DV6800N (`dryer_dv6800n`) is
