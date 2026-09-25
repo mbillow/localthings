@@ -35,7 +35,7 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
+from smartthings_local.errors import PeerInitiatedHandshakeError
 
 from . import cloudcourse, probing
 from .const import (
@@ -727,6 +727,20 @@ def _worth_retrying(exc: Exception, confirmed: bool, local_port: int | None) -> 
     return isinstance(exc, TimeoutError) and confirmed and local_port is not None
 
 
+def _source_port_bindable(host: str, local_port: int) -> bool:
+    """Whether the library's own bind of `local_port` would succeed: same
+    family, same SO_REUSEADDR. Checked up front because the library reports
+    a failed bind as the same EndpointError as a refused or failed send."""
+    try:
+        family = socket.getaddrinfo(host, None, type=socket.SOCK_DGRAM)[0][0]
+        with socket.socket(family, socket.SOCK_DGRAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("::", local_port, 0, 0) if family == socket.AF_INET6 else ("", local_port))
+    except OSError:
+        return False
+    return True
+
+
 def _connect_and_read(
     host: str, port: int, cert_pem: str, key_pem: str, local_port: int | None
 ) -> dict:
@@ -756,6 +770,9 @@ def _handshake_and_read(
     from (transport.local_source_port), or None for an ephemeral one -- see
     LocalThingsConfigFlow._setup_source_port for when each applies.
     """
+    if local_port is not None and scan.candidates and not _source_port_bindable(host, local_port):
+        _LOGGER.debug("source port %d unavailable; using an ephemeral one", local_port)
+        local_port = None
     failures: list[tuple[int, Exception]] = []
     for port in scan.candidates:
         retried = False
@@ -766,15 +783,6 @@ def _handshake_and_read(
                 # The device answered, just not with something we can use --
                 # trying the remaining ports can't improve on that.
                 raise
-            except EndpointError as exc:
-                if local_port is None:
-                    failures.append((port, exc))
-                    _LOGGER.debug("port %d failed: %s", port, exc)
-                    break
-                _LOGGER.debug(
-                    "source port %d unavailable (%s); using an ephemeral one", local_port, exc
-                )
-                local_port = None
             except Exception as exc:
                 if not retried and _worth_retrying(exc, port in scan.confirmed, local_port):
                     retried = True

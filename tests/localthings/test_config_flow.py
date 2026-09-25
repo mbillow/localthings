@@ -203,6 +203,7 @@ def fake_dtls(monkeypatch):
     FakeSession.reject_certs = set()
     FakeSession.redact_rejection = False
     FakeSession.connect_errors = []
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: True)
     monkeypatch.setattr(config_flow, "_fetch_samsung_uuid", lambda: "test-uuid")
     monkeypatch.setattr(
         config_flow,
@@ -1804,6 +1805,7 @@ def _handshake_fixture(monkeypatch):
         alert = None
 
     monkeypatch.setattr(config_flow, "_diagnostic_alert", lambda *a: _NoAlert())
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: True)
     return config_flow
 
 
@@ -1868,16 +1870,36 @@ def test_peer_initiated_handshake_is_retried_even_from_an_ephemeral_port(monkeyp
 
 
 def test_unbindable_fixed_port_falls_back_to_an_ephemeral_one(monkeypatch) -> None:
+    config_flow = _handshake_fixture(monkeypatch)
+    monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: False)
+
+    info = config_flow._handshake_and_read(
+        MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", 61042
+    )
+    assert info["port"] == 49154
+    assert [s.local_port for s in FakeSession.instances] == [None]
+
+
+def test_endpoint_error_on_one_port_keeps_the_fixed_port_for_the_next(monkeypatch) -> None:
+    """The library raises EndpointError for a refused or failed send too, so
+    one port's failure says nothing about whether the source port binds."""
     from smartthings_local.errors import EndpointError
 
     config_flow = _handshake_fixture(monkeypatch)
     FakeSession.connect_errors = [EndpointError()]
 
     info = config_flow._handshake_and_read(
-        MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", 61042
+        MOCK_HOST,
+        _scan(confirmed=[49155], candidates=[49154, 49155]),
+        MOCK_LEAF_CERT_PEM,
+        "KEY",
+        61042,
     )
-    assert info["port"] == 49154
-    assert [s.local_port for s in FakeSession.instances] == [61042, None]
+    assert info["port"] == 49155
+    assert [(s.port, s.local_port) for s in FakeSession.instances] == [
+        (49154, 61042),
+        (49155, 61042),
+    ]
 
 
 async def test_new_device_handshakes_from_its_fixed_source_port(
