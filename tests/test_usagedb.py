@@ -1,9 +1,9 @@
 """Decoding the usage history at /file/transfer/vs/0 (issue #301).
 
-Backed by two real captures in fixtures/usage_blobs.json: a dishwasher's
-single record and a TP1X_REF_21K fridge's full 181-record file, both read
-live and both reconciled against their own appliance's
-/energy/consumption/vs/0 at the time -- see that file's notes.
+Backed by real captures in fixtures/usage_blobs.json -- a dishwasher, a
+TP1X_REF_21K fridge and a TP2X_RAC_20K air conditioner (#488), each read
+live and reconciled against its own appliance's /energy/consumption/vs/0
+at the time -- see that file's notes.
 """
 
 from __future__ import annotations
@@ -150,6 +150,20 @@ def test_energy_is_refused_where_the_scale_is_unconfirmed():
     the other scale reports 511858.5 kWh instead of 5118.6."""
     rep = _rep(_prac_like(62700))
     assert usagedb.cumulative_runtime_hours(rep) == 6270.0
+    assert usagedb.cumulative_energy_kwh(rep) is None
+
+
+def test_a_real_runtime_capture_keeps_energy_in_plain_wh():
+    """Issue #488's TP2X_RAC_20K: the same energy-plus-runtime shape as #329,
+    on a second board family, and its second field again equals the live
+    cumulativePower outright -- so energy stays refused."""
+    blob, expected = _capture("airconditioner_tp2x_rac_20k")
+    rep = _rep(blob)
+    parsed = usagedb.records(rep)
+    assert parsed is not None
+    assert len(parsed) == expected["records"]
+    assert parsed[-1][1] == expected["cumulative_wh"]
+    assert usagedb.cumulative_runtime_hours(rep) == expected["runtime_hours"]
     assert usagedb.cumulative_energy_kwh(rep) is None
 
 

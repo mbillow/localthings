@@ -49,6 +49,15 @@ def wh_to_kwh(v):
     return round(n / 1000.0, 2) if n is not None else None
 
 
+def lifetime_wh_to_kwh(v):
+    """wh_to_kwh for an appliance's lifetime energy counter, where 0 reads as
+    unknown: a TP2X_RAC_20K (issue #488) reports "0" for a minute or two
+    after its connection drops, and HA books a total_increasing drop to 0 as
+    a meter reset, counting the whole lifetime total again on recovery."""
+    n = _num(v)
+    return round(n / 1000.0, 2) if n else None
+
+
 def parse_iso_utc(raw):
     """ISO datetime defaulting to UTC when the string carries no timezone of
     its own. A few boards ship a 'Z'/offset suffix already (fromisoformat
@@ -527,7 +536,7 @@ ENERGY_METER = Capability(
             device_class="energy",
             state_class="total_increasing",
             unit="kWh",
-            value_fn=wh_to_kwh,
+            value_fn=lifetime_wh_to_kwh,
             exists_fn=lambda rep, resources: (
                 is_stub_rep(rep) or "x.com.samsung.da.cumulativePower" in rep
             ),

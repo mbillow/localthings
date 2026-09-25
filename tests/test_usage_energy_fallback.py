@@ -85,14 +85,16 @@ def test_a_zero_meter_reading_still_wins():
     """A permanent, correct `0` -- the ARTIK051_KRAC_18K of issue #302, whose
     hardware genuinely has no meter. The field being *present* is what
     decides, not its value, so this stays the meter's entity and the file
-    does not quietly substitute a different number for it."""
+    does not quietly substitute a different number for it. The 0 itself reads
+    as unknown (issue #488, see common.lifetime_wh_to_kwh)."""
     state = _state(
         {
             ENERGY: {"x.com.samsung.da.cumulativePower": "0"},
             TRANSFER: _transfer_rep(),
         }
     )
-    assert state["energy_kwh"] == 0.0
+    assert "energy_kwh" in state
+    assert state["energy_kwh"] is None
 
 
 def test_a_not_yet_fetched_meter_stub_wins():
