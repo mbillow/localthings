@@ -1046,9 +1046,6 @@
       "burner_power_level": {
         "name": "Vermogensniveau brander {number}"
       },
-      "burner_hot_surface": {
-        "name": "Heet oppervlak brander {number}"
-      },
       "clean_level": {
         "name": "Reinigingsniveau"
       },

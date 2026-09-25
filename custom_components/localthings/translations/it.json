@@ -1046,9 +1046,6 @@
       "burner_power_level": {
         "name": "Livello di potenza fornello {number}"
       },
-      "burner_hot_surface": {
-        "name": "Superficie calda fornello {number}"
-      },
       "clean_level": {
         "name": "Livello di pulizia"
       },

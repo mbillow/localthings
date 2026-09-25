@@ -1046,9 +1046,6 @@
       "burner_power_level": {
         "name": "Úroveň výkonu varnej zóny {number}"
       },
-      "burner_hot_surface": {
-        "name": "Horúci povrch varnej zóny {number}"
-      },
       "clean_level": {
         "name": "Úroveň čistoty"
       },

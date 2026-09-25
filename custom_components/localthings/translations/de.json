@@ -1046,9 +1046,6 @@
       "burner_power_level": {
         "name": "Brenner {number} Leistungsstufe"
       },
-      "burner_hot_surface": {
-        "name": "Brenner {number} heiße Oberfläche"
-      },
       "clean_level": {
         "name": "Reinigungsstufe"
       },

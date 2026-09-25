@@ -39,7 +39,7 @@ def test_per_zone_power_level_and_hot_surface():
     # Slot 2 is not advertised on this board, so it gets no entities.
     for slot in (0, 1, 3, 4, 5):
         assert state[f"burner_{slot}_power_level"] == "Off"
-        assert state[f"burner_{slot}_hot_surface"] == "Normal"
+        assert state[f"burner_{slot}_hot_surface"] is False
     assert "burner_2_power_level" not in state
     assert "burner_2_hot_surface" not in state
 

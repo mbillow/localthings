@@ -74,6 +74,11 @@ COOKTOP_POWER = Capability(
 _SUPPORTED_OPERATION_SLOTS = tuple(range(8))
 
 
+def _hot_surface(options, slot):
+    value = _option_value(options, f"HotSurface{slot}")
+    return None if value is None else value.lower() != "normal"
+
+
 def _slot_option_present(prefix, slot):
     """exists_fn for a per-slot `<prefix><slot>_` option on /mode/vs/0."""
     return lambda rep, resources: (
@@ -106,9 +111,10 @@ COOKTOP_MODE = Capability(
             for slot in _SUPPORTED_OPERATION_SLOTS
         ),
         # Induction boards only (issue #508's NV9300K and issue #314's
-        # NV8000T); the gas NA9300K reports neither. Raw values: only idle
-        # readings have been seen (PowerLevel Off/0, HotSurface Normal), so
-        # no value is interpreted as "on" or "hot" yet.
+        # NV8000T); the gas NA9300K reports neither. Power level stays raw:
+        # only idle readings have been seen (Off on one board, 0 on the
+        # other). Hot surface reads like range.py's hotSurfaceState: anything
+        # but Normal is hot.
         *(
             SensorDesc(
                 key=f"burner_{slot}_power_level",
@@ -122,13 +128,13 @@ COOKTOP_MODE = Capability(
             for slot in _SUPPORTED_OPERATION_SLOTS
         ),
         *(
-            SensorDesc(
+            BinarySensorDesc(
                 key=f"burner_{slot}_hot_surface",
                 field="x.com.samsung.da.options",
+                device_class="heat",
                 translation_key="burner_hot_surface",
                 translation_placeholders={"number": str(slot)},
-                icon="mdi:heat-wave",
-                value_fn=lambda options, slot=slot: _option_value(options, f"HotSurface{slot}"),
+                value_fn=lambda options, slot=slot: _hot_surface(options, slot),
                 exists_fn=_slot_option_present("HotSurface", slot),
             )
             for slot in _SUPPORTED_OPERATION_SLOTS
