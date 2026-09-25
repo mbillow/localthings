@@ -1,4 +1,4 @@
-"""Tests for the TP2X_DA-KS-COOKTOP-000001 gas cooktop (issue #314).
+"""Tests for the TP2X_DA-KS-COOKTOP-000001 NV8000T induction cooktop (issue #314).
 
 The reporter's actual complaint (six advertised burner slots when only
 three are physically present) is expected: the registry declares a
@@ -17,16 +17,16 @@ from tests.conftest import _load_device
 
 
 def _bound():
-    resources = _load_device("gas_cooktop_tp2x_ks")
+    resources = _load_device("cooktop_nv8000t")
     reg = resolve(resources)
     assert reg is not None
     return discover(resources, reg.capabilities, reg.pattern_capabilities), resources
 
 
-def test_resolves_to_gas_cooktop_registry():
-    resources = _load_device("gas_cooktop_tp2x_ks")
+def test_resolves_to_cooktop_registry():
+    resources = _load_device("cooktop_nv8000t")
     reg = resolve(resources)
-    assert reg is not None and reg.name == "gas_cooktop"
+    assert reg is not None and reg.name == "cooktop"
 
 
 def test_no_unbound_hrefs():

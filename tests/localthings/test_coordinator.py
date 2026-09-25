@@ -309,7 +309,7 @@ def test_run_discovery_detects_cooktop_via_resource_signature(
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     coordinator._run_discovery(_load_device("cooktop"))
 
-    assert coordinator.device_type_name == "gas_cooktop"
+    assert coordinator.device_type_name == "cooktop"
     assert coordinator._unbound_hrefs == []
 
 

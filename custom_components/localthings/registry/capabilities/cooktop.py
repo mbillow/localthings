@@ -1,10 +1,11 @@
 """Read-only capabilities for Samsung cooktops.
 
-The first verified device is an NA9300K-class five-burner gas cooktop.  Its
-local OCF API reports burner state as strings embedded in the
-``x.com.samsung.da.options`` array on ``/mode/vs/0``.  Heat-producing controls
-are intentionally not exposed: the local write contract is unverified and a
-cooktop must not be remotely ignited by an automation.
+The first verified device is an NA9300K-class five-burner gas cooktop; the
+NV9300K and NV8000T induction cooktops share its surface.  All of them report
+burner state as strings embedded in the ``x.com.samsung.da.options`` array on
+``/mode/vs/0``.  Heat-producing controls are intentionally not exposed: the
+local write contract is unverified and a cooktop must not be remotely ignited
+by an automation.
 """
 
 import re
@@ -72,6 +73,15 @@ COOKTOP_POWER = Capability(
 # Replace this bound with data-driven entity generation when #31 lands.
 _SUPPORTED_OPERATION_SLOTS = tuple(range(8))
 
+
+def _slot_option_present(prefix, slot):
+    """exists_fn for a per-slot `<prefix><slot>_` option on /mode/vs/0."""
+    return lambda rep, resources: (
+        is_stub_rep(rep)
+        or _option_value(rep.get("x.com.samsung.da.options"), f"{prefix}{slot}") is not None
+    )
+
+
 COOKTOP_MODE = Capability(
     href="/mode/vs/0",
     poll_tier="hot",
@@ -91,14 +101,35 @@ COOKTOP_MODE = Capability(
                 translation_placeholders={"number": str(slot)},
                 icon="mdi:gas-burner",
                 value_fn=lambda options, slot=slot: _option_value(options, f"OperationState{slot}"),
-                exists_fn=lambda rep, resources, slot=slot: (
-                    is_stub_rep(rep)
-                    or _option_value(
-                        rep.get("x.com.samsung.da.options"),
-                        f"OperationState{slot}",
-                    )
-                    is not None
-                ),
+                exists_fn=_slot_option_present("OperationState", slot),
+            )
+            for slot in _SUPPORTED_OPERATION_SLOTS
+        ),
+        # Induction boards only (issue #508's NV9300K and issue #314's
+        # NV8000T); the gas NA9300K reports neither. Raw values: only idle
+        # readings have been seen (PowerLevel Off/0, HotSurface Normal), so
+        # no value is interpreted as "on" or "hot" yet.
+        *(
+            SensorDesc(
+                key=f"burner_{slot}_power_level",
+                field="x.com.samsung.da.options",
+                translation_key="burner_power_level",
+                translation_placeholders={"number": str(slot)},
+                icon="mdi:gauge",
+                value_fn=lambda options, slot=slot: _option_value(options, f"PowerLevel{slot}"),
+                exists_fn=_slot_option_present("PowerLevel", slot),
+            )
+            for slot in _SUPPORTED_OPERATION_SLOTS
+        ),
+        *(
+            SensorDesc(
+                key=f"burner_{slot}_hot_surface",
+                field="x.com.samsung.da.options",
+                translation_key="burner_hot_surface",
+                translation_placeholders={"number": str(slot)},
+                icon="mdi:heat-wave",
+                value_fn=lambda options, slot=slot: _option_value(options, f"HotSurface{slot}"),
+                exists_fn=_slot_option_present("HotSurface", slot),
             )
             for slot in _SUPPORTED_OPERATION_SLOTS
         ),

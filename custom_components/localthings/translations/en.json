@@ -1043,6 +1043,12 @@
       "burner_state": {
         "name": "Burner {number} state"
       },
+      "burner_power_level": {
+        "name": "Burner {number} power level"
+      },
+      "burner_hot_surface": {
+        "name": "Burner {number} hot surface"
+      },
       "clean_level": {
         "name": "Clean level"
       },

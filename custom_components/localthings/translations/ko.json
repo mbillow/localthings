@@ -1043,6 +1043,12 @@
       "burner_state": {
         "name": "{number}번 화구 상태"
       },
+      "burner_power_level": {
+        "name": "{number}번 화구 화력 단계"
+      },
+      "burner_hot_surface": {
+        "name": "{number}번 화구 표면 고온"
+      },
       "clean_level": {
         "name": "청정도"
       },

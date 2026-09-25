@@ -7,7 +7,7 @@ Reuses range.py's COOKTOP_STATUS/COOKTOP_SPEC/COOKTOP_SAFETY/PROBE_STATUS
 wholesale (identical resource shapes to the range combo's cooktop half)
 and cooktop.PAIRED_HOOD_STATUS for the Bluetooth-paired range hood some
 units pair with. Distinct registry key from cooktop.REGISTRY ('cooktop')
--- that family is the unrelated NA9300K-class gas cooktop (burner state
+-- that family is the unrelated NA9300K-class cooktop (burner state
 embedded in /mode/vs/0's options array, a completely different OCF
 surface that happens to share the English word "cooktop").
 """

@@ -561,7 +561,7 @@ class TestForDeviceByModel:
             "ARTIK051_GLOBAL_COOKTOP",
         )
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_range_hood_via_ahd_model(self):
         from custom_components.localthings.registry.by_type import for_device_by_model
@@ -681,7 +681,7 @@ class TestForDeviceByModel:
 
         reg = for_device_by_model("ARTIK051_GB_CT_001", "ARTIK051_GLOBAL_COOKTOP")
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_board_token_in_description_used_when_model_num_has_none(self):
         """Some units report a placeholder modelNum and carry the board token
@@ -862,6 +862,9 @@ class TestResolve:
                 disagreements[name] = (by_resources.name, by_model.name)
 
         assert disagreements == {
+            # issue #508: TP2X_DA-KS-COOKTOP carries the burner-options
+            # surface, not the TP1X COOKTOP board's range-family one.
+            "cooktop_nv9300k": ("cooktop", "induction_cooktop"),
             "microwave_nq7000b": ("microwave", "oven"),  # issue #496
             "qooker_mw7500a": ("microwave", "oven"),
         }
@@ -916,7 +919,7 @@ class TestForDeviceByResources:
         reg = for_device_by_resources(_load_device("cooktop"))
 
         assert reg is not None
-        assert reg.name == "gas_cooktop"
+        assert reg.name == "cooktop"
 
     def test_unrelated_mode_options_are_not_cooktop(self):
         from custom_components.localthings.registry.by_type import for_device_by_resources

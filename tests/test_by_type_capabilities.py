@@ -96,7 +96,7 @@ def test_every_registry_covers_the_probe_hrefs():
     capability coverage" Repair (issue #301).
 
     Registries that hand-pick common capabilities rather than spreading
-    `common.UNIVERSAL` are the ones that miss this -- gas_cooktop and
+    `common.UNIVERSAL` are the ones that miss this -- the cooktop and
     range_hood both did.
     """
     from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY
