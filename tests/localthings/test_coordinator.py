@@ -34,7 +34,7 @@ from custom_components.localthings.coordinator import (
     LocalThingsCoordinator,
     _local_source_port,
 )
-from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL, PUSH_HEALTH_WINDOW_S
+from custom_components.localthings.observe import MODE_OBSERVE, MODE_POLL
 from custom_components.localthings.registry.capabilities.common import (
     remote_control_enabled,
     remote_control_required_for_write,
@@ -497,15 +497,6 @@ async def test_reconnect_while_observe_mode_downgrades_to_poll(
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
-    # Age out the notify so recently_notified() is False — a poll failure
-    # with a recent notify is now treated as evidence the session is
-    # still alive (see test_poll_failure_skips_reconnect_when_push_is_healthy)
-    # and would not trigger a reconnect at all. This test covers a
-    # genuinely dead channel: no recent push, poll fails, reconnect fires.
-    last_notify_ts = coordinator._observe._last_notify_ts
-    assert last_notify_ts is not None
-    coordinator._observe._last_notify_ts = last_notify_ts - (PUSH_HEALTH_WINDOW_S + 1)
-
     # Simulate the existing "poll failed, reconnecting" branch: _poll_once
     # fails once (triggering the reconnect/backoff path), then succeeds.
     # The device stops notifying on subscribe, so the immediate resubscribe
@@ -557,10 +548,6 @@ async def test_total_poll_failure_downgrades_observe_mode_to_poll(
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
 
-    last_notify_ts = coordinator._observe._last_notify_ts
-    assert last_notify_ts is not None
-    coordinator._observe._last_notify_ts = last_notify_ts - (PUSH_HEALTH_WINDOW_S + 1)
-
     with (
         patch(
             "custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once",
@@ -611,15 +598,88 @@ def test_defer_reconnect_for_still_tolerates_an_ambiguous_timeout(
     assert coordinator._defer_reconnect_for(SessionTimeoutError()) is False
 
 
-async def test_poll_timeout_skips_reconnect_when_push_is_healthy(
+class _HalfDeadSession:
+    """A session whose /device/0 transfer times out, and whose /oic/d
+    either answers (`answers=True`, a slow transfer) or times out too (the
+    half-dead session of issue #507)."""
+
+    def __init__(self, answers: bool) -> None:
+        self.answers = answers
+        self.reads: list[list[str]] = []
+
+    def pace(self) -> None:
+        pass
+
+    def read(self, path_segs, timeout=None):
+        self.reads.append(list(path_segs))
+        if list(path_segs) == ["oic", "d"] and self.answers:
+            return 0x45, {"n": "Range"}
+        raise SessionTimeoutError()
+
+
+def test_poll_timeout_on_a_half_dead_session_closes_it_at_once(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Issue #507: when the probe gets no answer either, the timeout must
+    not count toward the slow-transfer tolerance. It surfaces as a
+    non-TimeoutError so _defer_reconnect_for reconnects this cycle."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._discovered = True
+    sess = _HalfDeadSession(answers=False)
+    coordinator._session = cast(Any, sess)
+
+    with (
+        patch.object(coordinator, "_close_session") as mock_close,
+        pytest.raises(RuntimeError) as err,
+    ):
+        coordinator._poll_once()
+
+    assert sess.reads == [["device", "0"], ["oic", "d"]]
+    mock_close.assert_called_once()
+    assert coordinator._defer_reconnect_for(err.value) is False
+
+
+def test_poll_timeout_on_a_slow_session_keeps_the_tolerance(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """When the probe answers, the transfer was merely slow: the
+    TimeoutError goes through untouched and the session stays open, which
+    keeps the dishwasher fix from 569029c."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._discovered = True
+    sess = _HalfDeadSession(answers=True)
+    coordinator._session = cast(Any, sess)
+
+    with (
+        patch.object(coordinator, "_close_session") as mock_close,
+        pytest.raises(TimeoutError),
+    ):
+        coordinator._poll_once()
+
+    assert sess.reads == [["device", "0"], ["oic", "d"]]
+    mock_close.assert_not_called()
+
+
+def test_poll_timeout_before_discovery_skips_the_probe(hass: HomeAssistant, mock_entry) -> None:
+    """Before discovery a timeout reconnects regardless, so the probe would
+    only add its wait to entry setup."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    sess = _HalfDeadSession(answers=False)
+    coordinator._session = cast(Any, sess)
+
+    with pytest.raises(TimeoutError):
+        coordinator._poll_once()
+
+    assert sess.reads == [["device", "0"]]
+
+
+async def test_lone_poll_timeout_keeps_observe_mode(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
-    """A poll (summary GET) TimeoutError with a recent OBSERVE notify must
-    not reconnect or downgrade at all — the notify proves the DTLS session
-    and its subscriptions are still alive, so the GET failure is just a
-    choked blockwise transfer on a slow device, not a dead channel. This
-    is the fix for a flaky device (e.g. a slow dishwasher) repeatedly
-    tearing down a healthy observe session on nothing but a poll hiccup."""
+    """A poll TimeoutError that reaches _defer_reconnect_for has already
+    passed the liveness probe in _poll_once, so it is a slow transfer: one
+    of them must not reconnect or downgrade. This is what keeps a slow
+    dishwasher from tearing down a healthy observe session every cycle."""
     fake = mock_coordinator_observe_session
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
@@ -654,14 +714,11 @@ async def test_poll_timeout_skips_reconnect_when_push_is_healthy(
     mock_close.assert_not_called()
 
 
-async def test_poll_timeout_reconnects_after_consecutive_limit_even_with_push(
+async def test_poll_timeout_reconnects_after_consecutive_limit(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources
 ) -> None:
-    """Push health only matters at the moment of the failing poll — if
-    notifies later go stale too (not supplied here, so recently_notified()
-    becomes False once the window elapses) a run of consecutive timeouts
-    must still escalate to a reconnect, so a genuinely dead channel isn't
-    stuck forever just because it looked healthy once."""
+    """A run of consecutive slow-transfer timeouts in observe mode still
+    escalates to a reconnect once it reaches the limit."""
     fake = mock_coordinator_observe_session
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
@@ -679,12 +736,6 @@ async def test_poll_timeout_reconnects_after_consecutive_limit_even_with_push(
     )
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
-
-    # No notify is recent any more, so every timeout below counts toward
-    # the consecutive-timeout limit instead of being deferred.
-    last_notify_ts = coordinator._observe._last_notify_ts
-    assert last_notify_ts is not None
-    coordinator._observe._last_notify_ts = last_notify_ts - (PUSH_HEALTH_WINDOW_S + 1)
 
     # Call _async_update_data directly rather than via
     # async_request_refresh() — the coordinator's built-in debouncer
@@ -719,15 +770,13 @@ async def test_poll_timeout_reconnects_after_consecutive_limit_even_with_push(
     assert coordinator.observe_mode == MODE_POLL
 
 
-async def test_poll_timeout_counter_resets_when_push_is_healthy_again(
-    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+async def test_notify_does_not_reset_poll_timeout_count(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session, fridge_resources
 ) -> None:
-    """Timeouts accrued during a quiet stretch must not survive into a
-    later burst of healthy push — otherwise an intermittently-active
-    device could reconnect on old timeouts even though push just proved
-    the session alive. The counter means "consecutive timeouts with no
-    push activity to vouch for the session," not just "consecutive
-    timeouts count.\""""
+    """A notify proves the appliance still pushes, not that it still answers
+    requests (issue #507): a range kept notifying on a session no GET got
+    through on, and resetting the count on each notify kept that session
+    from ever being reconnected."""
     fake = mock_coordinator_observe_session
     await hass.config_entries.async_setup(mock_entry.entry_id)
     await hass.async_block_till_done()
@@ -744,31 +793,32 @@ async def test_poll_timeout_counter_resets_when_push_is_healthy_again(
         0.8,
     )
     assert entered is True
-    assert coordinator.observe_mode == MODE_OBSERVE
 
-    # Age the notify out so timeouts accrue toward the limit.
-    last_notify_ts = coordinator._observe._last_notify_ts
-    assert last_notify_ts is not None
-    coordinator._observe._last_notify_ts = last_notify_ts - (PUSH_HEALTH_WINDOW_S + 1)
     with patch(
         "custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once",
         side_effect=TimeoutError("GET /device/0 block 11 timeout"),
     ):
         for _ in range(coordinator._POLL_TIMEOUT_LIMIT - 1):
+            fake.on_notification(hrefs[0], cbor2.dumps({"notified": True}))
             await coordinator._async_update_data()
     assert coordinator._consecutive_poll_timeouts == coordinator._POLL_TIMEOUT_LIMIT - 1
 
-    # A fresh notify proves push is healthy again — the next timeout must
-    # not add to the pre-existing count, and must not reconnect.
     fake.on_notification(hrefs[0], cbor2.dumps({"notified": True}))
-    with patch(
-        "custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once",
-        side_effect=TimeoutError("GET /device/0 block 11 timeout"),
+    fake.notify_on_subscribe = None
+    with (
+        patch(
+            "custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once",
+            side_effect=[TimeoutError("GET /device/0 block 11 timeout"), fridge_resources],
+        ) as mock_poll,
+        patch(
+            "custom_components.localthings.coordinator.asyncio.sleep",
+            new=AsyncMock(),
+        ),
     ):
         await coordinator._async_update_data()
 
+    assert mock_poll.call_count == 2, "the limit-reaching timeout must reconnect"
     assert coordinator._consecutive_poll_timeouts == 0
-    assert coordinator.observe_mode == MODE_OBSERVE
 
 
 async def test_reconnect_from_observe_mode_resubscribes_immediately(
@@ -796,14 +846,6 @@ async def test_reconnect_from_observe_mode_resubscribes_immediately(
     )
     assert entered is True
     assert coordinator.observe_mode == MODE_OBSERVE
-
-    # Age out the notify so recently_notified() is False and the poll
-    # failure below actually triggers a reconnect (see
-    # test_poll_failure_skips_reconnect_when_push_is_healthy for the
-    # healthy-push case, which now skips reconnecting entirely).
-    last_notify_ts = coordinator._observe._last_notify_ts
-    assert last_notify_ts is not None
-    coordinator._observe._last_notify_ts = last_notify_ts - (PUSH_HEALTH_WINDOW_S + 1)
 
     # If a stale retry timer (rather than an immediate resubscribe) were
     # driving recovery, mode would still be 'poll' right after this single

@@ -48,12 +48,10 @@ def _rep_diff(cached: dict, sweep: dict) -> dict:
 
 SUCCESS_FRACTION = 0.8
 
-# A notify within this long counts as proof the DTLS session is alive,
-# even if the summary poll's blockwise GET just timed out on a slow
-# device. Twice the coordinator's 30s summary interval: generous enough
-# to absorb jitter, tight enough that a channel that's actually gone
-# quiet doesn't get credit for a notify from a while ago.
-PUSH_HEALTH_WINDOW_S = 60.0
+# Consecutive sweeps that find a subscribed href's cached rep out of date
+# before it goes back on the sub-poll cadence. Two, so one missed notify
+# doesn't demote an href that otherwise pushes fine.
+STALE_SWEEPS_TO_FALLBACK = 2
 
 
 def _is_alarms_href(href: str) -> bool:
@@ -93,7 +91,9 @@ class ObserveManager:
         self._cache_lock = threading.Lock()
         self.subscribed_hrefs: set[str] = set()
         self._notified: set[str] = set()
-        self._last_notify_ts: float | None = None
+        # Per subscribed href, how many sweeps in a row found it stale; see
+        # log_sweep_discrepancies. Guarded by _notify_cond like fallback_hrefs.
+        self._stale_sweeps: dict[str, int] = {}
         # Wakes try_enter_observe_mode's grace wait early once enough hrefs
         # have notified. Guards `_notified` mutations, the `wait_for`, and
         # fallback_hrefs (enter_observe_mode assignment, on_notification
@@ -101,9 +101,10 @@ class ObserveManager:
         self._notify_cond = threading.Condition()
         # Idle while polling, except after downgrade_to_poll (every href
         # that was subscribed). While in observe mode this is the set of
-        # subscribed hrefs that have not yet notified (issue #92) -- they
-        # stay on the hot/warm sub-poll cadence. on_notification discards
-        # an href once it pushes, so a late first notify self-corrects.
+        # subscribed hrefs that have not yet notified (issue #92), plus any
+        # the sweep keeps finding stale (issue #507) -- they stay on the
+        # hot/warm sub-poll cadence. on_notification discards an href once
+        # it pushes, so a late notify self-corrects.
         self.fallback_hrefs: set[str] = set()
         self._on_applied: Callable[[str, dict, str], None] | None = None
         self._refresh_task: ObserveRefreshTask | None = None
@@ -218,7 +219,7 @@ class ObserveManager:
             # full grace period -- a late first push (blockwise refetch)
             # must drop the href so we don't keep GET-polling a live one.
             self.fallback_hrefs.discard(href)
-            self._last_notify_ts = time.monotonic()
+            self._stale_sweeps.pop(href, None)
             self._notify_cond.notify_all()
         self.log.debug("observe notify: %s", href)
         self.apply(href, rep, source="observe")
@@ -244,20 +245,6 @@ class ObserveManager:
             "observe %s: dropping notify with rt %s, cached rt is %s", href, rt, cached_rt
         )
         return True
-
-    def recently_notified(self, window_s: float = PUSH_HEALTH_WINDOW_S) -> bool:
-        """True if any OBSERVE notify has arrived within `window_s`.
-
-        Used only to gate whether a poll (summary GET) failure should
-        close/reconnect the DTLS session — NOT to decide observe-mode
-        health in general (see `log_sweep_discrepancies` for why that
-        distinction matters: a notify recent enough to prove the session
-        itself is alive is a much stronger, narrower claim than "the
-        channel has been perfectly healthy").
-        """
-        return (
-            self._last_notify_ts is not None and time.monotonic() - self._last_notify_ts < window_s
-        )
 
     def subscribe_hrefs(self, session, hrefs: list[str]) -> set[str]:
         """Register OBSERVE on every href; returns the ones that took.
@@ -315,6 +302,7 @@ class ObserveManager:
         # cannot land on a set object that is about to be replaced.
         with self._notify_cond:
             self.fallback_hrefs = set(subscribed) - self._notified
+            self._stale_sweeps.clear()
         self._set_mode(MODE_OBSERVE)
         self.start_refresh_task(session)
 
@@ -363,6 +351,11 @@ class ObserveManager:
         for why only shared fields count). Returns True if any
         discrepancy was found (False if not in observe mode).
 
+        An href found stale on `STALE_SWEEPS_TO_FALLBACK` sweeps in a row
+        joins `fallback_hrefs`, the same as one that never pushed (issue
+        #92): it pushed once and has since gone quiet, like a range's
+        /temperatures/vs/0 through a preheat (issue #507).
+
         This never changes mode or subscriptions. The sweep already
         re-applies the full /device/0 result to the cache every cycle
         regardless of mode, so a missed notify never leaves data stale
@@ -398,17 +391,26 @@ class ObserveManager:
             if cached is None:
                 continue
             diff = _rep_diff(cached, sweep_resources[href])
-            if diff:
-                found = True
-                self.log.debug(
-                    "observe missed a change on %s (sweep disagrees with cache): %s",
-                    href,
-                    diff,
-                )
+            with self._notify_cond:
+                if not diff:
+                    self._stale_sweeps.pop(href, None)
+                    continue
+                misses = self._stale_sweeps.get(href, 0) + 1
+                self._stale_sweeps[href] = misses
+                if misses >= STALE_SWEEPS_TO_FALLBACK and href not in self.fallback_hrefs:
+                    self.fallback_hrefs.add(href)
+                    self.log.debug("%s stale on %d sweeps; sub-polling it again", href, misses)
+            found = True
+            self.log.debug(
+                "observe missed a change on %s (sweep disagrees with cache): %s",
+                href,
+                diff,
+            )
         return found
 
     def downgrade_to_poll(self) -> None:
         self.fallback_hrefs = set(self.subscribed_hrefs)
+        self._stale_sweeps.clear()
         self.subscribed_hrefs = set()
         self._stop_refresh_task()
         self._set_mode(MODE_POLL)
