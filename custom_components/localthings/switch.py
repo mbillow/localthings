@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -31,7 +31,7 @@ async def async_setup_entry(
 class LocalThingsSwitch(LocalThingsEntity, SwitchEntity):
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
-        desc: SwitchDesc = bound.desc
+        desc = cast(SwitchDesc, bound.desc)
         self._attr_device_class = (
             SwitchDeviceClass(desc.device_class) if desc.device_class else None
         )
@@ -39,7 +39,7 @@ class LocalThingsSwitch(LocalThingsEntity, SwitchEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return entity specific state attributes."""
-        desc: SwitchDesc = self._bound.desc
+        desc = cast(SwitchDesc, self._bound.desc)
         if desc.extra_state_attributes_fn is not None:
             rep = self.coordinator.entity_rep(self._bound.href or "")
             resources = self._resources
