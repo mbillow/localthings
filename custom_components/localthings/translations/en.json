@@ -118,6 +118,12 @@
       "add_wash_indicator": {
         "name": "AddWash ready"
       },
+      "pre_wash_selected": {
+        "name": "Pre-wash selected"
+      },
+      "delay_wash_set": {
+        "name": "Delayed start set"
+      },
       "stick_ble_connected": {
         "name": "Stick BLE connected"
       },
@@ -672,6 +678,15 @@
       "rinse_cycles": {
         "name": "Rinse cycles"
       },
+      "laundry_out_time": {
+        "name": "Laundry-out reminder",
+        "state": {
+          "0": "Off",
+          "30": "Every 30 min",
+          "60": "Every 60 min",
+          "90": "Every 90 min"
+        }
+      },
       "sensing_mode": {
         "name": "AI Purify action",
         "state": {
@@ -1173,6 +1188,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Drum last cleaned"
+      },
+      "quick_wash": {
+        "name": "Quick wash",
+        "state": {
+          "not_used": "Not available",
+          "off": "Off",
+          "on": "On"
+        }
       },
       "dryer_type": {
         "name": "Dryer type",

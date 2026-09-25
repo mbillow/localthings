@@ -118,6 +118,12 @@
       "add_wash_indicator": {
         "name": "AddWash beschikbaar"
       },
+      "pre_wash_selected": {
+        "name": "Voorwas gekozen"
+      },
+      "delay_wash_set": {
+        "name": "Uitgestelde start ingesteld"
+      },
       "stick_ble_connected": {
         "name": "Steel via BLE verbonden"
       },
@@ -672,6 +678,15 @@
       "rinse_cycles": {
         "name": "Spoelcycli"
       },
+      "laundry_out_time": {
+        "name": "Herinnering was uit de trommel",
+        "state": {
+          "0": "Uit",
+          "30": "Elke 30 min",
+          "60": "Elke 60 min",
+          "90": "Elke 90 min"
+        }
+      },
       "sensing_mode": {
         "name": "AI Purify-actie",
         "state": {
@@ -1173,6 +1188,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel laatst gereinigd"
+      },
+      "quick_wash": {
+        "name": "Snelwas",
+        "state": {
+          "not_used": "Niet beschikbaar",
+          "off": "Uit",
+          "on": "Aan"
+        }
       },
       "dryer_type": {
         "name": "Type droger",

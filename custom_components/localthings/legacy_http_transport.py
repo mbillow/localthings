@@ -42,6 +42,12 @@ from .legacy_http import (
     with_staged,
 )
 from .legacy_http_tls import client_context
+from .registry.capabilities.laundry import (
+    OPTION_KIND_RINSE,
+    OPTION_KIND_SPIN,
+    OPTION_KIND_WATER_TEMPERATURE,
+    course_option_mask,
+)
 from .transport import AuthRejected
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,6 +71,17 @@ _AUTH_HEADER = "Authorization"
 _START_SETTLE_S = 3.0
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
+
+# The option-token prefix a course is held under (see legacy_http.StagedKey).
+_COURSE_PREFIX = "Course"
+
+# The washer settings a course's supportedOptions record states defaults for.
+_WASHER_WRAPPER = "Washer"
+_COURSE_DEFAULTS = (
+    ("waterTemperature", OPTION_KIND_WATER_TEMPERATURE),
+    ("rinseCycles", OPTION_KIND_RINSE),
+    ("spinLevel", OPTION_KIND_SPIN),
+)
 
 
 @dataclass
@@ -176,6 +193,12 @@ class LegacyHttpTransport:
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
         sendable, staged = split_start_only(aggregate, self._table)
+        if any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
+            # A new course brings its own settings, on the panel as well, so
+            # one held for the previous course would be sent to a course that
+            # may not take it.
+            for key in [k for k in self._state.staged if k[2] is None and k not in staged]:
+                del self._state.staged[key]
         for key, value in staged.items():
             self._state.staged[key] = (value, staged_current(self._state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
@@ -236,7 +259,42 @@ class LegacyHttpTransport:
                     "%s: %s changed at the appliance; dropping %s", self._host, key[1], value
                 )
                 del self._state.staged[key]
-        return with_staged(bodies, {key: value for key, (value, _) in self._state.staged.items()})
+        held = with_staged(bodies, {key: value for key, (value, _) in self._state.staged.items()})
+        return self._with_course_defaults(held)
+
+    def _with_course_defaults(self, bodies: dict[str, Any]) -> dict[str, Any]:
+        """A held course reads with its own default settings, as the panel
+        does when the dial turns, for every setting not held itself.
+
+        Shown only: the start leaves them out and the appliance applies its
+        own. Measured on a WW6500 -- the composed Drum Clean start came up
+        at 60C/2/400, the defaults its record states.
+        """
+        staged = self._state.staged
+        if not any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
+            return bodies
+        washer = bodies.get(_WASHER_WRAPPER)
+        if not isinstance(washer, dict):
+            return bodies
+        # A single-resource read carries no Mode; the course's record is the
+        # last sweep's, with the held course in place.
+        context = with_staged(
+            {**self._state.last_bodies, **bodies},
+            {key: value for key, (value, _) in staged.items()},
+        )
+        resources = to_resources(context, self._table)
+        washer = dict(washer)
+        for name, kind in _COURSE_DEFAULTS:
+            if (_WASHER_WRAPPER, name, None) in staged:
+                continue
+            mask = course_option_mask(resources, kind)
+            supported = washer.get(f"supported{name[0].upper()}{name[1:]}")
+            if mask is None or not isinstance(supported, list):
+                continue
+            default, allowed = mask
+            if default in allowed and default < len(supported):
+                washer[name] = supported[default]
+        return {**bodies, _WASHER_WRAPPER: washer}
 
     def diagnostics(self) -> dict[str, Any]:
         return {

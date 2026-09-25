@@ -28,7 +28,7 @@ class TestWasherSettings:
             if e.key == "wash_temperature" and isinstance(e, SelectDesc)
         )
         assert desc.field == "x.com.samsung.da.waterTemperature"
-        assert desc.options_field == "x.com.samsung.da.supportedWaterTemperature"
+        assert callable(desc.options)
 
     def test_wash_temperature_write(self):
         desc = next(
@@ -613,3 +613,226 @@ class TestFlexWashAndComboFixturesHaveCompleteCoverage:
         state = flatten(bound, resources)
         # the device's own "off" sentinel is the literal string 'None', not absence
         assert state["dry_level"] == "None"
+
+
+def _settings(key):
+    return next(
+        e for e in washer.WASHER_SETTINGS.entities if e.key == key and isinstance(e, SelectDesc)
+    )
+
+
+def _ww6500(course=None, **washer_fields):
+    """The WW6500 dump, optionally on another course or with other live
+    wash settings."""
+    resources = _load_device("washer_ww6500")
+    course_rep = dict(resources["/course/vs/0"])
+    if course is not None:
+        course_rep["x.com.samsung.da.options"] = [
+            f"Course_{course}" if o.startswith("Course_") else o
+            for o in course_rep["x.com.samsung.da.options"]
+        ]
+    washer_rep = dict(resources["/washer/vs/0"])
+    washer_rep.update({f"x.com.samsung.da.{k}": v for k, v in washer_fields.items()})
+    return {**resources, "/course/vs/0": course_rep, "/washer/vs/0": washer_rep}
+
+
+class TestCourseNarrowedWashSettings:
+    """The three wash dials narrow to the selected course, from the same
+    supportedOptions decode the dryer uses. The WW6500's records are the ones
+    0x8/0x9/0xA were named on."""
+
+    def test_extra_speed_offers_only_what_its_course_allows(self):
+        resources = _ww6500("5C")
+
+        assert _settings("wash_temperature").options(resources) == ["Cold", "20", "30", "40"]
+        assert _settings("rinse_cycles").options(resources) == ["0", "1", "2", "3", "4", "5"]
+        assert _settings("spin_speed").options(resources) == [
+            "RinseHold",
+            "NoSpin",
+            "400",
+            "800",
+            "1200",
+            "1400",
+        ]
+
+    def test_delicates_tops_out_at_400_rpm(self):
+        resources = _ww6500("5E", spinLevel="400")
+
+        assert _settings("spin_speed").options(resources) == ["RinseHold", "NoSpin", "400"]
+
+    def test_a_live_value_the_course_does_not_allow_stays_selectable(self):
+        """Mid course change the board can still report the last course's
+        setting; dropping it would read the select as unknown."""
+        resources = _ww6500("63", waterTemperature="30")
+
+        assert _settings("wash_temperature").options(resources) == ["30", "60"]
+
+
+class TestHotWashRinses:
+    """A 95C wash rinses at least twice on these device types, which is why
+    a WW6500 refuses 0 and 1 rinses on Baby Care although its mask allows
+    them."""
+
+    def test_95c_hides_fewer_than_two_rinses(self):
+        resources = _ww6500("5F", waterTemperature="95", rinseCycles="4")
+
+        assert _settings("rinse_cycles").options(resources) == ["2", "3", "4", "5"]
+
+    def test_a_cooler_wash_on_the_same_course_keeps_every_count(self):
+        resources = _ww6500("5F", waterTemperature="40", rinseCycles="4")
+
+        assert _settings("rinse_cycles").options(resources) == ["0", "1", "2", "3", "4", "5"]
+
+    def test_the_live_count_is_never_hidden(self):
+        resources = _ww6500("5F", waterTemperature="95", rinseCycles="1")
+
+        assert _settings("rinse_cycles").options(resources) == ["1", "2", "3", "4", "5"]
+
+    def test_other_device_types_are_left_alone(self):
+        resources = _ww6500("5F", waterTemperature="95", rinseCycles="4")
+        course_rep = dict(resources["/course/vs/0"])
+        course_rep["x.com.samsung.da.options"] = [
+            "DeviceType_0146" if o.startswith("DeviceType_") else o
+            for o in course_rep["x.com.samsung.da.options"]
+        ]
+        resources["/course/vs/0"] = course_rep
+
+        assert _settings("rinse_cycles").options(resources) == ["0", "1", "2", "3", "4", "5"]
+
+
+class TestDrumCleanTemperature:
+    """Drum Clean reports and takes 60C, but runs at the 70C Samsung's app
+    shows on a board that heats past 60C."""
+
+    def test_drum_clean_shows_70(self):
+        resources = _ww6500("63", waterTemperature="60")
+
+        assert _settings("wash_temperature").display_fn("60", resources) == "70"
+
+    def test_another_course_at_60_shows_60(self):
+        resources = _ww6500("5B", waterTemperature="60")
+
+        assert _settings("wash_temperature").display_fn("60", resources) is None
+
+    def test_a_board_that_heats_no_higher_than_60_shows_60(self):
+        resources = _ww6500("63", waterTemperature="60")
+        washer_rep = dict(resources["/washer/vs/0"])
+        washer_rep["x.com.samsung.da.supportedWaterTemperature"] = ["Cold", "20", "40", "60"]
+        resources["/washer/vs/0"] = washer_rep
+
+        assert _settings("wash_temperature").display_fn("60", resources) is None
+
+    def test_the_same_code_on_another_course_table_shows_60(self):
+        resources = _ww6500("63", waterTemperature="60")
+        resources["/st/washercourse/vs/0"] = {"x.com.samsung.da.st.courseTable": "Table_02"}
+
+        assert _settings("wash_temperature").display_fn("60", resources) is None
+
+
+def _course_desc(key):
+    return next(e for e in washer.WASHER_COURSE.entities if e.key == key)
+
+
+class TestLaundryOutTime:
+    def test_reads_the_reminder_interval(self):
+        desc = _course_desc("laundry_out_time")
+        rep = {"x.com.samsung.da.options": ["Course_5C", "LaundryOutTime_60"]}
+
+        assert desc.exists_fn(rep, {}) is True
+        assert desc.rep_fn(rep) == "60"
+
+    def test_off_is_zero(self):
+        rep = {"x.com.samsung.da.options": ["LaundryOutTime_0"]}
+
+        assert _course_desc("laundry_out_time").rep_fn(rep) == "0"
+
+    def test_a_value_outside_the_four_intervals_binds_nothing(self):
+        """A onebody combo reports LaundryOutTime_158, which is not this."""
+        rep = {"x.com.samsung.da.options": ["LaundryOutTime_158"]}
+
+        assert _course_desc("laundry_out_time").exists_fn(rep, {}) is False
+
+    def test_write_is_one_token(self):
+        rep = {"x.com.samsung.da.options": ["LaundryOutTime_0"]}
+
+        assert _course_desc("laundry_out_time").write_fn("90", rep) == (
+            ["course", "vs", "0"],
+            {"x.com.samsung.da.options": ["LaundryOutTime_90"]},
+        )
+
+    def test_write_refuses_another_interval(self):
+        rep = {"x.com.samsung.da.options": ["LaundryOutTime_0"]}
+
+        assert _course_desc("laundry_out_time").write_fn("45", rep) is None
+
+
+class TestQuickWash:
+    def test_not_used_is_its_own_state(self):
+        rep = {"x.com.samsung.da.options": ["QuickWash_Not_Used"]}
+
+        assert _course_desc("quick_wash").rep_fn(rep) == "not_used"
+
+    def test_off(self):
+        rep = {"x.com.samsung.da.options": ["QuickWash_Off", "QuickWashSet_5B847E933FA53F"]}
+
+        assert _course_desc("quick_wash").rep_fn(rep) == "off"
+
+    def test_absent_binds_nothing(self):
+        rep = {"x.com.samsung.da.options": ["Course_5C"]}
+
+        assert _course_desc("quick_wash").exists_fn(rep, {}) is False
+
+
+def _operational_desc(key):
+    return next(e for e in washer.WASHER_OPERATIONAL_STATE.entities if e.key == key)
+
+
+class TestSupportedProgressChoices:
+    """supportedProgress gains Prewash and Delaywash while those are chosen."""
+
+    def test_pre_wash_selected(self):
+        desc = _operational_desc("pre_wash_selected")
+        rep = {"x.com.samsung.da.supportedProgress": ["None", "Prewash", "Wash", "Finish"]}
+
+        assert desc.exists_fn(rep, {}) is True
+        assert desc.rep_fn(rep) is True
+
+    def test_nothing_chosen(self):
+        rep = {"x.com.samsung.da.supportedProgress": ["None", "Wash", "Rinse", "Spin", "Finish"]}
+
+        assert _operational_desc("pre_wash_selected").rep_fn(rep) is False
+        assert _operational_desc("delay_wash_set").rep_fn(rep) is False
+
+    def test_delay_wash_set(self):
+        rep = {"x.com.samsung.da.supportedProgress": ["None", "Delaywash", "Wash", "Finish"]}
+
+        assert _operational_desc("delay_wash_set").rep_fn(rep) is True
+
+    def test_a_board_with_the_pre_wash_switch_gets_no_duplicate(self):
+        rep = {"x.com.samsung.da.supportedProgress": ["None", "Wash"]}
+        resources = {"/course/vs/0": {"x.com.samsung.da.options": ["PreWashSetting_Off"]}}
+
+        assert _operational_desc("pre_wash_selected").exists_fn(rep, resources) is False
+
+    def test_a_board_reporting_its_delay_gets_no_duplicate(self):
+        rep = {
+            "x.com.samsung.da.supportedProgress": ["None", "Wash"],
+            "x.com.samsung.da.delayEndTime": "00:00:00",
+        }
+
+        assert _operational_desc("delay_wash_set").exists_fn(rep, {}) is False
+
+    def test_the_shared_capability_is_unchanged(self):
+        from custom_components.localthings.registry.capabilities.operational import (
+            OPERATIONAL_STATE,
+        )
+
+        keys = {e.key for e in OPERATIONAL_STATE.entities}
+        assert "pre_wash_selected" not in keys
+        assert keys < {e.key for e in washer.WASHER_OPERATIONAL_STATE.entities}
+
+    def test_the_microfiber_filter_gets_neither(self):
+        rep = {"x.com.samsung.da.supportedProgress": ["None", "Filtering", "Bypassing"]}
+
+        assert _operational_desc("pre_wash_selected").exists_fn(rep, {}) is False
+        assert _operational_desc("delay_wash_set").exists_fn(rep, {}) is False

@@ -118,6 +118,12 @@
       "add_wash_indicator": {
         "name": "AddWash pripravené"
       },
+      "pre_wash_selected": {
+        "name": "Predpieranie zvolené"
+      },
+      "delay_wash_set": {
+        "name": "Odložený štart nastavený"
+      },
       "stick_ble_connected": {
         "name": "Tyčový vysávač pripojený cez BLE"
       },
@@ -672,6 +678,15 @@
       "rinse_cycles": {
         "name": "Počet plákaní"
       },
+      "laundry_out_time": {
+        "name": "Pripomienka vybratia bielizne",
+        "state": {
+          "0": "Vypnuté",
+          "30": "Každých 30 min",
+          "60": "Každých 60 min",
+          "90": "Každých 90 min"
+        }
+      },
       "sensing_mode": {
         "name": "Akcia AI Purify",
         "state": {
@@ -1173,6 +1188,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Posledné čistenie bubna"
+      },
+      "quick_wash": {
+        "name": "Rýchle pranie",
+        "state": {
+          "not_used": "Nedostupné",
+          "off": "Vypnuté",
+          "on": "Zapnuté"
+        }
       },
       "dryer_type": {
         "name": "Typ sušičky",

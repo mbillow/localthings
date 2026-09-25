@@ -118,6 +118,12 @@
       "add_wash_indicator": {
         "name": "AddWash disponibile"
       },
+      "pre_wash_selected": {
+        "name": "Prelavaggio selezionato"
+      },
+      "delay_wash_set": {
+        "name": "Partenza ritardata impostata"
+      },
       "stick_ble_connected": {
         "name": "Scopa elettrica connessa via BLE"
       },
@@ -672,6 +678,15 @@
       "rinse_cycles": {
         "name": "Risciacquo"
       },
+      "laundry_out_time": {
+        "name": "Promemoria bucato nel cestello",
+        "state": {
+          "0": "Spento",
+          "30": "Ogni 30 min",
+          "60": "Ogni 60 min",
+          "90": "Ogni 90 min"
+        }
+      },
       "sensing_mode": {
         "name": "Azione AI Purify",
         "state": {
@@ -1173,6 +1188,14 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Ultima pulizia cestello"
+      },
+      "quick_wash": {
+        "name": "Lavaggio rapido",
+        "state": {
+          "not_used": "Non disponibile",
+          "off": "Spento",
+          "on": "Acceso"
+        }
       },
       "dryer_type": {
         "name": "Tipo di asciugatrice",
