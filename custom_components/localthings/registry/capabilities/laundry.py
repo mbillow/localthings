@@ -297,7 +297,9 @@ def drum_clean_last_cleaned(rep):
 OPTION_KIND_WATER_TEMPERATURE = 0x8
 OPTION_KIND_RINSE = 0x9
 OPTION_KIND_SPIN = 0xA
+OPTION_KIND_SOIL = 0xC
 OPTION_KIND_DRY = 0xD
+
 
 # Named on one board, but not on "it decodes against supportedDryTime"
 # alone: on the DV6800N -- the only dump carrying both -- every record holds
@@ -833,7 +835,14 @@ def bool_option_exists(prefix):
 
 
 def bool_option_switch(
-    key, icon, prefix, *, entity_category=None, gate_on_presence=False, validate_fn=None
+    key,
+    icon,
+    prefix,
+    *,
+    entity_category=None,
+    gate_on_presence=False,
+    validate_fn=None,
+    extra_state_attributes_fn=None,
 ):
     """A SwitchDesc over a '<prefix>_On'/'<prefix>_Off' options[] token.
 
@@ -843,6 +852,8 @@ def bool_option_switch(
     validate_fn passes straight through to SwitchDesc for callers that need
     to reject a write against live state -- this factory has no opinion on
     it.
+    extra_state_attributes_fn is used for capabilities that expose per-course
+    support/availability metadata on the switch entity itself.
     """
     return SwitchDesc(
         key=key,
@@ -852,6 +863,7 @@ def bool_option_switch(
         rep_fn=bool_option_value(prefix),
         write_fn=bool_option_write(prefix),
         validate_fn=validate_fn,
+        extra_state_attributes_fn=extra_state_attributes_fn,
     )
 
 

@@ -520,6 +520,31 @@ class TestWashOptionToggleValidation:
         translation_key = self._desc("bubble_soak").validate_fn("On", rep, _EDIT_COURSE_RESOURCES)
         assert translation_key == "bubble_soak_unavailable_for_cycle"
 
+    def test_supported_options_table_is_used_for_course_alignment(self):
+        rep = {
+            "x.com.samsung.da.options": [
+                "Course_1B",
+                "BubbleSoakSet_0000F000F00000F000F0F0F0F0000000F0F00000F000000000",
+            ]
+        }
+        resources = {
+            "/course/vs/0": {
+                "x.com.samsung.da.options": ["Course_1B"],
+                "x.com.samsung.da.supportedOptions": [
+                    "41C8410923FA67FB03F2B8410923FA37FB03F1B847E923FA37FB03F1E831E933FA33FB03F1D841E923FA67FB03F96841E920FA37FB0008F8102923FA57FB03F25843E933FA57FB03F26831E920FA207B03F33857E933FA67FB00024841E930FA30FB00032833E923FA37FB00020857E943FA67FB03F22841E920FA30FB00023831E930FA57FB03F21841E943FA57FB0002D841E923FA30FB00030843E923FA67FB000278000913FA67FB03F2880009000A67EB03F368410923FA640B13E3880009000A000B13E3980009000A000B13E2985209204A520B0003780009000A000B000"
+                ],
+            },
+            "/wm/editcourse/vs/0": {
+                "x.com.samsung.da.editCourseList": [
+                    "EditCourseList_1C1B1E26281D29243321272B25203822322339302D36378F96"
+                ]
+            },
+        }
+        assert self._desc("bubble_soak").validate_fn("On", rep, resources) is None
+        assert self._desc("bubble_soak").extra_state_attributes_fn(rep, resources) == {
+            "course_supported": True
+        }
+
     def test_pre_wash_and_intensive_use_their_own_availableset_field(self):
         rep = {"x.com.samsung.da.options": ["Course_30", _PRE_WASH_AVAILABLE_SET]}
         assert self._desc("pre_wash").validate_fn("On", rep, _EDIT_COURSE_RESOURCES) is None

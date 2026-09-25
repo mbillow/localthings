@@ -697,6 +697,17 @@
           "03": "Hoog"
         }
       },
+      "soil_level": {
+        "name": "Vuilgraad",
+        "state": {
+          "none": "Geen",
+          "extra_light": "Extra licht",
+          "light": "Licht",
+          "normal": "Normaal",
+          "heavy": "Zwaar",
+          "extra_heavy": "Extra zwaar"
+        }
+      },
       "sound_mode": {
         "name": "Geluidsmodus",
         "state": {

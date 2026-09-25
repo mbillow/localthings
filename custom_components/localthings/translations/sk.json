@@ -697,6 +697,17 @@
           "03": "Vysoké"
         }
       },
+      "soil_level": {
+        "name": "Úroveň znečistenia",
+        "state": {
+          "none": "Žiadna",
+          "extra_light": "Extra ľahké",
+          "light": "Ľahké",
+          "normal": "Normálne",
+          "heavy": "Silné",
+          "extra_heavy": "Extra silné"
+        }
+      },
       "sound_mode": {
         "name": "Zvukový režim",
         "state": {

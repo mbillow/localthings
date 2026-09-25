@@ -697,6 +697,17 @@
           "03": "많이"
         }
       },
+      "soil_level": {
+        "name": "오염도",
+        "state": {
+          "none": "설정 안 함",
+          "extra_light": "매우 약하게",
+          "light": "약하게",
+          "normal": "표준",
+          "heavy": "강하게",
+          "extra_heavy": "최대"
+        }
+      },
       "sound_mode": {
         "name": "소리 모드",
         "state": {

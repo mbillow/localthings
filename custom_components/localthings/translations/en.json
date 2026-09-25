@@ -697,6 +697,17 @@
           "03": "High"
         }
       },
+      "soil_level": {
+        "name": "Soil level",
+        "state": {
+          "none": "None",
+          "extra_light": "Extra light",
+          "light": "Light",
+          "normal": "Normal",
+          "heavy": "Heavy",
+          "extra_heavy": "Extra heavy"
+        }
+      },
       "sound_mode": {
         "name": "Sound mode",
         "state": {
