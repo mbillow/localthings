@@ -332,7 +332,8 @@ def _legacy_cumulative_power_kwh(v):
         n = float(v)
     except (TypeError, ValueError):
         return None
-    return round(n / 100000.0, 2)
+    # 0 reads as unknown, same as common.lifetime_wh_to_kwh.
+    return round(n / 100000.0, 2) if n else None
 
 
 ENERGY_METER_LEGACY = replace(
