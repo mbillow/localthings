@@ -101,6 +101,9 @@ _KEEP = object()
 _LOGGER = logging.getLogger(__name__)
 
 _SEED_PATH = ["device", "0"]
+# Small and single-block on every board, and any answer counts, a 4.04
+# included -- see _session_answers.
+_LIVENESS_PATH = ["oic", "d"]
 
 # Discovery snapshot (issue #295): exactly what the last successful first
 # cycle fed _run_discovery, so a restart can register the same entities
@@ -341,11 +344,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # A block-level ACK timeout on the summary GET doesn't prove the session
     # is dead (see _poll_once) -- require this many in a row before treating
     # it as one, so one slow transfer doesn't tear down a working OBSERVE
-    # subscription. Only covers that ambiguous case: smartthings-local
-    # >= 0.1.6 raises a distinct SessionClosedError, not a TimeoutError, the
-    # moment a dead reader thread is confirmed, and _defer_reconnect_for
-    # never defers that -- see its docstring for what changed there.
+    # subscription. Only covers the case the liveness probe says is slow
+    # rather than dead: smartthings-local >= 0.1.6 raises a distinct
+    # SessionClosedError the moment a dead reader thread is confirmed, and
+    # _defer_reconnect_for never defers that.
     _POLL_TIMEOUT_LIMIT: int = 3
+    _LIVENESS_PROBE_TIMEOUT_S: float = 5.0
 
     # Named (not inline literals) so the write-settle window in
     # async_send_command can be sized to outlast both round trips a write
@@ -995,10 +999,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _poll_once(self) -> dict[str, dict]:
         """GET /device/0, return parsed resources. Blocking.
 
-        A `TimeoutError` here means one block's ACK didn't arrive in time --
-        not that the session is dead (earlier blocks succeeded). Left open;
-        `_async_update_data` decides whether repeated timeouts warrant a
-        reconnect. Any other exception is unambiguous -- close immediately.
+        A `TimeoutError` here means one block's ACK didn't arrive in time,
+        which is either a slow transfer or a session the appliance has
+        stopped answering. After discovery, one small GET tells them apart
+        (issue #507): if it answers, the `TimeoutError` is re-raised with the
+        session left open, and `_async_update_data` decides whether repeated
+        timeouts warrant a reconnect. If it doesn't, or on any other
+        exception, the session is closed immediately.
 
         smartthings-local >= 0.1.6 tells those two cases apart itself now:
         a reader thread that has actually died raises `SessionClosedError`
@@ -1025,7 +1032,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # 35s gives a slow blockwise transfer room to finish instead of
             # raising TimeoutError every cycle on an otherwise-fine device.
             code, body = sess.read(_SEED_PATH, timeout=self._POLL_TIMEOUT_S)
-        except (TimeoutError, AuthRejected):
+        except TimeoutError as e:
+            # Before discovery a timeout reconnects anyway (see
+            # _defer_reconnect_for), so the probe would only add its wait.
+            if self._discovered and not self._session_answers(sess):
+                self._close_session()
+                raise RuntimeError(f"poll timed out and the session no longer answers: {e}") from e
+            raise
+        except AuthRejected:
             raise
         except DecodeError as e:
             # The device answered; its answer is what could not be read.
@@ -1045,6 +1059,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for subdevice in self.subdevices:
             result.update(self._poll_subdevice_seed(subdevice))
         return result
+
+    def _session_answers(self, sess: Transport) -> bool:
+        """True if `sess` still answers a request, whatever the answer.
+
+        A range's session goes half-dead after about a minute (issue #507):
+        its reader stays up and notifies keep arriving, but no request is
+        answered again, so only asking can tell it from a slow transfer.
+        Blocking."""
+        try:
+            sess.pace()
+            sess.read(_LIVENESS_PATH, timeout=self._LIVENESS_PROBE_TIMEOUT_S)
+        except DecodeError:
+            return True
+        except Exception as e:
+            self._log.debug("liveness probe got no answer: %s", e)
+            return False
+        return True
 
     def _poll_subdevice_seed(self, subdevice: Subdevice) -> dict[str, dict]:
         """GET one subdevice's seed Collection, normalized to real hrefs. A
@@ -1892,11 +1923,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """True if this poll failure should NOT trigger a reconnect this
         cycle.
 
-        A `TimeoutError` means one block's ACK was late, not that the
-        session is dead (see `_poll_once`). A recent OBSERVE notify is proof
-        the channel is live, so always defer then. Otherwise defer until
-        `_POLL_TIMEOUT_LIMIT` consecutive timeouts pile up. Any other
-        exception reconnects immediately.
+        A `TimeoutError` that reaches here means the session still answered
+        `_poll_once`'s liveness probe, so the transfer was slow rather than
+        the session dead. Defer until `_POLL_TIMEOUT_LIMIT` consecutive
+        timeouts pile up. Any other exception reconnects immediately.
+
+        A recent OBSERVE notify no longer defers anything or resets the
+        count (issue #507): a range kept pushing notifies on a session that
+        had stopped answering requests, which stretched the outage instead
+        of ending it. Only a sweep that gets through resets the count.
 
         That includes `SessionClosedError`, which is the point: before
         smartthings-local 0.1.6, a reader thread that had actually died was
@@ -1920,12 +1955,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         if not isinstance(e, TimeoutError):
             return False
-        if self._observe.mode == MODE_OBSERVE and self._observe.recently_notified():
-            # Recent push is proof of life -- reset the counter too, so
-            # timeouts from an earlier quiet stretch don't carry over and
-            # trigger a false reconnect once the device goes quiet again.
-            self._consecutive_poll_timeouts = 0
-            return True
         self._consecutive_poll_timeouts += 1
         return self._consecutive_poll_timeouts < self._POLL_TIMEOUT_LIMIT
 

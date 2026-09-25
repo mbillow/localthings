@@ -10,6 +10,7 @@ from smartthings_local.ocf.state_cache import StateCache
 
 from custom_components.localthings.observe import (
     MODE_POLL,
+    STALE_SWEEPS_TO_FALLBACK,
     ObserveManager,
     _rep_diff,
 )
@@ -290,25 +291,6 @@ def test_on_notification_ignores_malformed_cbor():
     assert mgr.cache.get("/oven/vs/0") is None
 
 
-def test_recently_notified_false_before_any_notify():
-    mgr = _manager()
-    assert mgr.recently_notified() is False
-
-
-def test_recently_notified_true_just_after_a_notify():
-    mgr = _manager()
-    mgr.on_notification("/oven/vs/0", cbor2.dumps({"a": 1}))
-    assert mgr.recently_notified() is True
-
-
-def test_recently_notified_false_after_window_elapses():
-    mgr = _manager()
-    mgr.on_notification("/oven/vs/0", cbor2.dumps({"a": 1}))
-    assert mgr.recently_notified(window_s=0.01) is True
-    time.sleep(0.02)
-    assert mgr.recently_notified(window_s=0.01) is False
-
-
 def test_try_enter_observe_mode_clears_stale_notifications_on_retry():
     """Regression test: verify second call to try_enter_observe_mode() doesn't
     get polluted by notifications from the first call. This happens in real
@@ -387,6 +369,74 @@ def test_log_sweep_discrepancies_never_changes_mode():
         mgr.log_sweep_discrepancies({hrefs[0]: {"a": 2}, hrefs[1]: {"a": 2}})
 
         assert mgr.mode == "observe"
+    finally:
+        mgr.close()
+
+
+def _observing(mgr: ObserveManager, hrefs: list[str]) -> None:
+    """Enter observe mode with every href having pushed once."""
+    for href in hrefs:
+        mgr.on_notification(href, cbor2.dumps({"t": 0}))
+    mgr.enter_observe_mode(_FakeSession(), set(hrefs))
+    assert mgr.fallback_hrefs == set()
+
+
+def _sweep(mgr: ObserveManager, resources: dict[str, dict]) -> None:
+    """What the coordinator does with each sweep: compare, then apply."""
+    mgr.log_sweep_discrepancies(resources)
+    for href, rep in resources.items():
+        mgr.apply(href, rep, source="sweep")
+
+
+def test_href_the_sweep_keeps_finding_stale_goes_back_on_fallback():
+    """Issue #507: a range's /temperatures/vs/0 pushes once, then climbs
+    through a preheat without another notify. Once the sweep has found it
+    stale enough times in a row, it is sub-polled again like an href that
+    never pushed (issue #92)."""
+    mgr = _manager()
+    href = "/temperatures/vs/0"
+    _observing(mgr, [href, "/power/vs/0"])
+    try:
+        for t in range(1, STALE_SWEEPS_TO_FALLBACK):
+            _sweep(mgr, {href: {"t": t}, "/power/vs/0": {"t": 0}})
+            assert mgr.fallback_hrefs == set()
+        _sweep(mgr, {href: {"t": STALE_SWEEPS_TO_FALLBACK}, "/power/vs/0": {"t": 0}})
+        assert mgr.fallback_hrefs == {href}
+        assert mgr.mode == "observe"
+    finally:
+        mgr.close()
+
+
+def test_a_fresh_sweep_resets_the_stale_count():
+    """Only consecutive stale sweeps count, so an href that misses one
+    change now and then stays push-covered."""
+    mgr = _manager()
+    href = "/temperatures/vs/0"
+    _observing(mgr, [href])
+    try:
+        for t in range(1, STALE_SWEEPS_TO_FALLBACK * 2):
+            _sweep(mgr, {href: {"t": t}})
+            _sweep(mgr, {href: {"t": t}})
+        assert mgr.fallback_hrefs == set()
+    finally:
+        mgr.close()
+
+
+def test_a_notify_takes_a_stale_href_back_off_fallback():
+    mgr = _manager()
+    href = "/temperatures/vs/0"
+    _observing(mgr, [href])
+    try:
+        for t in range(1, STALE_SWEEPS_TO_FALLBACK + 1):
+            _sweep(mgr, {href: {"t": t}})
+        assert mgr.fallback_hrefs == {href}
+
+        mgr.on_notification(href, cbor2.dumps({"t": 99}))
+        assert mgr.fallback_hrefs == set()
+        # The count restarted with the notify, so one stale sweep is not
+        # enough to demote it again.
+        _sweep(mgr, {href: {"t": 100}})
+        assert mgr.fallback_hrefs == set()
     finally:
         mgr.close()
 
@@ -633,7 +683,7 @@ def test_on_notification_drops_rep_whose_rt_names_another_resource():
 
     assert mgr.cache.get("/mode/vs/0") == mode
     assert mgr.fallback_hrefs == {"/mode/vs/0"}
-    assert not mgr.recently_notified()
+    assert "/mode/vs/0" not in mgr._notified
 
 
 def test_on_notification_applies_rep_when_rt_matches_or_is_absent():
