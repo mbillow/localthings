@@ -13,7 +13,6 @@ from . import (
     dishwasher,
     dryer,
     ehs,
-    induction_cooktop,
     microwave,
     oven,
     range_hood,
@@ -49,7 +48,6 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "dishwasher": dishwasher.REGISTRY,
     "dryer": dryer.REGISTRY,
     "ehs": ehs.REGISTRY,
-    "induction_cooktop": induction_cooktop.REGISTRY,
     "microwave": microwave.REGISTRY,
     "oven": oven.REGISTRY,
     "range": _range.REGISTRY,
@@ -120,13 +118,9 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "RANGE": "range",  # issue #44 -- cooktop+oven combo
     "OVEN": "oven",  # issue #55 -- wall oven, no burners
     "MICROWAVE": "microwave",  # issues #66, #121
-    "COOKTOP": "induction_cooktop",  # issue #86 -- standalone, no oven
-    # Legacy ARTIK051 gas cooktops ('ARTIK051_GB_CT_001'): burner state
-    # lives in /mode/vs/0's options array. Deliberately the loosest entry
-    # here -- reached only when nothing more specific matched, since its
-    # description ('ARTIK051_GLOBAL_COOKTOP') would otherwise read as an
-    # induction cooktop via COOKTOP above (see for_device_by_model's field
-    # ordering).
+    "COOKTOP": "cooktop",  # issue #86 -- standalone, no oven
+    # Legacy ARTIK051 gas cooktops ('ARTIK051_GB_CT_001'), whose modelNum
+    # carries no COOKTOP token.
     "CT": "cooktop",
     "VSKR": "vacuum_station",  # issue #131 -- stick-vacuum clean station
     "DF": "air_dresser",  # issue #162
@@ -213,16 +207,11 @@ def _consumer_model_key(description: str) -> str | None:
 #
 # `x.com.st.d.*` entries are SmartThings' own vendor extension to the OCF
 # device-type vocabulary, for categories with no `oic.d.*` equivalent.
-#
-# `oic.d.cooktop` is deliberately absent: a TP1X_DA-KS-COOKTOP induction
-# reports it, but `cooktop` and `induction_cooktop` are unrelated registries
-# sharing the English word (see by_type/cooktop.py's docstring) -- the OCF
-# type doesn't distinguish them, and as the primary signal it would override
-# a correct `COOKTOP`/`CT` board token. No unambiguous key to point at, so no
-# row.
 _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.airconditioner": "airconditioner",
     "oic.d.airpurifier": "air_purifier",
+    # Both cooktop board generations (issues #86, #508); see by_type/cooktop.py.
+    "oic.d.cooktop": "cooktop",
     "oic.d.dishwasher": "dishwasher",
     "oic.d.dryer": "dryer",
     "oic.d.microwave": "microwave",  # issue #433
@@ -272,10 +261,7 @@ def for_device_by_model(model_num: str, description: str) -> DeviceRegistry | No
     2. The same tokens in `description`. Some units carry the board token only
        there (a scrubbed or placeholder modelNum, e.g. description
        'TP1X_REF_21K'). This runs second so that a device whose two fields
-       disagree is typed by its modelNum: the legacy gas cooktop reports
-       'ARTIK051_GB_CT_001' (CT -> gas cooktop) alongside
-       'ARTIK051_GLOBAL_COOKTOP' (COOKTOP -> induction cooktop), and the
-       board is right.
+       disagree is typed by its modelNum, which names the board.
     3. The consumer-model prefix in `description` (washer/dryer/dishwasher).
        Last, because a bare two-letter prefix is the fuzziest evidence here
        and would otherwise shadow the specific board tokens above.

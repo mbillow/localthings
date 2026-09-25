@@ -696,8 +696,8 @@ def test_registry_reproduces_golden_state_keys_for_induction_cooktop():
     """Standalone induction cooktop, no oven attached (model
     TP1X_DA-KS-COOKTOP-01011, issue #86) -- reports no oneUiVersion and a
     hyphenated '-COOKTOP-' modelNum token, resolved via
-    for_device_by_model into its own 'induction_cooktop' registry (not
-    cooktop.REGISTRY, which is the unrelated NA9300K gas-cooktop family)."""
+    for_device_by_model into the cooktop registry, whose burnerList
+    capabilities bind on this board and its options-array ones don't."""
     from tests.conftest import _load_device
 
     resources = _load_device("induction_cooktop")
