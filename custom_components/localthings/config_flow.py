@@ -475,6 +475,16 @@ def _resolve_alert(exc: Exception, host: str, port: int, cert_pem: str, key_pem:
         result = _diagnostic_alert(host, port, cert_pem, key_pem)
     except Exception:
         return None
+    # How far the appliance got is the evidence a bare timeout lacks: no
+    # reply at all, a cookie exchange and then silence, or its whole flight
+    # and then silence after ours (#504).
+    _LOGGER.debug(
+        "diagnostic handshake on port %d: outcome=%s server_sent=%s alert=%s",
+        port,
+        getattr(result, "outcome", None),
+        getattr(result, "handshake_msgs", None),
+        result.alert,
+    )
     if result.alert is None:
         return None
     level, name = result.alert

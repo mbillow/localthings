@@ -676,6 +676,28 @@ def test_resolve_alert_ignores_a_non_fatal_alert() -> None:
     assert name is None
 
 
+def test_resolve_alert_logs_how_far_the_diagnostic_handshake_got(caplog) -> None:
+    """A timeout carries no alert, so the diagnostic's record of which
+    server messages arrived is the only sign of where the appliance stopped
+    (#504). It has to reach the debug log even when there is nothing to
+    classify."""
+    from smartthings_local.errors import SessionTimeoutError
+
+    from custom_components.localthings import config_flow
+
+    class _Result:
+        outcome = "live"
+        handshake_msgs = ("HelloVerifyRequest", "ServerHello", "ServerHelloDone")
+        alert = None
+
+    caplog.set_level("DEBUG", logger="custom_components.localthings.config_flow")
+    with patch.object(config_flow, "_diagnostic_alert", lambda *a, **k: _Result()):
+        name = config_flow._resolve_alert(SessionTimeoutError(), MOCK_HOST, 49154, "CERT", "KEY")
+    assert name is None
+    assert "outcome=live" in caplog.text
+    assert "ServerHelloDone" in caplog.text
+
+
 def test_resolve_alert_is_none_when_the_diagnostic_handshake_also_fails() -> None:
     """A best-effort extra probe: its own failure must not raise out of
     _resolve_alert, it just leaves the caller with no alert to report."""
