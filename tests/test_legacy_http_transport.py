@@ -492,3 +492,90 @@ class TestUnmappedFamily:
         # The aggregate's description can carry the serial; name is user-set.
         assert "description" not in diag["bodies"]
         assert "name" not in diag["bodies"]
+
+
+# The WW6500's own supportedOptions and supported lists, so a held course
+# has a record to take its defaults from.
+_WW6500_BLOB = (
+    "35B847E933FA53F5C841E923FA53F5D8102923FA43F66841E930FA30F5E831E920FA207"
+    "5F867E943FA53F60831E930FA43F61841E943FA43F6385209204A204648000913FA53F"
+    "6C831E933FA30F65841E920FA30F67843E923FA43F688430923FA53F"
+)
+
+
+class TestHeldCourseDefaults:
+    """A held course reads with the defaults its record states, as the dial
+    does, and the start still leaves them to the appliance."""
+
+    @pytest.fixture
+    def idle(self, transport, monkeypatch):
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", lambda s: None
+        )
+        aggregate = json.loads(json.dumps(AGGREGATE))
+        aggregate["Device"]["Mode"]["supportedOptions"] = [_WW6500_BLOB]
+        aggregate["Device"]["Washer"] = {
+            "waterTemperature": "40",
+            "supportedWaterTemperature": ["None", "Cold", "20", "30", "40", "60", "95"],
+            "rinseCycles": "3",
+            "supportedRinseCycles": ["0", "1", "2", "3", "4", "5"],
+            "spinLevel": "1400",
+            "supportedSpinLevel": ["RinseHold", "NoSpin", "400", "800", "1200", "1400"],
+        }
+        _FakeConnection.routes["/devices/0"] = (200, aggregate)
+        _FakeConnection.routes["/devices/0/washer"] = (
+            200,
+            {"Washer": aggregate["Device"]["Washer"]},
+        )
+        _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
+        _FakeConnection.routes["/devices/0/operation"] = (200, {"Operation": {"state": "Run"}})
+        transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+        return transport
+
+    @staticmethod
+    def _washer(body):
+        return next(e["rep"] for e in body if e["href"] == "/washer/vs/0")
+
+    def test_drum_clean_reads_60c_two_rinses_400rpm(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        _, body = idle.read(["device", "0"], timeout=10.0)
+        washer = self._washer(body)
+
+        assert washer[PREFIX + "waterTemperature"] == "60"
+        assert washer[PREFIX + "rinseCycles"] == "2"
+        assert washer[PREFIX + "spinLevel"] == "400"
+
+    def test_a_single_washer_read_shows_them_too(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        _, rep = idle.read(["washer", "vs", "0"], timeout=10.0)
+
+        assert rep[PREFIX + "spinLevel"] == "400"
+
+    def test_a_setting_held_after_the_course_wins(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_5B"]}, 8.0)
+        idle.write(["washer", "vs", "0"], {PREFIX + "waterTemperature": "95"}, 8.0)
+
+        _, body = idle.read(["device", "0"], timeout=10.0)
+        washer = self._washer(body)
+
+        assert washer[PREFIX + "waterTemperature"] == "95"
+        assert washer[PREFIX + "rinseCycles"] == "3"  # Cotton's own default
+
+    def test_the_defaults_are_not_sent(self, idle):
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+        idle.read(["device", "0"], timeout=10.0)
+
+        idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        puts = [body for method, _, body, _ in _FakeConnection.log if method == "PUT"]
+        assert puts == [
+            {"Device": {"Operation": {"state": "Run"}, "Mode": {"options": ["Course_63"]}}}
+        ]
+
+    def test_nothing_held_reads_as_reported(self, idle):
+        _, body = idle.read(["device", "0"], timeout=10.0)
+
+        assert self._washer(body)[PREFIX + "waterTemperature"] == "40"
