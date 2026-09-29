@@ -71,7 +71,7 @@
         "name": "Dostępna aktualizacja oprogramowania"
       },
       "instance_open": {
-        "name": "{instance_name} — otwarte"
+        "name": "{instance_name} — otwarcie"
       },
       "paired_hood_connected": {
         "name": "Sparowany okap połączony"
@@ -101,7 +101,7 @@
         "name": "Zasilanie"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -110,7 +110,7 @@
         "name": "Smart Control"
       },
       "softener_low": {
-        "name": "Niski poziom płynu zmiękczającego"
+        "name": "Niski poziom środka zmiękczającego"
       },
       "add_wash_available": {
         "name": "AddWash dozwolone"
@@ -257,10 +257,10 @@
         "name": "Good Sleep"
       },
       "instance_setpoint": {
-        "name": "{instance_name} — wartość zadana"
+        "name": "{instance_name} — temperatura"
       },
       "oven_setpoint": {
-        "name": "Wartość zadana"
+        "name": "Temperatura"
       },
       "sensing_interval": {
         "name": "Interwał AI Purify"
@@ -315,7 +315,7 @@
         }
       },
       "brightness_level": {
-        "name": "Jasność nocna",
+        "name": "Jasność oświetlenia w nocy",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -323,10 +323,10 @@
         }
       },
       "cooler_temperature_setpoint": {
-        "name": "Temperatura chłodziarki"
+        "name": "Temperatura lodówki"
       },
       "day_brightness": {
-        "name": "Jasność wnętrza",
+        "name": "Jasność oświetlenia",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -523,9 +523,9 @@
       "flex_zone_mode": {
         "name": "Tryb strefy Flex",
         "state": {
-          "cv_ttype_rf9000a_fridge": "Chłodziarka",
+          "cv_ttype_rf9000a_fridge": "Lodówka",
           "cv_ttype_rf9000a_freeze": "Zamrażanie",
-          "cv_ttype_rf9000a_softfreeze": "Lekkie zamrażanie",
+          "cv_ttype_rf9000a_softfreeze": "Lekkie mrożenie",
           "cv_ttype_rf9000a_meat_fish": "Mięso/ryby",
           "cv_ttype_rf9000a_fruit_veggies": "Owoce i warzywa",
           "cv_ttype_rf9000a_beverage": "Napoje",
@@ -533,7 +533,11 @@
           "cv_fdr_deli": "Wędliny",
           "cv_fdr_beverage": "Napoje",
           "cv_fdr_meat": "Mięso",
-          "cv_fdr_soft_freezer": "Lekkie zamrażanie"
+          "cv_fdr_soft_freezer": "Lekkie mrożenie",
+          "fconvert_soft_freezing_22 k": "Lekkie mrożenie",
+          "fconvert_freezer": "Zamrażanie",
+          "fconvert_cold": "Zimne",
+          "fconvert_cool": "Chłodzenie"
         }
       },
       "heated_dry": {
@@ -552,9 +556,9 @@
         "name": "{instance_name} — rodzaj",
         "state": {
           "off": "Wył.",
-          "whiskey_iceball_3": "3 kulki/dzień",
-          "whiskey_iceball_6": "6 kulek/dzień",
-          "whiskey_iceball_9": "9 kulek/dzień"
+          "whiskey_iceball_3": "3 kostki/dzień",
+          "whiskey_iceball_6": "6 kostki/dzień",
+          "whiskey_iceball_9": "9 kostki/dzień"
         }
       },
       "led_brightness": {
@@ -574,7 +578,7 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "micro_wave_grill": "Mikrofale + grill",
           "micro_wave_convection": "Mikrofale + termoobieg",
@@ -590,7 +594,7 @@
       "oven_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "bake": "Pieczenie",
           "broil": "Opiekanie",
           "convection": "Termoobieg",
@@ -623,10 +627,10 @@
           "kimchi_storage_low_salt_warm": "Kimchi niskosolne, łagodne",
           "kimchi_storage_crunfch": "Kimchi chrupiące",
           "kimchi_storage_buy": "Kimchi kupne",
-          "storage_fridge_normal": "Chłodziarka",
-          "storage_fridge_cold": "Chłodziarka, mocno",
-          "storage_fridge_warm": "Chłodziarka, słabo",
-          "storage_fridge": "Chłodziarka",
+          "storage_fridge_normal": "Lodówka",
+          "storage_fridge_cold": "Lodówka, mocno",
+          "storage_fridge_warm": "Lodówka, słabo",
+          "storage_fridge": "Lodówka",
           "storage_freezer_normal": "Zamrażarka",
           "storage_freezer_cold": "Zamrażarka, mocno",
           "storage_freezer_warm": "Zamrażarka, słabo",
@@ -699,7 +703,7 @@
         }
       },
       "softener_concentration": {
-        "name": "Stężenie płynu zmiękczającego",
+        "name": "Stężenie środka zmiękczającego",
         "state": {
           "01": "1x",
           "02": "2x",
@@ -707,7 +711,7 @@
         }
       },
       "softener_quantity": {
-        "name": "Ilość płynu zmiękczającego",
+        "name": "Ilość środka zmiękczającego",
         "state": {
           "00": "Brak",
           "01": "Niska",
@@ -1458,10 +1462,10 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "autocook": "Automatyczne pieczenie",
-          "keep_warm": "Utrzymywanie ciepła"
+          "keep_warm": "Utrzymuj ciepło"
         }
       },
       "cook_time": {
@@ -1587,10 +1591,10 @@
         "name": "Blokada brzęczyka"
       },
       "cabinet_light_dim": {
-        "name": "Rozjaśniaj stopniowo"
+        "name": "Powolne rozjaśnianie"
       },
       "cabinet_light_switch": {
-        "name": "Oświetlenie wnętrza"
+        "name": "Oświetlenie"
       },
       "child_lock": {
         "name": "Blokada rodzicielska"
@@ -1677,7 +1681,7 @@
         "name": "Pranie wstępne"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -1737,7 +1741,7 @@
         "name": "Automatyczne dozowanie detergentu"
       },
       "auto_softener": {
-        "name": "Automatyczne dozowanie płynu zmiękczającego"
+        "name": "Automatyczne dozowanie środka zmiękczającego"
       },
       "booster_light": {
         "name": "Oświetlenie boostera"
@@ -1947,7 +1951,7 @@
       },
       "settings": {
         "title": "Ustawienia urządzenia",
-        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/płynu zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
+        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/środka zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
         "data": {
           "bypass_remote_control_lock": "Zezwalaj na zapisy nawet wtedy, gdy zdalne sterowanie jest zgłaszane jako wyłączone",
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",
