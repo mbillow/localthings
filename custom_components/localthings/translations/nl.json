@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lamp"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Bereidingstijd"
@@ -1089,14 +1094,6 @@
           "on_on": "Beide korven",
           "off_on": "Alleen onderkorf",
           "on_off": "Alleen bovenkorf"
-        }
-      },
-      "lamp_level": {
-        "name": "Lampniveau",
-        "state": {
-          "off": "Uit",
-          "low": "Laag",
-          "high": "Hoog"
         }
       }
     },

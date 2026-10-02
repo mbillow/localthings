@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lampada"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Tempo di cottura"
@@ -1089,14 +1094,6 @@
           "on_on": "Entrambi i cestelli",
           "off_on": "Solo cestello inferiore",
           "on_off": "Solo cestello superiore"
-        }
-      },
-      "lamp_level": {
-        "name": "Livello lampada",
-        "state": {
-          "off": "Spenta",
-          "low": "Bassa",
-          "high": "Alta"
         }
       }
     },

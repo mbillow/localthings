@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Svetlo"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Čas varenia"
@@ -1089,14 +1094,6 @@
           "on_on": "Oba koše",
           "off_on": "Iba spodný kôš",
           "on_off": "Iba horný kôš"
-        }
-      },
-      "lamp_level": {
-        "name": "Úroveň osvetlenia",
-        "state": {
-          "off": "Vypnuté",
-          "low": "Nízka",
-          "high": "Vysoká"
         }
       }
     },
