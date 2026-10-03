@@ -54,6 +54,9 @@ class Resource:
     # Fields the appliance reports as JSON numbers, which the OCF side
     # writes as strings; to_write sends them back as numbers.
     numeric: frozenset[str] = frozenset()
+    # List fields the appliance packs into one comma-joined string, which
+    # the OCF side carries one value per entry.
+    joined: frozenset[str] = frozenset()
 
 
 # Every family serves its own identity here -- it is how the family is told
@@ -135,12 +138,51 @@ TP6X_RAC: tuple[Resource, ...] = (
 )
 
 
+# LCD_OV_WALL_16K (issue #572, NV51K777OS Flex Duo), read from a diagnostics
+# dump. The fields are the TP2X_DA-KS-WALLOVEN's CoAP vocabulary, so each
+# resource lands on that board's href. Writes follow the washer's aggregate
+# PUT and are not yet confirmed on this family.
+LCD_OV_WALL: tuple[Resource, ...] = (
+    Resource(
+        endpoint="operation",
+        wrapper="Operation",
+        href="/operational/state/vs/0",
+        fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
+        numeric=frozenset({"progressPercentage"}),
+    ),
+    Resource(
+        endpoint="mode",
+        wrapper="Mode",
+        href="/mode/vs/0",
+        joined=frozenset({"supportedModes"}),
+    ),
+    Resource(endpoint="oven", wrapper="Oven", href="/oven/vs/0"),
+    Resource(
+        endpoint="temperatures",
+        wrapper="Temperatures",
+        href="/temperatures/vs/0",
+        as_items=True,
+        numeric=frozenset({"desired"}),
+    ),
+    Resource(endpoint="doors", wrapper="Doors", href="/doors/vs/0", as_items=True),
+    Resource(
+        endpoint="configuration",
+        wrapper="Configuration",
+        href="/remotectrl/vs/0",
+    ),
+    INFORMATION,
+    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
+    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+)
+
+
 # Keyed by the appliance's own `description` (/devices/0/information's,
 # e.g. 'TP6X_WASHER'), less any trailing capacity (`_16K`), so one row covers
 # every size of a model line. A family not listed here is read with IDENTITY.
 FAMILIES: dict[str, tuple[Resource, ...]] = {
     "TP6X_WASHER": TP6X_WASHER,
     "TP6X_RAC": TP6X_RAC,
+    "LCD_OV_WALL": LCD_OV_WALL,
 }
 
 _CAPACITY = re.compile(r"_\d+K$")
@@ -159,6 +201,21 @@ def is_mapped(family: str | None) -> bool:
     return _family_key(family) in FAMILIES
 
 
+def unmapped_wrappers(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
+    """The resources the appliance reported that `table` has no row for, and
+    so are not read: what a new row would have to cover. Links and the
+    aggregate's own scalars are not resources."""
+    named = {resource.wrapper for resource in table}
+    return sorted(
+        key
+        for key, body in bodies.items()
+        if key[:1].isupper()
+        and not key.endswith("Link")
+        and isinstance(body, (Mapping, list))
+        and key not in named
+    )
+
+
 def _canonical_name(name: str, rename: Mapping[str, str]) -> str:
     return PREFIX + rename.get(name, name)
 
@@ -171,6 +228,20 @@ def _canonical_value(value: Any, rename: Mapping[str, str]) -> Any:
     if isinstance(value, list):
         return [_canonical_value(v, rename) for v in value]
     return value
+
+
+def _split_joined(value: Any) -> Any:
+    """`["a,b,a"]` -> `["a", "b"]`: split, trimmed, first occurrence kept."""
+    if not isinstance(value, list):
+        return value
+    out: list[Any] = []
+    for entry in value:
+        parts = entry.split(",") if isinstance(entry, str) else [entry]
+        for part in parts:
+            part = part.strip() if isinstance(part, str) else part
+            if part != "" and part not in out:
+                out.append(part)
+    return out
 
 
 def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
@@ -218,6 +289,8 @@ def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict
         if not isinstance(body, Mapping):
             continue
         for name, value in body.items():
+            if name in resource.joined:
+                value = _split_joined(value)
             href = resource.fan_out.get(name, resource.href)
             out.setdefault(href, {})[_canonical_name(name, resource.rename)] = _canonical_value(
                 value, resource.rename

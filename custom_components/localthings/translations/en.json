@@ -625,7 +625,12 @@
           "upper_convection_bake": "Upper convection bake",
           "upper_convection_roast": "Upper convection roast",
           "lower_bake": "Lower bake",
-          "lower_convection_bake": "Lower convection bake"
+          "lower_convection_bake": "Lower convection bake",
+          "steam_bake": "Steam bake",
+          "steam_roast": "Steam roast",
+          "upper_steam_bake": "Upper steam bake",
+          "descale": "Descale",
+          "drain": "Drain"
         }
       },
       "operating_mode": {

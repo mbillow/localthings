@@ -625,7 +625,12 @@
           "upper_convection_bake": "Pieczenie z termoobiegiem (górna)",
           "upper_convection_roast": "Pieczenie mięs z termoobiegiem (górna)",
           "lower_bake": "Pieczenie (dolna)",
-          "lower_convection_bake": "Pieczenie z termoobiegiem (dolna)"
+          "lower_convection_bake": "Pieczenie z termoobiegiem (dolna)",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą (górna)",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody"
         }
       },
       "operating_mode": {

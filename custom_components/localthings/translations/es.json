@@ -970,7 +970,12 @@
           "upper_convection_bake": "Hornear por convección (superior)",
           "upper_convection_roast": "Asar por convección (superior)",
           "lower_bake": "Hornear (inferior)",
-          "lower_convection_bake": "Hornear por convección (inferior)"
+          "lower_convection_bake": "Hornear por convección (inferior)",
+          "steam_bake": "Hornear al vapor",
+          "steam_roast": "Asar al vapor",
+          "upper_steam_bake": "Hornear al vapor (superior)",
+          "descale": "Descalcificación",
+          "drain": "Vaciado de agua"
         }
       },
       "operating_mode": {

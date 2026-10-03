@@ -625,7 +625,12 @@
           "upper_convection_bake": "Cottura a convezione (superiore)",
           "upper_convection_roast": "Arrosto ventilato (superiore)",
           "lower_bake": "Statico (inferiore)",
-          "lower_convection_bake": "Cottura a convezione (inferiore)"
+          "lower_convection_bake": "Cottura a convezione (inferiore)",
+          "steam_bake": "Cottura a vapore",
+          "steam_roast": "Arrosto a vapore",
+          "upper_steam_bake": "Cottura a vapore (superiore)",
+          "descale": "Decalcificazione",
+          "drain": "Scarico acqua"
         }
       },
       "operating_mode": {

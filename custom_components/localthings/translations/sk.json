@@ -625,7 +625,12 @@
           "upper_convection_bake": "Teplovzdušné pečenie (horná)",
           "upper_convection_roast": "Teplovzdušné opekanie (horná)",
           "lower_bake": "Pečenie (dolná)",
-          "lower_convection_bake": "Teplovzdušné pečenie (dolná)"
+          "lower_convection_bake": "Teplovzdušné pečenie (dolná)",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou (horná)",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody"
         }
       },
       "operating_mode": {

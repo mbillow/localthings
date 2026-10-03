@@ -625,7 +625,12 @@
           "upper_convection_bake": "Konvekční pečení (horní)",
           "upper_convection_roast": "Pečení horkým vzduchem (horní)",
           "lower_bake": "Pečení (dolní)",
-          "lower_convection_bake": "Konvekční pečení (dolní)"
+          "lower_convection_bake": "Konvekční pečení (dolní)",
+          "steam_bake": "Pečení s párou",
+          "steam_roast": "Pečení masa s párou",
+          "upper_steam_bake": "Pečení s párou (horní)",
+          "descale": "Odvápnění",
+          "drain": "Vypuštění vody"
         }
       },
       "operating_mode": {
