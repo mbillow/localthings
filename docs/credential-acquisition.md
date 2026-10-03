@@ -146,6 +146,64 @@ unverified.
 | Rules | The before-and-after comparison recorded unchanged IDs and exported definitions for 13 Rules, apart from normal execution timestamps. | None of the 13 exported Rule definitions directly referenced the washer, so washer-specific routine preservation was not tested. |
 | Scenes | The before-and-after comparison recorded unchanged IDs and available exported records for 14 Scenes. | The saved Scene responses contain metadata, not action definitions. Full Scene-definition preservation, washer dependencies, and execution behavior were not verified. |
 
+## Samsung LCD oven with rooted Android 17
+
+I recovered my Samsung LCD oven's OwnerPSK on 2026-10-03.
+It reports board prefix `LCD_R18_SCO_QMD_EU_22K`, with SmartThings
+profile `DA-KS-OVEN-0105X`. I haven't checked its retail model number yet.
+
+I used a Motorola Edge 30 Fusion running rooted Android 17
+with KernelSU. SmartThings was `1.8.51.30` (`185130010`), and Frida was
+`17.21.0` on both the macOS host and Android ARM64 phone.
+
+The [public recovery repository](https://github.com/KRZ303/locathings-oven-psk-retrieval)
+contains my extraction scripts, installation instructions, synthetic tests,
+and format details. The cleaned-up scripts passed offline tests; I used their
+original, device-specific versions for the live recovery.
+
+### What supplied the credential
+
+I'd originally paired the oven on another phone. My current phone could use
+the cloud tile, but its main Core credential store contained only certificates.
+I removed and re-added the oven through SmartThings on my rooted phone.
+Core still contained no PSK.
+
+The credential came from an account-specific `files/<account UUID>.datenc`
+store. The existing app CryptoManager unwrapped the existing IoTivity storage
+key through Android Keystore. This did not export the Keystore wrapping key.
+The helper verified the ciphertext HMAC, decrypted AES-256-CBC, and decoded
+the CBOR credential resource.
+
+Exactly one type-1 credential matched the oven's device UUID. Its key was
+16 bytes. The credential resource's `rowneruuid` supplied the owner PSK
+identity and matched the oven's separately reported `devowneruuid`.
+
+Removal can break registration and automation references. Inspect existing
+account stores before considering it. Follow the recovery repository's backup
+and version checks; its instructions are not a tested restore procedure.
+Acquisition remains external to LocalThings. The helpers do not generate
+credentials, perform ownership transfer, or write appliance security resources.
+
+### Authentication result and remaining limits
+
+My raw owner UUID contained a zero byte. The existing OpenSSL path refused
+that identity; removing the guard would not preserve its bytes.
+An optional Mbed TLS backend sent the complete binary identity and completed
+an authenticated `GET /oic/d` with the expected oven identity.
+The patched Python transport performed this read on macOS and inside HA's
+Linux runtime before deployment.
+
+With both the transport patch and this integration validation change installed,
+I imported the OwnerPSK and added my oven. A subsequent read-only HA check
+found both my oven and existing certificate-based washer entries loaded.
+My oven exposed only a connection-mode sensor, reporting `poll`; diagnostics
+showed no active observations. This establishes authentication and setup, not
+full oven entity coverage or working heating controls.
+
+The Mbed TLS native module requires a separate, compatible build. Installing
+the integration change alone does not enable binary identities.
+No heating controls, long-term stability, or other oven models were verified.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)

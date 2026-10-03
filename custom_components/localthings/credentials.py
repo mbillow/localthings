@@ -34,6 +34,8 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
+from smartthings_local.protocol.auth import PskAuth
+
 from .const import (
     AUTH_CERTIFICATE,
     AUTH_PSK,
@@ -73,7 +75,7 @@ class InvalidCredentialConfig(ValueError):
 
 
 class PskIdentityZeroByte(InvalidCredentialConfig):
-    """A well-formed UUID that DTLS cannot carry as a PSK identity.
+    """A well-formed UUID that the installed transport cannot carry.
 
     Its own type so setup can say so rather than call the UUID malformed --
     see `normalize_psk_identity`.
@@ -158,13 +160,8 @@ def identity_may_be_suggested_from_doxm(profile: str) -> bool:
 def normalize_psk_identity(value: Any) -> str:
     """One canonical 16-byte OCF UUID, usable as a DTLS PSK identity.
 
-    The NUL-byte rule is upstream's (``PskAuth`` refuses one) and it is a
-    real constraint rather than defensiveness: OpenSSL carries the identity
-    as a NUL-terminated byte string, so a zero byte truncates it on the
-    wire. Roughly one UUID in sixteen contains one. It gets its own message
-    because "your credential is malformed" is wrong and unhelpful for a
-    perfectly well-formed UUID -- and because a *peer* identity is generated
-    by whatever installed it, so the fix there is to generate another.
+    Ask the transport whether it can preserve zero bytes. OpenSSL cannot;
+    the optional Mbed TLS backend can. Keep older installations fail-closed.
     """
     try:
         parsed = UUID(str(value).strip())
@@ -173,7 +170,12 @@ def normalize_psk_identity(value: Any) -> str:
     if parsed.int == 0:
         raise InvalidCredentialConfig("PSK identity is not a UUID")
     if b"\x00" in parsed.bytes:
-        raise PskIdentityZeroByte("PSK identity contains a zero byte, which DTLS cannot carry")
+        try:
+            PskAuth.validate_identity(parsed.bytes)
+        except ValueError:
+            raise PskIdentityZeroByte(
+                "PSK identity contains a zero byte; the installed transport cannot carry it"
+            ) from None
     return str(parsed)
 
 

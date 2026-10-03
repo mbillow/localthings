@@ -1998,7 +1998,7 @@
       "psk_rejected": "Urządzenie odrzuciło klucz współdzielony. Tożsamość lub klucz są nieprawidłowe albo należą do innego urządzenia lub do właściciela, który się od tego czasu zmienił. Dokładny alert znajdziesz w logu Home Assistant.",
       "identity_unproven": "Klucz zadziałał, ale urządzenie nie podało swojego identyfikatora urządzenia OCF przez szyfrowane połączenie, więc LocalThings nie może potwierdzić, które urządzenie ma ten klucz, i go nie doda. Spróbuj ponownie, gdy urządzenie jest wybudzone. Jeśli problem się powtarza, daj nam znać w [zgłoszeniu #435]({issue_url}) i dołącz log Home Assistant.",
       "invalid_psk_identity": "Wprowadź tożsamość jako UUID, na przykład 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Ten UUID zawiera bajt zerowy, którego DTLS nie może przenieść jako tożsamości. Jeśli ta tożsamość peera została przez ciebie wygenerowana, wygeneruj nową.",
+      "psk_identity_zero_byte": "Ten UUID zawiera bajt zerowy. Wymaga transportu z zainstalowanym opcjonalnym modułem Mbed TLS. OpenSSL nie może przesłać tej tożsamości w całości.",
       "invalid_psk_key": "Wprowadź klucz jako 32 lub 64 znaki szesnastkowe.",
       "handshake_failed": "Urządzenie odrzuciło uzgadnianie DTLS z powodu niezwiązanego z certyfikatem, najprawdopodobniej przez niezgodność protokołu lub szyfru. Dokładny alert, który wysłało, znajdziesz w dzienniku Home Assistant.",
       "cloud_unreachable": "Nie udało się połączyć z bramą chmurową Samsunga, aby pobrać UUID potrzebny do wystawienia certyfikatu tego urządzenia. Sprawdź dostęp Home Assistant do internetu i spróbuj ponownie.",

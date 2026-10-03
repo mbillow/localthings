@@ -1998,7 +1998,7 @@
       "psk_rejected": "The appliance refused the pre-shared key. The identity or key is wrong, or it belongs to another appliance or to an owner that has since changed. The Home Assistant log records the exact alert.",
       "identity_unproven": "The key worked, but the appliance didn't report its OCF device ID over the encrypted connection, so LocalThings can't confirm which appliance holds the key and won't add it. Try again while the appliance is awake. If it keeps happening, tell us in [issue #435]({issue_url}) and include the Home Assistant log.",
       "invalid_psk_identity": "Enter the identity as a UUID, for example 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "This UUID contains a zero byte, which DTLS can't carry as an identity. If you generated this peer identity, generate another one.",
+      "psk_identity_zero_byte": "This UUID contains a zero byte. It requires a transport with the optional Mbed TLS backend installed. OpenSSL cannot send this identity intact.",
       "invalid_psk_key": "Enter the key as 32 or 64 hexadecimal characters.",
       "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
