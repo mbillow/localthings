@@ -9,6 +9,7 @@ from custom_components.localthings.registry.capabilities import microwave, range
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
     BinarySensorDesc,
+    LightDesc,
     NumberDesc,
     SelectDesc,
     SwitchDesc,
@@ -306,145 +307,81 @@ def test_sound_write_is_single_token():
     assert body == {"x.com.samsung.da.options": ["Sound_Off"]}
 
 
-def test_lamp_gated_absent_when_no_lamp_option():
-    """Issue #121's combi dump has no 'Lamp_*' token at all -- unlike
-    oven.py's lamp switch (assumed universal), this one self-gates off."""
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    rep = {"x.com.samsung.da.options": ["DeviceType_MW7300B-/EU1", "Sound_Off"]}
-    assert desc.exists_fn is not None
-    assert desc.exists_fn(rep, {}) is False
-
-
-def test_lamp_gated_present_when_lamp_option_reported():
-    """Issue #137's plain microwave reports 'Lamp_Off'."""
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    rep = {"x.com.samsung.da.options": ["Lamp_Off", "Sound_On"]}
-    assert desc.exists_fn is not None
-    assert desc.exists_fn(rep, {}) is True
-
-
-def test_lamp_write_is_single_token():
-    """issue #152: the device has never been observed accepting 'On' --
-    only 'High'/'Off' -- so the switch's "on" write uses 'High'."""
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    rep = {"x.com.samsung.da.options": ["Lamp_Off"]}
-    assert desc.write_fn is not None
-    result = desc.write_fn("On", rep)
-    assert result is not None
-    path, body = result
-    assert path == ["mode", "vs", "0"]
-    assert body == {"x.com.samsung.da.options": ["Lamp_High"]}
-
-
-def test_lamp_write_requires_existing_options():
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    assert desc.write_fn is not None
-    assert desc.write_fn("On", {}) is None
-
-
-def test_lamp_reads_off_as_false():
-    desc = next(e for e in microwave.MICROWAVE_MODE.entities if e.key == "lamp")
-    assert desc.value_fn(["Lamp_Off"]) is False
-
-
-def test_lamp_reads_any_non_off_level_as_true():
-    """issue #152's ME7500D reports 'Lamp_High', not the binary 'Lamp_On'
-    #137's dump implied -- any non-Off/non-absent value must read as on, not
-    just a literal 'On'."""
-    desc = next(e for e in microwave.MICROWAVE_MODE.entities if e.key == "lamp")
-    assert desc.value_fn(["Lamp_High"]) is True
-
-
-def test_upper_lamp_gated_present_and_reads_state():
-    """Oven-class combis (NQ7000B, issue #496) spell the token 'UpperLamp'."""
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    rep = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
-    assert desc.exists_fn is not None
-    assert desc.exists_fn(rep, {}) is True
-    assert desc.value_fn(["UpperLamp_Off"]) is False
-    assert desc.value_fn(["UpperLamp_On"]) is True
-
-
-def test_upper_lamp_write_uses_oven_on_off_values():
-    desc = next(
-        e
-        for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp" and isinstance(e, SwitchDesc)
-    )
-    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
-    assert desc.write_fn is not None
-    assert desc.write_fn("On", rep) == (
-        ["mode", "vs", "0"],
-        {"x.com.samsung.da.options": ["UpperLamp_On"]},
-    )
-    assert desc.write_fn("Off", rep) == (
-        ["mode", "vs", "0"],
-        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
-    )
-
-
-def _lamp_level():
+def _lamp(*, brightness: bool):
     return next(
         e
         for e in microwave.MICROWAVE_MODE.entities
-        if e.key == "lamp_level" and isinstance(e, SelectDesc)
+        if isinstance(e, LightDesc) and e.supports_brightness is brightness
     )
 
 
-def test_lamp_level_offers_three_levels_and_reads_the_token():
-    """Issue #181: the ME7500D's light has Low as well as High."""
-    desc = _lamp_level()
-    assert tuple(desc.options) == ("Off", "Low", "High")
-    assert desc.value_fn(["Sound_On", "Lamp_Low"]) == "Low"
-    assert desc.value_fn(["Lamp_High"]) == "High"
+def test_lamp_descriptors_are_mutually_exclusive():
+    bare = _lamp(brightness=True)
+    upper = _lamp(brightness=False)
+    assert bare.exists_fn is not None
+    assert upper.exists_fn is not None
+
+    no_lamp = {"x.com.samsung.da.options": ["DeviceType_MW7300B-/EU1", "Sound_Off"]}
+    assert bare.exists_fn(no_lamp, {}) is False
+    assert upper.exists_fn(no_lamp, {}) is False
+
+    bare_lamp = {"x.com.samsung.da.options": ["Lamp_Off", "Sound_On"]}
+    assert bare.exists_fn(bare_lamp, {}) is True
+    assert upper.exists_fn(bare_lamp, {}) is False
+
+    upper_lamp = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
+    assert bare.exists_fn(upper_lamp, {}) is False
+    assert upper.exists_fn(upper_lamp, {}) is True
+
+    both_tokens = {"x.com.samsung.da.options": ["Lamp_Low", "UpperLamp_On"]}
+    assert bare.exists_fn(both_tokens, {}) is True
+    assert upper.exists_fn(both_tokens, {}) is False
 
 
-def test_lamp_level_writes_each_level_as_one_token():
-    desc = _lamp_level()
+def test_lamp_reads_three_brightness_levels():
+    desc = _lamp(brightness=True)
+    assert desc.value_fn(["Lamp_Off"]) == 0
+    assert desc.value_fn(["Lamp_Low"]) == 128
+    assert desc.value_fn(["Lamp_High"]) == 255
+    assert desc.value_fn(["Lamp_On"]) == 255
+    assert desc.value_fn(["Sound_On"]) is None
+
+
+def test_lamp_brightness_writes_supported_ranges():
+    desc = _lamp(brightness=True)
     rep = {"x.com.samsung.da.options": ["Lamp_Off"]}
     assert desc.write_fn is not None
-    for level in ("Off", "Low", "High"):
-        assert desc.write_fn(level, rep) == (
+    expected = {0: "Off", 1: "Low", 128: "Low", 129: "High", 255: "High"}
+    for brightness, level in expected.items():
+        assert desc.write_fn(brightness, rep) == (
             ["mode", "vs", "0"],
             {"x.com.samsung.da.options": [f"Lamp_{level}"]},
         )
-    assert desc.write_fn("Medium", rep) is None
-    assert desc.write_fn("Low", {}) is None
+    assert desc.write_fn("invalid", rep) is None
+    assert desc.write_fn(128, {}) is None
 
 
-def test_lamp_level_gated_to_the_bare_lamp_token():
-    """UpperLamp boards (NQ7000B, issue #496) only have On/Off, and the
-    combi dump (issue #121) has no lamp at all."""
-    desc = _lamp_level()
-    assert desc.exists_fn is not None
-    assert desc.exists_fn({"x.com.samsung.da.options": ["Lamp_Off"]}, {}) is True
-    assert desc.exists_fn({"x.com.samsung.da.options": ["UpperLamp_Off"]}, {}) is False
-    assert desc.exists_fn({"x.com.samsung.da.options": ["Sound_Off"]}, {}) is False
+def test_upper_lamp_reads_and_writes_on_off_values():
+    desc = _lamp(brightness=False)
+    assert desc.value_fn(["UpperLamp_Off"]) is False
+    assert desc.value_fn(["UpperLamp_On"]) is True
+    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
+    assert desc.write_fn is not None
+    assert desc.write_fn(True, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_On"]},
+    )
+    assert desc.write_fn(False, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
+    )
+    assert desc.write_fn("On", rep) is None
+    assert desc.write_fn(True, {}) is None
 
 
 def test_nq7000b_fixture_resolves_as_microwave_with_lamp_and_clock_sync():
     """Issue #496: NQ7000B declares oic.d.oven but has the microwave
-    surface; it binds fully, with the UpperLamp switch and clock sync."""
+    surface; it binds fully, with the UpperLamp light and clock sync."""
     from tests.conftest import _load_device
 
     resources = _load_device("microwave_nq7000b")

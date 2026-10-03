@@ -45,7 +45,7 @@ custom_components/localthings/
   services.yaml        Selectors and descriptions for those actions
   const.py             Domain, config keys and probe ports
   entity.py            Base entity that turns registry entries into Home Assistant entities
-  sensor.py, binary_sensor.py, switch.py, number.py, select.py, button.py,
+  sensor.py, binary_sensor.py, light.py, switch.py, number.py, select.py, button.py,
   time.py, fan.py, climate.py, water_heater.py
                        One module per Home Assistant platform
   catalog.py           Reads which keys and states the translation catalog has

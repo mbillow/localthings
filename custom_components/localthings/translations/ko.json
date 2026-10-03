@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "램프"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "조리 시간"
@@ -1089,14 +1094,6 @@
           "on_on": "상·하단 모두",
           "off_on": "하단만",
           "on_off": "상단만"
-        }
-      },
-      "lamp_level": {
-        "name": "램프 단계",
-        "state": {
-          "off": "꺼짐",
-          "low": "약",
-          "high": "강"
         }
       }
     },

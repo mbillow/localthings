@@ -14,7 +14,6 @@
     "finish_time",
     "firmware_update",
     "lamp",
-    "lamp_level",
     "machine_state",
     "operation_time_minutes",
     "power_level",

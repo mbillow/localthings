@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Lamp"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Cook time"
@@ -1089,14 +1094,6 @@
           "on_on": "Both racks",
           "off_on": "Lower rack only",
           "on_off": "Upper rack only"
-        }
-      },
-      "lamp_level": {
-        "name": "Lamp level",
-        "state": {
-          "off": "Off",
-          "low": "Low",
-          "high": "High"
         }
       }
     },
