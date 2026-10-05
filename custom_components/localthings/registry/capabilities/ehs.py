@@ -186,9 +186,9 @@ ZONE_TEMPERATURE = Capability(
     ),
 )
 
-# Zone 2 (issue #581). The reporter's unbound hrefs name these resources,
-# but the dump wasn't available when this was written, so their shapes are
-# assumed to match zone1's -- needs live confirmation.
+# Zone 2 (issue #581, TP1X_DA_AC_EHS_01002_0000): same fields as zone1's,
+# minus the temperature unit, which _temp_unit defaults to Celsius. Writes
+# mirror zone1's and need live confirmation.
 ZONE2_TEMPERATURE = Capability(
     href=HREF_ZONE2_TEMPERATURE,
     poll_tier="warm",

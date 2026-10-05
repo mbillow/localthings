@@ -34,18 +34,8 @@ class _FakeCoordinator:
 
 
 def _two_zone_resources():
-    """The real single-zone dump plus zone2 resources copied from zone1's.
-    Constructed: issue #581's dump names these hrefs but wasn't available, so
-    their shapes are assumed to match zone1's."""
-    resources = dict(_load_device("ehs"))
-    resources["/power/zone2/vs/0"] = {"x.com.samsung.da.power": "On"}
-    resources["/temperatures/zone2/indoor/vs/0"] = {
-        **resources["/temperatures/indoor/vs/0"],
-        "x.com.samsung.da.current": "21.5",
-        "x.com.samsung.da.desired": "20.0",
-    }
-    resources["/actions/zone2/vs/0"] = {}
-    return resources
+    """Issue #581's two-zone TP1X_DA_AC_EHS_01002_0000 dump."""
+    return dict(_load_device("ehs_01002"))
 
 
 def _bound(resources):
@@ -106,14 +96,19 @@ def test_zone2_binds_with_no_unbound_hrefs():
     )
     assert unbound == []
     state = flatten(bound, resources)
-    assert state["zone2_temperature"] == 21.5
-    assert state["zone2_climate"] == 20.0
+    assert state["zone2_temperature"] == 23.0
+    assert state["zone2_climate"] == 18.0
 
 
 def test_zone2_writes_its_own_power_and_setpoint_but_the_shared_mode():
-    entity, _, bound = _entity(_two_zone_resources(), "zone2_climate")
+    resources = _two_zone_resources()
+    entity, _, bound = _entity(resources, "zone2_climate")
+    assert entity.hvac_mode == HVACMode.OFF  # zone2 is off on the dump
+    assert (entity.current_temperature, entity.target_temperature) == (23.0, 18.0)
+    # zone2's temperature resource carries no unit field; Celsius is the fallback.
+    assert entity.temperature_unit == "°C"
+    resources["/power/zone2/vs/0"] = {"x.com.samsung.da.power": "On"}
     assert entity.hvac_mode == HVACMode.COOL
-    assert entity.current_temperature == 21.5
     assert _write(bound, ("power", False)) == (
         ["power", "zone2", "vs", "0"],
         {"x.com.samsung.da.power": "Off"},

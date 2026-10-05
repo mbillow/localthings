@@ -69,6 +69,20 @@ def test_registry_reproduces_golden_state_keys_for_ehs():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_ehs_01002():
+    """Issue #581: a two-zone EHS gets a climate entity per zone."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("ehs_01002")
+    golden = json.loads((GOLDEN / "ehs_01002.json").read_text())
+    state_keys = _new_state_keys("ehs_01002", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_wa8000t():
     """Top-load washer (WA8000T, issue #106) reports no oneUiVersion and
     used the 'WA' consumer-model prefix, previously unmapped in
