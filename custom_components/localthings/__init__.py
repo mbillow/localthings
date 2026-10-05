@@ -212,6 +212,8 @@ def _relabel_particulate_statistics(hass: HomeAssistant, entry: ConfigEntry) -> 
 # dry_level or dry_time any more, so the domain check plus this tail is
 # already exact.
 _MOVED_TO_SELECT_KEY_RE = re.compile(r"_(?:dry_level|dry_time)(?:_\d+)?$")
+_MICROWAVE_LAMP_SWITCH_KEY_RE = re.compile(r"_lamp(?:_\d+)?$")
+_MICROWAVE_LAMP_LEVEL_SELECT_KEY_RE = re.compile(r"_lamp_level(?:_\d+)?$")
 
 
 @callback
@@ -243,6 +245,31 @@ def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry)
         # the new select gets.
         _LOGGER.info(
             "Removing %s, superseded by a select entity on the same device; "
+            "update any automation or dashboard that referenced it",
+            registry_entry.entity_id,
+        )
+        ent_reg.async_remove(registry_entry.entity_id)
+
+
+@callback
+def _drop_microwave_entities_superseded_by_light(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Drop the microwave switch and select rows replaced by its light."""
+    if entry.data.get(CONF_DEVICE_TYPE) != "microwave":
+        return
+
+    ent_reg = er.async_get(hass)
+    for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        superseded = (
+            registry_entry.domain == "switch"
+            and _MICROWAVE_LAMP_SWITCH_KEY_RE.search(registry_entry.unique_id)
+        ) or (
+            registry_entry.domain == "select"
+            and _MICROWAVE_LAMP_LEVEL_SELECT_KEY_RE.search(registry_entry.unique_id)
+        )
+        if not superseded:
+            continue
+        _LOGGER.info(
+            "Removing %s, superseded by a light entity on the same device; "
             "update any automation or dashboard that referenced it",
             registry_entry.entity_id,
         )
@@ -320,9 +347,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
-    # Before the platforms register anything, so an upgraded dryer never has
-    # the dead sensor row and its replacement select alive at the same time.
+    # Before platforms register, so an upgraded entry never has a dead row
+    # and its replacement alive at the same time.
     _drop_sensors_superseded_by_selects(hass, entry)
+    _drop_microwave_entities_superseded_by_light(hass, entry)
 
     coordinator = LocalThingsCoordinator(hass, entry)
 

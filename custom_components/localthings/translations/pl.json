@@ -249,6 +249,11 @@
         }
       }
     },
+    "light": {
+      "lamp": {
+        "name": "Oświetlenie"
+      }
+    },
     "number": {
       "cook_time": {
         "name": "Czas gotowania"
@@ -1089,14 +1094,6 @@
           "on_on": "Oba kosze",
           "off_on": "Tylko dolny kosz",
           "on_off": "Tylko górny kosz"
-        }
-      },
-      "lamp_level": {
-        "name": "Poziom oświetlenia",
-        "state": {
-          "off": "Wył.",
-          "low": "Niska",
-          "high": "Wysoka"
         }
       }
     },
