@@ -148,6 +148,109 @@ class TestRead:
 
         assert transport.read(["power", "vs", "0"], timeout=1.0) == (0x80, b"bad option")
 
+    def test_device_directory_requests_batch_representations(self, transport, monkeypatch):
+        from custom_components.localthings.registry.batch import parse_device0_batch
+
+        path = ["device", "0"]
+        href = "/temperature/current/cook/0"
+        rep = {"rt": ["oic.r.temperature"], "temperature": 21}
+        directory = {"links": [{"href": href, "rt": rep["rt"]}]}
+        batch = [{"href": href, "rep": rep}]
+        calls = []
+
+        def get(path_segs, *, timeout, query=()):
+            calls.append((path_segs, query, timeout))
+            return 0x45, cbor2.dumps(batch if query else directory)
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        code, body = transport.read(path, timeout=10.0)
+
+        assert code == 0x45
+        assert parse_device0_batch(body) == {href: rep}
+        assert [(p, q) for p, q, _ in calls] == [(path, ()), (path, ["if=oic.if.b"])]
+        assert 0 < calls[1][2] <= 10.0
+        assert fake_of(transport).paced == 1
+
+    @pytest.mark.parametrize(
+        ("path", "code", "body"),
+        [
+            (["device", "0"], 0x45, [{"href": "/power/0", "rep": {"value": True}}]),
+            (["device", "0"], 0x45, {"value": True}),
+            (["device", "0"], 0x45, {"links": "invalid"}),
+            (["device", "0"], 0x44, {"links": []}),
+            (["oic", "res"], 0x45, {"links": []}),
+            (["device", "1"], 0x45, {"links": []}),
+            (["power", "0"], 0x45, {"value": True}),
+        ],
+    )
+    def test_other_reads_do_not_request_batch(self, transport, monkeypatch, path, code, body):
+        calls = []
+
+        def get(path_segs, *, timeout):
+            calls.append(path_segs)
+            return code, cbor2.dumps(body)
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        assert transport.read(path, timeout=1.0) == (code, body)
+        assert calls == [path]
+        assert fake_of(transport).paced == 0
+
+    @pytest.mark.parametrize(
+        ("code", "payload", "expected"),
+        [
+            (0x80, b"bad option", b"bad option"),
+            (0x84, b"", None),
+            (0x45, cbor2.dumps({"links": []}), {"links": []}),
+        ],
+    )
+    def test_batch_fallback_preserves_response_contract(
+        self, transport, monkeypatch, code, payload, expected
+    ):
+        queries = []
+
+        def get(path_segs, *, timeout, query=()):
+            queries.append(query)
+            return (code, payload) if query else (0x45, cbor2.dumps({"links": []}))
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        assert transport.read(["device", "0"], timeout=1.0) == (code, expected)
+        assert queries == [(), ["if=oic.if.b"]]
+
+    def test_batch_decode_error_retains_payload(self, transport, monkeypatch):
+        def get(path_segs, *, timeout, query=()):
+            return 0x45, b"\x18" if query else cbor2.dumps({"links": []})
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        with pytest.raises(DecodeError) as caught:
+            transport.read(["device", "0"], timeout=1.0)
+        assert (caught.value.code, caught.value.payload) == (0x45, b"\x18")
+
+    @pytest.mark.parametrize("elapsed", [3.0, 10.0, 11.0])
+    def test_batch_read_shares_timeout_including_pacing(self, transport, monkeypatch, elapsed):
+        now = [100.0]
+        timeouts = []
+
+        def get(path_segs, *, timeout, query=()):
+            timeouts.append(timeout)
+            now[0] += elapsed / 2
+            return 0x45, cbor2.dumps([] if query else {"links": []})
+
+        def pace():
+            now[0] += elapsed / 2
+
+        monkeypatch.setattr(
+            "custom_components.localthings.transport.time.monotonic", lambda: now[0]
+        )
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        monkeypatch.setattr(fake_of(transport), "pace", pace)
+        if elapsed >= 10:
+            with pytest.raises(TimeoutError, match="batch read"):
+                transport.read(["device", "0"], timeout=10.0)
+            assert timeouts == [10.0]
+        else:
+            assert transport.read(["device", "0"], timeout=10.0) == (0x45, [])
+            assert timeouts == [10.0, 7.0]
+
 
 class TestWrite:
     def test_takes_a_body_and_returns_the_code(self, transport):
