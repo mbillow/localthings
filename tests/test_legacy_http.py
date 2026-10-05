@@ -21,6 +21,7 @@ import pytest
 from custom_components.localthings.legacy_http import (
     COURSE_TABLE_HREF,
     IDENTITY,
+    LCD_OV_WALL,
     PREFIX,
     TP6X_RAC,
     TP6X_WASHER,
@@ -558,3 +559,124 @@ class TestTp6xRac:
 
         assert sendable == aggregate
         assert staged == {}
+
+
+class TestLcdOvWall:
+    """LCD_OV_WALL_16K, the NV51K777OS Flex Duo wall oven (issue #572), from
+    the bodies its diagnostics recorded idle.
+
+    Its fields are the TP2X_DA-KS-WALLOVEN's CoAP vocabulary, so the existing
+    oven registry binds everything once each resource is on that board's href.
+    """
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
+
+    def _bodies(self):
+        return json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+
+    def _resources(self, bodies=None):
+        return to_resources(bodies or self._bodies(), LCD_OV_WALL)
+
+    def _state(self, resources):
+        from custom_components.localthings.registry.adapter import flatten
+
+        registry = resolve(resources)
+        assert registry is not None
+        return flatten(
+            discover(resources, registry.capabilities, registry.pattern_capabilities), resources
+        )
+
+    def test_the_family_is_mapped_at_any_capacity(self):
+        for family in ("LCD_OV_WALL_16K", "LCD_OV_WALL_30K"):
+            assert table_for(family) is LCD_OV_WALL
+            assert is_mapped(family)
+
+    def test_the_dump_produces_the_wall_oven_hrefs(self):
+        assert set(self._resources()) == {
+            "/alarms/vs/0",
+            "/diagnosis/vs/0",
+            "/doors/vs/0",
+            "/information/vs/0",
+            "/kidslock/vs/0",
+            "/mode/vs/0",
+            "/operational/state/vs/0",
+            "/oven/vs/0",
+            "/power/vs/0",
+            "/remotectrl/vs/0",
+            "/temperatures/vs/0",
+        }
+
+    def test_supported_modes_are_split_out_of_one_string(self):
+        """The appliance packs all its modes, duplicates included, into a
+        single comma-joined list entry."""
+        raw = self._bodies()["Mode"]["supportedModes"]
+        assert len(raw) == 1 and raw[0].count("NoOperation") == 2
+
+        modes = self._resources()["/mode/vs/0"][PREFIX + "supportedModes"]
+
+        assert modes[:2] == ["UpperHealthycook4", "UpperHealthycook3"]
+        assert modes[-1] == "ConvectionBake"
+        assert {"Bake", "UpperConvectionBake", "SelfClean"} <= set(modes)
+        assert len(modes) == len(set(modes)) == 27
+
+    def test_it_types_as_an_oven_with_nothing_unbound(self):
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        assert registry.name == "oven"
+        unbound: list[str] = []
+
+        bound = discover(
+            resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+        )
+
+        assert unbound == []
+        keys = {b.key_override or b.desc.key for b in bound}
+        assert {
+            "oven_mode",
+            "oven_setpoint",
+            "current_temp_c",
+            "machine_state",
+            "door_open",
+            "remote_control",
+            "power_switch",
+        } <= keys
+
+    def test_a_cook_reads_through_the_float_temperatures(self):
+        """Idle, the cavity sits at the 175 F floor and reads unknown; this
+        firmware reports temperatures as floats, which must still read."""
+        bodies = self._bodies()
+        bodies["Temperatures"] = [{**bodies["Temperatures"][0], "desired": 350.0, "current": 220.0}]
+        bodies["Mode"] = {**bodies["Mode"], "modes": ["Bake"]}
+
+        state = self._state(self._resources(bodies))
+
+        assert state["oven_setpoint"] == 350
+        assert state["current_temp_c"] == 220
+        assert state["oven_mode"] == "Bake"
+
+    def test_oven_writes_reach_the_wrappers_the_appliance_reports(self):
+        from custom_components.localthings.registry.capabilities.oven import (
+            _cook_time_write,
+            _oven_mode_write,
+            _oven_setpoint_write,
+        )
+
+        resources = self._resources()
+
+        def wire(write, value, href):
+            segs, body = write(value, resources[href])
+            return to_write([("/" + "/".join(segs), body)], LCD_OV_WALL)["Device"]
+
+        assert wire(_oven_mode_write, "UpperConvectionBake", "/mode/vs/0") == {
+            "Mode": {"modes": ["UpperConvectionBake"]}
+        }
+        temperatures = wire(_oven_setpoint_write, 350, "/temperatures/vs/0")["Temperatures"]
+        assert temperatures[0]["id"] == "0"
+        assert temperatures[0]["desired"] == 350
+        assert wire(_cook_time_write, 90, "/operational/state/vs/0") == {
+            "Operation": {"operationTime": "01:30:00", "remainingTime": "01:30:00"}
+        }
+
+    def test_the_washer_power_flag_is_not_read_off_an_oven(self):
+        assert model_settings("LCD_OV_WALL_16K", self._bodies()) == {}

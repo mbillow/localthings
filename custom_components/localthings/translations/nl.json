@@ -636,7 +636,12 @@
           "upper_convection_bake": "Bakken met hetelucht (boven)",
           "upper_convection_roast": "Heteluchtbraden (boven)",
           "lower_bake": "Bakken (onder)",
-          "lower_convection_bake": "Bakken met hetelucht (onder)"
+          "lower_convection_bake": "Bakken met hetelucht (onder)",
+          "steam_bake": "Stoombakken",
+          "steam_roast": "Stoombraden",
+          "upper_steam_bake": "Stoombakken (boven)",
+          "descale": "Ontkalken",
+          "drain": "Water aftappen"
         }
       },
       "operating_mode": {

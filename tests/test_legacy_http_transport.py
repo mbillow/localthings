@@ -546,10 +546,26 @@ class TestUnmappedFamily:
 
         assert diag["family"] == "TP6X_DRYER"
         assert diag["family_mapped"] is False
+        assert diag["unmapped_resources"] == [
+            "Alarms",
+            "Configuration",
+            "Diagnosis",
+            "EnergyConsumption",
+            "Mode",
+            "Operation",
+            "Washer",
+        ]
         assert diag["bodies"]["Washer"] == AGGREGATE["Device"]["Washer"]
         # The aggregate's description can carry the serial; name is user-set.
         assert "description" not in diag["bodies"]
         assert "name" not in diag["bodies"]
+
+
+def test_diagnostics_name_what_a_mapped_family_does_not_read(transport):
+    """The washer's table reads everything but the usage-file pointer."""
+    transport.read(["device", "0"], timeout=10.0)
+
+    assert transport.diagnostics()["unmapped_resources"] == ["EnergyConsumption"]
 
 
 # The WW6500's own supportedOptions and supported lists, so a held course

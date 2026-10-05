@@ -40,6 +40,7 @@ from .legacy_http import (
     table_for,
     to_resources,
     to_write,
+    unmapped_wrappers,
     unwrap,
     with_staged,
 )
@@ -382,6 +383,7 @@ class LegacyHttpTransport:
             "transport": "legacy_http",
             "family": self._family,
             "family_mapped": is_mapped(self._family),
+            "unmapped_resources": unmapped_wrappers(self._state.last_bodies, self._table),
             # Resource bodies only: the aggregate's own scalars include a
             # `description` that can carry the serial and a user-set `name`.
             "bodies": {

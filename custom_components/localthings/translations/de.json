@@ -636,7 +636,12 @@
           "upper_convection_bake": "Umluftbacken (oben)",
           "upper_convection_roast": "Umluftbraten (oben)",
           "lower_bake": "Backen (unten)",
-          "lower_convection_bake": "Umluftbacken (unten)"
+          "lower_convection_bake": "Umluftbacken (unten)",
+          "steam_bake": "Dampfbacken",
+          "steam_roast": "Dampfbraten",
+          "upper_steam_bake": "Dampfbacken (oben)",
+          "descale": "Entkalken",
+          "drain": "Wasser ablassen"
         }
       },
       "operating_mode": {

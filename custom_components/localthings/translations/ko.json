@@ -636,7 +636,12 @@
           "upper_convection_bake": "컨벡션 베이크 (상단)",
           "upper_convection_roast": "컨벡션 로스트 (상단)",
           "lower_bake": "베이크 (하단)",
-          "lower_convection_bake": "컨벡션 베이크 (하단)"
+          "lower_convection_bake": "컨벡션 베이크 (하단)",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크 (상단)",
+          "descale": "석회 제거",
+          "drain": "배수"
         }
       },
       "operating_mode": {
