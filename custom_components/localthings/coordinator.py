@@ -55,7 +55,6 @@ from .const import (
 from .credentials import (
     DeviceBinding,
     DeviceIdentityMismatch,
-    InvalidCredentialConfig,
     check_device_binding,
     requires_authenticated_device_id,
 )
