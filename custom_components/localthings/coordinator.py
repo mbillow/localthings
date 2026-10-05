@@ -23,6 +23,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
 from . import cloudcourse, probing
@@ -981,21 +982,36 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         port = self._entry.data[CONF_PORT]
         try:
-            self._open_session(port)
+            self._open_session_retrying_collision(port)
             # The stored port answered, so a port followed earlier but never
             # proven by a poll must not be written over it.
             self._moved_port = None
-        except (DeviceIdentityMismatch, InvalidCredentialConfig):
-            raise
-        except Exception:
+        except (TimeoutError, EndpointError) as e:
+            # Only silence or an unreachable endpoint suggests the port moved;
+            # an appliance that answered with an alert is still on this one.
             moved = self._rediscover_port(port)
             if moved is None:
                 raise
-            self._log.info("secure port moved from %d to %d; reconnecting there", port, moved)
-            self._open_session(moved)
+            self._log.info(
+                "secure port moved from %d to %d after %s; reconnecting there",
+                port,
+                moved,
+                type(e).__name__,
+            )
+            self._open_session_retrying_collision(moved)
             self._moved_port = moved
         self._rediscovery_backoff_s = 0.0
         self._next_rediscovery_ts = 0.0
+
+    def _open_session_retrying_collision(self, port: int) -> None:
+        """A handshake the appliance started at the same moment clears its
+        peer, so one immediate retry normally succeeds (issue #567, the same
+        rule as config_flow._worth_retrying)."""
+        try:
+            self._open_session(port)
+        except PeerInitiatedHandshakeError as e:
+            self._log.debug("handshake collided with the appliance's own; retrying: %s", e)
+            self._open_session(port)
 
     def _rediscover_port(self, current: int) -> int | None:
         """The port the device now advertises, when a lookup is due. Blocking."""
