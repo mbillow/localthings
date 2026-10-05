@@ -5,7 +5,7 @@ from custom_components.localthings.registry.by_type import (
     for_device_by_model,
     resolve,
 )
-from custom_components.localthings.registry.capabilities import microwave, range_hood
+from custom_components.localthings.registry.capabilities import microwave, oven, range_hood
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
     BinarySensorDesc,
@@ -891,3 +891,14 @@ def test_lamp_switch_and_level_select_stay_but_are_disabled_by_default():
     assert {e.key for e in lamp_entities if isinstance(e, LightDesc)} == {"lamp_light"}
     for e in lamp_entities:
         assert e.enabled_default is isinstance(e, LightDesc), e.key
+
+
+def test_progress_reads_unknown_for_the_fixed_201_a_running_cook_reports():
+    """#181: TP1X microwaves report progressPercentage 201 from start to end
+    of a cook, which is no percentage."""
+    desc = next(e for e in oven.OVEN_OPERATIONAL_STATE.entities if e.key == "progress_percentage")
+    assert desc.rep_fn is not None
+    running = {"x.com.samsung.da.state": "Run"}
+    assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "201"}) is None
+    assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "40"}) == 40
+    assert desc.rep_fn({"x.com.samsung.da.state": "Ready"}) == 0

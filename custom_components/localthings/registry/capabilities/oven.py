@@ -88,6 +88,13 @@ def _int(v):
         return None
 
 
+def _percent(v):
+    """A 0-100 reading, else None: TP1X microwaves report a fixed 201 for
+    the whole of a running cook (#181)."""
+    value = _int(v)
+    return value if value is not None and 0 <= value <= 100 else None
+
+
 def _finish_time(rep):
     """now() + remainingTime while a cook is running, rounded to the minute.
 
@@ -356,7 +363,7 @@ OVEN_OPERATIONAL_STATE = Capability(
             rep_fn=lambda rep: (
                 0
                 if _SAMSUNG_STATE_TO_OCF.get(rep.get("x.com.samsung.da.state")) != "active"
-                else _int(rep.get("x.com.samsung.da.progressPercentage"))
+                else _percent(rep.get("x.com.samsung.da.progressPercentage"))
             ),
         ),
         SensorDesc(
