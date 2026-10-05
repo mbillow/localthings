@@ -577,6 +577,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zona 1"
+      },
+      "zone2_climate": {
+        "name": "Zona 2"
       }
     },
     "fan": {
@@ -592,6 +598,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lámpara"
       }
     },
     "number": {
@@ -1856,6 +1867,9 @@
       },
       "zone_temperature": {
         "name": "Temperatura de zona"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura de zona 2"
       },
       "watertank_full_alarm_status": {
         "name": "Estado de alarma de depósito de agua lleno"

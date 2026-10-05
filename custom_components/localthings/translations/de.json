@@ -232,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zone 1"
+      },
+      "zone2_climate": {
+        "name": "Zone 2"
       }
     },
     "fan": {
@@ -247,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lampe"
       }
     },
     "number": {
@@ -1505,6 +1516,9 @@
       },
       "zone_temperature": {
         "name": "Zonentemperatur"
+      },
+      "zone2_temperature": {
+        "name": "Temperatur Zone 2"
       },
       "watertank_full_alarm_status": {
         "name": "Wassertank-voll-Alarmstatus"

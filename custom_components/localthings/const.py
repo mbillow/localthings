@@ -3,6 +3,7 @@ DOMAIN = "localthings"
 PLATFORMS = [
     "sensor",
     "binary_sensor",
+    "light",
     "switch",
     "number",
     "select",

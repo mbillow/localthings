@@ -89,10 +89,10 @@ async def test_leaves_other_sensors_on_the_same_device_alone(hass: HomeAssistant
 
 
 async def test_skips_families_that_did_not_gain_the_unit(hass: HomeAssistant) -> None:
-    """range_hood and airconditioner still declare no unit for their
-    identically-named sensors. Relabelling their statistics would assert a
-    unit those entities don't report -- creating the very mismatch this
-    migration exists to prevent."""
+    """range_hood still declares no unit for its identically-named sensors,
+    so relabelling would assert a unit it doesn't report. airconditioner's
+    gained one later (issue #583) but recorded no statistics before that,
+    having had no state_class."""
     for device_type in ("range_hood", "airconditioner"):
         entry = _entry(hass, device_type)
         _add_sensor(hass, entry, "dust")

@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .legacy_http import (
+    TP6X_RAC,
     Resource,
     StagedKey,
     add_staged,
@@ -214,10 +215,63 @@ class LegacyHttpTransport:
         if sendable == _READY and self._already_ready(timeout):
             _LOGGER.debug("%s: already idle; stop not sent", self._host)
             return 0x44, None
+        target = self._write_target(href, sendable)
+        if target is None:
+            _LOGGER.warning("%s: invalid 8888 write shape for %s", self._host, href)
+            return 0x80, None
+        path, payload = target
+
         # The body is the appliance's own account of a refusal (`"Control
         # fail, <...>"`), so it travels back with the code.
-        status, response = self._request("PUT", "/devices/0", body=sendable, timeout=timeout)
+        status, response = self._request("PUT", path, body=payload, timeout=timeout)
         return http_status_to_coap(status), response
+
+    def _write_target(
+        self, href: str, aggregate: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]] | None:
+        """The HTTP path and body for one translated write.
+
+        Washers take the aggregate ``{"Device": ...}`` envelope at
+        ``/devices/0``; TP6X_RAC takes Operation there unwrapped, and Mode,
+        Wind and one Temperatures item on their own endpoints (confirmed on
+        TP6X_RAC_16K hardware, #576).
+        """
+        if self._table is not TP6X_RAC:
+            return "/devices/0", aggregate
+
+        resource = self._by_href.get(href)
+        if resource is None:
+            return None
+
+        device = aggregate.get("Device")
+        if not isinstance(device, dict):
+            return None
+
+        wire = device.get(resource.wrapper)
+
+        if resource.endpoint == "operation":
+            if not isinstance(wire, dict):
+                return None
+            return "/devices/0", {resource.wrapper: wire}
+
+        if resource.endpoint == "temperatures":
+            if not isinstance(wire, list) or len(wire) != 1 or not isinstance(wire[0], dict):
+                return None
+            item = dict(wire[0])
+            item_id = item.pop("id", None)
+            if item_id is None:
+                return None
+            return f"/devices/0/temperatures/{item_id}", item
+
+        if resource.endpoint in {"mode", "wind"}:
+            if not isinstance(wire, dict):
+                return None
+            return f"/devices/0/{resource.endpoint}", wire
+
+        # No direct-write behavior has been confirmed for the remaining
+        # TP6X_RAC resources. Preserve the existing aggregate path rather
+        # than guessing.
+        return "/devices/0", aggregate
 
     def _idle(self) -> bool:
         operation = self._state.last_bodies.get("Operation") or {}

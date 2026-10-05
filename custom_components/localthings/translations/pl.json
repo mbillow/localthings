@@ -232,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Strefa 1"
+      },
+      "zone2_climate": {
+        "name": "Strefa 2"
       }
     },
     "fan": {
@@ -247,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Oświetlenie"
       }
     },
     "number": {
@@ -1511,6 +1522,9 @@
       },
       "zone_temperature": {
         "name": "Temperatura strefy"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura strefy 2"
       },
       "watertank_full_alarm_status": {
         "name": "Stan alarmu pełnego zbiornika wody"

@@ -106,8 +106,8 @@ TP6X_WASHER: tuple[Resource, ...] = (
 
 # TP6X_RAC_16K (issue #563), read from a diagnostics dump. The fields are the
 # ones the ARTIK051 boards serve over CoAP, so each resource lands on that
-# generation's href: Wind is /airflow/vs/0, not /wind/strength/vs/0. Writes
-# follow the washer's aggregate PUT and are not yet confirmed on this family.
+# generation's href: Wind is /airflow/vs/0, not /wind/strength/vs/0. The
+# transport routes writes to this family's measured legacy RAC endpoints.
 TP6X_RAC: tuple[Resource, ...] = (
     Resource(endpoint="operation", wrapper="Operation", href="/power/vs/0"),
     Resource(endpoint="mode", wrapper="Mode", href="/mode/vs/0"),

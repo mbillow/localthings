@@ -7,6 +7,8 @@
     "firmware_update",
     "mute_once",
     "water_heater",
+    "zone2_climate",
+    "zone2_temperature",
     "zone_climate",
     "zone_mode",
     "zone_power",

@@ -121,6 +121,12 @@ class SwitchDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class LightDesc(SamsungEntityDescription):
+    supports_brightness: bool = False
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class ButtonDesc(SamsungEntityDescription):
     payload: Any = ""
     # Optional press-time payload generation. The button platform supplies
@@ -169,6 +175,16 @@ class ClimateDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class ZoneClimateDesc(SamsungEntityDescription):
+    # A heat pump zone as a climate entity: power, mode and temperature each
+    # on their own href, named here so one platform class serves every zone.
+    power_href: str = ""
+    mode_href: str = ""
+    temperature_href: str = ""
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class FanDesc(SamsungEntityDescription):
     # Composite fan entity: reads power from /power/0 and speed/support data
     # from its bound href. Payloads are (kind, value), like ClimateDesc.
@@ -187,10 +203,12 @@ PLATFORM_OF: dict[type, str] = {
     BinarySensorDesc: "binary_sensor",
     SelectDesc: "select",
     SwitchDesc: "switch",
+    LightDesc: "light",
     ButtonDesc: "button",
     NumberDesc: "number",
     TimeDesc: "time",
     ClimateDesc: "climate",
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
+    ZoneClimateDesc: "climate",
 }

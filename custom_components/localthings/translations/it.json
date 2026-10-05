@@ -232,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zona 1"
+      },
+      "zone2_climate": {
+        "name": "Zona 2"
       }
     },
     "fan": {
@@ -247,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lampada"
       }
     },
     "number": {
@@ -1511,6 +1522,9 @@
       },
       "zone_temperature": {
         "name": "Temperatura zona"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura zona 2"
       },
       "watertank_full_alarm_status": {
         "name": "Stato allarme serbatoio d'acqua pieno"

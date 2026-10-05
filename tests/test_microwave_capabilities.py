@@ -9,6 +9,7 @@ from custom_components.localthings.registry.capabilities import microwave, range
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
     BinarySensorDesc,
+    LightDesc,
     NumberDesc,
     SelectDesc,
     SwitchDesc,
@@ -801,3 +802,92 @@ def test_hood_front_vent_reads_raw_on_off():
     desc = _hood_entity("front_vent_open")
     assert desc.value_fn("on") is True
     assert desc.value_fn("off") is False
+
+
+# ---------------------------------------------------------------------------
+# MICROWAVE_MODE — lamp lights (#568)
+# ---------------------------------------------------------------------------
+
+
+def _lamp(*, brightness: bool):
+    return next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if isinstance(e, LightDesc) and e.supports_brightness is brightness
+    )
+
+
+def test_lamp_descriptors_are_mutually_exclusive():
+    bare = _lamp(brightness=True)
+    upper = _lamp(brightness=False)
+    assert bare.exists_fn is not None
+    assert upper.exists_fn is not None
+
+    no_lamp = {"x.com.samsung.da.options": ["DeviceType_MW7300B-/EU1", "Sound_Off"]}
+    assert bare.exists_fn(no_lamp, {}) is False
+    assert upper.exists_fn(no_lamp, {}) is False
+
+    bare_lamp = {"x.com.samsung.da.options": ["Lamp_Off", "Sound_On"]}
+    assert bare.exists_fn(bare_lamp, {}) is True
+    assert upper.exists_fn(bare_lamp, {}) is False
+
+    upper_lamp = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
+    assert bare.exists_fn(upper_lamp, {}) is False
+    assert upper.exists_fn(upper_lamp, {}) is True
+
+    both_tokens = {"x.com.samsung.da.options": ["Lamp_Low", "UpperLamp_On"]}
+    assert bare.exists_fn(both_tokens, {}) is True
+    assert upper.exists_fn(both_tokens, {}) is False
+
+
+def test_lamp_reads_three_brightness_levels():
+    desc = _lamp(brightness=True)
+    assert desc.value_fn(["Lamp_Off"]) == 0
+    assert desc.value_fn(["Lamp_Low"]) == 128
+    assert desc.value_fn(["Lamp_High"]) == 255
+    assert desc.value_fn(["Lamp_On"]) == 255
+    assert desc.value_fn(["Sound_On"]) is None
+
+
+def test_lamp_brightness_writes_supported_ranges():
+    desc = _lamp(brightness=True)
+    rep = {"x.com.samsung.da.options": ["Lamp_Off"]}
+    assert desc.write_fn is not None
+    expected = {0: "Off", 1: "Low", 128: "Low", 129: "High", 255: "High"}
+    for brightness, level in expected.items():
+        assert desc.write_fn(brightness, rep) == (
+            ["mode", "vs", "0"],
+            {"x.com.samsung.da.options": [f"Lamp_{level}"]},
+        )
+    assert desc.write_fn("invalid", rep) is None
+    assert desc.write_fn(128, {}) is None
+
+
+def test_upper_lamp_reads_and_writes_on_off_values():
+    desc = _lamp(brightness=False)
+    assert desc.value_fn(["UpperLamp_Off"]) is False
+    assert desc.value_fn(["UpperLamp_On"]) is True
+    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
+    assert desc.write_fn is not None
+    assert desc.write_fn(True, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_On"]},
+    )
+    assert desc.write_fn(False, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
+    )
+    assert desc.write_fn("On", rep) is None
+    assert desc.write_fn(True, {}) is None
+
+
+def test_lamp_switch_and_level_select_stay_but_are_disabled_by_default():
+    """#568: the light replaces them for new installs, while existing
+    entities keep their unique_ids, so the light gets its own key."""
+    lamp_entities = [e for e in microwave.MICROWAVE_MODE.entities if "lamp" in e.key]
+    by_type = {(type(e).__name__, e.key) for e in lamp_entities}
+    assert ("SwitchDesc", "lamp") in by_type
+    assert ("SelectDesc", "lamp_level") in by_type
+    assert {e.key for e in lamp_entities if isinstance(e, LightDesc)} == {"lamp_light"}
+    for e in lamp_entities:
+        assert e.enabled_default is isinstance(e, LightDesc), e.key
