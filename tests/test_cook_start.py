@@ -10,7 +10,7 @@ import pytest
 
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import resolve
-from custom_components.localthings.registry.capabilities import cook, oven
+from custom_components.localthings.registry.capabilities import cook, microwave, oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.subdevices import canonical_view
 from tests.conftest import _discover_full, _load_device, _load_device_full
@@ -506,3 +506,29 @@ class TestWithoutModeSpec:
         with pytest.raises(cook.CookStartError) as err:
             cook.plan_start(_idle("oven_tp2x_ks_walloven"), mode="Descale")
         assert err.value.key == "cook_mode_not_startable"
+
+    def test_a_microwave_keeps_its_own_range(self):
+        """The microwave family's static range is Celsius only, so a
+        Fahrenheit microwave offers no temperature rather than the oven's."""
+        resources = _load_device("microwave_nw9300md")
+        resources["/mode/vs/0"] = {
+            **resources["/mode/vs/0"],
+            "x.com.samsung.da.modes": ["NoOperation"],
+        }
+        assert cook.device_unit(resources) == "Fahrenheit"
+        assert cook.temp_bounds(resources, "Convection") is None
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(resources, mode="Convection", temperature=550)
+        assert err.value.key == "cook_temperature_not_supported"
+
+        items = [dict(i) for i in resources["/temperatures/vs/0"]["x.com.samsung.da.items"]]
+        items[0]["x.com.samsung.da.unit"] = "Celsius"
+        resources["/temperatures/vs/0"] = {
+            **resources["/temperatures/vs/0"],
+            "x.com.samsung.da.items": items,
+        }
+        assert cook.temp_bounds(resources, "Convection") == (
+            microwave.SETPOINT_MIN_C,
+            microwave.SETPOINT_MAX_C,
+            microwave.SETPOINT_STEP_C,
+        )

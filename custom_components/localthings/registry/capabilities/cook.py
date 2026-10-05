@@ -156,10 +156,13 @@ def _specless_startable(mode: str) -> bool:
     )
 
 
-def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
-    """A board with no modeSpec starts the same way (the NW9000KD started
-    Bake from Ready, #300), so its own live modes are offered, bounded by the
-    oven's static setpoint range when it reports a temperature."""
+def _specless_temps(live: list) -> dict[str, TempSpec]:
+    """The static setpoint range of the board's family: a microwave's has no
+    Fahrenheit bounds, so it offers no temperature in Fahrenheit."""
+    if any(isinstance(m, str) and "MicroWave" in m for m in live):
+        from .microwave import SETPOINT_MAX_C, SETPOINT_MIN_C, SETPOINT_STEP_C
+
+        return {"C": TempSpec(SETPOINT_MIN_C, SETPOINT_MAX_C, None, SETPOINT_STEP_C)}
     from .oven import (
         SETPOINT_MAX_C,
         SETPOINT_MAX_F,
@@ -169,15 +172,19 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
         SETPOINT_STEP_F,
     )
 
-    temps = (
-        {
-            "C": TempSpec(SETPOINT_MIN_C, SETPOINT_MAX_C, None, SETPOINT_STEP_C),
-            "F": TempSpec(SETPOINT_MIN_F, SETPOINT_MAX_F, None, SETPOINT_STEP_F),
-        }
-        if device_unit(resources)
-        else {}
-    )
+    return {
+        "C": TempSpec(SETPOINT_MIN_C, SETPOINT_MAX_C, None, SETPOINT_STEP_C),
+        "F": TempSpec(SETPOINT_MIN_F, SETPOINT_MAX_F, None, SETPOINT_STEP_F),
+    }
+
+
+def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
+    """A board with no modeSpec starts the same way (the NW9000KD started
+    Bake from Ready, #300), so its own live modes are offered, bounded by its
+    family's static setpoint range when it reports a temperature."""
     live = (resources.get(MODE_HREF) or {}).get(_SUPPORTED_MODES)
+    live = live if isinstance(live, list) else []
+    temps = _specless_temps(live) if device_unit(resources) else {}
     return {
         mode: ModeSpec(
             mode=mode,
@@ -186,7 +193,7 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
             time_max=parse_hms("23:59:00"),
             time_optional=True,
         )
-        for mode in (live if isinstance(live, list) else ())
+        for mode in live
         if isinstance(mode, str) and _specless_startable(mode)
     }
 
