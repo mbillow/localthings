@@ -26,9 +26,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .legacy_http import (
+    TP6X_RAC,
     Resource,
     StagedKey,
-    TP6X_RAC,
     add_staged,
     course_table,
     http_status_to_coap,
@@ -229,20 +229,12 @@ class LegacyHttpTransport:
     def _write_target(
         self, href: str, aggregate: dict[str, Any]
     ) -> tuple[str, dict[str, Any]] | None:
-        """Return the HTTP path and body for one translated write.
+        """The HTTP path and body for one translated write.
 
-        The washer family takes the aggregate ``{"Device": ...}`` envelope
-        at ``/devices/0``. TP6X_RAC uses Samsung's older RAC REST contract
-        instead:
-
-        * power stays on ``/devices/0``, but without the outer ``Device``;
-        * Mode is written to ``/devices/0/mode`` with the Mode body unwrapped;
-        * Wind is written to ``/devices/0/wind`` with the Wind body unwrapped;
-        * one temperature item is written to
-          ``/devices/0/temperatures/<id>`` without its ``id`` field.
-
-        Keep that exception tied to the already-mapped TP6X_RAC table so
-        other 8888 families retain their measured aggregate behavior.
+        Washers take the aggregate ``{"Device": ...}`` envelope at
+        ``/devices/0``; TP6X_RAC takes Operation there unwrapped, and Mode,
+        Wind and one Temperatures item on their own endpoints (confirmed on
+        TP6X_RAC_16K hardware, #576).
         """
         if self._table is not TP6X_RAC:
             return "/devices/0", aggregate
@@ -263,11 +255,7 @@ class LegacyHttpTransport:
             return "/devices/0", {resource.wrapper: wire}
 
         if resource.endpoint == "temperatures":
-            if (
-                not isinstance(wire, list)
-                or len(wire) != 1
-                or not isinstance(wire[0], dict)
-            ):
+            if not isinstance(wire, list) or len(wire) != 1 or not isinstance(wire[0], dict):
                 return None
             item = dict(wire[0])
             item_id = item.pop("id", None)
