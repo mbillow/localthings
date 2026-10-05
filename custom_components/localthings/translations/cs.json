@@ -232,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zóna 1"
+      },
+      "zone2_climate": {
+        "name": "Zóna 2"
       }
     },
     "fan": {
@@ -1516,6 +1522,9 @@
       },
       "zone_temperature": {
         "name": "Teplota zóny"
+      },
+      "zone2_temperature": {
+        "name": "Teplota zóny 2"
       },
       "watertank_full_alarm_status": {
         "name": "Stav alarmu plné nádržky na vodu"

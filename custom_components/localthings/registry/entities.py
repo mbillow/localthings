@@ -175,6 +175,16 @@ class ClimateDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class ZoneClimateDesc(SamsungEntityDescription):
+    # A heat pump zone as a climate entity: power, mode and temperature each
+    # on their own href, named here so one platform class serves every zone.
+    power_href: str = ""
+    mode_href: str = ""
+    temperature_href: str = ""
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class FanDesc(SamsungEntityDescription):
     # Composite fan entity: reads power from /power/0 and speed/support data
     # from its bound href. Payloads are (kind, value), like ClimateDesc.
@@ -200,4 +210,5 @@ PLATFORM_OF: dict[type, str] = {
     ClimateDesc: "climate",
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
+    ZoneClimateDesc: "climate",
 }

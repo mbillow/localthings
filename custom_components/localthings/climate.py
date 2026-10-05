@@ -85,7 +85,8 @@ from .registry.capabilities.airconditioner import (
     option_code_bit,
 )
 from .registry.capabilities.common import normalize_temp_unit
-from .registry.entities import ClimateDesc
+from .registry.entities import ClimateDesc, ZoneClimateDesc
+from .zone_climate import LocalThingsZoneClimate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -225,6 +226,11 @@ async def async_setup_entry(
         LocalThingsClimate(coordinator, b)
         for b in coordinator.bound
         if isinstance(b.desc, ClimateDesc) and _is_included(b, coordinator)
+    )
+    async_add_entities(
+        LocalThingsZoneClimate(coordinator, b)
+        for b in coordinator.bound
+        if isinstance(b.desc, ZoneClimateDesc) and _is_included(b, coordinator)
     )
 
 

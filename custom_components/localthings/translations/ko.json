@@ -232,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "구역 1"
+      },
+      "zone2_climate": {
+        "name": "구역 2"
       }
     },
     "fan": {
@@ -1516,6 +1522,9 @@
       },
       "zone_temperature": {
         "name": "구역 온도"
+      },
+      "zone2_temperature": {
+        "name": "구역 2 온도"
       },
       "watertank_full_alarm_status": {
         "name": "물통 가득 참 알림 상태"

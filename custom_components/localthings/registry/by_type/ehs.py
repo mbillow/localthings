@@ -23,6 +23,8 @@ REGISTRY = DeviceRegistry(
             ehs.ZONE_POWER,
             ehs.ZONE_MODE,
             ehs.ZONE_TEMPERATURE,
+            ehs.ZONE2_TEMPERATURE,
+            ehs.ZONE2_POWER,
             ehs.DHW,
             *ehs.DHW_CONSUMED,
             ehs.AWAY_MODE,
