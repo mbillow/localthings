@@ -1095,6 +1095,14 @@
           "off_on": "Solo cestello inferiore",
           "on_off": "Solo cestello superiore"
         }
+      },
+      "lamp_level": {
+        "name": "Livello lampada",
+        "state": {
+          "off": "Spenta",
+          "low": "Bassa",
+          "high": "Alta"
+        }
       }
     },
     "sensor": {

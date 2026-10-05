@@ -1,4 +1,3 @@
-import asyncio
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import AsyncMock, patch
@@ -43,33 +42,33 @@ def test_brightness_light_reports_off_low_high_and_unknown():
     assert light.brightness is None
 
 
-def test_brightness_light_commands_brightness_and_off():
+async def test_brightness_light_commands_brightness_and_off():
     light, send_command = _light(0, supports_brightness=True)
 
-    asyncio.run(light.async_turn_on(brightness=128))
+    await light.async_turn_on(brightness=128)
     send_command.assert_awaited_once_with(light._bound, 128)
 
     send_command.reset_mock()
-    asyncio.run(light.async_turn_off())
+    await light.async_turn_off()
     send_command.assert_awaited_once_with(light._bound, 0)
 
 
-def test_brightness_light_turn_on_defaults_to_high():
+async def test_brightness_light_turn_on_defaults_to_high():
     light, send_command = _light(0, supports_brightness=True)
-    asyncio.run(light.async_turn_on())
+    await light.async_turn_on()
     send_command.assert_awaited_once_with(light._bound, 255)
 
 
-def test_onoff_light_has_no_brightness_and_sends_booleans():
+async def test_onoff_light_has_no_brightness_and_sends_booleans():
     light, send_command = _light(False, supports_brightness=False)
     assert light.is_on is False
     assert light.brightness is None
 
-    asyncio.run(light.async_turn_on(brightness=128))
+    await light.async_turn_on(brightness=128)
     send_command.assert_awaited_once_with(light._bound, True)
 
     send_command.reset_mock()
-    asyncio.run(light.async_turn_off())
+    await light.async_turn_off()
     send_command.assert_awaited_once_with(light._bound, False)
 
 

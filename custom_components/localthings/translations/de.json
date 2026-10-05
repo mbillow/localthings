@@ -1095,6 +1095,14 @@
           "off_on": "Nur Unterkorb",
           "on_off": "Nur Oberkorb"
         }
+      },
+      "lamp_level": {
+        "name": "Lampenstufe",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "high": "Hoch"
+        }
       }
     },
     "sensor": {

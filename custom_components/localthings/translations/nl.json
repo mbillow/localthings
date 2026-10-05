@@ -1095,6 +1095,14 @@
           "off_on": "Alleen onderkorf",
           "on_off": "Alleen bovenkorf"
         }
+      },
+      "lamp_level": {
+        "name": "Lampniveau",
+        "state": {
+          "off": "Uit",
+          "low": "Laag",
+          "high": "Hoog"
+        }
       }
     },
     "sensor": {

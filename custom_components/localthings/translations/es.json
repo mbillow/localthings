@@ -1440,6 +1440,14 @@
           "off_on": "Solo bandeja inferior",
           "on_off": "Solo bandeja superior"
         }
+      },
+      "lamp_level": {
+        "name": "Nivel de la lámpara",
+        "state": {
+          "off": "Apagada",
+          "low": "Baja",
+          "high": "Alta"
+        }
       }
     },
     "sensor": {

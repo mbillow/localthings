@@ -1095,6 +1095,14 @@
           "off_on": "Pouze spodní koš",
           "on_off": "Pouze horní koš"
         }
+      },
+      "lamp_level": {
+        "name": "Úroveň osvětlení",
+        "state": {
+          "off": "Vypnuto",
+          "low": "Nízká",
+          "high": "Vysoká"
+        }
       }
     },
     "sensor": {

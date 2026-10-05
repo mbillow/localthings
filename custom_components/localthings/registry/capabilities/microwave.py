@@ -16,9 +16,16 @@ different from an oven, and defined fresh here:
     oven.py's fixed 30-270°C range.
   * Cavity: /oven/vs/0 here also carries a `powerLevel` field (100W-900W)
     that plain ovens don't report -- exposed as its own sensor.
-  * Lamp: bare `Lamp` boards expose Off/Low/High as a brightness light
-    (issues #181/#400/#545). Oven-class combis (NQ7000B, issue #496) spell
-    the token `UpperLamp` and expose a separate on/off light descriptor.
+  * Lamp: this family's option-array token is bare 'Lamp' (issue #137), not
+    oven.py's 'UpperLamp', and genuinely absent on the combi dump (issue
+    #121), so it's exists_fn-gated rather than assumed universal. 'On' has
+    never been observed as a value; the only confirmed non-Off token is
+    'High' (issue #152) -- the switch treats any non-Off/non-None value as
+    "on" for reads and writes back 'High'/'Off'. Oven-class combis (NQ7000B,
+    issue #496) spell it 'UpperLamp' instead, with oven.py's proven 'On'/'Off'
+    values. Both are lights now (#568): `Lamp` as a brightness light over
+    Off/Low/High, `UpperLamp` as an on/off one. The older switch and level
+    select stay for existing installs, disabled by default for new ones.
   * Filter reminder / end signal reminder: bare 'FilterRemind'/'RemindBeep'
     option-array tokens (issue #181), gated with exists_fn like Lamp since
     the MW7300B combi dump has neither.
@@ -48,7 +55,14 @@ always error.
 """
 
 from ..capability import Capability
-from ..entities import BinarySensorDesc, LightDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc
+from ..entities import (
+    BinarySensorDesc,
+    LightDesc,
+    NumberDesc,
+    SelectDesc,
+    SensorDesc,
+    SwitchDesc,
+)
 from .common import int_or_none, normalize_temp_unit, parse_iso_utc
 from .cook import PARAM_MODE, PARAM_TEMPERATURE, mode_specs
 from .laundry import option_value, option_write
@@ -182,8 +196,41 @@ def _sound_write(p, rep, href=None):
     }
 
 
+# Token -> the value written for "on" (see module docstring).
+_LAMP_ON_VALUE = {"Lamp": "High", "UpperLamp": "On"}
+
+
+def _lamp_token(opts):
+    for token in _LAMP_ON_VALUE:
+        if option_value(opts, token) is not None:
+            return token
+    return None
+
+
 def _lamp_exists(rep, resources):
+    return _lamp_token(rep.get("x.com.samsung.da.options")) is not None
+
+
+def _lamp_is_on(opts):
+    token = _lamp_token(opts)
+    return token is not None and option_value(opts, token) != "Off"
+
+
+# Issue #181: Lamp_Low confirmed on an ME7500D alongside Lamp_High/Lamp_Off.
+# UpperLamp boards have only On/Off, so the levels apply to bare 'Lamp' alone.
+_LAMP_LEVELS = ("Off", "Low", "High")
+
+
+def _lamp_level_exists(rep, resources):
     return option_value(rep.get("x.com.samsung.da.options"), "Lamp") is not None
+
+
+def _lamp_level_write(p, rep, href=None):
+    if p not in _LAMP_LEVELS or not rep.get("x.com.samsung.da.options"):
+        return None
+    return ["mode", "vs", "0"], {
+        "x.com.samsung.da.options": option_write("Lamp", p),
+    }
 
 
 def _upper_lamp_exists(rep, resources):
@@ -191,30 +238,22 @@ def _upper_lamp_exists(rep, resources):
     return option_value(opts, "Lamp") is None and option_value(opts, "UpperLamp") is not None
 
 
+# Off/Low/High as brightness 0/128/255. Any other non-Off token (Lamp_On in an
+# early dump) reads as full, matching the switch's read contract.
 def _lamp_brightness(opts):
-    # Lamp_On appeared in an early dump; any future non-Off/non-Low value
-    # stays on at full brightness, matching the old switch's read contract.
     value = option_value(opts, "Lamp")
     if value is None:
         return None
-    if value == "Off":
-        return 0
-    if value == "Low":
-        return 128
-    return 255
+    return {"Off": 0, "Low": 128}.get(value, 255)
 
 
-def _lamp_write(p, rep, href=None):
-    if not rep.get("x.com.samsung.da.options"):
-        return None
+def _lamp_brightness_write(p, rep, href=None):
     try:
         brightness = int(p)
     except (TypeError, ValueError):
         return None
     level = "Off" if brightness <= 0 else "Low" if brightness <= 128 else "High"
-    return ["mode", "vs", "0"], {
-        "x.com.samsung.da.options": option_write("Lamp", level),
-    }
+    return _lamp_level_write(level, rep, href)
 
 
 def _upper_lamp_write(p, rep, href=None):
@@ -231,6 +270,18 @@ def _filter_remind_exists(rep, resources):
 
 def _remind_beep_exists(rep, resources):
     return option_value(rep.get("x.com.samsung.da.options"), "RemindBeep") is not None
+
+
+def _lamp_write(p, rep, href=None):
+    if p not in ("On", "Off"):
+        return None
+    token = _lamp_token(rep.get("x.com.samsung.da.options"))
+    if token is None:
+        return None
+    value = _LAMP_ON_VALUE[token] if p == "On" else "Off"
+    return ["mode", "vs", "0"], {
+        "x.com.samsung.da.options": option_write(token, value),
+    }
 
 
 def _filter_remind_write(p, rep, href=None):
@@ -324,17 +375,39 @@ MICROWAVE_MODE = Capability(
             value_fn=lambda opts: option_value(opts, "Sound") == "On",
             write_fn=_sound_write,
         ),
-        LightDesc(
+        SwitchDesc(
             key="lamp",
             field="x.com.samsung.da.options",
             icon="mdi:track-light",
-            supports_brightness=True,
+            enabled_default=False,
             exists_fn=_lamp_exists,
-            value_fn=_lamp_brightness,
+            value_fn=_lamp_is_on,
             write_fn=_lamp_write,
         ),
+        SelectDesc(
+            key="lamp_level",
+            field="x.com.samsung.da.options",
+            icon="mdi:track-light",
+            options=_LAMP_LEVELS,
+            enabled_default=False,
+            exists_fn=_lamp_level_exists,
+            value_fn=lambda opts: option_value(opts, "Lamp"),
+            write_fn=_lamp_level_write,
+        ),
+        # Its own key so the switch above keeps its unique_id (#568).
         LightDesc(
-            key="lamp",
+            key="lamp_light",
+            translation_key="lamp",
+            field="x.com.samsung.da.options",
+            icon="mdi:track-light",
+            supports_brightness=True,
+            exists_fn=_lamp_level_exists,
+            value_fn=_lamp_brightness,
+            write_fn=_lamp_brightness_write,
+        ),
+        LightDesc(
+            key="lamp_light",
+            translation_key="lamp",
             field="x.com.samsung.da.options",
             icon="mdi:track-light",
             exists_fn=_upper_lamp_exists,
