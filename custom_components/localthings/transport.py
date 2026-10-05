@@ -13,6 +13,7 @@ anything.
 from __future__ import annotations
 
 import ipaddress
+import time
 import zlib
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
@@ -90,6 +91,17 @@ def _is_success(code: int) -> bool:
     """A 2.xx response class -- the only one whose body is CBOR by contract.
     An error response often carries a plain diagnostic string instead."""
     return code >> 5 == 2
+
+
+def _decode_read(code: int, payload: bytes) -> tuple[int, Any]:
+    if not payload:
+        return code, None
+    if not _is_success(code):
+        return code, payload
+    try:
+        return code, cbor2.loads(payload)
+    except Exception as err:
+        raise DecodeError(str(err), code=code, payload=payload) from err
 
 
 class Transport(Protocol):
@@ -200,15 +212,24 @@ class DtlsTransport:
         self._live().pace()
 
     def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]:
-        code, payload = self._live().get(list(path_segs), timeout=timeout)
-        if not payload:
-            return code, None
-        if not _is_success(code):
-            return code, payload
-        try:
-            return code, cbor2.loads(payload)
-        except Exception as err:
-            raise DecodeError(str(err), code=code, payload=payload) from err
+        session = self._live()
+        path = list(path_segs)
+        deadline = time.monotonic() + timeout
+        code, body = _decode_read(*session.get(path, timeout=timeout))
+        # The LCD_R18 oven returns links by default; explicit batch returns
+        # the representations needed for discovery and polling.
+        if (
+            path == ["device", "0"]
+            and code == 0x45
+            and isinstance(body, dict)
+            and isinstance(body.get("links"), list)
+        ):
+            session.pace()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("device batch read exhausted its timeout")
+            return _decode_read(*session.get(path, query=["if=oic.if.b"], timeout=remaining))
+        return code, body
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         code, payload = self._live().post(list(path_segs), cbor2.dumps(body), timeout=timeout)
