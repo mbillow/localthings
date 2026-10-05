@@ -106,10 +106,11 @@ def _repair_placeholder_keys(hass: HomeAssistant, entry: ConfigEntry, serial: st
 
 # Registries whose Dust/FineDust/SuperFineDust sensors gained pm10/pm25/pm1
 # and a unit in the release that introduced entry version 3. Deliberately
-# not every family reading /sensors/vs/0: range_hood and airconditioner
-# still declare no unit for their identically-named sensors, and relabelling
-# their statistics to µg/m³ would assert a unit those entities don't report
-# -- creating the very mismatch this migration exists to prevent.
+# not every family reading /sensors/vs/0: range_hood still declares no unit
+# for its identically-named sensors, and relabelling their statistics to
+# µg/m³ would assert a unit those entities don't report. airconditioner's
+# gained a unit later (issue #583) but had no state_class before, so it
+# recorded no statistics to relabel.
 _PARTICULATE_TYPED_IN_V3 = frozenset({"air_purifier", "air_monitor"})
 
 # unique_id is f"{DOMAIN}_{serial}_{state_key}"; state_key is the descriptor
