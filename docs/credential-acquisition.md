@@ -148,11 +148,11 @@ unverified.
 
 ## Samsung LCD oven with rooted Android 17
 
-I recovered my Samsung LCD oven's existing OwnerPSK from SmartThings on rooted
-Android 17. The [recovery scripts and procedure](https://github.com/KRZ303/locathings-oven-psk-retrieval)
-record the tested versions, backups, results, and limits. Keep the recovered
-identity unchanged. Installing this integration patch alone does not enable
-identities containing zero bytes; a compatible transport release is still required.
+A device owner recovered a Samsung LCD oven's existing OwnerPSK from SmartThings
+on rooted Android 17. Their [recovery scripts and procedure](https://github.com/KRZ303/locathings-oven-psk-retrieval)
+record the tested versions, backups, results, and limits. Import the recovered
+identity unchanged. An identity containing a zero byte needs `smartthings-local`
+0.1.23 or newer, which LocalThings requires.
 
 ## References
 

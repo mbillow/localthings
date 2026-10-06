@@ -167,6 +167,13 @@ def test_zero_byte_is_preserved_when_transport_supports_it(monkeypatch) -> None:
     assert checked == [UUID(identity).bytes]
 
 
+def test_the_required_library_accepts_a_zero_byte_identity() -> None:
+    """Pins upstream's side: smartthings-local 0.1.23, the manifest floor, frames
+    the identity with an explicit length, so a recovered OwnerPSK must not be refused."""
+    identity = normalize_psk_identity("3771f8bf-0000-3a2d-d885-e4c9818736d2")
+    protocol_auth.PskAuth(identity=UUID(identity).bytes, key=bytes.fromhex(KEY_128))
+
+
 @pytest.mark.parametrize("value", [KEY_128, KEY_256])
 def test_both_key_sizes_upstream_accepts_are_accepted(value: str) -> None:
     assert normalize_psk_key(value.upper()) == value.lower()
