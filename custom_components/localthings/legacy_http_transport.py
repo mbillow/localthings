@@ -21,7 +21,7 @@ import json
 import logging
 import ssl
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -188,12 +188,24 @@ class LegacyHttpTransport:
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
-        if not isinstance(body, dict):
-            # A Collection batch (issue #473) has no counterpart on a bridge
-            # with no Collections.
-            _LOGGER.warning("%s: no batch writes over 8888; write to %s refused", self._host, href)
-            return 0x85, None
-        aggregate = to_write([(href, body)], self._table)
+        steps: list[tuple[str, Mapping[str, Any]]]
+        if isinstance(body, list):
+            if href != _SEED_HREF:
+                _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
+                return 0x85, None
+            # A cook start's Collection batch (#473) is the same coalesced
+            # write the aggregate PUT already takes, so it goes as one body
+            # (#572); the bare `/devices/0` marker carries no rep.
+            steps = [
+                (element["href"], element["rep"])
+                for element in body
+                if isinstance(element, dict)
+                and isinstance(element.get("href"), str)
+                and isinstance(element.get("rep"), dict)
+            ]
+        else:
+            steps = [(href, body)]
+        aggregate = to_write(steps, self._table)
         if not aggregate.get("Device"):
             # A guessed wrapper would reach the appliance as a command nobody
             # chose, so a patch this family has no resource for is refused.
