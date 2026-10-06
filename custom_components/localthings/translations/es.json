@@ -123,7 +123,7 @@
       "psk_rejected": "El electrodoméstico rechazó la clave precompartida. La identidad o la clave son incorrectas, o pertenecen a otro electrodoméstico o a un propietario que ha cambiado desde entonces. El registro de Home Assistant contiene la alerta exacta.",
       "identity_unproven": "La clave funcionó, pero el electrodoméstico no indicó su ID de dispositivo OCF por la conexión cifrada, así que LocalThings no puede confirmar qué electrodoméstico tiene la clave y no lo añadirá. Inténtalo de nuevo mientras el electrodoméstico esté activo. Si sigue ocurriendo, cuéntanoslo en la [incidencia #435]({issue_url}) e incluye el registro de Home Assistant.",
       "invalid_psk_identity": "Introduce la identidad como UUID, por ejemplo 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Este UUID contiene un byte cero, que DTLS no puede transmitir como identidad. Si generaste esta identidad de par, genera otra.",
+      "psk_identity_zero_byte": "Este UUID contiene un byte cero que el transporte instalado no puede enviar. Mantén la identidad recuperada sin cambios.",
       "invalid_psk_key": "Introduce la clave como 32 o 64 caracteres hexadecimales.",
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
       "cloud_unreachable": "No se pudo contactar con la pasarela en la nube de Samsung para obtener el UUID necesario para emitir el certificado de este dispositivo. Comprueba el acceso a internet de Home Assistant e inténtalo de nuevo.",

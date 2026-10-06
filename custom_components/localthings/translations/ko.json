@@ -2017,7 +2017,7 @@
       "psk_rejected": "기기가 사전 공유 키를 거부했습니다. ID나 키가 잘못되었거나, 다른 기기 또는 이후 바뀐 소유자의 것입니다. 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "identity_unproven": "키는 작동했지만 기기가 암호화된 연결로 OCF 기기 ID를 알려 주지 않아, LocalThings가 어느 기기가 키를 가지고 있는지 확인할 수 없으므로 추가하지 않습니다. 기기가 깨어 있을 때 다시 시도하세요. 계속 발생하면 Home Assistant 로그와 함께 [이슈 #435]({issue_url})에 알려 주세요.",
       "invalid_psk_identity": "ID를 UUID 형식으로 입력하세요. 예: 12345678-1234-1234-1234-123456789abc",
-      "psk_identity_zero_byte": "이 UUID에는 DTLS가 ID로 전달할 수 없는 0 바이트가 들어 있습니다. 이 피어 ID를 직접 생성했다면 새로 생성하세요.",
+      "psk_identity_zero_byte": "이 UUID에는 설치된 전송 계층이 보낼 수 없는 0 바이트가 들어 있습니다. 복구한 ID를 변경하지 마세요.",
       "invalid_psk_key": "키를 16진수 32자 또는 64자로 입력하세요.",
       "handshake_failed": "인증서와 관련 없는 이유로 가전제품이 DTLS 핸드셰이크를 거부했습니다. 프로토콜이나 암호화 방식이 일치하지 않을 가능성이 큽니다. 가전제품이 보낸 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "cloud_unreachable": "이 기기의 인증서 발급에 필요한 UUID를 가져오기 위해 삼성 클라우드 게이트웨이에 연결할 수 없습니다. Home Assistant의 인터넷 연결을 확인한 후 다시 시도하세요.",

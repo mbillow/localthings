@@ -275,6 +275,13 @@ async def test_missing_di_refuses_the_entry(hass: HomeAssistant, monkeypatch, ap
 async def test_malformed_credentials_never_reach_the_appliance(
     hass: HomeAssistant, monkeypatch, appliance, identity, key, errors
 ) -> None:
+    if errors.get(CONF_PSK_IDENTITY) == "psk_identity_zero_byte":
+        from smartthings_local.protocol.auth import PskAuth
+
+        def unsupported(_identity):
+            raise ValueError("binary identity backend unavailable")
+
+        monkeypatch.setattr(PskAuth, "validate_identity", unsupported)
     _hint(monkeypatch, CredentialHint(sct=1))
     result = await _choose(hass, await _refused(hass), "psk_owner")
     opened = len(PskAppliance.opened)
