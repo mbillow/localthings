@@ -11,12 +11,14 @@ CoAP device.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import ClassVar
 
 import pytest
 
 from custom_components.localthings.legacy_http import http_status_to_coap
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
+from custom_components.localthings.registry.capabilities import cook
 
 AGGREGATE = {
     "Device": {
@@ -666,3 +668,75 @@ class TestHeldCourseDefaults:
         _, body = idle.read(["device", "0"], timeout=10.0)
 
         assert self._washer(body)[PREFIX + "waterTemperature"] == "40"
+
+
+class TestWallOvenStart:
+    """The cook start's Collection batch over 8888 (#572): this firmware has no
+    Collections, so the batch goes as one aggregate PUT."""
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
+
+    @pytest.fixture
+    def oven(self, transport):
+        bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
+        device = LegacyHttpTransport(
+            "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
+        )
+        device.connect()
+        return device
+
+    def test_a_start_goes_as_one_aggregate_body(self, oven):
+        _, seed = oven.read(["device", "0"], timeout=10.0)
+        resources = {e["href"]: e["rep"] for e in seed}
+        batch = cook.plan_start(resources, "UpperConvectionBake", 350, 5400).batch()
+        _FakeConnection.log.clear()
+
+        code, _ = oven.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            (
+                "PUT",
+                "/devices/0",
+                {
+                    "Device": {
+                        "Mode": {"modes": ["UpperConvectionBake"]},
+                        "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                        "Operation": {"operationTime": "01:30:00", "state": "Run"},
+                    }
+                },
+            )
+        ]
+
+    def test_a_batch_anywhere_else_is_refused(self, oven):
+        code, _ = oven.write(
+            ["mode", "vs", "0"], [{"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}], 8.0
+        )
+
+        assert code == 0x85
+        assert _FakeConnection.log == []
+
+    def test_a_batch_that_would_lose_an_element_sends_nothing(self, oven):
+        batch = [
+            {"href": "/energy/consumption/vs/0", "rep": {PREFIX + "cumulativePower": "1"}},
+            {"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}},
+        ]
+
+        code, _ = oven.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
+    def test_the_rac_takes_no_batch(self, transport):
+        rac = LegacyHttpTransport(
+            "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_16K"
+        )
+        rac.connect()
+        batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
+
+        code, _ = rac.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x85
+        assert _FakeConnection.log == []

@@ -21,7 +21,7 @@ import json
 import logging
 import ssl
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -30,6 +30,7 @@ from .legacy_http import (
     Resource,
     StagedKey,
     add_staged,
+    batch_steps,
     course_table,
     http_status_to_coap,
     is_mapped,
@@ -188,12 +189,24 @@ class LegacyHttpTransport:
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
-        if not isinstance(body, dict):
-            # A Collection batch (issue #473) has no counterpart on a bridge
-            # with no Collections.
-            _LOGGER.warning("%s: no batch writes over 8888; write to %s refused", self._host, href)
-            return 0x85, None
-        aggregate = to_write([(href, body)], self._table)
+        steps: list[tuple[str, Mapping[str, Any]]] | None
+        if isinstance(body, list):
+            # A cook start's Collection batch (#473) is the same coalesced
+            # write the aggregate PUT already takes, so it goes as one body
+            # (#572). The RAC's writes are per endpoint, with no aggregate.
+            if href != _SEED_HREF or self._table is TP6X_RAC:
+                _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
+                return 0x85, None
+            steps = batch_steps(body, self._table)
+            if steps is None:
+                hrefs = [e.get("href") for e in body if isinstance(e, dict)]
+                _LOGGER.warning(
+                    "%s: no 8888 resource for all of %s; batch refused", self._host, hrefs
+                )
+                return 0x84, None
+        else:
+            steps = [(href, body)]
+        aggregate = to_write(steps, self._table)
         if not aggregate.get("Device"):
             # A guessed wrapper would reach the appliance as a command nobody
             # chose, so a patch this family has no resource for is refused.
