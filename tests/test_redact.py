@@ -1,6 +1,7 @@
 """Tests for registry.redact — the safety net for diagnostics downloads."""
 
 import json
+import re
 from pathlib import Path
 
 from custom_components.localthings.registry.batch import parse_device0_batch
@@ -132,6 +133,34 @@ def test_bare_key_redaction_does_not_leak_into_substring_matching():
     }
 
 
+def test_redacts_ocf_wificonf_credentials_and_terse_mac_values():
+    """wificonf's SSID and passphrase are redacted by key, devconf's embedded MACs by shape."""
+    redacted = redact_resources(
+        {
+            "/WiFiConfResURI": {"tnn": "somebodys-house", "cd": "hunter2", "swf": 2},
+            "/DevConfResURI": {
+                "x.com.samsung.rsd": "{\n"
+                '\t"bm" : "AA:BB:CC:DD:EE:FF",\n'
+                '\t"rk" :\n\t[\n'
+                '\t\t"VOICE"\n\t]\n'
+                "}"
+            },
+        }
+    )
+    assert redacted["/WiFiConfResURI"] == {"tnn": REDACTED, "cd": REDACTED, "swf": 2}
+    rsd = redacted["/DevConfResURI"]["x.com.samsung.rsd"]
+    assert "AA:BB:CC:DD:EE:FF" not in rsd
+    assert "VOICE" in rsd  # the substitution redacts the address, not the string
+
+
+def test_redacts_upnp_device_name():
+    """UPnP's udn is a per-unit UUID (TV /sec/tv/deviceinfo)."""
+    redacted = redact_resources(
+        {"/sec/tv/deviceinfo": {"x.com.samsung.tv.udn": "11112222-3333-4444-aaaa-bbbbccccdddd"}}
+    )
+    assert redacted["/sec/tv/deviceinfo"]["x.com.samsung.tv.udn"] == REDACTED
+
+
 def test_redacts_the_wifi_network_name():
     """connectedApSsid is the owner's WiFi network name. It is not an account
     credential, which is why it went unredacted long enough for eleven dumps
@@ -152,3 +181,105 @@ def test_no_fixture_in_the_corpus_carries_a_real_ssid():
         for rep in parse_device0_batch(json.loads(path.read_text())["device0"]).values():
             ssid = rep.get("connectedApSsid")
             assert ssid in (None, REDACTED), f"{path.name} carries a real SSID: {ssid!r}"
+
+
+def test_redacts_the_sso_account_roster():
+    """ssolist is a JSON string holding the owner's account, so it goes whole."""
+    rep = {
+        "/DevConfResURI": {
+            "x.com.samsung.ssolist": '{"AccountList":["owner@example.com"],"RegisteredCount":1}',
+            "x.com.samsung.rsd": "DLNADMR",
+        }
+    }
+    redacted = redact_resources(rep)
+    assert redacted["/DevConfResURI"]["x.com.samsung.ssolist"] == REDACTED
+    assert "@" not in json.dumps(redacted)
+    assert redacted["/DevConfResURI"]["x.com.samsung.rsd"] == "DLNADMR"
+
+
+def test_no_fixture_in_the_corpus_carries_an_email_address():
+    """Like the SSID guard above: no fixture may carry a real e-mail address."""
+    email = re.compile(r"[\w.+-]+@(?!example\.(?:com|org|net)\b)[\w-]+\.[a-z]{2,}")
+    for path in sorted(FIXTURES.glob("*_device.json")):
+        assert not email.search(path.read_text()), f"{path.name} carries an email address"
+
+
+def test_redacts_the_provisioning_log_id():
+    """tglogid is a per-unit provisioning UUID (present live on KTSU2
+    boards) -- same identity class as the OCF uuids."""
+    redacted = redact_resources(
+        {"/sec/provisioninginfo": {"x.com.samsung.provisioning.tglogid": "some-uuid-here"}}
+    )
+    assert redacted["/sec/provisioninginfo"]["x.com.samsung.provisioning.tglogid"] == REDACTED
+
+
+def test_udn_match_is_segment_exact_not_substring():
+    """'udn' inside an unrelated feature key must NOT drag it out."""
+    rep = {
+        "/sec/tv/deviceinfo": {"x.com.samsung.tv.udn": "1111-2222"},
+        "/sec/tv/advancedaudio": {"x.com.samsung.tv.autoLoudness": "on"},
+    }
+    redacted = redact_resources(rep)
+    assert redacted["/sec/tv/deviceinfo"]["x.com.samsung.tv.udn"] == REDACTED
+    assert redacted["/sec/tv/advancedaudio"]["x.com.samsung.tv.autoLoudness"] == "on"
+
+
+def test_redacts_soundbar_connection_rows_but_keeps_channel_names():
+    """Source names in connection rows can be a person's phone; channel names are not."""
+    row = {"connectionType": "BT", "name": "Owner's phone", "groupName": "g", "ip": "192.0.2.9"}
+    redacted = redact_resources(
+        {
+            "/sec/networkaudio/soundFrom": {
+                "x.com.samsung.networkaudio.soundFrom": dict(row),
+                "x.com.samsung.networkaudio.name": "Owner's phone",
+            },
+            "/sec/networkaudio/lastConnections": {
+                "x.com.samsung.networkaudio.lastConnections": [dict(row)]
+            },
+            "/sec/networkaudio/channelVolume": {
+                "x.com.samsung.networkaudio.channelVolume": [{"name": "Spk_Center", "value": 0}]
+            },
+        }
+    )
+    sound_from = redacted["/sec/networkaudio/soundFrom"]
+    assert sound_from["x.com.samsung.networkaudio.name"] == REDACTED
+    for r in (
+        sound_from["x.com.samsung.networkaudio.soundFrom"],
+        redacted["/sec/networkaudio/lastConnections"]["x.com.samsung.networkaudio.lastConnections"][
+            0
+        ],
+    ):
+        assert r["connectionType"] == "BT"
+        assert r["name"] == r["groupName"] == r["ip"] == REDACTED
+    channel = redacted["/sec/networkaudio/channelVolume"][
+        "x.com.samsung.networkaudio.channelVolume"
+    ]
+    assert channel[0]["name"] == "Spk_Center"
+
+
+def test_serial_numbers_under_short_keys_are_redacted():
+    """The TV's serial (x.com.samsung.tv.sn) and the soundbar's Alexa
+    product_dsn are too short for the "serial" rule."""
+    redacted = redact_resources(
+        {
+            "/sec/tv/deviceinfo": {"x.com.samsung.tv.sn": "0ABC123", "x.com.samsung.tv.snd": 1},
+            "/sec/networkaudio/alexa": {"x.com.samsung.alexa.product_dsn": "5XYZ"},
+        }
+    )
+    assert redacted["/sec/tv/deviceinfo"]["x.com.samsung.tv.sn"] == REDACTED
+    assert redacted["/sec/tv/deviceinfo"]["x.com.samsung.tv.snd"] == 1
+    assert redacted["/sec/networkaudio/alexa"]["x.com.samsung.alexa.product_dsn"] == REDACTED
+
+
+def test_av_board_history_and_paired_phone_are_redacted():
+    redacted = redact_resources(
+        {
+            "/DevConfResURI": {"x.com.samsung.rmd": '{"dn":"[Phone] X"}'},
+            "/sec/provisioninginfo": {
+                "x.com.samsung.provisioning.sessionid": "2026081600311240",
+                "x.com.samsung.provisioning.laststatus": ";2026;HW;1786888527 ES11",
+            },
+            "/devicelog/connectioninfo": {"x.com.samsung.devicelog.connectioninfo": "{}"},
+        }
+    )
+    assert all(v == REDACTED for rep in redacted.values() for v in rep.values())
