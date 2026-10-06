@@ -11,8 +11,7 @@ docs/investigations/oven-cycle-start.md.
 
 `/mode/vs/0`'s modeSpec declares, per mode, whether a remote may start it
 (`control`), and its temperature, time and power limits. A board without
-one gets no start at all: nothing else tells a startable mode from a
-Setting-only one, and the gas range that declares none cannot be started.
+one is offered its own live modes instead (_specless_specs).
 What a cavity can run right now is its own live `supportedModes`, which
 is narrower: the NE9801T's modeSpec lists all 15 modes of both cavities
 while its upper cavity supports only the three Upper ones (#324).
@@ -83,6 +82,8 @@ class ModeSpec:
     time_min: int | None = None
     time_max: int | None = None
     time_default: int | None = None
+    # A start may leave the cook time out.
+    time_optional: bool = False
 
     @property
     def startable(self) -> bool:
@@ -126,10 +127,83 @@ def _temp_spec(entry: dict, unit: str) -> TempSpec | None:
     )
 
 
+# Modes that no board publishing a modeSpec declares Start&Setting, plus
+# maintenance programs: not offered on a board that publishes none. Name
+# families stand in for their variants (BroilS, Easycook3, the Speed*
+# microwave combinations).
+_NEVER_STARTABLE = frozenset(
+    {
+        "BreadProof",
+        "Defrost",
+        "Descale",
+        "Drain",
+        "NoOperation",
+        "PyroFree",
+        "SelfClean",
+        "SteamClean",
+    }
+)
+_NEVER_STARTABLE_FAMILIES = ("Autocook", "Broil", "Easycook", "HOMECARE", "Speed", "Toast")
+
+
+def _specless_startable(mode: str) -> bool:
+    return (
+        mode not in _NEVER_STARTABLE
+        and "MicroWave" not in mode
+        and not mode.removeprefix("Upper")
+        .removeprefix("Lower")
+        .startswith(_NEVER_STARTABLE_FAMILIES)
+    )
+
+
+def _specless_temps(live: list) -> dict[str, TempSpec]:
+    """The static setpoint range of the board's family: a microwave's has no
+    Fahrenheit bounds, so it offers no temperature in Fahrenheit."""
+    if any(isinstance(m, str) and "MicroWave" in m for m in live):
+        from .microwave import SETPOINT_MAX_C, SETPOINT_MIN_C, SETPOINT_STEP_C
+
+        return {"C": TempSpec(SETPOINT_MIN_C, SETPOINT_MAX_C, None, SETPOINT_STEP_C)}
+    from .oven import (
+        SETPOINT_MAX_C,
+        SETPOINT_MAX_F,
+        SETPOINT_MIN_C,
+        SETPOINT_MIN_F,
+        SETPOINT_STEP_C,
+        SETPOINT_STEP_F,
+    )
+
+    return {
+        "C": TempSpec(SETPOINT_MIN_C, SETPOINT_MAX_C, None, SETPOINT_STEP_C),
+        "F": TempSpec(SETPOINT_MIN_F, SETPOINT_MAX_F, None, SETPOINT_STEP_F),
+    }
+
+
+def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
+    """A board with no modeSpec starts the same way (the NW9000KD started
+    Bake from Ready, #300), so its own live modes are offered, bounded by its
+    family's static setpoint range when it reports a temperature."""
+    live = (resources.get(MODE_HREF) or {}).get(_SUPPORTED_MODES)
+    live = live if isinstance(live, list) else []
+    temps = _specless_temps(live) if device_unit(resources) else {}
+    return {
+        mode: ModeSpec(
+            mode=mode,
+            control=START_CONTROL,
+            temps=temps,
+            time_max=parse_hms("23:59:00"),
+            time_optional=True,
+        )
+        for mode in live
+        if isinstance(mode, str) and _specless_startable(mode)
+    }
+
+
 def mode_specs(resources: dict) -> dict[str, ModeSpec]:
     """{mode: ModeSpec} from `/mode/vs/0`'s modeSpec, which arrives as a
-    JSON string; {} when the board reports none."""
+    JSON string; a board reporting none gets _specless_specs."""
     raw = (resources.get(MODE_HREF) or {}).get(_MODE_SPEC)
+    if raw is None:
+        return _specless_specs(resources)
     if isinstance(raw, str):
         try:
             raw = json.loads(raw)
@@ -335,7 +409,7 @@ def plan_start(
     else:
         seconds = spec.time_default if duration is None else int(duration)
         lo = spec.time_min or 0
-        if seconds is None and not complete:
+        if seconds is None and (not complete or spec.time_optional):
             pass
         elif seconds is None or not lo <= seconds <= spec.time_max:
             raise CookStartError(
