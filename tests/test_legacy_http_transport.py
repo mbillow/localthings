@@ -717,3 +717,26 @@ class TestWallOvenStart:
 
         assert code == 0x85
         assert _FakeConnection.log == []
+
+    def test_a_batch_that_would_lose_an_element_sends_nothing(self, oven):
+        batch = [
+            {"href": "/energy/consumption/vs/0", "rep": {PREFIX + "cumulativePower": "1"}},
+            {"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}},
+        ]
+
+        code, _ = oven.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
+    def test_the_rac_takes_no_batch(self, transport):
+        rac = LegacyHttpTransport(
+            "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_16K"
+        )
+        rac.connect()
+        batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
+
+        code, _ = rac.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x85
+        assert _FakeConnection.log == []

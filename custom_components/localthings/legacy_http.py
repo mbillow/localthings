@@ -424,6 +424,26 @@ def to_write(
     return {"Device": device}
 
 
+def batch_steps(
+    batch: list, table: tuple[Resource, ...]
+) -> list[tuple[str, Mapping[str, Any]]] | None:
+    """A Collection batch's elements as to_write steps, or None when any one
+    can't be translated whole: a cook start that lost its mode would still
+    carry its `Run`. The bare `/devices/0` marker carries no rep and is
+    skipped."""
+    steps: list[tuple[str, Mapping[str, Any]]] = []
+    for element in batch:
+        if not isinstance(element, Mapping) or not isinstance(element.get("href"), str):
+            return None
+        href, rep = element["href"], element.get("rep")
+        if rep is None:
+            continue
+        if not isinstance(rep, Mapping) or not to_write([(href, rep)], table)["Device"]:
+            return None
+        steps.append((href, rep))
+    return steps
+
+
 # One value held for a start: (wrapper, wire field, option-token prefix). The
 # prefix is set for a token inside an `options` array (the cycle's
 # `Course_XX`) and None for a plain field (the washer's temperature).

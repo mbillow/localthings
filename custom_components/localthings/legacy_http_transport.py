@@ -30,6 +30,7 @@ from .legacy_http import (
     Resource,
     StagedKey,
     add_staged,
+    batch_steps,
     course_table,
     http_status_to_coap,
     is_mapped,
@@ -188,21 +189,21 @@ class LegacyHttpTransport:
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         href = "/" + "/".join(path_segs)
-        steps: list[tuple[str, Mapping[str, Any]]]
+        steps: list[tuple[str, Mapping[str, Any]]] | None
         if isinstance(body, list):
-            if href != _SEED_HREF:
-                _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
-                return 0x85, None
             # A cook start's Collection batch (#473) is the same coalesced
             # write the aggregate PUT already takes, so it goes as one body
-            # (#572); the bare `/devices/0` marker carries no rep.
-            steps = [
-                (element["href"], element["rep"])
-                for element in body
-                if isinstance(element, dict)
-                and isinstance(element.get("href"), str)
-                and isinstance(element.get("rep"), dict)
-            ]
+            # (#572). The RAC's writes are per endpoint, with no aggregate.
+            if href != _SEED_HREF or self._table is TP6X_RAC:
+                _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
+                return 0x85, None
+            steps = batch_steps(body, self._table)
+            if steps is None:
+                hrefs = [e.get("href") for e in body if isinstance(e, dict)]
+                _LOGGER.warning(
+                    "%s: no 8888 resource for all of %s; batch refused", self._host, hrefs
+                )
+                return 0x84, None
         else:
             steps = [(href, body)]
         aggregate = to_write(steps, self._table)

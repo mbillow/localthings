@@ -27,6 +27,7 @@ from custom_components.localthings.legacy_http import (
     TP6X_WASHER,
     StagedKey,
     add_staged,
+    batch_steps,
     course_table,
     http_status_to_coap,
     is_mapped,
@@ -680,3 +681,33 @@ class TestLcdOvWall:
 
     def test_the_washer_power_flag_is_not_read_off_an_oven(self):
         assert model_settings("LCD_OV_WALL_16K", self._bodies()) == {}
+
+
+_MODE = {"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}
+_RUN = {"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}
+
+
+class TestBatchSteps:
+    """A cook start's batch over 8888 (#572): translated whole or not at all,
+    since a start that lost its mode would still carry its Run."""
+
+    def test_the_marker_is_skipped_and_the_rest_kept_in_order(self):
+        steps = batch_steps([{"href": "/devices/0"}, _MODE, _RUN], LCD_OV_WALL)
+
+        assert steps == [(_MODE["href"], _MODE["rep"]), (_RUN["href"], _RUN["rep"])]
+
+    def test_an_element_this_family_has_no_row_for_refuses_the_batch(self):
+        """The washer's mode is /course/vs/0, so a /mode/vs/0 element would
+        drop and leave a bare Run."""
+        assert batch_steps([_MODE, _RUN], TP6X_WASHER) is None
+
+    @pytest.mark.parametrize(
+        "element",
+        [
+            "Bake",
+            {"rep": {PREFIX + "modes": ["Bake"]}},
+            {"href": "/mode/vs/0", "rep": ["Bake"]},
+        ],
+    )
+    def test_a_malformed_element_refuses_the_batch(self, element):
+        assert batch_steps([element, _RUN], LCD_OV_WALL) is None
