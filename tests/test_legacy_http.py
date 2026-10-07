@@ -468,8 +468,8 @@ class TestStaging:
 
 
 class TestTp6xRac:
-    """TP6X_RAC_16K (issue #563) and TP6X_RAC_17K (issue #524), from the
-    bodies their diagnostics recorded.
+    """TP6X_RAC_16K (issues #563, #589) and TP6X_RAC_17K (issue #524), from
+    the bodies their diagnostics recorded.
 
     Their fields are the ARTIK051 boards' CoAP vocabulary, so the table only
     has to put each resource on that generation's href and the existing
@@ -478,7 +478,7 @@ class TestTp6xRac:
 
     FIXTURES = tuple(
         Path(__file__).parent / "fixtures" / f"airconditioner_tp6x_rac_{size}_8888.json"
-        for size in ("16k", "17k")
+        for size in ("16k", "17k", "16k_heat")
     )
 
     @staticmethod

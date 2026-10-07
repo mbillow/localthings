@@ -80,6 +80,7 @@ from .registry.capabilities.airconditioner import (
     _temperature_step,
     extend_option_code_bit,
     has_extend_option_code,
+    has_heating_capacity,
     has_option_code,
     is_legacy_board,
     option_code_bit,
@@ -472,7 +473,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         paths resolve codes through here, so a learned code is selectable
         and writable by virtue of appearing in one list.
         """
-        supported = list(self._rep(href).get(_SUPPORTED_FIELD) or [])
+        rep = self._rep(href)
+        supported = list(rep.get(_SUPPORTED_FIELD) or [])
+        if href == MODE_HREF and "Heat" not in supported and has_heating_capacity(rep):
+            # The TP6X_RAC bridge leaves Heat off a heat pump's list (#589).
+            # Reading 'Heat' is confirmed; writing it is not yet.
+            supported.append("Heat")
         learned = self.coordinator.learned_modes(self._bound.subdevice.to_actual(href))
         return supported + [code for code in learned if code not in supported]
 

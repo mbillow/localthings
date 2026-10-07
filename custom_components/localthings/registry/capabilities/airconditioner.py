@@ -322,6 +322,19 @@ def has_extend_option_code(rep):
     return _option_token(rep, "ExtendOptionCode") is not None
 
 
+def has_heating_capacity(rep):
+    """Whether /mode/vs/0's `WarmCapa_<n>` token rates the unit for heating.
+
+    Every AC fixture with a non-zero WarmCapa lists Heat and every WarmCapa_0
+    unit is cool-only, except the TP6X_RAC 8888 bridge, which omits Heat from
+    supportedModes on heat pumps and reports it while heating (#589).
+    """
+    try:
+        return int(_option_token(rep, "WarmCapa") or 0) > 0
+    except ValueError:
+        return False
+
+
 def is_legacy_board(resources):
     """True for the board generation whose airflow lives in /airflow/vs/0
     rather than /wind/strength/vs/0 -- every AC dump on record has one shape
