@@ -145,13 +145,13 @@ def test_an_unusable_identity_is_refused(value) -> None:
         normalize_psk_identity(value)
 
 
-def test_a_zero_byte_in_the_identity_gets_its_own_message() -> None:
-    """Upstream's rule, and a real wire constraint: OpenSSL carries the PSK
-    identity as a NUL-terminated byte string, so a zero byte truncates it.
-    Roughly one UUID in sixteen has one, so this must not read as "your
-    credential is malformed" -- the UUID is perfectly well formed, and for a
-    generated peer identity the fix is to generate another.
-    """
+def test_a_zero_byte_gets_its_own_message_without_backend(monkeypatch) -> None:
+    """Older transports must still reject a credential they cannot preserve."""
+
+    def unsupported(_identity):
+        raise ValueError("binary identity backend unavailable")
+
+    monkeypatch.setattr(protocol_auth.PskAuth, "validate_identity", unsupported)
     zero_byte_uuid = "3771f8bf-0000-3a2d-d885-e4c9818736d2"
     assert b"\x00" in UUID(zero_byte_uuid).bytes
 
@@ -159,15 +159,19 @@ def test_a_zero_byte_in_the_identity_gets_its_own_message() -> None:
         normalize_psk_identity(zero_byte_uuid)
 
 
-def test_upstream_refuses_the_same_identity_we_do() -> None:
-    """The rule above is only worth enforcing early if it is really
-    upstream's -- if PskAuth stopped caring, this would be us inventing a
-    restriction on which UUIDs a user may own."""
-    with pytest.raises(ValueError):
-        protocol_auth.PskAuth(
-            identity=UUID("3771f8bf-0000-3a2d-d885-e4c9818736d2").bytes,
-            key=bytes.fromhex(KEY_128),
-        )
+def test_zero_byte_is_preserved_when_transport_supports_it(monkeypatch) -> None:
+    identity = "3771f8bf-0000-3a2d-d885-e4c9818736d2"
+    checked = []
+    monkeypatch.setattr(protocol_auth.PskAuth, "validate_identity", checked.append)
+    assert normalize_psk_identity(identity.upper()) == identity
+    assert checked == [UUID(identity).bytes]
+
+
+def test_the_required_library_accepts_a_zero_byte_identity() -> None:
+    """Pins upstream's side: smartthings-local 0.1.23, the manifest floor, frames
+    the identity with an explicit length, so a recovered OwnerPSK must not be refused."""
+    identity = normalize_psk_identity("3771f8bf-0000-3a2d-d885-e4c9818736d2")
+    protocol_auth.PskAuth(identity=UUID(identity).bytes, key=bytes.fromhex(KEY_128))
 
 
 @pytest.mark.parametrize("value", [KEY_128, KEY_256])

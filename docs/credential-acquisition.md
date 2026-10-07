@@ -146,6 +146,14 @@ unverified.
 | Rules | The before-and-after comparison recorded unchanged IDs and exported definitions for 13 Rules, apart from normal execution timestamps. | None of the 13 exported Rule definitions directly referenced the washer, so washer-specific routine preservation was not tested. |
 | Scenes | The before-and-after comparison recorded unchanged IDs and available exported records for 14 Scenes. | The saved Scene responses contain metadata, not action definitions. Full Scene-definition preservation, washer dependencies, and execution behavior were not verified. |
 
+## Samsung LCD oven with rooted Android 17
+
+A device owner recovered a Samsung LCD oven's existing OwnerPSK from SmartThings
+on rooted Android 17. Their [recovery scripts and procedure](https://github.com/KRZ303/locathings-oven-psk-retrieval)
+record the tested versions, backups, results, and limits. Import the recovered
+identity unchanged. An identity containing a zero byte needs `smartthings-local`
+0.1.23 or newer, which LocalThings requires.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)

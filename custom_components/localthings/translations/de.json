@@ -2017,7 +2017,7 @@
       "psk_rejected": "Das Gerät hat den Pre-Shared Key abgelehnt. Identität oder Schlüssel sind falsch, oder sie gehören zu einem anderen Gerät oder zu einem inzwischen geänderten Eigentümer. Das Home-Assistant-Protokoll enthält den genauen Alert.",
       "identity_unproven": "Der Schlüssel hat funktioniert, aber das Gerät hat seine OCF-Geräte-ID nicht über die verschlüsselte Verbindung gemeldet. LocalThings kann daher nicht bestätigen, welches Gerät den Schlüssel besitzt, und fügt es nicht hinzu. Versuchen Sie es erneut, während das Gerät wach ist. Tritt das weiterhin auf, melden Sie es in [Issue #435]({issue_url}) zusammen mit dem Home-Assistant-Protokoll.",
       "invalid_psk_identity": "Geben Sie die Identität als UUID ein, zum Beispiel 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Diese UUID enthält ein Null-Byte, das DTLS nicht als Identität übertragen kann. Wenn Sie diese Peer-Identität erzeugt haben, erzeugen Sie eine neue.",
+      "psk_identity_zero_byte": "Diese UUID enthält ein Null-Byte, das der installierte Transport nicht senden kann. Lassen Sie die wiederhergestellte Identität unverändert.",
       "invalid_psk_key": "Geben Sie den Schlüssel als 32 oder 64 Hexadezimalzeichen ein.",
       "handshake_failed": "Das Gerät hat den DTLS-Handshake aus einem Grund abgelehnt, der nichts mit dem Zertifikat zu tun hat — höchstwahrscheinlich eine falsche Protokoll- oder Verschlüsselungsübereinstimmung. Weitere Informationen in den Logs.",
       "cloud_unreachable": "Das Cloud-Gateway von Samsung konnte nicht erreicht werden, um die für die Zertifikatserstellung dieses Geräts benötigte UUID abzurufen. Prüfen Sie den Internetzugang von Home Assistant und versuchen Sie es erneut.",

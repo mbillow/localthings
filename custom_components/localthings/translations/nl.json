@@ -2017,7 +2017,7 @@
       "psk_rejected": "Het apparaat heeft de pre-shared key geweigerd. De identiteit of sleutel is onjuist, of hoort bij een ander apparaat of bij een eigenaar die inmiddels is gewijzigd. Het Home Assistant-logboek bevat de exacte alert.",
       "identity_unproven": "De sleutel werkte, maar het apparaat meldde zijn OCF-apparaat-ID niet via de versleutelde verbinding. LocalThings kan dus niet bevestigen welk apparaat de sleutel heeft en voegt het niet toe. Probeer het opnieuw terwijl het apparaat wakker is. Blijft dit gebeuren, laat het ons dan weten in [issue #435]({issue_url}) met het Home Assistant-logboek erbij.",
       "invalid_psk_identity": "Voer de identiteit in als UUID, bijvoorbeeld 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Deze UUID bevat een nulbyte, die DTLS niet als identiteit kan overbrengen. Heb je deze peer-identiteit zelf gegenereerd, genereer dan een nieuwe.",
+      "psk_identity_zero_byte": "Deze UUID bevat een nulbyte die het geïnstalleerde transport niet kan verzenden. Laat de herstelde identiteit ongewijzigd.",
       "invalid_psk_key": "Voer de sleutel in als 32 of 64 hexadecimale tekens.",
       "handshake_failed": "Het apparaat weigerde de DTLS-handshake om een reden die niets met het certificaat te maken heeft, hoogstwaarschijnlijk een protocol- of cipher-mismatch. Het Home Assistant-logboek bevat de precieze alert die het stuurde.",
       "cloud_unreachable": "Kon de cloudgateway van Samsung niet bereiken om de UUID op te halen die nodig is om het certificaat van dit apparaat aan te maken. Controleer de internettoegang van Home Assistant en probeer het opnieuw.",

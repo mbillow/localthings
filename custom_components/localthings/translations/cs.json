@@ -2017,7 +2017,7 @@
       "psk_rejected": "Spotřebič odmítl předsdílený klíč. Identita nebo klíč jsou chybné, nebo patří jinému spotřebiči či vlastníkovi, který se mezitím změnil. Přesný alert je v logu Home Assistant.",
       "identity_unproven": "Klíč fungoval, ale spotřebič přes šifrované spojení nenahlásil své ID zařízení OCF, takže LocalThings nemůže potvrdit, který spotřebič klíč drží, a nepřidá ho. Zkuste to znovu, když je spotřebič probuzený. Pokud se to opakuje, dejte nám vědět v [issue #435]({issue_url}) a přiložte log Home Assistant.",
       "invalid_psk_identity": "Zadejte identitu jako UUID, například 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Toto UUID obsahuje nulový bajt, který DTLS nedokáže přenést jako identitu. Pokud jste tuto identitu peeru vygenerovali, vygenerujte jinou.",
+      "psk_identity_zero_byte": "Toto UUID obsahuje nulový bajt, který nainstalovaný transport nedokáže odeslat. Obnovenou identitu ponechte beze změny.",
       "invalid_psk_key": "Zadejte klíč jako 32 nebo 64 šestnáctkových znaků.",
       "handshake_failed": "Spotřebič odmítl DTLS handshake z důvodu, který nesouvisí s certifikátem — nejspíše kvůli neshodě protokolu nebo šifry. Přesný alert najdete v logu Home Assistanta.",
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",
