@@ -17,6 +17,7 @@ from . import (
     oven,
     range_hood,
     refrigerator,
+    soundbar,
     vacuum_station,
     washer,
     water_purifier,
@@ -32,6 +33,8 @@ __all__ = [
     "for_device_by_model",
     "for_device_by_oic_type",
     "for_device_by_resources",
+    "is_flat_board",
+    "registry_for",
     "resolve",
 ]
 
@@ -53,6 +56,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
+    "soundbar": soundbar.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
@@ -220,6 +224,8 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.range": "range",  # issue #324 -- oven+cooktop combo, no /information/vs/0
     "oic.d.refrigerator": "refrigerator",
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
+    # AV boards report no /information/vs/0, so /oic/d is their only route.
+    "oic.d.networkaudio": "soundbar",
     "oic.d.washer": "washer",
     "x.com.st.d.airqualitysensor": "air_monitor",
     "x.com.st.d.dehumidifier": "dehumidifier",
@@ -247,6 +253,23 @@ def for_device_by_oic_type(device_types: Sequence[str]) -> DeviceRegistry | None
         if key is not None:
             return _REGISTRY_BY_KEY[key]
     return None
+
+
+_DEFAULT = DeviceRegistry(name="", capabilities={})
+
+
+def registry_for(name: str | None) -> DeviceRegistry:
+    """A family's registry by name, for its settings (flat, subscribe_tiers,
+    write_settle_s); an unrecognized device gets the defaults."""
+    return _REGISTRY_BY_KEY.get(name or "", _DEFAULT)
+
+
+def is_flat_board(device_types: Sequence[str]) -> bool:
+    """True for a board /oic/d names as one without /device/0: a 4.04 there
+    then means "read each href", not a device still booting. Not inferred
+    from /oic/res, where many batch appliances list no /device/0 either."""
+    registry = for_device_by_oic_type(device_types)
+    return registry is not None and registry.flat
 
 
 def for_device_by_model(model_num: str, description: str) -> DeviceRegistry | None:

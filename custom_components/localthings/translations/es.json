@@ -504,6 +504,15 @@
       },
       "wrinkle_prevent_active": {
         "name": "Anti-arrugas activo"
+      },
+      "bluetooth_pairing": {
+        "name": "Emparejamiento Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Altavoces traseros"
+      },
+      "woofer_connection": {
+        "name": "Conexión del woofer"
       }
     },
     "button": {
@@ -554,6 +563,9 @@
       },
       "start_cooking": {
         "name": "Iniciar cocción"
+      },
+      "pair_bluetooth": {
+        "name": "Emparejar Bluetooth"
       }
     },
     "climate": {
@@ -647,6 +659,60 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura objetivo de zona"
+      },
+      "audio_sync": {
+        "name": "Sincronización de audio"
+      },
+      "bass": {
+        "name": "Graves"
+      },
+      "channel_level_center": {
+        "name": "Nivel central"
+      },
+      "channel_level_front_top": {
+        "name": "Nivel frontal superior"
+      },
+      "channel_level_rear": {
+        "name": "Nivel trasero"
+      },
+      "channel_level_rear_side": {
+        "name": "Nivel trasero lateral"
+      },
+      "channel_level_rear_top": {
+        "name": "Nivel trasero superior"
+      },
+      "channel_level_side": {
+        "name": "Nivel lateral"
+      },
+      "channel_level_wide": {
+        "name": "Nivel ancho"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Agudos"
+      },
+      "woofer_level": {
+        "name": "Nivel de woofer"
       }
     },
     "select": {
@@ -1468,6 +1534,28 @@
           "low": "Baja",
           "high": "Alta"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Idioma de los avisos de voz",
+        "state": {
+          "eng": "inglés",
+          "deu": "alemán",
+          "fra": "francés",
+          "kor": "coreano",
+          "spa": "español",
+          "eng_uk": "inglés (UK)",
+          "ita": "italiano"
+        }
+      },
+      "equalizer": {
+        "name": "Ecualizador",
+        "state": {
+          "none": "Ninguno",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Clásica",
+          "custom": "Personalizado"
+        }
       }
     },
     "sensor": {
@@ -1959,6 +2047,31 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Cambio automático desfase secundario de calefacción"
+      },
+      "current_eq_mode": {
+        "name": "Modo de ecualización actual"
+      },
+      "installation_type": {
+        "name": "Tipo de instalación"
+      },
+      "micom_version": {
+        "name": "Versión de micom"
+      },
+      "network_connection": {
+        "name": "Conexión",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Sonido desde"
+      },
+      "speaker_status": {
+        "name": "Estado de los altavoces"
+      },
+      "wifi_signal": {
+        "name": "Señal Wi-Fi"
       }
     },
     "switch": {
@@ -2213,6 +2326,36 @@
       },
       "extra_rinse": {
         "name": "Aclarado extra"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Avisos de voz"
+      },
+      "auto_power_down": {
+        "name": "Apagado automático"
+      },
+      "auto_update": {
+        "name": "Actualización automática"
+      },
+      "bass_boost": {
+        "name": "Refuerzo de graves"
+      },
+      "night_mode": {
+        "name": "Modo nocturno"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Amplificador de voz"
       }
     },
     "time": {

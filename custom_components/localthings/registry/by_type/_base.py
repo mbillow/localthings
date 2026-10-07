@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass, field, replace
 
 from ..capability import Capability
 
@@ -14,6 +15,26 @@ class DeviceRegistry:
     name: str
     capabilities: dict[str, list[Capability]]
     pattern_capabilities: list[Capability] = field(default_factory=list)
+    # No /device/0 Collection: read one href at a time (registry/flat.py),
+    # and found by a ClientHello probe when the port moves, as these boards
+    # advertise nothing in plaintext.
+    flat: bool = False
+    # Poll tiers that may carry an OBSERVE subscription; () when
+    # subscriptions cost other clients their session (the AV boards).
+    subscribe_tiers: tuple[str, ...] = ("hot", "warm")
+    # Write-settle window in seconds; None keeps the coordinator's default,
+    # sized for boards that settle well after the ACK (washer course).
+    write_settle_s: float | None = None
+
+
+def unpolled(*groups: Iterable[Capability]) -> list[Capability]:
+    """Coverage-only capabilities a flat board reads once, at discovery:
+    re-reading them every sweep would cost a GET each for nothing."""
+    return [
+        replace(cap, poll_tier="never") if cap.poll_tier == "cold" else cap
+        for group in groups
+        for cap in group
+    ]
 
 
 def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
