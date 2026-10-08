@@ -63,6 +63,9 @@ class SamsungEntityDescription:
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
     cook_param: str | None = None
+    # False for a write the appliance takes with Remote Control off; the
+    # coordinator then leaves the refusal, if any, to the appliance.
+    needs_remote_control: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)

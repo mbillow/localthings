@@ -12,8 +12,9 @@
 * The appliance leaves the network soon after going idle unless Remote
   Control is on, and answers `403 SHE-001` while it is off -- both read as
   an ordinary outage.
-* A family listed in legacy_http.FAMILY_DEVICE_COUNT serves siblings at
-  `/devices/<n>`; they read as the indexed subdevices OCF boards present.
+* A sibling device answers at `/devices/<n>` and reads as the indexed
+  subdevice OCF boards present. `/devices` lists it only while it is in use:
+  the Flex Duo's lower cavity drops out with the divider (#572).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import re
 import ssl
 import time
 from collections.abc import Mapping, Sequence
@@ -34,14 +36,12 @@ from .legacy_http import (
     add_staged,
     batch_steps,
     course_table,
-    device_count,
     http_status_to_coap,
     is_mapped,
     is_start,
     model_settings,
     split_start_only,
     staged_current,
-    stop_without_remote_control,
     table_for,
     to_resources,
     to_write,
@@ -72,11 +72,15 @@ _SEED_HREF = "/device/0"
 # Served by their own endpoint rather than embedded in the aggregate.
 _LINKED_ENDPOINTS = ("configuration", "information")
 
-# Where a lower cavity carries whether the divider is in, as the OCF
-# dual-cavity oven does (#324). The bridge serves no such resource; the
-# divider is in exactly while `/devices` lists the cavity (#572).
-_DIVIDER_HREF = "/connected/vs/0"
-_DIVIDER_FIELD = "x.com.samsung.da.connected"
+# Where a sibling carries whether `/devices` lists it -- for a lower cavity,
+# whether the divider is in, as the OCF dual-cavity oven reports it (#324).
+_LISTED_HREF = "/connected/vs/0"
+_LISTED_FIELD = "x.com.samsung.da.connected"
+
+# A sibling's record may extend its information endpoint's description with
+# a suffix (`LCD_OV_WALL_16K_DIV`, #572); only such a suffix is carried over,
+# since the record's description can otherwise carry the serial.
+_RECORD_SUFFIX = re.compile(r"_[A-Z]+")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
@@ -111,6 +115,8 @@ class _ApplianceState:
     # Values held for the next start, each with what the appliance reported
     # for it when it was chosen (None until first read).
     staged: dict[StagedKey, tuple[Any, Any]] = field(default_factory=dict)
+    # For a sibling: whether `/devices` listed it at the last read.
+    listed: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -125,8 +131,6 @@ class LegacyHttpTransport:
     """`Transport` over the 8888 bridge. Blocking, like the seam it implements."""
 
     supports_observe = False
-    # Set per family; see legacy_http.STOP_WITHOUT_REMOTE_CONTROL.
-    stop_without_remote_control = False
 
     def __init__(
         self,
@@ -146,8 +150,6 @@ class LegacyHttpTransport:
         self._family = family or ""
         self._table = table_for(family)
         self._by_href = _index_by_href(self._table)
-        self._devices = device_count(family)
-        self.stop_without_remote_control = stop_without_remote_control(family)
         self._ctx: ssl.SSLContext | None = None
 
     @property
@@ -178,7 +180,7 @@ class LegacyHttpTransport:
         device's hrefs carry its index in place of the trailing 0, as on the
         OCF boards (registry/subdevices.py's indexed pattern)."""
         head, sep, tail = href.rpartition("/")
-        if tail.isdigit() and 0 < int(tail) < self._devices:
+        if tail.isdigit() and int(tail) > 0:
             return int(tail), f"{head}{sep}0"
         return 0, href
 
@@ -186,9 +188,11 @@ class LegacyHttpTransport:
         index, href = self._locate("/" + "/".join(path_segs))
         if href == _SEED_HREF:
             return self._read_seed(index, timeout)
-        if index and href == _DIVIDER_HREF:
-            rep = self._divider(index, timeout)
-            return (0x45, rep) if rep is not None else (0x84, None)
+        if index and href == _LISTED_HREF:
+            status, devices = self._list_devices(timeout)
+            if devices is None:
+                return http_status_to_coap(status), None
+            return 0x45, self._listed_rep(index, devices)
         resource = self._by_href.get(href)
         if resource is None:
             # Including /oic/p and /oic/d, which nginx answers with HTML.
@@ -204,30 +208,29 @@ class LegacyHttpTransport:
         """The whole device in the shape a /device/<n> batch arrives in: the
         aggregate plus the two resources it only links to. A linked resource
         that fails is left out rather than failing the sweep."""
+        if index:
+            status, record, devices = self._sibling_record(index, timeout)
+            if record is None:
+                return status, None
+        else:
+            status, body = self._request("GET", _device_path(0), timeout=timeout)
+            if status != 200 or not isinstance(body, dict):
+                return http_status_to_coap(status), body if isinstance(body, str) else None
+            record, devices = unwrap(body), None
         base = _device_path(index)
-        status, body = self._request("GET", base, timeout=timeout)
-        if status != 200 or not isinstance(body, dict):
-            return http_status_to_coap(status), body if isinstance(body, str) else None
-        bodies = unwrap(body)
-        description = bodies.get("description")
+        bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
             linked_status, linked = self._request("GET", f"{base}/{endpoint}", timeout=timeout)
             if linked_status == 200 and isinstance(linked, dict):
                 bodies.update(unwrap(linked))
             else:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
-        if index and isinstance(description, str):
-            # The lower cavity's own record says LCD_OV_WALL_16K_DIV where its
-            # information endpoint repeats the main's description (#572).
-            bodies["Information"] = {
-                **(bodies.get("Information") or {}),
-                "description": description,
-            }
+        if index:
+            bodies = _with_record_description(bodies, record.get("description"))
         self._state_at(index).last_bodies = bodies
         resources = to_resources(self._with_staged(index, bodies), self._table)
-        if index:
-            if (divider := self._divider(index, timeout)) is not None:
-                resources[_DIVIDER_HREF] = divider
+        if devices is not None:
+            resources[_LISTED_HREF] = self._listed_rep(index, devices)
             sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
             resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
         else:
@@ -237,19 +240,45 @@ class LegacyHttpTransport:
             resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
-    def _divider(self, index: int, timeout: float) -> dict[str, str] | None:
-        """Whether `/devices` lists this device: `/devices/1` answers the same
-        with the divider out, and only the list drops it (#572)."""
+    def _sibling_record(
+        self, index: int, timeout: float
+    ) -> tuple[int, dict[str, Any] | None, list]:
+        """A sibling's own record, from `/devices` while it is listed and from
+        `/devices/<n>` otherwise, with the `/devices` list it was judged by.
+        A record naming another id is refused, so a bridge echoing device 0
+        at any index can't produce a phantom sibling."""
+        status, devices = self._list_devices(timeout)
+        if devices is None:
+            return http_status_to_coap(status), None, []
+        record = next(
+            (d for d in devices if isinstance(d, dict) and d.get("id") == str(index)), None
+        )
+        if record is None:
+            status, body = self._request("GET", _device_path(index), timeout=timeout)
+            if status != 200 or not isinstance(body, dict):
+                return http_status_to_coap(status), None, devices
+            record = unwrap(body)
+            if record.get("id") != str(index):
+                return 0x84, None, devices
+        return 0x45, record, devices
+
+    def _list_devices(self, timeout: float) -> tuple[int, list | None]:
         status, body = self._request("GET", "/devices", timeout=timeout)
         devices = body.get("Devices") if isinstance(body, dict) else None
-        if status != 200 or not isinstance(devices, list):
-            return None
+        return status, devices if status == 200 and isinstance(devices, list) else None
+
+    def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
         listed = any(isinstance(d, dict) and d.get("id") == str(index) for d in devices)
-        return {_DIVIDER_FIELD: "On" if listed else "Off"}
+        self._state_at(index).listed = listed
+        return {_LISTED_FIELD: "On" if listed else "Off"}
 
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
         index, href = self._locate("/" + "/".join(path_segs))
         state = self._state_at(index)
+        if index and state.listed is False:
+            # Untested what the appliance does with it; the Flex Duo still
+            # answers /devices/1 with the divider out (#572).
+            return 0x83, f"The appliance does not list device {index} now"
         steps: list[tuple[str, Mapping[str, Any]]] | None
         if isinstance(body, list):
             # A cook start's Collection batch (#473) is the same coalesced
@@ -474,17 +503,30 @@ class LegacyHttpTransport:
         return {**bodies, _WASHER_WRAPPER: washer}
 
     def diagnostics(self) -> dict[str, Any]:
-        out = {
+        states = {
+            index: state
+            for (host, port, index), state in _STATE.items()
+            if (host, port) == (self._host, self._port)
+        }
+        main = states.get(0, _ApplianceState()).last_bodies
+        out: dict[str, Any] = {
             "transport": "legacy_http",
             "family": self._family,
             "family_mapped": is_mapped(self._family),
-            "unmapped_resources": unmapped_wrappers(self._state_at(0).last_bodies, self._table),
-            "bodies": _resource_bodies(self._state_at(0).last_bodies),
+            "unmapped_resources": sorted(
+                {
+                    wrapper
+                    for state in states.values()
+                    for wrapper in unmapped_wrappers(state.last_bodies, self._table)
+                }
+            ),
+            "bodies": _resource_bodies(main),
         }
-        if self._devices > 1:
+        siblings = {index: state for index, state in states.items() if index}
+        if siblings:
             out["device_bodies"] = {
-                str(index): _resource_bodies(self._state_at(index).last_bodies)
-                for index in range(1, self._devices)
+                str(index): _resource_bodies(state.last_bodies)
+                for index, state in sorted(siblings.items())
             }
         return out
 
@@ -529,6 +571,20 @@ class LegacyHttpTransport:
             # panel -- the everyday case, so it reads as a reason, not a code.
             return response.status, "Remote Control is off at the appliance"
         return response.status, body
+
+
+def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:
+    """`bodies` with a sibling record's description on its Information, when
+    it is that Information's own description plus a suffix (_RECORD_SUFFIX)."""
+    information = bodies.get("Information")
+    if not isinstance(information, dict):
+        return bodies
+    own = information.get("description")
+    if not (isinstance(own, str) and isinstance(description, str)):
+        return bodies
+    if not (description.startswith(own) and _RECORD_SUFFIX.fullmatch(description[len(own) :])):
+        return bodies
+    return {**bodies, "Information": {**information, "description": description}}
 
 
 def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:

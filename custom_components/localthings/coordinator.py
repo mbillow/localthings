@@ -74,7 +74,6 @@ from .registry.capabilities.common import (
     remote_control_required_for_write,
 )
 from .registry.capabilities.laundry import cycle_options
-from .registry.capabilities.operational import STOP_BUTTON
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc
@@ -2355,9 +2354,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         a write with a user-facing message ahead of write_fn's silent
         no-op. The remote-control check runs first, unconditionally, unless
         the user opted out via CONF_BYPASS_REMOTE_CONTROL (issue #54: some
-        devices accept some writes even while reporting remote control off)
-        or the laundry firmware declares itself writable without Smart
-        Control."""
+        devices accept some writes even while reporting remote control off),
+        the laundry firmware declares itself writable without Smart Control,
+        or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
@@ -2392,7 +2391,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if (
             not bypass_remote_control
             and remote_control_required_for_write(raw_resources, href or "")
-            and not (desc is STOP_BUTTON and self._stops_without_remote_control())
+            and desc.needs_remote_control
             and not self._remote_control_enabled(bound_entity.subdevice)
         ):
             raise ServiceValidationError(
@@ -2572,11 +2571,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if href in overlaid:
                     snapshot[subdevice.to_actual(href)] = overlaid[href]
         return snapshot
-
-    def _stops_without_remote_control(self) -> bool:
-        """Whether the transport says this appliance takes a Stop with Remote
-        Control off (the 8888 Flex Duo wall oven, #572)."""
-        return bool(getattr(self._session, "stop_without_remote_control", False))
 
     def _remote_control_enabled(self, subdevice: Subdevice) -> bool:
         """Smart Control for the subdevice being written. Each cavity of a

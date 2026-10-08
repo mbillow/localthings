@@ -1,9 +1,9 @@
-"""The NV51K777OS Flex Duo's lower cavity over 8888 (issue #572).
+"""Sibling devices over 8888: the NV51K777OS Flex Duo's lower cavity (#572).
 
 The bridge serves the lower cavity as `/devices/1` and lists it in `/devices`
 only while the divider is in. The coordinator sees the same indexed sibling
 an OCF dual-cavity oven presents (`/device/1`, hrefs ending `/1`), so the
-existing subdevice machinery does the rest.
+existing subdevice machinery does the rest. Nothing here is per family.
 """
 
 from __future__ import annotations
@@ -16,11 +16,17 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 
-from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
+from custom_components.localthings.legacy_http_transport import (
+    LegacyHttpTransport,
+    _with_record_description,
+)
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.capabilities import cook
-from custom_components.localthings.registry.capabilities.operational import STOP_BUTTON
+from custom_components.localthings.registry.capabilities.operational import (
+    OPERATIONAL_STATE,
+    STOP_BUTTON,
+)
 from custom_components.localthings.registry.identity import DeviceIdentity
 from custom_components.localthings.transport import Transport
 from tests.test_legacy_http_transport import _FakeConnection
@@ -33,15 +39,16 @@ FIXTURE = json.loads(
     )
 )
 UPPER, LOWER = FIXTURE["devices_divided"]["Devices"]
+assert FIXTURE["devices_no_divider"]["Devices"] == [UPPER]
 
 
 def _running(device: dict) -> dict:
     return {**device, "Operation": {**device["Operation"], "state": "Run"}}
 
 
-def _routes(devices: dict, upper: dict = UPPER, lower: dict = LOWER) -> dict:
+def _routes(*, divided: bool = True, upper: dict = UPPER, lower: dict = LOWER) -> dict:
     return {
-        "/devices": (200, devices),
+        "/devices": (200, {"Devices": [upper, lower] if divided else [upper]}),
         "/devices/0": (200, {"Device": upper}),
         "/devices/0/configuration": (200, FIXTURE["device0_configuration"]),
         "/devices/0/information": (200, FIXTURE["device0_information"]),
@@ -67,7 +74,7 @@ def _fake_https(monkeypatch):
         lambda cert_pem, key_pem: object(),
     )
     _FakeConnection.log = []
-    _FakeConnection.routes = _routes(FIXTURE["devices_divided"])
+    _FakeConnection.routes = _routes()
 
 
 def _transport(family: str = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
@@ -89,7 +96,7 @@ def _requests() -> list[tuple[str, str]]:
 
 
 class TestReads:
-    def test_the_lower_cavity_reads_as_an_indexed_sibling(self):
+    def test_a_listed_sibling_reads_from_devices(self):
         resources = _seed(_transport(), 1)
 
         assert {href.rsplit("/", 1)[1] for href in resources} == {"1"}
@@ -101,30 +108,46 @@ class TestReads:
             "/information/vs/1",
             "/connected/vs/1",
         } <= set(resources)
+        assert _requests() == [
+            ("GET", "/devices"),
+            ("GET", "/devices/1/configuration"),
+            ("GET", "/devices/1/information"),
+        ]
+
+    def test_an_unlisted_sibling_reads_its_own_record(self):
+        """The divider is out: /devices drops the cavity, /devices/1 still
+        answers."""
+        _FakeConnection.routes = _routes(divided=False)
+
+        resources = _seed(_transport(), 1)
+
+        assert resources["/connected/vs/1"] == {PREFIX + "connected": "Off"}
         assert ("GET", "/devices/1") in _requests()
+
+    def test_a_listed_sibling_reads_as_listed(self):
+        assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "On"}
 
     def test_it_names_itself_by_its_own_record(self):
         """/devices/1/information repeats the main's description; the record
-        at /devices/1 says _DIV."""
+        says _DIV."""
         resources = _seed(_transport(), 1)
 
         assert resources["/information/vs/1"][PREFIX + "description"] == "LCD_OV_WALL_16K_DIV"
         assert resources["/information/vs/1"][PREFIX + "modelNum"].startswith("LCD_OV_WALL_16K|")
 
-    def test_the_divider_is_in_while_devices_lists_the_cavity(self):
-        assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "On"}
-
-    def test_the_divider_is_out_once_devices_drops_it(self):
-        _FakeConnection.routes = _routes(FIXTURE["devices_no_divider"])
-
-        assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "Off"}
-
-    def test_the_divider_reads_on_its_own_too(self):
+    def test_listing_reads_on_its_own_too(self):
         code, rep = _transport().read(["connected", "vs", "1"], timeout=10.0)
 
         assert (code, rep) == (0x45, {PREFIX + "connected": "On"})
 
-    def test_a_single_lower_href_reads_its_own_endpoint(self):
+    def test_a_refused_listing_keeps_the_appliances_status(self):
+        _FakeConnection.routes["/devices"] = (403, {"errorCode": "SHE-001"})
+
+        code, _ = _transport().read(["connected", "vs", "1"], timeout=10.0)
+
+        assert code == 0x83
+
+    def test_a_single_sibling_href_reads_its_own_endpoint(self):
         code, rep = _transport().read(["operational", "state", "vs", "1"], timeout=10.0)
 
         assert code == 0x45
@@ -138,25 +161,41 @@ class TestReads:
         assert "/connected/vs/0" not in resources
         assert ("GET", "/devices") not in _requests()
 
-    def test_a_third_device_is_not_served(self):
+    def test_a_sibling_the_bridge_does_not_serve_is_a_404(self):
+        code, _ = _transport("TP6X_WASHER").read(["device", "2"], timeout=10.0)
+
+        assert code == 0x84
+
+    def test_a_record_naming_another_device_is_no_sibling(self):
+        """A bridge echoing device 0 at any index must not produce a phantom."""
+        _FakeConnection.routes["/devices/2"] = (200, {"Device": UPPER})
+
         code, _ = _transport().read(["device", "2"], timeout=10.0)
 
         assert code == 0x84
-        assert _FakeConnection.log == []
 
-    def test_a_single_device_family_serves_no_index(self):
-        code, _ = _transport("TP6X_WASHER").read(["operational", "state", "vs", "1"], timeout=10.0)
 
-        assert code == 0x84
-        assert _FakeConnection.log == []
+_INFO = {"Information": {"description": "LCD_OV_WALL_16K", "modelID": "LCD_OV_WALL_16K|1|2"}}
+
+
+class TestRecordDescription:
+    def test_a_suffix_is_carried(self):
+        bodies = _with_record_description(_INFO, "LCD_OV_WALL_16K_DIV")
+
+        assert bodies["Information"]["description"] == "LCD_OV_WALL_16K_DIV"
+
+    @pytest.mark.parametrize(
+        "description", ["LCD_OV_WALL_16K(0A1B2C3D)", "OTHER_DIV", "LCD_OV_WALL_16K_DIV2", None]
+    )
+    def test_anything_else_is_not(self, description):
+        assert _with_record_description(_INFO, description) == _INFO
 
 
 class TestWrites:
     def test_stop_on_the_lower_cavity_goes_to_devices_1(self):
-        _FakeConnection.routes = _routes(FIXTURE["devices_divided"], lower=_running(LOWER))
-        transport = _transport()
+        _FakeConnection.routes = _routes(lower=_running(LOWER))
 
-        code, _ = transport.write(
+        code, _ = _transport().write(
             ["operational", "state", "vs", "1"], {PREFIX + "state": "Ready"}, timeout=8.0
         )
 
@@ -194,8 +233,22 @@ class TestWrites:
         assert code == 0x84
         assert _FakeConnection.log == []
 
+    def test_an_unlisted_sibling_takes_no_command(self):
+        _FakeConnection.routes = _routes(divided=False, lower=_running(LOWER))
+        transport = _transport()
+        _seed(transport, 1)
+        _FakeConnection.log.clear()
+
+        code, reason = transport.write(
+            ["operational", "state", "vs", "1"], {PREFIX + "state": "Ready"}, timeout=8.0
+        )
+
+        assert code == 0x83
+        assert "does not list device 1" in reason
+        assert _FakeConnection.log == []
+
     def test_each_cavity_holds_its_own_state(self):
-        _FakeConnection.routes = _routes(FIXTURE["devices_divided"], upper=_running(UPPER))
+        _FakeConnection.routes = _routes(upper=_running(UPPER))
         transport = _transport()
         _seed(transport, 0)
         _seed(transport, 1)
@@ -210,10 +263,11 @@ class TestWrites:
         assert ("PUT", "/devices/1") not in _requests()
 
 
-def test_only_the_wall_oven_stops_without_remote_control():
-    assert _transport().stop_without_remote_control
-    assert not _transport("TP6X_WASHER").stop_without_remote_control
-    assert not _transport("TP6X_RAC_16K").stop_without_remote_control
+def test_only_stop_is_declared_free_of_remote_control():
+    assert not STOP_BUTTON.needs_remote_control
+    others = [e for e in OPERATIONAL_STATE.entities if e is not STOP_BUTTON]
+    assert others
+    assert all(e.needs_remote_control for e in others)
 
 
 def test_diagnostics_carry_the_lower_cavity_bodies():
@@ -276,7 +330,7 @@ async def test_stop_reaches_the_lower_cavity_with_remote_control_off(hass: HomeA
     """The reporter's Stop with the bypass on stopped the upper cavity but
     not the lower (every write went to /devices/0)."""
     off = {"Configuration": {"remoteControlEnabled": False}}
-    routes = _routes(FIXTURE["devices_divided"], lower=_running(LOWER))
+    routes = _routes(lower=_running(LOWER))
     routes["/devices/0/configuration"] = (200, off)
     routes["/devices/1/configuration"] = (200, off)
     coordinator = await _discovered(hass, routes)
@@ -291,7 +345,7 @@ async def test_stop_reaches_the_lower_cavity_with_remote_control_off(hass: HomeA
 
 async def test_other_writes_still_need_remote_control(hass: HomeAssistant):
     off = {"Configuration": {"remoteControlEnabled": False}}
-    routes = _routes(FIXTURE["devices_divided"])
+    routes = _routes()
     routes["/devices/0/configuration"] = (200, off)
     coordinator = await _discovered(hass, routes)
     power = next(
