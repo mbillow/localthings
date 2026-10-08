@@ -2183,6 +2183,9 @@
     "command_refused": {
       "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
     },
+    "command_not_confirmed": {
+      "message": "Polecenie do {href} zostało wysłane przy wyłączonym zdalnym sterowaniu, ale urządzenie jeszcze go nie pokazuje. Jeśli nie zareaguje, włącz zdalne sterowanie w urządzeniu."
+    },
     "debug_read_failed": {
       "message": "Odczyt z {href} nie powiódł się: {error}"
     },

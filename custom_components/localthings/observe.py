@@ -121,17 +121,23 @@ class ObserveManager:
         """
         self._on_applied = callback
 
-    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> float | None:
-        """Arm the settle window; returns the deadline it replaced, if any."""
+    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> float:
+        """Arm the settle window; returns its deadline."""
         with self._settle_lock:
-            previous = self._settle_until.get(href)
-            self._settle_until[href] = time.monotonic() + settle_s
-            return previous
+            deadline = time.monotonic() + settle_s
+            self._settle_until[href] = deadline
+            return deadline
 
-    def restore_write_pending(self, href: str, previous: float | None) -> None:
-        """Undo mark_write_pending for a write the appliance refused, keeping
-        any window an earlier, accepted write to the same href still holds."""
+    def settle_deadline(self, href: str) -> float | None:
         with self._settle_lock:
+            return self._settle_until.get(href)
+
+    def restore_write_pending(self, href: str, previous: float | None, armed: float) -> None:
+        """Undo the window a refused write armed (`armed`), back to what it
+        replaced. A newer write that has armed its own since keeps it."""
+        with self._settle_lock:
+            if self._settle_until.get(href) != armed:
+                return
             if previous is None or previous <= time.monotonic():
                 self._settle_until.pop(href, None)
             else:

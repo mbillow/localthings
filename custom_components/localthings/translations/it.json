@@ -2183,6 +2183,9 @@
     "command_refused": {
       "message": "L'elettrodomestico ha rifiutato il comando per {href}: {error}"
     },
+    "command_not_confirmed": {
+      "message": "Il comando per {href} è stato inviato con Smart Control disattivato, ma l'elettrodomestico non lo mostra ancora. Se non risponde, attivare Smart Control sull'elettrodomestico."
+    },
     "debug_read_failed": {
       "message": "La lettura da {href} è fallita: {error}"
     },

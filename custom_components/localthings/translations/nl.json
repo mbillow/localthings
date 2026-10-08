@@ -2183,6 +2183,9 @@
     "command_refused": {
       "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
     },
+    "command_not_confirmed": {
+      "message": "Het commando naar {href} is verzonden terwijl afstandsbediening uit staat, maar het apparaat toont het nog niet. Als het niet reageert, schakel dan afstandsbediening in op het apparaat."
+    },
     "debug_read_failed": {
       "message": "Het lezen van {href} is mislukt: {error}"
     },

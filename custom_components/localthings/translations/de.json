@@ -2183,6 +2183,9 @@
     "command_refused": {
       "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
     },
+    "command_not_confirmed": {
+      "message": "Der Befehl an {href} wurde bei ausgeschalteter Fernsteuerung gesendet, aber das Gerät zeigt ihn noch nicht an. Falls es nicht reagiert, schalten Sie die Fernsteuerung am Gerät ein."
+    },
     "debug_read_failed": {
       "message": "Das Lesen von {href} ist fehlgeschlagen: {error}"
     },

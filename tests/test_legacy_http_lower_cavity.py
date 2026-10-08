@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -164,8 +165,8 @@ class TestReads:
         assert ("GET", "/devices/1") in _requests()
 
     def test_a_sibling_shares_one_budget(self):
-        with pytest.raises(TimeoutError):
-            _transport().read(["device", "1"], timeout=0.0)
+        assert _transport().read(["device", "1"], timeout=0.0) == (0xA4, None)
+        assert _FakeConnection.log == []
 
     def test_a_single_sibling_href_reads_its_own_endpoint(self):
         code, rep = _transport().read(["operational", "state", "vs", "1"], timeout=10.0)
@@ -333,6 +334,7 @@ async def _discovered(hass: HomeAssistant, routes: dict | None = None):
     if routes is not None:
         _FakeConnection.routes = routes
     coordinator = _coordinator(hass)
+    coordinator.async_request_refresh = AsyncMock()
     transport = _transport()
     coordinator._session = cast(Transport, transport)
     coordinator._identity = DeviceIdentity(
@@ -408,19 +410,20 @@ async def test_stop_reaches_the_lower_cavity_with_remote_control_off(hass: HomeA
 
 
 @pytest.mark.usefixtures("_no_confirm_wait")
-async def test_a_stop_dropped_with_remote_control_off_says_so(hass: HomeAssistant):
-    """An appliance that answers 2.04 and keeps running gets the same error
-    the gate used to give before sending anything."""
+async def test_a_stop_not_shown_with_remote_control_off_says_so(hass: HomeAssistant):
+    """An appliance that answers 2.04 and still reads Run says so, without
+    claiming why: it may have dropped it, or still be winding down."""
     routes = _remote_control_off(_routes(lower=_running(LOWER)))
     coordinator = await _discovered(hass, routes)
     lower = _lower(coordinator)
     stop = next(b for b in coordinator.bound if b.subdevice == lower and b.desc is STOP_BUTTON)
 
-    with pytest.raises(ServiceValidationError) as err:
+    with pytest.raises(HomeAssistantError) as err:
         await coordinator.async_send_command(stop, STOP_BUTTON.payload)
 
-    assert err.value.translation_key == "remote_control_disabled"
+    assert err.value.translation_key == "command_not_confirmed"
     assert ("PUT", "/devices/1") in _requests()
+    coordinator.async_request_refresh.assert_awaited()
 
 
 async def test_other_writes_still_need_remote_control(hass: HomeAssistant):

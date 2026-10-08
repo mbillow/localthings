@@ -254,6 +254,11 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     return f"{cavity} oven" if cavity else None
 
 
+# Write errors after which the session is fine and a re-poll shows the
+# appliance's real state; a dead session isn't re-polled (see _async_put).
+_APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+
+
 def _refusal(code: int, response: Any) -> str:
     """A refused write's CoAP code, with the appliance's own reason when it
     gave one (`Control fail, <...>`; see transport.Transport)."""
@@ -360,7 +365,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # triggers: the PUT itself, then the confirming summary poll.
     _POST_TIMEOUT_S: float = 8.0
     # How long a write sent with Remote Control off is given before it is
-    # read back (_took_effect); the 8888 start settles in the same time.
+    # read back (_took_effect).
     _CONFIRM_DELAY_S: float = 3.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
@@ -2466,7 +2471,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
         write_only = getattr(desc, "write_only", False)
-        previous_settle: float | None = None
+        previous_settle = self._observe.settle_deadline(write_href)
+        armed_settle = 0.0
         if not write_only:
             optimistic_body = body
             new_options = body.get("x.com.samsung.da.options")
@@ -2486,37 +2492,40 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
                 }
             self._observe.apply(write_href, optimistic_body, source="optimistic")
-            previous_settle = self._observe.mark_write_pending(
+            armed_settle = self._observe.mark_write_pending(
                 write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
             )
 
         def _rearm() -> None:
+            nonlocal armed_settle
             # The retry's own reconnect pause + second PUT can eat well
             # into the settle window armed above, leaving too little of it
             # for the confirming poll below and reviving the
             # revert-then-reapply symptom settle_s exists to prevent (issue
             # #9). Re-arm it fresh now that the write actually landed.
             if not write_only:
-                self._observe.mark_write_pending(
+                armed_settle = self._observe.mark_write_pending(
                     write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
                 )
 
         try:
             await self._async_put(path_segs, body, write_href, on_retry=_rearm)
             if remote_control_off and not await self._took_effect(path_segs, body):
-                # Sent only because the descriptor waives Remote Control; the
-                # appliance answered 2.04 but dropped it, as some boards do
-                # with it off (docs/investigations/oven-cycle-start.md).
-                raise ServiceValidationError(
+                # Sent only because the descriptor waives Remote Control. Some
+                # boards answer 2.04 and drop a write with it off
+                # (docs/investigations/oven-cycle-start.md); others take it
+                # but are still winding down (a drain) when read back.
+                raise HomeAssistantError(
                     translation_domain=DOMAIN,
-                    translation_key="remote_control_disabled",
+                    translation_key="command_not_confirmed",
+                    translation_placeholders={"href": write_href},
                 )
-        except HomeAssistantError as err:
-            # The appliance never took it: let the next poll replace the
+        except (HomeAssistantError, asyncio.CancelledError) as err:
+            # Not known to have landed: let the next poll replace the
             # optimistic value instead of holding it for the settle window.
             if not write_only:
-                self._observe.restore_write_pending(write_href, previous_settle)
-            if err.translation_key in ("command_refused", "remote_control_disabled"):
+                self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
+            if getattr(err, "translation_key", None) in _APPLIANCE_ANSWERED:
                 await self.async_request_refresh()
             raise
         await self.async_request_refresh()
@@ -2530,7 +2539,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 return None
-            code, rep = sess.read(path_segs, timeout=self._POLL_TIMEOUT_S)
+            code, rep = sess.read(path_segs, timeout=self._POST_TIMEOUT_S)
             return rep if _coap_accepted(code) and isinstance(rep, dict) else None
 
         async with self._session_lock:

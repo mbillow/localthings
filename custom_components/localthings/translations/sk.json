@@ -2183,6 +2183,9 @@
     "command_refused": {
       "message": "Spotrebič odmietol príkaz pre {href}: {error}"
     },
+    "command_not_confirmed": {
+      "message": "Príkaz pre {href} bol odoslaný s vypnutým diaľkovým ovládaním, ale spotrebič ho zatiaľ nezobrazuje. Ak nezareaguje, zapnite na spotrebiči diaľkové ovládanie."
+    },
     "debug_read_failed": {
       "message": "Čítanie z {href} zlyhalo: {error}"
     },

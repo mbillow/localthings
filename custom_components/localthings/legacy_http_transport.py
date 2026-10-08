@@ -214,7 +214,10 @@ class LegacyHttpTransport:
         /device/1 and /device/2 on every appliance, within one budget."""
         if index:
             deadline = time.monotonic() + timeout
-            code, record, devices = self._sibling_record(index, deadline)
+            try:
+                code, record, devices = self._sibling_record(index, deadline)
+            except TimeoutError:
+                return 0xA4, None  # 5.04: the budget ran out
             if record is None:
                 return code, None
         else:
@@ -427,10 +430,7 @@ class LegacyHttpTransport:
         throwing away what was dialled in at the panel. Read fresh rather
         than from the last sweep, which can be a poll interval old.
         """
-        path = f"{_device_path(index)}/operation"
-        status, state = self._request("GET", path, timeout=timeout)
-        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
-        return status == 200 and isinstance(operation, dict) and operation.get("state") == "Ready"
+        return self._operation_state(index, timeout) == "Ready"
 
     def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
         """Start with every held value in the same body -- the only way this
@@ -459,10 +459,13 @@ class LegacyHttpTransport:
         return http_status_to_coap(run_status), run_response
 
     def _running(self, index: int, timeout: float) -> bool:
-        path = f"{_device_path(index)}/operation"
-        status, state = self._request("GET", path, timeout=timeout)
-        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
-        return status == 200 and isinstance(operation, dict) and operation.get("state") == "Run"
+        return self._operation_state(index, timeout) == "Run"
+
+    def _operation_state(self, index: int, timeout: float) -> str | None:
+        """A fresh read of the device's Operation state, None if unreadable."""
+        status, body = self._request("GET", f"{_device_path(index)}/operation", timeout=timeout)
+        operation = unwrap(body).get("Operation") if isinstance(body, dict) else None
+        return operation.get("state") if status == 200 and isinstance(operation, dict) else None
 
     def _with_staged(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         """`bodies` as the next start would leave them.
