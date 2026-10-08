@@ -201,6 +201,23 @@ def is_mapped(family: str | None) -> bool:
     return _family_key(family) in FAMILIES
 
 
+# Families whose bridge serves more than `/devices/0`. The NV51K777OS Flex
+# Duo answers `/devices/1` as its lower cavity (#572).
+FAMILY_DEVICE_COUNT: dict[str, int] = {"LCD_OV_WALL": 2}
+
+# Families that take a Stop with Remote Control off; confirmed on the
+# NV51K777OS for a cook started at the panel (#572).
+STOP_WITHOUT_REMOTE_CONTROL: frozenset[str] = frozenset({"LCD_OV_WALL"})
+
+
+def device_count(family: str | None) -> int:
+    return FAMILY_DEVICE_COUNT.get(_family_key(family), 1)
+
+
+def stop_without_remote_control(family: str | None) -> bool:
+    return _family_key(family) in STOP_WITHOUT_REMOTE_CONTROL
+
+
 def unmapped_wrappers(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
     """The resources the appliance reported that `table` has no row for, and
     so are not read: what a new row would have to cover. Links and the

@@ -74,6 +74,7 @@ from .registry.capabilities.common import (
     remote_control_required_for_write,
 )
 from .registry.capabilities.laundry import cycle_options
+from .registry.capabilities.operational import STOP_BUTTON
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc
@@ -248,29 +249,10 @@ def _batch_element_reps(payload: list) -> dict[str, dict]:
     }
 
 
-# An oven cavity names itself in /mode/vs/0's defaultMode, which prefixes
-# the cavity onto the mode ('UpperConvection'/'LowerConvection' on the
-# dual-cavity board in issue #490). Only the prefix is a cavity; the rest
-# is a cooking mode and must not reach a device name.
-_CAVITY_PREFIXES = ("Upper", "Lower")
-
-
 def _cavity_label(resources: dict[str, dict]) -> str | None:
-    """'Upper oven'/'Lower oven' when this subdevice says which cavity it
-    is, else None.
-
-    Deliberately a two-entry table rather than a general camel-case split:
-    every other defaultMode in the corpus is a plain cooking mode, and
-    naming somebody's appliance 'Samsung Oven Convection Bake' would be a
-    worse outcome than the model label this falls back to.
-    """
-    mode = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.defaultMode")
-    if not isinstance(mode, str):
-        return None
-    for prefix in _CAVITY_PREFIXES:
-        if mode.startswith(prefix):
-            return f"{prefix} oven"
-    return None
+    """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
+    cavity = cook.cavity(resources)
+    return f"{cavity} oven" if cavity else None
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -2410,6 +2392,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if (
             not bypass_remote_control
             and remote_control_required_for_write(raw_resources, href or "")
+            and not (desc is STOP_BUTTON and self._stops_without_remote_control())
             and not self._remote_control_enabled(bound_entity.subdevice)
         ):
             raise ServiceValidationError(
@@ -2589,6 +2572,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if href in overlaid:
                     snapshot[subdevice.to_actual(href)] = overlaid[href]
         return snapshot
+
+    def _stops_without_remote_control(self) -> bool:
+        """Whether the transport says this appliance takes a Stop with Remote
+        Control off (the 8888 Flex Duo wall oven, #572)."""
+        return bool(getattr(self._session, "stop_without_remote_control", False))
 
     def _remote_control_enabled(self, subdevice: Subdevice) -> bool:
         """Smart Control for the subdevice being written. Each cavity of a

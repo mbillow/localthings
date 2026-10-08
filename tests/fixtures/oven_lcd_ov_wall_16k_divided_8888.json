@@ -1,0 +1,291 @@
+{
+  "note": "LCD_OV_WALL_16K, NV51K777OS Flex Duo wall oven (issue #572): the reporter's raw 8888 responses, verbatim, captured idle with remote control on. `devices_divided`/`devices_no_divider` are GET /devices with the divider in and out; `device1_information`/`device1_configuration` are /devices/1's linked endpoints. /devices/0's linked endpoints are the ones oven_lcd_ov_wall_16k_8888.json recorded from the same oven. The uuids are the bridge's own all-zero placeholders; there is no serial.",
+  "devices_divided": {
+    "Devices": [
+      {
+        "Alarms": [],
+        "ConfigurationLink": {
+          "href": "/devices/0/configuration"
+        },
+        "Diagnosis": {
+          "diagnosisStart": "Ready"
+        },
+        "Doors": [
+          {
+            "id": "0",
+            "lock": "Unlock",
+            "openState": "Close"
+          }
+        ],
+        "InformationLink": {
+          "href": "/devices/0/information"
+        },
+        "Mode": {
+          "modes": [
+            "NoOperation"
+          ],
+          "options": [
+            "DeviceType_NW9000KW/AA0",
+            "meatprobe_disconnected",
+            "NoPreheat_Off",
+            "waterInlet_Close",
+            "steamAddLevel_NULL",
+            "descaleAlarm_Normal",
+            "descaleNewWaterAlarm_Off",
+            "descaleEmptyWaterAlarm_Off",
+            "steamGeneratorLevel_Empty",
+            "steamUsingTime_409",
+            "drainRequired_00",
+            "steamState_Standby",
+            "descaleState_Standby",
+            "waterTankInSwitch_On",
+            "pyroFreeState_Standby",
+            "waterTankOutSwitch_Off",
+            "AdjustingTemp_0",
+            "Sabbath_Off",
+            "EnergySaving_On"
+          ],
+          "supportedModes": [
+            "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,Drain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+          ]
+        },
+        "Operation": {
+          "kidsLock": "Ready",
+          "operationTime": "00:00:00",
+          "power": "On",
+          "progressPercentage": 1,
+          "remainingTime": "00:00:00",
+          "state": "Ready"
+        },
+        "Oven": {
+          "recipe": "00000000000000",
+          "state": "Ready"
+        },
+        "Temperatures": [
+          {
+            "current": 175.0,
+            "desired": 0.0,
+            "id": "0",
+            "increment": 5.0,
+            "unit": "Fahrenheit"
+          }
+        ],
+        "connected": true,
+        "description": "LCD_OV_WALL_16K",
+        "id": "0",
+        "name": "Oven",
+        "resources": [
+          "Alarms",
+          "Configuration",
+          "Information",
+          "Mode",
+          "Operation",
+          "Temperatures",
+          "Oven",
+          "Diagnosis",
+          "Doors"
+        ],
+        "type": "Oven",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+      },
+      {
+        "Alarms": [],
+        "ConfigurationLink": {
+          "href": "/devices/1/configuration"
+        },
+        "Doors": [],
+        "InformationLink": {
+          "href": "/devices/1/information"
+        },
+        "Mode": {
+          "modes": [
+            "NoOperation"
+          ],
+          "supportedModes": [
+            "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,Drain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+          ]
+        },
+        "Operation": {
+          "operationTime": "00:00:00",
+          "power": "On",
+          "progressPercentage": 1,
+          "remainingTime": "00:00:00",
+          "state": "Ready"
+        },
+        "Oven": {
+          "state": "Ready"
+        },
+        "Temperatures": [
+          {
+            "current": 175.0,
+            "desired": 0.0,
+            "id": "0",
+            "increment": 5.0,
+            "unit": "Fahrenheit"
+          }
+        ],
+        "connected": true,
+        "description": "LCD_OV_WALL_16K_DIV",
+        "id": "1",
+        "name": "Oven",
+        "resources": [
+          "Alarms",
+          "Configuration",
+          "Information",
+          "Mode",
+          "Operation",
+          "Temperatures",
+          "Oven",
+          "Diagnosis",
+          "Doors"
+        ],
+        "type": "Oven",
+        "uuid": "00000000-0000-0000-0000-000000000001"
+      }
+    ]
+  },
+  "devices_no_divider": {
+    "Devices": [
+      {
+        "Alarms": [],
+        "ConfigurationLink": {
+          "href": "/devices/0/configuration"
+        },
+        "Diagnosis": {
+          "diagnosisStart": "Ready"
+        },
+        "Doors": [
+          {
+            "id": "0",
+            "lock": "Unlock",
+            "openState": "Close"
+          }
+        ],
+        "InformationLink": {
+          "href": "/devices/0/information"
+        },
+        "Mode": {
+          "modes": [
+            "NoOperation"
+          ],
+          "options": [
+            "DeviceType_NW9000KW/AA0",
+            "meatprobe_disconnected",
+            "NoPreheat_Off",
+            "waterInlet_Close",
+            "steamAddLevel_NULL",
+            "descaleAlarm_Normal",
+            "descaleNewWaterAlarm_Off",
+            "descaleEmptyWaterAlarm_Off",
+            "steamGeneratorLevel_Empty",
+            "steamUsingTime_409",
+            "drainRequired_00",
+            "steamState_Standby",
+            "descaleState_Standby",
+            "waterTankInSwitch_On",
+            "pyroFreeState_Standby",
+            "waterTankOutSwitch_Off",
+            "AdjustingTemp_0",
+            "Sabbath_Off",
+            "EnergySaving_On"
+          ],
+          "supportedModes": [
+            "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,Drain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+          ]
+        },
+        "Operation": {
+          "kidsLock": "Ready",
+          "operationTime": "00:00:00",
+          "power": "On",
+          "progressPercentage": 1,
+          "remainingTime": "00:00:00",
+          "state": "Ready"
+        },
+        "Oven": {
+          "recipe": "00000000000000",
+          "state": "Ready"
+        },
+        "Temperatures": [
+          {
+            "current": 175.0,
+            "desired": 0.0,
+            "id": "0",
+            "increment": 5.0,
+            "unit": "Fahrenheit"
+          }
+        ],
+        "connected": true,
+        "description": "LCD_OV_WALL_16K",
+        "id": "0",
+        "name": "Oven",
+        "resources": [
+          "Alarms",
+          "Configuration",
+          "Information",
+          "Mode",
+          "Operation",
+          "Temperatures",
+          "Oven",
+          "Diagnosis",
+          "Doors"
+        ],
+        "type": "Oven",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+      }
+    ]
+  },
+  "device1_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0138",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17071200,17041300",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K",
+      "deviceSubType": "WallOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40401841|5002011e011023550100000000000000"
+    }
+  },
+  "device1_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": true
+    }
+  },
+  "device0_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0138",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17071200,17041300",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K",
+      "deviceSubType": "WallOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40401841|5002011e011023550100000000000000"
+    }
+  },
+  "device0_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": true
+    }
+  }
+}
