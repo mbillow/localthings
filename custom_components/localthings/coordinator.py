@@ -256,8 +256,8 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
 
 def _refusal(code: int, response: Any) -> str:
     """A refused write's CoAP code, with the appliance's own reason when it
-    gave one as text (the 8888 bridge's `Control fail, ...`)."""
-    text = f"{code >> 5}.{code & 0x1F:02d}"
+    gave one (`Control fail, <...>`; see transport.Transport)."""
+    text = _coap_code_str(code)
     return f"{text} {response}" if isinstance(response, str) and response else text
 
 
@@ -359,6 +359,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # async_send_command can be sized to outlast both round trips a write
     # triggers: the PUT itself, then the confirming summary poll.
     _POST_TIMEOUT_S: float = 8.0
+    # How long a write sent with Remote Control off is given before it is
+    # read back (_took_effect); the 8888 start settles in the same time.
+    _CONFIRM_DELAY_S: float = 3.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -2395,12 +2398,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # resource instead of its own subdevice's.
         raw_resources = self._cache.snapshot()
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
-        if (
+        remote_control_off = (
             not bypass_remote_control
             and remote_control_required_for_write(raw_resources, href or "")
-            and desc.needs_remote_control
             and not self._remote_control_enabled(bound_entity.subdevice)
-        ):
+        )
+        if remote_control_off and desc.needs_remote_control:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="remote_control_disabled",
@@ -2463,6 +2466,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
         write_only = getattr(desc, "write_only", False)
+        previous_settle: float | None = None
         if not write_only:
             optimistic_body = body
             new_options = body.get("x.com.samsung.da.options")
@@ -2482,7 +2486,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
                 }
             self._observe.apply(write_href, optimistic_body, source="optimistic")
-            self._observe.mark_write_pending(
+            previous_settle = self._observe.mark_write_pending(
                 write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
             )
 
@@ -2499,15 +2503,43 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         try:
             await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+            if remote_control_off and not await self._took_effect(path_segs, body):
+                # Sent only because the descriptor waives Remote Control; the
+                # appliance answered 2.04 but dropped it, as some boards do
+                # with it off (docs/investigations/oven-cycle-start.md).
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="remote_control_disabled",
+                )
         except HomeAssistantError as err:
             # The appliance never took it: let the next poll replace the
             # optimistic value instead of holding it for the settle window.
             if not write_only:
-                self._observe.release_write_pending(write_href)
-            if err.translation_key == "command_refused":
+                self._observe.restore_write_pending(write_href, previous_settle)
+            if err.translation_key in ("command_refused", "remote_control_disabled"):
                 await self.async_request_refresh()
             raise
         await self.async_request_refresh()
+
+    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
+        """Whether a fresh read shows `body`. A read that fails proves
+        nothing, so it counts as taken."""
+        await asyncio.sleep(self._CONFIRM_DELAY_S)
+
+        def _read() -> Any:
+            sess = self._session
+            if sess is None:
+                return None
+            code, rep = sess.read(path_segs, timeout=self._POLL_TIMEOUT_S)
+            return rep if _coap_accepted(code) and isinstance(rep, dict) else None
+
+        async with self._session_lock:
+            try:
+                rep = await self.hass.async_add_executor_job(_read)
+            except Exception as err:
+                self._log.debug("confirming read of %s failed: %s", path_segs, err)
+                return True
+        return rep is None or _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2559,7 +2591,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
-        if code >> 5 != 2:
+        if not _coap_accepted(code):
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.
             raise HomeAssistantError(

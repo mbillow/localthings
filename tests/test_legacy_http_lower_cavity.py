@@ -369,13 +369,34 @@ async def test_the_lower_cavity_becomes_its_own_device(hass: HomeAssistant):
     assert any(b.subdevice == lower and b.desc is STOP_BUTTON for b in coordinator.bound)
 
 
+class _StopsOnStop(dict):
+    """Routes where the lower cavity reads Run until a PUT reaches it."""
+
+    def get(self, key, default=None):
+        if key == "/devices/1/operation" and ("PUT", "/devices/1") in _requests():
+            return (200, {"Operation": LOWER["Operation"]})
+        return super().get(key, default)
+
+
+def _remote_control_off(routes: dict) -> dict:
+    off = {"Configuration": {"remoteControlEnabled": False}}
+    routes["/devices/0/configuration"] = (200, off)
+    routes["/devices/1/configuration"] = (200, off)
+    return routes
+
+
+@pytest.fixture
+def _no_confirm_wait(monkeypatch):
+    monkeypatch.setattr(
+        "custom_components.localthings.coordinator.LocalThingsCoordinator._CONFIRM_DELAY_S", 0.0
+    )
+
+
+@pytest.mark.usefixtures("_no_confirm_wait")
 async def test_stop_reaches_the_lower_cavity_with_remote_control_off(hass: HomeAssistant):
     """The reporter's Stop with the bypass on stopped the upper cavity but
     not the lower (every write went to /devices/0)."""
-    off = {"Configuration": {"remoteControlEnabled": False}}
-    routes = _routes(lower=_running(LOWER))
-    routes["/devices/0/configuration"] = (200, off)
-    routes["/devices/1/configuration"] = (200, off)
+    routes = _StopsOnStop(_remote_control_off(_routes(lower=_running(LOWER))))
     coordinator = await _discovered(hass, routes)
     lower = _lower(coordinator)
     stop = next(b for b in coordinator.bound if b.subdevice == lower and b.desc is STOP_BUTTON)
@@ -383,6 +404,22 @@ async def test_stop_reaches_the_lower_cavity_with_remote_control_off(hass: HomeA
 
     await coordinator.async_send_command(stop, STOP_BUTTON.payload)
 
+    assert ("PUT", "/devices/1") in _requests()
+
+
+@pytest.mark.usefixtures("_no_confirm_wait")
+async def test_a_stop_dropped_with_remote_control_off_says_so(hass: HomeAssistant):
+    """An appliance that answers 2.04 and keeps running gets the same error
+    the gate used to give before sending anything."""
+    routes = _remote_control_off(_routes(lower=_running(LOWER)))
+    coordinator = await _discovered(hass, routes)
+    lower = _lower(coordinator)
+    stop = next(b for b in coordinator.bound if b.subdevice == lower and b.desc is STOP_BUTTON)
+
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_send_command(stop, STOP_BUTTON.payload)
+
+    assert err.value.translation_key == "remote_control_disabled"
     assert ("PUT", "/devices/1") in _requests()
 
 

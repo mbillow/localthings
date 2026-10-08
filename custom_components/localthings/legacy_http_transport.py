@@ -226,7 +226,11 @@ class LegacyHttpTransport:
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
-            linked_timeout = timeout if deadline is None else _remaining(deadline)
+            try:
+                linked_timeout = timeout if deadline is None else _remaining(deadline)
+            except TimeoutError:
+                _LOGGER.debug("%s: no time left for %s's linked resources", self._host, base)
+                break
             linked_status, linked = self._request(
                 "GET", f"{base}/{endpoint}", timeout=linked_timeout
             )
@@ -389,7 +393,7 @@ class LegacyHttpTransport:
         if resource.endpoint == "operation":
             if not isinstance(wire, dict):
                 return None
-            return "/devices/0", {resource.wrapper: wire}
+            return _device_path(index), {resource.wrapper: wire}
 
         if resource.endpoint == "temperatures":
             if not isinstance(wire, list) or len(wire) != 1 or not isinstance(wire[0], dict):
@@ -398,17 +402,17 @@ class LegacyHttpTransport:
             item_id = item.pop("id", None)
             if item_id is None:
                 return None
-            return f"/devices/0/temperatures/{item_id}", item
+            return f"{_device_path(index)}/temperatures/{item_id}", item
 
         if resource.endpoint in {"mode", "wind"}:
             if not isinstance(wire, dict):
                 return None
-            return f"/devices/0/{resource.endpoint}", wire
+            return f"{_device_path(index)}/{resource.endpoint}", wire
 
         # No direct-write behavior has been confirmed for the remaining
         # TP6X_RAC resources. Preserve the existing aggregate path rather
         # than guessing.
-        return "/devices/0", aggregate
+        return _device_path(index), aggregate
 
     def _idle(self, index: int) -> bool:
         operation = self._state_at(index).last_bodies.get("Operation") or {}
@@ -445,13 +449,20 @@ class LegacyHttpTransport:
             return http_status_to_coap(status), response
         held.clear()
         time.sleep(_START_SETTLE_S)
-        state_status, state = self._request("GET", f"{base}/operation", timeout=timeout)
-        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
-        if state_status == 200 and isinstance(operation, dict) and operation.get("state") == "Run":
+        if self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        status, response = self._request("PUT", base, body=_RUN, timeout=timeout)
-        return http_status_to_coap(status), response
+        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
+        if not 200 <= run_status < 300 and self._running(index, timeout):
+            # It got there by itself between the read and the Run.
+            return http_status_to_coap(status), response
+        return http_status_to_coap(run_status), run_response
+
+    def _running(self, index: int, timeout: float) -> bool:
+        path = f"{_device_path(index)}/operation"
+        status, state = self._request("GET", path, timeout=timeout)
+        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
+        return status == 200 and isinstance(operation, dict) and operation.get("state") == "Run"
 
     def _with_staged(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         """`bodies` as the next start would leave them.
@@ -590,6 +601,12 @@ class LegacyHttpTransport:
             # What every request gets while Remote Control is off at the
             # panel -- the everyday case, so it reads as a reason, not a code.
             return response.status, "Remote Control is off at the appliance"
+        if response.status >= 400 and isinstance(body, dict):
+            # The bridge's `Control fail, <...>`, as text: the shape the DTLS
+            # boards give it in (transport.Transport).
+            description = body.get("errorDescription")
+            if isinstance(description, str) and description:
+                return response.status, description
         return response.status, body
 
 
