@@ -2180,6 +2180,9 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "command_refused": {
+      "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
+    },
     "debug_read_failed": {
       "message": "Het lezen van {href} is mislukt: {error}"
     },

@@ -2180,6 +2180,9 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "command_refused": {
+      "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
+    },
     "debug_read_failed": {
       "message": "Das Lesen von {href} ist fehlgeschlagen: {error}"
     },

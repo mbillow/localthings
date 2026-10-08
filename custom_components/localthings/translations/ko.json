@@ -2180,6 +2180,9 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "command_refused": {
+      "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
+    },
     "debug_read_failed": {
       "message": "{href}에서 읽기가 실패했습니다: {error}"
     },

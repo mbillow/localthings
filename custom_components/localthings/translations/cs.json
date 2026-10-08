@@ -2180,6 +2180,9 @@
     "command_failed": {
       "message": "Příkaz pro {href} selhal i po opětovném připojení: {error}"
     },
+    "command_refused": {
+      "message": "Spotřebič odmítl příkaz pro {href}: {error}"
+    },
     "debug_read_failed": {
       "message": "Čtení z {href} selhalo: {error}"
     },

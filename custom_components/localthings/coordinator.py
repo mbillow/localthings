@@ -254,6 +254,13 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     return f"{cavity} oven" if cavity else None
 
 
+def _refusal(code: int, response: Any) -> str:
+    """A refused write's CoAP code, with the appliance's own reason when it
+    gave one as text (the 8888 bridge's `Control fail, ...`)."""
+    text = f"{code >> 5}.{code & 0x1F:02d}"
+    return f"{text} {response}" if isinstance(response, str) and response else text
+
+
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     """Whether everything `payload` wrote is present in `readback`.
 
@@ -2490,7 +2497,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
                 )
 
-        await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+        try:
+            await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+        except HomeAssistantError as err:
+            # The appliance never took it: let the next poll replace the
+            # optimistic value instead of holding it for the settle window.
+            if not write_only:
+                self._observe.release_write_pending(write_href)
+            if err.translation_key == "command_refused":
+                await self.async_request_refresh()
+            raise
         await self.async_request_refresh()
 
     async def _async_put(
@@ -2509,15 +2525,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
+            return code, response
 
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
-                await self.hass.async_add_executor_job(_do_put)
+                code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
                 self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
@@ -2532,7 +2549,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._resubscribe_due = True
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
-                    await self.hass.async_add_executor_job(_do_put)
+                    code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
@@ -2542,6 +2559,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        if code >> 5 != 2:
+            # A refusal is the appliance's answer, not a dead session, so it
+            # is reported rather than retried.
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_refused",
+                translation_placeholders={"href": write_href, "error": _refusal(code, response)},
+            )
 
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.

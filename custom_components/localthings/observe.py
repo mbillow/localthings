@@ -125,6 +125,11 @@ class ObserveManager:
         with self._settle_lock:
             self._settle_until[href] = time.monotonic() + settle_s
 
+    def release_write_pending(self, href: str) -> None:
+        """End a settle window early: the write it protected was refused."""
+        with self._settle_lock:
+            self._settle_until.pop(href, None)
+
     def _is_settling(self, href: str) -> bool:
         with self._settle_lock:
             until = self._settle_until.get(href)

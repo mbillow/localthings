@@ -14,7 +14,7 @@ from typing import cast
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.localthings.legacy_http_transport import (
     LegacyHttpTransport,
@@ -147,6 +147,26 @@ class TestReads:
 
         assert code == 0x83
 
+    def test_a_listing_that_is_no_list_is_no_success(self):
+        _FakeConnection.routes["/devices"] = (200, "<html>")
+
+        code, _ = _transport().read(["connected", "vs", "1"], timeout=10.0)
+
+        assert code == 0xA2
+
+    def test_a_failed_listing_falls_back_to_the_record(self):
+        _FakeConnection.routes["/devices"] = (500, None)
+
+        resources = _seed(_transport(), 1)
+
+        assert "/operational/state/vs/1" in resources
+        assert "/connected/vs/1" not in resources
+        assert ("GET", "/devices/1") in _requests()
+
+    def test_a_sibling_shares_one_budget(self):
+        with pytest.raises(TimeoutError):
+            _transport().read(["device", "1"], timeout=0.0)
+
     def test_a_single_sibling_href_reads_its_own_endpoint(self):
         code, rep = _transport().read(["operational", "state", "vs", "1"], timeout=10.0)
 
@@ -247,6 +267,21 @@ class TestWrites:
         assert "does not list device 1" in reason
         assert _FakeConnection.log == []
 
+    def test_a_failed_listing_forgets_the_last_one(self):
+        """Unknown is not unlisted: commands go through again."""
+        _FakeConnection.routes = _routes(divided=False, lower=_running(LOWER))
+        transport = _transport()
+        _seed(transport, 1)
+        _FakeConnection.routes["/devices"] = (500, None)
+        _seed(transport, 1)
+
+        code, _ = transport.write(
+            ["operational", "state", "vs", "1"], {PREFIX + "state": "Ready"}, timeout=8.0
+        )
+
+        assert code == 0x44
+        assert ("PUT", "/devices/1") in _requests()
+
     def test_each_cavity_holds_its_own_state(self):
         _FakeConnection.routes = _routes(upper=_running(UPPER))
         transport = _transport()
@@ -279,6 +314,14 @@ def test_diagnostics_carry_the_lower_cavity_bodies():
 
     assert diagnostics["device_bodies"]["1"]["Operation"] == LOWER["Operation"]
     assert "Diagnosis" in diagnostics["bodies"]
+
+
+def test_diagnostics_list_only_devices_that_were_read():
+    transport = _transport()
+    _seed(transport, 0)
+    transport.write(["operational", "state", "vs", "3"], {PREFIX + "state": "Ready"}, timeout=8.0)
+
+    assert "device_bodies" not in transport.diagnostics()
 
 
 # ---------------------------------------------------------------------------
@@ -354,3 +397,35 @@ async def test_other_writes_still_need_remote_control(hass: HomeAssistant):
 
     with pytest.raises(ServiceValidationError):
         await coordinator.async_send_command(power, False)
+
+
+async def test_a_refused_stop_reaches_the_user(hass: HomeAssistant):
+    """Stop no longer waits on Remote Control, so an appliance that refuses
+    it has to say so."""
+    off = {"Configuration": {"remoteControlEnabled": False}}
+    routes = _routes(lower=_running(LOWER))
+    routes["/devices/1/configuration"] = (200, off)
+    routes[("PUT", "/devices/1")] = (403, {"errorCode": "SHE-001"})
+    coordinator = await _discovered(hass, routes)
+    lower = _lower(coordinator)
+    stop = next(b for b in coordinator.bound if b.subdevice == lower and b.desc is STOP_BUTTON)
+
+    with pytest.raises(HomeAssistantError) as err:
+        await coordinator.async_send_command(stop, STOP_BUTTON.payload)
+
+    assert err.value.translation_key == "command_refused"
+    placeholders = err.value.translation_placeholders or {}
+    assert "4.03 Remote Control is off" in placeholders["error"]
+
+
+async def test_a_command_to_an_unlisted_sibling_is_refused_aloud(hass: HomeAssistant):
+    coordinator = await _discovered(hass, _routes(divided=False))
+    lower = _lower(coordinator)
+    stop = next(b for b in coordinator.bound if b.subdevice == lower and b.desc is STOP_BUTTON)
+    _FakeConnection.log.clear()
+
+    with pytest.raises(HomeAssistantError) as err:
+        await coordinator.async_send_command(stop, STOP_BUTTON.payload)
+
+    assert err.value.translation_key == "command_refused"
+    assert not any(method == "PUT" for method, _ in _requests())

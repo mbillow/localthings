@@ -286,6 +286,9 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "command_refused": {
+      "message": "El electrodoméstico rechazó el comando para {href}: {error}"
+    },
     "debug_read_failed": {
       "message": "La lectura desde {href} falló: {error}"
     },

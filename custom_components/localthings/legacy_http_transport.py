@@ -189,9 +189,10 @@ class LegacyHttpTransport:
         if href == _SEED_HREF:
             return self._read_seed(index, timeout)
         if index and href == _LISTED_HREF:
-            status, devices = self._list_devices(timeout)
+            code, devices = self._list_devices(timeout)
             if devices is None:
-                return http_status_to_coap(status), None
+                self._state_at(index).listed = None
+                return code, None
             return 0x45, self._listed_rep(index, devices)
         resource = self._by_href.get(href)
         if resource is None:
@@ -207,12 +208,17 @@ class LegacyHttpTransport:
     def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
         """The whole device in the shape a /device/<n> batch arrives in: the
         aggregate plus the two resources it only links to. A linked resource
-        that fails is left out rather than failing the sweep."""
+        that fails is left out rather than failing the sweep.
+
+        A sibling's requests share `timeout` between them: setup probes
+        /device/1 and /device/2 on every appliance, within one budget."""
         if index:
-            status, record, devices = self._sibling_record(index, timeout)
+            deadline = time.monotonic() + timeout
+            code, record, devices = self._sibling_record(index, deadline)
             if record is None:
-                return status, None
+                return code, None
         else:
+            deadline = None
             status, body = self._request("GET", _device_path(0), timeout=timeout)
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
@@ -220,7 +226,10 @@ class LegacyHttpTransport:
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
-            linked_status, linked = self._request("GET", f"{base}/{endpoint}", timeout=timeout)
+            linked_timeout = timeout if deadline is None else _remaining(deadline)
+            linked_status, linked = self._request(
+                "GET", f"{base}/{endpoint}", timeout=linked_timeout
+            )
             if linked_status == 200 and isinstance(linked, dict):
                 bodies.update(unwrap(linked))
             else:
@@ -229,8 +238,9 @@ class LegacyHttpTransport:
             bodies = _with_record_description(bodies, record.get("description"))
         self._state_at(index).last_bodies = bodies
         resources = to_resources(self._with_staged(index, bodies), self._table)
-        if devices is not None:
-            resources[_LISTED_HREF] = self._listed_rep(index, devices)
+        if index:
+            if devices is not None:
+                resources[_LISTED_HREF] = self._listed_rep(index, devices)
             sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
             resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
         else:
@@ -241,20 +251,23 @@ class LegacyHttpTransport:
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     def _sibling_record(
-        self, index: int, timeout: float
-    ) -> tuple[int, dict[str, Any] | None, list]:
-        """A sibling's own record, from `/devices` while it is listed and from
-        `/devices/<n>` otherwise, with the `/devices` list it was judged by.
-        A record naming another id is refused, so a bridge echoing device 0
-        at any index can't produce a phantom sibling."""
-        status, devices = self._list_devices(timeout)
+        self, index: int, deadline: float
+    ) -> tuple[int, dict[str, Any] | None, list | None]:
+        """A sibling's own record, from `/devices` while it lists it and from
+        `/devices/<n>` otherwise, with the `/devices` list (None when that
+        read failed, so whether it is listed is unknown). A record naming
+        another id is refused, so a bridge echoing device 0 at any index
+        can't produce a phantom sibling."""
+        _, devices = self._list_devices(_remaining(deadline))
         if devices is None:
-            return http_status_to_coap(status), None, []
+            self._state_at(index).listed = None
         record = next(
-            (d for d in devices if isinstance(d, dict) and d.get("id") == str(index)), None
+            (d for d in devices or () if isinstance(d, dict) and d.get("id") == str(index)),
+            None,
         )
         if record is None:
-            status, body = self._request("GET", _device_path(index), timeout=timeout)
+            path = _device_path(index)
+            status, body = self._request("GET", path, timeout=_remaining(deadline))
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), None, devices
             record = unwrap(body)
@@ -263,9 +276,14 @@ class LegacyHttpTransport:
         return 0x45, record, devices
 
     def _list_devices(self, timeout: float) -> tuple[int, list | None]:
+        """`/devices`'s list, or None with the code its failure reads as."""
         status, body = self._request("GET", "/devices", timeout=timeout)
+        if status != 200:
+            return http_status_to_coap(status), None
         devices = body.get("Devices") if isinstance(body, dict) else None
-        return status, devices if status == 200 and isinstance(devices, list) else None
+        if not isinstance(devices, list):
+            return 0xA2, None  # 5.02: the bridge answered, with no device list
+        return 0x45, devices
 
     def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
         listed = any(isinstance(d, dict) and d.get("id") == str(index) for d in devices)
@@ -503,10 +521,12 @@ class LegacyHttpTransport:
         return {**bodies, _WASHER_WRAPPER: washer}
 
     def diagnostics(self) -> dict[str, Any]:
+        # Only devices whose record was read: a state is also created for
+        # any index a write or a rejected probe names.
         states = {
             index: state
             for (host, port, index), state in _STATE.items()
-            if (host, port) == (self._host, self._port)
+            if (host, port) == (self._host, self._port) and (state.last_bodies or not index)
         }
         main = states.get(0, _ApplianceState()).last_bodies
         out: dict[str, Any] = {
@@ -571,6 +591,14 @@ class LegacyHttpTransport:
             # panel -- the everyday case, so it reads as a reason, not a code.
             return response.status, "Remote Control is off at the appliance"
         return response.status, body
+
+
+def _remaining(deadline: float) -> float:
+    """What is left of a shared deadline; spent reads as a timeout."""
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise TimeoutError("the request budget is spent")
+    return left
 
 
 def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:

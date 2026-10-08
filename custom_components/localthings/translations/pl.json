@@ -2180,6 +2180,9 @@
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
     },
+    "command_refused": {
+      "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
+    },
     "debug_read_failed": {
       "message": "Odczyt z {href} nie powiódł się: {error}"
     },
