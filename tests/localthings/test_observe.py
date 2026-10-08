@@ -137,6 +137,40 @@ def test_apply_optimistic_bypasses_an_in_progress_settle_window():
     assert mgr.apply("/course/vs/0", {"Detergent": "1"}, source="poll") is False
 
 
+def test_a_refused_write_keeps_an_earlier_writes_settle_window():
+    mgr = _manager()
+    mgr.cache.apply_rep("/oven/vs/0", {"a": 1}, source="seed")
+    mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+    previous = mgr.settle_deadline("/oven/vs/0")
+    armed = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+
+    mgr.restore_write_pending("/oven/vs/0", previous, armed)
+
+    assert mgr.settle_deadline("/oven/vs/0") == previous
+
+
+def test_a_refused_write_alone_ends_its_settle_window():
+    mgr = _manager()
+    mgr.cache.apply_rep("/oven/vs/0", {"a": 1}, source="seed")
+    armed = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+
+    mgr.restore_write_pending("/oven/vs/0", None, armed)
+
+    assert mgr.apply("/oven/vs/0", {"a": 2}, source="poll") is True
+
+
+def test_a_refused_write_leaves_a_newer_writes_settle_window():
+    """Two writes queued on one href: the first is refused after the second
+    armed its window, which must survive."""
+    mgr = _manager()
+    first = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+    second = mgr.mark_write_pending("/oven/vs/0", settle_s=31.0)
+
+    mgr.restore_write_pending("/oven/vs/0", None, first)
+
+    assert mgr.settle_deadline("/oven/vs/0") == second
+
+
 def test_apply_accepts_update_after_settle_window_elapses():
     mgr = _manager()
     mgr.mark_write_pending("/oven/vs/0", settle_s=0.05)

@@ -271,7 +271,7 @@ class TestWrites:
         )
 
         assert code == http_status_to_coap(400)
-        assert response["errorDescription"] == "Control fail, <Mode.options=Course_63>"
+        assert response == "Control fail, <Mode.options=Course_63>"
 
     def test_the_other_tokens_in_that_same_array_still_write(self, transport):
         """The rule is about the field, not the resource: LaundryOutTime
@@ -412,6 +412,28 @@ class TestStartOnlyWrites:
         idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
 
         assert self._puts()[-1] == {"Device": {"Operation": {"state": "Run"}}}
+        assert len(self._puts()) == 2
+
+    def test_a_refused_run_on_a_cycle_that_started_anyway_is_no_refusal(self, idle):
+        """The cycle got to Run by itself between the read and the plain Run,
+        which the appliance then refuses."""
+
+        class _Starts(dict):
+            def get(self, key, default=None):
+                puts = sum(1 for method, *_ in _FakeConnection.log if method == "PUT")
+                if key == ("PUT", "/devices/0") and puts > 1:
+                    return (400, {"errorCode": "0", "errorDescription": "Control fail, <Run>"})
+                if key == "/devices/0/operation":
+                    state = "Run" if puts > 1 else "Ready"
+                    return (200, {"Operation": {"state": state}})
+                return super().get(key, default)
+
+        _FakeConnection.routes = _Starts(_FakeConnection.routes)
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        code, _ = idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert code == 0x44
         assert len(self._puts()) == 2
 
     def test_start_with_nothing_held_is_a_plain_run(self, idle):

@@ -669,10 +669,8 @@ OVEN_DOOR = Capability(
 
 
 def _is_lower_cavity(rep, resources):
-    """A cavity names itself in defaultMode ('LowerConvectionBake'), the same
-    signal coordinator._cavity_label uses for the device name."""
-    mode = (resources.get(cook.MODE_HREF) or {}).get("x.com.samsung.da.defaultMode")
-    return isinstance(mode, str) and mode.startswith("Lower")
+    """The same signal coordinator._cavity_label names the device by."""
+    return cook.cavity(resources) == "Lower"
 
 
 OVEN_CONNECTED = Capability(

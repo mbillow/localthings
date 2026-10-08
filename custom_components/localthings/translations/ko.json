@@ -2180,6 +2180,12 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "command_refused": {
+      "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "스마트 컨트롤이 꺼진 상태에서 {href} 명령을 보냈지만 가전제품에 아직 반영되지 않았습니다. 반응이 없으면 가전제품에서 스마트 컨트롤을 켜세요."
+    },
     "debug_read_failed": {
       "message": "{href}에서 읽기가 실패했습니다: {error}"
     },

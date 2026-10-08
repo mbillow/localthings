@@ -248,29 +248,22 @@ def _batch_element_reps(payload: list) -> dict[str, dict]:
     }
 
 
-# An oven cavity names itself in /mode/vs/0's defaultMode, which prefixes
-# the cavity onto the mode ('UpperConvection'/'LowerConvection' on the
-# dual-cavity board in issue #490). Only the prefix is a cavity; the rest
-# is a cooking mode and must not reach a device name.
-_CAVITY_PREFIXES = ("Upper", "Lower")
-
-
 def _cavity_label(resources: dict[str, dict]) -> str | None:
-    """'Upper oven'/'Lower oven' when this subdevice says which cavity it
-    is, else None.
+    """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
+    cavity = cook.cavity(resources)
+    return f"{cavity} oven" if cavity else None
 
-    Deliberately a two-entry table rather than a general camel-case split:
-    every other defaultMode in the corpus is a plain cooking mode, and
-    naming somebody's appliance 'Samsung Oven Convection Bake' would be a
-    worse outcome than the model label this falls back to.
-    """
-    mode = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.defaultMode")
-    if not isinstance(mode, str):
-        return None
-    for prefix in _CAVITY_PREFIXES:
-        if mode.startswith(prefix):
-            return f"{prefix} oven"
-    return None
+
+# Write errors after which the session is fine and a re-poll shows the
+# appliance's real state; a dead session isn't re-polled (see _async_put).
+_APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+
+
+def _refusal(code: int, response: Any) -> str:
+    """A refused write's CoAP code, with the appliance's own reason when it
+    gave one (`Control fail, <...>`; see transport.Transport)."""
+    text = _coap_code_str(code)
+    return f"{text} {response}" if isinstance(response, str) and response else text
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -371,6 +364,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # async_send_command can be sized to outlast both round trips a write
     # triggers: the PUT itself, then the confirming summary poll.
     _POST_TIMEOUT_S: float = 8.0
+    # How long a write sent with Remote Control off is given before it is
+    # read back (_took_effect).
+    _CONFIRM_DELAY_S: float = 3.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -2373,9 +2369,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         a write with a user-facing message ahead of write_fn's silent
         no-op. The remote-control check runs first, unconditionally, unless
         the user opted out via CONF_BYPASS_REMOTE_CONTROL (issue #54: some
-        devices accept some writes even while reporting remote control off)
-        or the laundry firmware declares itself writable without Smart
-        Control."""
+        devices accept some writes even while reporting remote control off),
+        the laundry firmware declares itself writable without Smart Control,
+        or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
@@ -2407,11 +2403,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # resource instead of its own subdevice's.
         raw_resources = self._cache.snapshot()
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
-        if (
+        remote_control_off = (
             not bypass_remote_control
             and remote_control_required_for_write(raw_resources, href or "")
             and not self._remote_control_enabled(bound_entity.subdevice)
-        ):
+        )
+        if remote_control_off and desc.needs_remote_control:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="remote_control_disabled",
@@ -2474,6 +2471,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
         write_only = getattr(desc, "write_only", False)
+        previous_settle = self._observe.settle_deadline(write_href)
+        armed_settle = 0.0
         if not write_only:
             optimistic_body = body
             new_options = body.get("x.com.samsung.da.options")
@@ -2493,23 +2492,63 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
                 }
             self._observe.apply(write_href, optimistic_body, source="optimistic")
-            self._observe.mark_write_pending(
+            armed_settle = self._observe.mark_write_pending(
                 write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
             )
 
         def _rearm() -> None:
+            nonlocal armed_settle
             # The retry's own reconnect pause + second PUT can eat well
             # into the settle window armed above, leaving too little of it
             # for the confirming poll below and reviving the
             # revert-then-reapply symptom settle_s exists to prevent (issue
             # #9). Re-arm it fresh now that the write actually landed.
             if not write_only:
-                self._observe.mark_write_pending(
+                armed_settle = self._observe.mark_write_pending(
                     write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
                 )
 
-        await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+        try:
+            await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+            if remote_control_off and not await self._took_effect(path_segs, body):
+                # Sent only because the descriptor waives Remote Control. Some
+                # boards answer 2.04 and drop a write with it off
+                # (docs/investigations/oven-cycle-start.md); others take it
+                # but are still winding down (a drain) when read back.
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_not_confirmed",
+                    translation_placeholders={"href": write_href},
+                )
+        except (HomeAssistantError, asyncio.CancelledError) as err:
+            # Not known to have landed: let the next poll replace the
+            # optimistic value instead of holding it for the settle window.
+            if not write_only:
+                self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
+            if getattr(err, "translation_key", None) in _APPLIANCE_ANSWERED:
+                await self.async_request_refresh()
+            raise
         await self.async_request_refresh()
+
+    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
+        """Whether a fresh read shows `body`. A read that fails proves
+        nothing, so it counts as taken."""
+        await asyncio.sleep(self._CONFIRM_DELAY_S)
+
+        def _read() -> Any:
+            sess = self._session
+            if sess is None:
+                return None
+            code, rep = sess.read(path_segs, timeout=self._POST_TIMEOUT_S)
+            return rep if _coap_accepted(code) and isinstance(rep, dict) else None
+
+        async with self._session_lock:
+            try:
+                rep = await self.hass.async_add_executor_job(_read)
+            except Exception as err:
+                self._log.debug("confirming read of %s failed: %s", path_segs, err)
+                return True
+        return rep is None or _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2527,15 +2566,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
+            return code, response
 
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
-                await self.hass.async_add_executor_job(_do_put)
+                code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
                 self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
@@ -2550,7 +2590,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._resubscribe_due = True
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
-                    await self.hass.async_add_executor_job(_do_put)
+                    code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
@@ -2560,6 +2600,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        if not _coap_accepted(code):
+            # A refusal is the appliance's answer, not a dead session, so it
+            # is reported rather than retried.
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_refused",
+                translation_placeholders={"href": write_href, "error": _refusal(code, response)},
+            )
 
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.

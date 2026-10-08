@@ -2180,6 +2180,12 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "command_refused": {
+      "message": "The appliance refused the command to {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "The command to {href} was sent with Remote Control off, but the appliance doesn't show it yet. If it doesn't follow, turn on Remote Control at the appliance."
+    },
     "debug_read_failed": {
       "message": "The read from {href} failed: {error}"
     },

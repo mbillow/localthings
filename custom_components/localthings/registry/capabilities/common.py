@@ -455,6 +455,10 @@ def remote_control_required_for_write(resources: dict, bound_href: str) -> bool:
     writes (wash temp, spin, course options, buzzer, ...) with remote
     control off, but cycle start/pause/stop on /operational/state still
     need Smart Control. Absent that flag, keep the historical blanket gate.
+
+    A descriptor can still waive it (needs_remote_control=False); such a
+    write is read back, and reported as needing Remote Control if it didn't
+    take (coordinator._took_effect).
     """
     if not model_setting_without_sc(resources):
         return True

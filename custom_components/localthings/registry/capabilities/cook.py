@@ -241,6 +241,29 @@ def share_mode_spec(resources: dict, mode_hrefs: list[str]) -> dict:
     return shared
 
 
+_CAVITY_PREFIXES = ("Upper", "Lower")
+# The 8888 Flex Duo's lower cavity describes itself LCD_OV_WALL_16K_DIV (#572).
+_LOWER_CAVITY_SUFFIX = "_DIV"
+
+
+def cavity(resources: dict) -> str | None:
+    """'Upper'/'Lower' when a cavity says which it is, else None.
+
+    OCF boards prefix the cavity onto defaultMode ('LowerConvection', #490).
+    Only those two prefixes count: every other defaultMode in the corpus is a
+    plain cooking mode.
+    """
+    mode = (resources.get(MODE_HREF) or {}).get("x.com.samsung.da.defaultMode")
+    if isinstance(mode, str):
+        for prefix in _CAVITY_PREFIXES:
+            if mode.startswith(prefix):
+                return prefix
+    description = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.description")
+    if isinstance(description, str) and description.endswith(_LOWER_CAVITY_SUFFIX):
+        return "Lower"
+    return None
+
+
 def startable_modes(resources: dict) -> list[str]:
     """Modes this cavity can start now: declared startable, and in its own
     live supportedModes when it reports one."""

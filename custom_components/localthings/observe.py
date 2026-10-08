@@ -121,9 +121,27 @@ class ObserveManager:
         """
         self._on_applied = callback
 
-    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> None:
+    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> float:
+        """Arm the settle window; returns its deadline."""
         with self._settle_lock:
-            self._settle_until[href] = time.monotonic() + settle_s
+            deadline = time.monotonic() + settle_s
+            self._settle_until[href] = deadline
+            return deadline
+
+    def settle_deadline(self, href: str) -> float | None:
+        with self._settle_lock:
+            return self._settle_until.get(href)
+
+    def restore_write_pending(self, href: str, previous: float | None, armed: float) -> None:
+        """Undo the window a refused write armed (`armed`), back to what it
+        replaced. A newer write that has armed its own since keeps it."""
+        with self._settle_lock:
+            if self._settle_until.get(href) != armed:
+                return
+            if previous is None or previous <= time.monotonic():
+                self._settle_until.pop(href, None)
+            else:
+                self._settle_until[href] = previous
 
     def _is_settling(self, href: str) -> bool:
         with self._settle_lock:
