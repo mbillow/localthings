@@ -36,6 +36,7 @@ from .legacy_http import (
     add_staged,
     batch_steps,
     course_table,
+    has_cavities,
     http_status_to_coap,
     is_mapped,
     is_start,
@@ -47,6 +48,7 @@ from .legacy_http import (
     to_write,
     unmapped_wrappers,
     unwrap,
+    with_cavity_modes,
     with_staged,
 )
 from .legacy_http_tls import client_context
@@ -202,7 +204,7 @@ class LegacyHttpTransport:
         status, body = self._request("GET", path, timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        bodies = self._with_staged(index, unwrap(body))
+        bodies = self._with_modes(index, self._with_staged(index, unwrap(body)))
         return 0x45, to_resources(bodies, self._table).get(href, {})
 
     def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
@@ -226,6 +228,12 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
+            if has_cavities(self._family):
+                # Whether the divider is in decides which modes the upper
+                # cavity offers (with_cavity_modes).
+                _, listing = self._list_devices(timeout)
+                if listing is not None:
+                    self._listed_rep(1, listing)
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -244,7 +252,9 @@ class LegacyHttpTransport:
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
         self._state_at(index).last_bodies = bodies
-        resources = to_resources(self._with_staged(index, bodies), self._table)
+        resources = to_resources(
+            self._with_modes(index, self._with_staged(index, bodies)), self._table
+        )
         if index:
             if devices is not None:
                 resources[_LISTED_HREF] = self._listed_rep(index, devices)
@@ -491,6 +501,10 @@ class LegacyHttpTransport:
                 del state.staged[key]
         held = with_staged(bodies, {key: value for key, (value, _) in state.staged.items()})
         return self._with_course_defaults(state, held)
+
+    def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
+        divided = True if index else self._state_at(1).listed
+        return with_cavity_modes(self._family, bodies, index, divided)
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]

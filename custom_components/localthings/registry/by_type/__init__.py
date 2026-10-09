@@ -118,6 +118,7 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "AHD": "range_hood",
     "RANGE": "range",  # issue #44 -- cooktop+oven combo
     "OVEN": "oven",  # issue #55 -- wall oven, no burners
+    "OV": "oven",  # issue #572 -- LCD_OV_WALL, the 8888 Flex Duo
     "MICROWAVE": "microwave",  # issues #66, #121
     "COOKTOP": "cooktop",  # issue #86 -- standalone, no oven
     # Legacy ARTIK051 gas cooktops ('ARTIK051_GB_CT_001'), whose modelNum
