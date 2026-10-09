@@ -20,6 +20,8 @@ import cbor2
 from smartthings_local.ocf.observe_refresh import ObserveRefreshTask
 from smartthings_local.ocf.state_cache import StateCache
 
+from .registry.capabilities.common import merge_options_field
+
 _LOGGER = logging.getLogger(__name__)
 
 REFRESH_INTERVAL_S = 6 * 3600.0
@@ -29,6 +31,8 @@ MODE_POLL = "poll"
 
 DEFAULT_SETTLE_S = 4.0
 GRACE_PERIOD_S = 15.0
+
+_OPTIONS_FIELD = "x.com.samsung.da.options"
 
 
 def _rep_diff(cached: dict, sweep: dict) -> dict:
@@ -209,7 +213,20 @@ class ObserveManager:
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
         with self._cache_lock:
-            merged = dict(rep) if _is_alarms_href(href) else {**(self.cache.get(href) or {}), **rep}
+            prior = self.cache.get(href) or {}
+            merged = dict(rep) if _is_alarms_href(href) else {**prior, **rep}
+            # A notify's options[] carries only the tokens that changed (a
+            # washer dial change pushes just ["AvailableDelayTime_87"], issue
+            # #579), so merge it by prefix; polls and sweeps read the whole
+            # array and still replace it.
+            if (
+                source == "observe"
+                and isinstance(rep.get(_OPTIONS_FIELD), list)
+                and isinstance(prior.get(_OPTIONS_FIELD), list)
+            ):
+                merged[_OPTIONS_FIELD] = merge_options_field(
+                    prior[_OPTIONS_FIELD], rep[_OPTIONS_FIELD]
+                )
             changed = self.cache.apply_rep(href, merged, source=source)
         # Outside the cache lock -- the hook takes locks of its own and
         # never reads the cache back. `source` is passed along rather than

@@ -59,6 +59,58 @@ def test_apply_merges_partial_update_onto_prior_rep():
     assert cached["x.com.samsung.da.supportedOptions"] == ["CV_FDR_WINE", "CV_FDR_MEAT"]
 
 
+_WASHER_OPTIONS = [
+    "Course_1B",
+    "AvailableDelayTime_87",
+    "DetergentLevelCtrl_2",
+    "SoftenerLevelCtrl_2",
+    "BubbleSoak_Off",
+    "DrumCleanLog_2026-09-30T10:00:00",
+]
+
+
+def test_observe_notify_merges_partial_options_by_prefix():
+    """Issue #579: on a dial change a washer's /course/vs/0 notify carries
+    only the tokens that changed. Replacing the cached array with it wiped
+    Course_ and every sibling setting until the next sweep."""
+    mgr = _manager()
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": list(_WASHER_OPTIONS)}, source="poll")
+
+    mgr.apply(
+        "/course/vs/0", {"x.com.samsung.da.options": ["AvailableDelayTime_25"]}, source="observe"
+    )
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": ["Course_1E"]}, source="observe")
+
+    cached = mgr.cache.get("/course/vs/0")
+    assert cached is not None
+    options = cached["x.com.samsung.da.options"]
+    assert options == [
+        "Course_1E",
+        "AvailableDelayTime_25",
+        "DetergentLevelCtrl_2",
+        "SoftenerLevelCtrl_2",
+        "BubbleSoak_Off",
+        "DrumCleanLog_2026-09-30T10:00:00",
+    ]
+
+
+def test_poll_still_replaces_the_whole_options_array():
+    """A poll or sweep reads the complete array, so a token the device has
+    dropped (one the new course doesn't support) must go with it."""
+    mgr = _manager()
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": list(_WASHER_OPTIONS)}, source="poll")
+
+    mgr.apply(
+        "/course/vs/0",
+        {"x.com.samsung.da.options": ["Course_22", "SoftenerLevelCtrl_2"]},
+        source="poll",
+    )
+
+    cached = mgr.cache.get("/course/vs/0")
+    assert cached is not None
+    assert cached["x.com.samsung.da.options"] == ["Course_22", "SoftenerLevelCtrl_2"]
+
+
 def test_apply_fully_replaces_alarms_href_instead_of_merging():
     """Regression test for issue #348: /alarms/vs/0's `items` array is a
     complete snapshot of every currently-active alarm, not a partial field
