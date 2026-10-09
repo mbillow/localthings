@@ -184,7 +184,14 @@ class LegacyHttpTransport:
             return int(tail), f"{head}{sep}0"
         return 0, href
 
-    def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]:
+    def read(
+        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+    ) -> tuple[int, Any]:
+        if query:
+            # 4.02 Bad Option: these endpoints have no counterpart to an OCF
+            # interface query, and ignoring it would pass off a plain read as
+            # the one asked for.
+            return 0x82, None
         index, href = self._locate("/" + "/".join(path_segs))
         if href == _SEED_HREF:
             return self._read_seed(index, timeout)

@@ -7,7 +7,7 @@ import contextlib
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
@@ -2801,7 +2801,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._log.debug("raw write follow-up read failed: %s", e)
         return code, new_rep, response_body
 
-    def _raw_read_blocking(self, path_segs: list[str], href: str) -> tuple[int, dict, Any]:
+    def _raw_read_blocking(
+        self, path_segs: list[str], href: str, query: Sequence[str] = ()
+    ) -> tuple[int, dict, Any]:
         """Debug primitive: a live GET, deliberately bypassing the cache
         (issue #300) -- the cache can be up to a poll interval stale,
         exactly the staleness that makes testing whether a write held or
@@ -2818,6 +2820,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         an accepted-but-empty `2.05 {}`, which reads as "the resource is
         there and has nothing in it" -- the opposite of what a full batch
         means, and how issue #335's `/sec/devices` was nearly written off.
+
+        `query` is sent as URI-Query options (e.g. `if=oic.if.b`). A rep read
+        under one is kept out of the cache, since an interface query can
+        change which properties the appliance returns.
         """
         if self._session is None:
             self._connect_session()
@@ -2827,18 +2833,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rep: dict = {}
         body: Any = None
         try:
-            code, body = sess.read(path_segs, timeout=10.0)
+            code, body = sess.read(path_segs, timeout=10.0, query=query)
         except DecodeError as e:
             # A body that will not decode is itself what a debug read exists
             # to surface, so it is reported raw rather than raised.
             self._log.debug("raw read decode failed for %s: %s", href, e)
             code, body = e.code, e.payload
         if code == 0x45 and isinstance(body, dict):
-            self._observe.apply(href, body, source="poll")
+            if not query:
+                self._observe.apply(href, body, source="poll")
             rep = body
         return code, rep, body
 
-    async def async_raw_read(self, href: str) -> tuple[int, dict, Any]:
+    async def async_raw_read(self, href: str, query: Sequence[str] = ()) -> tuple[int, dict, Any]:
         """Debug-only live GET (issue #300, backs the read_resource
         service). Same href validation as async_raw_write. Three-tuple --
         see `_raw_read_blocking` for why the raw body comes back alongside
@@ -2853,7 +2860,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._session_lock:
             try:
                 return await self.hass.async_add_executor_job(
-                    self._raw_read_blocking, path_segs, norm_href
+                    self._raw_read_blocking, path_segs, norm_href, tuple(query)
                 )
             except Exception as e:
                 # Unlike async_raw_write_sequence, there's nothing to

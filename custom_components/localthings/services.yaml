@@ -140,9 +140,11 @@ read_resource:
     href:
       name: Resource href
       description: >-
-        Canonical resource href to read (e.g. /mode/vs/0). Omit to get the
-        cached snapshot of every tracked resource instead of a live GET.
+        Canonical resource href to read (e.g. /mode/vs/0). Add a query
+        after ? to send it with the GET, e.g. /device/1?if=oic.if.b, with
+        & between parameters. Omit to get the cached snapshot of every
+        tracked resource instead of a live GET.
       required: false
-      example: /mode/vs/0
+      example: /device/1?if=oic.if.b
       selector:
         text:
