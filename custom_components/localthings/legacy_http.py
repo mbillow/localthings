@@ -192,6 +192,54 @@ def _family_key(family: str | None) -> str:
     return _CAPACITY.sub("", family or "")
 
 
+# Families whose `supportedModes` is one static list on every cavity, divider
+# in or out, mapped to the lower cavity's modes, which that list never names.
+# On the NV51K777OS (#572), cooks started at the panel ran as
+# UpperConvectionBake and LowerConvectionBake with the divider in; the other
+# two Lower modes are the reporter's reading of the panel.
+_LOWER_CAVITY_MODES: dict[str, tuple[str, ...]] = {
+    "LCD_OV_WALL": ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast"),
+}
+
+_IDLE_MODE = "NoOperation"
+
+
+def has_cavities(family: str | None) -> bool:
+    return _family_key(family) in _LOWER_CAVITY_MODES
+
+
+def with_cavity_modes(
+    family: str | None, bodies: dict[str, Any], index: int, divided: bool | None
+) -> dict[str, Any]:
+    """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
+    run: Upper modes on device 0 with the divider in, unprefixed ones with
+    it out, the family's Lower modes on device 1 and none with the divider
+    out. Device 0's is left as reported while the divider state is unknown.
+    The mode the cavity reports is always kept, so a running cook still
+    reads as one of its options."""
+    lower = _LOWER_CAVITY_MODES.get(_family_key(family))
+    mode = bodies.get("Mode")
+    if lower is None or not isinstance(mode, Mapping):
+        return bodies
+    supported = _split_joined(mode.get("supportedModes"))
+    if not isinstance(supported, list):
+        return bodies
+    supported = [m for m in supported if isinstance(m, str)]
+    if index:
+        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *lower]
+    elif divided is None:
+        return bodies
+    elif divided:
+        modes = [m for m in supported if m == _IDLE_MODE or m.startswith("Upper")]
+    else:
+        modes = [m for m in supported if not m.startswith(("Upper", "Lower"))]
+    current = mode.get("modes")
+    for name in current if isinstance(current, list) else ():
+        if isinstance(name, str) and name not in modes:
+            modes.append(name)
+    return {**bodies, "Mode": {**mode, "supportedModes": [",".join(modes)]}}
+
+
 def table_for(family: str | None) -> tuple[Resource, ...]:
     """The envelope table for `family`, or IDENTITY when it is unmapped."""
     return FAMILIES.get(_family_key(family), IDENTITY)

@@ -23,6 +23,7 @@ from custom_components.localthings.legacy_http_transport import (
 )
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
+from custom_components.localthings.registry.by_type import oven, resolve
 from custom_components.localthings.registry.capabilities import cook
 from custom_components.localthings.registry.capabilities.operational import (
     OPERATIONAL_STATE,
@@ -53,6 +54,7 @@ def _routes(*, divided: bool = True, upper: dict = UPPER, lower: dict = LOWER) -
         "/devices/0": (200, {"Device": upper}),
         "/devices/0/configuration": (200, FIXTURE["device0_configuration"]),
         "/devices/0/information": (200, FIXTURE["device0_information"]),
+        "/devices/0/mode": (200, {"Mode": upper["Mode"]}),
         "/devices/0/operation": (200, {"Operation": upper["Operation"]}),
         "/devices/1": (200, {"Device": lower}),
         "/devices/1/configuration": (200, FIXTURE["device1_configuration"]),
@@ -180,6 +182,14 @@ class TestReads:
 
         assert all(href.endswith("/0") for href in resources)
         assert "/connected/vs/0" not in resources
+
+    def test_the_main_reads_the_listing_only_for_a_family_with_cavities(self):
+        _seed(_transport(), 0)
+        assert ("GET", "/devices") in _requests()
+
+        _FakeConnection.log.clear()
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": {"Information": {}}})
+        _seed(_transport("TP6X_WASHER"), 0)
         assert ("GET", "/devices") not in _requests()
 
     def test_a_sibling_the_bridge_does_not_serve_is_a_404(self):
@@ -194,6 +204,132 @@ class TestReads:
         code, _ = _transport().read(["device", "2"], timeout=10.0)
 
         assert code == 0x84
+
+
+def _supported(resources: dict[str, dict], index: int) -> list[str]:
+    return resources[f"/mode/vs/{index}"][PREFIX + "supportedModes"]
+
+
+def _startable(resources: dict[str, dict], index: int) -> list[str]:
+    canonical = {href[: -len(str(index))] + "0": rep for href, rep in resources.items()}
+    return cook.startable_modes(canonical)
+
+
+class TestCavityModes:
+    """The bridge reports one static supportedModes on both cavities, divider
+    in or out; what each cavity can run comes from the divider (#572)."""
+
+    def test_divider_in_the_upper_cavity_offers_its_upper_modes(self):
+        transport = _transport()
+
+        modes = _supported(_seed(transport, 0), 0)
+
+        assert "NoOperation" in modes
+        assert all(m.startswith("Upper") for m in modes if m != "NoOperation")
+        assert "UpperConvectionBake" in modes
+        assert "ConvectionBake" not in modes
+
+    def test_divider_out_the_whole_oven_offers_the_unprefixed_modes(self):
+        _FakeConnection.routes = _routes(divided=False)
+
+        modes = _supported(_seed(_transport(), 0), 0)
+
+        assert "ConvectionBake" in modes
+        assert not any(m.startswith(("Upper", "Lower")) for m in modes)
+
+    def test_the_lower_cavity_offers_the_lower_modes(self):
+        resources = _seed(_transport(), 1)
+
+        assert _supported(resources, 1) == [
+            "NoOperation",
+            "LowerBake",
+            "LowerConvectionBake",
+            "LowerConvectionRoast",
+        ]
+        assert _startable(resources, 1) == [
+            "LowerBake",
+            "LowerConvectionBake",
+            "LowerConvectionRoast",
+        ]
+
+    def test_only_upper_modes_start_with_the_divider_in(self):
+        startable = _startable(_seed(_transport(), 0), 0)
+
+        assert "UpperConvectionBake" in startable
+        assert all(m.startswith("Upper") for m in startable)
+
+    @pytest.mark.parametrize("divided", [True, False])
+    def test_the_oven_routes_whatever_its_modes(self, divided):
+        """Bake is in the list only with the divider out, so routing can't
+        rest on it."""
+        _FakeConnection.routes = _routes(divided=divided)
+
+        assert resolve(_seed(_transport(), 0)) is oven.REGISTRY
+
+    def test_an_unknown_divider_leaves_the_list_as_reported(self):
+        _FakeConnection.routes["/devices"] = (500, None)
+
+        modes = _supported(_seed(_transport(), 0), 0)
+
+        assert "UpperConvectionBake" in modes and "ConvectionBake" in modes
+
+    @pytest.mark.parametrize(
+        ("index", "key", "mode"),
+        [
+            (0, "device0_running_divided", "UpperConvectionBake"),
+            (1, "device1_running_divided", "LowerConvectionBake"),
+        ],
+    )
+    def test_a_running_cavity_reports_one_of_its_own_modes(self, index, key, mode):
+        running = FIXTURE[key]["Device"]
+        if index:
+            _FakeConnection.routes = _routes(lower=running)
+        else:
+            _FakeConnection.routes = _routes(upper=running)
+
+        resources = _seed(_transport(), index)
+
+        assert resources[f"/mode/vs/{index}"][PREFIX + "modes"] == [mode]
+        assert mode in _supported(resources, index)
+
+    def test_a_failed_listing_forgets_the_divider(self):
+        """Unknown is not "in": the upper list goes back to as reported."""
+        transport = _transport()
+        _seed(transport, 0)
+        _FakeConnection.routes["/devices"] = (500, None)
+
+        modes = _supported(_seed(transport, 0), 0)
+
+        assert "ConvectionBake" in modes
+
+    def test_divider_out_the_lower_cavity_offers_nothing_to_start(self):
+        _FakeConnection.routes = _routes(divided=False)
+
+        resources = _seed(_transport(), 1)
+
+        assert _supported(resources, 1) == ["NoOperation"]
+        assert _startable(resources, 1) == []
+
+    def test_a_list_entry_that_is_no_string_is_dropped(self):
+        upper = {**UPPER, "Mode": {**UPPER["Mode"], "supportedModes": ["Bake,UpperBake", 5]}}
+        _FakeConnection.routes = _routes(divided=False, upper=upper)
+
+        assert _supported(_seed(_transport(), 0), 0) == ["Bake", "NoOperation"]
+
+    def test_a_reported_mode_outside_the_list_is_kept(self):
+        lower = {**LOWER, "Mode": {**LOWER["Mode"], "modes": ["LowerKeepWarm"]}}
+        _FakeConnection.routes = _routes(lower=lower)
+
+        assert "LowerKeepWarm" in _supported(_seed(_transport(), 1), 1)
+
+    def test_a_single_mode_read_follows_the_last_listing(self):
+        transport = _transport()
+        _seed(transport, 0)
+
+        code, rep = transport.read(["mode", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        assert "ConvectionBake" not in rep[PREFIX + "supportedModes"]
 
 
 _INFO = {"Information": {"description": "LCD_OV_WALL_16K", "modelID": "LCD_OV_WALL_16K|1|2"}}
@@ -232,7 +368,7 @@ class TestWrites:
         resources = {
             href.replace("/vs/1", "/vs/0"): rep for href, rep in _seed(transport, 1).items()
         }
-        plan = cook.plan_start(resources, "Bake", 350, None)
+        plan = cook.plan_start(resources, "LowerBake", 350, None)
         _FakeConnection.log.clear()
 
         code, _ = transport.write(
@@ -243,7 +379,7 @@ class TestWrites:
         method, path, body, _ = _FakeConnection.log[0]
         assert (method, path) == ("PUT", "/devices/1")
         assert body is not None
-        assert body["Device"]["Mode"] == {"modes": ["Bake"]}
+        assert body["Device"]["Mode"] == {"modes": ["LowerBake"]}
         assert body["Device"]["Operation"]["state"] == "Run"
 
     def test_a_batch_naming_the_other_cavity_is_refused(self):

@@ -1,5 +1,5 @@
 {
-  "note": "LCD_OV_WALL_16K, NV51K777OS Flex Duo wall oven (issue #572): the reporter's raw 8888 responses, verbatim, captured idle with remote control on. `devices_divided`/`devices_no_divider` are GET /devices with the divider in and out; `device1_information`/`device1_configuration` are /devices/1's linked endpoints. /devices/0's linked endpoints are the ones oven_lcd_ov_wall_16k_8888.json recorded from the same oven. The uuids are the bridge's own all-zero placeholders; there is no serial.",
+  "note": "LCD_OV_WALL_16K, NV51K777OS Flex Duo wall oven (issue #572): the reporter's raw 8888 responses, verbatim, captured idle with remote control on. `devices_divided`/`devices_no_divider` are GET /devices with the divider in and out; `device1_information`/`device1_configuration` are /devices/1's linked endpoints. /devices/0's linked endpoints are the ones oven_lcd_ov_wall_16k_8888.json recorded from the same oven. The uuids are the bridge's own all-zero placeholders; there is no serial. `device0_running_divided`/`device1_running_divided` are GET /devices/0 and /devices/1 with the divider in, each during a cook started at the panel; the reporter masked their uuids, which carry the same placeholders here.",
   "devices_divided": {
     "Devices": [
       {
@@ -286,6 +286,150 @@
   "device0_configuration": {
     "Configuration": {
       "remoteControlEnabled": true
+    }
+  },
+  "device0_running_divided": {
+    "Device": {
+      "Alarms": [],
+      "ConfigurationLink": {
+        "href": "/devices/0/configuration"
+      },
+      "Diagnosis": {
+        "diagnosisStart": "Ready"
+      },
+      "Doors": [
+        {
+          "id": "0",
+          "lock": "Unlock",
+          "openState": "Close"
+        }
+      ],
+      "InformationLink": {
+        "href": "/devices/0/information"
+      },
+      "Mode": {
+        "modes": [
+          "UpperConvectionBake"
+        ],
+        "options": [
+          "DeviceType_NW9000KW/AA0",
+          "meatprobe_disconnected",
+          "NoPreheat_Off",
+          "waterInlet_Close",
+          "steamAddLevel_NULL",
+          "descaleAlarm_Normal",
+          "descaleNewWaterAlarm_Off",
+          "descaleEmptyWaterAlarm_Off",
+          "steamGeneratorLevel_Empty",
+          "steamUsingTime_409",
+          "drainRequired_00",
+          "steamState_Standby",
+          "descaleState_Standby",
+          "waterTankInSwitch_On",
+          "pyroFreeState_Standby",
+          "waterTankOutSwitch_Off",
+          "AdjustingTemp_0",
+          "Sabbath_Off",
+          "EnergySaving_On"
+        ],
+        "supportedModes": [
+          "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,Drain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+        ]
+      },
+      "Operation": {
+        "kidsLock": "Ready",
+        "operationTime": "00:00:00",
+        "power": "On",
+        "progressPercentage": 1,
+        "remainingTime": "00:00:00",
+        "state": "Run"
+      },
+      "Oven": {
+        "recipe": "00000000000000",
+        "state": "Preheat"
+      },
+      "Temperatures": [
+        {
+          "current": 175.0,
+          "desired": 175.0,
+          "id": "0",
+          "increment": 5.0,
+          "unit": "Fahrenheit"
+        }
+      ],
+      "connected": true,
+      "description": "LCD_OV_WALL_16K",
+      "id": "0",
+      "name": "Oven",
+      "resources": [
+        "Alarms",
+        "Configuration",
+        "Information",
+        "Mode",
+        "Operation",
+        "Temperatures",
+        "Oven",
+        "Diagnosis",
+        "Doors"
+      ],
+      "type": "Oven",
+      "uuid": "00000000-0000-0000-0000-000000000000"
+    }
+  },
+  "device1_running_divided": {
+    "Device": {
+      "Alarms": [],
+      "ConfigurationLink": {
+        "href": "/devices/1/configuration"
+      },
+      "Doors": [],
+      "InformationLink": {
+        "href": "/devices/1/information"
+      },
+      "Mode": {
+        "modes": [
+          "LowerConvectionBake"
+        ],
+        "supportedModes": [
+          "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,Drain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+        ]
+      },
+      "Operation": {
+        "operationTime": "00:00:00",
+        "power": "On",
+        "progressPercentage": 1,
+        "remainingTime": "00:00:00",
+        "state": "Run"
+      },
+      "Oven": {
+        "state": "Preheat"
+      },
+      "Temperatures": [
+        {
+          "current": 175.0,
+          "desired": 175.0,
+          "id": "0",
+          "increment": 5.0,
+          "unit": "Fahrenheit"
+        }
+      ],
+      "connected": true,
+      "description": "LCD_OV_WALL_16K_DIV",
+      "id": "1",
+      "name": "Oven",
+      "resources": [
+        "Alarms",
+        "Configuration",
+        "Information",
+        "Mode",
+        "Operation",
+        "Temperatures",
+        "Oven",
+        "Diagnosis",
+        "Doors"
+      ],
+      "type": "Oven",
+      "uuid": "00000000-0000-0000-0000-000000000001"
     }
   }
 }

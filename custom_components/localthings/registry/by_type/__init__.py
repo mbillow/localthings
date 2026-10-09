@@ -323,7 +323,9 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
             m in supported_modes for m in ("MicroWave", "MicroWaveGrill", "MicroWaveConvection")
         ):
             return _REGISTRY_BY_KEY["microwave"]
-        if "Bake" in supported_modes:
+        # A Flex Duo's upper cavity offers only Upper* modes while its
+        # divider is in (#572), so any Bake mode counts.
+        if any(isinstance(m, str) and m.endswith("Bake") for m in supported_modes):
             if "/cooktopmonitoring/vs/0" in resources or "/cooktop/status/vs/0" in resources:
                 return _REGISTRY_BY_KEY["range"]
             return _REGISTRY_BY_KEY["oven"]
