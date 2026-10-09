@@ -125,7 +125,7 @@ def test_read_identity_captures_oic_res_links():
 def test_read_identity_tolerates_malformed_oic_res():
     """A single Property map instead of an array (or anything else
     non-list-shaped) must not explode -- same defensive posture as
-    _device_types' handling of a malformed /oic/d rt."""
+    device_types_of's handling of a malformed /oic/d rt."""
     ident = read_identity(FakeSession({("oic", "res"): {"not": "a list"}}), serial=None)
     assert ident.raw["/oic/res"] == []
 

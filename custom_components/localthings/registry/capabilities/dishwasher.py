@@ -7,6 +7,7 @@ washer and dryer in laundry.py; only the dishwasher-specific options (storm
 wash, auto release dry) are read locally here.
 """
 
+from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status
@@ -20,6 +21,18 @@ from .laundry import (
 # /dishwasher/vs/0 — cycle wash/dry settings
 # ---------------------------------------------------------------------------
 
+
+def _has(field):
+    """Bound only where the board reports the field: the DW60BG750 (#538) has
+    no heatedDry, and an absent field would otherwise show as a dead entity.
+    A not-yet-fetched stub still binds, as elsewhere (issue #127)."""
+    return lambda rep, resources: is_stub_rep(rep) or field in rep
+
+
+def _setting_write(field):
+    return lambda p, rep, href=None: (["dishwasher", "vs", "0"], {field: p})
+
+
 DISHWASHER_SETTINGS = Capability(
     href="/dishwasher/vs/0",
     entities=(
@@ -27,10 +40,22 @@ DISHWASHER_SETTINGS = Capability(
             key="sanitize",
             field="x.com.samsung.da.sanitize",
             icon="mdi:bacteria",
+            exists_fn=_has("x.com.samsung.da.sanitize"),
             value_fn=lambda v: v == "On",
             write_fn=lambda p, rep, href=None: (
                 ["dishwasher", "vs", "0"],
                 {"x.com.samsung.da.sanitize": "On" if p == "On" else "Off"},
+            ),
+        ),
+        SwitchDesc(
+            key="speed_booster",
+            field="x.com.samsung.da.speedBooster",
+            icon="mdi:fast-forward",
+            exists_fn=_has("x.com.samsung.da.speedBooster"),
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["dishwasher", "vs", "0"],
+                {"x.com.samsung.da.speedBooster": "On" if p == "On" else "Off"},
             ),
         ),
         SelectDesc(
@@ -38,10 +63,20 @@ DISHWASHER_SETTINGS = Capability(
             field="x.com.samsung.da.heatedDry",
             icon="mdi:heat-wave",
             options_field="x.com.samsung.da.supportedHeatedDry",
-            write_fn=lambda p, rep, href=None: (
-                ["dishwasher", "vs", "0"],
-                {"x.com.samsung.da.heatedDry": p},
-            ),
+            exists_fn=_has("x.com.samsung.da.heatedDry"),
+            write_fn=_setting_write("x.com.samsung.da.heatedDry"),
+        ),
+        # Which racks wash, as UPPER_LOWER: the DW60BG750 (#538) offers OFF_ON
+        # and ON_ON. The reporter confirmed OFF_ON is the panel's lower-rack-only
+        # zone wash.
+        SelectDesc(
+            key="wash_zone",
+            field="x.com.samsung.da.selectedZone",
+            icon="mdi:dishwasher",
+            translation_key="wash_zone",
+            options_field="x.com.samsung.da.supportedSelectedZone",
+            exists_fn=_has("x.com.samsung.da.selectedZone"),
+            write_fn=_setting_write("x.com.samsung.da.selectedZone"),
         ),
     ),
 )

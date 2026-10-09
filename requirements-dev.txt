@@ -2,11 +2,14 @@
 # matching versions. pip resolves the newest home-assistant your interpreter
 # supports: Python 3.13 gets 0.13.316 (the floor below), 3.14 gets newer. On
 # 3.12 or older nothing resolves and the whole install fails.
-pytest-homeassistant-custom-component>=0.13.316
+# Capped below 0.13.368 (homeassistant 2026.10.0b0), whose schema parameters
+# are typed as probatio.Schema and fail ty on every vol.Schema; lift once the
+# schemas are migrated.
+pytest-homeassistant-custom-component>=0.13.316,<0.13.368
 
 # Integration runtime deps, needed to import the component under test
 # (also declared in custom_components/localthings/manifest.json).
-smartthings-local>=0.1.20
+smartthings-local>=0.1.23
 cbor2>=5.4.6
 pyOpenSSL>=23.0
 cryptography>=41.0

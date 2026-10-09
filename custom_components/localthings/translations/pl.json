@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Podwójna nastawa włączona"
+      },
+      "divider": {
+        "name": "Przegroda"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Bez zagnieceń aktywne"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Strefa 1"
+      },
+      "zone2_climate": {
+        "name": "Strefa 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Oświetlenie"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "Higiena",
           "3b": "Pościel/odkurzanie",
           "3c": "Odzież sportowa",
-          "3d": "Jeansy"
+          "3d": "Jeansy",
+          "2f": "Intensywne",
+          "30": "Odzież sportowa",
+          "32": "Tkaniny niemnące",
+          "33": "Dezynfekcja parą+",
+          "34": "Odświeżanie parą",
+          "35": "Bez zagnieceń",
+          "36": "Napowietrzanie",
+          "3e": "Mały wsad",
+          "2e": "Eko Normalny"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "Wyrastanie ciasta",
           "dehydrate": "Suszenie żywności",
           "self_clean": "Samoczyszczenie",
-          "air_fryer": "Smażenie na gorącym powietrzu"
+          "air_fryer": "Smażenie na gorącym powietrzu",
+          "upper_broil": "Opiekanie (górna)",
+          "upper_convection_bake": "Pieczenie z termoobiegiem (górna)",
+          "upper_convection_roast": "Pieczenie mięs z termoobiegiem (górna)",
+          "lower_bake": "Pieczenie (dolna)",
+          "lower_convection_bake": "Pieczenie z termoobiegiem (dolna)",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą (górna)",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody"
         }
       },
       "operating_mode": {
@@ -650,7 +686,9 @@
         "state": {
           "fdr_wine": "Wino",
           "fdr_deli": "Wędliny",
-          "fdr_drinks": "Napoje"
+          "fdr_drinks": "Napoje",
+          "ttype_meat_fish": "Mięso/ryby",
+          "ttype_rf9000a_fridge": "Chłodziarka"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +797,9 @@
           "no_spin": "Bez wirowania",
           "low": "Niska",
           "medium": "Średnia",
-          "high": "Wysoka"
+          "high": "Wysoka",
+          "extra_low": "Bardzo niska",
+          "extra_high": "Bardzo wysoka"
         }
       },
       "wash_temperature": {
@@ -770,7 +810,8 @@
           "cool": "Chłodna",
           "warm": "Ciepła",
           "hot": "Gorąca",
-          "extra_hot": "Bardzo gorąca"
+          "extra_hot": "Bardzo gorąca",
+          "tap_cold": "Zimna z kranu"
         }
       },
       "washer_cycle_table_00": {
@@ -877,13 +918,18 @@
           "38": "Suszenie bawełny",
           "39": "Suszenie syntetyków",
           "3a": "Czyszczenie bębna",
+          "51": "Super szybki",
           "52": "Eko na zimno",
           "53": "Intensywne",
           "54": "Ręczniki",
           "55": "Odzież sportowa",
+          "56": "Pościel",
           "57": "Delikatne",
+          "5a": "Steam Sanitize",
+          "5b": "Mały wsad",
           "5e": "Płukanie + wirowanie",
           "60": "Samoczyszczenie+",
+          "64": "Tkaniny białe z parą",
           "65": "Tkaniny kolorowe",
           "66": "Jeansy",
           "69": "Pranie optymalne",
@@ -907,13 +953,23 @@
           "7d": "Pościel/tkaniny wodoodporne",
           "7e": "Samoczyszczenie",
           "7f": "Wełna/tkaniny delikatne",
+          "85": "Normalny z parą",
           "86": "Pranie dogłębne",
           "87": "Pobrany program",
           "88": "Dla zwierząt",
+          "8b": "Szybkie pranie",
+          "8c": "AI OptiWash",
           "8f": "Intensywne pranie na zimno",
           "96": "Mniej włókien",
           "a0": "Szybkie pranie 15'",
-          "b0": "Pranie mieszane"
+          "b0": "Pranie mieszane",
+          "58": "Wełna",
+          "5c": "Odzież outdoorowa",
+          "5d": "Mocne płukanie",
+          "5f": "Tylko wirowanie",
+          "63": "Mocna para",
+          "67": "Antyalergiczny z parą",
+          "68": "Duże rzeczy z parą"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "Oczyszczanie",
           "ventilation": "Wentylacja",
-          "smartventilation": "Inteligentna wentylacja"
+          "smartventilation": "Inteligentna wentylacja",
+          "aicomfort": "AI Comfort",
+          "autoventilation": "Wentylacja automatyczna",
+          "freshairintake": "Nawiew świeżego powietrza",
+          "indoorpurification": "Oczyszczanie powietrza wewnętrznego",
+          "indoordehumidification": "Osuszanie powietrza wewnętrznego"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "W prawo, szeroko",
           "left_narrow": "W lewo, wąsko",
           "left_wide": "W lewo, szeroko"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "Nawiew AI z wykrywaniem ruchu",
+        "state": {
+          "off": "Wyłączony",
+          "surround": "Dookólny",
+          "longreach": "Daleki zasięg",
+          "down": "W dół",
+          "power": "Moc",
+          "windfree": "Wind-Free",
+          "aidirect": "AI bezpośredni",
+          "aiindirect": "AI pośredni"
+        }
+      },
+      "wash_zone": {
+        "name": "Strefa mycia",
+        "state": {
+          "on_on": "Oba kosze",
+          "off_on": "Tylko dolny kosz",
+          "on_off": "Tylko górny kosz"
+        }
+      },
+      "lamp_level": {
+        "name": "Poziom oświetlenia",
+        "state": {
+          "off": "Wył.",
+          "low": "Niska",
+          "high": "Wysoka"
         }
       }
     },
@@ -1214,7 +1304,8 @@
       "dryer_type": {
         "name": "Typ suszarki",
         "state": {
-          "electricity": "Energia elektryczna"
+          "electricity": "Energia elektryczna",
+          "gas": "Gaz"
         }
       },
       "dust": {
@@ -1436,6 +1527,9 @@
       },
       "zone_temperature": {
         "name": "Temperatura strefy"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura strefy 2"
       },
       "watertank_full_alarm_status": {
         "name": "Stan alarmu pełnego zbiornika wody"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "Automatyczne przełączanie"
+      },
+      "interlock": {
+        "name": "Blokada współpracy"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Alert wilgotnego wsadu"
+      },
+      "extra_rinse": {
+        "name": "Dodatkowe płukanie"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "Ten adres IP jest osiągalny, ale aktywnie odrzucił każdy port z zakresu lokalnego API (UDP 49152-49160) i nie odpowiedział na kanale wykrywania. Najprawdopodobniej nie jest to urządzenie Samsung albo nie ma włączonego lokalnego API.",
       "no_dtls_server": "Porty z zakresu lokalnego API są pod tym adresem osiągalne, ale nic nie odpowiedziało na uzgadnianie DTLS. Sprawdź, czy ten adres IP należy do urządzenia, a nie do innego sprzętu w sieci.",
       "appliance_no_dtls": "Pod tym adresem znajduje się urządzenie Samsung — przedstawiło się jako {model} na nieszyfrowanym kanale wykrywania i podało {port} jako swój bezpieczny port — ale nigdy nie ukończyło tam uzgadniania DTLS. Problemem nie jest adres. Sprawdź, czy w panelu urządzenia nie wyłączono Zdalnego sterowania lub podobnego ustawienia, i zajrzyj do dziennika Home Assistant po dokładną przyczynę błędu.",
+      "non_appliance_stack": "Pod tym adresem IP coś odpowiedziało, ale przedstawiło się jako usługa OCF, która nie jest urządzeniem. Niektóre urządzenia Samsung uruchamiają taką usługę obok własnej, a LocalThings znajdzie urządzenie za nią tylko wtedy, gdy Home Assistant jest w tym samym segmencie sieci. Umieść Home Assistant i urządzenie w tej samej podsieci i sieci VLAN, a następnie spróbuj ponownie.",
+      "multiple_appliances": "Pod tym adresem IP odpowiada więcej niż jedno urządzenie Samsung i LocalThings nie potrafi jeszcze wybrać spośród nich. Zgłoś to w systemie zgłoszeń LocalThings i dołącz log Home Assistant.",
       "handshake_timeout": "Urządzenie odpowiedziało na porcie lokalnego API, ale nie ukończyło uzgadniania DTLS. Zwykle oznacza to, że wciąż utrzymuje sesję z poprzedniej próby — odczekaj około minuty i spróbuj ponownie.",
       "cert_rejected": "Urządzenie odrzuciło certyfikat. Najprawdopodobniej certyfikat i klucz CA nie pochodzą z CA AC14K_M, któremu ufa to urządzenie, albo do siebie nie pasują. Dokładny alert wysłany przez urządzenie znajdziesz w dzienniku Home Assistant.",
       "psk_rejected": "Urządzenie odrzuciło klucz współdzielony. Tożsamość lub klucz są nieprawidłowe albo należą do innego urządzenia lub do właściciela, który się od tego czasu zmienił. Dokładny alert znajdziesz w logu Home Assistant.",
       "identity_unproven": "Klucz zadziałał, ale urządzenie nie podało swojego identyfikatora urządzenia OCF przez szyfrowane połączenie, więc LocalThings nie może potwierdzić, które urządzenie ma ten klucz, i go nie doda. Spróbuj ponownie, gdy urządzenie jest wybudzone. Jeśli problem się powtarza, daj nam znać w [zgłoszeniu #435]({issue_url}) i dołącz log Home Assistant.",
       "invalid_psk_identity": "Wprowadź tożsamość jako UUID, na przykład 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Ten UUID zawiera bajt zerowy, którego DTLS nie może przenieść jako tożsamości. Jeśli ta tożsamość peera została przez ciebie wygenerowana, wygeneruj nową.",
+      "psk_identity_zero_byte": "Ten UUID zawiera bajt zerowy, którego zainstalowany transport nie może przesłać. Zachowaj odzyskaną tożsamość bez zmian.",
       "invalid_psk_key": "Wprowadź klucz jako 32 lub 64 znaki szesnastkowe.",
       "handshake_failed": "Urządzenie odrzuciło uzgadnianie DTLS z powodu niezwiązanego z certyfikatem, najprawdopodobniej przez niezgodność protokołu lub szyfru. Dokładny alert, który wysłało, znajdziesz w dzienniku Home Assistant.",
       "cloud_unreachable": "Nie udało się połączyć z bramą chmurową Samsunga, aby pobrać UUID potrzebny do wystawienia certyfikatu tego urządzenia. Sprawdź dostęp Home Assistant do internetu i spróbuj ponownie.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "Pod tym adresem odpowiedziało urządzenie Samsung, ale nie to — zgłosiło inną tożsamość. Sprawdź, czy adres należy do tego urządzenia. Aby dodać to drugie, użyj opcji Dodaj urządzenie.",
       "token_not_received": "Nie otrzymano tokenu urządzenia. Sprawdź, czy w urządzeniu włączone jest Zdalne sterowanie przy zamkniętych drzwiach i czy urządzenie może połączyć się z Home Assistant na porcie 8889 — albo wklej token uzyskany w inny sposób.",
       "invalid_token": "Urządzenie odrzuciło ten token. Pozostaw pole puste, aby poprosić o nowy.",
-      "callback_port_in_use": "Port 8889 jest już zajęty w Home Assistant, zwykle przez wciąż oczekujące żądanie tokenu. Spróbuj ponownie za półtorej minuty."
+      "callback_port_in_use": "Port 8889 jest już zajęty w Home Assistant, zwykle przez wciąż oczekujące żądanie tokenu. Spróbuj ponownie za półtorej minuty.",
+      "callback_cert_rejected": "Urządzenie oddzwoniło na port 8889, ale odrzuciło samopodpisany certyfikat Home Assistant. Wklej certyfikat i klucz CA AC14K_M, aby LocalThings podpisał certyfikat, który zostanie zaakceptowany; potem żądanie tokenu zostanie powtórzone.",
+      "callback_ca_rejected": "Urządzenie oddzwoniło na port 8889, ale odrzuciło również certyfikat podpisany przez AC14K_M. Wklej token uzyskany w inny sposób; błąd uzgadniania znajdziesz w dzienniku Home Assistant."
     },
     "abort": {
       "already_configured": "Urządzenie jest już skonfigurowane",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
     },
+    "command_refused": {
+      "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "Polecenie do {href} zostało wysłane przy wyłączonym zdalnym sterowaniu, ale urządzenie jeszcze go nie pokazuje. Jeśli nie zareaguje, włącz zdalne sterowanie w urządzeniu."
+    },
     "debug_read_failed": {
       "message": "Odczyt z {href} nie powiódł się: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "Tryb {mode} przyjmuje czas gotowania od {min} do {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Dodatkowe płukanie nie jest dostępne dla wybranego cyklu."
     }
   },
   "selector": {

@@ -269,13 +269,12 @@ PROBE_STATUS = Capability(
 # `cooktopMonitoring` is a bitmask of lit burners, one bit per knob. Verified
 # on a gas NX60T8311SS/AA (TP2X -0101X) by lighting each burner alone: bits
 # 0-4 are front-left, back-left, center, back-right, front-right, and the
-# value is unaffected by flame level. Only gas boards have been seen non-zero
-# (this unit, and #404's TP1X NX6512A idling at 0), and both of those also
-# carry a `Fuel_Gas` token in /mode/vs/0 options[] that none of the electric
-# NE boards report. So the decoded entities (a count plus one binary sensor
-# per bit) are gated on that token, and every other board gets the raw value
-# as a diagnostic sensor instead -- an electric owner who lights two burners
-# and sees 3 has the evidence to lift the gate (issue #450).
+# value is unaffected by flame level. On an electric NE6516A-class board it is
+# a 0/1 cooktop-in-use flag instead: one element or two both read 1 (issue
+# #450). So the decoded entities (a count plus one binary sensor per bit) are
+# gated on the `Fuel_Gas` token in /mode/vs/0 options[], which no electric NE
+# board reports, and every other board gets the raw value as a diagnostic
+# sensor, kept so other electric models can show whether theirs differs.
 #
 # The mask can't say how many burners exist (a four-burner board just never
 # sets bit 4), so the width is the layout it was verified on. A board that

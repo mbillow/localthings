@@ -41,12 +41,17 @@ def _all_airconditioner_fixture_names():
     return names
 
 
+# Ventilators that route to the AC registry and are meant to get the select.
+_VENTILATOR_FIXTURES = frozenset(("airconditioner_tp1x_rhs",))
+
+
 def test_ventilation_mode_gate_never_false_positives_on_real_ac_fixtures():
-    """None of the real air-conditioner fixtures in this corpus use the
-    Purification/Ventilation/SmartVentilation vocabulary -- confirms
-    _is_ventilation_mode_device can't turn a real AC's climate card into
-    this select."""
+    """None of the real air-conditioner fixtures in this corpus use a
+    ventilator's mode vocabulary -- confirms _is_ventilation_mode_device
+    can't turn a real AC's climate card into this select."""
     for name in _all_airconditioner_fixture_names():
+        if name in _VENTILATOR_FIXTURES:
+            continue
         resources = _load_device(name)
         reg = for_device_by_model(
             resources["/information/vs/0"]["x.com.samsung.da.modelNum"],
@@ -69,6 +74,13 @@ def test_ventilation_mode_gate_matches_diffuser_shape():
         "x.com.samsung.da.supportedModes": ["Purification", "Ventilation", "SmartVentilation"],
     }
     assert _is_ventilation_mode_device(rep, {}) is True
+
+
+def test_ventilation_mode_gate_does_not_accept_ai_comfort_alone():
+    """AIComfort is allowed next to ventilator modes (issue #551) because real
+    ACs list it too -- so it must never be enough on its own."""
+    rep = {"x.com.samsung.da.supportedModes": ["AIComfort"]}
+    assert _is_ventilation_mode_device(rep, {}) is False
 
 
 def test_ventilation_mode_gate_rejects_partial_overlap():

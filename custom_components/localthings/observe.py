@@ -20,6 +20,8 @@ import cbor2
 from smartthings_local.ocf.observe_refresh import ObserveRefreshTask
 from smartthings_local.ocf.state_cache import StateCache
 
+from .registry.capabilities.common import merge_options_field
+
 _LOGGER = logging.getLogger(__name__)
 
 REFRESH_INTERVAL_S = 6 * 3600.0
@@ -29,6 +31,8 @@ MODE_POLL = "poll"
 
 DEFAULT_SETTLE_S = 4.0
 GRACE_PERIOD_S = 15.0
+
+_OPTIONS_FIELD = "x.com.samsung.da.options"
 
 
 def _rep_diff(cached: dict, sweep: dict) -> dict:
@@ -121,9 +125,27 @@ class ObserveManager:
         """
         self._on_applied = callback
 
-    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> None:
+    def mark_write_pending(self, href: str, settle_s: float = DEFAULT_SETTLE_S) -> float:
+        """Arm the settle window; returns its deadline."""
         with self._settle_lock:
-            self._settle_until[href] = time.monotonic() + settle_s
+            deadline = time.monotonic() + settle_s
+            self._settle_until[href] = deadline
+            return deadline
+
+    def settle_deadline(self, href: str) -> float | None:
+        with self._settle_lock:
+            return self._settle_until.get(href)
+
+    def restore_write_pending(self, href: str, previous: float | None, armed: float) -> None:
+        """Undo the window a refused write armed (`armed`), back to what it
+        replaced. A newer write that has armed its own since keeps it."""
+        with self._settle_lock:
+            if self._settle_until.get(href) != armed:
+                return
+            if previous is None or previous <= time.monotonic():
+                self._settle_until.pop(href, None)
+            else:
+                self._settle_until[href] = previous
 
     def _is_settling(self, href: str) -> bool:
         with self._settle_lock:
@@ -191,7 +213,20 @@ class ObserveManager:
             self.log.debug("dropping %s update for %s (settling)", source, href)
             return False
         with self._cache_lock:
-            merged = dict(rep) if _is_alarms_href(href) else {**(self.cache.get(href) or {}), **rep}
+            prior = self.cache.get(href) or {}
+            merged = dict(rep) if _is_alarms_href(href) else {**prior, **rep}
+            # A notify's options[] carries only the tokens that changed (a
+            # washer dial change pushes just ["AvailableDelayTime_87"], issue
+            # #579), so merge it by prefix; polls and sweeps read the whole
+            # array and still replace it.
+            if (
+                source == "observe"
+                and isinstance(rep.get(_OPTIONS_FIELD), list)
+                and isinstance(prior.get(_OPTIONS_FIELD), list)
+            ):
+                merged[_OPTIONS_FIELD] = merge_options_field(
+                    prior[_OPTIONS_FIELD], rep[_OPTIONS_FIELD]
+                )
             changed = self.cache.apply_rep(href, merged, source=source)
         # Outside the cache lock -- the hook takes locks of its own and
         # never reads the cache back. `source` is passed along rather than

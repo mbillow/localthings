@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Doppelter Sollwert aktiviert"
+      },
+      "divider": {
+        "name": "Trennwand"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Knitterschutz aktiv"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zone 1"
+      },
+      "zone2_climate": {
+        "name": "Zone 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lampe"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "Hygienepflege",
           "3b": "Bettwäsche/Entstauben",
           "3c": "Sportkleidung",
-          "3d": "Jeansstoff"
+          "3d": "Jeansstoff",
+          "2f": "Intensiv",
+          "30": "Sportkleidung",
+          "32": "Pflegeleicht",
+          "33": "Dampf-Hygiene+",
+          "34": "Dampfauffrischung",
+          "35": "Knitterschutz",
+          "36": "Lüften",
+          "3e": "Kleine Beladung",
+          "2e": "Eco Normal"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "Teig gehen lassen",
           "dehydrate": "Dörren",
           "self_clean": "Selbstreinigung",
-          "air_fryer": "Heißluftfritteuse"
+          "air_fryer": "Heißluftfritteuse",
+          "upper_broil": "Grillen (oben)",
+          "upper_convection_bake": "Umluftbacken (oben)",
+          "upper_convection_roast": "Umluftbraten (oben)",
+          "lower_bake": "Backen (unten)",
+          "lower_convection_bake": "Umluftbacken (unten)",
+          "steam_bake": "Dampfbacken",
+          "steam_roast": "Dampfbraten",
+          "upper_steam_bake": "Dampfbacken (oben)",
+          "descale": "Entkalken",
+          "drain": "Wasser ablassen"
         }
       },
       "operating_mode": {
@@ -616,7 +652,9 @@
         "state": {
           "fdr_wine": "Wein",
           "fdr_deli": "Feinkost",
-          "fdr_drinks": "Getränke"
+          "fdr_drinks": "Getränke",
+          "ttype_meat_fish": "Fleisch/Fisch",
+          "ttype_rf9000a_fridge": "Kühlen"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -722,7 +760,9 @@
           "no_spin": "Ohne Schleudern",
           "low": "Niedrig",
           "medium": "Mittel",
-          "high": "Hoch"
+          "high": "Hoch",
+          "extra_low": "Extra niedrig",
+          "extra_high": "Extra hoch"
         }
       },
       "wash_temperature": {
@@ -733,7 +773,8 @@
           "cool": "Kühl",
           "warm": "Warm",
           "hot": "Heiß",
-          "extra_hot": "Extra heiß"
+          "extra_hot": "Extra heiß",
+          "tap_cold": "Leitungswasser kalt"
         }
       },
       "washer_cycle_table_00": {
@@ -840,13 +881,18 @@
           "38": "Trocknen Baumwolle",
           "39": "Trocknen Pflegeleicht",
           "3a": "Trommelreinigung",
+          "51": "Super Speed",
           "52": "Eco Kalt",
           "53": "Intensiv",
           "54": "Handtücher",
           "55": "Sportkleidung",
+          "56": "Bettwäsche",
           "57": "Feinwäsche",
+          "5a": "Dampf-Hygiene",
+          "5b": "Kleine Beladung",
           "5e": "Spülen + Schleudern",
           "60": "Selbstreinigung+",
+          "64": "Weißwäsche mit Dampf",
           "65": "Buntwäsche",
           "66": "Jeansstoff",
           "69": "KI-Wäsche",
@@ -870,13 +916,23 @@
           "7d": "Bettwäsche/Wasserdicht",
           "7e": "Selbstreinigung",
           "7f": "Wolle/Feinwäsche",
+          "85": "Normal mit Dampf",
           "86": "Tiefenreinigung",
           "87": "Download",
           "88": "Tierpflege",
+          "8b": "Schnellwäsche",
+          "8c": "AI OptiWash",
           "8f": "Kaltwäsche Intensiv",
           "96": "Weniger Mikrofasern",
           "a0": "Schnelle Wäsche 15'",
-          "b0": "Gemischte Beladung"
+          "b0": "Gemischte Beladung",
+          "58": "Wolle",
+          "5c": "Outdoor",
+          "5d": "Power-Spülen",
+          "5f": "Nur Schleudern",
+          "63": "Power-Dampf",
+          "67": "Dampf-Anti-Allergie",
+          "68": "Dampf-Großwäsche"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "Reinigung",
           "ventilation": "Lüftung",
-          "smartventilation": "Intelligente Lüftung"
+          "smartventilation": "Intelligente Lüftung",
+          "aicomfort": "KI-Komfort",
+          "autoventilation": "Automatische Lüftung",
+          "freshairintake": "Frischluftzufuhr",
+          "indoorpurification": "Innenraumreinigung",
+          "indoordehumidification": "Innenraumentfeuchtung"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "Rechts weit",
           "left_narrow": "Links eng",
           "left_wide": "Links weit"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "KI-Bewegungswind",
+        "state": {
+          "off": "Aus",
+          "surround": "Rundum",
+          "longreach": "Weitwurf",
+          "down": "Nach unten",
+          "power": "Leistung",
+          "windfree": "WindFree",
+          "aidirect": "KI direkt",
+          "aiindirect": "KI indirekt"
+        }
+      },
+      "wash_zone": {
+        "name": "Spülzone",
+        "state": {
+          "on_on": "Beide Körbe",
+          "off_on": "Nur Unterkorb",
+          "on_off": "Nur Oberkorb"
+        }
+      },
+      "lamp_level": {
+        "name": "Lampenstufe",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "high": "Hoch"
         }
       }
     },
@@ -1208,7 +1298,8 @@
       "dryer_type": {
         "name": "Trocknertyp",
         "state": {
-          "electricity": "Strom"
+          "electricity": "Strom",
+          "gas": "Gas"
         }
       },
       "dust": {
@@ -1430,6 +1521,9 @@
       },
       "zone_temperature": {
         "name": "Zonentemperatur"
+      },
+      "zone2_temperature": {
+        "name": "Temperatur Zone 2"
       },
       "watertank_full_alarm_status": {
         "name": "Wassertank-voll-Alarmstatus"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "Automatische Umschaltung"
+      },
+      "interlock": {
+        "name": "Verriegelung"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Signal Mischbeladung"
+      },
+      "extra_rinse": {
+        "name": "Extra-Spülen"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "Diese IP-Adresse ist erreichbar, hat aber jeden Port im lokalen API-Bereich (UDP 49152-49160) aktiv abgelehnt und auf dem Discovery-Kanal überhaupt nicht geantwortet. Es handelt sich höchstwahrscheinlich nicht um ein Samsung-Gerät, oder um eines ohne aktivierte lokale API.",
       "no_dtls_server": "Ports im lokalen API-Bereich sind unter dieser Adresse erreichbar, aber nichts hat auf einen DTLS-Handshake reagiert. Prüfen Sie, ob die IP-Adresse tatsächlich zum Gerät gehört und nicht zu einem anderen Gerät in Ihrem Netzwerk.",
       "appliance_no_dtls": "Diese Adresse gehört zu einem Samsung-Gerät — es hat sich über den unverschlüsselten Discovery-Kanal als {model} identifiziert und {port} als seinen sicheren Port gemeldet — aber dort wurde nie ein DTLS-Handshake abgeschlossen. Die Adresse ist nicht das Problem. Prüfen Sie, ob am Gerät die Fernsteuerung oder eine ähnliche Einstellung am Bedienfeld ausgeschaltet ist, und schauen Sie für den genauen Fehler im Home Assistant-Log nach.",
+      "non_appliance_stack": "An dieser IP-Adresse hat etwas geantwortet, sich aber als OCF-Dienst gemeldet, der kein Gerät ist. Manche Samsung-Geräte betreiben einen solchen neben ihrem eigenen, und LocalThings findet das Gerät dahinter nur, wenn Home Assistant im selben Netzwerksegment ist. Bring Home Assistant und das Gerät ins selbe Subnetz und VLAN und versuche es dann erneut.",
+      "multiple_appliances": "An dieser IP-Adresse antwortet mehr als ein Samsung-Gerät, und LocalThings kann noch nicht zwischen ihnen wählen. Bitte melde das im Issue-Tracker von LocalThings und füge das Home-Assistant-Log bei.",
       "handshake_timeout": "Das Gerät hat auf seinem lokalen API-Port geantwortet, den DTLS-Handshake aber auch nach einem erneuten Versuch nicht abgeschlossen. Versuchen Sie es noch einmal. Schlägt es weiter fehl, gibt ein Neustart des Geräts die Verbindungen frei, die es noch hält; den genauen Fehler finden Sie im Home-Assistant-Protokoll.",
       "cert_rejected": "Das Gerät hat das Zertifikat abgelehnt. Das CA-Zertifikat und der Schlüssel sind höchstwahrscheinlich nicht die AC14K_M-CA, der dieses Gerät vertraut, oder sie passen nicht zueinander. Weitere Informationen in den Logs.",
       "psk_rejected": "Das Gerät hat den Pre-Shared Key abgelehnt. Identität oder Schlüssel sind falsch, oder sie gehören zu einem anderen Gerät oder zu einem inzwischen geänderten Eigentümer. Das Home-Assistant-Protokoll enthält den genauen Alert.",
       "identity_unproven": "Der Schlüssel hat funktioniert, aber das Gerät hat seine OCF-Geräte-ID nicht über die verschlüsselte Verbindung gemeldet. LocalThings kann daher nicht bestätigen, welches Gerät den Schlüssel besitzt, und fügt es nicht hinzu. Versuchen Sie es erneut, während das Gerät wach ist. Tritt das weiterhin auf, melden Sie es in [Issue #435]({issue_url}) zusammen mit dem Home-Assistant-Protokoll.",
       "invalid_psk_identity": "Geben Sie die Identität als UUID ein, zum Beispiel 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Diese UUID enthält ein Null-Byte, das DTLS nicht als Identität übertragen kann. Wenn Sie diese Peer-Identität erzeugt haben, erzeugen Sie eine neue.",
+      "psk_identity_zero_byte": "Diese UUID enthält ein Null-Byte, das der installierte Transport nicht senden kann. Lassen Sie die wiederhergestellte Identität unverändert.",
       "invalid_psk_key": "Geben Sie den Schlüssel als 32 oder 64 Hexadezimalzeichen ein.",
       "handshake_failed": "Das Gerät hat den DTLS-Handshake aus einem Grund abgelehnt, der nichts mit dem Zertifikat zu tun hat — höchstwahrscheinlich eine falsche Protokoll- oder Verschlüsselungsübereinstimmung. Weitere Informationen in den Logs.",
       "cloud_unreachable": "Das Cloud-Gateway von Samsung konnte nicht erreicht werden, um die für die Zertifikatserstellung dieses Geräts benötigte UUID abzurufen. Prüfen Sie den Internetzugang von Home Assistant und versuchen Sie es erneut.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "Unter dieser Adresse hat ein Samsung-Gerät geantwortet, aber nicht dieses — es hat eine andere Identität gemeldet. Prüfen Sie, ob die Adresse zu diesem Gerät gehört. Um das andere hinzuzufügen, verwenden Sie „Gerät hinzufügen“.",
       "token_not_received": "Es ist kein Gerätetoken eingetroffen. Prüfen Sie, ob am Gerät die Fernsteuerung bei geschlossener Tür eingeschaltet ist und ob es Home Assistant auf Port 8889 erreicht – oder fügen Sie einen anders besorgten Token ein.",
       "invalid_token": "Das Gerät hat dieses Gerätetoken abgelehnt. Lassen Sie das Feld leer, um ein neues anzufordern.",
-      "callback_port_in_use": "Port 8889 ist auf Home Assistant bereits belegt, meist durch eine noch wartende Token-Anfrage. Versuchen Sie es in anderthalb Minuten erneut."
+      "callback_port_in_use": "Port 8889 ist auf Home Assistant bereits belegt, meist durch eine noch wartende Token-Anfrage. Versuchen Sie es in anderthalb Minuten erneut.",
+      "callback_cert_rejected": "Das Gerät hat sich auf Port 8889 zurückgemeldet, aber das selbstsignierte Zertifikat von Home Assistant abgelehnt. Fügen Sie das AC14K_M-CA-Zertifikat und den Schlüssel ein, damit LocalThings ein akzeptiertes Zertifikat signieren kann; die Token-Anfrage wird dann erneut ausgeführt.",
+      "callback_ca_rejected": "Das Gerät hat sich auf Port 8889 zurückgemeldet, aber auch das mit AC14K_M signierte Zertifikat abgelehnt. Fügen Sie ein auf anderem Weg beschafftes Token ein; der genaue Handshake-Fehler steht im Home Assistant-Protokoll."
     },
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "command_refused": {
+      "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "Der Befehl an {href} wurde bei ausgeschalteter Fernsteuerung gesendet, aber das Gerät zeigt ihn noch nicht an. Falls es nicht reagiert, schalten Sie die Fernsteuerung am Gerät ein."
+    },
     "debug_read_failed": {
       "message": "Das Lesen von {href} ist fehlgeschlagen: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "{mode} erlaubt eine Garzeit von {min} bis {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Extra Rinse ist bei dem ausgewählten Programm nicht verfügbar."
     }
   },
   "selector": {

@@ -12,6 +12,9 @@
 * The appliance leaves the network soon after going idle unless Remote
   Control is on, and answers `403 SHE-001` while it is off -- both read as
   an ordinary outage.
+* A sibling device answers at `/devices/<n>` and reads as the indexed
+  subdevice OCF boards present. `/devices` lists it only while it is in use:
+  the Flex Duo's lower cavity drops out with the divider (#572).
 """
 
 from __future__ import annotations
@@ -19,16 +22,19 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import re
 import ssl
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from .legacy_http import (
+    TP6X_RAC,
     Resource,
     StagedKey,
     add_staged,
+    batch_steps,
     course_table,
     http_status_to_coap,
     is_mapped,
@@ -39,6 +45,7 @@ from .legacy_http import (
     table_for,
     to_resources,
     to_write,
+    unmapped_wrappers,
     unwrap,
     with_staged,
 )
@@ -49,6 +56,7 @@ from .registry.capabilities.laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     course_option_mask,
 )
+from .registry.subdevices import Subdevice
 from .transport import AuthRejected
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +71,16 @@ _SEED_HREF = "/device/0"
 
 # Served by their own endpoint rather than embedded in the aggregate.
 _LINKED_ENDPOINTS = ("configuration", "information")
+
+# Where a sibling carries whether `/devices` lists it -- for a lower cavity,
+# whether the divider is in, as the OCF dual-cavity oven reports it (#324).
+_LISTED_HREF = "/connected/vs/0"
+_LISTED_FIELD = "x.com.samsung.da.connected"
+
+# A sibling's record may extend its information endpoint's description with
+# a suffix (`LCD_OV_WALL_16K_DIV`, #572); only such a suffix is carried over,
+# since the record's description can otherwise carry the serial.
+_RECORD_SUFFIX = re.compile(r"_[A-Z]+")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
@@ -97,9 +115,16 @@ class _ApplianceState:
     # Values held for the next start, each with what the appliance reported
     # for it when it was chosen (None until first read).
     staged: dict[StagedKey, tuple[Any, Any]] = field(default_factory=dict)
+    # For a sibling: whether `/devices` listed it at the last read.
+    listed: bool | None = None
 
 
-_STATE: dict[tuple[str, int], _ApplianceState] = {}
+# Keyed by (host, port, device index).
+_STATE: dict[tuple[str, int, int], _ApplianceState] = {}
+
+
+def _device_path(index: int) -> str:
+    return f"/devices/{index}"
 
 
 class LegacyHttpTransport:
@@ -126,7 +151,6 @@ class LegacyHttpTransport:
         self._table = table_for(family)
         self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
-        self._state = _STATE.setdefault((host, port), _ApplianceState())
 
     @property
     def host(self) -> str:
@@ -148,50 +172,157 @@ class LegacyHttpTransport:
     def pace(self) -> None:
         """Nothing to pace: each request is its own connection."""
 
+    def _state_at(self, index: int) -> _ApplianceState:
+        return _STATE.setdefault((self._host, self._port, index), _ApplianceState())
+
+    def _locate(self, href: str) -> tuple[int, str]:
+        """The device index an href names and its canonical form. A sibling
+        device's hrefs carry its index in place of the trailing 0, as on the
+        OCF boards (registry/subdevices.py's indexed pattern)."""
+        head, sep, tail = href.rpartition("/")
+        if tail.isdigit() and int(tail) > 0:
+            return int(tail), f"{head}{sep}0"
+        return 0, href
+
     def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]:
-        href = "/" + "/".join(path_segs)
+        index, href = self._locate("/" + "/".join(path_segs))
         if href == _SEED_HREF:
-            return self._read_seed(timeout)
+            return self._read_seed(index, timeout)
+        if index and href == _LISTED_HREF:
+            code, devices = self._list_devices(timeout)
+            if devices is None:
+                self._state_at(index).listed = None
+                return code, None
+            return 0x45, self._listed_rep(index, devices)
         resource = self._by_href.get(href)
         if resource is None:
             # Including /oic/p and /oic/d, which nginx answers with HTML.
             return 0x84, None
-        status, body = self._request("GET", f"/devices/0/{resource.endpoint}", timeout=timeout)
+        path = f"{_device_path(index)}/{resource.endpoint}"
+        status, body = self._request("GET", path, timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        bodies = self._with_staged(unwrap(body))
+        bodies = self._with_staged(index, unwrap(body))
         return 0x45, to_resources(bodies, self._table).get(href, {})
 
-    def _read_seed(self, timeout: float) -> tuple[int, Any]:
-        """The whole device in the shape a /device/0 batch arrives in: the
+    def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
+        """The whole device in the shape a /device/<n> batch arrives in: the
         aggregate plus the two resources it only links to. A linked resource
-        that fails is left out rather than failing the sweep."""
-        status, body = self._request("GET", "/devices/0", timeout=timeout)
-        if status != 200 or not isinstance(body, dict):
-            return http_status_to_coap(status), body if isinstance(body, str) else None
-        bodies = unwrap(body)
+        that fails is left out rather than failing the sweep.
+
+        A sibling's requests share `timeout` between them: setup probes
+        /device/1 and /device/2 on every appliance, within one budget."""
+        if index:
+            deadline = time.monotonic() + timeout
+            try:
+                code, record, devices = self._sibling_record(index, deadline)
+            except TimeoutError:
+                return 0xA4, None  # 5.04: the budget ran out
+            if record is None:
+                return code, None
+        else:
+            deadline = None
+            status, body = self._request("GET", _device_path(0), timeout=timeout)
+            if status != 200 or not isinstance(body, dict):
+                return http_status_to_coap(status), body if isinstance(body, str) else None
+            record, devices = unwrap(body), None
+        base = _device_path(index)
+        bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
-            linked_status, linked = self._request("GET", f"/devices/0/{endpoint}", timeout=timeout)
+            try:
+                linked_timeout = timeout if deadline is None else _remaining(deadline)
+            except TimeoutError:
+                _LOGGER.debug("%s: no time left for %s's linked resources", self._host, base)
+                break
+            linked_status, linked = self._request(
+                "GET", f"{base}/{endpoint}", timeout=linked_timeout
+            )
             if linked_status == 200 and isinstance(linked, dict):
                 bodies.update(unwrap(linked))
             else:
-                _LOGGER.debug("%s: /devices/0/%s answered %s", self._host, endpoint, linked_status)
-        self._state.last_bodies = bodies
-        resources = to_resources(self._with_staged(bodies), self._table)
-        # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
-        resources.update(course_table(self._family))
-        # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
-        resources.update(model_settings(bodies))
+                _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
+        if index:
+            bodies = _with_record_description(bodies, record.get("description"))
+        self._state_at(index).last_bodies = bodies
+        resources = to_resources(self._with_staged(index, bodies), self._table)
+        if index:
+            if devices is not None:
+                resources[_LISTED_HREF] = self._listed_rep(index, devices)
+            sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
+            resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
+        else:
+            # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
+            resources.update(course_table(self._family))
+            # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
+            resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
+    def _sibling_record(
+        self, index: int, deadline: float
+    ) -> tuple[int, dict[str, Any] | None, list | None]:
+        """A sibling's own record, from `/devices` while it lists it and from
+        `/devices/<n>` otherwise, with the `/devices` list (None when that
+        read failed, so whether it is listed is unknown). A record naming
+        another id is refused, so a bridge echoing device 0 at any index
+        can't produce a phantom sibling."""
+        _, devices = self._list_devices(_remaining(deadline))
+        if devices is None:
+            self._state_at(index).listed = None
+        record = next(
+            (d for d in devices or () if isinstance(d, dict) and d.get("id") == str(index)),
+            None,
+        )
+        if record is None:
+            path = _device_path(index)
+            status, body = self._request("GET", path, timeout=_remaining(deadline))
+            if status != 200 or not isinstance(body, dict):
+                return http_status_to_coap(status), None, devices
+            record = unwrap(body)
+            if record.get("id") != str(index):
+                return 0x84, None, devices
+        return 0x45, record, devices
+
+    def _list_devices(self, timeout: float) -> tuple[int, list | None]:
+        """`/devices`'s list, or None with the code its failure reads as."""
+        status, body = self._request("GET", "/devices", timeout=timeout)
+        if status != 200:
+            return http_status_to_coap(status), None
+        devices = body.get("Devices") if isinstance(body, dict) else None
+        if not isinstance(devices, list):
+            return 0xA2, None  # 5.02: the bridge answered, with no device list
+        return 0x45, devices
+
+    def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
+        listed = any(isinstance(d, dict) and d.get("id") == str(index) for d in devices)
+        self._state_at(index).listed = listed
+        return {_LISTED_FIELD: "On" if listed else "Off"}
+
     def write(self, path_segs: Sequence[str], body: dict | list, timeout: float) -> tuple[int, Any]:
-        href = "/" + "/".join(path_segs)
-        if not isinstance(body, dict):
-            # A Collection batch (issue #473) has no counterpart on a bridge
-            # with no Collections.
-            _LOGGER.warning("%s: no batch writes over 8888; write to %s refused", self._host, href)
-            return 0x85, None
-        aggregate = to_write([(href, body)], self._table)
+        index, href = self._locate("/" + "/".join(path_segs))
+        state = self._state_at(index)
+        if index and state.listed is False:
+            # Untested what the appliance does with it; the Flex Duo still
+            # answers /devices/1 with the divider out (#572).
+            return 0x83, f"The appliance does not list device {index} now"
+        steps: list[tuple[str, Mapping[str, Any]]] | None
+        if isinstance(body, list):
+            # A cook start's Collection batch (#473) is the same coalesced
+            # write the aggregate PUT already takes, so it goes as one body
+            # (#572). The RAC's writes are per endpoint, with no aggregate.
+            if href != _SEED_HREF or self._table is TP6X_RAC:
+                _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
+                return 0x85, None
+            batch = self._canonical_batch(index, body)
+            steps = None if batch is None else batch_steps(batch, self._table)
+            if steps is None:
+                hrefs = [e.get("href") for e in body if isinstance(e, dict)]
+                _LOGGER.warning(
+                    "%s: no 8888 resource for all of %s; batch refused", self._host, hrefs
+                )
+                return 0x84, None
+        else:
+            steps = [(href, body)]
+        aggregate = to_write(steps, self._table)
         if not aggregate.get("Device"):
             # A guessed wrapper would reach the appliance as a command nobody
             # chose, so a patch this family has no resource for is refused.
@@ -202,28 +333,95 @@ class LegacyHttpTransport:
             # A new course brings its own settings, on the panel as well, so
             # one held for the previous course would be sent to a course that
             # may not take it.
-            for key in [k for k in self._state.staged if k[2] is None and k not in staged]:
-                del self._state.staged[key]
+            for key in [k for k in state.staged if k[2] is None and k not in staged]:
+                del state.staged[key]
         for key, value in staged.items():
-            self._state.staged[key] = (value, staged_current(self._state.last_bodies, key))
+            state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and self._state.staged and self._idle():
-            return self._start(sendable, timeout)
+        if is_start(sendable) and state.staged and self._idle(index):
+            return self._start(index, sendable, timeout)
         if not sendable["Device"]:
             return 0x44, None
-        if sendable == _READY and self._already_ready(timeout):
+        if sendable == _READY and self._already_ready(index, timeout):
             _LOGGER.debug("%s: already idle; stop not sent", self._host)
             return 0x44, None
+        target = self._write_target(index, href, sendable)
+        if target is None:
+            _LOGGER.warning("%s: invalid 8888 write shape for %s", self._host, href)
+            return 0x80, None
+        path, payload = target
+
         # The body is the appliance's own account of a refusal (`"Control
         # fail, <...>"`), so it travels back with the code.
-        status, response = self._request("PUT", "/devices/0", body=sendable, timeout=timeout)
+        status, response = self._request("PUT", path, body=payload, timeout=timeout)
         return http_status_to_coap(status), response
 
-    def _idle(self) -> bool:
-        operation = self._state.last_bodies.get("Operation") or {}
+    def _canonical_batch(self, index: int, batch: list) -> list | None:
+        """A batch's element hrefs in canonical form, or None when one names
+        another device's resource: it would land on the wrong cavity."""
+        out = []
+        for element in batch:
+            href = element.get("href") if isinstance(element, dict) else None
+            if isinstance(href, str) and element.get("rep") is not None:
+                element_index, canonical = self._locate(href)
+                if element_index != index:
+                    return None
+                element = {**element, "href": canonical}
+            out.append(element)
+        return out
+
+    def _write_target(
+        self, index: int, href: str, aggregate: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]] | None:
+        """The HTTP path and body for one translated write.
+
+        Washers take the aggregate ``{"Device": ...}`` envelope at
+        ``/devices/0``; TP6X_RAC takes Operation there unwrapped, and Mode,
+        Wind and one Temperatures item on their own endpoints (confirmed on
+        TP6X_RAC_16K hardware, #576).
+        """
+        if self._table is not TP6X_RAC:
+            return _device_path(index), aggregate
+
+        resource = self._by_href.get(href)
+        if resource is None:
+            return None
+
+        device = aggregate.get("Device")
+        if not isinstance(device, dict):
+            return None
+
+        wire = device.get(resource.wrapper)
+
+        if resource.endpoint == "operation":
+            if not isinstance(wire, dict):
+                return None
+            return _device_path(index), {resource.wrapper: wire}
+
+        if resource.endpoint == "temperatures":
+            if not isinstance(wire, list) or len(wire) != 1 or not isinstance(wire[0], dict):
+                return None
+            item = dict(wire[0])
+            item_id = item.pop("id", None)
+            if item_id is None:
+                return None
+            return f"{_device_path(index)}/temperatures/{item_id}", item
+
+        if resource.endpoint in {"mode", "wind"}:
+            if not isinstance(wire, dict):
+                return None
+            return f"{_device_path(index)}/{resource.endpoint}", wire
+
+        # No direct-write behavior has been confirmed for the remaining
+        # TP6X_RAC resources. Preserve the existing aggregate path rather
+        # than guessing.
+        return _device_path(index), aggregate
+
+    def _idle(self, index: int) -> bool:
+        operation = self._state_at(index).last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
 
-    def _already_ready(self, timeout: float) -> bool:
+    def _already_ready(self, index: int, timeout: float) -> bool:
         """Whether a fresh read says the appliance is idle.
 
         Measured on a TP6X_WW6500: `Ready` from `Run` cancels the cycle,
@@ -232,11 +430,9 @@ class LegacyHttpTransport:
         throwing away what was dialled in at the panel. Read fresh rather
         than from the last sweep, which can be a poll interval old.
         """
-        status, state = self._request("GET", "/devices/0/operation", timeout=timeout)
-        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
-        return status == 200 and isinstance(operation, dict) and operation.get("state") == "Ready"
+        return self._operation_state(index, timeout) == "Ready"
 
-    def _start(self, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
+    def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
         """Start with every held value in the same body -- the only way this
         firmware takes them -- then make sure it actually runs.
 
@@ -245,45 +441,60 @@ class LegacyHttpTransport:
         That second `Run` is sent only when a fresh read says it isn't
         running.
         """
-        body = add_staged(aggregate, {key: value for key, (value, _) in self._state.staged.items()})
-        status, response = self._request("PUT", "/devices/0", body=body, timeout=timeout)
+        held = self._state_at(index).staged
+        base = _device_path(index)
+        body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
+        status, response = self._request("PUT", base, body=body, timeout=timeout)
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
-        self._state.staged.clear()
+        held.clear()
         time.sleep(_START_SETTLE_S)
-        state_status, state = self._request("GET", "/devices/0/operation", timeout=timeout)
-        operation = unwrap(state).get("Operation") if isinstance(state, dict) else None
-        if state_status == 200 and isinstance(operation, dict) and operation.get("state") == "Run":
+        if self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        status, response = self._request("PUT", "/devices/0", body=_RUN, timeout=timeout)
-        return http_status_to_coap(status), response
+        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
+        if not 200 <= run_status < 300 and self._running(index, timeout):
+            # It got there by itself between the read and the Run.
+            return http_status_to_coap(status), response
+        return http_status_to_coap(run_status), run_response
 
-    def _with_staged(self, bodies: dict[str, Any]) -> dict[str, Any]:
+    def _running(self, index: int, timeout: float) -> bool:
+        return self._operation_state(index, timeout) == "Run"
+
+    def _operation_state(self, index: int, timeout: float) -> str | None:
+        """A fresh read of the device's Operation state, None if unreadable."""
+        status, body = self._request("GET", f"{_device_path(index)}/operation", timeout=timeout)
+        operation = unwrap(body).get("Operation") if isinstance(body, dict) else None
+        return operation.get("state") if status == 200 and isinstance(operation, dict) else None
+
+    def _with_staged(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         """`bodies` as the next start would leave them.
 
         A held value is dropped once the appliance reports something else
         for it than when it was chosen (the dial was turned), and all of them
         once it is no longer idle -- the appliance's own choice wins.
         """
+        state = self._state_at(index)
         operation = bodies.get("Operation")
         if isinstance(operation, dict) and operation.get("state") not in (None, "Ready"):
-            self._state.staged.clear()
-        for key, (value, base) in list(self._state.staged.items()):
+            state.staged.clear()
+        for key, (value, base) in list(state.staged.items()):
             if key[0] not in bodies:
                 continue
             current = staged_current(bodies, key)
             if base is None:
-                self._state.staged[key] = (value, current)
+                state.staged[key] = (value, current)
             elif current != base:
                 _LOGGER.info(
                     "%s: %s changed at the appliance; dropping %s", self._host, key[1], value
                 )
-                del self._state.staged[key]
-        held = with_staged(bodies, {key: value for key, (value, _) in self._state.staged.items()})
-        return self._with_course_defaults(held)
+                del state.staged[key]
+        held = with_staged(bodies, {key: value for key, (value, _) in state.staged.items()})
+        return self._with_course_defaults(state, held)
 
-    def _with_course_defaults(self, bodies: dict[str, Any]) -> dict[str, Any]:
+    def _with_course_defaults(
+        self, state: _ApplianceState, bodies: dict[str, Any]
+    ) -> dict[str, Any]:
         """A held course reads with its own default settings, as the panel
         does when the dial turns, for every setting not held itself.
 
@@ -291,7 +502,7 @@ class LegacyHttpTransport:
         own. Measured on a WW6500 -- the composed Drum Clean start came up
         at 60C/2/400, the defaults its record states.
         """
-        staged = self._state.staged
+        staged = state.staged
         if not any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
             return bodies
         washer = bodies.get(_WASHER_WRAPPER)
@@ -300,7 +511,7 @@ class LegacyHttpTransport:
         # A single-resource read carries no Mode; the course's record is the
         # last sweep's, with the held course in place.
         context = with_staged(
-            {**self._state.last_bodies, **bodies},
+            {**state.last_bodies, **bodies},
             {key: value for key, (value, _) in staged.items()},
         )
         resources = to_resources(context, self._table)
@@ -324,18 +535,34 @@ class LegacyHttpTransport:
         return {**bodies, _WASHER_WRAPPER: washer}
 
     def diagnostics(self) -> dict[str, Any]:
-        return {
+        # Only devices whose record was read: a state is also created for
+        # any index a write or a rejected probe names.
+        states = {
+            index: state
+            for (host, port, index), state in _STATE.items()
+            if (host, port) == (self._host, self._port) and (state.last_bodies or not index)
+        }
+        main = states.get(0, _ApplianceState()).last_bodies
+        out: dict[str, Any] = {
             "transport": "legacy_http",
             "family": self._family,
             "family_mapped": is_mapped(self._family),
-            # Resource bodies only: the aggregate's own scalars include a
-            # `description` that can carry the serial and a user-set `name`.
-            "bodies": {
-                key: value
-                for key, value in self._state.last_bodies.items()
-                if isinstance(value, (dict, list)) or key == "type"
-            },
+            "unmapped_resources": sorted(
+                {
+                    wrapper
+                    for state in states.values()
+                    for wrapper in unmapped_wrappers(state.last_bodies, self._table)
+                }
+            ),
+            "bodies": _resource_bodies(main),
         }
+        siblings = {index: state for index, state in states.items() if index}
+        if siblings:
+            out["device_bodies"] = {
+                str(index): _resource_bodies(state.last_bodies)
+                for index, state in sorted(siblings.items())
+            }
+        return out
 
     def subscribe(self, path_segs: Sequence[str]) -> Any:
         raise NotImplementedError("the 8888 bridge has no OBSERVE")
@@ -377,7 +604,45 @@ class LegacyHttpTransport:
             # What every request gets while Remote Control is off at the
             # panel -- the everyday case, so it reads as a reason, not a code.
             return response.status, "Remote Control is off at the appliance"
+        if response.status >= 400 and isinstance(body, dict):
+            # The bridge's `Control fail, <...>`, as text: the shape the DTLS
+            # boards give it in (transport.Transport).
+            description = body.get("errorDescription")
+            if isinstance(description, str) and description:
+                return response.status, description
         return response.status, body
+
+
+def _remaining(deadline: float) -> float:
+    """What is left of a shared deadline; spent reads as a timeout."""
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise TimeoutError("the request budget is spent")
+    return left
+
+
+def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:
+    """`bodies` with a sibling record's description on its Information, when
+    it is that Information's own description plus a suffix (_RECORD_SUFFIX)."""
+    information = bodies.get("Information")
+    if not isinstance(information, dict):
+        return bodies
+    own = information.get("description")
+    if not (isinstance(own, str) and isinstance(description, str)):
+        return bodies
+    if not (description.startswith(own) and _RECORD_SUFFIX.fullmatch(description[len(own) :])):
+        return bodies
+    return {**bodies, "Information": {**information, "description": description}}
+
+
+def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:
+    """Resource bodies only: the aggregate's own scalars include a
+    `description` that can carry the serial and a user-set `name`."""
+    return {
+        key: value
+        for key, value in bodies.items()
+        if isinstance(value, (dict, list)) or key == "type"
+    }
 
 
 def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:

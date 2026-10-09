@@ -95,7 +95,11 @@ from .credentials import (
 from .devices import find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
-from .legacy_http_token import CallbackPortUnavailable, obtain_device_token
+from .legacy_http_token import (
+    CallbackCertRejected,
+    CallbackPortUnavailable,
+    obtain_device_token,
+)
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
 from .session import psk_provider
@@ -137,6 +141,8 @@ class CannotConnect(Exception):
     """
 
     error_key = "cannot_connect"
+    # The plaintext port the appliance answered on, when the probe found one.
+    plaintext_port: int | None = None
 
 
 class NoResponse(CannotConnect):
@@ -169,6 +175,23 @@ class ApplianceNoDtls(CannotConnect):
     def __init__(self, message: str, model: str, port: str) -> None:
         super().__init__(message)
         self.placeholders = {"model": model, "port": port}
+
+
+class NonApplianceStack(CannotConnect):
+    """The address answers as an OCF stack that isn't an appliance (#540).
+
+    It declares no appliance type, multicast found no appliance behind it
+    (usually because Home Assistant is on another subnet), and its secure
+    port then failed the handshake.
+    """
+
+    error_key = "non_appliance_stack"
+
+
+class MultipleAppliances(CannotConnect):
+    """More than one OCF appliance answers at this address (#540)."""
+
+    error_key = "multiple_appliances"
 
 
 class HandshakeTimeout(CannotConnect):
@@ -875,7 +898,12 @@ def _handshake_and_read(
     LocalThingsConfigFlow._setup_source_port for when each applies.
 
     `psk`, when given, is offered instead of the certificate.
+
+    A failure carries the appliance's plaintext port as `plaintext_port`,
+    so the credential step reads that stack's doxm and not another's (#540).
     """
+    if scan.appliance_responders > 1:
+        raise MultipleAppliances(f"{scan.appliance_responders} OCF appliances answer at {host}")
     if local_port is not None and scan.candidates and not _source_port_bindable(host, local_port):
         _LOGGER.debug("source port %d unavailable; using an ephemeral one", local_port)
         local_port = None
@@ -885,10 +913,13 @@ def _handshake_and_read(
         while True:
             try:
                 return _connect_and_read(host, port, cert_pem, key_pem, local_port, auth=psk)
-            except CannotConnect:
+            except CannotConnect as err:
                 # The device answered, just not with something we can use --
                 # trying the remaining ports can't improve on that.
-                raise
+                failure = _stack_failure(host, scan, err)
+                if failure is err:
+                    raise
+                raise failure from err
             except Exception as exc:
                 if not retried and _worth_retrying(exc, port in scan.confirmed, local_port):
                     retried = True
@@ -898,7 +929,18 @@ def _handshake_and_read(
                 _LOGGER.debug("port %d failed: %s", port, exc)
                 break
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem, auth=psk)
-    raise _classify_handshake_failure(host, scan, failures, alerts, psk=psk is not None)
+    raise _stack_failure(
+        host, scan, _classify_handshake_failure(host, scan, failures, alerts, psk=psk is not None)
+    )
+
+
+def _stack_failure(host: str, scan: probing.HostProbe, err: CannotConnect) -> CannotConnect:
+    """`err`, or NonApplianceStack when the stack dialled declared no
+    appliance type: its refusal says nothing about our credential (#540)."""
+    if scan.typeless_stack:
+        err = NonApplianceStack(f"{host} answers as an OCF stack with no appliance type ({err})")
+    err.plaintext_port = scan.plaintext_port
+    return err
 
 
 def _probe_and_validate(
@@ -994,10 +1036,14 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # The form a token exchange returns to: "legacy_token" when adding
         # an appliance, "reauth_confirm" when its token stopped working.
         self._legacy_step: str = "legacy_token"
+        self._legacy_cert_rejected = False
         self._token_task: asyncio.Task[str | None] | None = None
         # Set only on the PSK branch: the imported credential as it is
         # stored, and what plaintext doxm hinted before the menu.
         self._psk: dict[str, str] | None = None
+        # The appliance's plaintext port from the probe the certificate was
+        # refused on, for reading its doxm (#540).
+        self._plaintext_port: int | None = None
         self._credential_hint = probing.CredentialHint()
 
     def _setup_source_port(self, host: str) -> int | None:
@@ -1121,10 +1167,10 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._setup_source_port(self._host),
                 )
             except LegacyHttpFamily:
-                # This family authenticates nothing about the certificate
-                # (measured on a TP6X_WW6500: any leaf is answered 200, a
-                # wrong device token is 401), so there is no fallback_ca to
-                # fall through to -- the token step is the whole credential.
+                # The washer authenticates nothing about the certificate (a
+                # TP6X_WW6500 answers any leaf 200), so the token step comes
+                # first; fallback_ca is offered only if the token callback
+                # refuses the leaf, as the TP6X_RAC appears to (#524).
                 try:
                     self._legacy_leaf = existing_leaf or await self.hass.async_add_executor_job(
                         _mint_preferred, self._ca_cert_pem, self._ca_key_pem
@@ -1136,7 +1182,8 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = exc.error_key
                 else:
                     return await self.async_step_legacy_token()
-            except CertRejected:
+            except CertRejected as exc:
+                self._plaintext_port = exc.plaintext_port
                 # The self-signed leaf (or a reused one, re-minted and refused
                 # again) didn't authenticate. Either this device validates the
                 # chain and wants AC14K_M, or it isn't on the certificate
@@ -1216,42 +1263,50 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Ask for the AC14K_M CA after a device rejects the self-signed leaf.
 
-        Reached from the credential menu. Kept for an appliance that checks
-        the chain against AC14K_M, though none has been confirmed since the
-        self-signed default landed (#435). The pasted CA cert and key mint a
-        chain-signed leaf, which is then stored on the entry so the retry is
-        never needed again for this appliance. A refusal goes back to a menu
+        Reached from the credential menu, or from the 8888 token exchange
+        when the appliance's callback refused the self-signed leaf (#524).
+        DTLS-side, it is kept for an appliance that checks the chain against
+        AC14K_M, though none has been confirmed since the self-signed default
+        landed (#435). The pasted CA cert and key mint a chain-signed leaf,
+        which is then stored on the entry so the retry is never needed again
+        for this appliance. A DTLS refusal goes back to a menu
         (async_step_ca_rejected), since a PSK appliance refuses every CA.
         """
         existing = self.hass.config_entries.async_entries(DOMAIN)
         errors: dict[str, str] = {}
+        if user_input is None and self._legacy_cert_rejected:
+            errors["base"] = "callback_cert_rejected"
 
         if user_input is not None:
             # Normalized here, not just before minting: this is also what gets
             # stored and reused to re-mint the leaf later.
             self._ca_cert_pem = _normalize_pem(user_input[CONF_CA_CERT_PEM])
             self._ca_key_pem = _normalize_pem(user_input[CONF_CA_KEY_PEM])
-            try:
-                info = await self.hass.async_add_executor_job(
-                    _probe_and_validate,
-                    self._host,
-                    self._ca_cert_pem,
-                    self._ca_key_pem,
-                    None,
-                    self._setup_source_port(self._host),
-                )
-            except CertRejected as exc:
-                _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
-                return await self.async_step_ca_rejected()
-            except (CannotConnect, InvalidCA) as exc:
-                _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
-                errors["base"] = exc.error_key
-                self._error_placeholders = getattr(exc, "placeholders", {})
-            except Exception:
-                _LOGGER.exception("Unexpected error during device probe")
-                errors["base"] = "unknown"
+            if self._legacy_cert_rejected:
+                if (result := await self._legacy_retry_with_ca(errors)) is not None:
+                    return result
             else:
-                return await self._finish_probe(info, existing)
+                try:
+                    info = await self.hass.async_add_executor_job(
+                        _probe_and_validate,
+                        self._host,
+                        self._ca_cert_pem,
+                        self._ca_key_pem,
+                        None,
+                        self._setup_source_port(self._host),
+                    )
+                except CertRejected as exc:
+                    _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
+                    return await self.async_step_ca_rejected()
+                except (CannotConnect, InvalidCA) as exc:
+                    _LOGGER.warning("Probe of %s failed [%s]: %s", self._host, exc.error_key, exc)
+                    errors["base"] = exc.error_key
+                    self._error_placeholders = getattr(exc, "placeholders", {})
+                except Exception:
+                    _LOGGER.exception("Unexpected error during device probe")
+                    errors["base"] = "unknown"
+                else:
+                    return await self._finish_probe(info, existing)
 
         schema = vol.Schema(
             {
@@ -1271,6 +1326,24 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def _legacy_retry_with_ca(self, errors: dict[str, str]) -> ConfigFlowResult | None:
+        """Mint an AC14K_M-signed leaf and rerun the token exchange with it.
+
+        The listener presents the whole chain, as the manual `openssl
+        s_server -cert_chain` workaround in #524 did. Returns None, with
+        `errors` filled in, when the CA cannot mint.
+        """
+        try:
+            self._legacy_leaf = await self.hass.async_add_executor_job(
+                _mint_credentials, self._ca_cert_pem, self._ca_key_pem
+            )
+        except (CannotConnect, InvalidCA) as exc:
+            _LOGGER.warning("Minting for %s failed [%s]: %s", self._host, exc.error_key, exc)
+            errors["base"] = exc.error_key
+            return None
+        self._legacy_cert_rejected = False
+        return await self.async_step_legacy_token_exchange()
+
     async def async_step_credential(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -1282,7 +1355,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         has been reported to accept it (#435, #494, #520).
         """
         self._credential_hint = await self.hass.async_add_executor_job(
-            probing.read_credential_hint, self._host
+            probing.read_credential_hint, self._host, self._plaintext_port
         )
         if self._credential_hint.suggests_psk:
             return await self.async_step_credential_psk()
@@ -1427,6 +1500,8 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="reauth_unsupported")
         self._host = entry_data[CONF_HOST]
         self._legacy_leaf = (entry_data[CONF_LEAF_CERT_PEM], entry_data[CONF_LEAF_KEY_PEM])
+        self._ca_cert_pem = entry_data.get(CONF_CA_CERT_PEM, "")
+        self._ca_key_pem = entry_data.get(CONF_CA_KEY_PEM, "")
         self._legacy_step = "reauth_confirm"
         return await self.async_step_reauth_confirm()
 
@@ -1472,6 +1547,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except CallbackPortUnavailable as err:
             _LOGGER.warning("Token callback port for %s unavailable: %s", self._host, err)
             return self._legacy_token_form({"base": "callback_port_in_use"})
+        except CallbackCertRejected as err:
+            _LOGGER.warning("Token callback from %s refused the certificate: %s", self._host, err)
+            if self._ca_cert_pem:
+                # Already an AC14K_M-signed leaf; another CA is a guess.
+                return self._legacy_token_form({"base": "callback_ca_rejected"})
+            self._legacy_cert_rejected = True
+            return await self.async_step_fallback_ca()
         except OSError as err:
             _LOGGER.warning("Token request to %s failed: %s", self._host, err)
             return self._legacy_token_form({"base": "cannot_connect"})
@@ -1505,8 +1587,16 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry = self._get_reauth_entry()
             if not _identity_matches(entry, info, self._host):
                 return self._legacy_token_form({"base": "wrong_device"})
+            # The leaf too: fallback_ca may have replaced it with a CA-signed one.
             return self.async_update_reload_and_abort(
-                entry, data_updates={CONF_DEVICE_TOKEN: token}
+                entry,
+                data_updates={
+                    CONF_DEVICE_TOKEN: token,
+                    CONF_LEAF_CERT_PEM: cert_pem,
+                    CONF_LEAF_KEY_PEM: key_pem,
+                    CONF_CA_CERT_PEM: self._ca_cert_pem,
+                    CONF_CA_KEY_PEM: self._ca_key_pem,
+                },
             )
         self._legacy_token = token
         info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}

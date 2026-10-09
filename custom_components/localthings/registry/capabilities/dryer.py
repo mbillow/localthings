@@ -5,20 +5,23 @@ remote-control fallback pairs, buzzer, energy meter, job-beginning-status, and
 the /course/vs/0 cycle select -- lives in laundry.py.
 
   /washer/vs/0   -> DRYER_SETTINGS (dryLevel, dryTime, dryerType, wrinklePrevent)
-  /course/vs/0   -> DRYER_COURSE (shared cycle select; see below)
+  /course/vs/0   -> DRYER_COURSE (cycle select, damp alert, wrinkle-prevent
+                    active; see below)
   /diagnosis/vs/0 -> DRYER_DIAGNOSIS
 """
 
 from ..capability import Capability
-from ..entities import SelectDesc, SensorDesc, SwitchDesc
-from .common import diagnosis_status
+from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
+from .common import diagnosis_status, option_value
 from .laundry import (
     OPTION_KIND_DRY,
     OPTION_KIND_DRY_TIME,
+    bool_option_exists,
     course_narrowed_options,
     cycle_select,
     drum_clean_cycles_remaining,
     drum_clean_last_cleaned,
+    option_write,
 )
 
 
@@ -99,10 +102,10 @@ DRYER_SETTINGS = Capability(
             field="x.com.samsung.da.dryerType",
             icon="mdi:tumble-dryer",
             device_class="enum",
-            # Only 'Electricity' confirmed across shipped fixtures (#366); an
-            # unrecognized value still passes through raw via sensor.py's
-            # options property rather than breaking the entity.
-            options=("electricity",),
+            # 'Electricity' from the shipped fixtures (#366), 'Gas' from a
+            # DV8900B (#464); an unrecognized value still passes through raw
+            # via sensor.py's options property rather than breaking the entity.
+            options=("electricity", "gas"),
             value_fn=lambda v: v.lower() if isinstance(v, str) else v,
         ),
         SwitchDesc(
@@ -114,6 +117,7 @@ DRYER_SETTINGS = Capability(
         ),
     ),
 )
+
 
 # /course/vs/0 -- cycle selection, shared with washer/dishwasher via
 # laundry.cycle_select. Course display names live in translations under
@@ -143,13 +147,56 @@ DRYER_SETTINGS = Capability(
 # drum_clean_last_cleaned. No separate heat-exchanger-clean tracking was
 # found on either dump #258 supplied, so if the app surfaces that reminder,
 # it isn't computed from anything this integration can read locally.
+# Damp Alert maps to MixedLoadBell; its Enable/Disable vocabulary requires a
+# dedicated writer. The per-course bitmap is not confirmed enough to safely
+# reject a write, so this control stays ungated.
+def _damp_alert_write(p, rep, href=None):
+    if p == "On":
+        value = "Enable"
+    elif p == "Off":
+        value = "Disable"
+    else:
+        return None
+    if not rep.get("x.com.samsung.da.options"):
+        return None
+    return ["course", "vs", "0"], {
+        "x.com.samsung.da.options": option_write("MixedLoadBell", value),
+    }
+
+
 DRYER_COURSE = Capability(
     href="/course/vs/0",
+    # Warm, not cold: same push reasoning as washer.WASHER_COURSE --
+    # observe only subscribes hot/warm hrefs.
+    poll_tier="warm",
     entities=(
         cycle_select(
             translation_key="dryer_cycle",
             icon="mdi:tumble-dryer",
             table_href="/st/dryercourse/vs/0",
+            # Verbatim: an unknown code renders as-is instead of falling
+            # into select._display's cosmetic camel-split (`3E` → `3 E`).
+            display_fn=lambda value, resources: value,
+        ),
+        SwitchDesc(
+            key="damp_alert",
+            icon="mdi:bell-ring-outline",
+            entity_category="config",
+            exists_fn=bool_option_exists("MixedLoadBell"),
+            rep_fn=lambda rep: (
+                option_value(rep.get("x.com.samsung.da.options"), "MixedLoadBell") == "Enable"
+            ),
+            write_fn=_damp_alert_write,
+        ),
+        # Reports the active post-cycle tumble, distinct from the
+        # wrinkle_prevent switch on /washer/vs/0 that arms it.
+        BinarySensorDesc(
+            key="wrinkle_prevent_active",
+            icon="mdi:iron-outline",
+            exists_fn=bool_option_exists("WrinklePreventRunning"),
+            rep_fn=lambda rep: (
+                option_value(rep.get("x.com.samsung.da.options"), "WrinklePreventRunning") == "On"
+            ),
         ),
         SensorDesc(
             key="drum_clean_cycles_remaining",

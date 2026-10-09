@@ -11,12 +11,14 @@ CoAP device.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import ClassVar
 
 import pytest
 
 from custom_components.localthings.legacy_http import http_status_to_coap
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
+from custom_components.localthings.registry.capabilities import cook
 
 AGGREGATE = {
     "Device": {
@@ -269,7 +271,7 @@ class TestWrites:
         )
 
         assert code == http_status_to_coap(400)
-        assert response["errorDescription"] == "Control fail, <Mode.options=Course_63>"
+        assert response == "Control fail, <Mode.options=Course_63>"
 
     def test_the_other_tokens_in_that_same_array_still_write(self, transport):
         """The rule is about the field, not the resource: LaundryOutTime
@@ -412,6 +414,28 @@ class TestStartOnlyWrites:
         assert self._puts()[-1] == {"Device": {"Operation": {"state": "Run"}}}
         assert len(self._puts()) == 2
 
+    def test_a_refused_run_on_a_cycle_that_started_anyway_is_no_refusal(self, idle):
+        """The cycle got to Run by itself between the read and the plain Run,
+        which the appliance then refuses."""
+
+        class _Starts(dict):
+            def get(self, key, default=None):
+                puts = sum(1 for method, *_ in _FakeConnection.log if method == "PUT")
+                if key == ("PUT", "/devices/0") and puts > 1:
+                    return (400, {"errorCode": "0", "errorDescription": "Control fail, <Run>"})
+                if key == "/devices/0/operation":
+                    state = "Run" if puts > 1 else "Ready"
+                    return (200, {"Operation": {"state": state}})
+                return super().get(key, default)
+
+        _FakeConnection.routes = _Starts(_FakeConnection.routes)
+        idle.write(["course", "vs", "0"], {PREFIX + "options": ["Course_63"]}, 8.0)
+
+        code, _ = idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        assert code == 0x44
+        assert len(self._puts()) == 2
+
     def test_start_with_nothing_held_is_a_plain_run(self, idle):
         idle.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
 
@@ -546,10 +570,26 @@ class TestUnmappedFamily:
 
         assert diag["family"] == "TP6X_DRYER"
         assert diag["family_mapped"] is False
+        assert diag["unmapped_resources"] == [
+            "Alarms",
+            "Configuration",
+            "Diagnosis",
+            "EnergyConsumption",
+            "Mode",
+            "Operation",
+            "Washer",
+        ]
         assert diag["bodies"]["Washer"] == AGGREGATE["Device"]["Washer"]
         # The aggregate's description can carry the serial; name is user-set.
         assert "description" not in diag["bodies"]
         assert "name" not in diag["bodies"]
+
+
+def test_diagnostics_name_what_a_mapped_family_does_not_read(transport):
+    """The washer's table reads everything but the usage-file pointer."""
+    transport.read(["device", "0"], timeout=10.0)
+
+    assert transport.diagnostics()["unmapped_resources"] == ["EnergyConsumption"]
 
 
 # The WW6500's own supportedOptions and supported lists, so a held course
@@ -650,3 +690,75 @@ class TestHeldCourseDefaults:
         _, body = idle.read(["device", "0"], timeout=10.0)
 
         assert self._washer(body)[PREFIX + "waterTemperature"] == "40"
+
+
+class TestWallOvenStart:
+    """The cook start's Collection batch over 8888 (#572): this firmware has no
+    Collections, so the batch goes as one aggregate PUT."""
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
+
+    @pytest.fixture
+    def oven(self, transport):
+        bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
+        device = LegacyHttpTransport(
+            "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
+        )
+        device.connect()
+        return device
+
+    def test_a_start_goes_as_one_aggregate_body(self, oven):
+        _, seed = oven.read(["device", "0"], timeout=10.0)
+        resources = {e["href"]: e["rep"] for e in seed}
+        batch = cook.plan_start(resources, "UpperConvectionBake", 350, 5400).batch()
+        _FakeConnection.log.clear()
+
+        code, _ = oven.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            (
+                "PUT",
+                "/devices/0",
+                {
+                    "Device": {
+                        "Mode": {"modes": ["UpperConvectionBake"]},
+                        "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                        "Operation": {"operationTime": "01:30:00", "state": "Run"},
+                    }
+                },
+            )
+        ]
+
+    def test_a_batch_anywhere_else_is_refused(self, oven):
+        code, _ = oven.write(
+            ["mode", "vs", "0"], [{"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}], 8.0
+        )
+
+        assert code == 0x85
+        assert _FakeConnection.log == []
+
+    def test_a_batch_that_would_lose_an_element_sends_nothing(self, oven):
+        batch = [
+            {"href": "/energy/consumption/vs/0", "rep": {PREFIX + "cumulativePower": "1"}},
+            {"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}},
+        ]
+
+        code, _ = oven.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
+    def test_the_rac_takes_no_batch(self, transport):
+        rac = LegacyHttpTransport(
+            "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_16K"
+        )
+        rac.connect()
+        batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
+
+        code, _ = rac.write(["device", "0"], batch, timeout=8.0)
+
+        assert code == 0x85
+        assert _FakeConnection.log == []

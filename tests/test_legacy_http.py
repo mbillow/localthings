@@ -16,13 +16,18 @@ MAC address in UUID form.
 import json
 from pathlib import Path
 
+import pytest
+
 from custom_components.localthings.legacy_http import (
     COURSE_TABLE_HREF,
     IDENTITY,
+    LCD_OV_WALL,
     PREFIX,
+    TP6X_RAC,
     TP6X_WASHER,
     StagedKey,
     add_staged,
+    batch_steps,
     course_table,
     http_status_to_coap,
     is_mapped,
@@ -243,20 +248,27 @@ class TestModelSettings:
     def test_a_ww6500_does_not_take_remote_power(self):
         """Its byte 26 is 00, and the washer answers a power write with
         `400 Control fail, <Operation.power=Off>`."""
-        rep = model_settings(self._with(self.WW6500))["/wm/setinfo/vs/0"]
+        rep = model_settings("TP6X_WASHER", self._with(self.WW6500))["/wm/setinfo/vs/0"]
 
         assert rep == {PREFIX + "isModelSettingPowerOnOff": "false"}
-        assert model_allows_power_on_off(model_settings(self._with(self.WW6500))) is False
+        assert (
+            model_allows_power_on_off(model_settings("TP6X_WASHER", self._with(self.WW6500)))
+            is False
+        )
 
     def test_bit_0_of_byte_26_allows_it(self):
         model_id = self.WW6500[: len(self.WW6500) - 6] + "01" + "0000"
 
-        assert model_allows_power_on_off(model_settings(self._with(model_id))) is True
+        assert (
+            model_allows_power_on_off(model_settings("TP6X_WASHER", self._with(model_id))) is True
+        )
 
     def test_only_bit_0_counts(self):
         model_id = self.WW6500[: len(self.WW6500) - 6] + "FE" + "0000"
 
-        assert model_allows_power_on_off(model_settings(self._with(model_id))) is False
+        assert (
+            model_allows_power_on_off(model_settings("TP6X_WASHER", self._with(model_id))) is False
+        )
 
     def test_no_usable_model_id_says_nothing(self):
         """Nothing to go on leaves the switch as it was."""
@@ -267,7 +279,7 @@ class TestModelSettings:
             self._with("TP6X_WW6500"),
             self._with("TP6X_WW6500|FF18E000|20010102001011070000000000ZZ0000"),
         ):
-            assert model_settings(bodies) == {}
+            assert model_settings("TP6X_WASHER", bodies) == {}
 
 
 class TestHttpStatusToCoap:
@@ -453,3 +465,249 @@ class TestStaging:
         }
         assert is_start(body)
         assert not is_start({"Device": {"Operation": {"state": "Pause"}}})
+
+
+class TestTp6xRac:
+    """TP6X_RAC_16K (issues #563, #589) and TP6X_RAC_17K (issue #524), from
+    the bodies their diagnostics recorded.
+
+    Their fields are the ARTIK051 boards' CoAP vocabulary, so the table only
+    has to put each resource on that generation's href and the existing
+    air-conditioner registry does the rest.
+    """
+
+    FIXTURES = tuple(
+        Path(__file__).parent / "fixtures" / f"airconditioner_tp6x_rac_{size}_8888.json"
+        for size in ("16k", "17k", "16k_heat")
+    )
+
+    @staticmethod
+    def _bodies(fixture):
+        return json.loads(fixture.read_text(encoding="utf-8"))["bodies"]
+
+    def _resources(self, fixture=None):
+        return to_resources(self._bodies(fixture or self.FIXTURES[0]), TP6X_RAC)
+
+    def test_every_capacity_shares_the_table(self):
+        """The reporter's unit is a 16K; issue #524's are 17K."""
+        for family in ("TP6X_RAC_16K", "TP6X_RAC_17K", "TP6X_RAC_09K"):
+            assert table_for(family) is TP6X_RAC
+            assert is_mapped(family)
+        assert not is_mapped("TP6X_RACX_16K")
+
+    @pytest.mark.parametrize("fixture", FIXTURES, ids=lambda p: p.stem)
+    def test_the_dump_produces_the_legacy_board_hrefs(self, fixture):
+        assert set(self._resources(fixture)) == {
+            "/airflow/vs/0",
+            "/alarms/vs/0",
+            "/configuration/vs/0",
+            "/diagnosis/vs/0",
+            "/information/vs/0",
+            "/mode/vs/0",
+            "/power/vs/0",
+            "/temperatures/vs/0",
+        }
+
+    @pytest.mark.parametrize("fixture", FIXTURES, ids=lambda p: p.stem)
+    def test_it_types_as_an_air_conditioner_with_nothing_unbound(self, fixture):
+        resources = self._resources(fixture)
+        registry = resolve(resources)
+        assert registry is not None
+        assert registry.name == "airconditioner"
+        unbound: list[str] = []
+
+        bound = discover(
+            resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+        )
+
+        assert unbound == []
+        keys = {b.key_override or b.desc.key for b in bound}
+        assert {"climate", "beep", "alarm_code", "diagnosis_status"} <= keys
+
+    def test_climate_writes_reach_the_wrappers_the_appliance_reports(self):
+        """Through the climate entity's own write function. Number-valued
+        fields go back as numbers, the way the appliance reports them, and
+        the temperature list is the wrapper's whole body."""
+        from custom_components.localthings.registry.capabilities.airconditioner import (
+            _climate_write,
+        )
+
+        rep = self._resources()["/mode/vs/0"]
+
+        def wire(payload):
+            segs, body = _climate_write(payload, rep, resources={})
+            return to_write([("/" + "/".join(segs), body)], TP6X_RAC)["Device"]
+
+        assert wire(("power", False)) == {"Operation": {"power": "Off"}}
+        assert wire(("mode", "Cool")) == {"Mode": {"modes": ["Cool"]}}
+        assert wire(("temperature", 23)) == {"Temperatures": [{"id": "0", "desired": 23}]}
+        assert wire(("fan_legacy", "3")) == {"Wind": {"speedLevel": 3}}
+        assert wire(("swing_legacy", "Fix")) == {"Wind": {"direction": "Fix"}}
+        assert wire(("preset_legacy", "Nano")) == {"Mode": {"options": ["Comode_Nano"]}}
+
+    def test_the_washer_power_flag_is_not_read_off_an_ac(self):
+        """The 17K's modelID carries a feature string too, but byte 26 is
+        the washer plugin's reading, and /wm/setinfo/vs/0 a laundry resource."""
+        bodies = self._bodies(self.FIXTURES[1])
+        assert bodies["Information"]["modelID"].count("|") == 2
+
+        assert model_settings("TP6X_RAC_17K", bodies) == {}
+
+    def test_a_list_body_passes_the_start_split_untouched(self):
+        aggregate = {"Device": {"Temperatures": [{"id": "0", "desired": 23}]}}
+
+        sendable, staged = split_start_only(aggregate, TP6X_RAC)
+
+        assert sendable == aggregate
+        assert staged == {}
+
+
+class TestLcdOvWall:
+    """LCD_OV_WALL_16K, the NV51K777OS Flex Duo wall oven (issue #572), from
+    the bodies its diagnostics recorded idle.
+
+    Its fields are the TP2X_DA-KS-WALLOVEN's CoAP vocabulary, so the existing
+    oven registry binds everything once each resource is on that board's href.
+    """
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
+
+    def _bodies(self):
+        return json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+
+    def _resources(self, bodies=None):
+        return to_resources(bodies or self._bodies(), LCD_OV_WALL)
+
+    def _state(self, resources):
+        from custom_components.localthings.registry.adapter import flatten
+
+        registry = resolve(resources)
+        assert registry is not None
+        return flatten(
+            discover(resources, registry.capabilities, registry.pattern_capabilities), resources
+        )
+
+    def test_the_family_is_mapped_at_any_capacity(self):
+        for family in ("LCD_OV_WALL_16K", "LCD_OV_WALL_30K"):
+            assert table_for(family) is LCD_OV_WALL
+            assert is_mapped(family)
+
+    def test_the_dump_produces_the_wall_oven_hrefs(self):
+        assert set(self._resources()) == {
+            "/alarms/vs/0",
+            "/diagnosis/vs/0",
+            "/doors/vs/0",
+            "/information/vs/0",
+            "/kidslock/vs/0",
+            "/mode/vs/0",
+            "/operational/state/vs/0",
+            "/oven/vs/0",
+            "/power/vs/0",
+            "/remotectrl/vs/0",
+            "/temperatures/vs/0",
+        }
+
+    def test_supported_modes_are_split_out_of_one_string(self):
+        """The appliance packs all its modes, duplicates included, into a
+        single comma-joined list entry."""
+        raw = self._bodies()["Mode"]["supportedModes"]
+        assert len(raw) == 1 and raw[0].count("NoOperation") == 2
+
+        modes = self._resources()["/mode/vs/0"][PREFIX + "supportedModes"]
+
+        assert modes[:2] == ["UpperHealthycook4", "UpperHealthycook3"]
+        assert modes[-1] == "ConvectionBake"
+        assert {"Bake", "UpperConvectionBake", "SelfClean"} <= set(modes)
+        assert len(modes) == len(set(modes)) == 27
+
+    def test_it_types_as_an_oven_with_nothing_unbound(self):
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        assert registry.name == "oven"
+        unbound: list[str] = []
+
+        bound = discover(
+            resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+        )
+
+        assert unbound == []
+        keys = {b.key_override or b.desc.key for b in bound}
+        assert {
+            "oven_mode",
+            "oven_setpoint",
+            "current_temp_c",
+            "machine_state",
+            "door_open",
+            "remote_control",
+            "power_switch",
+        } <= keys
+
+    def test_a_cook_reads_through_the_float_temperatures(self):
+        """Idle, the cavity sits at the 175 F floor and reads unknown; this
+        firmware reports temperatures as floats, which must still read."""
+        bodies = self._bodies()
+        bodies["Temperatures"] = [{**bodies["Temperatures"][0], "desired": 350.0, "current": 220.0}]
+        bodies["Mode"] = {**bodies["Mode"], "modes": ["Bake"]}
+
+        state = self._state(self._resources(bodies))
+
+        assert state["oven_setpoint"] == 350
+        assert state["current_temp_c"] == 220
+        assert state["oven_mode"] == "Bake"
+
+    def test_oven_writes_reach_the_wrappers_the_appliance_reports(self):
+        from custom_components.localthings.registry.capabilities.oven import (
+            _cook_time_write,
+            _oven_mode_write,
+            _oven_setpoint_write,
+        )
+
+        resources = self._resources()
+
+        def wire(write, value, href):
+            segs, body = write(value, resources[href])
+            return to_write([("/" + "/".join(segs), body)], LCD_OV_WALL)["Device"]
+
+        assert wire(_oven_mode_write, "UpperConvectionBake", "/mode/vs/0") == {
+            "Mode": {"modes": ["UpperConvectionBake"]}
+        }
+        temperatures = wire(_oven_setpoint_write, 350, "/temperatures/vs/0")["Temperatures"]
+        assert temperatures[0]["id"] == "0"
+        assert temperatures[0]["desired"] == 350
+        assert wire(_cook_time_write, 90, "/operational/state/vs/0") == {
+            "Operation": {"operationTime": "01:30:00", "remainingTime": "01:30:00"}
+        }
+
+    def test_the_washer_power_flag_is_not_read_off_an_oven(self):
+        assert model_settings("LCD_OV_WALL_16K", self._bodies()) == {}
+
+
+_MODE = {"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}
+_RUN = {"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}
+
+
+class TestBatchSteps:
+    """A cook start's batch over 8888 (#572): translated whole or not at all,
+    since a start that lost its mode would still carry its Run."""
+
+    def test_the_marker_is_skipped_and_the_rest_kept_in_order(self):
+        steps = batch_steps([{"href": "/devices/0"}, _MODE, _RUN], LCD_OV_WALL)
+
+        assert steps == [(_MODE["href"], _MODE["rep"]), (_RUN["href"], _RUN["rep"])]
+
+    def test_an_element_this_family_has_no_row_for_refuses_the_batch(self):
+        """The washer's mode is /course/vs/0, so a /mode/vs/0 element would
+        drop and leave a bare Run."""
+        assert batch_steps([_MODE, _RUN], TP6X_WASHER) is None
+
+    @pytest.mark.parametrize(
+        "element",
+        [
+            "Bake",
+            {"rep": {PREFIX + "modes": ["Bake"]}},
+            {"href": "/mode/vs/0", "rep": ["Bake"]},
+        ],
+    )
+    def test_a_malformed_element_refuses_the_batch(self, element):
+        assert batch_steps([element, _RUN], LCD_OV_WALL) is None

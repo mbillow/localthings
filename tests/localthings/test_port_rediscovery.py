@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from smartthings_local.errors import PeerInitiatedHandshakeError, SessionError
 
 from custom_components.localthings import coordinator as coordinator_module
 from custom_components.localthings import probing
@@ -79,7 +80,7 @@ class _Appliance:
 
         return _Transport()
 
-    def advertised(self, host: str, current: int) -> int | None:
+    def advertised(self, host: str, current: int, device_id: str | None = None) -> int | None:
         self.lookups += 1
         if self.live_port is None or self.live_port == current:
             return None
@@ -235,3 +236,74 @@ def test_moved_secure_port_skips_the_current_port_and_5684(monkeypatch) -> None:
 
 
 _real_moved_secure_port = probing.moved_secure_port
+
+
+class _ScriptedAppliance(_Appliance):
+    """Raises each of `failures` on successive handshakes, then connects."""
+
+    def __init__(self, failures: list[Exception]) -> None:
+        super().__init__(NEW_PORT)
+        self.failures = failures
+
+    def transport(self, data, **kwargs):
+        appliance = self
+        port = data[CONF_PORT]
+
+        class _Transport:
+            def connect(self) -> None:
+                appliance.dialled.append(port)
+                if appliance.failures:
+                    raise appliance.failures.pop(0)
+
+            def close(self) -> None:
+                pass
+
+        return _Transport()
+
+
+def _scripted(monkeypatch, failures: list[Exception]) -> _ScriptedAppliance:
+    device = _ScriptedAppliance(failures)
+    monkeypatch.setattr(coordinator_module, "create_transport", device.transport)
+    monkeypatch.setattr(probing, "moved_secure_port", device.advertised)
+    monkeypatch.setattr(
+        coordinator_module,
+        "read_identity",
+        lambda sess, serial: DeviceIdentity(
+            manufacturer="Samsung Electronics",
+            model="AWM-KR-M64-24-WD86",
+            name="Samsung Washer",
+            serial=None,
+            device_id=DEVICE_ID,
+        ),
+    )
+    return device
+
+
+async def test_a_handshake_collision_is_retried_on_the_same_port(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """Issue #567: the appliance's own concurrent handshake clears on an
+    immediate retry, so it costs neither a cycle nor a port lookup."""
+    device = _scripted(monkeypatch, [PeerInitiatedHandshakeError()])
+    coordinator = _coordinator(hass)
+
+    await hass.async_add_executor_job(coordinator._connect_session)
+
+    assert device.dialled == [OLD_PORT, OLD_PORT]
+    assert device.lookups == 0
+    assert coordinator._session is not None
+
+
+async def test_an_alert_from_the_stored_port_does_not_look_for_a_moved_one(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """An appliance that answered with an alert is still on this port; only
+    silence or an unreachable endpoint suggests the port moved."""
+    device = _scripted(monkeypatch, [SessionError()])
+    coordinator = _coordinator(hass)
+
+    with pytest.raises(SessionError):
+        await hass.async_add_executor_job(coordinator._connect_session)
+
+    assert device.dialled == [OLD_PORT]
+    assert device.lookups == 0

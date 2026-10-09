@@ -88,6 +88,13 @@ def _int(v):
         return None
 
 
+def _percent(v):
+    """A 0-100 reading, else None: TP1X microwaves report a fixed 201 for
+    the whole of a running cook (#181)."""
+    value = _int(v)
+    return value if value is not None and 0 <= value <= 100 else None
+
+
 def _finish_time(rep):
     """now() + remainingTime while a cook is running, rounded to the minute.
 
@@ -356,7 +363,7 @@ OVEN_OPERATIONAL_STATE = Capability(
             rep_fn=lambda rep: (
                 0
                 if _SAMSUNG_STATE_TO_OCF.get(rep.get("x.com.samsung.da.state")) != "active"
-                else _int(rep.get("x.com.samsung.da.progressPercentage"))
+                else _percent(rep.get("x.com.samsung.da.progressPercentage"))
             ),
         ),
         SensorDesc(
@@ -660,15 +667,34 @@ OVEN_DOOR = Capability(
     ),
 )
 
+
+def _is_lower_cavity(rep, resources):
+    """The same signal coordinator._cavity_label names the device by."""
+    return cook.cavity(resources) == "Lower"
+
+
 OVEN_CONNECTED = Capability(
     href="/connected/vs/0",
     poll_tier="warm",
     entities=(
+        # A lower cavity's copy of this field is the divider below, so it is
+        # not also shown as a connectivity sensor there.
         BinarySensorDesc(
             key="cloud_connected",
             field="x.com.samsung.da.connected",
             device_class="connectivity",
             entity_category="diagnostic",
+            exists_fn=lambda rep, resources: not _is_lower_cavity(rep, resources),
+            value_fn=lambda v: v == "On",
+        ),
+        # On a lower cavity this flag is whether the divider is in, which
+        # SmartThings reports as ovenCavityStatus: On with the upper cavity
+        # offering only Upper* modes (issue #324), Off with whole-oven modes.
+        BinarySensorDesc(
+            key="divider",
+            field="x.com.samsung.da.connected",
+            icon="mdi:view-split-horizontal",
+            exists_fn=_is_lower_cavity,
             value_fn=lambda v: v == "On",
         ),
     ),

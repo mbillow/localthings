@@ -210,12 +210,14 @@ def _completion_minutes(rep):
 
 # Shared by dryer/dishwasher/oven/washer -- oven.py imports this directly
 # rather than keeping its own copy, since both wrote the identical
-# state='Ready' RMW.
+# state='Ready' RMW. Stopping is the safe direction, and the NV51K777OS
+# takes it with Remote Control off for a cook started at the panel (#572).
 STOP_BUTTON = ButtonDesc(
     key="stop",
     field="",
     payload="Ready",
     icon="mdi:stop",
+    needs_remote_control=False,
     write_fn=lambda p, rep, href=None: (
         ["operational", "state", "vs", "0"],
         {"x.com.samsung.da.state": p},

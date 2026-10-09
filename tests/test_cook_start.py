@@ -10,7 +10,7 @@ import pytest
 
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import resolve
-from custom_components.localthings.registry.capabilities import cook, oven
+from custom_components.localthings.registry.capabilities import cook, microwave, oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.subdevices import canonical_view
 from tests.conftest import _discover_full, _load_device, _load_device_full
@@ -59,10 +59,31 @@ def _running(resources):
         # No MicroWave* mode is startable.
         ("microwave_mw7300b", ["Convection", "AirFryer", "Grill", "Deodorization"]),
         ("qooker_mw7500a", []),
-        # No modeSpec at all.
-        ("oven", []),
-        ("oven_tp2x_ks_walloven", []),
-        ("microwave_me7500d", []),
+        # No modeSpec: the board's own live modes, less maintenance programs
+        # and the modes no modeSpec ever declares startable (#300).
+        (
+            "oven",
+            [
+                "Convection",
+                "TopHeatPluseConvection",
+                "Conventional",
+                "LargeGrill",
+                "SmallGrill",
+                "BottomHeatPluseConvection",
+                "PlateWarm",
+                "KeepWarm",
+                "Bottom",
+                "EcoConvection",
+                "FanGrill",
+            ],
+        ),
+        (
+            "oven_tp2x_ks_walloven",
+            ["ConvectionBake", "ConvectionRoast", "Bake", "SteamBake", "SteamRoast"],
+        ),
+        ("microwave_me7500d", ["KeepWarm"]),
+        ("microwave_nw9300md", ["Convection"]),
+        ("oven_nv75n_dual_cook", []),
     ],
 )
 def test_startable_modes_come_from_the_boards_own_declaration(name, startable):
@@ -173,7 +194,7 @@ class TestPlan:
 
         assert err.value.key == "cook_mode_required"
 
-    @pytest.mark.parametrize("name", ["range_nx60t8311ss", "oven", "qooker_mw7500a"])
+    @pytest.mark.parametrize("name", ["range_nx60t8311ss", "qooker_mw7500a"])
     def test_a_board_that_declares_nothing_startable_is_refused(self, name):
         with pytest.raises(cook.CookStartError) as err:
             cook.plan_start(_load_device(name), mode="Bake")
@@ -215,14 +236,18 @@ class TestLowerCavity:
 
         assert cook.startable_modes(resources) == ["LowerBake", "LowerConvectionBake"]
 
-    def test_without_the_shared_modespec_it_could_not_start(self):
-        lower, _resources = _lower_cavity()
+    def test_without_the_shared_modespec_it_loses_the_declared_limits(self):
+        """Unshared, the lower cavity falls back to its own live modes with
+        the static setpoint range instead of the board's declared one."""
+        lower, shared = _lower_cavity()
         resources, oic_res, seeds = _load_device_full("range_tp1x_da_ks_range_0101x")
         _bound, subdevices, _skipped, full, _name = _discover_full(
             resources, oic_res, seeds, ("oic.wk.d", "oic.d.range")
         )
+        unshared = canonical_view(lower, full, subdevices)
 
-        assert cook.startable_modes(canonical_view(lower, full, subdevices)) == []
+        assert cook.mode_specs(unshared) != cook.mode_specs(shared)
+        assert cook.temp_bounds(shared, "LowerBake") != cook.temp_bounds(unshared, "LowerBake")
 
     def test_its_batch_uses_its_own_hrefs_and_no_marker(self):
         lower, resources = _lower_cavity()
@@ -393,7 +418,7 @@ class TestEntities:
         assert start.desc.exists_fn is cook.can_start
         assert cook.can_start(resources.get(start.href) or {}, resources)
 
-    @pytest.mark.parametrize("name", ["range_nx60t8311ss", "oven", "qooker_mw7500a"])
+    @pytest.mark.parametrize("name", ["range_nx60t8311ss", "qooker_mw7500a"])
     def test_the_start_button_stays_away_elsewhere(self, name):
         resources = _load_device(name)
         reg = resolve(resources)
@@ -424,3 +449,86 @@ def test_every_start_rejection_is_translated():
     for path in sorted(_TRANSLATIONS.glob("*.json")):
         exceptions = json.loads(path.read_text())["exceptions"]
         assert keys <= set(exceptions), (path.name, sorted(keys - set(exceptions)))
+
+
+class TestWithoutModeSpec:
+    """#300: the NW9000KD publishes no modeSpec and started Bake from Ready
+    with the same Collection write as every other board."""
+
+    def test_the_measured_300_start(self):
+        plan = cook.plan_start(
+            _idle("oven_tp2x_ks_walloven"), mode="Bake", temperature=350, duration=600
+        )
+
+        assert plan.batch() == [
+            {"href": "/devices/0"},
+            {"href": "/mode/vs/0", "rep": {"x.com.samsung.da.modes": ["Bake"]}},
+            {
+                "href": "/temperatures/vs/0",
+                "rep": {
+                    "x.com.samsung.da.items": [
+                        {
+                            "x.com.samsung.da.id": "0",
+                            "x.com.samsung.da.desired": "350",
+                            "x.com.samsung.da.unit": "Fahrenheit",
+                        }
+                    ]
+                },
+            },
+            {
+                "href": "/operational/state/vs/0",
+                "rep": {
+                    "x.com.samsung.da.operationTime": "00:10:00",
+                    "x.com.samsung.da.state": "Run",
+                },
+            },
+        ]
+
+    def test_cook_time_is_optional(self):
+        plan = cook.plan_start(_idle("oven_tp2x_ks_walloven"), mode="Bake", temperature=350)
+        assert plan.duration is None
+        assert plan.batch()[-1] == {
+            "href": "/operational/state/vs/0",
+            "rep": {"x.com.samsung.da.state": "Run"},
+        }
+
+    def test_temperature_is_bounded_by_the_static_setpoint_range(self):
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(_idle("oven_tp2x_ks_walloven"), mode="Bake", temperature=600)
+        assert err.value.key == "cook_temperature_out_of_range"
+        assert cook.temp_bounds(_idle("oven_tp2x_ks_walloven"), "Bake") == (
+            oven.SETPOINT_MIN_F,
+            oven.SETPOINT_MAX_F,
+            oven.SETPOINT_STEP_F,
+        )
+
+    def test_a_maintenance_program_is_not_startable(self):
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(_idle("oven_tp2x_ks_walloven"), mode="Descale")
+        assert err.value.key == "cook_mode_not_startable"
+
+    def test_a_microwave_keeps_its_own_range(self):
+        """The microwave family's static range is Celsius only, so a
+        Fahrenheit microwave offers no temperature rather than the oven's."""
+        resources = _load_device("microwave_nw9300md")
+        resources["/mode/vs/0"] = {
+            **resources["/mode/vs/0"],
+            "x.com.samsung.da.modes": ["NoOperation"],
+        }
+        assert cook.device_unit(resources) == "Fahrenheit"
+        assert cook.temp_bounds(resources, "Convection") is None
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(resources, mode="Convection", temperature=550)
+        assert err.value.key == "cook_temperature_not_supported"
+
+        items = [dict(i) for i in resources["/temperatures/vs/0"]["x.com.samsung.da.items"]]
+        items[0]["x.com.samsung.da.unit"] = "Celsius"
+        resources["/temperatures/vs/0"] = {
+            **resources["/temperatures/vs/0"],
+            "x.com.samsung.da.items": items,
+        }
+        assert cook.temp_bounds(resources, "Convection") == (
+            microwave.SETPOINT_MIN_C,
+            microwave.SETPOINT_MAX_C,
+            microwave.SETPOINT_STEP_C,
+        )

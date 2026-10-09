@@ -952,23 +952,47 @@ def test_air_filter_threshold_binds_on_enum_board():
 
 
 def test_air_quality_sensors_from_sensors_vs_items():
-    """/sensors/vs/0 items[] surface as diagnostic scalars (no unit advertised
-    on the resource, so no device_class until a populated reading + unit is
-    observed -- the 'don't guess' rule). CleanLevel is corroborated as numeric
-    by a top-level cleanLevel scalar, so it's an int measurement; the others
-    are string diagnostics. Dust/FineDust/SuperFineDust carry a 2-element
-    array whose second element is unconfirmed -- v[0] is taken as the reading
-    (see _sensor_item_value)."""
+    """/sensors/vs/0 items[] surface as diagnostic scalars. CleanLevel and the
+    three particulate readings are ints; Odor stays a string diagnostic.
+    Dust/FineDust/SuperFineDust carry a 2-element array, and v[0] is the
+    reading (see _sensor_item_value)."""
     reg, resources = _ac_windfree()
     state = flatten(discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
     assert state["clean_level"] == 0  # numeric (int), corroborated
-    for key in ("odor", "dust", "fine_dust", "super_fine_dust"):
-        assert state[key] == "0"  # string diagnostic
+    assert state["odor"] == "0"  # string diagnostic
+    for key in ("dust", "fine_dust", "super_fine_dust"):
+        assert state[key] == 0
     # tp1x_da_ac_rac_01011 is the only fixture with a non-zero air-quality
     # reading -- the one that catches a value_fn regression.
     reg2, resources2 = _ac_tp1x()
     state2 = flatten(discover(resources2, reg2.capabilities, reg2.pattern_capabilities), resources2)
     assert state2["clean_level"] == 1
+
+
+def test_particulate_sensors_are_typed_measurements():
+    """Issue #583: SmartThings reports a TP2X_RAC_20K's FineDust as PM2.5 in
+    μg/m³, the same mapping as the purifier (issue #325), so HA keeps
+    statistics and offers unit and precision settings."""
+    expected = {"dust": "pm10", "fine_dust": "pm25", "super_fine_dust": "pm1"}
+    for key, device_class in expected.items():
+        desc = next(e for e in airconditioner.AIR_QUALITY.entities if e.key == key)
+        assert isinstance(desc, SensorDesc)
+        assert desc.device_class == device_class, key
+        assert desc.state_class == "measurement", key
+        assert desc.unit == "\u03bcg/m\u00b3", key
+
+
+def test_particulate_readings_from_a_populated_board():
+    """AN9000 reports nonzero readings ordered PM10 >= PM2.5 >= PM1."""
+    items = _load_device("airconditioner_aca_kr_tp2_21_an9000")["/sensors/vs/0"][
+        "x.com.samsung.da.items"
+    ]
+    readings = {
+        e.key: e.value_fn(items)
+        for e in airconditioner.AIR_QUALITY.entities
+        if e.key in ("dust", "fine_dust", "super_fine_dust") and e.value_fn is not None
+    }
+    assert readings == {"dust": 80, "fine_dust": 74, "super_fine_dust": 35}
 
 
 def test_air_quality_disabled_by_default():

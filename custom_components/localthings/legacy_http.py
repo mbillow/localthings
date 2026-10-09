@@ -14,6 +14,7 @@ so a family that disagrees costs a row rather than a branch.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -50,6 +51,12 @@ class Resource:
     # answers 204 to, then discards, on their own; the transport holds them
     # for the next start (see split_start_only).
     start_only: frozenset[str] = frozenset()
+    # Fields the appliance reports as JSON numbers, which the OCF side
+    # writes as strings; to_write sends them back as numbers.
+    numeric: frozenset[str] = frozenset()
+    # List fields the appliance packs into one comma-joined string, which
+    # the OCF side carries one value per entry.
+    joined: frozenset[str] = frozenset()
 
 
 # Every family serves its own identity here -- it is how the family is told
@@ -100,18 +107,113 @@ TP6X_WASHER: tuple[Resource, ...] = (
 )
 
 
+# TP6X_RAC_16K (issue #563), read from a diagnostics dump. The fields are the
+# ones the ARTIK051 boards serve over CoAP, so each resource lands on that
+# generation's href: Wind is /airflow/vs/0, not /wind/strength/vs/0. The
+# transport routes writes to this family's measured legacy RAC endpoints.
+TP6X_RAC: tuple[Resource, ...] = (
+    Resource(endpoint="operation", wrapper="Operation", href="/power/vs/0"),
+    Resource(endpoint="mode", wrapper="Mode", href="/mode/vs/0"),
+    Resource(
+        endpoint="temperatures",
+        wrapper="Temperatures",
+        href="/temperatures/vs/0",
+        as_items=True,
+        numeric=frozenset({"desired"}),
+    ),
+    Resource(
+        endpoint="wind",
+        wrapper="Wind",
+        href="/airflow/vs/0",
+        numeric=frozenset({"speedLevel"}),
+    ),
+    Resource(
+        endpoint="configuration",
+        wrapper="Configuration",
+        href="/configuration/vs/0",
+    ),
+    INFORMATION,
+    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
+    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+)
+
+
+# LCD_OV_WALL_16K (issue #572, NV51K777OS Flex Duo), read from a diagnostics
+# dump. The fields are the TP2X_DA-KS-WALLOVEN's CoAP vocabulary, so each
+# resource lands on that board's href. Writes follow the washer's aggregate
+# PUT and are not yet confirmed on this family.
+LCD_OV_WALL: tuple[Resource, ...] = (
+    Resource(
+        endpoint="operation",
+        wrapper="Operation",
+        href="/operational/state/vs/0",
+        fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
+        numeric=frozenset({"progressPercentage"}),
+    ),
+    Resource(
+        endpoint="mode",
+        wrapper="Mode",
+        href="/mode/vs/0",
+        joined=frozenset({"supportedModes"}),
+    ),
+    Resource(endpoint="oven", wrapper="Oven", href="/oven/vs/0"),
+    Resource(
+        endpoint="temperatures",
+        wrapper="Temperatures",
+        href="/temperatures/vs/0",
+        as_items=True,
+        numeric=frozenset({"desired"}),
+    ),
+    Resource(endpoint="doors", wrapper="Doors", href="/doors/vs/0", as_items=True),
+    Resource(
+        endpoint="configuration",
+        wrapper="Configuration",
+        href="/remotectrl/vs/0",
+    ),
+    INFORMATION,
+    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
+    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+)
+
+
 # Keyed by the appliance's own `description` (/devices/0/information's,
-# e.g. 'TP6X_WASHER'). A family not listed here is read with IDENTITY.
-FAMILIES: dict[str, tuple[Resource, ...]] = {"TP6X_WASHER": TP6X_WASHER}
+# e.g. 'TP6X_WASHER'), less any trailing capacity (`_16K`), so one row covers
+# every size of a model line. A family not listed here is read with IDENTITY.
+FAMILIES: dict[str, tuple[Resource, ...]] = {
+    "TP6X_WASHER": TP6X_WASHER,
+    "TP6X_RAC": TP6X_RAC,
+    "LCD_OV_WALL": LCD_OV_WALL,
+}
+
+_CAPACITY = re.compile(r"_\d+K$")
+
+
+def _family_key(family: str | None) -> str:
+    return _CAPACITY.sub("", family or "")
 
 
 def table_for(family: str | None) -> tuple[Resource, ...]:
     """The envelope table for `family`, or IDENTITY when it is unmapped."""
-    return FAMILIES.get(family or "", IDENTITY)
+    return FAMILIES.get(_family_key(family), IDENTITY)
 
 
 def is_mapped(family: str | None) -> bool:
-    return (family or "") in FAMILIES
+    return _family_key(family) in FAMILIES
+
+
+def unmapped_wrappers(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
+    """The resources the appliance reported that `table` has no row for, and
+    so are not read: what a new row would have to cover. Links and the
+    aggregate's own scalars are not resources."""
+    named = {resource.wrapper for resource in table}
+    return sorted(
+        key
+        for key, body in bodies.items()
+        if key[:1].isupper()
+        and not key.endswith("Link")
+        and isinstance(body, (Mapping, list))
+        and key not in named
+    )
 
 
 def _canonical_name(name: str, rename: Mapping[str, str]) -> str:
@@ -126,6 +228,20 @@ def _canonical_value(value: Any, rename: Mapping[str, str]) -> Any:
     if isinstance(value, list):
         return [_canonical_value(v, rename) for v in value]
     return value
+
+
+def _split_joined(value: Any) -> Any:
+    """`["a,b,a"]` -> `["a", "b"]`: split, trimmed, first occurrence kept."""
+    if not isinstance(value, list):
+        return value
+    out: list[Any] = []
+    for entry in value:
+        parts = entry.split(",") if isinstance(entry, str) else [entry]
+        for part in parts:
+            part = part.strip() if isinstance(part, str) else part
+            if part != "" and part not in out:
+                out.append(part)
+    return out
 
 
 def unwrap(*responses: Mapping[str, Any]) -> dict[str, Any]:
@@ -173,6 +289,8 @@ def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict
         if not isinstance(body, Mapping):
             continue
         for name, value in body.items():
+            if name in resource.joined:
+                value = _split_joined(value)
             href = resource.fan_out.get(name, resource.href)
             out.setdefault(href, {})[_canonical_name(name, resource.rename)] = _canonical_value(
                 value, resource.rename
@@ -196,10 +314,17 @@ SETINFO_HREF = "/wm/setinfo/vs/0"
 _POWER_ON_OFF_FIELD = PREFIX + "isModelSettingPowerOnOff"
 
 
-def model_settings(bodies: Mapping[str, Any]) -> dict[str, dict]:
+# Families whose modelID feature string is the washer plugin's. The
+# TP6X_RAC's carries one too, but the byte means nothing known on an AC
+# (#524's units all read 00), and /wm/setinfo/vs/0 is a laundry resource.
+_SETINFO_FAMILIES = frozenset({"TP6X_WASHER"})
+
+
+def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, dict]:
     """A `/wm/setinfo/vs/0` rep carrying the power on/off flag this family
     states in Information.modelID, which CoAP boards serve as a resource of
-    its own; empty when the model id doesn't carry it.
+    its own; empty when the model id doesn't carry it, or for a family
+    outside the laundry ones.
 
     The third `|` field of modelID is a hex feature string. Samsung's own
     washer plugin reads remote power control from bit 0 of the byte at
@@ -207,6 +332,8 @@ def model_settings(bodies: Mapping[str, Any]) -> dict[str, dict]:
     whose byte is 00: `Operation.power = Off` answers
     `400 Control fail, <Operation.power=Off>` and the washer stays on.
     """
+    if _family_key(family) not in _SETINFO_FAMILIES:
+        return {}
     info = bodies.get("Information")
     model_id = info.get("modelID") if isinstance(info, Mapping) else None
     if not isinstance(model_id, str):
@@ -230,10 +357,30 @@ def course_table(family: str) -> dict[str, dict]:
     return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
 
 
+def _bare(name: str) -> str:
+    return name[len(PREFIX) :] if name.startswith(PREFIX) else name
+
+
+def _wire_value(value: Any, numeric: frozenset[str], name: str = "") -> Any:
+    """One field's value as the appliance spells it: bare names inside any
+    nested map, and numbers where it reports numbers."""
+    if isinstance(value, Mapping):
+        return {_bare(k): _wire_value(v, numeric, _bare(k)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_wire_value(v, numeric) for v in value]
+    if name in numeric and isinstance(value, str):
+        try:
+            number = float(value)
+        except ValueError:
+            return value
+        return int(number) if number.is_integer() else number
+    return value
+
+
 def _wire_field(href: str, name: str, table: tuple[Resource, ...]) -> tuple[str, str] | None:
     """``(wrapper, wire field name)`` for one canonical field, or None when
     this table has nowhere to put it."""
-    bare = name[len(PREFIX) :] if name.startswith(PREFIX) else name
+    bare = _bare(name)
     for resource in table:
         for wire_name, fan_href in resource.fan_out.items():
             if fan_href == href and wire_name == bare:
@@ -255,15 +402,46 @@ def to_write(
     Always the aggregate endpoint: a bare body on a resource endpoint
     (`PUT /devices/0/mode`) has never been tested on this hardware.
     """
-    device: dict[str, dict] = {}
+    device: dict[str, Any] = {}
+    items = {resource.href: resource for resource in table if resource.as_items}
     for href, patch in steps:
+        listed = items.get(href)
         for name, value in patch.items():
+            if listed is not None:
+                # The appliance's list is the wrapper's whole body, so the
+                # items go there as they are and nothing else on the href does.
+                if name == PREFIX + "items" and isinstance(value, list):
+                    device[listed.wrapper] = _wire_value(value, listed.numeric)
+                continue
             target = _wire_field(href, name, table)
             if target is None:
                 continue
             wrapper, wire_name = target
-            device.setdefault(wrapper, {})[wire_name] = value
+            resource = next(r for r in table if r.wrapper == wrapper)
+            device.setdefault(wrapper, {})[wire_name] = _wire_value(
+                value, resource.numeric, wire_name
+            )
     return {"Device": device}
+
+
+def batch_steps(
+    batch: list, table: tuple[Resource, ...]
+) -> list[tuple[str, Mapping[str, Any]]] | None:
+    """A Collection batch's elements as to_write steps, or None when any one
+    can't be translated whole: a cook start that lost its mode would still
+    carry its `Run`. The bare `/devices/0` marker carries no rep and is
+    skipped."""
+    steps: list[tuple[str, Mapping[str, Any]]] = []
+    for element in batch:
+        if not isinstance(element, Mapping) or not isinstance(element.get("href"), str):
+            return None
+        href, rep = element["href"], element.get("rep")
+        if rep is None:
+            continue
+        if not isinstance(rep, Mapping) or not to_write([(href, rep)], table)["Device"]:
+            return None
+        steps.append((href, rep))
+    return steps
 
 
 # One value held for a start: (wrapper, wire field, option-token prefix). The
@@ -284,9 +462,12 @@ def split_start_only(
     token did apply). Returns `(sendable body, {key: value})`.
     """
     by_wrapper = {resource.wrapper: resource for resource in table}
-    device: dict[str, dict] = {}
+    device: dict[str, Any] = {}
     staged: dict[StagedKey, Any] = {}
     for wrapper, fields in (aggregate.get("Device") or {}).items():
+        if not isinstance(fields, Mapping):
+            device[wrapper] = fields
+            continue
         resource = by_wrapper.get(wrapper)
         start_only = resource.start_only if resource is not None else frozenset()
         for name, value in fields.items():
@@ -346,7 +527,10 @@ def add_staged(aggregate: Mapping[str, Any], staged: Mapping[StagedKey, Any]) ->
     """A start body carrying every staged value alongside what it already
     had. Tokens go in as single-token writes, the merge this firmware
     applies to an `options` array."""
-    device = {k: dict(v) for k, v in (aggregate.get("Device") or {}).items()}
+    device = {
+        k: dict(v) if isinstance(v, Mapping) else v
+        for k, v in (aggregate.get("Device") or {}).items()
+    }
     for (wrapper, name, prefix), value in staged.items():
         fields = device.setdefault(wrapper, {})
         if prefix is None:

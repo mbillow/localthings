@@ -584,6 +584,43 @@ async def test_dark_appliance_reports_its_outage_once(
     assert recovered[0].levelno == logging.INFO
 
 
+async def test_dark_appliance_without_a_handshake_polls_once_per_cycle(
+    hass: HomeAssistant, mock_entry, caplog
+) -> None:
+    """The 8888 transport opens no session, so a switched-off washer fails in
+    the poll itself rather than the handshake. Once the outage is reported,
+    each cycle must cost one request and no warning -- the reconnect retry
+    used to add a second request and a WARNING to every cycle."""
+    resources = _load_fridge()
+    await _setup_online_then_unload(hass, mock_entry, resources)
+
+    polls: list[float] = []
+
+    def _poll(self) -> dict:
+        polls.append(time.monotonic())
+        raise RuntimeError("poll GET failed: [Errno 113] Host is unreachable")
+
+    caplog.clear()
+    caplog.set_level(logging.INFO)
+    with (
+        patch(f"{_COORD}._connect_session"),
+        patch(f"{_COORD}._poll_once", _poll),
+        patch(f"{_COORD}._close_session"),
+        patch.object(LocalThingsCoordinator, "_RECONNECT_PAUSE_S", 0),
+    ):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        after_setup = len(polls)
+
+        for expected in (1, 2, 3, 4):
+            await _tick(hass)
+            assert len(polls) == after_setup + expected
+
+    ours = [r for r in caplog.records if r.name.startswith(f"{_COORD_LOGGER}.")]
+    assert [r for r in ours if r.levelno == logging.WARNING] == []
+    assert len([r for r in ours if r.levelno >= logging.ERROR]) == 1
+
+
 async def test_broken_session_still_reconnects_within_the_cycle(
     hass: HomeAssistant, mock_entry
 ) -> None:

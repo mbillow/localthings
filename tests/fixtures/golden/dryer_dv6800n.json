@@ -5,6 +5,7 @@
     "completion_minutes",
     "cycle",
     "cycle_active",
+    "damp_alert",
     "delay_finish_at",
     "delay_start_hours",
     "diagnosis",
@@ -19,6 +20,7 @@
     "progress",
     "progress_percentage",
     "remote_control",
-    "wrinkle_prevent"
+    "wrinkle_prevent",
+    "wrinkle_prevent_active"
   ]
 }

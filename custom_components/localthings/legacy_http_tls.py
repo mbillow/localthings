@@ -71,7 +71,8 @@ def server_context(cert_pem: str, key_pem: str) -> ssl.SSLContext:
     """For the token callback listener.
 
     The appliance connects back over HTTPS, so the listener needs a server
-    certificate; the same leaf works, since the appliance does not verify
-    it either.
+    certificate, and presents the same leaf with any chain it carries. The
+    washer accepts any leaf here; the TP6X_RAC appears to want an
+    AC14K_M-signed one (#524).
     """
     return _relaxed(ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER), cert_pem, key_pem)

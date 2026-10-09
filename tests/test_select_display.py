@@ -66,3 +66,12 @@ def test_uncatalogued_value_stays_raw_when_the_fallback_declines_it():
     assert _display("0E", "cycle", lambda value: None) == "0E"
     # A fallback that does name the value still wins.
     assert _display("0E", "cycle", lambda value: f"Course {value}") == "Course 0E"
+
+
+def test_tp2x_ref_20k_pantry_zone_options_are_named():
+    """A TP2X_REF_20K's flex crisper (/status/pantry/one/vs/0, issue #464)
+    reports the flex zone's RF9000A options without the CV_ prefix. Unnamed,
+    'TTYPE_RF9000A_FRIDGE' fell to the cosmetic split and showed as
+    'TTYPE_RF9000 A_FRIDGE'."""
+    assert _display("TTYPE_MEAT_FISH", "pantry_zone_mode") == "ttype_meat_fish"
+    assert _display("TTYPE_RF9000A_FRIDGE", "pantry_zone_mode") == "ttype_rf9000a_fridge"

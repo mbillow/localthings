@@ -5,10 +5,11 @@ from custom_components.localthings.registry.by_type import (
     for_device_by_model,
     resolve,
 )
-from custom_components.localthings.registry.capabilities import microwave, range_hood
+from custom_components.localthings.registry.capabilities import microwave, oven, range_hood
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
     BinarySensorDesc,
+    LightDesc,
     NumberDesc,
     SelectDesc,
     SwitchDesc,
@@ -403,6 +404,45 @@ def test_upper_lamp_write_uses_oven_on_off_values():
     )
 
 
+def _lamp_level():
+    return next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if e.key == "lamp_level" and isinstance(e, SelectDesc)
+    )
+
+
+def test_lamp_level_offers_three_levels_and_reads_the_token():
+    """Issue #181: the ME7500D's light has Low as well as High."""
+    desc = _lamp_level()
+    assert tuple(desc.options) == ("Off", "Low", "High")
+    assert desc.value_fn(["Sound_On", "Lamp_Low"]) == "Low"
+    assert desc.value_fn(["Lamp_High"]) == "High"
+
+
+def test_lamp_level_writes_each_level_as_one_token():
+    desc = _lamp_level()
+    rep = {"x.com.samsung.da.options": ["Lamp_Off"]}
+    assert desc.write_fn is not None
+    for level in ("Off", "Low", "High"):
+        assert desc.write_fn(level, rep) == (
+            ["mode", "vs", "0"],
+            {"x.com.samsung.da.options": [f"Lamp_{level}"]},
+        )
+    assert desc.write_fn("Medium", rep) is None
+    assert desc.write_fn("Low", {}) is None
+
+
+def test_lamp_level_gated_to_the_bare_lamp_token():
+    """UpperLamp boards (NQ7000B, issue #496) only have On/Off, and the
+    combi dump (issue #121) has no lamp at all."""
+    desc = _lamp_level()
+    assert desc.exists_fn is not None
+    assert desc.exists_fn({"x.com.samsung.da.options": ["Lamp_Off"]}, {}) is True
+    assert desc.exists_fn({"x.com.samsung.da.options": ["UpperLamp_Off"]}, {}) is False
+    assert desc.exists_fn({"x.com.samsung.da.options": ["Sound_Off"]}, {}) is False
+
+
 def test_nq7000b_fixture_resolves_as_microwave_with_lamp_and_clock_sync():
     """Issue #496: NQ7000B declares oic.d.oven but has the microwave
     surface; it binds fully, with the UpperLamp switch and clock sync."""
@@ -762,3 +802,103 @@ def test_hood_front_vent_reads_raw_on_off():
     desc = _hood_entity("front_vent_open")
     assert desc.value_fn("on") is True
     assert desc.value_fn("off") is False
+
+
+# ---------------------------------------------------------------------------
+# MICROWAVE_MODE — lamp lights (#568)
+# ---------------------------------------------------------------------------
+
+
+def _lamp(*, brightness: bool):
+    return next(
+        e
+        for e in microwave.MICROWAVE_MODE.entities
+        if isinstance(e, LightDesc) and e.supports_brightness is brightness
+    )
+
+
+def test_lamp_descriptors_are_mutually_exclusive():
+    bare = _lamp(brightness=True)
+    upper = _lamp(brightness=False)
+    assert bare.exists_fn is not None
+    assert upper.exists_fn is not None
+
+    no_lamp = {"x.com.samsung.da.options": ["DeviceType_MW7300B-/EU1", "Sound_Off"]}
+    assert bare.exists_fn(no_lamp, {}) is False
+    assert upper.exists_fn(no_lamp, {}) is False
+
+    bare_lamp = {"x.com.samsung.da.options": ["Lamp_Off", "Sound_On"]}
+    assert bare.exists_fn(bare_lamp, {}) is True
+    assert upper.exists_fn(bare_lamp, {}) is False
+
+    upper_lamp = {"x.com.samsung.da.options": ["UpperLamp_Off", "Sound_Off"]}
+    assert bare.exists_fn(upper_lamp, {}) is False
+    assert upper.exists_fn(upper_lamp, {}) is True
+
+    both_tokens = {"x.com.samsung.da.options": ["Lamp_Low", "UpperLamp_On"]}
+    assert bare.exists_fn(both_tokens, {}) is True
+    assert upper.exists_fn(both_tokens, {}) is False
+
+
+def test_lamp_reads_three_brightness_levels():
+    desc = _lamp(brightness=True)
+    assert desc.value_fn(["Lamp_Off"]) == 0
+    assert desc.value_fn(["Lamp_Low"]) == 128
+    assert desc.value_fn(["Lamp_High"]) == 255
+    assert desc.value_fn(["Lamp_On"]) == 255
+    assert desc.value_fn(["Sound_On"]) is None
+
+
+def test_lamp_brightness_writes_supported_ranges():
+    desc = _lamp(brightness=True)
+    rep = {"x.com.samsung.da.options": ["Lamp_Off"]}
+    assert desc.write_fn is not None
+    expected = {0: "Off", 1: "Low", 128: "Low", 129: "High", 255: "High"}
+    for brightness, level in expected.items():
+        assert desc.write_fn(brightness, rep) == (
+            ["mode", "vs", "0"],
+            {"x.com.samsung.da.options": [f"Lamp_{level}"]},
+        )
+    assert desc.write_fn("invalid", rep) is None
+    assert desc.write_fn(128, {}) is None
+
+
+def test_upper_lamp_reads_and_writes_on_off_values():
+    desc = _lamp(brightness=False)
+    assert desc.value_fn(["UpperLamp_Off"]) is False
+    assert desc.value_fn(["UpperLamp_On"]) is True
+    rep = {"x.com.samsung.da.options": ["UpperTimerState_Ready", "UpperLamp_Off"]}
+    assert desc.write_fn is not None
+    assert desc.write_fn(True, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_On"]},
+    )
+    assert desc.write_fn(False, rep) == (
+        ["mode", "vs", "0"],
+        {"x.com.samsung.da.options": ["UpperLamp_Off"]},
+    )
+    assert desc.write_fn("On", rep) is None
+    assert desc.write_fn(True, {}) is None
+
+
+def test_lamp_switch_and_level_select_stay_but_are_disabled_by_default():
+    """#568: the light replaces them for new installs, while existing
+    entities keep their unique_ids, so the light gets its own key."""
+    lamp_entities = [e for e in microwave.MICROWAVE_MODE.entities if "lamp" in e.key]
+    by_type = {(type(e).__name__, e.key) for e in lamp_entities}
+    assert ("SwitchDesc", "lamp") in by_type
+    assert ("SelectDesc", "lamp_level") in by_type
+    assert {e.key for e in lamp_entities if isinstance(e, LightDesc)} == {"lamp_light"}
+    for e in lamp_entities:
+        assert e.enabled_default is isinstance(e, LightDesc), e.key
+
+
+def test_progress_reads_unknown_for_the_fixed_201_a_running_cook_reports():
+    """#181: TP1X microwaves report progressPercentage 201 from start to end
+    of a cook, which is no percentage."""
+    desc = next(e for e in oven.OVEN_OPERATIONAL_STATE.entities if e.key == "progress_percentage")
+    assert desc.rep_fn is not None
+    running = {"x.com.samsung.da.state": "Run"}
+    assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "201"}) is None
+    assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "40"}) == 40
+    assert desc.rep_fn({"x.com.samsung.da.state": "Ready"}) == 0

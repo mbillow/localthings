@@ -17,7 +17,7 @@ uses unconditionally.
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0.
 """
 
-from ..capabilities import air_purifier, airconditioner, common, dishwasher, ignored
+from ..capabilities import air_purifier, airconditioner, common, dishwasher, ehs, ignored
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -71,6 +71,11 @@ REGISTRY = DeviceRegistry(
             # TP1X_DA-AC-DUCT slim duct (issue #501).
             airconditioner.AUTO_CHANGEOVER,
             airconditioner.DUAL_SETPOINT,
+            airconditioner.AI_MOTION_WIND,
+            # AI Air Combo ventilator (issue #551): the same device-wide away
+            # flag the EHS reports.
+            airconditioner.INTERLOCK,
+            ehs.AWAY_MODE,
             *airconditioner.COVERAGE,
         ]
     ),

@@ -184,7 +184,7 @@ def _get_links(transport, path) -> list:
     return []
 
 
-def _device_types(d: dict) -> tuple[str, ...]:
+def device_types_of(d: dict) -> tuple[str, ...]:
     """/oic/d's `rt` -- the device's own OCF device-type declaration.
 
     The one standardized "what am I" field in OCF: alongside the generic
@@ -222,7 +222,7 @@ def read_identity(transport, serial: str | None) -> DeviceIdentity:
         serial=serial,
         device_id=d.get("di") if isinstance(d.get("di"), str) else None,
         platform_id=p.get("pi") if isinstance(p.get("pi"), str) else None,
-        device_types=_device_types(d),
+        device_types=device_types_of(d),
         # Kept whole rather than field-by-field: outside the /device/0 dump
         # diagnostics already captures, and we don't yet know which fields
         # will turn out to identify a device type.

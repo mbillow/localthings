@@ -32,6 +32,7 @@ from .const import (
     PREFERRED_PROBE_PORTS,
     PROBE_PORT_RANGE,
 )
+from .registry.identity import device_types_of
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,6 +180,14 @@ class HostProbe:
     plaintext: PlaintextIdentity | None = None
     plaintext_port: int | None = None
     legacy_http: bool = False
+    # Another OCF stack may share the address (#540). `typeless_stack`: the
+    # one that answered unicast declares no appliance type and multicast
+    # found no appliance behind it; it is still dialled, and a failure is
+    # reported as reaching the wrong stack. `appliance_responders`: how many
+    # appliance-typed responders multicast found; more than one is
+    # ambiguous, and then `candidates` is empty so nothing is dialled.
+    typeless_stack: bool = False
+    appliance_responders: int = 0
 
 
 def _legacy_http_open(host: str) -> bool:
@@ -310,6 +319,32 @@ def look(host: str) -> HostProbe:
             )
             plaintext = None
 
+    typeless_stack = False
+    appliance_responders = 0
+    if plaintext is not None and declares_no_appliance(plaintext.device_types):
+        responders = _appliance_responders(host)
+        appliance_responders = len(responders)
+        if appliance_responders == 1:
+            advertised = responders[0].secure_ports
+            plaintext_port = responders[0].plaintext_port
+            with contextlib.suppress(Exception):  # guarded like the first read
+                plaintext = _read_plaintext_identity(host, plaintext_port) or plaintext
+        elif appliance_responders > 1:
+            return HostProbe(
+                host=host,
+                candidates=[],
+                confirmed=[],
+                advertised=advertised,
+                plaintext=plaintext,
+                plaintext_port=plaintext_port,
+                appliance_responders=appliance_responders,
+            )
+        else:
+            # Still dialled: an appliance that declares no type of its own
+            # would otherwise never be reached. Only a failure is reported
+            # as the other stack's.
+            typeless_stack = True
+
     if legacy_http and plaintext_port is None and not advertised:
         # Nothing to scan for: this lineage serves no CoAP at all.
         return HostProbe(host=host, candidates=[], confirmed=[], legacy_http=True)
@@ -333,6 +368,7 @@ def look(host: str) -> HostProbe:
             plaintext=plaintext,
             plaintext_port=plaintext_port,
             legacy_http=legacy_http,
+            typeless_stack=typeless_stack,
         )
 
     sweep, candidates = sweep_ports(host, PROBE_PORT_RANGE, LIVENESS_PROBE_TIMEOUT_S)
@@ -358,6 +394,7 @@ def look(host: str) -> HostProbe:
         plaintext=plaintext,
         plaintext_port=plaintext_port,
         legacy_http=legacy_http,
+        typeless_stack=typeless_stack,
     )
 
 
@@ -375,6 +412,67 @@ class PlaintextIdentity:
     vendor_id: str
     firmware: str
     name: str
+    device_types: tuple[str, ...] = ()
+
+
+def is_appliance_type(device_type: str) -> bool:
+    """A functional OCF device type, beyond the mandatory 'oic.wk.d'."""
+    return device_type.startswith(("oic.d.", "x.com.st.d."))
+
+
+def declares_no_appliance(device_types: tuple[str, ...]) -> bool:
+    """`/oic/d` lists its types and none is an appliance's (#540's
+    'oic.wk.d'-only stack). Every captured appliance declares one; an empty
+    `rt` says nothing either way."""
+    return bool(device_types) and not any(is_appliance_type(t) for t in device_types)
+
+
+def _source_ip(host: str) -> str | None:
+    """The local address the OS would route to `host` from. A UDP connect
+    sends nothing; it only picks the route."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        try:
+            sock.connect((host, 5683))
+            return sock.getsockname()[0]
+        except OSError:
+            return None
+
+
+def _ocf_responders(host: str) -> tuple:
+    """Every OCF responder at `host`, found over multicast (#540).
+
+    Only for an address whose unicast 5683 answer is a non-appliance stack:
+    multicast is TTL 1, so it finds nothing across a router or VLAN, and on
+    every other device unicast already reaches the appliance. Empty when it
+    finds nothing or can't run.
+    """
+    from smartthings_local.protocol.ocf_multicast import discover_ocf_responders
+
+    interface = _source_ip(host)
+    if interface is None:
+        return ()
+    try:
+        found = discover_ocf_responders(
+            host,
+            interface_address=interface,
+            per_read_timeout=PLAINTEXT_READ_TIMEOUT_S,
+            retries=PLAINTEXT_DISCOVERY_RETRIES,
+        )
+    except (OSError, ValueError) as exc:
+        _LOGGER.debug("Multicast responder discovery on %s failed: %s", host, exc)
+        return ()
+    _LOGGER.debug("OCF responders at %s: %s (%s)", host, found.responders, found.error_code)
+    return found.responders
+
+
+def _appliance_responders(host: str) -> list:
+    """The responders at `host` that declare an appliance type and advertise
+    a secure port."""
+    return [
+        r
+        for r in _ocf_responders(host)
+        if any(is_appliance_type(t) for t in r.rt) and r.secure_ports
+    ]
 
 
 def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
@@ -412,7 +510,7 @@ def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
     return tuple(ports), answered
 
 
-def moved_secure_port(host: str, current: int) -> int | None:
+def moved_secure_port(host: str, current: int, device_id: str | None = None) -> int | None:
     """The secure port the device now advertises, if it isn't `current`.
 
     For a reconnect whose handshake failed: ports are kernel-assigned and
@@ -420,8 +518,18 @@ def moved_secure_port(host: str, current: int) -> int | None:
     one can go stale while the device is fine. One sequential plaintext
     lookup, nothing scanned. 5684 is never returned: it answers on any
     board, and on the S61B it served no PSK session at all (#435).
+
+    When 5683 is answered by a non-appliance stack (#540), its ports are
+    not the device's: the responder whose `di` is the entry's `device_id`
+    is found over multicast instead.
     """
-    advertised, _ = _discover_advertised_ports(host)
+    advertised, plaintext_port = _discover_advertised_ports(host)
+    if device_id and plaintext_port is not None:
+        identity = _read_plaintext_identity(host, plaintext_port)
+        if identity is not None and declares_no_appliance(identity.device_types):
+            from smartthings_local.protocol.ocf_multicast import secure_ports_for_di
+
+            advertised = secure_ports_for_di(_ocf_responders(host), device_id)
     return next((port for port in advertised if port not in (current, MULTICAST_SECURE_PORT)), None)
 
 
@@ -457,6 +565,7 @@ def _read_plaintext_identity(host: str, port: int) -> PlaintextIdentity | None:
         vendor_id=platform.get("vid", ""),
         firmware=platform.get("mnfv", ""),
         name=device.get("n", ""),
+        device_types=device_types_of(device),
     )
 
 
@@ -489,10 +598,12 @@ class CredentialHint:
         )
 
 
-def read_credential_hint(host: str) -> CredentialHint:
+def read_credential_hint(host: str, port: int | None = None) -> CredentialHint:
     """`sct` and `devowneruuid` from plaintext doxm, or an empty hint.
 
-    One port at a time, for the same Block2 reason as
+    `port` is the appliance's own plaintext port when setup found one, which
+    is not 5683 where another stack shares the address (#540). Otherwise
+    one port at a time, for the same Block2 reason as
     `_discover_advertised_ports`. A missing or malformed answer is an empty
     hint rather than an error: this only orders a menu.
     """
@@ -501,18 +612,18 @@ def read_credential_hint(host: str) -> CredentialHint:
 
     from .credentials import InvalidCredentialConfig, normalize_psk_identity
 
-    for port in PLAINTEXT_DISCOVERY_PORTS:
+    for candidate in [port] if port is not None else PLAINTEXT_DISCOVERY_PORTS:
         try:
             result = read_plaintext_ocf_resource(
                 host,
                 "/oic/sec/doxm",
-                port=port,
+                port=candidate,
                 timeout=PLAINTEXT_READ_TIMEOUT_S,
                 retries=PLAINTEXT_DISCOVERY_RETRIES,
             )
             body = cbor2.loads(result.payload) if result.successful and result.payload else None
         except Exception as exc:
-            _LOGGER.debug("Plaintext doxm read on %s:%d failed: %s", host, port, exc)
+            _LOGGER.debug("Plaintext doxm read on %s:%d failed: %s", host, candidate, exc)
             continue
         if not isinstance(body, dict):
             continue
@@ -524,6 +635,6 @@ def read_credential_hint(host: str) -> CredentialHint:
             owner_uuid = normalize_psk_identity(body.get("devowneruuid"))
         except InvalidCredentialConfig:
             owner_uuid = None
-        _LOGGER.debug("Plaintext doxm on %s:%d: sct=%s", host, port, sct)
+        _LOGGER.debug("Plaintext doxm on %s:%d: sct=%s", host, candidate, sct)
         return CredentialHint(sct=sct, owner_uuid=owner_uuid)
     return CredentialHint()

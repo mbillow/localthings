@@ -13,7 +13,8 @@ def _no_live_port_rediscovery(monkeypatch):
     real network. Tests that drive a failed connect would otherwise wait out
     that lookup against an address nothing answers on."""
     monkeypatch.setattr(
-        "custom_components.localthings.probing.moved_secure_port", lambda host, current: None
+        "custom_components.localthings.probing.moved_secure_port",
+        lambda host, current, device_id=None: None,
     )
 
 

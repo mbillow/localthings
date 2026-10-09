@@ -97,13 +97,19 @@ IGNORED: list[Capability] = [
     # Demand-response energy planner — same utility-program dependency as
     # /drlc/vs/0 above; every dump seen so far is inert (plan: 'none').
     Capability(href="/energy/planner/vs/0"),
+    # OpenADR demand response (AHRI 1380, issue #569) -- same
+    # utility-program dependency as /drlc/vs/0 above; status Idle on the dump.
+    Capability(href="/oadr/vs/0"),
     # Temperature-unit display preference, redundant with HA's own units.
     Capability(href="/wm/submode/vs/0"),
     # Read-only re-encoding of the course already exposed by
     # washer.WASHER_COURSE at /course/vs/0 (same hex code, just prefixed
     # "Table_02_Course_").
+    #
+    # Course tables arrive in the initial device batch, so discovery has them
+    # before Home Assistant registers the cycle select's translated states.
     Capability(href="/st/washercourse/vs/0"),
-    # Dryer counterpart: re-encodes dryer.DRYER_COURSE's /course/vs/0.
+    # Dryer counterpart: its courseTable supplies dryer_cycle's translated states.
     Capability(href="/st/dryercourse/vs/0"),
     # AirDresser counterpart (issue #157): read only for its courseTable id
     # (air_dresser.AIR_DRESSER_COURSE's table_href), no entity of its own.

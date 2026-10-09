@@ -1,0 +1,25 @@
+{
+  "state_keys": [
+    "absence_power_saving_active",
+    "absence_power_saving_mode",
+    "air_filter_status",
+    "air_filter_usage",
+    "air_filter_usage_hours",
+    "alarm_code",
+    "auto_clean",
+    "auto_clean_progress",
+    "auto_clean_running",
+    "beep",
+    "climate",
+    "current_temperature_c",
+    "diagnosis_status",
+    "display_light",
+    "energy_kwh",
+    "firmware_update",
+    "humidity",
+    "motion_detect_wind_active",
+    "motion_detect_wind_mode",
+    "mute_once",
+    "tropical_night_mode"
+  ]
+}

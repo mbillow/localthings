@@ -42,7 +42,7 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 
 What you see depends on what each appliance reports. Typical controls and sensors include power, program or mode selection, start, pause and stop, temperatures and setpoints, time remaining and finish time, door and child-lock state, energy use, filter status and alarms.
 
-Most Samsung appliances from about 2022 onward work, and so do some earlier washers that use an older local interface. See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888). Setup detects which interface an appliance has, and tells you if it finds none.
+Most Samsung appliances from about 2022 onward work, and so do some earlier washers, air conditioners and wall ovens that use an older local interface. See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888). Setup detects which interface an appliance has, and tells you if it finds none.
 
 If an appliance sets up but LocalThings doesn't recognize it, or a control is missing, Home Assistant shows a notice asking for a diagnostics download. That download is usually all the maintainers need to add support. See [Reporting a capability gap](#reporting-a-capability-gap).
 
@@ -77,7 +77,7 @@ When you add your first appliance, LocalThings contacts Samsung's servers once t
 A few appliances need one more step:
 
 - **Some appliances refuse the automatic certificate.** Setup then offers to import a pre-shared key, which LocalThings can't obtain for you. [Credential acquisition](docs/credential-acquisition.md) covers where one comes from. We're still working to understand these appliances, and [#435](https://github.com/mbillow/localthings/issues/435) has the plan, what we've found so far, and a place to report how it went. Setup also offers the public `AC14K_M` CA certificate, which the `smartthings-local` project's [`setup_cert.py --fallback`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py) shows how to get, but no appliance that refused the automatic certificate has been reported to accept it.
-- **Older washers on TCP 8888 ask for a device token.** See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888).
+- **Older appliances on TCP 8888 ask for a device token.** See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888).
 
 You can rename devices. LocalThings identifies each appliance by its OCF device ID, not by its name or serial number. Some models ship the same serial number on every unit.
 
@@ -107,7 +107,7 @@ About half of Samsung's appliances report their Wi-Fi MAC address. For those, Ho
 
 ### Older appliances on TCP 8888
 
-Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners and an NV51K777OS Flex Duo wall oven. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
 
 On these appliances, a chosen cycle, temperature, rinse count or spin speed takes effect only when the cycle starts. The selects hold your choice, and the **Start** button sends it. If you turn the dial on the appliance, the dial's setting replaces the held choice.
 
@@ -127,7 +127,7 @@ Some installations run several indoor units from one outdoor unit, all at one IP
 
 ## Reporting a capability gap
 
-If LocalThings doesn't recognize an appliance, or the appliance reports something LocalThings doesn't handle yet, a notice appears under **Settings > System > Repairs**. It points you to **Download diagnostics** on the device. LocalThings removes personal and network details from that download before you save it. It removes the account email, tokens, device IDs, MAC addresses, serial numbers, the Wi-Fi network name and the device's name. You can attach the file to a [device-support issue](https://github.com/mbillow/localthings/issues/new?template=device-support.yml), and that is the fastest way to get an appliance supported.
+If LocalThings doesn't recognize an appliance, or the appliance reports something LocalThings doesn't handle yet, a notice appears under **Settings > System > Repairs**. It points you to **Download diagnostics** on the device. LocalThings removes personal and network details from that download before you save it. It removes the account email, tokens, device IDs, MAC addresses, serial numbers, the Wi-Fi network name and password, the device's name, the name of a paired phone and the device's on/off history. You can attach the file to a [device-support issue](https://github.com/mbillow/localthings/issues/new?template=device-support.yml), and that is the fastest way to get an appliance supported.
 
 A diagnostics download can't show whether a command sticks or what order commands need. The `localthings.read_resource` and `localthings.write_resource` actions answer those questions by reading and writing an appliance's resources without going through its entities. See [Reading and writing resources directly](docs/resource-actions.md).
 

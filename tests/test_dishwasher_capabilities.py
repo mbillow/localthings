@@ -5,6 +5,8 @@ cycle_options, cycle_write) is tested in test_laundry_capabilities.py; here we
 check the dishwasher wiring and its device-specific options.
 """
 
+import pytest
+
 from custom_components.localthings.registry.capabilities import dishwasher
 from custom_components.localthings.registry.entities import SensorDesc, SwitchDesc
 
@@ -106,3 +108,34 @@ def test_diagnosis_status_is_a_translatable_enum():
     assert desc.device_class == "enum"
     assert desc.options == ("ready",)
     assert desc.value_fn("Ready") == "ready"
+
+
+class TestDishwasherSettings:
+    """/dishwasher/vs/0 on the DW60BG750 (issue #538)."""
+
+    @staticmethod
+    def _desc(key):
+        return next(e for e in dishwasher.DISHWASHER_SETTINGS.entities if e.key == key)
+
+    def test_speed_booster_reads_and_writes(self):
+        desc = self._desc("speed_booster")
+        assert desc.value_fn("On") is True
+        assert desc.value_fn("Off") is False
+        assert desc.write_fn("On", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.speedBooster": "On"},
+        )
+
+    def test_wash_zone_writes_the_raw_code(self):
+        assert self._desc("wash_zone").write_fn("OFF_ON", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.selectedZone": "OFF_ON"},
+        )
+
+    @pytest.mark.parametrize("key", ["sanitize", "speed_booster", "heated_dry", "wash_zone"])
+    def test_absent_field_binds_nothing(self, key):
+        assert self._desc(key).exists_fn({}, {}) is False
+
+    @pytest.mark.parametrize("key", ["sanitize", "speed_booster", "heated_dry", "wash_zone"])
+    def test_not_yet_fetched_stub_still_binds(self, key):
+        assert self._desc(key).exists_fn({"href": "/dishwasher/vs/0"}, {}) is True

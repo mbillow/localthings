@@ -7,9 +7,9 @@ device token the appliance itself issues through a callback. These cover
 that it routes there at all, both ways of getting a token, and what the
 entry ends up carrying.
 
-No AC14K_M CA is involved anywhere here: this family does not authenticate
-the certificate at all (see the comment in `async_step_user`), so the leaf
-is self-signed and the token is what authorizes.
+The washer authenticates nothing about the certificate, so the leaf is
+self-signed and the token is what authorizes. The TP6X_RAC refuses that leaf
+on its token callback, and only then is an AC14K_M CA asked for (#524).
 """
 
 from __future__ import annotations
@@ -416,3 +416,126 @@ async def test_reconfigure_of_a_dtls_entry_onto_an_8888_appliance_is_the_wrong_d
     )
 
     assert result["errors"] == {"base": "wrong_device"}
+
+
+async def _rejected_callback(hass: HomeAssistant, token):
+    """Ask for a token and have the callback refuse the self-signed leaf."""
+    from custom_components.localthings.legacy_http_token import CallbackCertRejected
+
+    token.side_effect = [CallbackCertRejected("unknown ca"), "tok-from-ca"]
+    result = await _start(hass)
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+    )
+
+
+async def test_a_refused_callback_asks_for_the_ac14k_m_ca(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    token, probe, _mint = legacy_bridge
+
+    result = await _rejected_callback(hass, token)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "fallback_ca"
+    assert result["errors"] == {"base": "callback_cert_rejected"}
+    assert probe.called is False
+
+
+async def test_the_ca_signed_leaf_reruns_the_exchange_and_is_stored(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    """The manual workaround in #524 that got a TP6X_RAC token, done by the flow."""
+    token, probe, _mint = legacy_bridge
+    result = await _rejected_callback(hass, token)
+
+    with patch(
+        "custom_components.localthings.config_flow._mint_credentials",
+        return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+    ) as mint_ca:
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CA_CERT_PEM: "CA-CERT", CONF_CA_KEY_PEM: "CA-KEY"}
+        )
+
+    assert mint_ca.call_args.args == ("CA-CERT", "CA-KEY")
+    assert token.call_args.args[2:] == ("CA-FULLCHAIN", "CA-LEAFKEY")
+    assert probe.call_args.args == (MOCK_HOST, "CA-FULLCHAIN", "CA-LEAFKEY", "tok-from-ca")
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    data = result["data"]
+    assert data[CONF_DEVICE_TOKEN] == "tok-from-ca"
+    assert data[CONF_LEAF_CERT_PEM] == "CA-FULLCHAIN"
+    assert data[CONF_CA_CERT_PEM] == "CA-CERT"
+    assert data[CONF_CA_KEY_PEM] == "CA-KEY"
+
+
+async def test_a_ca_that_cannot_mint_stays_on_the_ca_form(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    from custom_components.localthings.config_flow import InvalidCA
+
+    token, _, _mint = legacy_bridge
+    result = await _rejected_callback(hass, token)
+
+    with patch(
+        "custom_components.localthings.config_flow._mint_credentials",
+        side_effect=InvalidCA("bad pem"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CA_CERT_PEM: "junk", CONF_CA_KEY_PEM: "junk"}
+        )
+
+    assert result["step_id"] == "fallback_ca"
+    assert result["errors"] == {"base": "invalid_ca"}
+    assert token.call_count == 1
+
+
+async def test_a_refused_ca_signed_leaf_falls_back_to_a_pasted_token(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    from custom_components.localthings.legacy_http_token import CallbackCertRejected
+
+    token, _, _mint = legacy_bridge
+    result = await _rejected_callback(hass, token)
+    token.side_effect = CallbackCertRejected("unknown ca")
+
+    with patch(
+        "custom_components.localthings.config_flow._mint_credentials",
+        return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CA_CERT_PEM: "CA-CERT", CONF_CA_KEY_PEM: "CA-KEY"}
+        )
+
+    assert result["step_id"] == "legacy_token"
+    assert result["errors"] == {"base": "callback_ca_rejected"}
+
+
+async def test_reauth_stores_the_ca_signed_leaf_it_needed(
+    hass: HomeAssistant, legacy_bridge
+) -> None:
+    """Otherwise the entry keeps the self-signed leaf the appliance refused."""
+    from custom_components.localthings.const import CONF_LEAF_KEY_PEM
+    from custom_components.localthings.legacy_http_token import CallbackCertRejected
+
+    token, _, _mint = legacy_bridge
+    token.side_effect = [CallbackCertRejected("unknown ca"), "tok-from-ca"]
+    entry = _legacy_entry(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+    )
+    assert result["step_id"] == "fallback_ca"
+    with patch(
+        "custom_components.localthings.config_flow._mint_credentials",
+        return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CA_CERT_PEM: "CA-CERT", CONF_CA_KEY_PEM: "CA-KEY"}
+        )
+
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_DEVICE_TOKEN] == "tok-from-ca"
+    assert entry.data[CONF_LEAF_CERT_PEM] == "CA-FULLCHAIN"
+    assert entry.data[CONF_LEAF_KEY_PEM] == "CA-LEAFKEY"
+    assert entry.data[CONF_CA_CERT_PEM] == "CA-CERT"

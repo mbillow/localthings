@@ -13,7 +13,6 @@
     "filter_usage",
     "finish_time",
     "firmware_update",
-    "heated_dry",
     "machine_state",
     "power_switch",
     "progress",
@@ -21,6 +20,7 @@
     "remote_control",
     "sanitize",
     "storm_wash",
+    "wash_zone",
     "water_liters"
   ]
 }

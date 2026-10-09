@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Dvojitá požadovaná teplota zapnutá"
+      },
+      "divider": {
+        "name": "Priečka"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Ochrana proti pokrčeniu aktívna"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zóna 1"
+      },
+      "zone2_climate": {
+        "name": "Zóna 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Svetlo"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "Hygienické sušenie",
           "3b": "Posteľná bielizeň/odstránenie prachu",
           "3c": "Športové oblečenie",
-          "3d": "Džínsy"
+          "3d": "Džínsy",
+          "2f": "Intenzívny",
+          "30": "Športové oblečenie",
+          "32": "Nekrčivá bielizeň",
+          "33": "Parná dezinfekcia+",
+          "34": "Osvieženie parou",
+          "35": "Proti pokrčeniu",
+          "36": "Prevetranie",
+          "3e": "Malá náplň",
+          "2e": "Eko Normálny"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "Kysnutie cesta",
           "dehydrate": "Sušenie",
           "self_clean": "Samočistenie",
-          "air_fryer": "Teplovzdušné fritovanie"
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie (horná)",
+          "upper_convection_bake": "Teplovzdušné pečenie (horná)",
+          "upper_convection_roast": "Teplovzdušné opekanie (horná)",
+          "lower_bake": "Pečenie (dolná)",
+          "lower_convection_bake": "Teplovzdušné pečenie (dolná)",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou (horná)",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody"
         }
       },
       "operating_mode": {
@@ -650,7 +686,9 @@
         "state": {
           "fdr_wine": "Víno",
           "fdr_deli": "Lahôdky",
-          "fdr_drinks": "Nápoje"
+          "fdr_drinks": "Nápoje",
+          "ttype_meat_fish": "Mäso/ryby",
+          "ttype_rf9000a_fridge": "Chladenie"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +797,9 @@
           "no_spin": "Bez odstreďovania",
           "low": "Nízka",
           "medium": "Stredná",
-          "high": "Vysoká"
+          "high": "Vysoká",
+          "extra_low": "Extra nízke",
+          "extra_high": "Extra vysoké"
         }
       },
       "wash_temperature": {
@@ -770,7 +810,8 @@
           "cool": "Chladná",
           "warm": "Teplá",
           "hot": "Horúca",
-          "extra_hot": "Extra horúca"
+          "extra_hot": "Extra horúca",
+          "tap_cold": "Studená z vodovodu"
         }
       },
       "washer_cycle_table_00": {
@@ -877,13 +918,18 @@
           "38": "Sušenie bavlny",
           "39": "Sušenie syntetiky",
           "3a": "Čistenie bubna",
+          "51": "Super Speed",
           "52": "Eko pranie v studenej vode",
           "53": "Intenzívny",
           "54": "Uteráky",
           "55": "Športové oblečenie",
-          "57": "Jemný",
+          "56": "Posteľná bielizeň",
+          "57": "Jemná bielizeň",
+          "5a": "Parná dezinfekcia",
+          "5b": "Malá náplň",
           "5e": "Plákanie + odstreďovanie",
           "60": "Samočistenie+",
+          "64": "Biela bielizeň s parou",
           "65": "Farebná bielizeň",
           "66": "Džínsy",
           "69": "AI pranie",
@@ -907,13 +953,23 @@
           "7d": "Posteľná bielizeň/nepremokavé oblečenie",
           "7e": "Samočistenie",
           "7f": "Vlna/jemná bielizeň",
+          "85": "Normálny s parou",
           "86": "Hĺbkové pranie",
           "87": "Stiahnutý program",
           "88": "Starostlivosť o domáce zvieratá",
+          "8b": "Rýchle pranie",
+          "8c": "AI OptiWash",
           "8f": "Intenzívne pranie v studenej vode",
           "96": "Menej mikrovlákien",
           "a0": "15-minútové rýchle pranie",
-          "b0": "Zmiešaná náplň"
+          "b0": "Zmiešaná náplň",
+          "58": "Vlna",
+          "5c": "Outdoor",
+          "5d": "Výkonné plákanie",
+          "5f": "Iba odstreďovanie",
+          "63": "Výkonná para",
+          "67": "Parný antialergénny",
+          "68": "Parná objemná bielizeň"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "Čistenie vzduchu",
           "ventilation": "Vetranie",
-          "smartventilation": "Inteligentné vetranie"
+          "smartventilation": "Inteligentné vetranie",
+          "aicomfort": "AI komfort",
+          "autoventilation": "Automatické vetranie",
+          "freshairintake": "Prívod čerstvého vzduchu",
+          "indoorpurification": "Čistenie vnútorného vzduchu",
+          "indoordehumidification": "Odvlhčovanie vnútorného vzduchu"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "Vpravo široko",
           "left_narrow": "Vľavo úzko",
           "left_wide": "Vľavo široko"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "AI prúdenie vzduchu podľa pohybu",
+        "state": {
+          "off": "Vypnuté",
+          "surround": "Všesmerové",
+          "longreach": "Dlhý dosah",
+          "down": "Nadol",
+          "power": "Výkon",
+          "windfree": "Wind-Free",
+          "aidirect": "AI priame",
+          "aiindirect": "AI nepriame"
+        }
+      },
+      "wash_zone": {
+        "name": "Zóna umývania",
+        "state": {
+          "on_on": "Oba koše",
+          "off_on": "Iba spodný kôš",
+          "on_off": "Iba horný kôš"
+        }
+      },
+      "lamp_level": {
+        "name": "Úroveň osvetlenia",
+        "state": {
+          "off": "Vypnuté",
+          "low": "Nízka",
+          "high": "Vysoká"
         }
       }
     },
@@ -1214,7 +1304,8 @@
       "dryer_type": {
         "name": "Typ sušičky",
         "state": {
-          "electricity": "Elektrická"
+          "electricity": "Elektrická",
+          "gas": "Plyn"
         }
       },
       "dust": {
@@ -1436,6 +1527,9 @@
       },
       "zone_temperature": {
         "name": "Teplota zóny"
+      },
+      "zone2_temperature": {
+        "name": "Teplota zóny 2"
       },
       "watertank_full_alarm_status": {
         "name": "Stav alarmu plnej nádržky na vodu"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "Automatické prepínanie"
+      },
+      "interlock": {
+        "name": "Prepojenie prevádzky"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Upozornenie na vlhké prádlo"
+      },
+      "extra_rinse": {
+        "name": "Extra plákanie"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "Táto IP adresa je dostupná, ale aktívne odmietla spojenie na každom porte v rozsahu lokálneho API (UDP 49152-49160) a na kanáli zisťovania vôbec neodpovedala. Najskôr nejde o spotrebič Samsung, alebo ide o taký, ktorý nemá zapnuté lokálne API.",
       "no_dtls_server": "Porty v rozsahu lokálneho API sú na tejto adrese dostupné, ale žiadny neodpovedal na nadviazanie spojenia DTLS. Skontrolujte, či IP adresa patrí spotrebiču a nie inému zariadeniu vo vašej sieti.",
       "appliance_no_dtls": "Na tejto adrese je spotrebič Samsung — cez nešifrovaný kanál zisťovania sa predstavil ako {model} a ako svoj zabezpečený port uviedol {port} — no nadviazanie spojenia DTLS na ňom nikdy nedokončil. Adresa teda nie je problém. Skontrolujte, či spotrebič nemá na paneli vypnuté diaľkové ovládanie alebo podobné nastavenie, a presnú príčinu zlyhania nájdete v protokole Home Assistant.",
+      "non_appliance_stack": "Na tejto IP adrese niečo odpovedalo, ale ohlásilo sa ako služba OCF, ktorá nie je spotrebičom. Niektoré spotrebiče Samsung ju prevádzkujú popri svojej vlastnej a LocalThings nájde spotrebič za ňou len vtedy, keď je Home Assistant v rovnakom segmente siete. Umiestnite Home Assistant a spotrebič do rovnakej podsiete a VLAN a skúste to znova.",
+      "multiple_appliances": "Na tejto IP adrese odpovedá viac ako jeden spotrebič Samsung a LocalThings medzi nimi zatiaľ nevie vybrať. Nahláste to prosím v systéme hlásení chýb LocalThings a priložte log Home Assistanta.",
       "handshake_timeout": "Spotrebič odpovedal na porte lokálneho API, ale nedokončil nadviazanie spojenia DTLS ani po opakovanom pokuse. Skúste to znova. Ak to stále zlyháva, reštart spotrebiča uvoľní spojenia, ktoré ešte drží; presnú chybu nájdete v logu Home Assistantu.",
       "cert_rejected": "Spotrebič odmietol certifikát. Certifikát a kľúč CA pravdepodobne nepatria CA AC14K_M, ktorej tento spotrebič dôveruje, alebo sa navzájom nezhodujú. Presné upozornenie odoslané spotrebičom nájdete v protokole Home Assistant.",
       "psk_rejected": "Spotrebič odmietol vopred zdieľaný kľúč. Identita alebo kľúč sú nesprávne, alebo patria inému spotrebiču či vlastníkovi, ktorý sa medzitým zmenil. Presný alert je v logu Home Assistant.",
       "identity_unproven": "Kľúč fungoval, ale spotrebič cez šifrované spojenie nenahlásil svoje ID zariadenia OCF, takže LocalThings nemôže potvrdiť, ktorý spotrebič kľúč drží, a nepridá ho. Skúste to znova, keď je spotrebič prebudený. Ak sa to opakuje, dajte nám vedieť v [issue #435]({issue_url}) a priložte log Home Assistant.",
       "invalid_psk_identity": "Zadajte identitu ako UUID, napríklad 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Toto UUID obsahuje nulový bajt, ktorý DTLS nedokáže preniesť ako identitu. Ak ste túto identitu peera vygenerovali, vygenerujte inú.",
+      "psk_identity_zero_byte": "Toto UUID obsahuje nulový bajt, ktorý nainštalovaný transport nedokáže odoslať. Obnovenú identitu ponechajte bez zmeny.",
       "invalid_psk_key": "Zadajte kľúč ako 32 alebo 64 šestnástkových znakov.",
       "handshake_failed": "Spotrebič odmietol nadviazanie spojenia DTLS z dôvodu nesúvisiaceho s certifikátom, pravdepodobne pre nezhodu protokolu alebo šifry. Presné upozornenie, ktoré odoslal, nájdete v protokole Home Assistant.",
       "cloud_unreachable": "Nepodarilo sa spojiť s cloudovou bránou Samsung a získať UUID potrebné na vytvorenie certifikátu tohto zariadenia. Skontrolujte prístup Home Assistant na internet a skúste to znova.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "Na tejto adrese odpovedal spotrebič Samsung, ale nie je to tento spotrebič – nahlásil inú identitu. Skontrolujte, či adresa patrí tomuto spotrebiču. Ak chcete pridať ten druhý, použite možnosť Pridať zariadenie.",
       "token_not_received": "Nedorazil žiadny token zariadenia. Skontrolujte, či je na spotrebiči zapnuté diaľkové ovládanie so zatvorenými dvierkami a či sa spotrebič dostane k Home Assistant na port 8889 – alebo vložte token, ktorý ste získali inak.",
       "invalid_token": "Spotrebič tento token zariadenia odmietol. Nechajte pole prázdne a požiadajte o nový.",
-      "callback_port_in_use": "Port 8889 je v Home Assistant už obsadený, zvyčajne ešte čakajúcou žiadosťou o token. Skúste to znova o minútu a pol."
+      "callback_port_in_use": "Port 8889 je v Home Assistant už obsadený, zvyčajne ešte čakajúcou žiadosťou o token. Skúste to znova o minútu a pol.",
+      "callback_cert_rejected": "Spotrebič sa ozval späť na porte 8889, ale odmietol certifikát Home Assistant podpísaný sám sebou. Vložte certifikát a kľúč CA AC14K_M, aby LocalThings podpísal certifikát, ktorý prijme; žiadosť o token sa potom spustí znova.",
+      "callback_ca_rejected": "Spotrebič sa ozval späť na porte 8889, ale odmietol aj certifikát podpísaný AC14K_M. Vložte token získaný iným spôsobom; chybu handshaku nájdete v protokole Home Assistant."
     },
     "abort": {
       "already_configured": "Zariadenie je už nakonfigurované",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "Príkaz pre {href} zlyhal aj po opätovnom pripojení: {error}"
     },
+    "command_refused": {
+      "message": "Spotrebič odmietol príkaz pre {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "Príkaz pre {href} bol odoslaný s vypnutým diaľkovým ovládaním, ale spotrebič ho zatiaľ nezobrazuje. Ak nezareaguje, zapnite na spotrebiči diaľkové ovládanie."
+    },
     "debug_read_failed": {
       "message": "Čítanie z {href} zlyhalo: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "Režim {mode} prijíma čas prípravy od {min} do {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Extra plákanie nie je pri vybranom cykle dostupné."
     }
   },
   "selector": {

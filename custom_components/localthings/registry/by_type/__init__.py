@@ -103,6 +103,7 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "CAWW": "airconditioner",
     "CAC": "airconditioner",  # issue #191
     "DUCT": "airconditioner",  # issue #501 -- slim duct
+    "RHS": "airconditioner",  # issue #551 -- AI Air Combo ventilator
     "ARA": "airconditioner",
     "DHM": "dehumidifier",  # issue #88 -- target humidity, no climate
     "EHS": "ehs",  # heat pump: zone1 heating/cooling + domestic hot water

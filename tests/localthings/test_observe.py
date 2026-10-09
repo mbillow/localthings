@@ -59,6 +59,58 @@ def test_apply_merges_partial_update_onto_prior_rep():
     assert cached["x.com.samsung.da.supportedOptions"] == ["CV_FDR_WINE", "CV_FDR_MEAT"]
 
 
+_WASHER_OPTIONS = [
+    "Course_1B",
+    "AvailableDelayTime_87",
+    "DetergentLevelCtrl_2",
+    "SoftenerLevelCtrl_2",
+    "BubbleSoak_Off",
+    "DrumCleanLog_2026-09-30T10:00:00",
+]
+
+
+def test_observe_notify_merges_partial_options_by_prefix():
+    """Issue #579: on a dial change a washer's /course/vs/0 notify carries
+    only the tokens that changed. Replacing the cached array with it wiped
+    Course_ and every sibling setting until the next sweep."""
+    mgr = _manager()
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": list(_WASHER_OPTIONS)}, source="poll")
+
+    mgr.apply(
+        "/course/vs/0", {"x.com.samsung.da.options": ["AvailableDelayTime_25"]}, source="observe"
+    )
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": ["Course_1E"]}, source="observe")
+
+    cached = mgr.cache.get("/course/vs/0")
+    assert cached is not None
+    options = cached["x.com.samsung.da.options"]
+    assert options == [
+        "Course_1E",
+        "AvailableDelayTime_25",
+        "DetergentLevelCtrl_2",
+        "SoftenerLevelCtrl_2",
+        "BubbleSoak_Off",
+        "DrumCleanLog_2026-09-30T10:00:00",
+    ]
+
+
+def test_poll_still_replaces_the_whole_options_array():
+    """A poll or sweep reads the complete array, so a token the device has
+    dropped (one the new course doesn't support) must go with it."""
+    mgr = _manager()
+    mgr.apply("/course/vs/0", {"x.com.samsung.da.options": list(_WASHER_OPTIONS)}, source="poll")
+
+    mgr.apply(
+        "/course/vs/0",
+        {"x.com.samsung.da.options": ["Course_22", "SoftenerLevelCtrl_2"]},
+        source="poll",
+    )
+
+    cached = mgr.cache.get("/course/vs/0")
+    assert cached is not None
+    assert cached["x.com.samsung.da.options"] == ["Course_22", "SoftenerLevelCtrl_2"]
+
+
 def test_apply_fully_replaces_alarms_href_instead_of_merging():
     """Regression test for issue #348: /alarms/vs/0's `items` array is a
     complete snapshot of every currently-active alarm, not a partial field
@@ -135,6 +187,40 @@ def test_apply_optimistic_bypasses_an_in_progress_settle_window():
     # gated -- the second write's own guard (re-armed by mark_write_pending,
     # not exercised directly here) is what protects it going forward.
     assert mgr.apply("/course/vs/0", {"Detergent": "1"}, source="poll") is False
+
+
+def test_a_refused_write_keeps_an_earlier_writes_settle_window():
+    mgr = _manager()
+    mgr.cache.apply_rep("/oven/vs/0", {"a": 1}, source="seed")
+    mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+    previous = mgr.settle_deadline("/oven/vs/0")
+    armed = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+
+    mgr.restore_write_pending("/oven/vs/0", previous, armed)
+
+    assert mgr.settle_deadline("/oven/vs/0") == previous
+
+
+def test_a_refused_write_alone_ends_its_settle_window():
+    mgr = _manager()
+    mgr.cache.apply_rep("/oven/vs/0", {"a": 1}, source="seed")
+    armed = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+
+    mgr.restore_write_pending("/oven/vs/0", None, armed)
+
+    assert mgr.apply("/oven/vs/0", {"a": 2}, source="poll") is True
+
+
+def test_a_refused_write_leaves_a_newer_writes_settle_window():
+    """Two writes queued on one href: the first is refused after the second
+    armed its window, which must survive."""
+    mgr = _manager()
+    first = mgr.mark_write_pending("/oven/vs/0", settle_s=30.0)
+    second = mgr.mark_write_pending("/oven/vs/0", settle_s=31.0)
+
+    mgr.restore_write_pending("/oven/vs/0", None, first)
+
+    assert mgr.settle_deadline("/oven/vs/0") == second
 
 
 def test_apply_accepts_update_after_settle_window_elapses():

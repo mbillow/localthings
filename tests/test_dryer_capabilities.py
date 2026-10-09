@@ -4,7 +4,7 @@ from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_model, resolve
 from custom_components.localthings.registry.capabilities import dryer, ignored
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SelectDesc
+from custom_components.localthings.registry.entities import SelectDesc, SensorDesc
 from tests.conftest import _load_device
 
 
@@ -48,6 +48,8 @@ def test_expected_entities_present():
         "remote_control",
         "dry_level",
         "wrinkle_prevent",
+        "damp_alert",
+        "wrinkle_prevent_active",
         "energy_kwh",
     ):
         assert key in state, key
@@ -159,6 +161,59 @@ def test_st_dryercourse_is_ignored():
     assert "/st/washercourse/vs/0" in ignored_hrefs
 
 
+class TestDampAlert:
+    """Damp Alert switch over /course/vs/0's options[] array."""
+
+    @staticmethod
+    def _desc():
+        return next(e for e in dryer.DRYER_COURSE.entities if e.key == "damp_alert")
+
+    def test_exists_only_when_token_present(self):
+        assert self._desc().exists_fn({"x.com.samsung.da.options": []}, {}) is False
+        rep = {"x.com.samsung.da.options": ["MixedLoadBell_Disable"]}
+        assert self._desc().exists_fn(rep, {}) is True
+
+    def test_reads_enable_and_disable(self):
+        rep = lambda token: {"x.com.samsung.da.options": [token]}  # noqa: E731
+        assert self._desc().rep_fn(rep("MixedLoadBell_Enable")) is True
+        assert self._desc().rep_fn(rep("MixedLoadBell_Disable")) is False
+
+    def test_write_maps_on_off_to_enable_disable(self):
+        rep = {"x.com.samsung.da.options": ["MixedLoadBell_Disable", "GMT_F2"]}
+        path, body = self._desc().write_fn("On", rep)
+        assert path == ["course", "vs", "0"]
+        assert body == {"x.com.samsung.da.options": ["MixedLoadBell_Enable"]}
+
+        rep = {"x.com.samsung.da.options": ["MixedLoadBell_Enable"]}
+        path, body = self._desc().write_fn("Off", rep)
+        assert body == {"x.com.samsung.da.options": ["MixedLoadBell_Disable"]}
+
+    def test_write_rejects_non_on_off_payload(self):
+        rep = {"x.com.samsung.da.options": ["MixedLoadBell_Disable"]}
+        assert self._desc().write_fn("bogus", rep) is None
+
+    def test_write_needs_a_populated_options_array(self):
+        assert self._desc().write_fn("On", {}) is None
+
+
+class TestWrinklePreventActive:
+    """Wrinkle-prevent running indicator over /course/vs/0's options[] array."""
+
+    @staticmethod
+    def _desc():
+        return next(e for e in dryer.DRYER_COURSE.entities if e.key == "wrinkle_prevent_active")
+
+    def test_exists_only_when_token_present(self):
+        assert self._desc().exists_fn({"x.com.samsung.da.options": []}, {}) is False
+        rep = {"x.com.samsung.da.options": ["WrinklePreventRunning_Off"]}
+        assert self._desc().exists_fn(rep, {}) is True
+
+    def test_reads_on_and_off(self):
+        rep = lambda token: {"x.com.samsung.da.options": [token]}  # noqa: E731
+        assert self._desc().rep_fn(rep("WrinklePreventRunning_On")) is True
+        assert self._desc().rep_fn(rep("WrinklePreventRunning_Off")) is False
+
+
 def _dv6800n():
     resources = _load_device("dryer_dv6800n")
     reg = resolve(resources, device_types=("oic.wk.d", "oic.d.dryer"))
@@ -247,3 +302,36 @@ def test_dry_time_keeps_its_full_list_where_the_board_carries_no_0xe_group():
         supported = resources["/washer/vs/0"]["x.com.samsung.da.supportedDryTime"]
         assert len(supported) >= 11, name
         assert desc.options(resources) == supported, name
+
+
+def test_dv8900b_course_list_is_fully_translated():
+    """A DV8900B reporting Table_03 (issue #464): every course its
+    editCourseList advertises has a name. The owner confirmed 2F, 30, 32, 33,
+    34, 35, 36 and 3E by selecting each cycle on the panel."""
+    from custom_components.localthings.catalog import translated_states
+
+    desc = next(
+        e for e in dryer.DRYER_COURSE.entities if e.key == "cycle" and isinstance(e, SelectDesc)
+    )
+    live = {
+        "/wm/editcourse/vs/0": {
+            "x.com.samsung.da.editCourseList": "EditCourseList_01360605022F173E073335340E3032"
+        }
+    }
+    codes = {code.lower() for code in desc.options(live)}
+    assert {"2f", "30", "32", "33", "34", "35", "36", "3e"} <= codes
+    assert codes <= translated_states("select", "dryer_cycle_table_03")
+
+
+def test_gas_dryer_type_is_named():
+    """A DV8900B reports dryerType 'Gas' (issue #464)."""
+    from custom_components.localthings.catalog import translated_states
+
+    desc = next(
+        e
+        for e in dryer.DRYER_SETTINGS.entities
+        if e.key == "dryer_type" and isinstance(e, SensorDesc)
+    )
+    assert desc.value_fn("Gas") == "gas"
+    assert "gas" in desc.options
+    assert "gas" in translated_states("sensor", "dryer_type")

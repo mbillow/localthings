@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Dual setpoint enabled"
+      },
+      "divider": {
+        "name": "Divider"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Wrinkle prevent active"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zone 1"
+      },
+      "zone2_climate": {
+        "name": "Zone 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lamp"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "Hygiene Care",
           "3b": "Bedding/Dust Off",
           "3c": "Activewear",
-          "3d": "Denim"
+          "3d": "Denim",
+          "2f": "Heavy Duty",
+          "30": "Activewear",
+          "32": "Perm Press",
+          "33": "Steam Sanitize+",
+          "34": "Steam Refresh",
+          "35": "Wrinkle Away",
+          "36": "Air Fluff",
+          "3e": "Small Load",
+          "2e": "Eco Normal"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "Bread proof",
           "dehydrate": "Dehydrate",
           "self_clean": "Self clean",
-          "air_fryer": "Air fry"
+          "air_fryer": "Air fry",
+          "upper_broil": "Upper broil",
+          "upper_convection_bake": "Upper convection bake",
+          "upper_convection_roast": "Upper convection roast",
+          "lower_bake": "Lower bake",
+          "lower_convection_bake": "Lower convection bake",
+          "steam_bake": "Steam bake",
+          "steam_roast": "Steam roast",
+          "upper_steam_bake": "Upper steam bake",
+          "descale": "Descale",
+          "drain": "Drain"
         }
       },
       "operating_mode": {
@@ -650,7 +686,9 @@
         "state": {
           "fdr_wine": "Wine",
           "fdr_deli": "Deli",
-          "fdr_drinks": "Drinks"
+          "fdr_drinks": "Drinks",
+          "ttype_meat_fish": "Meat/Fish",
+          "ttype_rf9000a_fridge": "Fridge"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +797,9 @@
           "no_spin": "No spin",
           "low": "Low",
           "medium": "Medium",
-          "high": "High"
+          "high": "High",
+          "extra_low": "Extra low",
+          "extra_high": "Extra high"
         }
       },
       "wash_temperature": {
@@ -770,7 +810,8 @@
           "cool": "Cool",
           "warm": "Warm",
           "hot": "Hot",
-          "extra_hot": "Extra hot"
+          "extra_hot": "Extra hot",
+          "tap_cold": "Tap cold"
         }
       },
       "washer_cycle_table_00": {
@@ -877,13 +918,18 @@
           "38": "Cotton Dry",
           "39": "Synthetics Dry",
           "3a": "Drum Clean",
+          "51": "Super Speed",
           "52": "Eco Cold",
           "53": "Heavy Duty",
           "54": "Towels",
           "55": "Activewear",
-          "57": "Delicate",
+          "56": "Bedding",
+          "57": "Delicates",
+          "5a": "Steam Sanitize",
+          "5b": "Small Load",
           "5e": "Rinse+Spin",
           "60": "Self Clean+",
+          "64": "Steam Whites",
           "65": "Colors",
           "66": "Denim",
           "69": "AI Wash",
@@ -907,13 +953,23 @@
           "7d": "Bedding/Waterproof",
           "7e": "Self-Clean",
           "7f": "Wool/Delicate",
+          "85": "Steam Normal",
           "86": "Deep Wash",
           "87": "Download",
           "88": "Pet Care",
+          "8b": "Quick Wash",
+          "8c": "AI OptiWash",
           "8f": "Intense Cold",
           "96": "Less Microfiber",
           "a0": "15' Quick Wash",
-          "b0": "Mixed Load"
+          "b0": "Mixed Load",
+          "58": "Wool",
+          "5c": "Outdoor",
+          "5d": "Power Rinse",
+          "5f": "Spin Only",
+          "63": "Power Steam",
+          "67": "Steam Allergen",
+          "68": "Steam Bulky"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "Purification",
           "ventilation": "Ventilation",
-          "smartventilation": "Smart Ventilation"
+          "smartventilation": "Smart Ventilation",
+          "aicomfort": "AI Comfort",
+          "autoventilation": "Auto ventilation",
+          "freshairintake": "Fresh air intake",
+          "indoorpurification": "Indoor purification",
+          "indoordehumidification": "Indoor dehumidification"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "Right wide",
           "left_narrow": "Left narrow",
           "left_wide": "Left wide"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "AI Motion Wind",
+        "state": {
+          "off": "Off",
+          "surround": "Surround",
+          "longreach": "Long reach",
+          "down": "Down",
+          "power": "Power",
+          "windfree": "Wind-Free",
+          "aidirect": "AI direct",
+          "aiindirect": "AI indirect"
+        }
+      },
+      "wash_zone": {
+        "name": "Wash zone",
+        "state": {
+          "on_on": "Both racks",
+          "off_on": "Lower rack only",
+          "on_off": "Upper rack only"
+        }
+      },
+      "lamp_level": {
+        "name": "Lamp level",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "high": "High"
         }
       }
     },
@@ -1214,7 +1304,8 @@
       "dryer_type": {
         "name": "Dryer type",
         "state": {
-          "electricity": "Electricity"
+          "electricity": "Electricity",
+          "gas": "Gas"
         }
       },
       "dust": {
@@ -1436,6 +1527,9 @@
       },
       "zone_temperature": {
         "name": "Zone temperature"
+      },
+      "zone2_temperature": {
+        "name": "Zone 2 temperature"
       },
       "watertank_full_alarm_status": {
         "name": "Water tank full alarm status"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "Auto changeover"
+      },
+      "interlock": {
+        "name": "Interlock"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Damp alert"
+      },
+      "extra_rinse": {
+        "name": "Extra rinse"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "That IP address is reachable, but it actively refused every port in the local API range (UDP 49152-49160) and answered nothing on the discovery channel. It is most likely not a Samsung appliance, or not one with the local API enabled.",
       "no_dtls_server": "Ports in the local API range are reachable at that address, but nothing there answered a DTLS handshake. Check that the IP address belongs to the appliance and not another device on your network.",
       "appliance_no_dtls": "That address is a Samsung appliance — it identified itself as {model} over the unencrypted discovery channel and advertised its secure port as {port} — but it never completed a DTLS handshake there. The address is not the problem. Check whether the appliance has Remote Control or a similar setting switched off at its panel, and see the Home Assistant log for the exact failure.",
+      "non_appliance_stack": "Something at that IP address answered, but it identified itself as an OCF service that isn't an appliance. Some Samsung appliances run one alongside their own, and LocalThings can only find the appliance behind it when Home Assistant is on the same network segment. Put Home Assistant and the appliance on the same subnet and VLAN, then try again.",
+      "multiple_appliances": "More than one Samsung appliance answers at that IP address, and LocalThings can't yet choose between them. Please report it on the LocalThings issue tracker and include the Home Assistant log.",
       "handshake_timeout": "The appliance answered on its local API port but never finished the DTLS handshake, even after a retry. Try again. If it keeps failing, restarting the appliance clears the connections it is still holding; the Home Assistant log has the exact failure.",
       "cert_rejected": "The appliance rejected the certificate. The CA certificate and key are most likely not the AC14K_M CA this appliance trusts, or they don't pair. The Home Assistant log records the exact alert the appliance sent.",
       "psk_rejected": "The appliance refused the pre-shared key. The identity or key is wrong, or it belongs to another appliance or to an owner that has since changed. The Home Assistant log records the exact alert.",
       "identity_unproven": "The key worked, but the appliance didn't report its OCF device ID over the encrypted connection, so LocalThings can't confirm which appliance holds the key and won't add it. Try again while the appliance is awake. If it keeps happening, tell us in [issue #435]({issue_url}) and include the Home Assistant log.",
       "invalid_psk_identity": "Enter the identity as a UUID, for example 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "This UUID contains a zero byte, which DTLS can't carry as an identity. If you generated this peer identity, generate another one.",
+      "psk_identity_zero_byte": "This UUID contains a zero byte that the installed transport cannot send. Keep the recovered identity unchanged.",
       "invalid_psk_key": "Enter the key as 32 or 64 hexadecimal characters.",
       "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "A Samsung appliance answered at that address, but it isn't this one — it reported a different identity. Check the address belongs to this appliance. To add the other one, use Add device instead.",
       "token_not_received": "No device token arrived. Check that Remote Control is on at the appliance with the door closed, and that it can reach Home Assistant on port 8889 - or paste a token you obtained another way.",
       "invalid_token": "The appliance rejected that device token. Leave the field empty to request a new one.",
-      "callback_port_in_use": "Port 8889 is already in use on Home Assistant, usually by a token request still waiting. Try again in a minute and a half."
+      "callback_port_in_use": "Port 8889 is already in use on Home Assistant, usually by a token request still waiting. Try again in a minute and a half.",
+      "callback_cert_rejected": "The appliance called back on port 8889 but refused Home Assistant's self-signed certificate. Paste the AC14K_M CA certificate and key so LocalThings can sign one it accepts; the token request then runs again.",
+      "callback_ca_rejected": "The appliance called back on port 8889 but refused the AC14K_M-signed certificate too. Paste a token you obtained another way, and see the Home Assistant log for the handshake error."
     },
     "abort": {
       "already_configured": "Device is already configured",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "command_refused": {
+      "message": "The appliance refused the command to {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "The command to {href} was sent with Remote Control off, but the appliance doesn't show it yet. If it doesn't follow, turn on Remote Control at the appliance."
+    },
     "debug_read_failed": {
       "message": "The read from {href} failed: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "{mode} takes a cook time from {min} to {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Extra Rinse isn't available on the selected cycle."
     }
   },
   "selector": {

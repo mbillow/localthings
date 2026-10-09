@@ -69,6 +69,20 @@ def test_registry_reproduces_golden_state_keys_for_ehs():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_ehs_01002():
+    """Issue #581: a two-zone EHS gets a climate entity per zone."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("ehs_01002")
+    golden = json.loads((GOLDEN / "ehs_01002.json").read_text())
+    state_keys = _new_state_keys("ehs_01002", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_wa8000t():
     """Top-load washer (WA8000T, issue #106) reports no oneUiVersion and
     used the 'WA' consumer-model prefix, previously unmapped in
@@ -1716,6 +1730,22 @@ def test_registry_reproduces_golden_state_keys_for_dishwasher_dw5000c_cloud():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_dishwasher_dw60bg750():
+    """A DW60BG750 (DA_DW_TP1_21_COMMON, issue #538) reporting Speed Booster
+    and a rack zone on /dishwasher/vs/0, and no heatedDry at all -- so no
+    Smart Dry select, where an ungated one showed as a dead entity."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("dishwasher_dw60bg750")
+    golden = json.loads((GOLDEN / "dishwasher_dw60bg750.json").read_text())
+    state_keys = _new_state_keys("dishwasher_dw60bg750", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_wf80h():
     """A KR-market WF80H (DA_WM_TP1_21_COMMON, Table_02) captured mid-cycle
     on a delayed start (issues #437/#438 came from the same reporter, a
@@ -1885,6 +1915,56 @@ def test_registry_reproduces_golden_state_keys_for_microwave_nw9300md():
     name = "microwave_nw9300md"
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_subdevice_aware_state_keys(name, device_types=("oic.wk.d", "oic.d.oven"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_rac_01011_aimotionwind():
+    """AR80H12CAAWNSK (issue #554): the TP1X_DA-AC-RAC-01011 board with the
+    AI motion wind picker."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_tp1x_rac_01011_aimotionwind"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_rhs():
+    """AI Air Combo ventilator AJ020FERPBC2 (issue #551, TP1X_DA-AC-RHS-01001)."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_tp1x_rhs"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_rac_01001_oadr():
+    """AR18CYLZBGEN (issue #569): the TP1X_DA-AC-RAC-01001 board with
+    /oadr/vs/0 and an empty /auxiliaryheater/vs/0."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_tp1x_rac_01001_oadr"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

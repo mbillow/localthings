@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 class _FakeLiveness:
     """Stands in for smartthings_local's DtlsLivenessResult. A reply is a
@@ -733,3 +735,154 @@ def test_legacy_http_open_is_false_for_a_closed_port(monkeypatch, socket_enabled
     # Port 1 on loopback: nothing listens, and the connect is refused at once.
     monkeypatch.setattr(probing, "LEGACY_HTTP_PORT", 1)
     assert probing._legacy_http_open("127.0.0.1") is False
+
+
+# --- Several OCF stacks at one address (#540, #520) -------------------------
+
+# The conftest stub replaces moved_secure_port for every test; keep the real one.
+from custom_components.localthings.probing import (  # noqa: E402
+    moved_secure_port as _real_moved_secure_port,
+)
+
+_AC_DI = "e5e61a70-4d70-be3c-6864-0df78cc1d1eb"
+
+
+def _responder(port, rt, secure_ports, di=None):
+    from smartthings_local.protocol.ocf_multicast import OcfResponder
+
+    return OcfResponder(plaintext_port=port, rt=rt, di=di, name=None, secure_ports=secure_ports)
+
+
+# #520's floor unit: a typeless stack on 5683, the air conditioner behind it.
+_TYPELESS = _responder(47616, ("oic.wk.d",), (41000,), di="fbd2e7f4-99b7-3823-7eb3-67159c27daf5")
+_AC = _responder(60137, ("oic.wk.d", "oic.d.airconditioner"), (60912,), di=_AC_DI)
+
+
+def _identity(device_types, model=""):
+    from custom_components.localthings import probing
+
+    return probing.PlaintextIdentity(
+        device_id=None,
+        model=model,
+        vendor_id="",
+        firmware="",
+        name="",
+        device_types=device_types,
+    )
+
+
+def _patch_stacks(monkeypatch, identities: dict, responders=None):
+    """5683 answers with `identities[5683]` and advertises 41000; a
+    multicast enumeration returns `responders` (None: must not run)."""
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((41000,), 5683))
+    monkeypatch.setattr(probing, "_read_plaintext_identity", lambda host, port: identities[port])
+    monkeypatch.setattr(probing, "_legacy_http_open", lambda host: False)
+
+    def _multicast(host):
+        if responders is None:
+            raise AssertionError("multicast must not run for this stack")
+        return responders
+
+    monkeypatch.setattr(probing, "_ocf_responders", _multicast)
+
+
+def test_look_dials_the_appliance_behind_a_typeless_stack(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    ac = _identity(("oic.wk.d", "oic.d.airconditioner"), model="R18_BIXBY_FAC_TIME_23K|x")
+    _patch_stacks(
+        monkeypatch, {5683: _identity(("oic.wk.d",)), 60137: ac}, responders=(_TYPELESS, _AC)
+    )
+    seen: dict = {}
+
+    def _scan(host, ports, preferred=None):
+        seen["ports"], seen["preferred"] = list(ports), preferred
+        return [60912]
+
+    monkeypatch.setattr(probing, "_clienthello_scan", _scan)
+
+    probe = probing.look("10.0.0.1")
+
+    assert seen["ports"][0] == 60912
+    assert seen["preferred"] == 60912
+    assert probe.candidates == [60912]
+    assert probe.advertised == (60912,)
+    assert probe.plaintext_port == 60137
+    assert probe.plaintext is ac
+    assert not probe.typeless_stack
+
+
+def test_look_still_dials_a_typeless_stack_when_no_appliance_is_found(monkeypatch) -> None:
+    """Multicast stops at a router, so an off-segment Home Assistant finds
+    no appliance behind the typeless stack. It is still dialled, in case it
+    is an appliance that declares no type, and flagged so a failure there
+    is reported as reaching the wrong stack."""
+    from custom_components.localthings import probing
+
+    _patch_stacks(monkeypatch, {5683: _identity(("oic.wk.d",))}, responders=(_TYPELESS,))
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [41000])
+
+    probe = probing.look("10.0.0.1")
+
+    assert probe.typeless_stack
+    assert probe.candidates == [41000]
+    assert probe.appliance_responders == 0
+
+
+def test_look_dials_nothing_when_several_appliances_answer(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    other = _responder(50000, ("oic.wk.d", "oic.d.airconditioner"), (50001,), di="other")
+    _patch_stacks(monkeypatch, {5683: _identity(("oic.wk.d",))}, responders=(_AC, other))
+    monkeypatch.setattr(
+        probing, "_clienthello_scan", lambda *a, **k: pytest.fail("nothing should be dialled")
+    )
+
+    probe = probing.look("10.0.0.1")
+
+    assert probe.appliance_responders == 2
+    assert not probe.typeless_stack
+    assert probe.candidates == []
+
+
+@pytest.mark.parametrize(
+    "device_types",
+    [("oic.wk.d", "oic.d.washer"), ("oic.wk.d", "x.com.st.d.winecellar"), ()],
+)
+def test_look_never_multicasts_for_an_appliance_or_an_unread_type(
+    monkeypatch, device_types
+) -> None:
+    """Every captured appliance declares its type; an empty `rt` says
+    nothing. Both keep today's unicast path."""
+    from custom_components.localthings import probing
+
+    _patch_stacks(monkeypatch, {5683: _identity(device_types)})
+    monkeypatch.setattr(probing, "_clienthello_scan", lambda host, ports, preferred=None: [41000])
+
+    assert probing.look("10.0.0.1").candidates == [41000]
+
+
+def test_moved_secure_port_follows_the_stored_di_past_a_typeless_stack(monkeypatch) -> None:
+
+    _patch_stacks(monkeypatch, {5683: _identity(("oic.wk.d",))}, responders=(_TYPELESS, _AC))
+
+    assert _real_moved_secure_port("10.0.0.1", 59999, _AC_DI) == 60912
+    assert _real_moved_secure_port("10.0.0.1", 60912, _AC_DI) is None
+
+
+def test_moved_secure_port_keeps_an_appliance_stacks_own_advertisement(monkeypatch) -> None:
+
+    _patch_stacks(monkeypatch, {5683: _identity(("oic.wk.d", "oic.d.washer"))})
+
+    assert _real_moved_secure_port("10.0.0.1", 59999, _AC_DI) == 41000
+
+
+def test_credential_hint_reads_only_the_given_port(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    asked = _patch_doxm(monkeypatch, {60137: {"sct": 1}, 5683: {"sct": 8}})
+
+    assert probing.read_credential_hint("10.0.0.1", 60137) == probing.CredentialHint(sct=1)
+    assert asked == [60137]

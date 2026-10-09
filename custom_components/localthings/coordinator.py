@@ -23,6 +23,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
 from . import cloudcourse, probing
@@ -54,7 +55,6 @@ from .const import (
 from .credentials import (
     DeviceBinding,
     DeviceIdentityMismatch,
-    InvalidCredentialConfig,
     check_device_binding,
     requires_authenticated_device_id,
 )
@@ -67,6 +67,7 @@ from .registry.batch import parse_device0_batch
 from .registry.by_type import resolve as resolve_registry
 from .registry.capabilities import cook
 from .registry.capabilities.common import (
+    REMOTE_CONTROL_HREFS,
     merge_items_field,
     merge_options_field,
     remote_control_enabled,
@@ -247,29 +248,22 @@ def _batch_element_reps(payload: list) -> dict[str, dict]:
     }
 
 
-# An oven cavity names itself in /mode/vs/0's defaultMode, which prefixes
-# the cavity onto the mode ('UpperConvection'/'LowerConvection' on the
-# dual-cavity board in issue #490). Only the prefix is a cavity; the rest
-# is a cooking mode and must not reach a device name.
-_CAVITY_PREFIXES = ("Upper", "Lower")
-
-
 def _cavity_label(resources: dict[str, dict]) -> str | None:
-    """'Upper oven'/'Lower oven' when this subdevice says which cavity it
-    is, else None.
+    """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
+    cavity = cook.cavity(resources)
+    return f"{cavity} oven" if cavity else None
 
-    Deliberately a two-entry table rather than a general camel-case split:
-    every other defaultMode in the corpus is a plain cooking mode, and
-    naming somebody's appliance 'Samsung Oven Convection Bake' would be a
-    worse outcome than the model label this falls back to.
-    """
-    mode = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.defaultMode")
-    if not isinstance(mode, str):
-        return None
-    for prefix in _CAVITY_PREFIXES:
-        if mode.startswith(prefix):
-            return f"{prefix} oven"
-    return None
+
+# Write errors after which the session is fine and a re-poll shows the
+# appliance's real state; a dead session isn't re-polled (see _async_put).
+_APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+
+
+def _refusal(code: int, response: Any) -> str:
+    """A refused write's CoAP code, with the appliance's own reason when it
+    gave one (`Control fail, <...>`; see transport.Transport)."""
+    text = _coap_code_str(code)
+    return f"{text} {response}" if isinstance(response, str) and response else text
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -370,6 +364,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # async_send_command can be sized to outlast both round trips a write
     # triggers: the PUT itself, then the confirming summary poll.
     _POST_TIMEOUT_S: float = 8.0
+    # How long a write sent with Remote Control off is given before it is
+    # read back (_took_effect).
+    _CONFIRM_DELAY_S: float = 3.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -980,21 +977,36 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         port = self._entry.data[CONF_PORT]
         try:
-            self._open_session(port)
+            self._open_session_retrying_collision(port)
             # The stored port answered, so a port followed earlier but never
             # proven by a poll must not be written over it.
             self._moved_port = None
-        except (DeviceIdentityMismatch, InvalidCredentialConfig):
-            raise
-        except Exception:
+        except (TimeoutError, EndpointError) as e:
+            # Only silence or an unreachable endpoint suggests the port moved;
+            # an appliance that answered with an alert is still on this one.
             moved = self._rediscover_port(port)
             if moved is None:
                 raise
-            self._log.info("secure port moved from %d to %d; reconnecting there", port, moved)
-            self._open_session(moved)
+            self._log.info(
+                "secure port moved from %d to %d after %s; reconnecting there",
+                port,
+                moved,
+                type(e).__name__,
+            )
+            self._open_session_retrying_collision(moved)
             self._moved_port = moved
         self._rediscovery_backoff_s = 0.0
         self._next_rediscovery_ts = 0.0
+
+    def _open_session_retrying_collision(self, port: int) -> None:
+        """A handshake the appliance started at the same moment clears its
+        peer, so one immediate retry normally succeeds (issue #567, the same
+        rule as config_flow._worth_retrying)."""
+        try:
+            self._open_session(port)
+        except PeerInitiatedHandshakeError as e:
+            self._log.debug("handshake collided with the appliance's own; retrying: %s", e)
+            self._open_session(port)
 
     def _rediscover_port(self, current: int) -> int | None:
         """The port the device now advertises, when a lookup is due. Blocking."""
@@ -1009,7 +1021,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self._next_rediscovery_ts = now + self._rediscovery_backoff_s
         try:
-            return probing.moved_secure_port(self._entry.data[CONF_HOST], current)
+            return probing.moved_secure_port(
+                self._entry.data[CONF_HOST], current, self._entry.data.get(CONF_OCF_DEVICE_ID)
+            )
         except Exception as e:
             self._log.debug("secure port lookup failed: %s", e)
             return None
@@ -2180,6 +2194,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # per cycle, and the same wait again on every setup
                     # attempt while it stays dark (issue #269).
                     return self._device_unreachable("device unreachable", e)
+                if self._failed_cycles:
+                    # Already reported dark, so the retry below can only
+                    # repeat the failure. The 8888 transport needs this
+                    # guard: its connect() never touches the network, so
+                    # `_handshake_failed` never fires and a switched-off
+                    # washer warned and polled twice every cycle (issue #269).
+                    await self.hass.async_add_executor_job(self._close_session)
+                    return self._device_unreachable("device unreachable", e)
                 # A lone reconnect is routine (README's "Known device
                 # behavior"); only warn once they pile up. Pause first so
                 # the device can clean up its DTLS state before we knock
@@ -2348,8 +2370,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         no-op. The remote-control check runs first, unconditionally, unless
         the user opted out via CONF_BYPASS_REMOTE_CONTROL (issue #54: some
         devices accept some writes even while reporting remote control off),
-        the laundry firmware declares itself writable without Smart
-        Control, or the description sets requires_remote_control=False."""
+        the laundry firmware declares itself writable without Smart Control,
+        the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
@@ -2371,23 +2393,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # tree to read one rep.
         rep = self.entity_rep(href or "")
         # The remote-control gate below keys off the raw on-the-wire href
-        # and a raw snapshot -- /remotectrl/* is a shared, MAIN-only
-        # resource that a subdevice's canonical_resources() view (owned
-        # hrefs only) would drop entirely. write_fn/validate_fn, by
-        # contrast, are written against canonical hrefs (same convention as
-        # exists_fn/rep_fn -- see entity.py's _resources), so they get this
-        # entity's own subdevice view instead of the raw snapshot: without
-        # it, a composite device's write_fn reading resources.get(some
-        # canonical href) (e.g. airconditioner._temperature_step) would
-        # silently see the master's resource instead of its own subdevice's.
+        # and a raw snapshot (see _remote_control_enabled). write_fn/
+        # validate_fn, by contrast, are written against canonical hrefs
+        # (same convention as exists_fn/rep_fn -- see entity.py's
+        # _resources), so they get this entity's own subdevice view instead
+        # of the raw snapshot: without it, a composite device's write_fn
+        # reading resources.get(some canonical href) (e.g.
+        # airconditioner._temperature_step) would silently see the master's
+        # resource instead of its own subdevice's.
         raw_resources = self._cache.snapshot()
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
-        if (
+        remote_control_off = (
             not bypass_remote_control
             and getattr(desc, "requires_remote_control", True)
             and remote_control_required_for_write(raw_resources, href or "")
-            and not remote_control_enabled(raw_resources)
-        ):
+            and not self._remote_control_enabled(bound_entity.subdevice)
+        )
+        if remote_control_off and desc.needs_remote_control:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="remote_control_disabled",
@@ -2450,6 +2472,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
         write_only = getattr(desc, "write_only", False)
+        previous_settle = self._observe.settle_deadline(write_href)
+        armed_settle = 0.0
         if not write_only:
             optimistic_body = body
             new_options = body.get("x.com.samsung.da.options")
@@ -2469,23 +2493,63 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
                 }
             self._observe.apply(write_href, optimistic_body, source="optimistic")
-            self._observe.mark_write_pending(
+            armed_settle = self._observe.mark_write_pending(
                 write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
             )
 
         def _rearm() -> None:
+            nonlocal armed_settle
             # The retry's own reconnect pause + second PUT can eat well
             # into the settle window armed above, leaving too little of it
             # for the confirming poll below and reviving the
             # revert-then-reapply symptom settle_s exists to prevent (issue
             # #9). Re-arm it fresh now that the write actually landed.
             if not write_only:
-                self._observe.mark_write_pending(
+                armed_settle = self._observe.mark_write_pending(
                     write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
                 )
 
-        await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+        try:
+            await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+            if remote_control_off and not await self._took_effect(path_segs, body):
+                # Sent only because the descriptor waives Remote Control. Some
+                # boards answer 2.04 and drop a write with it off
+                # (docs/investigations/oven-cycle-start.md); others take it
+                # but are still winding down (a drain) when read back.
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_not_confirmed",
+                    translation_placeholders={"href": write_href},
+                )
+        except (HomeAssistantError, asyncio.CancelledError) as err:
+            # Not known to have landed: let the next poll replace the
+            # optimistic value instead of holding it for the settle window.
+            if not write_only:
+                self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
+            if getattr(err, "translation_key", None) in _APPLIANCE_ANSWERED:
+                await self.async_request_refresh()
+            raise
         await self.async_request_refresh()
+
+    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
+        """Whether a fresh read shows `body`. A read that fails proves
+        nothing, so it counts as taken."""
+        await asyncio.sleep(self._CONFIRM_DELAY_S)
+
+        def _read() -> Any:
+            sess = self._session
+            if sess is None:
+                return None
+            code, rep = sess.read(path_segs, timeout=self._POST_TIMEOUT_S)
+            return rep if _coap_accepted(code) and isinstance(rep, dict) else None
+
+        async with self._session_lock:
+            try:
+                rep = await self.hass.async_add_executor_job(_read)
+            except Exception as err:
+                self._log.debug("confirming read of %s failed: %s", path_segs, err)
+                return True
+        return rep is None or _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2503,15 +2567,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, _ = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
+            return code, response
 
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
-                await self.hass.async_add_executor_job(_do_put)
+                code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
                 self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
@@ -2526,7 +2591,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._resubscribe_due = True
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
-                    await self.hass.async_add_executor_job(_do_put)
+                    code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
@@ -2536,6 +2601,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        if not _coap_accepted(code):
+            # A refusal is the appliance's answer, not a dead session, so it
+            # is reported rather than retried.
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_refused",
+                translation_placeholders={"href": write_href, "error": _refusal(code, response)},
+            )
 
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.
@@ -2565,6 +2638,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if href in overlaid:
                     snapshot[subdevice.to_actual(href)] = overlaid[href]
         return snapshot
+
+    def _remote_control_enabled(self, subdevice: Subdevice) -> bool:
+        """Smart Control for the subdevice being written. Each cavity of a
+        dual-cavity oven reports its own /remotectrl (the NV75N's
+        /remotectrl/vs/1, #300's /remotectrl/vs/2), so a subdevice's own
+        copy decides; one that reports none falls back to MAIN's."""
+        raw = self._cache.snapshot()
+        if subdevice != MAIN:
+            own = {
+                href: raw[actual]
+                for href in REMOTE_CONTROL_HREFS
+                if (actual := subdevice.to_actual(href)) in raw
+            }
+            if own:
+                return remote_control_enabled(own)
+        return remote_control_enabled(raw)
 
     def _holds_cook(self, subdevice: Subdevice) -> bool:
         """Whether a mode/setpoint/cook-time write is held rather than sent:
@@ -2617,10 +2706,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="cook_start_not_supported"
             )
-        raw_resources = self._cache.snapshot()
         if not self._entry.options.get(
             CONF_BYPASS_REMOTE_CONTROL, False
-        ) and not remote_control_enabled(raw_resources):
+        ) and not self._remote_control_enabled(subdevice):
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="remote_control_disabled"
             )

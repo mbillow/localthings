@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Dubbel setpoint ingeschakeld"
+      },
+      "divider": {
+        "name": "Scheidingswand"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Kreukpreventie actief"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zone 1"
+      },
+      "zone2_climate": {
+        "name": "Zone 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lamp"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "Hygiënisch drogen",
           "3b": "Beddengoed/Stof verwijderen",
           "3c": "Sportkleding",
-          "3d": "Spijkergoed"
+          "3d": "Spijkergoed",
+          "2f": "Intensief",
+          "30": "Sportkleding",
+          "32": "Strijkvrij",
+          "33": "Stoomhygiëne+",
+          "34": "Opfrissen met stoom",
+          "35": "Kreukvrij",
+          "36": "Luchtdrogen",
+          "3e": "Kleine lading",
+          "2e": "Eco Normaal"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "Deeg rijzen",
           "dehydrate": "Drogen",
           "self_clean": "Zelfreiniging",
-          "air_fryer": "Airfryer"
+          "air_fryer": "Airfryer",
+          "upper_broil": "Grillen (boven)",
+          "upper_convection_bake": "Bakken met hetelucht (boven)",
+          "upper_convection_roast": "Heteluchtbraden (boven)",
+          "lower_bake": "Bakken (onder)",
+          "lower_convection_bake": "Bakken met hetelucht (onder)",
+          "steam_bake": "Stoombakken",
+          "steam_roast": "Stoombraden",
+          "upper_steam_bake": "Stoombakken (boven)",
+          "descale": "Ontkalken",
+          "drain": "Water aftappen"
         }
       },
       "operating_mode": {
@@ -650,7 +686,9 @@
         "state": {
           "fdr_wine": "Wijn",
           "fdr_deli": "Delicatessen",
-          "fdr_drinks": "Dranken"
+          "fdr_drinks": "Dranken",
+          "ttype_meat_fish": "Vlees/vis",
+          "ttype_rf9000a_fridge": "Koelen"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +797,9 @@
           "no_spin": "Niet centrifugeren",
           "low": "Laag",
           "medium": "Gemiddeld",
-          "high": "Hoog"
+          "high": "Hoog",
+          "extra_low": "Extra laag",
+          "extra_high": "Extra hoog"
         }
       },
       "wash_temperature": {
@@ -770,7 +810,8 @@
           "cool": "Koel",
           "warm": "Warm",
           "hot": "Heet",
-          "extra_hot": "Extra heet"
+          "extra_hot": "Extra heet",
+          "tap_cold": "Koud leidingwater"
         }
       },
       "washer_cycle_table_00": {
@@ -877,13 +918,18 @@
           "38": "Katoen drogen",
           "39": "Synthetisch drogen",
           "3a": "Trommel reinigen",
+          "51": "Super Speed",
           "52": "Eco koud",
           "53": "Intensief",
           "54": "Handdoeken",
           "55": "Sportkleding",
+          "56": "Beddengoed",
           "57": "Fijne was",
+          "5a": "Stoomhygiëne",
+          "5b": "Kleine lading",
           "5e": "Spoelen+centrifugeren",
           "60": "Self Clean+",
+          "64": "Witte was met stoom",
           "65": "Bonte was",
           "66": "Spijkergoed",
           "69": "AI wassen",
@@ -907,13 +953,23 @@
           "7d": "Beddengoed/waterdicht",
           "7e": "Self Clean",
           "7f": "Wol/fijne was",
+          "85": "Normaal met stoom",
           "86": "Diep wassen",
           "87": "Gedownload",
           "88": "Huisdierverzorging",
+          "8b": "Snelle was",
+          "8c": "AI OptiWash",
           "8f": "Intensief koud",
           "96": "Minder microvezels",
           "a0": "15' Snelle was",
-          "b0": "Gemengde was"
+          "b0": "Gemengde was",
+          "58": "Wol",
+          "5c": "Outdoor",
+          "5d": "Power spoelen",
+          "5f": "Alleen centrifugeren",
+          "63": "Power Steam",
+          "67": "Stoom anti-allergie",
+          "68": "Stoom volumineuze was"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "Zuivering",
           "ventilation": "Ventilatie",
-          "smartventilation": "Slimme ventilatie"
+          "smartventilation": "Slimme ventilatie",
+          "aicomfort": "AI-comfort",
+          "autoventilation": "Automatische ventilatie",
+          "freshairintake": "Verse luchttoevoer",
+          "indoorpurification": "Binnenluchtzuivering",
+          "indoordehumidification": "Binnenluchtontvochtiging"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "Rechts breed",
           "left_narrow": "Links smal",
           "left_wide": "Links breed"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "AI-bewegingsluchtstroom",
+        "state": {
+          "off": "Uit",
+          "surround": "Rondom",
+          "longreach": "Groot bereik",
+          "down": "Omlaag",
+          "power": "Krachtig",
+          "windfree": "Wind-Free",
+          "aidirect": "AI direct",
+          "aiindirect": "AI indirect"
+        }
+      },
+      "wash_zone": {
+        "name": "Wasgebied",
+        "state": {
+          "on_on": "Beide korven",
+          "off_on": "Alleen onderkorf",
+          "on_off": "Alleen bovenkorf"
+        }
+      },
+      "lamp_level": {
+        "name": "Lampniveau",
+        "state": {
+          "off": "Uit",
+          "low": "Laag",
+          "high": "Hoog"
         }
       }
     },
@@ -1214,7 +1304,8 @@
       "dryer_type": {
         "name": "Type droger",
         "state": {
-          "electricity": "Elektriciteit"
+          "electricity": "Elektriciteit",
+          "gas": "Gas"
         }
       },
       "dust": {
@@ -1436,6 +1527,9 @@
       },
       "zone_temperature": {
         "name": "Zonetemperatuur"
+      },
+      "zone2_temperature": {
+        "name": "Temperatuur zone 2"
       },
       "watertank_full_alarm_status": {
         "name": "Status alarm waterreservoir vol"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "Automatisch omschakelen"
+      },
+      "interlock": {
+        "name": "Koppeling"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Waarschuwing vochtige was"
+      },
+      "extra_rinse": {
+        "name": "Extra spoelen"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "Dat IP-adres is bereikbaar, maar weigerde actief elke poort in het bereik van de lokale API (UDP 49152-49160) en gaf geen enkele reactie op het ontdekkingskanaal. Het is hoogstwaarschijnlijk geen Samsung-apparaat, of een apparaat waarop de lokale API niet is ingeschakeld.",
       "no_dtls_server": "De poorten in het bereik van de lokale API zijn bereikbaar op dat adres, maar niets daar beantwoordde een DTLS-handshake. Controleer of het IP-adres bij het apparaat hoort en niet bij een ander apparaat in je netwerk.",
       "appliance_no_dtls": "Dat adres is van een Samsung-apparaat — het heeft zich via het onversleutelde ontdekkingskanaal geïdentificeerd als {model} en {port} als zijn beveiligde poort opgegeven — maar daar is nooit een DTLS-handshake voltooid. Het adres is niet het probleem. Controleer of Afstandsbediening of een vergelijkbare instelling op het bedieningspaneel van het apparaat is uitgeschakeld, en bekijk het Home Assistant-logboek voor de exacte fout.",
+      "non_appliance_stack": "Er antwoordde iets op dat IP-adres, maar het meldde zich als een OCF-dienst die geen apparaat is. Sommige Samsung-apparaten draaien er een naast hun eigen dienst, en LocalThings vindt het apparaat daarachter alleen als Home Assistant in hetzelfde netwerksegment zit. Zet Home Assistant en het apparaat in hetzelfde subnet en VLAN en probeer het opnieuw.",
+      "multiple_appliances": "Op dat IP-adres antwoordt meer dan één Samsung-apparaat, en LocalThings kan nog niet tussen ze kiezen. Meld het in de issuetracker van LocalThings en voeg het Home Assistant-logboek toe.",
       "handshake_timeout": "Het apparaat antwoordde op zijn lokale API-poort, maar voltooide de DTLS-handshake ook na een nieuwe poging niet. Probeer het opnieuw. Blijft het mislukken, dan maakt een herstart van het apparaat de verbindingen vrij die het nog vasthoudt; de exacte fout staat in het Home Assistant-logboek.",
       "cert_rejected": "Het apparaat heeft het certificaat geweigerd. Het CA-certificaat en de sleutel zijn waarschijnlijk niet van de AC14K_M-CA die dit apparaat vertrouwt, of ze horen niet bij elkaar. Het Home Assistant-logboek bevat de precieze alert die het apparaat stuurde.",
       "psk_rejected": "Het apparaat heeft de pre-shared key geweigerd. De identiteit of sleutel is onjuist, of hoort bij een ander apparaat of bij een eigenaar die inmiddels is gewijzigd. Het Home Assistant-logboek bevat de exacte alert.",
       "identity_unproven": "De sleutel werkte, maar het apparaat meldde zijn OCF-apparaat-ID niet via de versleutelde verbinding. LocalThings kan dus niet bevestigen welk apparaat de sleutel heeft en voegt het niet toe. Probeer het opnieuw terwijl het apparaat wakker is. Blijft dit gebeuren, laat het ons dan weten in [issue #435]({issue_url}) met het Home Assistant-logboek erbij.",
       "invalid_psk_identity": "Voer de identiteit in als UUID, bijvoorbeeld 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Deze UUID bevat een nulbyte, die DTLS niet als identiteit kan overbrengen. Heb je deze peer-identiteit zelf gegenereerd, genereer dan een nieuwe.",
+      "psk_identity_zero_byte": "Deze UUID bevat een nulbyte die het geïnstalleerde transport niet kan verzenden. Laat de herstelde identiteit ongewijzigd.",
       "invalid_psk_key": "Voer de sleutel in als 32 of 64 hexadecimale tekens.",
       "handshake_failed": "Het apparaat weigerde de DTLS-handshake om een reden die niets met het certificaat te maken heeft, hoogstwaarschijnlijk een protocol- of cipher-mismatch. Het Home Assistant-logboek bevat de precieze alert die het stuurde.",
       "cloud_unreachable": "Kon de cloudgateway van Samsung niet bereiken om de UUID op te halen die nodig is om het certificaat van dit apparaat aan te maken. Controleer de internettoegang van Home Assistant en probeer het opnieuw.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "Op dat adres antwoordde een Samsung-apparaat, maar niet dit apparaat — het meldde een andere identiteit. Controleer of het adres bij dit apparaat hoort. Gebruik Apparaat toevoegen om het andere toe te voegen.",
       "token_not_received": "Er is geen apparaattoken binnengekomen. Controleer of de afstandsbediening op het apparaat aanstaat met de deur dicht en of het Home Assistant kan bereiken op poort 8889 - of plak een token dat je op een andere manier hebt opgehaald.",
       "invalid_token": "Het apparaat heeft dat token geweigerd. Laat het veld leeg om een nieuw token aan te vragen.",
-      "callback_port_in_use": "Poort 8889 is al in gebruik op Home Assistant, meestal door een tokenaanvraag die nog wacht. Probeer het over anderhalve minuut opnieuw."
+      "callback_port_in_use": "Poort 8889 is al in gebruik op Home Assistant, meestal door een tokenaanvraag die nog wacht. Probeer het over anderhalve minuut opnieuw.",
+      "callback_cert_rejected": "Het apparaat belde terug op poort 8889, maar weigerde het zelfondertekende certificaat van Home Assistant. Plak het AC14K_M-CA-certificaat en de sleutel zodat LocalThings er een kan ondertekenen dat wel wordt geaccepteerd; daarna wordt de tokenaanvraag opnieuw uitgevoerd.",
+      "callback_ca_rejected": "Het apparaat belde terug op poort 8889, maar weigerde ook het met AC14K_M ondertekende certificaat. Plak een token dat je op een andere manier hebt verkregen; de handshakefout staat in het Home Assistant-logboek."
     },
     "abort": {
       "already_configured": "Apparaat is al geconfigureerd",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "command_refused": {
+      "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "Het commando naar {href} is verzonden terwijl afstandsbediening uit staat, maar het apparaat toont het nog niet. Als het niet reageert, schakel dan afstandsbediening in op het apparaat."
+    },
     "debug_read_failed": {
       "message": "Het lezen van {href} is mislukt: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "{mode} accepteert een bereidingstijd van {min} tot {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Extra Rinse is niet beschikbaar voor het geselecteerde programma."
     }
   },
   "selector": {

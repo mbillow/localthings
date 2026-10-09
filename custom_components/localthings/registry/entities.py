@@ -66,6 +66,9 @@ class SamsungEntityDescription:
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
     cook_param: str | None = None
+    # False for a write the appliance takes with Remote Control off; the
+    # coordinator then leaves the refusal, if any, to the appliance.
+    needs_remote_control: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -124,6 +127,12 @@ class SwitchDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class LightDesc(SamsungEntityDescription):
+    supports_brightness: bool = False
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class ButtonDesc(SamsungEntityDescription):
     payload: Any = ""
     # Optional press-time payload generation. The button platform supplies
@@ -172,6 +181,16 @@ class ClimateDesc(SamsungEntityDescription):
 
 
 @dataclass(frozen=True, kw_only=True)
+class ZoneClimateDesc(SamsungEntityDescription):
+    # A heat pump zone as a climate entity: power, mode and temperature each
+    # on their own href, named here so one platform class serves every zone.
+    power_href: str = ""
+    mode_href: str = ""
+    temperature_href: str = ""
+    write_fn: WriteFn = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class FanDesc(SamsungEntityDescription):
     # Composite fan entity: reads power from /power/0 and speed/support data
     # from its bound href. Payloads are (kind, value), like ClimateDesc.
@@ -190,10 +209,12 @@ PLATFORM_OF: dict[type, str] = {
     BinarySensorDesc: "binary_sensor",
     SelectDesc: "select",
     SwitchDesc: "switch",
+    LightDesc: "light",
     ButtonDesc: "button",
     NumberDesc: "number",
     TimeDesc: "time",
     ClimateDesc: "climate",
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
+    ZoneClimateDesc: "climate",
 }

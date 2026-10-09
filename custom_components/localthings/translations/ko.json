@@ -147,6 +147,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "이중 설정 온도 사용"
+      },
+      "divider": {
+        "name": "칸막이"
+      },
+      "wrinkle_prevent_active": {
+        "name": "구김 방지 작동 중"
       }
     },
     "button": {
@@ -226,6 +232,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "구역 1"
+      },
+      "zone2_climate": {
+        "name": "구역 2"
       }
     },
     "fan": {
@@ -241,6 +253,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "램프"
       }
     },
     "number": {
@@ -484,7 +501,16 @@
           "3a": "살균건조",
           "3b": "이불/먼지털기",
           "3c": "피트니스",
-          "3d": "데님"
+          "3d": "데님",
+          "2f": "강력건조",
+          "30": "피트니스",
+          "32": "구김방지",
+          "33": "스팀살균+",
+          "34": "스팀 리프레시",
+          "35": "구김 방지",
+          "36": "송풍",
+          "3e": "소량 세탁",
+          "2e": "에코 표준건조"
         }
       },
       "dryer_dry_level": {
@@ -605,7 +631,17 @@
           "bread_proof": "발효",
           "dehydrate": "건조",
           "self_clean": "자동 세척",
-          "air_fryer": "에어프라이"
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일 (상단)",
+          "upper_convection_bake": "컨벡션 베이크 (상단)",
+          "upper_convection_roast": "컨벡션 로스트 (상단)",
+          "lower_bake": "베이크 (하단)",
+          "lower_convection_bake": "컨벡션 베이크 (하단)",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크 (상단)",
+          "descale": "석회 제거",
+          "drain": "배수"
         }
       },
       "operating_mode": {
@@ -650,7 +686,9 @@
         "state": {
           "fdr_wine": "와인",
           "fdr_deli": "델리",
-          "fdr_drinks": "음료"
+          "fdr_drinks": "음료",
+          "ttype_meat_fish": "육류/생선",
+          "ttype_rf9000a_fridge": "냉장"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +797,9 @@
           "no_spin": "탈수 안 함",
           "low": "약",
           "medium": "중",
-          "high": "강"
+          "high": "강",
+          "extra_low": "매우 낮음",
+          "extra_high": "매우 높음"
         }
       },
       "wash_temperature": {
@@ -770,7 +810,8 @@
           "cool": "찬물",
           "warm": "미온수",
           "hot": "온수",
-          "extra_hot": "고온수"
+          "extra_hot": "고온수",
+          "tap_cold": "수돗물 냉수"
         }
       },
       "washer_cycle_table_00": {
@@ -877,13 +918,18 @@
           "38": "면 건조",
           "39": "합성섬유 건조",
           "3a": "무세제통세척",
+          "51": "쾌속건조",
           "52": "에코 냉수 세탁",
           "53": "강력세탁",
           "54": "타월",
           "55": "피트니스",
+          "56": "이불",
           "57": "섬세의류",
+          "5a": "스팀살균",
+          "5b": "소량 세탁",
           "5e": "헹굼+탈수",
           "60": "통세척+",
+          "64": "스팀 흰옷",
           "65": "컬러 의류",
           "66": "데님",
           "69": "AI 맞춤세탁",
@@ -907,13 +953,23 @@
           "7d": "이불/방수 의류",
           "7e": "통세척",
           "7f": "울/섬세",
+          "85": "스팀 표준",
           "86": "찌든 때 세탁",
           "87": "다운로드",
           "88": "펫케어",
+          "8b": "쾌속세탁",
+          "8c": "AI OptiWash",
           "8f": "강력 냉수 세탁",
           "96": "미세플라스틱저감",
           "a0": "15분 쾌속세탁",
-          "b0": "혼합 세탁"
+          "b0": "혼합 세탁",
+          "58": "울",
+          "5c": "아웃도어",
+          "5d": "강력 헹굼",
+          "5f": "탈수만",
+          "63": "강력 스팀",
+          "67": "스팀 알레르기 케어",
+          "68": "스팀 이불"
         }
       },
       "washer_dry_level": {
@@ -983,7 +1039,12 @@
         "state": {
           "purification": "청정",
           "ventilation": "환기",
-          "smartventilation": "스마트환기"
+          "smartventilation": "스마트환기",
+          "aicomfort": "AI 쾌적",
+          "autoventilation": "자동환기",
+          "freshairintake": "외기도입",
+          "indoorpurification": "실내청정",
+          "indoordehumidification": "실내제습"
         }
       },
       "dry_time": {
@@ -1023,6 +1084,35 @@
           "right_wide": "오른쪽 넓게",
           "left_narrow": "왼쪽 좁게",
           "left_wide": "왼쪽 넓게"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "AI 모션 바람",
+        "state": {
+          "off": "끄기",
+          "surround": "서라운드",
+          "longreach": "원거리",
+          "down": "하향",
+          "power": "파워",
+          "windfree": "무풍",
+          "aidirect": "AI 직접풍",
+          "aiindirect": "AI 간접풍"
+        }
+      },
+      "wash_zone": {
+        "name": "세척 구역",
+        "state": {
+          "on_on": "상·하단 모두",
+          "off_on": "하단만",
+          "on_off": "상단만"
+        }
+      },
+      "lamp_level": {
+        "name": "램프 단계",
+        "state": {
+          "off": "꺼짐",
+          "low": "약",
+          "high": "강"
         }
       }
     },
@@ -1214,7 +1304,8 @@
       "dryer_type": {
         "name": "건조기 유형",
         "state": {
-          "electricity": "전기"
+          "electricity": "전기",
+          "gas": "가스"
         }
       },
       "dust": {
@@ -1436,6 +1527,9 @@
       },
       "zone_temperature": {
         "name": "구역 온도"
+      },
+      "zone2_temperature": {
+        "name": "구역 2 온도"
       },
       "watertank_full_alarm_status": {
         "name": "물통 가득 참 알림 상태"
@@ -1750,6 +1844,18 @@
       },
       "auto_changeover": {
         "name": "자동 전환"
+      },
+      "interlock": {
+        "name": "연동"
+      },
+      "speed_booster": {
+        "name": "스피드 부스터"
+      },
+      "damp_alert": {
+        "name": "다림질 알림"
+      },
+      "extra_rinse": {
+        "name": "헹굼 추가"
       }
     },
     "time": {
@@ -1904,12 +2010,14 @@
       "ports_closed": "해당 IP 주소에는 연결할 수 있지만, 로컬 API 포트 범위(UDP 49152-49160)의 모든 포트가 연결을 거부했고 검색 채널에서도 응답이 전혀 없었습니다. 삼성 가전제품이 아니거나, 로컬 API가 활성화되지 않은 기기일 가능성이 큽니다.",
       "no_dtls_server": "해당 주소의 로컬 API 포트 범위에는 연결할 수 있지만, DTLS 핸드셰이크에 응답하는 서버가 없습니다. IP 주소가 네트워크의 다른 기기가 아닌 해당 가전제품의 주소인지 확인하세요.",
       "appliance_no_dtls": "해당 주소는 삼성 가전제품입니다. 암호화되지 않은 검색 채널을 통해 모델을 \"{model}\"(으)로 알리고 보안 포트를 {port}(으)로 알렸지만, 해당 포트에서 DTLS 핸드셰이크를 완료하지 못했습니다. 주소 자체는 문제가 아닙니다. 가전제품 조작부에서 스마트 컨트롤 등의 설정이 꺼져 있지 않은지 확인하고, 정확한 실패 원인은 Home Assistant 로그에서 확인하세요.",
+      "non_appliance_stack": "해당 IP 주소에서 응답이 있었지만 가전제품이 아닌 OCF 서비스로 확인되었습니다. 일부 삼성 가전제품은 자체 서비스 외에 이런 서비스를 함께 실행하며, LocalThings는 Home Assistant가 같은 네트워크 세그먼트에 있을 때만 그 뒤의 가전제품을 찾을 수 있습니다. Home Assistant와 가전제품을 같은 서브넷과 VLAN에 둔 뒤 다시 시도하세요.",
+      "multiple_appliances": "해당 IP 주소에서 둘 이상의 삼성 가전제품이 응답하며, LocalThings는 아직 그중 하나를 선택할 수 없습니다. LocalThings 이슈 트래커에 Home Assistant 로그와 함께 알려 주세요.",
       "handshake_timeout": "가전제품이 로컬 API 포트에서 응답했지만 재시도 후에도 DTLS 핸드셰이크를 완료하지 않았습니다. 다시 시도하세요. 계속 실패하면 가전제품을 다시 시작하면 아직 유지 중인 연결이 정리됩니다. 정확한 오류는 Home Assistant 로그에서 확인할 수 있습니다.",
       "cert_rejected": "가전제품이 인증서를 거부했습니다. CA 인증서와 키가 이 가전제품에서 신뢰하는 AC14K_M CA의 것이 아니거나 서로 일치하지 않을 가능성이 큽니다. 가전제품이 보낸 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "psk_rejected": "기기가 사전 공유 키를 거부했습니다. ID나 키가 잘못되었거나, 다른 기기 또는 이후 바뀐 소유자의 것입니다. 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "identity_unproven": "키는 작동했지만 기기가 암호화된 연결로 OCF 기기 ID를 알려 주지 않아, LocalThings가 어느 기기가 키를 가지고 있는지 확인할 수 없으므로 추가하지 않습니다. 기기가 깨어 있을 때 다시 시도하세요. 계속 발생하면 Home Assistant 로그와 함께 [이슈 #435]({issue_url})에 알려 주세요.",
       "invalid_psk_identity": "ID를 UUID 형식으로 입력하세요. 예: 12345678-1234-1234-1234-123456789abc",
-      "psk_identity_zero_byte": "이 UUID에는 DTLS가 ID로 전달할 수 없는 0 바이트가 들어 있습니다. 이 피어 ID를 직접 생성했다면 새로 생성하세요.",
+      "psk_identity_zero_byte": "이 UUID에는 설치된 전송 계층이 보낼 수 없는 0 바이트가 들어 있습니다. 복구한 ID를 변경하지 마세요.",
       "invalid_psk_key": "키를 16진수 32자 또는 64자로 입력하세요.",
       "handshake_failed": "인증서와 관련 없는 이유로 가전제품이 DTLS 핸드셰이크를 거부했습니다. 프로토콜이나 암호화 방식이 일치하지 않을 가능성이 큽니다. 가전제품이 보낸 정확한 경고는 Home Assistant 로그에 기록됩니다.",
       "cloud_unreachable": "이 기기의 인증서 발급에 필요한 UUID를 가져오기 위해 삼성 클라우드 게이트웨이에 연결할 수 없습니다. Home Assistant의 인터넷 연결을 확인한 후 다시 시도하세요.",
@@ -1920,7 +2028,9 @@
       "wrong_device": "해당 주소에서 삼성 가전제품이 응답했지만 이 기기가 아닙니다. 다른 신원을 보고했습니다. 주소가 이 가전제품의 것인지 확인하세요. 다른 기기를 추가하려면 기기 추가를 사용하세요.",
       "token_not_received": "기기 토큰이 도착하지 않았습니다. 문을 닫은 상태에서 가전의 원격 제어가 켜져 있는지, 그리고 8889 포트로 Home Assistant에 연결할 수 있는지 확인하거나, 다른 방법으로 얻은 토큰을 붙여넣으십시오.",
       "invalid_token": "가전제품이 해당 기기 토큰을 거부했습니다. 새 토큰을 요청하려면 칸을 비워 두세요.",
-      "callback_port_in_use": "Home Assistant의 포트 8889가 이미 사용 중입니다. 보통 아직 대기 중인 토큰 요청 때문입니다. 1분 30초 후에 다시 시도하세요."
+      "callback_port_in_use": "Home Assistant의 포트 8889가 이미 사용 중입니다. 보통 아직 대기 중인 토큰 요청 때문입니다. 1분 30초 후에 다시 시도하세요.",
+      "callback_cert_rejected": "가전이 포트 8889로 콜백했지만 Home Assistant의 자체 서명 인증서를 거부했습니다. LocalThings가 기기가 받아들일 인증서에 서명할 수 있도록 AC14K_M CA 인증서와 키를 붙여 넣으세요. 그러면 토큰 요청이 다시 실행됩니다.",
+      "callback_ca_rejected": "가전이 포트 8889로 콜백했지만 AC14K_M으로 서명된 인증서도 거부했습니다. 다른 방법으로 얻은 토큰을 붙여 넣고, 핸드셰이크 오류는 Home Assistant 로그에서 확인하세요."
     },
     "abort": {
       "already_configured": "기기가 이미 구성되어 있습니다",
@@ -2070,6 +2180,12 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "command_refused": {
+      "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "스마트 컨트롤이 꺼진 상태에서 {href} 명령을 보냈지만 가전제품에 아직 반영되지 않았습니다. 반응이 없으면 가전제품에서 스마트 컨트롤을 켜세요."
+    },
     "debug_read_failed": {
       "message": "{href}에서 읽기가 실패했습니다: {error}"
     },
@@ -2123,6 +2239,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "{mode} 모드의 조리 시간 범위는 {min}~{max}입니다."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "선택한 코스에서는 추가 헹굼을 사용할 수 없습니다."
     }
   },
   "selector": {

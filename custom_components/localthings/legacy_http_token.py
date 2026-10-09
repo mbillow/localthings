@@ -54,6 +54,14 @@ class CallbackPortUnavailable(OSError):
     holding it for the rest of its wait."""
 
 
+class CallbackCertRejected(Exception):
+    """The appliance called back but would not finish the TLS handshake.
+
+    The washer accepts any leaf here, but the TP6X_RAC has only been seen
+    to issue a token to a listener presenting an AC14K_M-signed chain (#524).
+    """
+
+
 class TokenListener:
     """The HTTPS listener the appliance POSTs the token to. Start it before
     asking for a token, stop it when you have one.
@@ -70,10 +78,16 @@ class TokenListener:
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._token: str | None = None
+        self._handshake_failed = False
 
     @property
     def token(self) -> str | None:
         return self._token
+
+    @property
+    def handshake_failed(self) -> bool:
+        """The appliance connected back but the TLS handshake did not complete."""
+        return self._handshake_failed
 
     def start(self) -> None:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -127,8 +141,9 @@ class TokenListener:
         raw.settimeout(10.0)
         try:
             connection = self._context.wrap_socket(raw, server_side=True)
-        except ssl.SSLError as err:
+        except OSError as err:  # ssl.SSLError, or the appliance hanging up mid-handshake
             _LOGGER.debug("token callback TLS handshake from %s failed: %s", peer, err)
+            self._handshake_failed = True
             return
         data = _read_request(connection)
         match = _TOKEN_RE.search(data)
@@ -211,6 +226,9 @@ def obtain_device_token(
     be awake and reachable, and inbound 8889 has to reach this host. The
     config flow offers a pasted token as the fallback, so a user whose
     network makes the callback impossible is not locked out.
+
+    Raises CallbackCertRejected when the appliance called back but refused
+    the handshake: asking again with the same certificate cannot help.
     """
     listener = TokenListener(cert_pem, key_pem, peer=socket.gethostbyname(host))
     listener.start()
@@ -219,17 +237,25 @@ def obtain_device_token(
         context = client_context(cert_pem, key_pem)
         deadline = time.monotonic() + timeout
         while listener.token is None and time.monotonic() < deadline:
+            if listener.handshake_failed:
+                break
             try:
                 status = request_token(host, port, address, context)
                 _LOGGER.debug("token request answered %s", status)
             except OSError as err:
                 _LOGGER.debug("token request failed: %s", err)
             waited = 0.0
-            while listener.token is None and waited < _RETRY_INTERVAL_S:
+            while (
+                listener.token is None
+                and not listener.handshake_failed
+                and waited < _RETRY_INTERVAL_S
+            ):
                 if time.monotonic() >= deadline:
                     break
                 time.sleep(_ACCEPT_POLL_S)
                 waited += _ACCEPT_POLL_S
+        if listener.token is None and listener.handshake_failed:
+            raise CallbackCertRejected(f"{host} refused the TLS handshake on its token callback")
         return listener.token
     finally:
         listener.stop()

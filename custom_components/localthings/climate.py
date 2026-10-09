@@ -80,12 +80,14 @@ from .registry.capabilities.airconditioner import (
     _temperature_step,
     extend_option_code_bit,
     has_extend_option_code,
+    has_heating_capacity,
     has_option_code,
     is_legacy_board,
     option_code_bit,
 )
 from .registry.capabilities.common import normalize_temp_unit
-from .registry.entities import ClimateDesc
+from .registry.entities import ClimateDesc, ZoneClimateDesc
+from .zone_climate import LocalThingsZoneClimate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,14 +99,20 @@ _SUPPORTED_FIELD = "x.com.samsung.da.supportedModes"
 # driven by the power resource).
 _DEVICE_TO_HVAC: dict[str, HVACMode] = {
     "Cool": HVACMode.COOL,
+    # AI Air Combo ventilator (TP1X_DA-AC-RHS-01001, #551). Listed before
+    # 'Dry' so that stays the reverse map's fallback.
+    "IndoorDehumidification": HVACMode.DRY,
     "Dry": HVACMode.DRY,
-    # The fresh-air ventilator's only modes (ACA-KR-TP2-21-AN9000, #522).
-    # Fan-only gives its climate card an on state; the ventilation_mode
-    # select picks among the three. Listed before 'Fan'/'Wind' so neither
-    # becomes the reverse map's fallback.
+    # The fresh-air ventilators' fan-only modes (ACA-KR-TP2-21-AN9000, #522;
+    # TP1X_DA-AC-RHS-01001, #551). Fan-only gives the climate card an on
+    # state; the ventilation_mode select tells them apart. Listed before
+    # 'Fan'/'Wind' so neither becomes the reverse map's fallback.
     "Purification": HVACMode.FAN_ONLY,
     "Ventilation": HVACMode.FAN_ONLY,
     "SmartVentilation": HVACMode.FAN_ONLY,
+    "AutoVentilation": HVACMode.FAN_ONLY,
+    "FreshAirIntake": HVACMode.FAN_ONLY,
+    "IndoorPurification": HVACMode.FAN_ONLY,
     # Fan-only is spelled 'Wind' on some boards and 'Fan' on others; both map
     # to FAN_ONLY. _device_code_for_hvac() resolves the write-side code from
     # the unit's own supportedModes, so this reverse map is only a fallback
@@ -219,6 +227,11 @@ async def async_setup_entry(
         LocalThingsClimate(coordinator, b)
         for b in coordinator.bound
         if isinstance(b.desc, ClimateDesc) and _is_included(b, coordinator)
+    )
+    async_add_entities(
+        LocalThingsZoneClimate(coordinator, b)
+        for b in coordinator.bound
+        if isinstance(b.desc, ZoneClimateDesc) and _is_included(b, coordinator)
     )
 
 
@@ -460,7 +473,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         paths resolve codes through here, so a learned code is selectable
         and writable by virtue of appearing in one list.
         """
-        supported = list(self._rep(href).get(_SUPPORTED_FIELD) or [])
+        rep = self._rep(href)
+        supported = list(rep.get(_SUPPORTED_FIELD) or [])
+        if href == MODE_HREF and "Heat" not in supported and has_heating_capacity(rep):
+            # The TP6X_RAC bridge leaves Heat off a heat pump's list (#589).
+            # Reading 'Heat' is confirmed; writing it is not yet.
+            supported.append("Heat")
         learned = self.coordinator.learned_modes(self._bound.subdevice.to_actual(href))
         return supported + [code for code in learned if code not in supported]
 
@@ -598,6 +616,10 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
                 continue
             if mapped not in modes:
                 modes.append(mapped)
+        # hvac_mode reads AIComfort as AUTO, so a unit with no plain Auto (the
+        # AI Air Combo ventilator, #551) still needs AUTO offered for it.
+        if HVACMode.AUTO not in modes and _AI_COMFORT_MODE in self._supported(MODE_HREF):
+            modes.append(HVACMode.AUTO)
         return modes
 
     # -- fan / swing / preset ----------------------------------------------
@@ -677,9 +699,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         current = _first(self._rep(MODE_HREF).get(_MODES_FIELD))
         if _DEVICE_TO_HVAC.get(current) == hvac_mode:
             return current
-        for code in self._supported(MODE_HREF):
+        supported = self._supported(MODE_HREF)
+        for code in supported:
             if _DEVICE_TO_HVAC.get(code) == hvac_mode:
                 return code
+        if hvac_mode == HVACMode.AUTO and _AI_COMFORT_MODE in supported:
+            return _AI_COMFORT_MODE  # same reasoning as hvac_modes' AUTO fallback
         return _HVAC_TO_DEVICE.get(hvac_mode)
 
     async def async_set_temperature(self, **kwargs) -> None:

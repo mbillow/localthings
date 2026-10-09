@@ -116,12 +116,14 @@
       "ports_closed": "Esa dirección IP es accesible, pero rechazó activamente todos los puertos del rango de la API local (UDP 49152-49160) y no respondió nada por el canal de descubrimiento. Lo más probable es que no sea un electrodoméstico Samsung, o que sea uno sin la API local activada.",
       "no_dtls_server": "Los puertos del rango de la API local son accesibles en esa dirección, pero nada respondió a un saludo DTLS. Comprueba que la dirección IP pertenezca al electrodoméstico y no a otro dispositivo de tu red.",
       "appliance_no_dtls": "Esa dirección es un electrodoméstico Samsung: se identificó como {model} por el canal de descubrimiento sin cifrar y anunció {port} como su puerto seguro, pero nunca completó un saludo DTLS en él. La dirección no es el problema. Comprueba si el Control remoto u otro ajuste similar está desactivado en el panel del electrodoméstico, y consulta el registro de Home Assistant para ver el fallo exacto.",
+      "non_appliance_stack": "Algo respondió en esa dirección IP, pero se identificó como un servicio OCF que no es un electrodoméstico. Algunos electrodomésticos Samsung ejecutan uno junto al suyo, y LocalThings solo encuentra el electrodoméstico que hay detrás cuando Home Assistant está en el mismo segmento de red. Pon Home Assistant y el electrodoméstico en la misma subred y VLAN y vuelve a intentarlo.",
+      "multiple_appliances": "Más de un electrodoméstico Samsung responde en esa dirección IP y LocalThings aún no puede elegir entre ellos. Infórmalo en el gestor de incidencias de LocalThings e incluye el registro de Home Assistant.",
       "handshake_timeout": "El electrodoméstico respondió en su puerto de API local, pero no completó el saludo DTLS ni siquiera tras un reintento. Inténtalo de nuevo. Si sigue fallando, reiniciar el electrodoméstico libera las conexiones que aún mantiene; el registro de Home Assistant muestra el fallo exacto.",
       "cert_rejected": "El electrodoméstico rechazó el certificado. Lo más probable es que el certificado y la clave de la CA no sean los de la CA AC14K_M en la que confía este electrodoméstico, o que no se correspondan entre sí. El registro de Home Assistant recoge la alerta exacta que envió el electrodoméstico.",
       "psk_rejected": "El electrodoméstico rechazó la clave precompartida. La identidad o la clave son incorrectas, o pertenecen a otro electrodoméstico o a un propietario que ha cambiado desde entonces. El registro de Home Assistant contiene la alerta exacta.",
       "identity_unproven": "La clave funcionó, pero el electrodoméstico no indicó su ID de dispositivo OCF por la conexión cifrada, así que LocalThings no puede confirmar qué electrodoméstico tiene la clave y no lo añadirá. Inténtalo de nuevo mientras el electrodoméstico esté activo. Si sigue ocurriendo, cuéntanoslo en la [incidencia #435]({issue_url}) e incluye el registro de Home Assistant.",
       "invalid_psk_identity": "Introduce la identidad como UUID, por ejemplo 12345678-1234-1234-1234-123456789abc.",
-      "psk_identity_zero_byte": "Este UUID contiene un byte cero, que DTLS no puede transmitir como identidad. Si generaste esta identidad de par, genera otra.",
+      "psk_identity_zero_byte": "Este UUID contiene un byte cero que el transporte instalado no puede enviar. Mantén la identidad recuperada sin cambios.",
       "invalid_psk_key": "Introduce la clave como 32 o 64 caracteres hexadecimales.",
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
       "cloud_unreachable": "No se pudo contactar con la pasarela en la nube de Samsung para obtener el UUID necesario para emitir el certificado de este dispositivo. Comprueba el acceso a internet de Home Assistant e inténtalo de nuevo.",
@@ -132,7 +134,9 @@
       "wrong_device": "Un electrodoméstico Samsung respondió en esa dirección, pero no es este: informó de una identidad distinta. Comprueba que la dirección corresponde a este electrodoméstico. Para añadir el otro, usa Añadir dispositivo.",
       "token_not_received": "No llegó ningún token de dispositivo. Comprueba que el control remoto esté activado en el electrodoméstico con la puerta cerrada y que pueda alcanzar Home Assistant en el puerto 8889, o pega un token obtenido de otra forma.",
       "invalid_token": "El electrodoméstico rechazó ese token. Deja el campo vacío para solicitar uno nuevo.",
-      "callback_port_in_use": "El puerto 8889 ya está en uso en Home Assistant, normalmente por una solicitud de token que sigue esperando. Vuelve a intentarlo en un minuto y medio."
+      "callback_port_in_use": "El puerto 8889 ya está en uso en Home Assistant, normalmente por una solicitud de token que sigue esperando. Vuelve a intentarlo en un minuto y medio.",
+      "callback_cert_rejected": "El electrodoméstico devolvió la llamada en el puerto 8889, pero rechazó el certificado autofirmado de Home Assistant. Pega el certificado y la clave de la CA AC14K_M para que LocalThings firme uno que acepte; después, la solicitud de token se repetirá.",
+      "callback_ca_rejected": "El electrodoméstico devolvió la llamada en el puerto 8889, pero también rechazó el certificado firmado con AC14K_M. Pega un token obtenido de otra forma y consulta el registro de Home Assistant para ver el error del handshake."
     },
     "abort": {
       "already_configured": "El dispositivo ya está configurado",
@@ -282,6 +286,12 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "command_refused": {
+      "message": "El electrodoméstico rechazó el comando para {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "El comando para {href} se envió con el control remoto desactivado, pero el electrodoméstico aún no lo refleja. Si no responde, activa el control remoto en el electrodoméstico."
+    },
     "debug_read_failed": {
       "message": "La lectura desde {href} falló: {error}"
     },
@@ -335,6 +345,9 @@
     },
     "cook_duration_out_of_range": {
       "message": "{mode} admite un tiempo de cocción de {min} a {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "El aclarado extra no está disponible en el ciclo seleccionado."
     }
   },
   "entity": {
@@ -485,6 +498,12 @@
       },
       "dual_setpoint_enabled": {
         "name": "Doble consigna activada"
+      },
+      "divider": {
+        "name": "Divisor"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Anti-arrugas activo"
       }
     },
     "button": {
@@ -564,6 +583,12 @@
             }
           }
         }
+      },
+      "zone_climate": {
+        "name": "Zona 1"
+      },
+      "zone2_climate": {
+        "name": "Zona 2"
       }
     },
     "fan": {
@@ -579,6 +604,11 @@
             }
           }
         }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lámpara"
       }
     },
     "number": {
@@ -822,7 +852,16 @@
           "3a": "Cuidado higiénico",
           "3b": "Ropa de cama/Antipolvo",
           "3c": "Ropa deportiva",
-          "3d": "Denim"
+          "3d": "Denim",
+          "2f": "Servicio intensivo",
+          "30": "Ropa deportiva",
+          "32": "Planchado fácil",
+          "33": "Desinfección por vapor+",
+          "34": "Renovación con vapor",
+          "35": "Antiarrugas",
+          "36": "Aireación",
+          "3e": "Carga pequeña",
+          "2e": "Eco normal"
         }
       },
       "dryer_dry_level": {
@@ -943,7 +982,17 @@
           "bread_proof": "Fermentar masa",
           "dehydrate": "Deshidratar",
           "self_clean": "Autolimpieza",
-          "air_fryer": "Freidora de aire"
+          "air_fryer": "Freidora de aire",
+          "upper_broil": "Gratinar (superior)",
+          "upper_convection_bake": "Hornear por convección (superior)",
+          "upper_convection_roast": "Asar por convección (superior)",
+          "lower_bake": "Hornear (inferior)",
+          "lower_convection_bake": "Hornear por convección (inferior)",
+          "steam_bake": "Hornear al vapor",
+          "steam_roast": "Asar al vapor",
+          "upper_steam_bake": "Hornear al vapor (superior)",
+          "descale": "Descalcificación",
+          "drain": "Vaciado de agua"
         }
       },
       "operating_mode": {
@@ -988,7 +1037,9 @@
         "state": {
           "fdr_wine": "Vino",
           "fdr_deli": "Charcutería",
-          "fdr_drinks": "Bebidas"
+          "fdr_drinks": "Bebidas",
+          "ttype_meat_fish": "Carne/Pescado",
+          "ttype_rf9000a_fridge": "Refrigerar"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -1097,7 +1148,9 @@
           "no_spin": "Sin centrifugado",
           "low": "Baja",
           "medium": "Media",
-          "high": "Alta"
+          "high": "Alta",
+          "extra_low": "Extra bajo",
+          "extra_high": "Extra alto"
         }
       },
       "wash_temperature": {
@@ -1108,7 +1161,8 @@
           "cool": "Fresca",
           "warm": "Tibia",
           "hot": "Caliente",
-          "extra_hot": "Muy caliente"
+          "extra_hot": "Muy caliente",
+          "tap_cold": "Frío del grifo"
         }
       },
       "washer_cycle_table_00": {
@@ -1215,13 +1269,18 @@
           "38": "Secado de algodón",
           "39": "Secado de sintéticos",
           "3a": "Limpieza de Tambor",
+          "51": "Súper velocidad",
           "52": "Eco frío",
           "53": "Servicio intensivo",
           "54": "Toallas",
           "55": "Ropa deportiva",
-          "57": "Delicado",
+          "56": "Ropa de cama",
+          "57": "Delicados",
+          "5a": "Desinfección por vapor",
+          "5b": "Carga pequeña",
           "5e": "Aclarar + Centrifugar",
           "60": "Autolimpieza+",
+          "64": "Blancos con vapor",
           "65": "Color",
           "66": "Denim",
           "69": "Lavado IA",
@@ -1245,13 +1304,23 @@
           "7d": "Ropa de cama / Impermeable",
           "7e": "Autolimpieza",
           "7f": "Lana / Delicados",
+          "85": "Normal con vapor",
           "86": "Lavado profundo",
           "87": "Descarga de Programas",
           "88": "Cuidado de mascotas",
+          "8b": "Lavado rápido",
+          "8c": "AI OptiWash",
           "8f": "Lavado en frío",
           "96": "Menos microfibras",
           "a0": "Lavado rápido 15'",
-          "b0": "Carga mixta"
+          "b0": "Carga mixta",
+          "58": "Lana",
+          "5c": "Exterior",
+          "5d": "Aclarado potente",
+          "5f": "Solo centrifugar",
+          "63": "Vapor potente",
+          "67": "Antialérgico con vapor",
+          "68": "Voluminoso con vapor"
         }
       },
       "washer_dry_level": {
@@ -1321,7 +1390,12 @@
         "state": {
           "purification": "Purificación",
           "ventilation": "Ventilación",
-          "smartventilation": "Ventilación inteligente"
+          "smartventilation": "Ventilación inteligente",
+          "aicomfort": "Confort IA",
+          "autoventilation": "Ventilación automática",
+          "freshairintake": "Entrada de aire fresco",
+          "indoorpurification": "Purificación interior",
+          "indoordehumidification": "Deshumidificación interior"
         }
       },
       "dry_time": {
@@ -1361,6 +1435,35 @@
           "right_wide": "Derecha amplia",
           "left_narrow": "Izquierda estrecha",
           "left_wide": "Izquierda amplia"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "Viento por movimiento IA",
+        "state": {
+          "off": "Apagado",
+          "surround": "Envolvente",
+          "longreach": "Largo alcance",
+          "down": "Hacia abajo",
+          "power": "Potencia",
+          "windfree": "Wind-Free",
+          "aidirect": "IA directo",
+          "aiindirect": "IA indirecto"
+        }
+      },
+      "wash_zone": {
+        "name": "Zona de lavado",
+        "state": {
+          "on_on": "Ambas bandejas",
+          "off_on": "Solo bandeja inferior",
+          "on_off": "Solo bandeja superior"
+        }
+      },
+      "lamp_level": {
+        "name": "Nivel de la lámpara",
+        "state": {
+          "off": "Apagada",
+          "low": "Baja",
+          "high": "Alta"
         }
       }
     },
@@ -1549,7 +1652,8 @@
       "dryer_type": {
         "name": "Tipo de secadora",
         "state": {
-          "electricity": "Electricidad"
+          "electricity": "Electricidad",
+          "gas": "Gas"
         }
       },
       "dust": {
@@ -1774,6 +1878,9 @@
       },
       "zone_temperature": {
         "name": "Temperatura de zona"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura de zona 2"
       },
       "watertank_full_alarm_status": {
         "name": "Estado de alarma de depósito de agua lleno"
@@ -2088,6 +2195,18 @@
       },
       "auto_changeover": {
         "name": "Cambio automático"
+      },
+      "interlock": {
+        "name": "Enclavamiento"
+      },
+      "speed_booster": {
+        "name": "Speed Booster"
+      },
+      "damp_alert": {
+        "name": "Alerta de humedad"
+      },
+      "extra_rinse": {
+        "name": "Aclarado extra"
       }
     },
     "time": {

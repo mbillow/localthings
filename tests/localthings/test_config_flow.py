@@ -257,7 +257,7 @@ def fake_dtls(monkeypatch):
     )
     monkeypatch.setattr(
         "custom_components.localthings.probing.read_credential_hint",
-        lambda host: CredentialHint(),
+        lambda host, port=None: CredentialHint(),
     )
     return FakeSession
 
@@ -846,6 +846,73 @@ def test_confirmed_port_that_times_out_is_reported_as_a_stuck_session() -> None:
     )
     assert isinstance(err, HandshakeTimeout)
     assert err.error_key == "handshake_timeout"
+
+
+async def test_several_appliances_at_the_address_stop_before_any_handshake(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        probing,
+        "look",
+        lambda host: probing.HostProbe(
+            host=host, candidates=[], confirmed=[], appliance_responders=2
+        ),
+    )
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+
+    assert result["errors"] == {"base": "multiple_appliances"}
+    assert _probe_sessions() == []
+
+
+def _typeless_scan(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        probing,
+        "look",
+        lambda host: probing.HostProbe(
+            host=host, candidates=[49154], confirmed=[49154], typeless_stack=True
+        ),
+    )
+
+
+async def test_a_typeless_stack_that_completes_the_handshake_is_added(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """An appliance whose /oic/d declares no type of its own, with nothing
+    else at its address, must still set up as it did before #540's fix."""
+    _typeless_scan(monkeypatch)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_PORT] == 49154
+
+
+async def test_a_refusal_from_a_typeless_stack_is_not_called_a_certificate_problem(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """#540: the other stack's unknown_ca would otherwise send the user to
+    the credential menu for a device they never reached."""
+    _typeless_scan(monkeypatch)
+    FakeSession.reject_certs = {"SELFSIGNED"}
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "non_appliance_stack"}
 
 
 def test_advertised_only_host_is_reported_as_appliance_no_dtls() -> None:

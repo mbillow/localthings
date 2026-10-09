@@ -121,7 +121,7 @@ def appliance(monkeypatch):
 
 
 def _hint(monkeypatch, hint: CredentialHint) -> None:
-    monkeypatch.setattr(config_flow.probing, "read_credential_hint", lambda host: hint)
+    monkeypatch.setattr(config_flow.probing, "read_credential_hint", lambda host, port=None: hint)
 
 
 async def _refused(hass: HomeAssistant):
@@ -153,6 +153,27 @@ async def test_no_psk_hint_still_puts_the_ca_last(
     result = await _refused(hass)
     assert result["step_id"] == "credential"
     assert result["menu_options"] == ["psk_owner", "psk_peer", "fallback_ca"]
+
+
+async def test_hint_is_read_on_the_appliances_own_plaintext_port(
+    hass: HomeAssistant, monkeypatch, appliance
+) -> None:
+    """Where another OCF stack answers 5683 (#540), the doxm that orders the
+    menu is the appliance's, on the plaintext port the probe found it on."""
+    scan = HostProbe(MOCK_HOST, [PORT], [PORT], advertised=(PORT,), plaintext_port=60137)
+    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    asked: list[int | None] = []
+
+    def _read(host, port=None):
+        asked.append(port)
+        return CredentialHint(sct=1)
+
+    monkeypatch.setattr(config_flow.probing, "read_credential_hint", _read)
+
+    result = await _refused(hass)
+
+    assert result["step_id"] == "credential_psk"
+    assert asked == [60137]
 
 
 async def test_owner_psk_creates_a_psk_entry_bound_to_the_proven_di(
@@ -254,6 +275,13 @@ async def test_missing_di_refuses_the_entry(hass: HomeAssistant, monkeypatch, ap
 async def test_malformed_credentials_never_reach_the_appliance(
     hass: HomeAssistant, monkeypatch, appliance, identity, key, errors
 ) -> None:
+    if errors.get(CONF_PSK_IDENTITY) == "psk_identity_zero_byte":
+        from smartthings_local.protocol.auth import PskAuth
+
+        def unsupported(_identity):
+            raise ValueError("binary identity backend unavailable")
+
+        monkeypatch.setattr(PskAuth, "validate_identity", unsupported)
     _hint(monkeypatch, CredentialHint(sct=1))
     result = await _choose(hass, await _refused(hass), "psk_owner")
     opened = len(PskAppliance.opened)

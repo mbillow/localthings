@@ -53,9 +53,10 @@ def lifetime_wh_to_kwh(v):
     """wh_to_kwh for an appliance's lifetime energy counter, where 0 reads as
     unknown: a TP2X_RAC_20K (issue #488) reports "0" for a minute or two
     after its connection drops, and HA books a total_increasing drop to 0 as
-    a meter reset, counting the whole lifetime total again on recovery."""
+    a meter reset, counting the whole lifetime total again on recovery. A
+    negative reading is the same: issue #569's meterless RAC reports "-1"."""
     n = _num(v)
-    return round(n / 1000.0, 2) if n else None
+    return round(n / 1000.0, 2) if n is not None and n > 0 else None
 
 
 def parse_iso_utc(raw):
@@ -177,15 +178,20 @@ def merge_options_field(cached, new_tokens):
     changed token(s), not the whole array -- see laundry.option_write /
     oven._option_write for the write side. coordinator.async_send_command
     uses this read-side counterpart to keep the optimistic cache entry
-    complete during the write-settle window."""
+    complete during the write-settle window.
+
+    The prefix is everything before the last underscore, so siblings such
+    as MildDetergentAlarm_Off and MildDetergentAlarm_Notice_0 stay distinct.
+    The only underscored values seen (QuickWash_Not_Used, ModelInfo_16K_...)
+    are fixed per model, so they never need replacing."""
     merged = list(cached or [])
     for token in new_tokens or ():
         if not isinstance(token, str) or "_" not in token:
             continue
-        prefix = token.split("_", 1)[0]
+        prefix = token.rsplit("_", 1)[0]
         replaced = False
         for i, o in enumerate(merged):
-            if isinstance(o, str) and o.startswith(prefix + "_"):
+            if isinstance(o, str) and "_" in o and o.rsplit("_", 1)[0] == prefix:
                 merged[i] = token
                 replaced = True
         if not replaced:
@@ -427,6 +433,10 @@ KIDS_LOCK_VS_FALLBACK = Capability(
 )
 
 
+# The hrefs remote_control_enabled reads, in precedence order.
+REMOTE_CONTROL_HREFS = ("/remotectrl/0", "/remotectrl/vs/0")
+
+
 def remote_control_enabled(resources: dict) -> bool:
     """Single source of truth for the /remotectrl on/off signal, mirroring
     REMOTE_CONTROL_GENERIC/_VS_FALLBACK's href/field precedence. Used both
@@ -450,6 +460,10 @@ def remote_control_required_for_write(resources: dict, bound_href: str) -> bool:
     writes (wash temp, spin, course options, buzzer, ...) with remote
     control off, but cycle start/pause/stop on /operational/state still
     need Smart Control. Absent that flag, keep the historical blanket gate.
+
+    A descriptor can still waive it (needs_remote_control=False); such a
+    write is read back, and reported as needing Remote Control if it didn't
+    take (coordinator._took_effect).
     """
     if not model_setting_without_sc(resources):
         return True

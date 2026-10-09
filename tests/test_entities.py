@@ -5,6 +5,7 @@ from custom_components.localthings.registry.entities import (
     ButtonDesc,
     ClimateDesc,
     FanDesc,
+    LightDesc,
     NumberDesc,
     SelectDesc,
     SensorDesc,
@@ -39,6 +40,7 @@ def test_platform_mapping_covers_all_subclasses():
     assert PLATFORM_OF[BinarySensorDesc] == "binary_sensor"
     assert PLATFORM_OF[SelectDesc] == "select"
     assert PLATFORM_OF[SwitchDesc] == "switch"
+    assert PLATFORM_OF[LightDesc] == "light"
     assert PLATFORM_OF[ButtonDesc] == "button"
     assert PLATFORM_OF[NumberDesc] == "number"
     assert PLATFORM_OF[TimeDesc] == "time"

@@ -109,13 +109,8 @@ def _sensor_item_value(items, type_):
     x.com.samsung.da.type. Dust/FineDust/SuperFineDust report a 2-element
     array; only v[0] is used. v[1] is the device's own graded air-quality
     level for that reading, left unbound because its floor differs by
-    family -- see common.sensor_item_value for the full note.
-
-    No device_class here: unlike air_purifier (issue #325), no AC family
-    has had its dust readings correlated against the app, and every AC
-    fixture reports permanent zeros or ties, so this file's own dumps
-    supply no grade-band evidence either. Returns a string rather than an
-    int, which these diagnostic entities have always done."""
+    family -- see common.sensor_item_value for the full note. Returns a
+    string; the particulate sensors below convert it with _int."""
     for it in items or []:
         if isinstance(it, dict) and it.get("x.com.samsung.da.type") == type_:
             v = it.get("x.com.samsung.da.value")
@@ -207,15 +202,28 @@ def _mode_options(rep):
 # climate.py maps all three to fan-only (#522), which can't tell them apart,
 # so this select does. Gated to devices whose *entire* supported-mode set is
 # this vocabulary, so it can't false-positive on a real AC's Cool/Heat/Dry
-# list.
-_VENTILATION_MODE_VALUES = frozenset(("Purification", "Ventilation", "SmartVentilation"))
+# list. The AI Air Combo ventilator (issue #551, TP1X_DA-AC-RHS-01001) has
+# the same problem with its own five modes.
+_VENTILATION_MODE_VALUES = frozenset(
+    (
+        "Purification",
+        "Ventilation",
+        "SmartVentilation",
+        "AutoVentilation",
+        "FreshAirIntake",
+        "IndoorPurification",
+        "IndoorDehumidification",
+    )
+)
 
 
 def _is_ventilation_mode_device(rep, resources):
     supported = rep.get("x.com.samsung.da.supportedModes")
     if not isinstance(supported, (list, tuple)) or not supported:
         return False
-    return set(supported) <= _VENTILATION_MODE_VALUES
+    # AIComfort is allowed alongside but never on its own: real ACs list it too.
+    modes = set(supported) - {"AIComfort"}
+    return bool(modes) and modes <= _VENTILATION_MODE_VALUES
 
 
 def _ventilation_mode_write(payload, rep, href=None):
@@ -314,6 +322,19 @@ def has_extend_option_code(rep):
     return _option_token(rep, "ExtendOptionCode") is not None
 
 
+def has_heating_capacity(rep):
+    """Whether /mode/vs/0's `WarmCapa_<n>` token rates the unit for heating.
+
+    Every AC fixture with a non-zero WarmCapa lists Heat and every WarmCapa_0
+    unit is cool-only, except the TP6X_RAC 8888 bridge, which omits Heat from
+    supportedModes on heat pumps and reports it while heating (#589).
+    """
+    try:
+        return int(_option_token(rep, "WarmCapa") or 0) > 0
+    except ValueError:
+        return False
+
+
 def is_legacy_board(resources):
     """True for the board generation whose airflow lives in /airflow/vs/0
     rather than /wind/strength/vs/0 -- every AC dump on record has one shape
@@ -332,8 +353,8 @@ def _legacy_cumulative_power_kwh(v):
         n = float(v)
     except (TypeError, ValueError):
         return None
-    # 0 reads as unknown, same as common.lifetime_wh_to_kwh.
-    return round(n / 100000.0, 2) if n else None
+    # 0 or less reads as unknown, same as common.lifetime_wh_to_kwh.
+    return round(n / 100000.0, 2) if n > 0 else None
 
 
 ENERGY_METER_LEGACY = replace(
@@ -1259,6 +1280,46 @@ MOTION_DETECT_WIND = Capability(
     ),
 )
 
+# AI motion wind (issue #554, TP1X_DA-AC-RAC-01011 AR80H12CAAWNSK): the app's
+# airflow-style picker. The write mirrors the resource's own `mode` field and
+# is not yet confirmed live. The app says AiDirect/AiIndirect need Auto mode,
+# so expect the device to reject them in any other.
+AI_MOTION_WIND = Capability(
+    href="/aimotionwind/vs/0",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="ai_motion_wind",
+            field="mode",
+            options_field="supportedModes",
+            icon="mdi:weather-windy",
+            entity_category="config",
+            write_fn=lambda p, rep, href=None: (["aimotionwind", "vs", "0"], {"mode": p}),
+        ),
+    ),
+)
+
+# Ventilator interlock (issue #551, TP1X_DA-AC-RHS-01001), presumably with the
+# indoor units paired in /rhs/connecteddevice/vs/0.
+# Bare On/Off like AUTO_CHANGEOVER; the write is not yet confirmed live.
+INTERLOCK = Capability(
+    href="/interlock/vs/0",
+    poll_tier="cold",
+    entities=(
+        SwitchDesc(
+            key="interlock",
+            field="x.com.samsung.da.interlock",
+            icon="mdi:link-variant",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["interlock", "vs", "0"],
+                {"x.com.samsung.da.interlock": "On" if p == "On" else "Off"},
+            ),
+        ),
+    ),
+)
+
 # Standalone temperature sensor for history/automations (issue #75); the
 # climate card only exposes current_temperature as an attribute. Shares key
 # 'current_temperature_c' with the _VS variant below so only one ever binds.
@@ -1558,8 +1619,10 @@ WINDSLEEP = Capability(
 
 # /sensors/vs/0 items[] carry live air-quality readings. CleanLevel is
 # corroborated as numeric by a top-level x.com.samsung.da.cleanLevel scalar,
-# so it's a measurement; the others stay string diagnostics (see
-# _sensor_item_value). All disabled by default: has_sensor_type only proves
+# so it's a measurement. Dust/FineDust/SuperFineDust are PM10/PM2.5/PM1 in
+# μg/m³ as on the purifier: SmartThings labels them so on a TP2X_RAC_20K
+# (issue #583), and every AC fixture with nonzero readings orders them
+# PM10 >= PM2.5 >= PM1. All disabled by default: has_sensor_type only proves
 # the item type is listed, not that the sensor is real (see its docstring).
 AIR_QUALITY = Capability(
     href="/sensors/vs/0",
@@ -1575,30 +1638,38 @@ AIR_QUALITY = Capability(
             enabled_default=False,
             value_fn=lambda items: _int(_sensor_item_value(items, "CleanLevel")),
         ),
+        SensorDesc(
+            key="odor",
+            field="x.com.samsung.da.items",
+            icon="mdi:weather-windy",
+            entity_category="diagnostic",
+            exists_fn=has_sensor_type("Odor"),
+            enabled_default=False,
+            value_fn=lambda items: _sensor_item_value(items, "Odor"),
+        ),
         *tuple(
             SensorDesc(
                 key=key,
                 field="x.com.samsung.da.items",
                 icon=icon,
                 entity_category="diagnostic",
+                device_class=device_class,
+                state_class="measurement",
+                unit="μg/m³",
                 exists_fn=has_sensor_type(type_),
                 enabled_default=False,
-                value_fn=lambda items, t=type_: _sensor_item_value(items, t),
+                value_fn=lambda items, t=type_: _int(_sensor_item_value(items, t)),
             )
-            for key, icon, type_ in (
-                ("odor", "mdi:weather-windy", "Odor"),
-                ("dust", "mdi:cloud", "Dust"),
-                ("fine_dust", "mdi:cloud-outline", "FineDust"),
-                ("super_fine_dust", "mdi:weather-fog", "SuperFineDust"),
+            for key, icon, type_, device_class in (
+                ("dust", "mdi:cloud", "Dust", "pm10"),
+                ("fine_dust", "mdi:cloud-outline", "FineDust", "pm25"),
+                ("super_fine_dust", "mdi:weather-fog", "SuperFineDust", "pm1"),
             )
         ),
         # CO2 (PR #316, ACA-KR-TP2-21-AN9000) -- a type this file's other AC
         # families don't report. Same field/shape air_monitor.SENSORS
         # already models with device_class='carbon_dioxide'/unit='ppm', so
-        # this matches that descriptor rather than guessing fresh. The dust
-        # keys above stay untyped for the reason in _sensor_item_value: the
-        # pm10/pm25/pm1 mapping is confirmed for the purifier and monitor
-        # families (issue #325), but no AC family has evidence of its own.
+        # this matches that descriptor rather than guessing fresh.
         SensorDesc(
             key="co2",
             field="x.com.samsung.da.items",
@@ -1757,6 +1828,18 @@ _AC_IGNORED = [
     # absenceInfo is an unconfirmed 48-slot P/A history blob with no
     # documented meaning -- don't guess what it encodes.
     "/csi/information/vs/0",
+    # Sleep-tracker linkage with a paired phone or watch (issue #554): the
+    # sleep data comes from the account's cloud, and every field is empty or
+    # Disable when unlinked.
+    "/sleepdata/interoperation/vs/0",
+    # AI Air Combo ventilator (issue #551). /ai/options/vs/0 is a lone
+    # `aigraph` flag with no app feature identified to name it by;
+    # /rhs/connecteddevice/vs/0 is the MAC list of paired indoor units.
+    "/ai/options/vs/0",
+    "/rhs/connecteddevice/vs/0",
+    # Empty ({}) on a cool-only RAC (issue #569). Revisit if a heat-pump dump
+    # populates it.
+    "/auxiliaryheater/vs/0",
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

@@ -1,0 +1,105 @@
+{
+  "note": "TP6X_RAC_16K (issue #563): the `transport.bodies` block of a LocalThings 0.31.0 diagnostics download, verbatim -- GET /devices/0 merged with its linked configuration and information resources. Not per-endpoint captures. Carries no serial or uuid.",
+  "bodies": {
+    "Alarms": [
+      {
+        "alarmType": "Device",
+        "code": "FilterAlarm_OFF",
+        "id": "0",
+        "triggeredTime": "2026-10-01T08:05:30"
+      }
+    ],
+    "ConfigurationLink": {
+      "href": "/devices/0/configuration"
+    },
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "EnergyConsumption": {
+      "saveLocation": "/files/usage.db"
+    },
+    "InformationLink": {
+      "href": "/devices/0/information"
+    },
+    "Mode": {
+      "modes": [
+        "Wind"
+      ],
+      "options": [
+        "Comode_Off",
+        "Sleep_0",
+        "Autoclean_Off",
+        "FilterCleanAlarm_0",
+        "OutdoorTemp_74",
+        "CoolCapa_25",
+        "WarmCapa_32",
+        "UsagesDB_254",
+        "FilterTime_30",
+        "OptionCode_32936",
+        "UpdateAllow_0",
+        "FilterAlarmTime_500",
+        "Function_15",
+        "Volume_100"
+      ],
+      "supportedModes": [
+        "Cool",
+        "Dry",
+        "Wind",
+        "Auto"
+      ]
+    },
+    "Operation": {
+      "power": "On"
+    },
+    "Temperatures": [
+      {
+        "current": 22.0,
+        "desired": 24.0,
+        "id": "0",
+        "maximum": 30,
+        "minimum": 16,
+        "unit": "Celsius"
+      }
+    ],
+    "Wind": {
+      "direction": "Up_And_Low",
+      "maxSpeedLevel": 4,
+      "speedLevel": 2
+    },
+    "resources": [
+      "Alarms",
+      "Configuration",
+      "Diagnosis",
+      "EnergyConsumption",
+      "Information",
+      "Mode",
+      "Operation",
+      "Temperatures",
+      "Wind"
+    ],
+    "type": "Air_Conditioner",
+    "Configuration": {
+      "region": "000"
+    },
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "01766A200404",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "06010500,FFFFFFFF",
+          "type": "Firmware"
+        }
+      ],
+      "description": "TP6X_RAC_16K",
+      "deviceSubType": "Room_Air_Conditioner",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "TP6X_RAC_16K|0001755A|"
+    }
+  }
+}

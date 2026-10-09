@@ -39,6 +39,7 @@ from custom_components.localthings.registry.capabilities.common import (
     remote_control_enabled,
     remote_control_required_for_write,
 )
+from custom_components.localthings.registry.subdevices import MAIN, Subdevice
 
 from .conftest import (
     ENTRY_DATA,
@@ -1909,6 +1910,76 @@ async def test_send_command_remote_control_check_precedes_validate_fn(
     with pytest.raises(ServiceValidationError) as exc_info:
         await coordinator.async_send_command(bound, "On")
     assert exc_info.value.translation_key == "remote_control_disabled"
+
+
+_LOWER_CAVITY = Subdevice(kind="indexed", key="2", seed_path=("device", "2"))
+
+
+def _smart_control(coordinator, href, enabled):
+    coordinator._cache.apply_rep(
+        href, {"x.com.samsung.da.remoteControlEnabled": enabled}, source="test"
+    )
+
+
+async def test_lower_cavity_write_follows_its_own_smart_control(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """Each cavity of a dual-cavity oven has its own Smart Control (#300's
+    NW9000KD reports /remotectrl/vs/2), so the upper cavity's being off
+    must not block a write to the lower one."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    _smart_control(coordinator, "/remotectrl/vs/0", "false")
+    _smart_control(coordinator, "/remotectrl/vs/2", "true")
+
+    def _write_fn(payload, rep, href=None):
+        return (["some", "path"], {"value": payload})
+
+    desc = NumberDesc(key="test", field="value", write_fn=_write_fn)
+    bound = BoundEntity(
+        href="/test/vs/2",
+        capability=coordinator.bound[0].capability,
+        desc=desc,
+        subdevice=_LOWER_CAVITY,
+    )
+
+    with patch.object(fake, "subscribe"):
+        fake.write = lambda *a, **k: (0x44, None)
+        await coordinator.async_send_command(bound, 5)
+
+
+async def test_smart_control_is_read_per_cavity(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    _smart_control(coordinator, "/remotectrl/vs/0", "true")
+    _smart_control(coordinator, "/remotectrl/vs/2", "false")
+    assert coordinator._remote_control_enabled(MAIN) is True
+    assert coordinator._remote_control_enabled(_LOWER_CAVITY) is False
+
+    _smart_control(coordinator, "/remotectrl/vs/0", "false")
+    _smart_control(coordinator, "/remotectrl/vs/2", "true")
+    assert coordinator._remote_control_enabled(MAIN) is False
+    assert coordinator._remote_control_enabled(_LOWER_CAVITY) is True
+
+
+async def test_subdevice_without_its_own_smart_control_follows_main(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    _smart_control(coordinator, "/remotectrl/vs/0", "false")
+
+    assert coordinator._remote_control_enabled(_LOWER_CAVITY) is False
 
 
 async def test_send_command_select_validate_fn_rejects_idle_oven_mode(
