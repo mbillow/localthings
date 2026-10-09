@@ -2347,9 +2347,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         a write with a user-facing message ahead of write_fn's silent
         no-op. The remote-control check runs first, unconditionally, unless
         the user opted out via CONF_BYPASS_REMOTE_CONTROL (issue #54: some
-        devices accept some writes even while reporting remote control off)
-        or the laundry firmware declares itself writable without Smart
-        Control."""
+        devices accept some writes even while reporting remote control off),
+        the laundry firmware declares itself writable without Smart
+        Control, or the description sets requires_remote_control=False."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
@@ -2384,6 +2384,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
         if (
             not bypass_remote_control
+            and getattr(desc, "requires_remote_control", True)
             and remote_control_required_for_write(raw_resources, href or "")
             and not remote_control_enabled(raw_resources)
         ):

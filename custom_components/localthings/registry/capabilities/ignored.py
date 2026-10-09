@@ -47,8 +47,8 @@ IGNORED: list[Capability] = [
     Capability(href="/quickcontrol/info/vs/0"),
     Capability(href="/realtimenotiforclient/vs/0"),
     Capability(href="/file/information/vs/0"),
-    # Normally static region/countryCode metadata. The range registry replaces
-    # this entry with its hardware-verified write-only clock capability.
+    # Normally static region/countryCode metadata. The range, oven and
+    # microwave registries replace this entry with the write-only clock button.
     Capability(href="/configuration/vs/0"),
     Capability(href="/setting/vs/0"),  # supported/selected UI language
     Capability(href="/timezone/vs/0"),  # redundant with HA's own timezone

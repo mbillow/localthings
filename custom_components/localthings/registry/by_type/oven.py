@@ -1,13 +1,14 @@
 """Oven device registry."""
 
 from ..capabilities import common, dishwasher, ignored, oven
+from ..capabilities import range as range_caps
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
     name="oven",
     capabilities=_build(
         [
-            *ignored.IGNORED,
+            *ignored.without("/configuration/vs/0"),
             *common.UNIVERSAL,
             *common.POWER,
             oven.OVEN_CAVITY,
@@ -25,6 +26,9 @@ REGISTRY = DeviceRegistry(
             # issue #300: /diagnosis/vs/0 is the same diagnosisStart shape
             # dishwasher.py and airconditioner.py already reuse.
             dishwasher.DIAGNOSIS,
+            # The range's clock write (#404), confirmed to set the clock on
+            # an NV7B4445VAK wall oven.
+            range_caps.RANGE_CLOCK_SYNC,
         ]
     ),
 )

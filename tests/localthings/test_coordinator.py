@@ -1843,6 +1843,42 @@ async def test_send_command_allowed_when_remote_control_enabled(
     assert coordinator._cache.get("/some/path") == {"value": 5}
 
 
+async def test_send_command_exempt_desc_allowed_when_remote_control_disabled(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """A description with requires_remote_control=False skips the gate."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        "/remotectrl/vs/0",
+        {"x.com.samsung.da.remoteControlEnabled": "false"},
+        source="test",
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (["some", "path"], {"value": payload})
+
+    desc = NumberDesc(key="test", field="value", write_fn=_write_fn, requires_remote_control=False)
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+
+    with patch.object(fake, "subscribe"):
+        fake.write = lambda *a, **k: (0x44, None)
+        await coordinator.async_send_command(bound, 5)
+
+    assert coordinator._cache.get("/some/path") == {"value": 5}
+
+
+def test_clock_sync_button_is_exempt_from_remote_control_gate() -> None:
+    from custom_components.localthings.registry.capabilities import range as range_caps
+
+    assert range_caps.RANGE_CLOCK_SYNC.entities[0].requires_remote_control is False
+
+
 async def test_send_command_remote_control_check_precedes_validate_fn(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:

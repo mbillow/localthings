@@ -1,4 +1,4 @@
-"""Tests for the range's write-only local clock synchronization (issue #404)."""
+"""Tests for the write-only local clock synchronization (issue #404), shared by ranges and ovens."""
 
 from datetime import datetime
 from typing import cast
@@ -67,7 +67,13 @@ def test_range_without_configuration_has_no_sync_button():
     assert all(item.desc.key != "sync_clock" for item in bound)
 
 
-def test_wall_oven_configuration_remains_ignored_without_write_evidence():
+def test_oven_registry_binds_sync_button():
     bound = discover({"/configuration/vs/0": {}}, OVEN_REGISTRY.capabilities)
 
-    assert bound == []
+    assert [item.desc.key for item in bound] == ["sync_clock"]
+
+
+def test_oven_without_configuration_has_no_sync_button():
+    bound = discover({"/oven/vs/0": {}}, OVEN_REGISTRY.capabilities)
+
+    assert all(item.desc.key != "sync_clock" for item in bound)
