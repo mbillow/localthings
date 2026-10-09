@@ -232,7 +232,9 @@ class LegacyHttpTransport:
                 # Whether the divider is in decides which modes the upper
                 # cavity offers (with_cavity_modes).
                 _, listing = self._list_devices(timeout)
-                if listing is not None:
+                if listing is None:
+                    self._state_at(1).listed = None
+                else:
                     self._listed_rep(1, listing)
         base = _device_path(index)
         bodies = dict(record)
@@ -252,12 +254,14 @@ class LegacyHttpTransport:
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
         self._state_at(index).last_bodies = bodies
+        # Before the modes: a sibling's own listing decides them.
+        listed = self._listed_rep(index, devices) if index and devices is not None else None
         resources = to_resources(
             self._with_modes(index, self._with_staged(index, bodies)), self._table
         )
         if index:
-            if devices is not None:
-                resources[_LISTED_HREF] = self._listed_rep(index, devices)
+            if listed is not None:
+                resources[_LISTED_HREF] = listed
             sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
             resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
         else:
@@ -503,8 +507,8 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        divided = True if index else self._state_at(1).listed
-        return with_cavity_modes(self._family, bodies, index, divided)
+        # Device 1's listing is the divider, for either cavity.
+        return with_cavity_modes(self._family, bodies, index, self._state_at(index or 1).listed)
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]

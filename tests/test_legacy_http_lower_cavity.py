@@ -292,6 +292,30 @@ class TestCavityModes:
         assert resources[f"/mode/vs/{index}"][PREFIX + "modes"] == [mode]
         assert mode in _supported(resources, index)
 
+    def test_a_failed_listing_forgets_the_divider(self):
+        """Unknown is not "in": the upper list goes back to as reported."""
+        transport = _transport()
+        _seed(transport, 0)
+        _FakeConnection.routes["/devices"] = (500, None)
+
+        modes = _supported(_seed(transport, 0), 0)
+
+        assert "ConvectionBake" in modes
+
+    def test_divider_out_the_lower_cavity_offers_nothing_to_start(self):
+        _FakeConnection.routes = _routes(divided=False)
+
+        resources = _seed(_transport(), 1)
+
+        assert _supported(resources, 1) == ["NoOperation"]
+        assert _startable(resources, 1) == []
+
+    def test_a_list_entry_that_is_no_string_is_dropped(self):
+        upper = {**UPPER, "Mode": {**UPPER["Mode"], "supportedModes": ["Bake,UpperBake", 5]}}
+        _FakeConnection.routes = _routes(divided=False, upper=upper)
+
+        assert _supported(_seed(_transport(), 0), 0) == ["Bake", "NoOperation"]
+
     def test_a_reported_mode_outside_the_list_is_kept(self):
         lower = {**LOWER, "Mode": {**LOWER["Mode"], "modes": ["LowerKeepWarm"]}}
         _FakeConnection.routes = _routes(lower=lower)
