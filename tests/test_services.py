@@ -31,7 +31,7 @@ from custom_components.localthings.const import (
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.encode import TYPE_KEY, from_json_safe
-from custom_components.localthings.registry.subdevices import Subdevice
+from custom_components.localthings.registry.subdevices import MAIN, Subdevice
 from custom_components.localthings.services import async_setup_services
 
 ENTRY_DATA = {
@@ -55,6 +55,7 @@ class _FakeSession:
     def __init__(self, post_code: int = 0x44, post_response: object = None):
         self.post_calls: list[tuple[list[str], bytes]] = []
         self.get_calls: list[list[str]] = []
+        self.get_queries: list[list[str]] = []
         self._post_code = post_code
         self._post_response = post_response
         self._get_reps: dict[str, list[dict | list]] = {}
@@ -76,8 +77,9 @@ class _FakeSession:
         # The transport decodes, so the double hands back the decoded body.
         return self._post_code, self._post_response
 
-    def read(self, path_segs, timeout=None):
+    def read(self, path_segs, timeout=None, query=()):
         self.get_calls.append(list(path_segs))
+        self.get_queries.append(list(query))
         key = "/".join(path_segs)
         queue = self._get_reps.get(key)
         if not queue:
@@ -427,7 +429,7 @@ async def test_write_resource_verify_after_survives_a_failed_confirmation_read(
     fake.queue_get("mode/vs/0", {"x.field": "target"})  # write's own follow-up read
     coordinator._session = fake
 
-    def _boom(path_segs, href):
+    def _boom(path_segs, href, query=()):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -629,7 +631,7 @@ async def test_write_resource_held_is_none_when_the_verify_read_fails(hass, coor
     """
 
     class _FailingVerifyRead(_FakeSession):
-        def read(self, path_segs, timeout=None):
+        def read(self, path_segs, timeout=None, query=()):
             self.get_calls.append(list(path_segs))
             # The write's own follow-up read succeeds; the later verify
             # re-read of the same href is the one that fails.
@@ -711,6 +713,70 @@ async def test_read_resource_with_href_does_live_get(hass, coordinator, device_i
     assert "body" not in response
 
 
+async def test_read_resource_sends_an_hrefs_query_as_uri_query_options(
+    hass, coordinator, device_id
+):
+    """A /device/<n> Collection answers its links unless asked for the batch
+    interface, so the query has to reach the GET rather than the path."""
+    batch = [{"rt": ["oic.wk.col"]}, {"href": "/mode/vs/0", "rep": {"x.field": "live"}}]
+    fake = _FakeSession()
+    fake.queue_get("device/1", batch)
+    coordinator._session = fake
+
+    response = await _call_read(hass, device_id, href="/device/1?if=oic.if.b&x=y")
+
+    assert fake.get_calls == [["device", "1"]]
+    assert fake.get_queries == [["if=oic.if.b", "x=y"]]
+    assert response["href"] == "/device/1"
+    assert response["query"] == ["if=oic.if.b", "x=y"]
+    assert response["body"] == batch
+
+
+async def test_read_resource_percent_decodes_the_query_and_drops_a_fragment(
+    hass, coordinator, device_id
+):
+    """URI-Query options carry decoded text (RFC 7252 §6.4)."""
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    await _call_read(hass, device_id, href="/mode/vs/0?rt=x.a%2Cx.b%26c#frag")
+
+    assert fake.get_queries == [["rt=x.a,x.b&c"]]
+
+
+async def test_read_resource_with_a_query_the_library_refuses_keeps_the_session(
+    hass, coordinator, device_id, monkeypatch
+):
+    """The library validates a query before sending anything, so refusing a
+    typo is no evidence the session is dead."""
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    def _refuse(path_segs, href, query=()):
+        raise ValueError("query must contain at most 32 values")
+
+    monkeypatch.setattr(coordinator, "_raw_read_blocking", _refuse)
+
+    with pytest.raises(HomeAssistantError):
+        await _call_read(hass, device_id, href="/device/1?" + "&".join(["a=b"] * 33))
+
+    assert coordinator._session is fake
+
+
+async def test_read_resource_under_a_query_leaves_the_cache_alone(hass, coordinator, device_id):
+    """A baseline or filtered interface can return a different property set
+    from the plain rep entities are built on."""
+    fake = _FakeSession()
+    fake.queue_get("mode/vs/0", {"x.field": "baseline", "rt": ["x.com.samsung.da.mode"]})
+    coordinator._session = fake
+    coordinator._observe.apply("/mode/vs/0", {"x.field": "cached"}, source="poll")
+
+    response = await _call_read(hass, device_id, href="/mode/vs/0?if=oic.if.baseline")
+
+    assert response["rep"]["x.field"] == "baseline"
+    assert coordinator.device_resources(MAIN)["/mode/vs/0"] == {"x.field": "cached"}
+
+
 async def test_read_resource_surfaces_a_collections_list_body(hass, coordinator, device_id):
     """A Collection answers a CBOR list, not a Property map, so `rep` can't
     hold it (issue #335: `/sec/devices` came back as an accepted-but-empty
@@ -765,7 +831,7 @@ async def test_read_resource_failure_is_surfaced_as_a_home_assistant_error(
     already goes through HomeAssistantError on failure, and async_raw_read
     must match that instead of letting the exception escape uncaught."""
 
-    def _boom(path_segs, href):
+    def _boom(path_segs, href, query=()):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -783,7 +849,7 @@ async def test_read_resource_failure_closes_a_confirmed_dead_session(
     poll cycle's own reconnect notices, up to a full update_interval later."""
     coordinator._session = _FakeSession()
 
-    def _boom(path_segs, href):
+    def _boom(path_segs, href, query=()):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -804,7 +870,7 @@ async def test_read_resource_timeout_does_not_close_the_session(
     fake = _FakeSession()
     coordinator._session = fake
 
-    def _boom(path_segs, href):
+    def _boom(path_segs, href, query=()):
         raise TimeoutError("GET timeout")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)

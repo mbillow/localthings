@@ -220,7 +220,7 @@ async def test_raw_read_reports_an_undecodable_body_raw_with_its_real_code(coord
     from custom_components.localthings.transport import DecodeError
 
     class _Undecodable(_FakeRawWriteSession):
-        def read(self, path_segs, timeout=None):
+        def read(self, path_segs, timeout=None, query=()):
             raise DecodeError("truncated", code=0x45, payload=b"\x18")
 
     coordinator._session = _Undecodable()

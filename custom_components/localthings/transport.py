@@ -129,7 +129,9 @@ class Transport(Protocol):
 
     def pace(self) -> None: ...
 
-    def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]: ...
+    def read(
+        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+    ) -> tuple[int, Any]: ...
 
     def write(
         self, path_segs: Sequence[str], body: dict | list, timeout: float
@@ -211,15 +213,19 @@ class DtlsTransport:
     def pace(self) -> None:
         self._live().pace()
 
-    def read(self, path_segs: Sequence[str], timeout: float) -> tuple[int, Any]:
+    def read(
+        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+    ) -> tuple[int, Any]:
         session = self._live()
         path = list(path_segs)
         deadline = time.monotonic() + timeout
-        code, body = _decode_read(*session.get(path, timeout=timeout))
+        code, body = _decode_read(*session.get(path, query=tuple(query), timeout=timeout))
         # The LCD_R18 oven returns links by default; explicit batch returns
-        # the representations needed for discovery and polling.
+        # the representations needed for discovery and polling. A caller
+        # that named its own query gets exactly what it asked for.
         if (
-            path == ["device", "0"]
+            not query
+            and path == ["device", "0"]
             and code == 0x45
             and isinstance(body, dict)
             and isinstance(body.get("links"), list)

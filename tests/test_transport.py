@@ -40,7 +40,7 @@ class _FakeCoapSession:
     def start_reader(self):
         self.reader_started = True
 
-    def get(self, path_segs, timeout=None):
+    def get(self, path_segs, query=(), timeout=None):
         return self.code, self.payload
 
     def post(self, path_segs, payload, timeout=None):
@@ -186,7 +186,7 @@ class TestRead:
     def test_other_reads_do_not_request_batch(self, transport, monkeypatch, path, code, body):
         calls = []
 
-        def get(path_segs, *, timeout):
+        def get(path_segs, *, timeout, query=()):
             calls.append(path_segs)
             return code, cbor2.dumps(body)
 
@@ -194,6 +194,22 @@ class TestRead:
         assert transport.read(path, timeout=1.0) == (code, body)
         assert calls == [path]
         assert fake_of(transport).paced == 0
+
+    def test_a_callers_own_query_is_sent_and_not_second_guessed(self, transport, monkeypatch):
+        """/device/0 with an explicit query gets one GET under that query,
+        not the links-then-batch fallback."""
+        calls = []
+
+        def get(path_segs, *, timeout, query=()):
+            calls.append((path_segs, query))
+            return 0x45, cbor2.dumps({"links": []})
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        assert transport.read(["device", "0"], timeout=1.0, query=["if=oic.if.ll"]) == (
+            0x45,
+            {"links": []},
+        )
+        assert calls == [(["device", "0"], ("if=oic.if.ll",))]
 
     @pytest.mark.parametrize(
         ("code", "payload", "expected"),

@@ -241,6 +241,15 @@ class TestResourceReads:
         assert transport.read(["oic", "p"], timeout=10.0) == (0x84, None)
         assert _FakeConnection.log == []
 
+    def test_a_query_is_refused_rather_than_dropped(self, transport):
+        """These endpoints have no interface query, so a read under one is a
+        4.02 Bad Option and nothing goes out."""
+        assert transport.read(["washer", "vs", "0"], timeout=10.0, query=["if=oic.if.b"]) == (
+            0x82,
+            None,
+        )
+        assert _FakeConnection.log == []
+
 
 class TestWrites:
     def test_a_write_goes_to_the_aggregate_in_the_appliance_envelope(self, transport):

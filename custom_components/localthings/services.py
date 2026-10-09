@@ -25,7 +25,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN, SERVICE_READ_RESOURCE, SERVICE_START_COOKING, SERVICE_WRITE_RESOURCE
-from .coordinator import LocalThingsCoordinator, normalize_href
+from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
 from .registry.capabilities import cook
 from .registry.encode import json_safe
 from .registry.subdevices import MAIN, Subdevice
@@ -201,10 +201,13 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
         snapshot: dict[str, Any] = {"resources": coordinator.device_resources(subdevice)}
         return cast(ServiceResponse, json_safe(snapshot))
 
+    # A `?a=b&c=d` suffix becomes URI-Query options, e.g. `if=oic.if.b` to
+    # ask a /device/<n> Collection for its batch rather than its links.
+    path, query = split_href_query(href)
     # Same normalize-before-translate order as the write path above.
-    canonical = normalize_href(href)
+    canonical = normalize_href(path)
     actual_href = subdevice.to_actual(canonical)
-    code, rep, body = await coordinator.async_raw_read(actual_href)
+    code, rep, body = await coordinator.async_raw_read(actual_href, query)
     read_result: dict[str, Any] = {
         "href": canonical,
         "actual_href": actual_href,
@@ -212,6 +215,8 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
         "raw_code": code,
         "rep": rep,
     }
+    if query:
+        read_result["query"] = list(query)
     # `body` only when it isn't the Property map already in `rep` -- a
     # Collection (`/device/0`, `/sec/devices`) answers a CBOR list, which
     # `rep` can't carry and which used to vanish into an empty-looking
