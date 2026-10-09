@@ -11,6 +11,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any, cast
+from urllib.parse import unquote, urlsplit
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -184,6 +185,14 @@ def normalize_href(href: str) -> str:
     only a trailing '0' segment: '/mode/vs/0/' slips through it unchanged
     and would land on the master's resource, not the subdevice's."""
     return "/" + "/".join(_href_to_path_segs(href))
+
+
+def split_href_query(href: str) -> tuple[str, tuple[str, ...]]:
+    """'/device/1?if=oic.if.b&x=%2C' -> ('/device/1', ('if=oic.if.b', 'x=,')):
+    one URI-Query option per `&`-separated parameter, percent-decoded as
+    RFC 7252 §6.4 specifies, fragment dropped."""
+    parts = urlsplit(href)
+    return parts.path, tuple(unquote(q) for q in parts.query.split("&") if q)
 
 
 def _coap_code_str(code: int) -> str:
@@ -2860,7 +2869,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._session_lock:
             try:
                 return await self.hass.async_add_executor_job(
-                    self._raw_read_blocking, path_segs, norm_href, tuple(query)
+                    self._raw_read_blocking, path_segs, norm_href, query
                 )
             except Exception as e:
                 # Unlike async_raw_write_sequence, there's nothing to
@@ -2869,13 +2878,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # path a raw session exception would otherwise reach a user
                 # untranslated (write_resource already goes through
                 # HomeAssistantError; this brings read_resource in line).
-                if not isinstance(e, TimeoutError):
+                if not isinstance(e, (TimeoutError, ValueError, TypeError)):
                     # Same TimeoutError-vs-anything-else split as
                     # _poll_once: a block-ACK timeout alone doesn't prove
                     # the session is dead, but anything else does -- and
                     # leaving a confirmed-dead one installed would fail
                     # every read/write identically until the next real
-                    # poll cycle's own reconnect notices.
+                    # poll cycle's own reconnect notices. ValueError and
+                    # TypeError are the library refusing a malformed path
+                    # or query before sending, which says nothing about it.
                     await self.hass.async_add_executor_job(self._close_session)
                 self._log.warning("debug read failed for %s: %s", norm_href, e)
                 raise HomeAssistantError(

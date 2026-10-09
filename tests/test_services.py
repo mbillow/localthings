@@ -732,6 +732,37 @@ async def test_read_resource_sends_an_hrefs_query_as_uri_query_options(
     assert response["body"] == batch
 
 
+async def test_read_resource_percent_decodes_the_query_and_drops_a_fragment(
+    hass, coordinator, device_id
+):
+    """URI-Query options carry decoded text (RFC 7252 §6.4)."""
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    await _call_read(hass, device_id, href="/mode/vs/0?rt=x.a%2Cx.b%26c#frag")
+
+    assert fake.get_queries == [["rt=x.a,x.b&c"]]
+
+
+async def test_read_resource_with_a_query_the_library_refuses_keeps_the_session(
+    hass, coordinator, device_id, monkeypatch
+):
+    """The library validates a query before sending anything, so refusing a
+    typo is no evidence the session is dead."""
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    def _refuse(path_segs, href, query=()):
+        raise ValueError("query must contain at most 32 values")
+
+    monkeypatch.setattr(coordinator, "_raw_read_blocking", _refuse)
+
+    with pytest.raises(HomeAssistantError):
+        await _call_read(hass, device_id, href="/device/1?" + "&".join(["a=b"] * 33))
+
+    assert coordinator._session is fake
+
+
 async def test_read_resource_under_a_query_leaves_the_cache_alone(hass, coordinator, device_id):
     """A baseline or filtered interface can return a different property set
     from the plain rep entities are built on."""
