@@ -74,6 +74,21 @@ class TestMergeOptionsField:
         merged = common.merge_options_field(cached, ["SoftenerLevelCtrl_2"])
         assert merged == ["DetergentLevelCtrl_1", "SoftenerLevelCtrl_2", "GMT_04"]
 
+    def test_keeps_siblings_sharing_a_first_segment(self):
+        """washer_wf80h reports MildDetergentAlarm_Off beside
+        MildDetergentAlarm_Notice_0; a first-underscore prefix overwrote both."""
+        cached = ["MildDetergentAlarm_Off", "MildDetergentAlarm_Notice_0", "Course_1B"]
+        assert common.merge_options_field(cached, ["MildDetergentAlarm_On"]) == [
+            "MildDetergentAlarm_On",
+            "MildDetergentAlarm_Notice_0",
+            "Course_1B",
+        ]
+        assert common.merge_options_field(cached, ["MildDetergentAlarm_Notice_1"]) == [
+            "MildDetergentAlarm_Off",
+            "MildDetergentAlarm_Notice_1",
+            "Course_1B",
+        ]
+
     def test_handles_missing_cache(self):
         assert common.merge_options_field(None, ["Course_1D"]) == ["Course_1D"]
 
