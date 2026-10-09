@@ -178,15 +178,20 @@ def merge_options_field(cached, new_tokens):
     changed token(s), not the whole array -- see laundry.option_write /
     oven._option_write for the write side. coordinator.async_send_command
     uses this read-side counterpart to keep the optimistic cache entry
-    complete during the write-settle window."""
+    complete during the write-settle window.
+
+    The prefix is everything before the last underscore, so siblings such
+    as MildDetergentAlarm_Off and MildDetergentAlarm_Notice_0 stay distinct.
+    The only underscored values seen (QuickWash_Not_Used, ModelInfo_16K_...)
+    are fixed per model, so they never need replacing."""
     merged = list(cached or [])
     for token in new_tokens or ():
         if not isinstance(token, str) or "_" not in token:
             continue
-        prefix = token.split("_", 1)[0]
+        prefix = token.rsplit("_", 1)[0]
         replaced = False
         for i, o in enumerate(merged):
-            if isinstance(o, str) and o.startswith(prefix + "_"):
+            if isinstance(o, str) and "_" in o and o.rsplit("_", 1)[0] == prefix:
                 merged[i] = token
                 replaced = True
         if not replaced:
