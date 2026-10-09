@@ -2371,7 +2371,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         the user opted out via CONF_BYPASS_REMOTE_CONTROL (issue #54: some
         devices accept some writes even while reporting remote control off),
         the laundry firmware declares itself writable without Smart Control,
-        the write's own descriptor doesn't need it (needs_remote_control)."""
+        or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
@@ -2405,7 +2405,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         bypass_remote_control = self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False)
         remote_control_off = (
             not bypass_remote_control
-            and getattr(desc, "requires_remote_control", True)
             and remote_control_required_for_write(raw_resources, href or "")
             and not self._remote_control_enabled(bound_entity.subdevice)
         )
@@ -2511,11 +2510,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         try:
             await self._async_put(path_segs, body, write_href, on_retry=_rearm)
-            if remote_control_off and not await self._took_effect(path_segs, body):
+            if (
+                remote_control_off
+                and not write_only
+                and not await self._took_effect(path_segs, body)
+            ):
                 # Sent only because the descriptor waives Remote Control. Some
                 # boards answer 2.04 and drop a write with it off
                 # (docs/investigations/oven-cycle-start.md); others take it
-                # but are still winding down (a drain) when read back.
+                # but are still winding down (a drain) when read back. A
+                # write-only resource (the clock) never reads back what it
+                # took, so there is nothing to confirm.
                 raise HomeAssistantError(
                     translation_domain=DOMAIN,
                     translation_key="command_not_confirmed",

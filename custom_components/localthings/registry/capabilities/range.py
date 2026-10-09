@@ -60,7 +60,7 @@ RANGE_CLOCK_SYNC = Capability(
             payload_fn=_clock_sync_payload,
             write_fn=_clock_sync_write,
             write_only=True,
-            requires_remote_control=False,
+            needs_remote_control=False,
         ),
     ),
 )

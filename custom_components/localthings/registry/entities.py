@@ -53,9 +53,6 @@ class SamsungEntityDescription:
     icon: str | None = None
     entity_category: str | None = None  # 'diagnostic' | 'config' | None
     enabled_default: bool = True
-    # False for a write the firmware accepts with Remote Control off; the
-    # coordinator's remote-control gate then lets it through.
-    requires_remote_control: bool = True
     value_fn: Callable[[Any], Any] = _identity
     rep_fn: Callable[[dict], Any] | None = None  # replaces field+value_fn; receives full rep
     # (rep, resources): rep is this entity's own href's representation;
