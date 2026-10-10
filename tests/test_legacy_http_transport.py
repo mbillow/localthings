@@ -741,6 +741,20 @@ class TestWallOvenStart:
             )
         ]
 
+    def test_a_start_without_a_cook_time_sends_zero(self, oven):
+        """The Flex Duo refused three starts that carried no operationTime;
+        a panel cook with no timer reports 00:00:00 (#572)."""
+        _, seed = oven.read(["device", "0"], timeout=10.0)
+        resources = {e["href"]: e["rep"] for e in seed}
+        batch = cook.plan_start(resources, "UpperConvectionBake", 350).batch()
+        _FakeConnection.log.clear()
+
+        oven.write(["device", "0"], batch, timeout=8.0)
+
+        body = _FakeConnection.log[0][2]
+        assert body is not None
+        assert body["Device"]["Operation"] == {"operationTime": "00:00:00", "state": "Run"}
+
     def test_a_batch_anywhere_else_is_refused(self, oven):
         code, _ = oven.write(
             ["mode", "vs", "0"], [{"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}], 8.0
