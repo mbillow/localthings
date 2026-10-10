@@ -196,7 +196,7 @@ ICEMAKER_NIGHTTIME = Capability(
 # boards list the resource empty, so the switch needs the field.
 DEFROST_PREDICTION = Capability(
     href="/defrost/prediction/vs/0",
-    poll_tier="warm",
+    poll_tier="cold",
     entities=(
         SwitchDesc(
             key="ai_precise_cooling",
