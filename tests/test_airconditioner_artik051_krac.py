@@ -333,12 +333,37 @@ def test_auto_clean_progress_and_stop_come_off_their_own_tokens():
 
 
 def test_auto_clean_stop_stays_off_boards_without_the_token():
-    """Newer boards run the same cycle off /option/autoclean/vs/0 and say
-    nothing about stopping it, so writing a legacy token there would be a
-    guess."""
+    """Newer boards run the same cycle off /option/autoclean/vs/0 and stop it
+    there (below), so the legacy token write stays off them."""
     newer = _load_device("airconditioner_tp1x_rac")
     assert _desc(newer, "auto_clean_stop") is None
     assert "auto_clean_progress_legacy" not in _state("airconditioner_tp1x_rac")
+
+
+def test_auto_clean_cycle_stop_writes_status_stop():
+    """Writing status Stop to /option/autoclean/vs/0 ended a running cycle on
+    an AR70F09C1AWNEU and left settingStatus On (#598)."""
+    desc = _desc(_load_device("airconditioner_tp1x_rac_01001"), "auto_clean_cycle_stop")
+    assert desc is not None
+    assert desc.translation_key == "auto_clean_stop"
+    assert desc.write_fn(desc.payload, {}) == (
+        ["option", "autoclean", "vs", "0"],
+        {"x.com.samsung.da.status": "Stop"},
+    )
+
+
+def test_auto_clean_cycle_stop_needs_stop_in_supported_status():
+    resources = _load_device("airconditioner_tp1x_rac_01001")
+    autoclean = dict(resources["/option/autoclean/vs/0"])
+    autoclean["x.com.samsung.da.supportedStatus"] = ["Start"]
+    assert (
+        _desc({**resources, "/option/autoclean/vs/0": autoclean}, "auto_clean_cycle_stop") is None
+    )
+
+
+def test_legacy_boards_get_only_the_token_stop():
+    """No board on record carries both, so no appliance shows two stop buttons."""
+    assert _desc(_load_device(FIXTURE), "auto_clean_cycle_stop") is None
 
 
 def test_filter_time_reset_writes_the_appliance_s_own_trigger_token():

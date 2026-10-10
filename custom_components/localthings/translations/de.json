@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Feinkost",
           "cv_fdr_beverage": "Getränke",
           "cv_fdr_meat": "Fleisch",
-          "cv_fdr_soft_freezer": "Sanftgefrierfach"
+          "cv_fdr_soft_freezer": "Sanftgefrierfach",
+          "fconvert_freezer": "Gefrieren",
+          "fconvert_fridge": "Kühlen",
+          "fconvert_off": "Aus"
         }
       },
       "heated_dry": {
@@ -1721,6 +1724,9 @@
       },
       "ice_night_mode": {
         "name": "Nachtruhemodus Eisbereitung"
+      },
+      "ai_precise_cooling": {
+        "name": "KI-Präzisionskühlung"
       },
       "instance_enabled": {
         "name": "{instance_name} aktiviert"

@@ -78,8 +78,6 @@ IGNORED: list[Capability] = [
     Capability(href="/sec/networkaudio/audio/vs/0"),
     # Static Bespoke-product-line flag, not appliance state.
     Capability(href="/bespoke/vs/0"),
-    # Empty resource on every dump seen so far — nothing to expose.
-    Capability(href="/defrost/prediction/vs/0"),
     # Seasonal defrost schedule (start/period/end per season). Automating
     # this cleanly would need a multi-field schedule editor; the practical
     # on/off control is fridge.DEFROST_DELAY.

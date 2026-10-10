@@ -64,7 +64,7 @@ from ..entities import (
     SwitchDesc,
 )
 from .common import int_or_none, normalize_temp_unit, parse_iso_utc
-from .cook import PARAM_MODE, PARAM_TEMPERATURE, mode_specs
+from .cook import PARAM_MODE, PARAM_TEMPERATURE, mode_specs, selectable_modes
 from .laundry import option_value, option_write
 
 # ---------------------------------------------------------------------------
@@ -176,11 +176,12 @@ def _cooking_mode_options(resources):
     doesn't have (issue #152 reports only 4 of _MICROWAVE_MODES' 11)."""
     rep = resources.get("/mode/vs/0") or {}
     live = rep.get("x.com.samsung.da.supportedModes")
-    return list(live) if live else list(_MICROWAVE_MODES)
+    return selectable_modes(live) if live else list(_MICROWAVE_MODES)
 
 
 def _mode_write(p, rep, href=None):
-    valid = rep.get("x.com.samsung.da.supportedModes") or _MICROWAVE_MODES
+    live = rep.get("x.com.samsung.da.supportedModes")
+    valid = selectable_modes(live) if live else _MICROWAVE_MODES
     if p not in valid:
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}

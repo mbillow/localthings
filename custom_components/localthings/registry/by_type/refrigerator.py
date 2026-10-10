@@ -27,6 +27,7 @@ REGISTRY = DeviceRegistry(
             fridge.WINECELLAR_INFO,
             dishwasher.DIAGNOSIS,
             fridge.ICEMAKER_NIGHTTIME,
+            fridge.DEFROST_PREDICTION,
             fridge.FLEX_ZONE,
             fridge.REFRIGERATION,
             fridge.AUTOFILL,

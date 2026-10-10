@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Salumeria",
           "cv_fdr_beverage": "Bevande",
           "cv_fdr_meat": "Carne",
-          "cv_fdr_soft_freezer": "Congelatore leggero"
+          "cv_fdr_soft_freezer": "Congelatore leggero",
+          "fconvert_freezer": "Congelamento",
+          "fconvert_fridge": "Refrigerazione",
+          "fconvert_off": "Spento"
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "Modalità silenziosa ghiaccio notturna"
+      },
+      "ai_precise_cooling": {
+        "name": "Raffreddamento preciso IA"
       },
       "instance_enabled": {
         "name": "{instance_name} abilitato"

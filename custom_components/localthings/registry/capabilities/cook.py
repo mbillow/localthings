@@ -146,6 +146,13 @@ _NEVER_STARTABLE = frozenset(
 _NEVER_STARTABLE_FAMILIES = ("Autocook", "Broil", "Easycook", "HOMECARE", "Speed", "Toast")
 
 
+def selectable_modes(live: list) -> list:
+    """`supportedModes` without HOMECARE_* codes, which LCD_R18 boards list
+    but have no modeSpec entry for (#600): a capability flag, as on the AC
+    (#235), not a cooking mode."""
+    return [m for m in live if not (isinstance(m, str) and m.startswith("HOMECARE"))]
+
+
 def _specless_startable(mode: str) -> bool:
     return (
         mode not in _NEVER_STARTABLE

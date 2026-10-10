@@ -1,6 +1,7 @@
 {
   "state_keys": [
     "ai_energy_level",
+    "ai_precise_cooling",
     "alarm_code",
     "alarm_in_mute",
     "auto_door_mode",

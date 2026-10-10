@@ -719,16 +719,12 @@ FILTER_STATUS = Capability(
     ),
 )
 
-# AI energy-saving level -- '0' is off, supportedAiLevel lists the
-# additional level(s) offered ('1' meaning just "on" on most hardware,
-# multi-level on some). Verified cross-family: fridge (issue #21) and
-# washer (issue #40). Most hardware's supportedAiLevel is a single-entry
-# list, so a select there would offer only one real choice against an
-# implicit "off" -- shown as a switch instead; '0' is never in
-# supportedAiLevel but is the observed off value, so the select
-# synthesizes it back in as an explicit option. No translation_key:
-# aiLevel's values are plain digit strings, and select.py already renders
-# an untranslated numeric string as-is.
+# AI energy-saving level. A single-entry supportedAiLevel is an on/off
+# switch with '0' as off (fridge #21, washer #40). A multi-level board offers
+# only its own levels: writing '0' left two fridges at aiLevel '254', not off
+# (#410).
+# No translation_key: aiLevel's values are plain digit strings, and select.py
+# already renders an untranslated numeric string as-is.
 
 
 def _ai_energy_supported_levels(rep):
@@ -740,7 +736,7 @@ def _ai_energy_supported_levels(rep):
 
 def _ai_energy_level_options(resources):
     rep = resources.get("/energy/ailevel/vs/0") or {}
-    return ["0", *_ai_energy_supported_levels(rep)]
+    return _ai_energy_supported_levels(rep)
 
 
 def _ai_energy_level_write(p, rep, href=None):

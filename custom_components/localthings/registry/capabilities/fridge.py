@@ -192,6 +192,27 @@ ICEMAKER_NIGHTTIME = Capability(
     ),
 )
 
+# The app's "AI precise cooling" setting (#599, AILITE_REF_25K). Older
+# boards list the resource empty, so the switch needs the field.
+DEFROST_PREDICTION = Capability(
+    href="/defrost/prediction/vs/0",
+    poll_tier="cold",
+    entities=(
+        SwitchDesc(
+            key="ai_precise_cooling",
+            field="ai.cooling.care",
+            icon="mdi:snowflake-thermometer",
+            entity_category="config",
+            exists_fn=lambda rep, resources: "ai.cooling.care" in rep,
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["defrost", "prediction", "vs", "0"],
+                {"ai.cooling.care": "On" if p == "On" else "Off"},
+            ),
+        ),
+    ),
+)
+
 # Icemaker (generic -- covers /icemaker/one/vs/0, /icemaker/two/vs/0).
 # /icemaker/status/vs/0 is an exact-href cap and binds first;
 # /icemaker/nighttime/vs/0 is excluded by match_fn (lacks iceMaker.state).

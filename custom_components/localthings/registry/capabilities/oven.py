@@ -256,13 +256,14 @@ def _oven_mode_options(resources):
     live = rep.get("x.com.samsung.da.supportedModes")
     if not live:
         return list(_OVEN_MODES)
+    live = cook.selectable_modes(live)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
     # Unknown. Listing it makes it selectable too, which _oven_mode_validate
     # turns into a user-facing error rather than a silent no-op.
     if "NoOperation" in live:
-        return list(live)
+        return live
     return ["NoOperation", *live]
 
 
@@ -279,7 +280,8 @@ def _oven_mode_validate(p, rep, resources):
 
 
 def _oven_mode_write(p, rep, href=None):
-    valid = rep.get("x.com.samsung.da.supportedModes") or _OVEN_MODES
+    live = rep.get("x.com.samsung.da.supportedModes")
+    valid = cook.selectable_modes(live) if live else _OVEN_MODES
     if p not in valid:
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}

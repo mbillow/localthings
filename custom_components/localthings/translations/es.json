@@ -910,7 +910,10 @@
           "cv_fdr_deli": "Charcutería",
           "cv_fdr_beverage": "Bebidas",
           "cv_fdr_meat": "Carne",
-          "cv_fdr_soft_freezer": "Congelador suave"
+          "cv_fdr_soft_freezer": "Congelador suave",
+          "fconvert_freezer": "Congelar",
+          "fconvert_fridge": "Refrigerar",
+          "fconvert_off": "Desactivado"
         }
       },
       "heated_dry": {
@@ -2078,6 +2081,9 @@
       },
       "ice_night_mode": {
         "name": "Modo silencioso de hielo nocturno"
+      },
+      "ai_precise_cooling": {
+        "name": "Refrigeración precisa con IA"
       },
       "instance_enabled": {
         "name": "{instance_name}: activada"

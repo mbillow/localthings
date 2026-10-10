@@ -557,16 +557,16 @@ class TestAiEnergyLevelSelect:
         desc = self._desc()
         assert desc.translation_key is None
 
-    def test_options_synthesize_off(self):
-        """'0' is never in supportedAiLevel but is a real, observed aiLevel
-        value -- synthesized back in as the explicit off option."""
+    def test_options_are_the_board_s_own_levels(self):
+        """No synthesized '0': writing it left two multi-level fridges at
+        aiLevel '254' rather than off (#410)."""
         desc = self._desc()
         resources = {"/energy/ailevel/vs/0": {"supportedAiLevel": ["1", "2"]}}
-        assert desc.options(resources) == ["0", "1", "2"]
+        assert desc.options(resources) == ["1", "2"]
 
     def test_options_empty_when_resource_missing(self):
         desc = self._desc()
-        assert desc.options({}) == ["0"]
+        assert desc.options({}) == []
 
     def test_write(self):
         desc = self._desc()
