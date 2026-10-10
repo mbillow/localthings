@@ -214,6 +214,19 @@ def test_oven_mode_options_prepends_idle_token_when_live_list_omits_it():
     assert desc.options(resources) == ["NoOperation", "Bake", "Broil", "KeepWarm"]
 
 
+def test_oven_mode_options_drop_homecare_wizard():
+    """LCD_R18 boards list HOMECARE_WIZARD_V2 in supportedModes with no
+    modeSpec entry for it (#600); it is neither offered nor written."""
+    desc = _oven_mode_desc()
+    resources = {
+        "/mode/vs/0": {
+            "x.com.samsung.da.supportedModes": ["Convection", "HOMECARE_WIZARD_V2"],
+        }
+    }
+    assert desc.options(resources) == ["NoOperation", "Convection"]
+    assert desc.write_fn("HOMECARE_WIZARD_V2", resources["/mode/vs/0"]) is None
+
+
 def _finish_desc():
     return next(e for e in oven.OVEN_OPERATIONAL_STATE.entities if e.key == "finish_time")
 

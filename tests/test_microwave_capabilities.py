@@ -255,6 +255,15 @@ def test_microwave_mode_options_reads_live_supported_modes():
     assert desc.options(resources) == ["NoOperation", "MicroWave", "Autocook", "KeepWarm"]
 
 
+def test_microwave_mode_options_drop_homecare_wizard():
+    """Same as the oven (#600): the LCD_R18 microwave lists
+    HOMECARE_WIZARD_V2 among its supportedModes."""
+    desc = _microwave_cooking_mode_desc()
+    rep = {"x.com.samsung.da.supportedModes": ["Convection", "HOMECARE_WIZARD_V2"]}
+    assert desc.options({"/mode/vs/0": rep}) == ["Convection"]
+    assert desc.write_fn("HOMECARE_WIZARD_V2", rep) is None
+
+
 def test_microwave_mode_write_round_trips():
     desc = _microwave_cooking_mode_desc()
     assert desc.write_fn is not None
