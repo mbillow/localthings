@@ -532,3 +532,112 @@ class TestWithoutModeSpec:
             microwave.SETPOINT_MAX_C,
             microwave.SETPOINT_STEP_C,
         )
+
+
+def _lcd_r18_microwave():
+    """#600's NQ5B6753CAA idle, with its Convection modeSpec entry verbatim:
+    every LCD_R18 entry leaves the time keys out."""
+    entry = {
+        "mode": "Convection",
+        "version": "0101",
+        "default": "Default",
+        "control": "Start&Setting",
+        "cavity": "Single",
+        "tempMinC": "40",
+        "tempMaxC": "250",
+        "tempDefaultC": "160",
+        "tempListLengthC": "0",
+        "tempMinF": "NotSupported",
+        "tempMaxF": "NotSupported",
+        "tempDefaultF": "NotSupported",
+        "tempListLengthF": "0",
+        "probeMinC": "NotSupported",
+        "probeMaxC": "NotSupported",
+        "probeDefaultC": "NotSupported",
+        "probeMinF": "NotSupported",
+        "probeMaxF": "NotSupported",
+        "probeDefaultF": "NotSupported",
+        "powerDefault": "NotSupported",
+        "powerListLength": "0",
+        "tempIntervalC": "5",
+        "tempIntervalF": "NotSupported",
+        "probeIntervalC": "NotSupported",
+        "probeIntervalF": "NotSupported",
+    }
+    return {
+        "/mode/vs/0": {
+            "x.com.samsung.da.modes": ["NoOperation"],
+            "x.com.samsung.da.supportedModes": ["Convection", "HOMECARE_WIZARD_V2"],
+            "x.com.samsung.da.modeSpec": json.dumps([entry]),
+        },
+        "/temperatures/vs/0": {
+            "x.com.samsung.da.items": [
+                {
+                    "x.com.samsung.da.id": "0",
+                    "x.com.samsung.da.desired": "0",
+                    "x.com.samsung.da.unit": "Celsius",
+                }
+            ]
+        },
+        "/operational/state/vs/0": {"x.com.samsung.da.state": "Ready"},
+    }
+
+
+class TestUndeclaredCookTime:
+    """#600: an LCD_R18 board ignores a start without a cook time, and its
+    modeSpec declares none, so a time was refused and Start did nothing."""
+
+    def test_the_measured_600_start(self):
+        plan = cook.plan_start(
+            _lcd_r18_microwave(), mode="Convection", temperature=160, duration=60
+        )
+
+        assert plan.batch() == [
+            {"href": "/devices/0"},
+            {"href": "/mode/vs/0", "rep": {"x.com.samsung.da.modes": ["Convection"]}},
+            {
+                "href": "/temperatures/vs/0",
+                "rep": {
+                    "x.com.samsung.da.items": [
+                        {
+                            "x.com.samsung.da.id": "0",
+                            "x.com.samsung.da.desired": "160",
+                            "x.com.samsung.da.unit": "Celsius",
+                        }
+                    ]
+                },
+            },
+            {
+                "href": "/operational/state/vs/0",
+                "rep": {
+                    "x.com.samsung.da.operationTime": "00:01:00",
+                    "x.com.samsung.da.state": "Run",
+                },
+            },
+        ]
+
+    def test_a_start_without_a_cook_time_is_refused(self):
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(_lcd_r18_microwave(), mode="Convection", temperature=160)
+
+        assert err.value.key == "cook_duration_required"
+        assert err.value.placeholders == {"mode": "Convection"}
+
+    def test_a_cook_time_can_be_held_before_the_rest(self):
+        plan = cook.plan_start(
+            _lcd_r18_microwave(), mode="Convection", duration=300, complete=False
+        )
+
+        assert plan.duration == 300
+
+    def test_not_supported_still_means_no_timer(self):
+        """Other boards write NotSupported for a mode with no timer."""
+        resources = _lcd_r18_microwave()
+        entry = json.loads(resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"])[0]
+        entry.update(timeMin="NotSupported", timeMax="NotSupported", timeDefault="NotSupported")
+        resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"] = json.dumps([entry])
+
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(resources, mode="Convection", duration=60)
+
+        assert err.value.key == "cook_duration_not_supported"

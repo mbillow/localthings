@@ -205,6 +205,14 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
     }
 
 
+_TIME_KEYS = frozenset({"timeMin", "timeMax", "timeDefault"})
+# LCD_R18 boards leave the time keys out of every modeSpec entry, where other
+# boards write NotSupported for a mode with no timer. The microwave ignored a
+# start without a cook time and ran one with it (#600), so a time is required.
+_UNDECLARED_TIME_MIN = parse_hms("00:01:00")
+_UNDECLARED_TIME_MAX = parse_hms("23:59:00")
+
+
 def mode_specs(resources: dict) -> dict[str, ModeSpec]:
     """{mode: ModeSpec} from `/mode/vs/0`'s modeSpec, which arrives as a
     JSON string; a board reporting none gets _specless_specs."""
@@ -221,12 +229,13 @@ def mode_specs(resources: dict) -> dict[str, ModeSpec]:
         if not isinstance(entry, dict) or not isinstance(entry.get("mode"), str):
             continue
         temps = {u: t for u in ("C", "F") if (t := _temp_spec(entry, u)) is not None}
+        declared = bool(_TIME_KEYS & entry.keys())
         specs[entry["mode"]] = ModeSpec(
             mode=entry["mode"],
             control=str(entry.get("control")),
             temps=temps,
-            time_min=parse_hms(entry.get("timeMin")),
-            time_max=parse_hms(entry.get("timeMax")),
+            time_min=parse_hms(entry.get("timeMin")) if declared else _UNDECLARED_TIME_MIN,
+            time_max=parse_hms(entry.get("timeMax")) if declared else _UNDECLARED_TIME_MAX,
             time_default=parse_hms(entry.get("timeDefault")),
         )
     return specs
@@ -441,7 +450,9 @@ def plan_start(
         lo = spec.time_min or 0
         if seconds is None and (not complete or spec.time_optional):
             pass
-        elif seconds is None or not lo <= seconds <= spec.time_max:
+        elif seconds is None:
+            raise CookStartError("cook_duration_required", mode=mode)
+        elif not lo <= seconds <= spec.time_max:
             raise CookStartError(
                 "cook_duration_out_of_range",
                 mode=mode,

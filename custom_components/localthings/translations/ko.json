@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "{mode} 모드는 조리 시간을 설정하지 않습니다."
     },
+    "cook_duration_required": {
+      "message": "{mode} 모드에는 조리 시간이 필요합니다."
+    },
     "cook_duration_out_of_range": {
       "message": "{mode} 모드의 조리 시간 범위는 {min}~{max}입니다."
     },

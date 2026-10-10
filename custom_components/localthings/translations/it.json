@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "{mode} non prevede un tempo di cottura."
     },
+    "cook_duration_required": {
+      "message": "{mode} richiede un tempo di cottura."
+    },
     "cook_duration_out_of_range": {
       "message": "{mode} accetta un tempo di cottura da {min} a {max}."
     },

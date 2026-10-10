@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "Tryb {mode} nie ma czasu gotowania."
     },
+    "cook_duration_required": {
+      "message": "Tryb {mode} wymaga czasu pieczenia."
+    },
     "cook_duration_out_of_range": {
       "message": "Tryb {mode} przyjmuje czas gotowania od {min} do {max}."
     },

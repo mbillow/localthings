@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "{mode} heeft geen bereidingstijd."
     },
+    "cook_duration_required": {
+      "message": "{mode} heeft een bereidingstijd nodig."
+    },
     "cook_duration_out_of_range": {
       "message": "{mode} accepteert een bereidingstijd van {min} tot {max}."
     },
