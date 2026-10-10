@@ -199,7 +199,7 @@ def merge_options_field(cached, new_tokens):
     return merged
 
 
-def merge_items_field(cached, new_items):
+def merge_items_field(cached, new_items, key: str = "x.com.samsung.da.id"):
     """Merge a partial x.com.samsung.da.items[]-style write (matched by
     x.com.samsung.da.id) into a cached items array -- the items[]
     counterpart of merge_options_field above.
@@ -209,14 +209,16 @@ def merge_items_field(cached, new_items):
     airconditioner._climate_write's vendor temperature write). Fields
     within the matched item are merged, not replaced outright, so a
     setpoint-only write doesn't wipe current/minimum/maximum/unit from the
-    optimistic cache entry. An id with no match in `cached` is appended."""
+    optimistic cache entry. An id with no match in `cached` is appended.
+    `key` names the field rows are matched by (a soundbar's channelVolume
+    rows carry a `name`)."""
     merged = [dict(i) if isinstance(i, dict) else i for i in (cached or [])]
     for new_item in new_items or ():
         if not isinstance(new_item, dict):
             continue
-        item_id = new_item.get("x.com.samsung.da.id")
+        item_id = new_item.get(key)
         for i, existing in enumerate(merged):
-            if isinstance(existing, dict) and existing.get("x.com.samsung.da.id") == item_id:
+            if isinstance(existing, dict) and existing.get(key) == item_id:
                 merged[i] = {**existing, **new_item}
                 break
         else:

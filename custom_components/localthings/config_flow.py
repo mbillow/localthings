@@ -737,7 +737,9 @@ def _read_device(transport, host: str, port: int) -> dict:
     (issue #236).
     """
     from .registry.batch import parse_device0_batch
+    from .registry.by_type import is_flat_board
     from .registry.by_type import resolve as resolve_registry
+    from .registry.flat import read_all
     from .registry.identity import (
         proven_ocf_device_id,
         read_identity,
@@ -750,14 +752,21 @@ def _read_device(transport, host: str, port: int) -> dict:
     identity = read_identity(transport, None)
 
     code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    if code != 0x45 or body is None:
+    if code == 0x84 and is_flat_board(identity.device_types):
+        # A board with no /device/0 (registry/flat.py), read the way the
+        # coordinator polls it.
+        resources = read_all(transport, identity.raw.get("/oic/res") or [], logger=_LOGGER)
+        usable = bool(resources)
+    else:
+        usable = code == 0x45 and body is not None
+        resources = parse_device0_batch(body) if usable and isinstance(body, list) else {}
+    if not usable:
         # Authenticated fine, so this isn't a connectivity or credentials
         # problem -- whatever is on this port just isn't an appliance whose
-        # /device/0 we understand.
+        # resources we understand.
         raise UnexpectedResponse(
             f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} ({code:#04x})"
         )
-    resources = parse_device0_batch(body) if isinstance(body, list) else {}
 
     info = resources.get("/information/vs/0", {})
     registry = resolve_registry(resources, device_types=identity.device_types)
@@ -778,8 +787,8 @@ def _read_device(transport, host: str, port: int) -> dict:
         # when the device reported no usable one.
         "ocf_device_id": proven_ocf_device_id(identity),
         "serial": resolve_serial(raw_serial, host),
-        # None for a board that doesn't report /wirelessinfo/vs/0 -- see
-        # resolve_mac, and CONF_MAC for what the stored value is for.
+        # None for a board that reports no MAC -- see resolve_mac, and
+        # CONF_MAC for what the stored value is for.
         "mac": resolve_mac(resources),
         "model": resolve_model(info.get("x.com.samsung.da.modelNum", ""), identity),
         "manufacturer": identity.manufacturer or "Samsung",
