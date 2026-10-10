@@ -107,9 +107,9 @@ About half of Samsung's appliances report their Wi-Fi MAC address. For those, Ho
 
 ### Older appliances on TCP 8888
 
-Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, a TP6X_CT_16K radiant electric cooktop and an NV51K777OS Flex Duo wall oven. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty to request a token, which the appliance sends back to Home Assistant on port 8889. Make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers the WW6500 washer, TP6X air conditioners, the TP6X_CT_16K radiant electric cooktop and the NV51K777OS Flex Duo wall oven. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty to request a token, which the appliance sends back to Home Assistant on port 8889. Make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
 
-On the tested TP6X_CT_16K cooktop, token pairing succeeded when **Smart Connect** was **off** before pairing and switched **on at the moment of pairing**. Starting with Smart Connect already on did not return a token in testing. This sequence has not been verified for other TCP 8888 appliance models. See [Legacy cooktop pairing findings](docs/legacy-pairing-findings.md).
+On the tested TP6X_CT_16K cooktop & NV51K777OS Flex Duo wall oven, token pairing succeeded only when *Smart Connect* was off before pairing initiation and switched on after a token request from Localthings. Starting with Smart Connect already on did not return a token in testing. This sequence has not been verified for other TCP 8888 appliance models.
 
 On these appliances, a chosen cycle, temperature, rinse count or spin speed takes effect only when the cycle starts. The selects hold your choice, and the **Start** button sends it. If you turn the dial on the appliance, the dial's setting replaces the held choice.
 
