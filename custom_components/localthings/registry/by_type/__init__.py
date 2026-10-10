@@ -307,6 +307,13 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     )
     if has_device_type and operation_states >= 2:
         return _REGISTRY_BY_KEY["cooktop"]
+    # Require the bridge's mode signature and a populated power resource
+    # before overriding device metadata.
+    from ..capabilities.legacy_cooktop import is_hood
+
+    power = resources.get("/power/vs/0", {}).get("x.com.samsung.da.power")
+    if is_hood(resources) and str(power).lower() in ("on", "off"):
+        return _REGISTRY_BY_KEY["range_hood"]
     if "/hood/fanspeed/vs/0" in resources and "/hood/lamp/vs/0" in resources:
         return _REGISTRY_BY_KEY["range_hood"]
     # Oven/range/microwave boards that report no /information/vs/0 at all

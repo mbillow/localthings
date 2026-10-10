@@ -153,6 +153,18 @@
       },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pomačkání aktivní"
+      },
+      "cooktop_sync_flex": {
+        "name": "Sync Flex"
+      },
+      "cooktop_paused": {
+        "name": "Pozastaveno"
+      },
+      "hood_bluetooth_enabled": {
+        "name": "Bluetooth digestoře povoleno"
+      },
+      "hood_interface_available": {
+        "name": "Rozhraní digestoře dostupné"
       }
     },
     "button": {
@@ -1608,6 +1620,30 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Automatické přepínání sekundární odchylka topení"
+      },
+      "cooktop_model": {
+        "name": "Model varné desky"
+      },
+      "cooktop_flex_coil": {
+        "name": "Kód cívky Flex"
+      },
+      "main_timer_set": {
+        "name": "Nastavení hlavního časovače"
+      },
+      "burner_pan_size": {
+        "name": "Velikost nádoby zóny {number}"
+      },
+      "hood_bluetooth_state": {
+        "name": "Stav Bluetooth digestoře"
+      },
+      "hood_shutoff_timer_set": {
+        "name": "Nastavení časovače vypnutí digestoře"
+      },
+      "hood_shutoff_timer_current": {
+        "name": "Hodnota časovače vypnutí digestoře"
+      },
+      "hood_shutoff_timer_state": {
+        "name": "Stav časovače vypnutí digestoře"
       }
     },
     "switch": {
@@ -2058,7 +2094,8 @@
           "settings": "Nastavení zápisu pro dálkové ovládání",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
-          "debug_write": "Ladění: zápis do prostředku"
+          "debug_write": "Ladění: zápis do prostředku",
+          "cooktop_display": "Zobrazení varné desky"
         }
       },
       "settings": {
@@ -2129,6 +2166,13 @@
         "menu_options": {
           "cloud_guided": "Počkat znovu",
           "cloud_finish": "Dokončit"
+        }
+      },
+      "cooktop_display": {
+        "title": "Zobrazení varné desky",
+        "description": "Zobrazit jeden řádek stavu pro každou varnou zónu; výkon, horký povrch a velikost nádoby jsou v atributech. Hodnoty časovače jsou u jeho stavu. Samostatné podrobné entity se zakážou, takže automatizace, které je používají, přestanou dostávat aktualizace. Vypnutím této volby se obnoví pouze entity zakázané touto volbou.",
+        "data": {
+          "compact_cooktop": "Kompaktní seznam senzorů"
         }
       }
     },

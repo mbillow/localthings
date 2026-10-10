@@ -60,6 +60,15 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
         self._sticky_spent = False
 
     @property
+    def extra_state_attributes(self):
+        desc = cast(SensorDesc, self._bound.desc)
+        if desc.extra_state_attributes_fn is None:
+            return None
+        return desc.extra_state_attributes_fn(
+            self.coordinator.entity_rep(self._bound.href or ""), self._resources
+        )
+
+    @property
     def native_unit_of_measurement(self):
         desc = cast(SensorDesc, self._bound.desc)
         if desc.unit_fn is not None:

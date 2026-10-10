@@ -158,7 +158,8 @@
           "settings": "Ajustes del dispositivo",
           "cloud_courses": "Ciclos descargados",
           "forget_learned_modes": "Olvidar los modos recordados",
-          "debug_write": "Depuración: escribir en un recurso"
+          "debug_write": "Depuración: escribir en un recurso",
+          "cooktop_display": "Vista de la placa"
         }
       },
       "settings": {
@@ -229,6 +230,13 @@
         "menu_options": {
           "cloud_guided": "Esperar de nuevo",
           "cloud_finish": "Finalizar"
+        }
+      },
+      "cooktop_display": {
+        "title": "Vista de la placa",
+        "description": "Mostrar una fila de estado por zona, con nivel de potencia, superficie caliente y tamaño del recipiente en sus atributos. Los valores del temporizador están en su estado. Se desactivan las entidades de detalle; las automatizaciones que las usan dejan de recibir actualizaciones. Al desactivar esta opción, solo se restauran las entidades desactivadas por ella.",
+        "data": {
+          "compact_cooktop": "Lista compacta de sensores"
         }
       }
     },
@@ -504,6 +512,18 @@
       },
       "wrinkle_prevent_active": {
         "name": "Anti-arrugas activo"
+      },
+      "cooktop_sync_flex": {
+        "name": "Sync Flex"
+      },
+      "cooktop_paused": {
+        "name": "En pausa"
+      },
+      "hood_bluetooth_enabled": {
+        "name": "Bluetooth de la campana activado"
+      },
+      "hood_interface_available": {
+        "name": "Interfaz de la campana disponible"
       }
     },
     "button": {
@@ -1959,6 +1979,30 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Cambio automático desfase secundario de calefacción"
+      },
+      "cooktop_model": {
+        "name": "Modelo de placa"
+      },
+      "cooktop_flex_coil": {
+        "name": "Código de bobina flexible"
+      },
+      "main_timer_set": {
+        "name": "Ajuste del temporizador principal"
+      },
+      "burner_pan_size": {
+        "name": "Tamaño del recipiente de la zona {number}"
+      },
+      "hood_bluetooth_state": {
+        "name": "Estado Bluetooth de la campana"
+      },
+      "hood_shutoff_timer_set": {
+        "name": "Ajuste del temporizador de apagado de la campana"
+      },
+      "hood_shutoff_timer_current": {
+        "name": "Lectura del temporizador de apagado de la campana"
+      },
+      "hood_shutoff_timer_state": {
+        "name": "Estado del temporizador de apagado de la campana"
       }
     },
     "switch": {

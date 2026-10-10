@@ -327,6 +327,20 @@ def test_registry_reproduces_golden_state_keys_for_cooktop_nv9300k():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_8888():
+    """Keep the TP6X cooktop's captured entity coverage stable."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("cooktop_tp6x_ct_16k_8888")
+    golden = json.loads((GOLDEN / "cooktop_tp6x_ct_16k_8888.json").read_text())
+    state_keys = _new_state_keys("cooktop_tp6x_ct_16k_8888", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_cooktop():
     from tests.conftest import _load_device
 
@@ -384,6 +398,20 @@ def test_registry_reproduces_golden_state_keys_for_tp1x_ref_21k_airfilter():
     resources = _load_device("refrigerator_tp1x_ref_21k_airfilter")
     golden = json.loads((GOLDEN / "refrigerator_tp1x_ref_21k_airfilter.json").read_text())
     state_keys = _new_state_keys("refrigerator_tp1x_ref_21k_airfilter", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_range_hood_tp6x_ct_unpaired():
+    from tests.conftest import _load_device
+
+    name = "range_hood_tp6x_ct_unpaired"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources)
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

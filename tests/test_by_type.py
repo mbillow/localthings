@@ -826,14 +826,10 @@ class TestResolve:
         assert reg.name == "refrigerator"
 
     def test_prefers_resource_signatures_over_model_strings(self, all_device_fixtures):
-        """A strong live-resource signature wins over model metadata.
+        """Limit resource/model disagreements to known captured cases.
 
-        Across the fixture corpus the only intentional disagreements are
-        oven-badged microwaves (Qooker, NQ7000B, the NW9300MD combo's microwave
-        cavity): an OVEN model token says oven
-        while the /oven + MicroWave surface says microwave. Locking the
-        disagreement set keeps resource-first routing from silently becoming
-        greedy as new signatures or fixtures land.
+        The hood bridge shares its parent's CT token, while the listed
+        microwaves report oven metadata.
         """
         from custom_components.localthings.registry.by_type import (
             for_device_by_model,
@@ -859,6 +855,7 @@ class TestResolve:
             "microwave_nq7000b": ("microwave", "oven"),  # issue #496
             "microwave_nw9300md": ("microwave", "oven"),  # issue #525
             "qooker_mw7500a": ("microwave", "oven"),
+            "range_hood_tp6x_ct_unpaired": ("range_hood", "cooktop"),
         }
 
     def test_qooker_microwave_surface_overrides_generic_oven_oic_type(self):

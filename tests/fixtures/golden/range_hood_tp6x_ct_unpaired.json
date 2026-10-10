@@ -1,0 +1,10 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "hood_bluetooth_enabled",
+    "hood_bluetooth_state",
+    "hood_interface_available",
+    "paired_hood_model",
+    "remote_control"
+  ]
+}

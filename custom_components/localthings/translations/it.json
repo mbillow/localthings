@@ -153,6 +153,18 @@
       },
       "wrinkle_prevent_active": {
         "name": "Antipiega attivo"
+      },
+      "cooktop_sync_flex": {
+        "name": "Sync Flex"
+      },
+      "cooktop_paused": {
+        "name": "In pausa"
+      },
+      "hood_bluetooth_enabled": {
+        "name": "Bluetooth della cappa attivato"
+      },
+      "hood_interface_available": {
+        "name": "Interfaccia della cappa disponibile"
       }
     },
     "button": {
@@ -1608,6 +1620,30 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Commutazione automatica offset secondario riscaldamento"
+      },
+      "cooktop_model": {
+        "name": "Modello del piano cottura"
+      },
+      "cooktop_flex_coil": {
+        "name": "Codice bobina flessibile"
+      },
+      "main_timer_set": {
+        "name": "Impostazione del timer principale"
+      },
+      "burner_pan_size": {
+        "name": "Dimensione pentola della zona {number}"
+      },
+      "hood_bluetooth_state": {
+        "name": "Stato Bluetooth della cappa"
+      },
+      "hood_shutoff_timer_set": {
+        "name": "Impostazione del timer di spegnimento della cappa"
+      },
+      "hood_shutoff_timer_current": {
+        "name": "Valore del timer di spegnimento della cappa"
+      },
+      "hood_shutoff_timer_state": {
+        "name": "Stato del timer di spegnimento della cappa"
       }
     },
     "switch": {
@@ -2058,7 +2094,8 @@
           "settings": "Impostazioni dispositivo",
           "cloud_courses": "Cicli scaricati",
           "forget_learned_modes": "Dimentica le modalità memorizzate",
-          "debug_write": "Debug: scrivi su una risorsa"
+          "debug_write": "Debug: scrivi su una risorsa",
+          "cooktop_display": "Vista del piano cottura"
         }
       },
       "settings": {
@@ -2129,6 +2166,13 @@
         "menu_options": {
           "cloud_guided": "Attendi di nuovo",
           "cloud_finish": "Fine"
+        }
+      },
+      "cooktop_display": {
+        "title": "Vista del piano cottura",
+        "description": "Mostra una riga di stato per zona, con livello di potenza, superficie calda e dimensione della pentola negli attributi. I valori del timer sono nello stato del timer. Le entità di dettaglio vengono disabilitate: le automazioni che le usano non ricevono più aggiornamenti. Disattivando questa opzione vengono ripristinate solo le entità disabilitate da essa.",
+        "data": {
+          "compact_cooktop": "Elenco sensori compatto"
         }
       }
     },
