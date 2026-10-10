@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Delicatessen",
           "cv_fdr_beverage": "Dranken",
           "cv_fdr_meat": "Vlees",
-          "cv_fdr_soft_freezer": "Zachtvriezer"
+          "cv_fdr_soft_freezer": "Zachtvriezer",
+          "fconvert_freezer": "Vriezen",
+          "fconvert_fridge": "Koelen",
+          "fconvert_off": "Uit"
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "Stille nachtmodus ijsmaker"
+      },
+      "ai_precise_cooling": {
+        "name": "AI-precisiekoeling"
       },
       "instance_enabled": {
         "name": "{instance_name} ingeschakeld"

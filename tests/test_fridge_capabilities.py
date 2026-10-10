@@ -9,6 +9,7 @@ from custom_components.localthings.registry.entities import (
     NumberDesc,
     SelectDesc,
     SensorDesc,
+    SwitchDesc,
 )
 
 
@@ -689,6 +690,7 @@ class TestSwitchOffIsNotInverted:
         ),
         (fridge.CABINET_LIGHT.entities[1], "light.dimming.status"),
         (fridge.ICEMAKER_STATUS_FALLBACK.entities[0], "x.com.samsung.da.iceMaker"),
+        (fridge.DEFROST_PREDICTION.entities[0], "ai.cooling.care"),
     ]
 
     def test_turning_off_sends_off(self):
@@ -702,3 +704,39 @@ class TestSwitchOffIsNotInverted:
         for desc, key in self.CASES:
             _segs, payload = desc.write_fn("On", {})
             assert payload[key] == "On", f"{desc.key}: ON must send 'On', got {payload[key]!r}"
+
+
+class TestAiPreciseCooling:
+    """/defrost/prediction/vs/0 follows the app's "AI precise cooling"
+    setting on AILITE_REF_25K and takes a write of the same field (#599)."""
+
+    def test_writes_its_own_resource(self):
+        desc = cast(SwitchDesc, fridge.DEFROST_PREDICTION.entities[0])
+        assert desc.write_fn is not None
+        assert desc.write_fn("On", {}) == (
+            ["defrost", "prediction", "vs", "0"],
+            {"ai.cooling.care": "On"},
+        )
+
+    def test_empty_resource_gets_no_switch(self):
+        desc = fridge.DEFROST_PREDICTION.entities[0]
+        assert desc.exists_fn is not None
+        assert desc.exists_fn({}, {}) is False
+        assert desc.exists_fn({"ai.cooling.care": "Off"}, {}) is True
+
+
+def test_fconvert_tokens_are_named():
+    """AILITE_REF_25K's freezer convert mode (#599): the select's raw
+    FCONVERT_* options resolve to catalog states."""
+    import json
+    from pathlib import Path
+
+    from custom_components.localthings.select import _translation_state
+
+    en = Path(__file__).parent.parent / "custom_components/localthings/translations/en.json"
+    states = json.loads(en.read_text())["entity"]["select"]["flex_zone_mode"]["state"]
+    known = frozenset(states)
+    assert [
+        states[_translation_state(t, known) or ""]
+        for t in ("FCONVERT_FREEZER", "FCONVERT_FRIDGE", "FCONVERT_OFF")
+    ] == ["Freeze", "Fridge", "Off"]

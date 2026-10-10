@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Lahôdky",
           "cv_fdr_beverage": "Nápoje",
           "cv_fdr_meat": "Mäso",
-          "cv_fdr_soft_freezer": "Mierne mrazenie"
+          "cv_fdr_soft_freezer": "Mierne mrazenie",
+          "fconvert_freezer": "Mrazenie",
+          "fconvert_fridge": "Chladenie",
+          "fconvert_off": "Vypnuté"
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "Tichý nočný režim výroby ľadu"
+      },
+      "ai_precise_cooling": {
+        "name": "AI presné chladenie"
       },
       "instance_enabled": {
         "name": "{instance_name} – zapnuté"

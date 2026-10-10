@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Deli",
           "cv_fdr_beverage": "Beverage",
           "cv_fdr_meat": "Meat",
-          "cv_fdr_soft_freezer": "Soft freezer"
+          "cv_fdr_soft_freezer": "Soft freezer",
+          "fconvert_freezer": "Freeze",
+          "fconvert_fridge": "Fridge",
+          "fconvert_off": "Off"
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "Nighttime ice quiet mode"
+      },
+      "ai_precise_cooling": {
+        "name": "AI precise cooling"
       },
       "instance_enabled": {
         "name": "{instance_name} enabled"

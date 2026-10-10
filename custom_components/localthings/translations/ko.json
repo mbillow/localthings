@@ -559,7 +559,10 @@
           "cv_fdr_deli": "델리",
           "cv_fdr_beverage": "음료",
           "cv_fdr_meat": "육류",
-          "cv_fdr_soft_freezer": "소프트 냉동"
+          "cv_fdr_soft_freezer": "소프트 냉동",
+          "fconvert_freezer": "냉동",
+          "fconvert_fridge": "냉장",
+          "fconvert_off": "끄기"
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "야간 제빙 저소음 모드"
+      },
+      "ai_precise_cooling": {
+        "name": "AI 정밀 냉각"
       },
       "instance_enabled": {
         "name": "{instance_name} 사용"

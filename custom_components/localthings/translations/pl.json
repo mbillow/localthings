@@ -559,7 +559,10 @@
           "cv_fdr_deli": "Wędliny",
           "cv_fdr_beverage": "Napoje",
           "cv_fdr_meat": "Mięso",
-          "cv_fdr_soft_freezer": "Lekkie zamrażanie"
+          "cv_fdr_soft_freezer": "Lekkie zamrażanie",
+          "fconvert_freezer": "Zamrażanie",
+          "fconvert_fridge": "Chłodziarka",
+          "fconvert_off": "Wył."
         }
       },
       "heated_dry": {
@@ -1727,6 +1730,9 @@
       },
       "ice_night_mode": {
         "name": "Nocny cichy tryb kostkarki"
+      },
+      "ai_precise_cooling": {
+        "name": "Precyzyjne chłodzenie AI"
       },
       "instance_enabled": {
         "name": "{instance_name} — włączone"
