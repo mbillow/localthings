@@ -731,6 +731,12 @@ OVEN_MODE = Capability(
         # token at all, so this was a phantom, always-off, write-does-
         # nothing switch there. Same fastpreheat/NaturalSteam-class gap
         # issue #183 already fixed on the other switches below.
+        # Lamp, sound and energy_saving waive Remote Control, as
+        # the SmartThings app does (issues #183, #500; the lamp write is
+        # proven with it off, see the module docstring). None of them heats
+        # or starts anything, and the coordinator reads each one back and
+        # reports it if the oven dropped it. fast_preheat, natural_steam,
+        # cooktop_on_alert, mode, setpoint and cook time stay gated.
         SwitchDesc(
             key="lamp",
             field="x.com.samsung.da.options",
@@ -738,6 +744,7 @@ OVEN_MODE = Capability(
             exists_fn=_has_option("UpperLamp"),
             value_fn=lambda opts: _option_value(opts, "UpperLamp") == "On",
             write_fn=_option_switch_write("UpperLamp"),
+            needs_remote_control=False,
         ),
         SwitchDesc(
             key="sound",
@@ -746,6 +753,7 @@ OVEN_MODE = Capability(
             entity_category="config",
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
+            needs_remote_control=False,
         ),
         SwitchDesc(
             key="fast_preheat",
@@ -774,6 +782,7 @@ OVEN_MODE = Capability(
             exists_fn=_has_option("EnergySaving"),
             value_fn=lambda opts: _option_value(opts, "EnergySaving") == "On",
             write_fn=_option_switch_write("EnergySaving"),
+            needs_remote_control=False,
         ),
         # Cooktop-on alert (issue #183): also confirmed present
         # (BurnerOnAlert_Off) though the reporter noted it mainly matters for

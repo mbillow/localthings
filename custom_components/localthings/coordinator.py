@@ -275,6 +275,19 @@ def _refusal(code: int, response: Any) -> str:
     return f"{text} {response}" if isinstance(response, str) and response else text
 
 
+def _field_present_in(key: str, value: Any, readback: dict) -> bool:
+    """Whether one written field shows in `readback`.
+
+    An options[] write carries only the changed `<Prefix>_<Value>` tokens
+    and the appliance merges them into its full array (issue #54), so the
+    read-back holds every sibling token too: each written token being in it
+    is what "took" means there. Every other field compares whole."""
+    current = readback.get(key)
+    if key == "x.com.samsung.da.options" and isinstance(value, list) and isinstance(current, list):
+        return all(token in current for token in value)
+    return current == value
+
+
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     """Whether everything `payload` wrote is present in `readback`.
 
@@ -285,7 +298,7 @@ def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     Collection it was posted to, which no useful claim can be made about.
     """
     if isinstance(payload, dict):
-        return all(readback.get(k) == v for k, v in payload.items())
+        return all(_field_present_in(k, v, readback) for k, v in payload.items())
     return all(
         all((readback.get(element_href) or {}).get(k) == v for k, v in rep.items())
         for element_href, rep in _batch_element_reps(payload).items()
