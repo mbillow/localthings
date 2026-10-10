@@ -489,7 +489,7 @@ class TestWithoutModeSpec:
         assert plan.duration is None
         assert plan.batch()[-1] == {
             "href": "/operational/state/vs/0",
-            "rep": {"x.com.samsung.da.operationTime": "00:00:00", "x.com.samsung.da.state": "Run"},
+            "rep": {"x.com.samsung.da.state": "Run"},
         }
 
     def test_temperature_is_bounded_by_the_static_setpoint_range(self):
@@ -616,11 +616,12 @@ class TestUndeclaredCookTime:
             },
         ]
 
-    def test_a_start_without_a_cook_time_sends_none(self):
-        plan = cook.plan_start(_lcd_r18_microwave(), mode="Convection", temperature=160)
+    def test_a_start_without_a_cook_time_is_refused(self):
+        with pytest.raises(cook.CookStartError) as err:
+            cook.plan_start(_lcd_r18_microwave(), mode="Convection", temperature=160)
 
-        assert plan.duration is None
-        assert plan.batch()[-1]["rep"]["x.com.samsung.da.operationTime"] == "00:00:00"
+        assert err.value.key == "cook_duration_required"
+        assert err.value.placeholders == {"mode": "Convection"}
 
     def test_a_cook_time_can_be_held_before_the_rest(self):
         plan = cook.plan_start(

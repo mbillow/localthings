@@ -212,8 +212,9 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
 
 _TIME_KEYS = frozenset({"timeMin", "timeMax", "timeDefault"})
 # LCD_R18 boards leave the time keys out of every modeSpec entry, where other
-# boards write NotSupported for a mode with no timer. The microwave ran a cook
-# given a time (#600), so these modes take an optional one, as specless boards do.
+# boards write NotSupported for a mode with no timer. The microwave ignored a
+# start without a cook time and ran one with it (#600), so a time is required.
+_UNDECLARED_TIME_MIN = parse_hms("00:01:00")
 
 
 def mode_specs(resources: dict) -> dict[str, ModeSpec]:
@@ -237,10 +238,9 @@ def mode_specs(resources: dict) -> dict[str, ModeSpec]:
             mode=entry["mode"],
             control=str(entry.get("control")),
             temps=temps,
-            time_min=parse_hms(entry.get("timeMin")),
+            time_min=parse_hms(entry.get("timeMin")) if declared else _UNDECLARED_TIME_MIN,
             time_max=parse_hms(entry.get("timeMax")) if declared else _OPEN_TIME_MAX,
             time_default=parse_hms(entry.get("timeDefault")),
-            time_optional=not declared,
         )
     return specs
 
@@ -392,13 +392,10 @@ class CookPlan:
                     },
                 }
             )
-        # Every start carries a cook time, 00:00:00 for none: the Flex Duo
-        # refused three starts without one (#572) and the LCD_R18 microwave
-        # ignored one (#600), and a panel cook with no timer reports 00:00:00.
-        operation = {
-            _OPERATION_TIME: format_hms(self.duration or 0),
-            _STATE: "Run",
-        }
+        operation: dict[str, str] = {}
+        if self.duration is not None:
+            operation[_OPERATION_TIME] = format_hms(self.duration)
+        operation[_STATE] = "Run"
         elements.append({"href": actual(OPERATION_HREF), "rep": operation})
         return elements
 
