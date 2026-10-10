@@ -1,0 +1,108 @@
+{
+  "capture_note": "Unpaired TP6X_CT_16K_HOOD interface from a diagnostics capture. legacy_bodies preserves the captured mapped endpoint bodies; device0 is their canonical translation through TP6X_CT. The connected resource comes from the same capture's skipped-subdevice listing. No physical hood was paired; paired-model test variations are constructed.",
+  "legacy_bodies": {
+    "Alarms": [],
+    "Configuration": {
+      "remoteControlEnabled": true
+    },
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "01031A200320",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "16081900,16071400",
+          "type": "Firmware"
+        }
+      ],
+      "description": "TP6X_CT_16K_HOOD",
+      "deviceSubType": "Cooktop",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "TP6X_CT_16K|40403241|"
+    },
+    "Mode": {
+      "options": [
+        "DeviceType_NULL",
+        "BTState_Idle",
+        "Bluetooth_Off",
+        "FanSpeed_0",
+        "Lamp_Off",
+        "ShutOffTimerSet_0",
+        "ShutOffTimerCurrent_0",
+        "ShutOffTimerState_Ready"
+      ]
+    },
+    "Operation": {
+      "power": "Off"
+    }
+  },
+  "device0": [
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.Versions": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.newVersionAvailable": false,
+            "x.com.samsung.da.number": "01031A200320",
+            "x.com.samsung.da.type": "Software"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.newVersionAvailable": false,
+            "x.com.samsung.da.number": "16081900,16071400",
+            "x.com.samsung.da.type": "Firmware"
+          }
+        ],
+        "x.com.samsung.da.description": "TP6X_CT_16K_HOOD",
+        "x.com.samsung.da.deviceSubType": "Cooktop",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "TP6X_CT_16K|40403241|"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "DeviceType_NULL",
+          "BTState_Idle",
+          "Bluetooth_Off",
+          "FanSpeed_0",
+          "Lamp_Off",
+          "ShutOffTimerSet_0",
+          "ShutOffTimerCurrent_0",
+          "ShutOffTimerState_Ready"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": true
+      }
+    }
+  ]
+}

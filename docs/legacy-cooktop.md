@@ -79,7 +79,14 @@ Not verified — values are kept raw and no commands are exposed:
 
 The hood-bridge mapping handles devices that share the cooktop's `CT` model
 token but advertise Bluetooth and fan/lamp options in place of burner
-options. `for_device_by_resources` routes this surface to the range-hood
-registry, where `HOOD_*` capabilities bind `/mode/vs/0` and `/power/vs/0`.
-The reporting unit has no paired physical hood, so these mappings have not
-been verified on a live hood.
+options. `for_device_by_resources` requires both those mode options and a
+recognized power value on `/power/vs/0` before routing to the range-hood
+registry, where `HOOD_*` capabilities bind the two resources.
+
+The [unpaired bridge fixture](../tests/fixtures/range_hood_tp6x_ct_unpaired_device.json)
+preserves captured endpoint bodies and their canonical translation. Its
+`DeviceType_NULL` state exposes diagnostic interface information without
+physical power, fan, light or timer readings. Tests cover this capture and
+explicitly constructed paired-model variations. No physical hood was
+paired with the reporting cooktop, so paired hood operation remains
+unverified.

@@ -1,17 +1,6 @@
-"""Tests for the TP6X_CT_16K cooktop (NV9300K-/AA2, legacy 8888/HTTPS family).
+"""Read-only capability coverage for the TP6X_CT_16K legacy cooktop.
 
-This board reports no OCF device types at all (empty /oic/p and /oic/d; the
-identity block carries no oic.wk.d type), so it routes by its 'CT' board
-token -- see the TP6X_CT_16K resource map in legacy_http.py. Everything it
-exposes arrives through the packed /mode/vs/0 options[] vocabulary, the same
-DeviceType_/OperationState_/PowerLevel_/HotSurface_ surface the NV9300K/
-NV8000T boards report (issue #508), just read over the legacy transport.
-
-Slot 2 is not advertised on this board (options carry OperationState0/1/3/4/5
-with no OperationState2), so it gets no entities -- same gap as the NV9300K
-fixture. Pan sizes appear only for slots 3 and 5. Physical
-burner positions, timer units and the flex-coil encoding are unverified, so
-everything here is read-only.
+The captured options omit slot 2 and report pan sizes only for slots 3 and 5.
 """
 
 from custom_components.localthings.registry.adapter import flatten
@@ -47,7 +36,6 @@ def test_no_unbound_hrefs():
 
 def test_per_zone_power_level_hot_surface_and_state():
     state = _state()
-    # Slots 0/1/3/4/5 are advertised; slot 2 is not, so it gets no entities.
     for slot in (0, 1, 3, 4, 5):
         assert state[f"burner_{slot}_state"] == "Ready"
         assert state[f"burner_{slot}_power_level"] == "Off"
