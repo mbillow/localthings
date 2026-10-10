@@ -49,6 +49,7 @@ def _clock_sync_write(payload, _rep, href=None):
 # The TP1X range family accepts a local wall-clock timestamp here but does not
 # echo it on GET. Keeping this as a button prevents arbitrary timestamps from
 # being supplied or cached and only generates the current timestamp on press.
+# An NV7B4445VAK wall oven accepted the write with Remote Control off.
 RANGE_CLOCK_SYNC = Capability(
     href="/configuration/vs/0",
     entities=(
@@ -59,6 +60,7 @@ RANGE_CLOCK_SYNC = Capability(
             payload_fn=_clock_sync_payload,
             write_fn=_clock_sync_write,
             write_only=True,
+            needs_remote_control=False,
         ),
     ),
 )

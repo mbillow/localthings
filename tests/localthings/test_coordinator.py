@@ -1844,6 +1844,49 @@ async def test_send_command_allowed_when_remote_control_enabled(
     assert coordinator._cache.get("/some/path") == {"value": 5}
 
 
+async def test_send_command_waived_write_only_is_not_read_back(
+    hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
+) -> None:
+    """A write-only resource that waives Remote Control (the clock) reads back
+    empty, so confirming it would always report the write as not taken."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import ButtonDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator._cache.apply_rep(
+        "/remotectrl/vs/0",
+        {"x.com.samsung.da.remoteControlEnabled": "false"},
+        source="test",
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (["some", "path"], {"value": payload})
+
+    desc = ButtonDesc(key="test", write_fn=_write_fn, write_only=True, needs_remote_control=False)
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+    written = []
+
+    with (
+        patch.object(fake, "subscribe"),
+        patch.object(fake, "read", create=True, return_value=(0x45, {})) as read,
+        patch.object(LocalThingsCoordinator, "_CONFIRM_DELAY_S", 0.0),
+    ):
+        fake.write = lambda *a, **k: written.append(a) or (0x44, None)
+        await coordinator.async_send_command(bound, "2026-10-10T12:00:00")
+
+    assert written
+    read.assert_not_called()
+
+
+def test_clock_sync_button_waives_remote_control() -> None:
+    from custom_components.localthings.registry.capabilities import range as range_caps
+
+    assert range_caps.RANGE_CLOCK_SYNC.entities[0].needs_remote_control is False
+
+
 async def test_send_command_remote_control_check_precedes_validate_fn(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:

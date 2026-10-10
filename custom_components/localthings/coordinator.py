@@ -2519,11 +2519,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         try:
             await self._async_put(path_segs, body, write_href, on_retry=_rearm)
-            if remote_control_off and not await self._took_effect(path_segs, body):
+            if (
+                remote_control_off
+                and not write_only
+                and not await self._took_effect(path_segs, body)
+            ):
                 # Sent only because the descriptor waives Remote Control. Some
                 # boards answer 2.04 and drop a write with it off
                 # (docs/investigations/oven-cycle-start.md); others take it
-                # but are still winding down (a drain) when read back.
+                # but are still winding down (a drain) when read back. A
+                # write-only resource (the clock) never reads back what it
+                # took, so there is nothing to confirm.
                 raise HomeAssistantError(
                     translation_domain=DOMAIN,
                     translation_key="command_not_confirmed",
