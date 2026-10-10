@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "{mode} hat keine Garzeit."
     },
+    "cook_duration_required": {
+      "message": "{mode} benötigt eine Garzeit."
+    },
     "cook_duration_out_of_range": {
       "message": "{mode} erlaubt eine Garzeit von {min} bis {max}."
     },

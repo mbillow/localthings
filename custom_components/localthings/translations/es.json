@@ -343,6 +343,9 @@
     "cook_duration_not_supported": {
       "message": "{mode} no admite tiempo de cocción."
     },
+    "cook_duration_required": {
+      "message": "{mode} necesita un tiempo de cocción."
+    },
     "cook_duration_out_of_range": {
       "message": "{mode} admite un tiempo de cocción de {min} a {max}."
     },

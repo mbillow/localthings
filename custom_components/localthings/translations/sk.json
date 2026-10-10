@@ -2243,6 +2243,9 @@
     "cook_duration_not_supported": {
       "message": "Režim {mode} nemá čas prípravy."
     },
+    "cook_duration_required": {
+      "message": "Režim {mode} vyžaduje čas prípravy."
+    },
     "cook_duration_out_of_range": {
       "message": "Režim {mode} prijíma čas prípravy od {min} do {max}."
     },
