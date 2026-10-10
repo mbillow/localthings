@@ -967,6 +967,24 @@ AUTO_CLEAN = Capability(
             entity_category="diagnostic",
             value_fn=common.int_or_none,
         ),
+        # Ends a running cycle without touching settingStatus; confirmed on an
+        # AR70F09C1AWNEU (TP1X_DA-AC-RAC-01001), which also carries the
+        # StopAutoClean_ token but isn't a legacy board (#598).
+        ButtonDesc(
+            key="auto_clean_cycle_stop",
+            translation_key="auto_clean_stop",
+            field="",
+            payload="Stop",
+            icon="mdi:fan-off",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                "Stop" in (rep.get("x.com.samsung.da.supportedStatus") or ())
+            ),
+            write_fn=lambda p, rep, href=None: (
+                ["option", "autoclean", "vs", "0"],
+                {"x.com.samsung.da.status": p},
+            ),
+        ),
     ),
 )
 
