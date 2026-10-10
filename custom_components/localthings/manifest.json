@@ -13,5 +13,5 @@
     "cbor2>=5.4.6",
     "smartthings-local>=0.1.23"
   ],
-  "version": "0.32.0"
+  "version": "0.33.0"
 }
