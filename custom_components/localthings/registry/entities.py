@@ -99,6 +99,7 @@ class SensorDesc(SamsungEntityDescription):
 @dataclass(frozen=True, kw_only=True)
 class BinarySensorDesc(SamsungEntityDescription):
     device_class: str | None = None  # value_fn must return bool
+    primary: bool = False  # use the device name; HA lists its primary entity first
 
 
 @dataclass(frozen=True, kw_only=True)

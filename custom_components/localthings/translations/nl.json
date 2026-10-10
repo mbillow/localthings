@@ -153,6 +153,18 @@
       },
       "wrinkle_prevent_active": {
         "name": "Kreukpreventie actief"
+      },
+      "cooktop_sync_flex": {
+        "name": "Sync Flex"
+      },
+      "cooktop_paused": {
+        "name": "Gepauzeerd"
+      },
+      "hood_bluetooth_enabled": {
+        "name": "Bluetooth afzuigkap ingeschakeld"
+      },
+      "hood_interface_available": {
+        "name": "Afzuigkapinterface beschikbaar"
       }
     },
     "button": {
@@ -1608,6 +1620,30 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Automatisch omschakelen secundaire offset verwarmen"
+      },
+      "cooktop_model": {
+        "name": "Kookplaatmodel"
+      },
+      "cooktop_flex_coil": {
+        "name": "Flexspoelcode"
+      },
+      "main_timer_set": {
+        "name": "Instelling hoofdtimer"
+      },
+      "burner_pan_size": {
+        "name": "Pangrootte kookzone {number}"
+      },
+      "hood_bluetooth_state": {
+        "name": "Bluetooth-status afzuigkap"
+      },
+      "hood_shutoff_timer_set": {
+        "name": "Instelling uitschakeltimer afzuigkap"
+      },
+      "hood_shutoff_timer_current": {
+        "name": "Waarde uitschakeltimer afzuigkap"
+      },
+      "hood_shutoff_timer_state": {
+        "name": "Status uitschakeltimer afzuigkap"
       }
     },
     "switch": {
@@ -2058,7 +2094,8 @@
           "settings": "Apparaatinstellingen",
           "cloud_courses": "Gedownloade programma's",
           "forget_learned_modes": "Onthouden modi vergeten",
-          "debug_write": "Foutopsporing: naar een resource schrijven"
+          "debug_write": "Foutopsporing: naar een resource schrijven",
+          "cooktop_display": "Kookplaatweergave"
         }
       },
       "settings": {
@@ -2129,6 +2166,13 @@
         "menu_options": {
           "cloud_guided": "Opnieuw wachten",
           "cloud_finish": "Voltooien"
+        }
+      },
+      "cooktop_display": {
+        "title": "Kookplaatweergave",
+        "description": "Toon één statusregel per kookzone, met vermogensniveau, hete-oppervlakstatus en panformaat als attributen. Timerwaarden staan bij de timerstatus. Aparte detailentiteiten worden uitgeschakeld; automatiseringen die deze gebruiken ontvangen geen updates meer. Schakel dit uit om alleen de door deze optie uitgeschakelde entiteiten te herstellen.",
+        "data": {
+          "compact_cooktop": "Compacte sensorlijst"
         }
       }
     },

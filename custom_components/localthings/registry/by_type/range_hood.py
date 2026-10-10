@@ -7,7 +7,7 @@ of the same board generation is covered too, not just when paired with a
 microwave -- no such dump exists yet, but the capabilities are generic
 vent-hood ones with nothing microwave-specific in them."""
 
-from ..capabilities import common, ignored, range_hood
+from ..capabilities import common, ignored, legacy_cooktop, range_hood
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -32,7 +32,12 @@ REGISTRY = DeviceRegistry(
             range_hood.AUTO_VENTILATION,
             range_hood.HOOD_STATUS,
             range_hood.HOOD_SPEC,
-            *range_hood.COVERAGE,
+            *(c for c in range_hood.COVERAGE if c.href not in {"/mode/vs/0", "/power/vs/0"}),
+            legacy_cooktop.HOOD_MODE,
+            legacy_cooktop.HOOD_POWER,
+            legacy_cooktop.HOOD_REMOTE_CONTROL,
+            legacy_cooktop.HOOD_LISTED,
+            legacy_cooktop.DIAGNOSIS,
         ]
     ),
 )

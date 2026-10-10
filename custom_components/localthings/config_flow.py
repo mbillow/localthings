@@ -38,7 +38,7 @@ from homeassistant.helpers.typing import UNDEFINED, UndefinedType
 from smartthings_local.errors import PeerInitiatedHandshakeError
 from smartthings_local.protocol.auth import AuthenticationProvider, PskAuth
 
-from . import cloudcourse, probing
+from . import cloudcourse, cooktop_display, probing
 from .const import (
     AUTH_CERTIFICATE,
     AUTH_PSK,
@@ -1883,17 +1883,42 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         # programs (issue #342) -- every other device would get a menu entry
         # leading to an empty screen.
         coord = self._coordinator()
+        if cooktop_display.supported(coord):
+            menu.insert(0, "cooktop_display")
         if coord is not None and cloudcourse.supports_cloud_courses(
             coord.cloud_course_rep(), cycle_options(coord.canonical_resources(MAIN))
         ):
             menu.insert(1, "cloud_courses")
         return self.async_show_menu(step_id="init", menu_options=menu)
 
+    async def async_step_cooktop_display(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        coord = self._coordinator()
+        if not cooktop_display.supported(coord):
+            return await self.async_step_init()
+        if user_input is not None:
+            options = cooktop_display.apply(
+                self.hass, self.config_entry, coord, user_input[cooktop_display.COMPACT]
+            )
+            return self.async_create_entry(data=options)
+        return self.async_show_form(
+            step_id="cooktop_display",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        cooktop_display.COMPACT,
+                        default=self.config_entry.options.get(cooktop_display.COMPACT, False),
+                    ): bool,
+                }
+            ),
+        )
+
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
 
         return self.async_show_form(
             step_id="settings",

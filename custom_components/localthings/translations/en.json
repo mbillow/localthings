@@ -153,6 +153,18 @@
       },
       "wrinkle_prevent_active": {
         "name": "Wrinkle prevent active"
+      },
+      "cooktop_sync_flex": {
+        "name": "Sync Flex"
+      },
+      "cooktop_paused": {
+        "name": "Paused"
+      },
+      "hood_bluetooth_enabled": {
+        "name": "Hood Bluetooth enabled"
+      },
+      "hood_interface_available": {
+        "name": "Hood interface available"
       }
     },
     "button": {
@@ -1608,6 +1620,30 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Auto changeover heating secondary offset"
+      },
+      "cooktop_model": {
+        "name": "Cooktop model"
+      },
+      "cooktop_flex_coil": {
+        "name": "Flex coil code"
+      },
+      "main_timer_set": {
+        "name": "Main timer setting"
+      },
+      "burner_pan_size": {
+        "name": "Burner {number} pan size"
+      },
+      "hood_bluetooth_state": {
+        "name": "Hood Bluetooth state"
+      },
+      "hood_shutoff_timer_set": {
+        "name": "Hood shutoff timer setting"
+      },
+      "hood_shutoff_timer_current": {
+        "name": "Hood shutoff timer reading"
+      },
+      "hood_shutoff_timer_state": {
+        "name": "Hood shutoff timer state"
       }
     },
     "switch": {
@@ -2058,7 +2094,8 @@
           "settings": "Device settings",
           "cloud_courses": "Download cycles",
           "forget_learned_modes": "Forget remembered modes",
-          "debug_write": "Debug: write to a resource"
+          "debug_write": "Debug: write to a resource",
+          "cooktop_display": "Cooktop display"
         }
       },
       "settings": {
@@ -2129,6 +2166,13 @@
         "menu_options": {
           "cloud_guided": "Wait again",
           "cloud_finish": "Finish"
+        }
+      },
+      "cooktop_display": {
+        "title": "Cooktop display",
+        "description": "Show one status row per burner, with power level, hot-surface status and pan size in its attributes. Timer readings are available on the timer status. Separate detail entities are disabled, so automations using those entities stop receiving updates. Turn this off to restore only the entities disabled by this option.",
+        "data": {
+          "compact_cooktop": "Compact sensor list"
         }
       }
     },

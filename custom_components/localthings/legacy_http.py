@@ -176,11 +176,29 @@ LCD_OV_WALL: tuple[Resource, ...] = (
 )
 
 
+# NZ36K7570R (TP6X_CT_16K) and its Bluetooth hood bridge use the same
+# options vocabulary as the existing cooktop registry.
+TP6X_CT: tuple[Resource, ...] = (
+    Resource(
+        endpoint="operation",
+        wrapper="Operation",
+        href="/power/vs/0",
+        fan_out={"kidsLock": "/kidslock/vs/0"},
+    ),
+    Resource(endpoint="mode", wrapper="Mode", href="/mode/vs/0"),
+    Resource(endpoint="configuration", wrapper="Configuration", href="/remotectrl/vs/0"),
+    INFORMATION,
+    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
+    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+)
+
+
 # Keyed by the appliance's own `description` (/devices/0/information's,
 # e.g. 'TP6X_WASHER'), less any trailing capacity (`_16K`), so one row covers
 # every size of a model line. A family not listed here is read with IDENTITY.
 FAMILIES: dict[str, tuple[Resource, ...]] = {
     "TP6X_WASHER": TP6X_WASHER,
+    "TP6X_CT": TP6X_CT,
     "TP6X_RAC": TP6X_RAC,
     "LCD_OV_WALL": LCD_OV_WALL,
 }

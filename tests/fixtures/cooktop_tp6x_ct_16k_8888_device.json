@@ -1,0 +1,88 @@
+{
+ "device0": [
+  {
+   "href": "/alarms/vs/0",
+   "rep": {
+    "x.com.samsung.da.items": []
+   }
+  },
+  {
+   "href": "/diagnosis/vs/0",
+   "rep": {
+    "x.com.samsung.da.diagnosisStart": "Ready"
+   }
+  },
+  {
+   "href": "/information/vs/0",
+   "rep": {
+    "x.com.samsung.da.Versions": [
+     {
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "01031A200320",
+      "x.com.samsung.da.type": "Software"
+     },
+     {
+      "x.com.samsung.da.id": "1",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "16081900,16071400",
+      "x.com.samsung.da.type": "Firmware"
+     }
+    ],
+    "x.com.samsung.da.description": "TP6X_CT_16K",
+    "x.com.samsung.da.deviceSubType": "Cooktop",
+    "x.com.samsung.da.manufacturer": "Samsung Electronics",
+    "x.com.samsung.da.modelNum": "TP6X_CT_16K|40403241|"
+   }
+  },
+  {
+   "href": "/kidslock/vs/0",
+   "rep": {
+    "x.com.samsung.da.kidsLock": "Run"
+   }
+  },
+  {
+   "href": "/mode/vs/0",
+   "rep": {
+    "x.com.samsung.da.options": [
+     "DeviceType_NV9300K-/AA2",
+     "SyncFlex_Off",
+     "FlexCoil_0",
+     "Pause_Off",
+     "OperationState0_Ready",
+     "OperationState1_Ready",
+     "OperationState3_Ready",
+     "OperationState4_Ready",
+     "OperationState5_Ready",
+     "HotSurface0_Normal",
+     "HotSurface1_Normal",
+     "HotSurface3_Normal",
+     "HotSurface4_Normal",
+     "HotSurface5_Normal",
+     "PowerLevel0_Off",
+     "PowerLevel1_Off",
+     "PowerLevel3_Off",
+     "PowerLevel4_Off",
+     "PowerLevel5_Off",
+     "MainTimerCurrent_0",
+     "MainTimerSet_0",
+     "MainTimerState_Ready",
+     "PanSize3_Idle",
+     "PanSize5_Single"
+    ]
+   }
+  },
+  {
+   "href": "/power/vs/0",
+   "rep": {
+    "x.com.samsung.da.power": "Off"
+   }
+  },
+  {
+   "href": "/remotectrl/vs/0",
+   "rep": {
+    "x.com.samsung.da.remoteControlEnabled": true
+   }
+  }
+ ]
+}

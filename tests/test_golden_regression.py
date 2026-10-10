@@ -327,6 +327,23 @@ def test_registry_reproduces_golden_state_keys_for_cooktop_nv9300k():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_8888():
+    """TP6X_CT_16K cooktop (NV9300K-/AA2, legacy 8888/HTTPS family) -- no
+    OCF device types, resolved by the 'CT' board token onto the cooktop
+    registry. Carries the same packed /mode/vs/0 options surface as the
+    NV9300K/NV8000T boards, bound by the legacy cooktop capability."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("cooktop_tp6x_ct_16k_8888")
+    golden = json.loads((GOLDEN / "cooktop_tp6x_ct_16k_8888.json").read_text())
+    state_keys = _new_state_keys("cooktop_tp6x_ct_16k_8888", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_cooktop():
     from tests.conftest import _load_device
 

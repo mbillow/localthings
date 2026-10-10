@@ -307,6 +307,12 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     )
     if has_device_type and operation_states >= 2:
         return _REGISTRY_BY_KEY["cooktop"]
+    # The cooktop's Bluetooth hood bridge shares its CT model token, but
+    # advertises independent Bluetooth and fan/lamp options instead of burners.
+    from ..capabilities.legacy_cooktop import is_hood
+
+    if is_hood(resources):
+        return _REGISTRY_BY_KEY["range_hood"]
     if "/hood/fanspeed/vs/0" in resources and "/hood/lamp/vs/0" in resources:
         return _REGISTRY_BY_KEY["range_hood"]
     # Oven/range/microwave boards that report no /information/vs/0 at all

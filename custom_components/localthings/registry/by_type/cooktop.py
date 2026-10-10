@@ -17,7 +17,7 @@ the board has.
 
 import dataclasses
 
-from ..capabilities import common, cooktop, ignored
+from ..capabilities import common, cooktop, ignored, legacy_cooktop
 from ..capabilities import range as range_caps
 from ._base import DeviceRegistry, _build
 
@@ -29,6 +29,7 @@ def _burner_list_board(rep, resources):
 _OPTIONS_POWER = dataclasses.replace(
     cooktop.COOKTOP_POWER,
     match_fn=lambda rep, resources: not _burner_list_board(rep, resources),
+    entities=tuple(dataclasses.replace(e, primary=True) for e in cooktop.COOKTOP_POWER.entities),
 )
 # POWER_VS_FALLBACK's own rule (the OCF-standard /power/0 wins) plus the
 # surface split.
@@ -57,7 +58,8 @@ REGISTRY = DeviceRegistry(
                 _OPTIONS_POWER,
                 _BURNER_LIST_POWER,
                 # /mode/vs/0 options-array boards.
-                cooktop.COOKTOP_MODE,
+                legacy_cooktop.MODE,
+                legacy_cooktop.DIAGNOSIS,
                 cooktop.COOKTOP_CONNECTED,
                 # /cooktop/status/vs/0 burnerList boards.
                 range_caps.COOKTOP_STATUS,
