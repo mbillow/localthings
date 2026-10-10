@@ -185,6 +185,11 @@ def _specless_temps(live: list) -> dict[str, TempSpec]:
     }
 
 
+# The cook-time cap for a mode whose board declares none: specless boards and
+# modeSpec entries without time keys.
+_OPEN_TIME_MAX = parse_hms("23:59:00")
+
+
 def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
     """A board with no modeSpec starts the same way (the NW9000KD started
     Bake from Ready, #300), so its own live modes are offered, bounded by its
@@ -197,7 +202,7 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
             mode=mode,
             control=START_CONTROL,
             temps=temps,
-            time_max=parse_hms("23:59:00"),
+            time_max=_OPEN_TIME_MAX,
             time_optional=True,
         )
         for mode in live
@@ -209,7 +214,6 @@ _TIME_KEYS = frozenset({"timeMin", "timeMax", "timeDefault"})
 # LCD_R18 boards leave the time keys out of every modeSpec entry, where other
 # boards write NotSupported for a mode with no timer. The microwave ran a cook
 # given a time (#600), so these modes take an optional one, as specless boards do.
-_UNDECLARED_TIME_MAX = parse_hms("23:59:00")
 
 
 def mode_specs(resources: dict) -> dict[str, ModeSpec]:
@@ -234,7 +238,7 @@ def mode_specs(resources: dict) -> dict[str, ModeSpec]:
             control=str(entry.get("control")),
             temps=temps,
             time_min=parse_hms(entry.get("timeMin")),
-            time_max=parse_hms(entry.get("timeMax")) if declared else _UNDECLARED_TIME_MAX,
+            time_max=parse_hms(entry.get("timeMax")) if declared else _OPEN_TIME_MAX,
             time_default=parse_hms(entry.get("timeDefault")),
             time_optional=not declared,
         )

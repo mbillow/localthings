@@ -584,8 +584,8 @@ def _lcd_r18_microwave():
 
 
 class TestUndeclaredCookTime:
-    """#600: an LCD_R18 board ignores a start without a cook time, and its
-    modeSpec declares none, so a time was refused and Start did nothing."""
+    """#600: an LCD_R18 board ignored a start that carried no operationTime,
+    and its modeSpec has no time keys, so every cook time was refused."""
 
     def test_the_measured_600_start(self):
         plan = cook.plan_start(
