@@ -47,6 +47,15 @@ def is_placeholder_serial(serial: str) -> bool:
     return len(upper) >= 8 and len(set(upper)) == 1 and upper[0] in "0123456789ABCDEF"
 
 
+def resolve_firmware(identity: DeviceIdentity | None) -> str | None:
+    """/oic/p's manufacturer firmware version (mnfv), if reported."""
+    platform = identity.raw.get("/oic/p") if identity else None
+    mnfv = platform.get("mnfv") if isinstance(platform, dict) else None
+    if not isinstance(mnfv, str):
+        return None
+    return mnfv.strip() or None
+
+
 def resolve_serial(raw_serial: str | None, host: str) -> str:
     """The device identity to mint registry keys from.
 
@@ -55,10 +64,13 @@ def resolve_serial(raw_serial: str | None, host: str) -> str:
     host, which is stable per install and unique across devices on one
     network -- see is_placeholder_serial for the two families that need it.
     """
+    return display_serial(raw_serial) or host
+
+
+def display_serial(raw_serial: str | None) -> str | None:
+    """The device-reported serial, or None if it is missing or a placeholder."""
     s = (raw_serial or "").strip()
-    if not s or is_placeholder_serial(s):
-        return host
-    return s
+    return None if not s or is_placeholder_serial(s) else s
 
 
 def is_usable_device_id(value: str | None) -> bool:
@@ -241,12 +253,23 @@ def resolve_mac(resources: dict[str, dict]) -> str | None:
     field of an appliance's own state that a DHCP sighting can be matched
     against: Home Assistant hands discovery an (ip, hostname, mac) triple,
     and neither of the other two identifies a unit -- three of issue #469's
-    air conditioners share one hostname.
+    air conditioners share one hostname. A soundbar reports its MAC in its
+    deviceinfo resource instead.
 
     Roughly half the dumps in tests/fixtures carry the resource at all, so
     None is an ordinary answer here, not a fault.
     """
-    raw = (resources.get(WIRELESS_INFO_HREF) or {}).get("macaddressWiFi")
+    for href, key in (
+        (WIRELESS_INFO_HREF, "macaddressWiFi"),
+        ("/sec/networkaudio/deviceinfo", "x.com.samsung.networkaudio.wifimac"),
+    ):
+        if (found := _normalized_mac((resources.get(href) or {}).get(key))) is not None:
+            return found
+    return None
+
+
+def _normalized_mac(raw) -> str | None:
+    """One candidate MAC in HA's colon form, or None if unusable."""
     if not isinstance(raw, str):
         return None
     digits = raw.strip().lower().replace(":", "").replace("-", "").replace(".", "")

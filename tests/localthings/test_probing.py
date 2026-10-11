@@ -886,3 +886,61 @@ def test_credential_hint_reads_only_the_given_port(monkeypatch) -> None:
 
     assert probing.read_credential_hint("10.0.0.1", 60137) == probing.CredentialHint(sct=1)
     assert asked == [60137]
+
+
+def _patch_scan(monkeypatch, selected: int | None) -> None:
+    """ClientHello scan yielding the given selected port (or none)."""
+
+    def _probe_ports(host, ports, *, preferred_port=None, **kwargs):
+        results = (
+            tuple(_FakeLiveness(port=p, responder_port=selected) for p in ports[:1])
+            if selected is not None
+            else ()
+        )
+        return _FakeProbeSet(
+            outcome="selected" if selected is not None else "no_response",
+            selected_port=selected,
+            results=results,
+        )
+
+    monkeypatch.setattr("smartthings_local.protocol.dtls_probe.probe_dtls_ports", _probe_ports)
+
+
+def test_moved_secure_port_prefers_the_advertised_answer(monkeypatch) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((49160,), 49160))
+    _patch_scan(monkeypatch, 49154)
+    assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) == 49160
+
+
+def test_moved_secure_port_falls_back_to_the_clienthello_probe(monkeypatch) -> None:
+    """AV boards advertise nothing in plaintext, so only the probe finds a move."""
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((), None))
+    _patch_scan(monkeypatch, 48729)
+    assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) == 48729
+
+
+def test_moved_secure_port_never_returns_the_wildcard_multicast_port(
+    monkeypatch,
+) -> None:
+    """5684 answers on any board (#482), so it never counts as a move."""
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((), None))
+    _patch_scan(monkeypatch, 5684)
+    assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) is None
+
+
+def test_moved_secure_port_reports_no_move_on_same_port_or_no_answer(
+    monkeypatch,
+) -> None:
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(probing, "_discover_advertised_ports", lambda host: ((), None))
+    _patch_scan(monkeypatch, 40294)
+    assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) is None
+    _patch_scan(monkeypatch, None)
+    assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) is None

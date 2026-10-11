@@ -95,6 +95,9 @@ async def async_get_config_entry_diagnostics(
             if identity is not None
             else None,
             "unbound_hrefs": sorted(coordinator._unbound_hrefs),
+            # Only for a board polled per href (registry/flat.py), which is
+            # why its `resources` have no /device/0 Collection.
+            **({"flat": True} if coordinator._flat else {}),
             # This subdevice's own resources, and only this subdevice's. On a
             # composite device (issue #177) `last_resources` is the union
             # across every live subdevice keyed by real hrefs, so reporting it

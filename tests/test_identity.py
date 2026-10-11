@@ -1,5 +1,6 @@
 from custom_components.localthings.registry.identity import (
     DeviceIdentity,
+    display_serial,
     is_usable_device_id,
     ocf_device_key,
     read_identity,
@@ -250,3 +251,23 @@ def test_ocf_device_key_reports_absence_rather_than_collapsing_to_the_serial():
     assert ocf_device_key(None) is None
     assert ocf_device_key(_identity(serial="REAL-SERIAL")) is None
     assert ocf_device_key(_identity(device_id="abc-123")) == "abc-123"
+
+
+def test_display_serial_shows_only_a_real_reported_serial():
+    assert display_serial(" 0A1B2C3D4E5F ") == "0A1B2C3D4E5F"
+    assert display_serial(None) is None
+    assert display_serial("") is None
+    assert display_serial("Nothing(SVC)") is None
+    assert display_serial("FFFFFFFFFFFF") is None
+
+
+def test_a_soundbar_reports_its_mac_in_deviceinfo():
+    from custom_components.localthings.registry.identity import resolve_mac
+
+    audio = {
+        "/sec/networkaudio/deviceinfo": {"x.com.samsung.networkaudio.wifimac": "aa:bb:cc:dd:ee:01"}
+    }
+    assert resolve_mac(audio) == "aa:bb:cc:dd:ee:01"
+    # /wirelessinfo/vs/0 still comes first, and an unusable MAC falls through.
+    wireless = {"/wirelessinfo/vs/0": {"macaddressWiFi": "00:00:00:00:00:00"}, **audio}
+    assert resolve_mac(wireless) == "aa:bb:cc:dd:ee:01"

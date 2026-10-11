@@ -153,6 +153,15 @@
       },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pomačkání aktivní"
+      },
+      "bluetooth_pairing": {
+        "name": "Párování Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Připojení zadních reproduktorů"
+      },
+      "woofer_connection": {
+        "name": "Připojení wooferu"
       }
     },
     "button": {
@@ -203,6 +212,9 @@
       },
       "start_cooking": {
         "name": "Spustit vaření"
+      },
+      "pair_bluetooth": {
+        "name": "Spárovat Bluetooth"
       }
     },
     "climate": {
@@ -296,6 +308,60 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
+      },
+      "audio_sync": {
+        "name": "Synchronizace zvuku"
+      },
+      "bass": {
+        "name": "Basy"
+      },
+      "channel_level_center": {
+        "name": "Úroveň středu"
+      },
+      "channel_level_front_top": {
+        "name": "Úroveň předních horních"
+      },
+      "channel_level_rear": {
+        "name": "Úroveň zadních"
+      },
+      "channel_level_rear_side": {
+        "name": "Úroveň zadních bočních"
+      },
+      "channel_level_rear_top": {
+        "name": "Úroveň zadních horních"
+      },
+      "channel_level_side": {
+        "name": "Úroveň bočních"
+      },
+      "channel_level_wide": {
+        "name": "Úroveň širokých"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Výšky"
+      },
+      "woofer_level": {
+        "name": "Úroveň wooferu"
       }
     },
     "select": {
@@ -1117,6 +1183,28 @@
           "low": "Nízká",
           "high": "Vysoká"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Jazyk zvukové zpětné vazby",
+        "state": {
+          "eng": "angličtina",
+          "deu": "němčina",
+          "fra": "francouzština",
+          "kor": "korejština",
+          "spa": "španělština",
+          "eng_uk": "angličtina (UK)",
+          "ita": "italština"
+        }
+      },
+      "equalizer": {
+        "name": "Ekvalizér",
+        "state": {
+          "none": "Vypnuto",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klasika",
+          "custom": "Vlastní"
+        }
       }
     },
     "sensor": {
@@ -1608,6 +1696,31 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Automatické přepínání sekundární odchylka topení"
+      },
+      "current_eq_mode": {
+        "name": "Aktuální režim ekvalizéru"
+      },
+      "installation_type": {
+        "name": "Typ instalace"
+      },
+      "micom_version": {
+        "name": "Verze micom"
+      },
+      "network_connection": {
+        "name": "Připojení",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Zdroj zvuku"
+      },
+      "speaker_status": {
+        "name": "Stav reproduktoru"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signál"
       }
     },
     "switch": {
@@ -1862,6 +1975,36 @@
       },
       "extra_rinse": {
         "name": "Extra máchání"
+      },
+      "active_voice_amplifier": {
+        "name": "Aktivní zesilovač hlasu"
+      },
+      "audio_prompt": {
+        "name": "Zvuková zpětná vazba"
+      },
+      "auto_power_down": {
+        "name": "Automatické vypnutí"
+      },
+      "auto_update": {
+        "name": "Automatická aktualizace"
+      },
+      "bass_boost": {
+        "name": "Zesílení basů"
+      },
+      "night_mode": {
+        "name": "Noční režim"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "Zvuk SpaceFit"
+      },
+      "voice_amplifier": {
+        "name": "Vylepšení hlasu"
       }
     },
     "time": {

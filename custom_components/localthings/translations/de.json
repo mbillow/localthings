@@ -153,6 +153,15 @@
       },
       "wrinkle_prevent_active": {
         "name": "Knitterschutz aktiv"
+      },
+      "bluetooth_pairing": {
+        "name": "Bluetooth-Kopplung"
+      },
+      "rear_speakers": {
+        "name": "Rear-Lautsprecher"
+      },
+      "woofer_connection": {
+        "name": "Woofer-Verbindung"
       }
     },
     "button": {
@@ -203,6 +212,9 @@
       },
       "start_cooking": {
         "name": "Garen starten"
+      },
+      "pair_bluetooth": {
+        "name": "Bluetooth koppeln"
       }
     },
     "climate": {
@@ -296,6 +308,60 @@
       },
       "good_sleep": {
         "name": "Guter Schlaf"
+      },
+      "audio_sync": {
+        "name": "Audio-Synchronisation"
+      },
+      "bass": {
+        "name": "Bässe"
+      },
+      "channel_level_center": {
+        "name": "Centerpegel"
+      },
+      "channel_level_front_top": {
+        "name": "Front-Top-Pegel"
+      },
+      "channel_level_rear": {
+        "name": "Rear-Pegel"
+      },
+      "channel_level_rear_side": {
+        "name": "Rear-Side-Pegel"
+      },
+      "channel_level_rear_top": {
+        "name": "Rear-Top-Pegel"
+      },
+      "channel_level_side": {
+        "name": "Seitenpegel"
+      },
+      "channel_level_wide": {
+        "name": "Wide-Pegel"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Höhen"
+      },
+      "woofer_level": {
+        "name": "Woofer-Pegel"
       }
     },
     "select": {
@@ -1117,6 +1183,28 @@
           "low": "Niedrig",
           "high": "Hoch"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Sprache der Sprachansagen",
+        "state": {
+          "eng": "Englisch",
+          "deu": "Deutsch",
+          "fra": "Französisch",
+          "kor": "Koreanisch",
+          "spa": "Spanisch",
+          "eng_uk": "Englisch (UK)",
+          "ita": "Italienisch"
+        }
+      },
+      "equalizer": {
+        "name": "Equalizer",
+        "state": {
+          "none": "Keiner",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klassik",
+          "custom": "Benutzerdefiniert"
+        }
       }
     },
     "sensor": {
@@ -1608,6 +1696,31 @@
       },
       "auto_changeover_heat_secondary_offset": {
         "name": "Automatische Umschaltung Heizen sekundärer Versatz"
+      },
+      "current_eq_mode": {
+        "name": "Aktueller EQ-Modus"
+      },
+      "installation_type": {
+        "name": "Installationstyp"
+      },
+      "micom_version": {
+        "name": "Micom-Version"
+      },
+      "network_connection": {
+        "name": "Verbindung",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Ton aus"
+      },
+      "speaker_status": {
+        "name": "Lautsprecherstatus"
+      },
+      "wifi_signal": {
+        "name": "WLAN-Signal"
       }
     },
     "switch": {
@@ -1862,6 +1975,36 @@
       },
       "extra_rinse": {
         "name": "Extra-Spülen"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Sprachansagen"
+      },
+      "auto_power_down": {
+        "name": "Automatisches Ausschalten"
+      },
+      "auto_update": {
+        "name": "Automatische Aktualisierung"
+      },
+      "bass_boost": {
+        "name": "Bassverstärkung"
+      },
+      "night_mode": {
+        "name": "Nachtmodus"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Stimmverstärker"
       }
     },
     "time": {

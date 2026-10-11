@@ -1970,3 +1970,19 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_rac_01001
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_s61b():
+    """AV boards have no /information/vs/0, so /oic/d alone routes them."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_s61b")
+    golden = json.loads((GOLDEN / "soundbar_s61b.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_s61b", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
