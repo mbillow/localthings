@@ -484,6 +484,20 @@ async def test_a_different_mode_is_still_written():
     assert [payload for _, payload in coordinator.commands] == [("mode", "Heat")]
 
 
+async def test_turning_on_in_the_last_mode_still_sets_the_temperature():
+    resources = _load_device(FIXTURE)
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_temperature(
+        hvac_mode=HVACMode.COOL, temperature=20
+    )
+
+    assert [payload for _, payload in coordinator.commands] == [
+        ("power", True),
+        ("temperature_ocf", 20),
+    ]
+
+
 def test_preset_comes_from_the_comode_token():
     resources = _load_device(FIXTURE)
     entity = _climate(resources)
