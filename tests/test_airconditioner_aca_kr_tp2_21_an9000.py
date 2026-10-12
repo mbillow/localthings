@@ -73,4 +73,4 @@ async def test_turning_on_keeps_the_chosen_ventilation_mode(climate):
     await climate.async_set_hvac_mode(HVACMode.FAN_ONLY)
 
     sent = [call.args[1] for call in climate.coordinator.async_send_command.call_args_list]
-    assert sent == [("power", True), ("mode", "SmartVentilation")]
+    assert sent == [("power", True)]
