@@ -733,6 +733,9 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
             return
         if not self._is_on():
             await self.coordinator.async_send_command(self._bound, ("power", True))
+        # The board might answer 4.00 to a write of the mode it is already in
+        if device == _first(self._rep(MODE_HREF).get(_MODES_FIELD)):
+            return
         await self.coordinator.async_send_command(self._bound, ("mode", device))
 
     async def async_turn_on(self) -> None:
