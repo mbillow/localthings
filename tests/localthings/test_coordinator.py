@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import threading
 import time
 from datetime import timedelta
 from typing import Any, cast
@@ -423,6 +424,33 @@ def test_cache_changes_coalesce_into_a_single_push(hass: HomeAssistant, mock_ent
         coordinator._on_cache_changed(True, "poll")
 
         assert mock_add_job.call_count == 2
+
+
+async def test_push_does_not_postpone_the_summary_poll(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """async_set_updated_data reschedules the next poll a full interval out,
+    so pushes arriving faster than that would starve the summary poll. A
+    push must reach listeners and leave the poll schedule alone."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    scheduled = coordinator._unsub_refresh
+    assert scheduled is not None
+    coordinator.last_update_success = False
+
+    updates: list[None] = []
+    unsub = coordinator.async_add_listener(lambda: updates.append(None))
+    try:
+        coordinator.data = {}
+        coordinator._push_cache_snapshot()
+    finally:
+        unsub()
+
+    assert updates
+    assert coordinator.data
+    assert coordinator._unsub_refresh is scheduled
+    assert coordinator.last_update_success is False
 
 
 async def test_enters_poll_mode_when_no_notifies_arrive(
@@ -1164,6 +1192,76 @@ async def _cancel_background_subpolls(coordinator: LocalThingsCoordinator) -> No
         await task
 
 
+async def test_cancelled_subpoll_keeps_the_session_lock_until_its_read_returns(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """Cancelling an executor job doesn't stop its thread. The summary poll
+    cancels the sub-poll and then takes the lock, so the lock must stay held
+    until the in-flight read returns, or two threads share one session."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    await _cancel_background_subpolls(coordinator)
+    assert coordinator._hot_hrefs
+
+    reading = threading.Event()
+    release = threading.Event()
+    stops: list[threading.Event] = []
+
+    def _slow_read(hrefs, *, stop):
+        stops.append(stop)
+        reading.set()
+        release.wait(5)
+        return {}
+
+    def _in_a_thread(target, *args):
+        # The test hass runs executor jobs inline; this needs a real thread.
+        return hass.loop.run_in_executor(None, target, *args)
+
+    with (
+        patch.object(coordinator, "_poll_hrefs_blocking", side_effect=_slow_read),
+        patch.object(hass, "async_add_executor_job", side_effect=_in_a_thread),
+        patch.object(coordinator, "_SUBPOLL_STEP_S", 0.01),
+    ):
+        task = hass.async_create_task(coordinator._run_subpolls())
+        assert await hass.loop.run_in_executor(None, reading.wait, 5)
+        task.cancel()
+        await asyncio.wait({task}, timeout=0.2)
+
+        assert coordinator._session_lock.locked()
+        assert stops[0].is_set()
+
+        release.set()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert task.cancelled()
+    assert not coordinator._session_lock.locked()
+
+
+def test_poll_hrefs_blocking_stops_between_hrefs(hass: HomeAssistant, mock_entry) -> None:
+    """A cancelled sub-poll's thread finishes the read in flight and skips
+    the rest of its batch, so the summary poll it holds up waits for one
+    read, not the whole batch."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    stop = threading.Event()
+    reads: list[list[str]] = []
+
+    class _Session:
+        def pace(self) -> None:
+            pass
+
+        def read(self, path, timeout):
+            reads.append(path)
+            stop.set()
+            return 0x45, {}
+
+    coordinator._session = cast(Any, _Session())
+    coordinator._poll_hrefs_blocking(["/a/vs/0", "/b/vs/0", "/c/vs/0"], apply=False, stop=stop)
+
+    assert reads == [["a", "vs", "0"]]
+
+
 async def test_observe_mode_subpolls_only_silent_hrefs(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:
@@ -1180,7 +1278,7 @@ async def test_observe_mode_subpolls_only_silent_hrefs(
 
     polled: list[list[str]] = []
 
-    def _capture(hrefs):
+    def _capture(hrefs, **_):
         polled.append(list(hrefs))
 
     with (
@@ -1238,7 +1336,7 @@ async def test_observe_mode_skips_empty_subpoll_slots(
 
     polled: list[list[str]] = []
 
-    def _capture(hrefs):
+    def _capture(hrefs, **_):
         polled.append(list(hrefs))
 
     with (
