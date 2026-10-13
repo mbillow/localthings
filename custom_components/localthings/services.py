@@ -16,12 +16,13 @@ through that subdevice, and shapes the response.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from typing import Any, cast
 
 import voluptuous as vol
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError, Unauthorized, UnknownUser
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util.unit_conversion import TemperatureConverter
@@ -36,6 +37,7 @@ from .const import (
 from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
 from .registry.capabilities import cook
 from .registry.encode import json_safe
+from .registry.redact import redact_resources
 from .registry.subdevices import MAIN, Subdevice
 
 ATTR_HREF = "href"
@@ -213,8 +215,11 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
         # canonical_resources).
         # device_resources, not canonical_resources: this response is what
         # the appliance reported, without the fields this integration merges
-        # on for its own use (see coordinator.entity_resources).
-        snapshot: dict[str, Any] = {"resources": coordinator.device_resources(subdevice)}
+        # on for its own use (see coordinator.entity_resources). Redacted
+        # like a diagnostics download, since it is the same whole-tree dump.
+        snapshot: dict[str, Any] = {
+            "resources": redact_resources(coordinator.device_resources(subdevice))
+        }
         return cast(ServiceResponse, json_safe(snapshot))
 
     # A `?a=b&c=d` suffix becomes URI-Query options, e.g. `if=oic.if.b` to
@@ -297,6 +302,28 @@ async def _async_start_cooking(hass: HomeAssistant, call: ServiceCall) -> None:
     )
 
 
+def _admin_only(
+    hass: HomeAssistant, handler: Callable[[ServiceCall], Coroutine[Any, Any, ServiceResponse]]
+) -> Callable[[ServiceCall], Coroutine[Any, Any, ServiceResponse]]:
+    """Refuse a non-admin user, as HA's async_register_admin_service does.
+
+    Not that helper itself: it only takes supports_response from HA 2025.6,
+    and hacs.json still allows 2025.1. A call with no user, such as the
+    options-flow debug panel's, passes.
+    """
+
+    async def _checked(call: ServiceCall) -> ServiceResponse:
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None:
+                raise UnknownUser(context=call.context)
+            if not user.is_admin:
+                raise Unauthorized(context=call.context)
+        return await handler(call)
+
+    return _checked
+
+
 def async_setup_services(hass: HomeAssistant) -> None:
     """Register start_cooking (issue #473), write_resource/read_resource
     (issue #300) and observe_resource (issue #607).
@@ -320,24 +347,27 @@ def async_setup_services(hass: HomeAssistant) -> None:
     async def _handle_start_cooking(call: ServiceCall) -> None:
         await _async_start_cooking(hass, call)
 
+    # The raw actions are admin-only: a write skips the Remote Control
+    # block and every entity check, and a read returns resources entities
+    # never expose.
     hass.services.async_register(
         DOMAIN,
         SERVICE_WRITE_RESOURCE,
-        _handle_write,
+        _admin_only(hass, _handle_write),
         schema=_WRITE_RESOURCE_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(
         DOMAIN,
         SERVICE_READ_RESOURCE,
-        _handle_read,
+        _admin_only(hass, _handle_read),
         schema=_READ_RESOURCE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
     hass.services.async_register(
         DOMAIN,
         SERVICE_OBSERVE_RESOURCE,
-        _handle_observe,
+        _admin_only(hass, _handle_observe),
         schema=_OBSERVE_RESOURCE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )

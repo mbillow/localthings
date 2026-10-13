@@ -4,6 +4,8 @@ Two HA actions, `localthings.write_resource` and `localthings.read_resource`, ta
 
 Both take a `device_id` (a device picker filtered to this integration) and resolve to exactly one appliance — a target that expands to more than one LocalThings device is rejected rather than silently fanned out across all of them. `href` is always canonical (e.g. `/mode/vs/0`); if the device you targeted is a subdevice — an oven's second cavity, an AC's second indoor unit — it's translated to the real on-the-wire href for you (`/mode/vs/1`, say), and the response reports both forms so there's no ambiguity about what was actually sent.
 
+All three raw actions (these two and `observe_resource`) are admin-only: a call from a non-admin Home Assistant user is refused.
+
 `write_resource` exists because a single write, one at a time, isn't enough to probe some boards. Issue #300's Samsung wall oven answers `2.04 Changed` to a settings write while idle and then silently reverts it — the write only sticks once a cycle is already running. Finding what actually triggers a cycle needs an *ordered sequence* of writes to different resources, with real delays between them, and a way to check afterward whether anything actually held:
 
 ```yaml
@@ -56,6 +58,6 @@ data:
   href: /mode/vs/0
 ```
 
-returning `{"href", "actual_href", "code", "raw_code", "rep"}` off a **live GET straight from the device**, not the cache — which can be up to a poll interval stale, exactly the staleness that would make `held` above meaningless. A sixth key, `body`, appears only when the response isn't a Property map: a Collection (`/device/0`, and the `x.com.samsung.devcol` siblings some boards expose) answers a CBOR list, which `rep` can't carry, and which would otherwise read as an accepted-but-empty resource. Omit `href` and you get `{"resources": {href: rep, ...}}`, the cached snapshot of everything this integration currently tracks on that device, with no GET at all — useful for seeing what's there before you start writing to it, without hammering the appliance.
+returning `{"href", "actual_href", "code", "raw_code", "rep"}` off a **live GET straight from the device**, not the cache — which can be up to a poll interval stale, exactly the staleness that would make `held` above meaningless. A sixth key, `body`, appears only when the response isn't a Property map: a Collection (`/device/0`, and the `x.com.samsung.devcol` siblings some boards expose) answers a CBOR list, which `rep` can't carry, and which would otherwise read as an accepted-but-empty resource. Omit `href` and you get `{"resources": {href: rep, ...}}`, the cached snapshot of everything this integration currently tracks on that device, with no GET at all — useful for seeing what's there before you start writing to it, without hammering the appliance. Account and network fields in it are redacted the same way a diagnostics download redacts them; a GET of one `href` returns that resource as the device sent it.
 
 The **Debug write** panel under a device's **Configure** menu is the friendlier single-write path over this same machinery — pick an href, type a payload, see the result — for when you don't need a sequence.
