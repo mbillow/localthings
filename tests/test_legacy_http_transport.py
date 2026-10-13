@@ -10,6 +10,7 @@ CoAP device.
 
 from __future__ import annotations
 
+import http.client
 import json
 from pathlib import Path
 from typing import ClassVar
@@ -72,7 +73,10 @@ class _FakeConnection:
         payload = json.loads(body) if body else None
         _FakeConnection.log.append((method, path, payload, dict(headers or {})))
         routes = _FakeConnection.routes
-        self._status, self._body = routes.get((method, path), routes.get(path, (404, None)))
+        route = routes.get((method, path), routes.get(path, (404, None)))
+        if isinstance(route, Exception):
+            raise route
+        self._status, self._body = route
 
     def getresponse(self):
         status, body = self._status, self._body
@@ -198,6 +202,21 @@ class TestSeed:
         assert code == 0x45
         assert "/information/vs/0" not in {entry["href"] for entry in body}
         assert "/washer/vs/0" in {entry["href"] for entry in body}
+
+    @pytest.mark.parametrize(
+        "error", [TimeoutError("timed out"), http.client.RemoteDisconnected("closed")]
+    )
+    def test_a_linked_resource_that_does_not_answer_does_not_fail_the_sweep(self, transport, error):
+        """A dropped or timed-out linked read is skipped like a failed status,
+        and the next linked resource is still read."""
+        _FakeConnection.routes["/devices/0/configuration"] = error
+
+        code, body = transport.read(["device", "0"], timeout=10.0)
+
+        assert code == 0x45
+        hrefs = {entry["href"] for entry in body}
+        assert "/information/vs/0" in hrefs
+        assert "/washer/vs/0" in hrefs
 
     def test_remote_control_off_reads_as_a_failed_poll_with_its_reason(self, transport):
         """403 SHE-001 is what every request gets while Remote Control is off
