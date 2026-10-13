@@ -616,6 +616,25 @@ def test_fac_bora_climate_entity_present():
     assert any(isinstance(item.desc, ClimateDesc) for item in bound)
 
 
+def test_fac_bora_standby_power_sentinel_reads_unknown():
+    """The fixture's instantaneousPower is the 65278 (0xFEFE) standby
+    reading from issue #625, not 65 kW."""
+    reg, resources = _ac_fac_bora()
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    state = flatten(bound, resources)
+    assert "power_watts" in state
+    assert state["power_watts"] is None
+
+    running = {
+        **resources,
+        "/energy/consumption/vs/0": {
+            **resources["/energy/consumption/vs/0"],
+            "x.com.samsung.da.instantaneousPower": "338.000000",
+        },
+    }
+    assert flatten(bound, running)["power_watts"] == 338.0
+
+
 def test_fac_bora_subdevices_and_runningmode_are_ignored_not_guessed():
     assert "/subdevices/vs/0" in airconditioner._AC_IGNORED
     assert "/runn/vs/0" in airconditioner._AC_IGNORED
