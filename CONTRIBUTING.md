@@ -11,7 +11,7 @@ docker compose logs -f
 
 The `Dockerfile` starts from the official `home-assistant/home-assistant:stable` image and installs `smartthings-local` at build time, so the container doesn't wait on Home Assistant's own pip install at startup. Rebuild with `--build` whenever the pinned `smartthings-local` version changes.
 
-`docker-compose.yml` uses `network_mode: host`, because DTLS runs over UDP and can't reach LAN appliances through Docker's bridge network. It mounts `custom_components/localthings/` read-only into `ha_config/custom_components/`. For verbose protocol logs, set `custom_components.localthings` to `debug` in `ha_config/configuration.yaml`.
+`docker-compose.yml` uses `network_mode: host`, because DTLS runs over UDP and can't reach LAN appliances through Docker's bridge network. It mounts `custom_components/localthings/` read-only into `ha_config/custom_components/`. For verbose protocol logs, set `custom_components.localthings` and `smartthings_local` to `debug` in `ha_config/configuration.yaml`. The integration's "Enable debug logging" toggle raises both.
 
 ## Tests and checks
 
