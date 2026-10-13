@@ -1408,7 +1408,13 @@
         "name": "Betriebszeit"
       },
       "oven_state": {
-        "name": "Ofenzustand"
+        "name": "Ofenzustand",
+        "state": {
+          "ready": "Bereit",
+          "preheat": "Vorheizen",
+          "cooking": "Garen",
+          "finish": "Fertig"
+        }
       },
       "cavity_state": {
         "name": "Garraumzustand"

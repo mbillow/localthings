@@ -410,9 +410,15 @@ OVEN_CAVITY = Capability(
     href="/oven/vs/0",
     poll_tier="hot",
     entities=(
+        # Ready and Preheat from the fixtures, Cooking and Finish from issue
+        # #183's dumps of a timed bake; an unseen value passes through raw via
+        # sensor.py's options property.
         SensorDesc(
             key="oven_state",
             field="x.com.samsung.da.state",
+            device_class="enum",
+            options=("ready", "preheat", "cooking", "finish"),
+            value_fn=lambda v: v.lower() if isinstance(v, str) else v,
         ),
     ),
 )

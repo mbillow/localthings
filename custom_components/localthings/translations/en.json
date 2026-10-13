@@ -1414,7 +1414,13 @@
         "name": "Operation time"
       },
       "oven_state": {
-        "name": "Cavity state"
+        "name": "Cavity state",
+        "state": {
+          "ready": "Ready",
+          "preheat": "Preheat",
+          "cooking": "Cooking",
+          "finish": "Finished"
+        }
       },
       "cavity_state": {
         "name": "Cavity state"

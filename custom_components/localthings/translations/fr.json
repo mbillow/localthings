@@ -1414,7 +1414,13 @@
         "name": "Durée de fonctionnement"
       },
       "oven_state": {
-        "name": "État de la cavité"
+        "name": "État de la cavité",
+        "state": {
+          "ready": "Prêt",
+          "preheat": "Préchauffage",
+          "cooking": "Cuisson",
+          "finish": "Terminé"
+        }
       },
       "cavity_state": {
         "name": "État de la cavité"

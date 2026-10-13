@@ -1780,7 +1780,13 @@
         "name": "Tiempo de funcionamiento"
       },
       "oven_state": {
-        "name": "Estado de la cavidad"
+        "name": "Estado de la cavidad",
+        "state": {
+          "ready": "Listo",
+          "preheat": "Precalentamiento",
+          "cooking": "Cocción",
+          "finish": "Finalizado"
+        }
       },
       "cavity_state": {
         "name": "Estado de la cavidad"

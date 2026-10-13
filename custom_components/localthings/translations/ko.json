@@ -1414,7 +1414,13 @@
         "name": "운전 시간"
       },
       "oven_state": {
-        "name": "조리실 상태"
+        "name": "조리실 상태",
+        "state": {
+          "ready": "준비됨",
+          "preheat": "예열",
+          "cooking": "조리 중",
+          "finish": "완료"
+        }
       },
       "cavity_state": {
         "name": "조리실 상태"
