@@ -162,6 +162,16 @@ keep their control. Setup removes the old LCD_OV_WALL Sound registry entry only
 when that cavity reports an options list without Sound; unknown resources and
 other config entries are preserved.
 
+The owner's panel photos confirm a separate Volume slider spanning 0–15.
+On October 14, diagnostics were supplied after setting it to 0 and again to 15,
+following instructions to reload the integration. Each download contained both
+cavities. The complete main resources, lower resources and raw legacy transport
+bodies were identical at both settings; only HA's internal Observe mode-change
+timestamp differed. No named Sound/Volume field or indirectly changing value was
+found. This rules out a volume reading in those captured responses, not every
+possible firmware command or unqueried endpoint. No functional volume slider can
+be added from this evidence, and no guessed volume write is introduced.
+
 Energy saving already has that presence gate. Its command sends one
 `EnergySaving_On` or `EnergySaving_Off` token to the selected cavity's Mode
 resource through the existing legacy transport. A reported token proves status
@@ -170,6 +180,13 @@ has established command support on this oven, so it is not reclassified as
 read-only or described as fixed. The next check is an idle toggle with debug
 logging, followed by a fresh resource read and panel comparison. Restore the
 original setting after checking.
+
+The panel identifies this setting as **12 hour energy saving**: automatic
+shutoff after 12 hours of baking or 3 hours of broiling. This is separate from
+the maximum 9:59 Cook Time countdown documented on [manual][manual] p.24;
+baking can also be started with Cook Time unset. The shutoff setting does not
+establish support for a longer countdown. Its meaning is confirmed by the
+panel; acceptance of the network write still needs verification.
 
 The coordinator initially displays writes optimistically. An explicit immediate
 readback check is currently conditional on Remote Control being off; otherwise
