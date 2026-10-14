@@ -828,14 +828,14 @@ async def test_both_discovered_setpoints_expose_numeric_box_attributes(hass: Hom
 
 
 @pytest.mark.parametrize("index", [0, 1])
-@pytest.mark.parametrize("minutes", [0, 5, 599])
+@pytest.mark.parametrize("minutes", [0, 5, 59])
 async def test_cook_time_before_mode_is_held_and_survives_the_first_mode_selection(
     hass: HomeAssistant, index, minutes
 ):
     coordinator = await _discovered(hass)
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
     resources = coordinator._cavity_resources(cavity)
     _FakeConnection.log.clear()
@@ -864,7 +864,9 @@ async def test_cook_time_before_mode_is_held_and_survives_the_first_mode_selecti
     assert coordinator._held_cooks.get(MAIN if index else _lower(coordinator)) is None
 
 
-@pytest.mark.parametrize("order", list(permutations(("oven_mode", "oven_setpoint", "cook_time"))))
+@pytest.mark.parametrize(
+    "order", list(permutations(("oven_mode", "oven_setpoint", "cook_time_minutes")))
+)
 @pytest.mark.parametrize(
     "index,divided,mode",
     [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
@@ -874,11 +876,11 @@ async def test_idle_settings_can_be_entered_in_any_order(hass, order, index, div
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
     resources = coordinator._cavity_resources(cavity)
     _FakeConnection.log.clear()
-    values = {"oven_mode": mode, "oven_setpoint": 350, "cook_time": 5}
+    values = {"oven_mode": mode, "oven_setpoint": 350, "cook_time_minutes": 5}
     entered = set()
 
     for key in order:
@@ -886,7 +888,7 @@ async def test_idle_settings_can_be_entered_in_any_order(hass, order, index, div
         entered.add(key)
         if "oven_setpoint" in entered:
             assert target.native_value == 350
-        if "cook_time" in entered:
+        if "cook_time_minutes" in entered:
             assert timer.native_value == 5
         if "oven_mode" not in entered:
             assert select.current_option == "no_operation"
@@ -915,7 +917,7 @@ async def test_idle_cook_time_starts_blank_and_keeps_explicit_values(hass, index
     coordinator = await _discovered(hass, _routes(divided=divided))
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     resources = coordinator._cavity_resources(cavity)
     coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
     _FakeConnection.log.clear()
@@ -923,7 +925,7 @@ async def test_idle_cook_time_starts_blank_and_keeps_explicit_values(hass, index
     assert coordinator.data[timer._state_key] == 0
     assert timer.native_value is None
     assert timer.native_min_value == 0
-    assert timer.native_max_value == 599
+    assert timer.native_max_value == 59
     assert coordinator._held_cooks.get(cavity) is None
 
     await coordinator.async_send_command(bound["oven_mode"], mode)
@@ -959,7 +961,7 @@ async def test_same_mode_reselection_preserves_settings_after_a_refused_start(ha
     mode = "LowerBake" if index else "UpperConvectionBake"
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     _FakeConnection.log.clear()
 
     await coordinator.async_send_command(bound["oven_mode"], mode)
@@ -1014,7 +1016,7 @@ async def test_pending_mode_does_not_display_unused_values_from_the_previous_coo
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     temp_href = cavity.to_actual(cook.TEMPERATURES_HREF)
     time_href = cavity.to_actual(cook.OPERATION_HREF)
     temperatures = coordinator.resource(temp_href)
@@ -1062,7 +1064,7 @@ async def test_running_zero_cook_time_stays_visible_and_returns_to_blank_when_id
     coordinator = await _discovered(hass, _routes(lower=running))
     cavity = _lower(coordinator)
     bound = next(
-        b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "cook_time"
+        b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "cook_time_minutes"
     )
     timer = LocalThingsNumber(coordinator, bound)
     coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
@@ -1084,11 +1086,11 @@ async def test_running_zero_cook_time_stays_visible_and_returns_to_blank_when_id
     assert timer.native_value is None
 
 
-async def test_other_oven_boards_keep_their_idle_zero_cook_time(hass):
+async def test_other_oven_families_keep_their_idle_zero_cook_time(hass):
     coordinator = await _discovered(hass)
     coordinator._observe.apply(
         "/information/vs/0",
-        {**coordinator.resource("/information/vs/0"), PREFIX + "modelNum": "LCD_OV_WALL_20K"},
+        {**coordinator.resource("/information/vs/0"), PREFIX + "modelNum": "OTHER_OVEN"},
         source="poll",
     )
     bound = next(b for b in coordinator.bound if b.subdevice == MAIN and b.desc.key == "cook_time")
@@ -1163,7 +1165,8 @@ async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
     assert target.native_value == temperature
     assert target.native_max_value == 480
-    await coordinator.async_send_command(bound["cook_time"], 599)
+    await coordinator.async_send_command(bound["cook_time_hours"], 9)
+    await coordinator.async_send_command(bound["cook_time_minutes"], 59)
     plan = coordinator._held_cooks[cavity].plan(coordinator._cavity_resources(cavity))
     assert plan.mode == f"{prefix}Healthycook{recipe}"
     assert plan.temperature == temperature
@@ -1174,7 +1177,7 @@ async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
     with pytest.raises(ServiceValidationError):
         await coordinator.async_send_command(bound["oven_setpoint"], 485)
     with pytest.raises(ServiceValidationError):
-        await coordinator.async_send_command(bound["cook_time"], 600)
+        await coordinator.async_send_command(bound["cook_time_minutes"], 60)
 
 
 async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged(hass):
@@ -1185,15 +1188,16 @@ async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged
     }
     coordinator = await _discovered(hass, _routes(lower=running))
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == _lower(coordinator)}
-    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time_minutes"])
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
-    assert timer.native_max_value == 599
+    assert timer.native_max_value == 59
     assert target.native_max_value == 480
 
     coordinator._observe.apply(
         "/information/vs/1", {PREFIX + "modelNum": "OTHER_OVEN"}, source="poll"
     )
-    assert timer.native_max_value == 1439
+    total = LocalThingsNumber(coordinator, bound["cook_time"])
+    assert total.native_max_value == 1439
     assert target.native_max_value == 550
     assert LocalThingsSelect(coordinator, bound["oven_mode"]).translation_key == "oven_mode"
 
@@ -1252,7 +1256,7 @@ async def test_normal_start_keeps_the_lock_through_both_writes(
     if use_button:
         await coordinator.async_send_command(bound("oven_mode"), mode)
         await coordinator.async_send_command(bound("oven_setpoint"), 350)
-        await coordinator.async_send_command(bound("cook_time"), 5)
+        await coordinator.async_send_command(bound("cook_time_minutes"), 5)
     _FakeConnection.log.clear()
 
     def settle(seconds):

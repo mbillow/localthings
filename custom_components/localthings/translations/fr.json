@@ -2369,7 +2369,7 @@
       "message": "Le rinçage supplémentaire n'est pas disponible avec le programme sélectionné."
     },
     "cook_duration_part_invalid": {
-      "message": "Saisissez des heures entières positives ou nulles et des minutes de 0 à 59."
+      "message": "Saisissez des heures entières de 0 à 9 et des minutes entières de 0 à 59."
     },
     "cook_duration_unavailable": {
       "message": "La durée de cuisson actuelle est indisponible. Attendez une mise à jour de l’appareil avant de modifier les heures ou les minutes."

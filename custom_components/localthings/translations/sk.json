@@ -2369,7 +2369,7 @@
       "message": "Extra plákanie nie je pri vybranom cykle dostupné."
     },
     "cook_duration_part_invalid": {
-      "message": "Zadajte celé nezáporné hodiny a minúty od 0 do 59."
+      "message": "Zadajte celé hodiny od 0 do 9 a celé minúty od 0 do 59."
     },
     "cook_duration_unavailable": {
       "message": "Aktuálny čas varenia nie je dostupný. Pred zmenou hodín alebo minút počkajte na aktualizáciu zariadenia."

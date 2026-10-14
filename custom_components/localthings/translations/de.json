@@ -2369,7 +2369,7 @@
       "message": "Extra Rinse ist bei dem ausgewählten Programm nicht verfügbar."
     },
     "cook_duration_part_invalid": {
-      "message": "Geben Sie ganze, nicht negative Stunden und Minuten von 0 bis 59 ein."
+      "message": "Geben Sie ganze Stunden von 0 bis 9 und ganze Minuten von 0 bis 59 ein."
     },
     "cook_duration_unavailable": {
       "message": "Die aktuelle Garzeit ist nicht verfügbar. Warten Sie auf eine Aktualisierung des Geräts, bevor Sie Stunden oder Minuten ändern."

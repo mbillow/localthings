@@ -21,7 +21,8 @@ from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, 
 from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
 from .entity import _is_included, async_load_instance_names
 from .registry.adapter import _key
-from .registry.entities import BinarySensorDesc
+from .registry.capabilities.common import is_lcd_wall_oven
+from .registry.entities import BinarySensorDesc, NumberDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -279,6 +280,67 @@ def _drop_power_switches_superseded_by_sensors(
         ent_reg.async_remove(old.entity_id)
 
 
+@callback
+def _drop_unsupported_oven_sound_switches(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove phantom Sound controls only after a wall oven reports its options."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, SwitchDesc)
+            or bound.desc.key != "sound"
+            or not is_lcd_wall_oven(coordinator.discovery_canonical(bound.subdevice))
+            or _is_included(bound, coordinator)
+        ):
+            continue
+        rep = coordinator.discovery_resources.get(bound.href) or {}
+        if not isinstance(rep.get("x.com.samsung.da.options"), list):
+            continue
+        unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(bound)}"
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info("Removing %s: the oven reports no Sound option", old.entity_id)
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
+def _drop_cook_times_superseded_by_parts(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove the total-duration number only where both replacements exist."""
+    parts = {
+        (bound.subdevice, bound.desc.key)
+        for bound in coordinator.bound
+        if isinstance(bound.desc, NumberDesc)
+        and bound.desc.key in ("cook_time_hours", "cook_time_minutes")
+        and _is_included(bound, coordinator)
+    }
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, NumberDesc)
+            or bound.desc.key != "cook_time"
+            or _is_included(bound, coordinator)
+            or (bound.subdevice, "cook_time_hours") not in parts
+            or (bound.subdevice, "cook_time_minutes") not in parts
+        ):
+            continue
+        unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(bound)}"
+        entity_id = ent_reg.async_get_entity_id("number", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info(
+            "Removing %s, superseded by Cook time hours and Cook time minutes; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -419,6 +481,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _drop_power_switches_superseded_by_sensors(hass, entry, coordinator)
+    _drop_cook_times_superseded_by_parts(hass, entry, coordinator)
+    _drop_unsupported_oven_sound_switches(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

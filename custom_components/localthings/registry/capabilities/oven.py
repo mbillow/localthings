@@ -30,7 +30,7 @@ from ..entities import (
     SwitchDesc,
 )
 from . import cook
-from .common import normalize_temp_unit
+from .common import is_lcd_wall_oven, normalize_temp_unit
 from .operational import STOP_BUTTON
 
 # ---------------------------------------------------------------------------
@@ -367,7 +367,13 @@ def _cook_time_bounds(rep, resources):
 
 
 def _cook_time_part_exists(rep, resources):
-    return cook.is_lcd_wall_16k(resources) and "x.com.samsung.da.operationTime" in rep
+    return is_lcd_wall_oven(resources) and "x.com.samsung.da.operationTime" in rep
+
+
+def _cook_time_total_exists(rep, resources):
+    return not is_lcd_wall_oven(resources) and (
+        not rep or is_stub_rep(rep) or "x.com.samsung.da.operationTime" in rep
+    )
 
 
 def _cook_hours(op_time):
@@ -381,8 +387,7 @@ def _cook_minutes(op_time):
 
 
 def _cook_hours_bounds(rep, resources):
-    bounds = _cook_time_bounds(rep, resources)
-    return (0.0, bounds[1] // 60, 1.0) if bounds is not None else None
+    return 0.0, float(cook.duration_parts_max(resources) // 3600), 1.0
 
 
 START_COOKING_BUTTON = ButtonDesc(
@@ -453,6 +458,7 @@ OVEN_OPERATIONAL_STATE = Capability(
             native_max=1439,
             step=1.0,
             icon="mdi:timer",
+            exists_fn=_cook_time_total_exists,
             bounds_fn=_cook_time_bounds,
             value_fn=_op_minutes,
             write_fn=_cook_time_write,
@@ -466,7 +472,7 @@ OVEN_OPERATIONAL_STATE = Capability(
             field="x.com.samsung.da.operationTime",
             unit="h",
             native_min=0,
-            native_max=23,
+            native_max=9,
             step=1.0,
             icon="mdi:timer",
             exists_fn=_cook_time_part_exists,
@@ -887,6 +893,7 @@ OVEN_MODE = Capability(
             field="x.com.samsung.da.options",
             icon="mdi:volume-high",
             entity_category="config",
+            exists_fn=_has_option("Sound"),
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,

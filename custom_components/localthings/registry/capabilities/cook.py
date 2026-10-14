@@ -649,21 +649,29 @@ DURATION_PARTS = (PARAM_DURATION_HOURS, PARAM_DURATION_MINUTES)
 PARAM_START = "start"
 
 
+def duration_parts_max(resources: dict) -> int:
+    """The paired controls' maximum, narrowed by the current mode when known."""
+    maximum = 599 * 60
+    spec = mode_specs(resources).get(current_mode(resources) or "")
+    return min(maximum, spec.time_max) if spec and spec.time_max is not None else maximum
+
+
 def duration_with_part(param: str, payload: Any, resources: dict) -> int:
     """Replace one timer component, preserving the cavity's other component."""
     try:
         value = float(payload)
     except (TypeError, ValueError):
         value = float("nan")
-    if not value.is_integer() or value < 0 or (param == PARAM_DURATION_MINUTES and value > 59):
+    maximum_part = 9 if param == PARAM_DURATION_HOURS else 59
+    if not value.is_integer() or not 0 <= value <= maximum_part:
         raise CookStartError("cook_duration_part_invalid")
     seconds = parse_hms((resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME))
     if seconds is None:
         raise CookStartError("cook_duration_unavailable")
     hours, minutes = divmod(-(-seconds // 60), 60)
     total = int(value) * 60 + minutes if param == PARAM_DURATION_HOURS else hours * 60 + int(value)
-    maximum = legacy_wall_time_max(resources)
-    if maximum is not None and total * 60 > maximum:
+    maximum = duration_parts_max(resources)
+    if total * 60 > maximum:
         raise CookStartError("cook_duration_total_out_of_range", max=format_hms(maximum))
     return total
 

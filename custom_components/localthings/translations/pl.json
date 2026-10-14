@@ -2369,7 +2369,7 @@
       "message": "Dodatkowe płukanie nie jest dostępne dla wybranego cyklu."
     },
     "cook_duration_part_invalid": {
-      "message": "Wprowadź całkowite, nieujemne godziny i minuty od 0 do 59."
+      "message": "Wprowadź całkowite godziny od 0 do 9 i całkowite minuty od 0 do 59."
     },
     "cook_duration_unavailable": {
       "message": "Bieżący czas gotowania jest niedostępny. Poczekaj na aktualizację urządzenia przed zmianą godzin lub minut."

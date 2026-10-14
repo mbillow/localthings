@@ -2369,7 +2369,7 @@
       "message": "Extra Rinse is niet beschikbaar voor het geselecteerde programma."
     },
     "cook_duration_part_invalid": {
-      "message": "Voer hele, niet-negatieve uren en minuten van 0 tot 59 in."
+      "message": "Voer hele uren van 0 tot 9 en hele minuten van 0 tot 59 in."
     },
     "cook_duration_unavailable": {
       "message": "De huidige kooktijd is niet beschikbaar. Wacht op een update van het apparaat voordat u de uren of minuten wijzigt."

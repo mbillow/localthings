@@ -2369,7 +2369,7 @@
       "message": "Risciacquo extra non è disponibile per il ciclo selezionato."
     },
     "cook_duration_part_invalid": {
-      "message": "Inserisci ore intere non negative e minuti da 0 a 59."
+      "message": "Inserisci ore intere da 0 a 9 e minuti interi da 0 a 59."
     },
     "cook_duration_unavailable": {
       "message": "Il tempo di cottura attuale non è disponibile. Attendi un aggiornamento del dispositivo prima di modificare le ore o i minuti."

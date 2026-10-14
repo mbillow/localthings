@@ -52,29 +52,34 @@ measured minimum. No additional heating tests are required for this write-up.
 
 ## Settings and presentation
 
-Setpoint and Cook time use native numeric boxes. On the measured board an unset
-idle Cook time is blank; explicit zero and running values remain visible.
-The native duration unit setting converts value, bounds, step and writes together,
-so selecting hours preserves one-minute precision. This avoids the rounding of
-integer-minute values in the development Core 2026.9.4 environment. The coordinator
-still holds minutes and the appliance receives HH:MM:SS.
+Setpoint and cooking-duration controls use native numeric boxes. On the measured
+board an unset idle timer is blank; explicit zero and running values remain visible.
+Other oven families retain their total Cook time number and native duration-unit
+conversion, including one-minute precision when displaying decimal hours. The
+coordinator holds one duration and the appliance receives HH:MM:SS.
 
-The measured board also exposes **Cook time hours** and **Cook time minutes**
+The LCD_OV_WALL legacy wall-oven family exposes **Cook time hours** and **Cook time minutes**
 as two native number controls per cavity. They replace one component of the
 same duration: 1 h plus 30 min means 90 minutes, not two independent timers.
-Hours range from 0 to 9 and minutes from 0 to 59 under the manual's 9h59m
-limit; live modeSpecs remain authoritative. Each edit preserves the other
+Hours are limited to whole numbers from 0 to 9 and minutes from 0 to 59 in
+both entity bounds and command validation. Live modeSpecs can further restrict
+the combined duration. Each edit preserves the other
 component, and idle edits remain held until Start. Invalid components and an
 unreadable current duration are rejected without guessing a replacement.
 
-The original **Cook time** total-duration entity keeps its identity, units and
-write behavior for existing automations, and stays synchronized with the pair.
-It is retained on the device page; users who prefer only the new controls can
-hide it through Home Assistant's entity settings. The pair uses fixed units,
-not HA duration-unit conversion. Both are blank for an unset idle timer and
-show zero once explicitly set. HA determines their row layout; no custom
-frontend is added. These new controls have automated coverage but have not
-yet been confirmed on the owner's Home Assistant installation.
+The pair replaces the original **Cook time** total-duration entity for that family.
+Setup removes its old number registry entry only where both replacements exist,
+including a renamed entry, and only within the owning config entry. Automations
+using that old entity need the paired controls or the existing start_cooking
+action's duration parameter. Other oven families keep their original control.
+
+The pair uses fixed units, not HA duration-unit conversion. On the measured board,
+both are blank for an unset idle timer and show zero once explicitly set. HA
+determines their row layout; no custom frontend is added. Only the NV51K7770S has hardware evidence
+so far. Tests cover sibling family identifiers without claiming additional
+hardware captures. The owner confirmed both controls appear in Home Assistant;
+the duplicate-total removal and paired controls' behavior still need confirmation
+on the installation.
 
 Pending temperature and time may be entered before choosing a mode if at least
 one available mode accepts the combination. The first mode selection revalidates
@@ -146,6 +151,33 @@ Cold idle readings remained at 175 F with desired 0. The existing display filter
 therefore showed Unknown; that value is not a measured room temperature. This
 change does not alter temperature filtering or claim to fix a physical sensor.
 
+## Configuration switches
+
+The October 14 diagnostic and divided-cavity fixture report `EnergySaving_On`
+but no `Sound_*` token in the upper record; the lower has no options array.
+Sound was bound whenever the options array existed,
+making an absent option appear as an Off switch. It now uses the same
+token-presence gate as the other oven option switches. Devices reporting Sound
+keep their control. Setup removes the old LCD_OV_WALL Sound registry entry only
+when that cavity reports an options list without Sound; unknown resources and
+other config entries are preserved.
+
+Energy saving already has that presence gate. Its command sends one
+`EnergySaving_On` or `EnergySaving_Off` token to the selected cavity's Mode
+resource through the existing legacy transport. A reported token proves status
+exists, not that this firmware accepts changing it. No before/write/after capture
+has established command support on this oven, so it is not reclassified as
+read-only or described as fixed. The next check is an idle toggle with debug
+logging, followed by a fresh resource read and panel comparison. Restore the
+original setting after checking.
+
+The coordinator initially displays writes optimistically. An explicit immediate
+readback check is currently conditional on Remote Control being off; otherwise
+the normal refresh/settle path applies. A brief switch movement or HTTP success
+alone is therefore insufficient evidence. The Sound write confirmed in
+[the earlier investigation](oven-cycle-start.md#what-is-measured) was on a
+different TP2X board and does not prove legacy wall-oven support.
+
 ## Lamp investigation closed for this submission
 
 All 21 native resource responses were identical with the lamp on and off.
@@ -171,7 +203,7 @@ on the [investigation branch][research].
 Regression coverage includes both cavity paths, held settings, mode labels,
 duration conversion, paired hours/minutes in all 24 setting-entry orders,
 strict permission checks, timeout/refusal/no-replay paths,
-status migration, reservoir states and partial-item verification. Passing tests
+status migration, Sound capability gating, reservoir states and partial-item verification. Passing tests
 do not resolve the reported Smart Control incident. Revised-sequence Upper/whole
 operation, timer completion, native hours presentation and paired timer controls,
 simultaneous combinations,
