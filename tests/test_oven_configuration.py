@@ -1,10 +1,14 @@
-"""Configuration controls must correspond to reported oven options."""
+"""Oven configuration and diagnostic controls reflect supported behavior."""
 
 import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_unsupported_oven_sound_switches
+from custom_components.localthings import (
+    _drop_unsupported_oven_sound_switches,
+    _drop_unverified_oven_diagnosis_buttons,
+)
+from custom_components.localthings.button import LocalThingsButton
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import flatten
@@ -109,5 +113,75 @@ async def test_sound_cleanup_requires_known_absence_on_owning_legacy_oven(hass, 
     old = registry.async_get_or_create("switch", DOMAIN, switch.unique_id, config_entry=entry)
 
     _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
+
+    assert registry.async_get(old.entity_id) is not None
+
+
+@pytest.mark.parametrize(
+    "model,button_included",
+    [
+        ("LCD_OV_WALL_16K|NV51K7770S", False),
+        ("LCD_OV_WALL_20K|OTHER", True),
+        ("TP2X_DA-KS-WALLOVEN-000002", True),
+        (None, True),
+    ],
+)
+async def test_diagnosis_start_is_withdrawn_only_on_the_tested_board(hass, model, button_included):
+    coordinator = await _discovered(hass)
+    coordinator._observe.apply("/information/vs/0", {PREFIX + "modelNum": model}, source="poll")
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == MAIN}
+    assert _is_included(bound["diagnosis_start"], coordinator) is button_included
+    assert _is_included(bound["diagnosis_status"], coordinator)
+    assert _is_included(bound["alarm_code"], coordinator)
+    data = flatten(coordinator.bound, coordinator.entity_resources())
+    assert data["diagnosis_status"] == "ready"
+
+
+async def test_diagnosis_cleanup_removes_renamed_button_and_preserves_sensors(hass):
+    coordinator = await _discovered(hass)
+    bound = next(b for b in coordinator.bound if b.desc.key == "diagnosis_start")
+    button = LocalThingsButton(coordinator, bound)
+    assert button.unique_id is not None
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "button", DOMAIN, button.unique_id, config_entry=coordinator._entry
+    )
+    old = registry.async_update_entity(old.entity_id, new_entity_id="button.renamed_oven_check")
+    kept = [
+        registry.async_get_or_create(platform, DOMAIN, unique_id, config_entry=coordinator._entry)
+        for platform, unique_id in (
+            ("sensor", button.unique_id),
+            ("sensor", button.unique_id.replace("diagnosis_start", "diagnosis_status")),
+            ("sensor", button.unique_id.replace("diagnosis_start", "alarm_code")),
+            ("button", "UNRELATED_diagnosis_start"),
+        )
+    ]
+
+    for _ in range(2):
+        _drop_unverified_oven_diagnosis_buttons(hass, coordinator._entry, coordinator)
+        assert registry.async_get(old.entity_id) is None
+        assert all(registry.async_get(item.entity_id) is not None for item in kept)
+
+
+@pytest.mark.parametrize("case", ["other_wall_oven", "unknown_model", "other_entry"])
+async def test_diagnosis_cleanup_requires_tested_board_and_owning_entry(hass, case):
+    coordinator = await _discovered(hass)
+    bound = next(b for b in coordinator.bound if b.desc.key == "diagnosis_start")
+    if case != "other_entry":
+        coordinator._observe.apply(
+            "/information/vs/0",
+            {PREFIX + "modelNum": "LCD_OV_WALL_20K" if case == "other_wall_oven" else None},
+            source="poll",
+        )
+    entry = coordinator._entry
+    if case == "other_entry":
+        entry = MockConfigEntry(domain=DOMAIN)
+        entry.add_to_hass(hass)
+    button = LocalThingsButton(coordinator, bound)
+    assert button.unique_id is not None
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create("button", DOMAIN, button.unique_id, config_entry=entry)
+
+    _drop_unverified_oven_diagnosis_buttons(hass, coordinator._entry, coordinator)
 
     assert registry.async_get(old.entity_id) is not None

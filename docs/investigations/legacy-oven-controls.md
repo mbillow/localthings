@@ -193,12 +193,32 @@ alone is therefore insufficient evidence. The Sound write confirmed in
 [the earlier investigation](oven-cycle-start.md#what-is-measured) was on a
 different TP2X board and does not prove legacy wall-oven support.
 
-The owner also reported an apparently unresponsive Start diagnosis button.
-The oven registry reuses the shared `diagnosisStart: Start` command; the captured
-status is only `Ready`, which does not prove a self-test was run. The current
-button requires Smart Control, and that flag was false in the latest supplied
-capture. Its state during the owner's earlier attempt is unknown, so neither
-a refused command nor unsupported appliance behavior has been established.
+The oven registry reuses the shared `diagnosisStart: Start` command. On October
+14, the owner's first logged attempt at 17:59:27 was blocked by LocalThings'
+Remote Control guard before transmission. After enabling Smart Connect, the
+18:34:49 attempt logged `PUT /diagnosis/vs/0` with success code `0x44`. The legacy
+transport sends this as a `Diagnosis` object inside `Device` to `/devices/0`;
+the success acknowledgement alone does not confirm execution. The immediate
+refresh was suppressed by the coordinator's settling guard, and the supplied
+log contains no subsequent diagnosis result. At approximately 18:36 the owner's
+HA screenshot showed `Ready`, and the owner reported no oven-screen response.
+These are the log/UI's local times. No diagnostic run or result is verified.
+
+The inspected Samsung Oven plug-in APK (v1.1040.8.0) includes generic
+`getDeviceDiagnosisById` and `putDeviceDiagnosisById` helpers targeting
+`/devices/{id}/diagnosis`, and a `DiagnosisJs` model containing `diagnosisStart`.
+The inspected DEX contains no oven-specific caller of those helpers or verified
+start/result sequence. That narrower endpoint differs from LocalThings'
+aggregate write, but a shared app helper does not establish which write this
+oven implements. No alternative diagnosis write was attempted. The Start
+diagnosis button is withdrawn specifically for `LCD_OV_WALL_16K`, whose tested
+command provides no verified function or useful feedback. This is a conservative
+UI decision, not proof that the firmware cannot run diagnostics. Diagnosis status
+and Alarm code remain read-only sensors; `Ready` is not evidence of a completed
+or passed diagnostic. Other oven boards retain their existing diagnosis button.
+Setup removes the withdrawn button's registry row by exact unique ID and config
+entry, including renamed rows, so upgrades do not leave an unavailable control.
+Automations or dashboards referencing that button need to be updated.
 
 ## Lamp investigation closed for this submission
 

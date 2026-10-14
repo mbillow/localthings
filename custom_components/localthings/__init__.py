@@ -22,7 +22,7 @@ from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
 from .entity import _is_included, async_load_instance_names
 from .registry.adapter import _key
 from .registry.capabilities.common import is_lcd_wall_oven
-from .registry.entities import BinarySensorDesc, NumberDesc, SwitchDesc
+from .registry.entities import BinarySensorDesc, ButtonDesc, NumberDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -307,6 +307,37 @@ def _drop_unsupported_oven_sound_switches(
 
 
 @callback
+def _drop_unverified_oven_diagnosis_buttons(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove withdrawn diagnosis buttons by model, including renamed entities."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        desc = bound.desc
+        if not isinstance(desc, ButtonDesc) or desc.key != "diagnosis_start":
+            continue
+        resources = coordinator.discovery_canonical(bound.subdevice)
+        rep = coordinator.discovery_resources.get(bound.href) or {}
+        if (
+            not is_lcd_wall_oven(resources)
+            or desc.exists_fn is None
+            or desc.exists_fn(rep, resources)
+        ):
+            continue
+        unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(bound)}"
+        entity_id = ent_reg.async_get_entity_id("button", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info(
+            "Removing %s: diagnosis start has no verified effect on this oven; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_cook_times_superseded_by_parts(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -483,6 +514,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _drop_power_switches_superseded_by_sensors(hass, entry, coordinator)
     _drop_cook_times_superseded_by_parts(hass, entry, coordinator)
     _drop_unsupported_oven_sound_switches(hass, entry, coordinator)
+    _drop_unverified_oven_diagnosis_buttons(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

@@ -17,6 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -29,7 +30,7 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
-from . import cook
+from . import cook, dishwasher
 from .common import is_lcd_wall_oven, normalize_temp_unit
 from .operational import STOP_BUTTON
 
@@ -401,6 +402,23 @@ START_COOKING_BUTTON = ButtonDesc(
 # ---------------------------------------------------------------------------
 # Capabilities
 # ---------------------------------------------------------------------------
+
+
+def _diagnosis_start_exists(rep, resources):
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return board != "LCD_OV_WALL_16K"
+
+
+# LCD_OV_WALL_16K acknowledges Start without a verified diagnostic result;
+# retain its reported status (docs/investigations/legacy-oven-controls.md).
+OVEN_DIAGNOSIS = replace(
+    dishwasher.DIAGNOSIS,
+    entities=tuple(
+        replace(desc, exists_fn=_diagnosis_start_exists) if isinstance(desc, ButtonDesc) else desc
+        for desc in dishwasher.DIAGNOSIS.entities
+    ),
+)
 
 OVEN_OPERATIONAL_STATE = Capability(
     href="/operational/state/vs/0",
