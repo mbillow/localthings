@@ -174,19 +174,17 @@ be added from this evidence, and no guessed volume write is introduced.
 
 Energy saving already has that presence gate. Its command sends one
 `EnergySaving_On` or `EnergySaving_Off` token to the selected cavity's Mode
-resource through the existing legacy transport. A reported token proves status
-exists, not that this firmware accepts changing it. No before/write/after capture
-has established command support on this oven, so it is not reclassified as
-read-only or described as fixed. The next check is an idle toggle with debug
-logging, followed by a fresh resource read and panel comparison. Restore the
-original setting after checking.
+resource through the existing legacy transport. On October 14 the owner confirmed
+that the existing HA toggle works, in response to an idle HA-Off/panel-readback
+check. This is owner-confirmed hardware behavior; no request/response log was
+supplied and the Smart Control state at the time of the write was not established.
+The existing switch is retained without a command change.
 
 The panel identifies this setting as **12 hour energy saving**: automatic
 shutoff after 12 hours of baking or 3 hours of broiling. This is separate from
 the maximum 9:59 Cook Time countdown documented on [manual][manual] p.24;
 baking can also be started with Cook Time unset. The shutoff setting does not
-establish support for a longer countdown. Its meaning is confirmed by the
-panel; acceptance of the network write still needs verification.
+establish support for a longer countdown.
 
 The coordinator initially displays writes optimistically. An explicit immediate
 readback check is currently conditional on Remote Control being off; otherwise
@@ -194,6 +192,13 @@ the normal refresh/settle path applies. A brief switch movement or HTTP success
 alone is therefore insufficient evidence. The Sound write confirmed in
 [the earlier investigation](oven-cycle-start.md#what-is-measured) was on a
 different TP2X board and does not prove legacy wall-oven support.
+
+The owner also reported an apparently unresponsive Start diagnosis button.
+The oven registry reuses the shared `diagnosisStart: Start` command; the captured
+status is only `Ready`, which does not prove a self-test was run. The current
+button requires Smart Control, and that flag was false in the latest supplied
+capture. Its state during the owner's earlier attempt is unknown, so neither
+a refused command nor unsupported appliance behavior has been established.
 
 ## Lamp investigation closed for this submission
 
