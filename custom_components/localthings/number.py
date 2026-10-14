@@ -136,7 +136,7 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
         value = (self.coordinator.data or {}).get(self._state_key)
         if (
             value == 0
-            and self._is_cook_duration()
+            and (self._is_cook_duration() or self._bound.desc.cook_param in cook.DURATION_PARTS)
             and self.coordinator.cook_time_is_unset(self._bound.subdevice)
         ):
             return None

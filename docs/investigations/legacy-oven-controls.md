@@ -59,6 +59,23 @@ so selecting hours preserves one-minute precision. This avoids the rounding of
 integer-minute values in the development Core 2026.9.4 environment. The coordinator
 still holds minutes and the appliance receives HH:MM:SS.
 
+The measured board also exposes **Cook time hours** and **Cook time minutes**
+as two native number controls per cavity. They replace one component of the
+same duration: 1 h plus 30 min means 90 minutes, not two independent timers.
+Hours range from 0 to 9 and minutes from 0 to 59 under the manual's 9h59m
+limit; live modeSpecs remain authoritative. Each edit preserves the other
+component, and idle edits remain held until Start. Invalid components and an
+unreadable current duration are rejected without guessing a replacement.
+
+The original **Cook time** total-duration entity keeps its identity, units and
+write behavior for existing automations, and stays synchronized with the pair.
+It is retained on the device page; users who prefer only the new controls can
+hide it through Home Assistant's entity settings. The pair uses fixed units,
+not HA duration-unit conversion. Both are blank for an unset idle timer and
+show zero once explicitly set. HA determines their row layout; no custom
+frontend is added. These new controls have automated coverage but have not
+yet been confirmed on the owner's Home Assistant installation.
+
 Pending temperature and time may be entered before choosing a mode if at least
 one available mode accepts the combination. The first mode selection revalidates
 and retains those values; selecting the same held mode again preserves them.
@@ -152,10 +169,12 @@ on the [investigation branch][research].
 ## Validation limits
 
 Regression coverage includes both cavity paths, held settings, mode labels,
-duration conversion, strict permission checks, timeout/refusal/no-replay paths,
+duration conversion, paired hours/minutes in all 24 setting-entry orders,
+strict permission checks, timeout/refusal/no-replay paths,
 status migration, reservoir states and partial-item verification. Passing tests
 do not resolve the reported Smart Control incident. Revised-sequence Upper/whole
-operation, timer completion, native hours presentation, simultaneous combinations,
+operation, timer completion, native hours presentation and paired timer controls,
+simultaneous combinations,
 all recipe starts and running adjustments remain hardware coverage gaps.
 
 [manual]: https://images.thdstatic.com/catalog/pdfImages/99/9900cc56-8433-4e1b-ba18-4271b575791d.pdf

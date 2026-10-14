@@ -305,6 +305,12 @@
       },
       "good_sleep": {
         "name": "Guter Schlaf"
+      },
+      "cook_time_hours": {
+        "name": "Garzeit Stunden"
+      },
+      "cook_time_minutes": {
+        "name": "Garzeit Minuten"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse ist bei dem ausgewählten Programm nicht verfügbar."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Geben Sie ganze, nicht negative Stunden und Minuten von 0 bis 59 ein."
+    },
+    "cook_duration_unavailable": {
+      "message": "Die aktuelle Garzeit ist nicht verfügbar. Warten Sie auf eine Aktualisierung des Geräts, bevor Sie Stunden oder Minuten ändern."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "Die gesamte Garzeit darf {max} nicht überschreiten."
     }
   },
   "selector": {

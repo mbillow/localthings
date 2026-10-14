@@ -305,6 +305,12 @@
       },
       "zone_target_temperature": {
         "name": "Température cible de la zone"
+      },
+      "cook_time_hours": {
+        "name": "Heures de cuisson"
+      },
+      "cook_time_minutes": {
+        "name": "Minutes de cuisson"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Le rinçage supplémentaire n'est pas disponible avec le programme sélectionné."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Saisissez des heures entières positives ou nulles et des minutes de 0 à 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "La durée de cuisson actuelle est indisponible. Attendez une mise à jour de l’appareil avant de modifier les heures ou les minutes."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "La durée totale de cuisson ne peut pas dépasser {max}."
     }
   },
   "selector": {

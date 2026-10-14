@@ -305,6 +305,12 @@
       },
       "zone_target_temperature": {
         "name": "Doeltemperatuur zone"
+      },
+      "cook_time_hours": {
+        "name": "Kooktijd uren"
+      },
+      "cook_time_minutes": {
+        "name": "Kooktijd minuten"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse is niet beschikbaar voor het geselecteerde programma."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Voer hele, niet-negatieve uren en minuten van 0 tot 59 in."
+    },
+    "cook_duration_unavailable": {
+      "message": "De huidige kooktijd is niet beschikbaar. Wacht op een update van het apparaat voordat u de uren of minuten wijzigt."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "De totale kooktijd mag niet langer zijn dan {max}."
     }
   },
   "selector": {

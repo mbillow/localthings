@@ -305,6 +305,12 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
+      },
+      "cook_time_hours": {
+        "name": "Hodiny vaření"
+      },
+      "cook_time_minutes": {
+        "name": "Minuty vaření"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra máchání není u vybraného cyklu k dispozici."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Zadejte celé nezáporné hodiny a minuty od 0 do 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "Aktuální doba vaření není dostupná. Před změnou hodin nebo minut počkejte na aktualizaci zařízení."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "Celková doba vaření nesmí překročit {max}."
     }
   },
   "selector": {

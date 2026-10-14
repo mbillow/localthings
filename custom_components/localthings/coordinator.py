@@ -2446,6 +2446,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
+        if cook_param in cook.DURATION_PARTS:
+            resources = self.canonical_resources(bound_entity.subdevice)
+            try:
+                payload = cook.duration_with_part(cook_param, payload, resources)
+            except cook.CookStartError as err:
+                raise await self._async_cook_error(err, bound_entity.subdevice, resources) from err
+            cook_param = cook.PARAM_DURATION
         if cook_param == cook.PARAM_START:
             await self.async_start_cooking(bound_entity.subdevice)
             return

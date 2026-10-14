@@ -305,6 +305,12 @@
       },
       "zone_target_temperature": {
         "name": "Docelowa temperatura strefy"
+      },
+      "cook_time_hours": {
+        "name": "Godziny gotowania"
+      },
+      "cook_time_minutes": {
+        "name": "Minuty gotowania"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Dodatkowe płukanie nie jest dostępne dla wybranego cyklu."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Wprowadź całkowite, nieujemne godziny i minuty od 0 do 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "Bieżący czas gotowania jest niedostępny. Poczekaj na aktualizację urządzenia przed zmianą godzin lub minut."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "Łączny czas gotowania nie może przekroczyć {max}."
     }
   },
   "selector": {

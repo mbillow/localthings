@@ -305,6 +305,12 @@
       },
       "zone_target_temperature": {
         "name": "Zone target temperature"
+      },
+      "cook_time_hours": {
+        "name": "Cook time hours"
+      },
+      "cook_time_minutes": {
+        "name": "Cook time minutes"
       }
     },
     "select": {
@@ -2361,6 +2367,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse isn't available on the selected cycle."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Enter whole, nonnegative hours and minutes from 0 to 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "The current cook time is unavailable. Wait for a device update before changing its hours or minutes."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "The combined cook time cannot exceed {max}."
     }
   },
   "selector": {

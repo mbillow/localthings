@@ -642,8 +642,30 @@ def _check_temperature(temp, temperature, mode, unit, resources, complete=True) 
 PARAM_MODE = "mode"
 PARAM_TEMPERATURE = "temperature"
 PARAM_DURATION = "duration"
+PARAM_DURATION_HOURS = "duration_hours"
+PARAM_DURATION_MINUTES = "duration_minutes"
+DURATION_PARTS = (PARAM_DURATION_HOURS, PARAM_DURATION_MINUTES)
 # The start button's own marker.
 PARAM_START = "start"
+
+
+def duration_with_part(param: str, payload: Any, resources: dict) -> int:
+    """Replace one timer component, preserving the cavity's other component."""
+    try:
+        value = float(payload)
+    except (TypeError, ValueError):
+        value = float("nan")
+    if not value.is_integer() or value < 0 or (param == PARAM_DURATION_MINUTES and value > 59):
+        raise CookStartError("cook_duration_part_invalid")
+    seconds = parse_hms((resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME))
+    if seconds is None:
+        raise CookStartError("cook_duration_unavailable")
+    hours, minutes = divmod(-(-seconds // 60), 60)
+    total = int(value) * 60 + minutes if param == PARAM_DURATION_HOURS else hours * 60 + int(value)
+    maximum = legacy_wall_time_max(resources)
+    if maximum is not None and total * 60 > maximum:
+        raise CookStartError("cook_duration_total_out_of_range", max=format_hms(maximum))
+    return total
 
 
 def _device_values(resources: dict) -> tuple:
