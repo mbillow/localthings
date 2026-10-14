@@ -1135,6 +1135,103 @@ async def test_write_resource_batch_verify_after_reports_held_per_element(
     assert "/devices/0" not in verified["elements"]
 
 
+@pytest.mark.parametrize("batch", [False, True])
+@pytest.mark.parametrize(
+    "returned,expected",
+    [
+        ({"id": "0", "desired": 350, "unit": "Fahrenheit"}, True),
+        ({"id": "0", "desired": "350.000000", "unit": "Fahrenheit"}, True),
+        ({"id": "0", "desired": 355, "unit": "Fahrenheit"}, False),
+        ({"id": "0", "desired": 350, "unit": "Celsius"}, False),
+        ({"id": "2", "desired": 350, "unit": "Fahrenheit"}, False),
+        ({"id": 0, "desired": 350, "unit": "Fahrenheit"}, False),
+        ({"id": "0", "unit": "Fahrenheit"}, False),
+        ({"id": "0", "desired": True, "unit": "Fahrenheit"}, False),
+        ({"id": "0", "desired": "NaN", "unit": "Fahrenheit"}, False),
+    ],
+)
+async def test_setpoint_verification_matches_written_fields_by_id(
+    hass, coordinator, device_id, batch, returned, expected
+):
+    prefix = "x.com.samsung.da."
+    href = "/temperatures/vs/0"
+    written = {
+        prefix + "items": [
+            {prefix + "id": "0", prefix + "desired": "350", prefix + "unit": "Fahrenheit"}
+        ]
+    }
+    payload = [{"href": href, "rep": written}] if batch else written
+    target = "/device/0" if batch else href
+    fake = _FakeSession()
+    for current in (175, 200):
+        rep = {
+            prefix + "items": [
+                {prefix + "id": "1", prefix + "desired": 150, prefix + "unit": "Fahrenheit"},
+                {
+                    **{prefix + k: v for k, v in returned.items()},
+                    prefix + "current": current,
+                    prefix + "increment": 5,
+                },
+            ]
+        }
+        fake.queue_get(target, [{"href": href, "rep": rep}] if batch else rep)
+    coordinator._session = fake
+
+    with patch(_SLEEP_TARGET, new_callable=AsyncMock):
+        response = await _call_write(
+            hass, device_id, writes=[{"href": target, "payload": payload}], verify_after=3
+        )
+
+    assert response["results"][0]["changed"] is expected
+    verified = response["verified"][target]
+    assert verified["held"] is expected
+    if batch:
+        assert verified["elements"] == {href: expected}
+    assert fake.post_calls[0][1] == payload
+
+
+@pytest.mark.parametrize(
+    "items", [[], [{"x.com.samsung.da.id": "0", "x.com.samsung.da.desired": 350}] * 2]
+)
+async def test_setpoint_verification_rejects_missing_or_ambiguous_items(
+    hass, coordinator, device_id, items
+):
+    fake = _FakeSession()
+    fake.queue_get("temperatures/vs/0", {"x.com.samsung.da.items": items})
+    coordinator._session = fake
+    response = await _call_write(
+        hass,
+        device_id,
+        writes=[
+            {
+                "href": "/temperatures/vs/0",
+                "payload": {
+                    "x.com.samsung.da.items": [
+                        {"x.com.samsung.da.id": "0", "x.com.samsung.da.desired": 350}
+                    ]
+                },
+            }
+        ],
+    )
+    assert response["results"][0]["changed"] is False
+
+
+async def test_batch_verification_accepts_merged_option_tokens(hass, coordinator, device_id):
+    href = "/mode/vs/0"
+    key = "x.com.samsung.da.options"
+    payload = [{"href": href, "rep": {key: ["Sound_On"]}}]
+    fake = _FakeSession()
+    fake.queue_get("device/0", [{"href": href, "rep": {key: ["Lamp_Off", "Sound_On"]}}])
+    coordinator._session = fake
+    with patch(_SLEEP_TARGET, new_callable=AsyncMock):
+        response = await _call_write(
+            hass, device_id, writes=[{"href": "/device/0", "payload": payload}], verify_after=3
+        )
+    assert response["results"][0]["changed"] is True
+    assert response["verified"]["/device/0"]["held"] is True
+    assert response["verified"]["/device/0"]["elements"] == {href: True}
+
+
 # ----------------------------------------------------------------------
 # observe_resource (issue #607): a timed OBSERVE next to a plain GET
 # ----------------------------------------------------------------------

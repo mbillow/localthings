@@ -6,11 +6,11 @@ rejected start sends nothing."""
 from __future__ import annotations
 
 from typing import cast
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -159,6 +159,22 @@ async def test_start_is_refused_with_remote_control_off(coordinator) -> None:
 
     assert err.value.translation_key == "remote_control_disabled"
     assert _posts(coordinator) == []
+
+
+async def test_ocf_start_does_not_retry_a_lost_response(coordinator, monkeypatch) -> None:
+    session = coordinator._session
+    write = Mock(side_effect=TimeoutError("response lost"))
+    reconnect = Mock()
+    monkeypatch.setattr(session, "write", write)
+    monkeypatch.setattr(coordinator, "_connect_session", reconnect)
+
+    with pytest.raises(HomeAssistantError) as error:
+        await coordinator.async_start_cooking(mode="Bake", temperature=375, duration=300)
+
+    assert error.value.translation_key == "cook_start_unconfirmed"
+    write.assert_called_once()
+    reconnect.assert_not_called()
+    assert not coordinator._session_lock.locked()
 
 
 @pytest.fixture

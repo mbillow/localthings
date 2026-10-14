@@ -207,18 +207,51 @@ def _option_write(prefix, new_value):
     return [f"{prefix}_{new_value}"]
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, prefix) is not None
+            for prefix in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """The LCD_OV_WALL_16K's two position switches agree at each endpoint.
+
+    Other combinations have not been measured; do not infer position from
+    one switch or the main oven door.
+    """
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Write functions
 # ---------------------------------------------------------------------------
 
 
-def _oven_setpoint_write(p, rep, href=None):
+def _oven_setpoint_write(p, rep, href=None, resources=None):
     """RMW write to /temperatures/vs/0 items array."""
     try:
         temp = float(p)
     except (TypeError, ValueError):
         return None
-    min_v, max_v, step_v = _setpoint_bounds(rep)
+    bounds = cook.temp_bounds(resources or {}) if cook.is_lcd_wall_16k(resources or {}) else None
+    min_v, max_v, step_v = bounds or _setpoint_bounds(rep)
     temp_i = int(round(temp / step_v) * step_v)
     if not (min_v <= temp_i <= max_v):
         return None
@@ -230,13 +263,15 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
-def _cook_time_write(p, rep, href=None):
+def _cook_time_write(p, rep, href=None, resources=None):
     """Write operationTime + remainingTime (H:MM:SS) from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
         return None
-    if not (0 <= minutes <= 1439):
+    limit = cook.legacy_wall_time_max(resources or {})
+    maximum = limit // 60 if limit is not None else 1439
+    if not (0 <= minutes <= maximum):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
@@ -319,9 +354,10 @@ def _mode_setpoint_bounds(rep, resources):
 
 
 def _cook_time_bounds(rep, resources):
-    """Before a start, the held mode's own time limits in whole minutes.
-    Mid-cook the static 0-1439 stays: those writes predate modeSpec and are
-    known to hold."""
+    """Legacy wall limits also hold mid-cook; other boards keep their
+    existing running range and use modeSpec while choosing an idle cook."""
+    if (maximum := cook.legacy_wall_time_max(resources)) is not None:
+        return 0.0, float(maximum // 60), 1.0
     if not cook.operation_ready(resources):
         return None
     spec = cook.mode_specs(resources).get(cook.current_mode(resources) or "")
@@ -390,6 +426,8 @@ OVEN_OPERATIONAL_STATE = Capability(
         ),
         NumberDesc(
             key="cook_time",
+            mode="box",
+            device_class="duration",
             field="x.com.samsung.da.operationTime",
             unit="min",
             native_min=0,
@@ -495,6 +533,7 @@ OVEN_SETPOINT = Capability(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(
             key="oven_setpoint",
+            mode="box",
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_oven_temp_unit,
@@ -614,6 +653,7 @@ OVEN_TEMP_DESIRED_OCF = Capability(
     entities=(
         NumberDesc(
             key="oven_setpoint",
+            mode="box",
             field="temperature",
             device_class="temperature",
             unit_fn=_ocf_temp_unit,
@@ -660,6 +700,34 @@ OVEN_PROBE_DESIRED_OCF = Capability(
         ),
     ),
 )
+
+
+def shared_door_view(resources: dict[str, dict]) -> dict[str, dict]:
+    """Share the NV51K7770 Flex Duo's single door only in the entity view."""
+    prefix = "x.com.samsung.da."
+    main = resources.get("/information/vs/0", {})
+    lower = resources.get("/information/vs/1", {})
+    if (
+        str(main.get(prefix + "modelNum", "")).split("|", 1)[0] != "LCD_OV_WALL_16K"
+        or lower.get(prefix + "description") != "LCD_OV_WALL_16K_DIV"
+        or resources.get("/connected/vs/1", {}).get(prefix + "connected") != "On"
+    ):
+        return resources
+    lower_door = resources.get("/doors/vs/1", {})
+    items = resources.get("/doors/vs/0", {}).get(prefix + "items")
+    if (
+        lower_door.get(prefix + "items") != []
+        or not isinstance(items, list)
+        or len(items) != 1
+        or not isinstance(items[0], dict)
+        or items[0].get(prefix + "id") != "0"
+        or items[0].get(prefix + "openState") not in ("Open", "Close")
+    ):
+        return resources
+    # Open/closed captures show only the upper record reports this shared
+    # door; raw reads and diagnostics must retain the lower record's [].
+    return {**resources, "/doors/vs/1": {**lower_door, prefix + "items": items}}
+
 
 OVEN_DOOR = Capability(
     href="/doors/vs/0",
@@ -724,6 +792,9 @@ OVEN_MODE = Capability(
         # SelectDesc first — test_oven_mode_options_nonempty uses entities[0]
         SelectDesc(
             key="oven_mode",
+            translation_key=lambda resources: (
+                "oven_mode_lcd_wall_16k" if cook.is_lcd_wall_16k(resources) else "oven_mode"
+            ),
             field="x.com.samsung.da.modes",
             icon="mdi:tune",
             options=_oven_mode_options,
@@ -731,6 +802,14 @@ OVEN_MODE = Capability(
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
         ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's

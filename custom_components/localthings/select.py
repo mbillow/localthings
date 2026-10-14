@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .catalog import translated_states
+from .catalog import translation_state as _translation_state
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
@@ -31,22 +32,6 @@ async def async_setup_entry(
 
 
 _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
-
-
-def _translation_state(value: str, known: frozenset[str]) -> str | None:
-    """Return the catalog state `value` normalizes to, else None.
-
-    Samsung reports options in whatever casing the resource uses
-    ('Rinse_Hold', 'SpTtypeBeerDrinks', '1b'); Home Assistant looks state
-    translations up by a lowercase key. Only values the catalog actually
-    knows are normalized -- an unrecognized (or future) vendor value keeps
-    its own readable form rather than becoming an untranslatable slug.
-    """
-    direct = value.lower().replace(" ", "_")
-    if direct in known:
-        return direct
-    snake = _CAMEL_BOUNDARY_RE.sub("_", value).lower().replace(" ", "_")
-    return snake if snake in known else None
 
 
 def _display(value, translation_key: str | None, fallback_fn=None):

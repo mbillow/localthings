@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Gerät aktiv"
       },
+      "reservoir_open": {
+        "name": "Wassertank"
+      },
       "door_open": {
         "name": "Tür"
       },
@@ -650,7 +653,24 @@
           "steam_roast": "Dampfbraten",
           "upper_steam_bake": "Dampfbacken (oben)",
           "descale": "Entkalken",
-          "drain": "Wasser ablassen"
+          "drain": "Wasser ablassen",
+          "lower_convection_roast": "Umluftbraten (unten)",
+          "autocook": "Automatikgaren",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen 1 (oben)",
+          "upper_healthycook2": "Gesundes Garen 2 (oben)",
+          "upper_healthycook3": "Gesundes Garen 3 (oben)",
+          "upper_healthycook4": "Gesundes Garen 4 (oben)",
+          "lower_healthycook1": "Gesundes Garen 1 (unten)",
+          "lower_healthycook2": "Gesundes Garen 2 (unten)",
+          "lower_healthycook3": "Gesundes Garen 3 (unten)",
+          "lower_healthycook4": "Gesundes Garen 4 (unten)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1142,54 @@
           "off": "Aus",
           "low": "Niedrig",
           "high": "Hoch"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Kochmodus",
+        "state": {
+          "no_operation": "Kein Betrieb",
+          "bake": "Backen",
+          "broil": "Grillen",
+          "convection": "Umluft",
+          "convection_bake": "Umluftbacken",
+          "convection_broil": "Umluftgrillen",
+          "frozen_pizza_plus": "Tiefkühlpizza+",
+          "slow_cook": "Langsam garen",
+          "plate_warm": "Tellerwärmen",
+          "air_fry": "Heißluftfritteuse",
+          "convection_roast": "Umluftbraten",
+          "keep_warm": "Warmhalten",
+          "bread_proof": "Teig gehen lassen",
+          "dehydrate": "Dörren",
+          "self_clean": "Selbstreinigung",
+          "air_fryer": "Heißluftfritteuse",
+          "upper_broil": "Grillen",
+          "upper_convection_bake": "Umluftbacken",
+          "upper_convection_roast": "Umluftbraten",
+          "lower_bake": "Backen",
+          "lower_convection_bake": "Umluftbacken",
+          "steam_bake": "Dampfbacken",
+          "steam_roast": "Dampfbraten",
+          "upper_steam_bake": "Dampfbacken",
+          "descale": "Entkalken",
+          "drain": "Wasser ablassen",
+          "lower_convection_roast": "Umluftbraten",
+          "autocook": "Automatikgaren",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen Ofenkartoffel",
+          "upper_healthycook2": "Gesundes Garen Gegrilltes Hähnchen",
+          "upper_healthycook3": "Gesundes Garen Lachssteak",
+          "upper_healthycook4": "Gesundes Garen Weißfischfilet",
+          "lower_healthycook1": "Gesundes Garen Ofenkartoffel",
+          "lower_healthycook2": "Gesundes Garen Gegrilltes Hähnchen",
+          "lower_healthycook3": "Gesundes Garen Lachssteak",
+          "lower_healthycook4": "Gesundes Garen Weißfischfilet"
         }
       }
     },
@@ -2209,6 +2277,9 @@
     },
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Der Garstart konnte nicht bestätigt werden und wurde nicht wiederholt. Prüfen Sie das Gerät, bevor Sie es erneut versuchen. Details: {error}"
     },
     "command_refused": {
       "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"

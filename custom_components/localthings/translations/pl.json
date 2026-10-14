@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Urządzenie aktywne"
       },
+      "reservoir_open": {
+        "name": "Zbiornik wody"
+      },
       "door_open": {
         "name": "Drzwi"
       },
@@ -650,7 +653,24 @@
           "steam_roast": "Pieczenie mięs z parą",
           "upper_steam_bake": "Pieczenie z parą (górna)",
           "descale": "Odkamienianie",
-          "drain": "Opróżnianie wody"
+          "drain": "Opróżnianie wody",
+          "lower_convection_roast": "Pieczenie mięs z termoobiegiem (dolna)",
+          "autocook": "Automatyczne pieczenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdrowe gotowanie 1",
+          "healthycook2": "Zdrowe gotowanie 2",
+          "healthycook3": "Zdrowe gotowanie 3",
+          "healthycook4": "Zdrowe gotowanie 4",
+          "healthycook5": "Zdrowe gotowanie 5",
+          "healthycook6": "Zdrowe gotowanie 6",
+          "upper_healthycook1": "Zdrowe gotowanie 1 (górna)",
+          "upper_healthycook2": "Zdrowe gotowanie 2 (górna)",
+          "upper_healthycook3": "Zdrowe gotowanie 3 (górna)",
+          "upper_healthycook4": "Zdrowe gotowanie 4 (górna)",
+          "lower_healthycook1": "Zdrowe gotowanie 1 (dolna)",
+          "lower_healthycook2": "Zdrowe gotowanie 2 (dolna)",
+          "lower_healthycook3": "Zdrowe gotowanie 3 (dolna)",
+          "lower_healthycook4": "Zdrowe gotowanie 4 (dolna)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1142,54 @@
           "off": "Wył.",
           "low": "Niska",
           "high": "Wysoka"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Tryb pieczenia",
+        "state": {
+          "no_operation": "Brak pracy",
+          "bake": "Pieczenie",
+          "broil": "Opiekanie",
+          "convection": "Termoobieg",
+          "convection_bake": "Pieczenie z termoobiegiem",
+          "convection_broil": "Opiekanie z termoobiegiem",
+          "frozen_pizza_plus": "Pizza mrożona+",
+          "slow_cook": "Wolne gotowanie",
+          "plate_warm": "Podgrzewanie talerzy",
+          "air_fry": "Smażenie na gorącym powietrzu",
+          "convection_roast": "Pieczenie mięs z termoobiegiem",
+          "keep_warm": "Utrzymywanie ciepła",
+          "bread_proof": "Wyrastanie ciasta",
+          "dehydrate": "Suszenie żywności",
+          "self_clean": "Samoczyszczenie",
+          "air_fryer": "Smażenie na gorącym powietrzu",
+          "upper_broil": "Opiekanie",
+          "upper_convection_bake": "Pieczenie z termoobiegiem",
+          "upper_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "lower_bake": "Pieczenie",
+          "lower_convection_bake": "Pieczenie z termoobiegiem",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody",
+          "lower_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "autocook": "Automatyczne pieczenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdrowe gotowanie 1",
+          "healthycook2": "Zdrowe gotowanie 2",
+          "healthycook3": "Zdrowe gotowanie 3",
+          "healthycook4": "Zdrowe gotowanie 4",
+          "healthycook5": "Zdrowe gotowanie 5",
+          "healthycook6": "Zdrowe gotowanie 6",
+          "upper_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "upper_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "upper_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "upper_healthycook4": "Zdrowe gotowanie Filet z białej ryby",
+          "lower_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "lower_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
         }
       }
     },
@@ -2209,6 +2277,9 @@
     },
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Nie udało się potwierdzić rozpoczęcia gotowania i nie ponowiono próby. Sprawdź urządzenie przed ponowną próbą. Szczegóły: {error}"
     },
     "command_refused": {
       "message": "Urządzenie odrzuciło polecenie do {href}: {error}"

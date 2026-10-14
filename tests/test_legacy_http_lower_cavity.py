@@ -9,18 +9,27 @@ existing subdevice machinery does the rest. Nothing here is per family.
 from __future__ import annotations
 
 import json
+from itertools import permutations
 from pathlib import Path
 from typing import cast
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.localthings import _drop_power_switches_superseded_by_sensors
+from custom_components.localthings.binary_sensor import LocalThingsBinarySensor
+from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.entity import _is_included
 from custom_components.localthings.legacy_http_transport import (
     LegacyHttpTransport,
     _with_record_description,
 )
+from custom_components.localthings.number import LocalThingsNumber
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.by_type import oven, resolve
@@ -29,7 +38,10 @@ from custom_components.localthings.registry.capabilities.operational import (
     OPERATIONAL_STATE,
     STOP_BUTTON,
 )
+from custom_components.localthings.registry.entities import BinarySensorDesc, SwitchDesc
 from custom_components.localthings.registry.identity import DeviceIdentity
+from custom_components.localthings.registry.subdevices import MAIN
+from custom_components.localthings.select import LocalThingsSelect
 from custom_components.localthings.transport import Transport
 from tests.test_legacy_http_transport import _FakeConnection
 from tests.test_subdevice_discovery import _coordinator
@@ -78,6 +90,7 @@ def _fake_https(monkeypatch):
     )
     _FakeConnection.log = []
     _FakeConnection.routes = _routes()
+    monkeypatch.setattr("custom_components.localthings.legacy_http_transport.time.sleep", Mock())
 
 
 def _transport(family: str = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
@@ -245,11 +258,19 @@ class TestCavityModes:
             "LowerBake",
             "LowerConvectionBake",
             "LowerConvectionRoast",
+            "LowerHealthycook1",
+            "LowerHealthycook2",
+            "LowerHealthycook3",
+            "LowerHealthycook4",
         ]
         assert _startable(resources, 1) == [
             "LowerBake",
             "LowerConvectionBake",
             "LowerConvectionRoast",
+            "LowerHealthycook1",
+            "LowerHealthycook2",
+            "LowerHealthycook3",
+            "LowerHealthycook4",
         ]
 
     def test_only_upper_modes_start_with_the_divider_in(self):
@@ -389,11 +410,19 @@ class TestWrites:
         )
 
         assert code == 0x44
-        method, path, body, _ = _FakeConnection.log[0]
+        assert _FakeConnection.log[0][:3] == ("GET", "/devices/1/configuration", None)
+        method, path, body, _ = _FakeConnection.log[1]
         assert (method, path) == ("PUT", "/devices/1")
         assert body is not None
         assert body["Device"]["Mode"] == {"modes": ["LowerBake"]}
-        assert body["Device"]["Operation"]["state"] == "Run"
+        assert "Operation" not in body["Device"]
+        assert _FakeConnection.log[2][:3] == ("GET", "/devices/1/configuration", None)
+        assert _FakeConnection.log[3][:3] == (
+            "PUT",
+            "/devices/1",
+            {"Device": {"Operation": {"state": "Run"}}},
+        )
+        assert len(_FakeConnection.log) == 4
 
     def test_a_batch_naming_the_other_cavity_is_refused(self):
         batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
@@ -446,6 +475,66 @@ class TestWrites:
 
         assert code == 0x44
         assert ("PUT", "/devices/1") not in _requests()
+
+    @pytest.mark.parametrize("index,mode", [(0, "UpperConvectionBake"), (1, "LowerBake")])
+    @pytest.mark.parametrize("failed_step", [0, 1])
+    def test_a_refusal_stops_the_sequence_and_keeps_the_reason(
+        self, index, mode, failed_step, monkeypatch
+    ):
+        transport = _transport()
+        permission = (200, {"Configuration": {"remoteControlEnabled": True}})
+        responses = [permission, (204, None)] * failed_step + [
+            permission,
+            (400, "Control fail, <Operation.state=Run>"),
+        ]
+        request = Mock(side_effect=responses)
+        monkeypatch.setattr(transport, "_request", request)
+        batch = cook.CookPlan(mode, 350, "Fahrenheit", 300).batch(
+            lambda href: href[:-1] + str(index)
+        )
+
+        code, response = transport.write(["device", str(index)], batch, timeout=8.0)
+
+        assert code == 0x80
+        assert response == "Control fail, <Operation.state=Run>"
+        assert request.call_count == (failed_step + 1) * 2
+        assert "state" not in request.call_args_list[1].kwargs["body"]["Device"]["Operation"]
+
+    @pytest.mark.parametrize("index", [0, 1])
+    def test_settings_alone_do_not_start_a_cook(self, index):
+        batch = [
+            {"href": f"/mode/vs/{index}", "rep": {PREFIX + "modes": ["LowerBake"]}},
+            {
+                "href": f"/operational/state/vs/{index}",
+                "rep": {PREFIX + "operationTime": "00:05:00"},
+            },
+        ]
+
+        code, _ = _transport().write(["device", str(index)], batch, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            (
+                "PUT",
+                f"/devices/{index}",
+                {
+                    "Device": {
+                        "Mode": {"modes": ["LowerBake"]},
+                        "Operation": {"operationTime": "00:05:00"},
+                    }
+                },
+            )
+        ]
+
+    def test_a_bare_run_is_still_one_write(self):
+        code, _ = _transport().write(
+            ["operational", "state", "vs", "1"], {PREFIX + "state": "Run"}, timeout=8.0
+        )
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            ("PUT", "/devices/1", {"Device": {"Operation": {"state": "Run"}}})
+        ]
 
 
 def test_only_stop_is_declared_free_of_remote_control():
@@ -520,6 +609,706 @@ async def test_the_lower_cavity_becomes_its_own_device(hass: HomeAssistant):
     assert any(b.subdevice == lower and b.desc is STOP_BUTTON for b in coordinator.bound)
 
 
+@pytest.mark.parametrize("divided", [False, True])
+async def test_reservoir_belongs_to_upper_and_tracks_position_independently_of_door(
+    hass: HomeAssistant, divided
+):
+    coordinator = await _discovered(hass, _routes(divided=divided))
+    reservoirs = [
+        b
+        for b in coordinator.bound
+        if b.desc.key == "reservoir_open" and _is_included(b, coordinator)
+    ]
+    assert len(reservoirs) == 1
+    bound = reservoirs[0]
+    assert bound.subdevice == MAIN
+    assert bound.href == "/mode/vs/0"
+    entity = LocalThingsBinarySensor(coordinator, bound)
+    assert entity.device_class == "opening"
+    assert not any(b.desc.key == "lamp" and _is_included(b, coordinator) for b in coordinator.bound)
+    assert flatten(coordinator.bound, coordinator.entity_resources())["reservoir_open"] is False
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_reservoir.json").read_text()
+    )
+    _FakeConnection.log.clear()
+    for sample in fixture["samples"]:
+        rep = {**coordinator.resource("/mode/vs/0"), PREFIX + "options": sample["options"]}
+        coordinator._observe.apply("/mode/vs/0", rep, source="poll")
+        coordinator._observe.apply(
+            "/doors/vs/0",
+            {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": sample["door"]}]},
+            source="poll",
+        )
+        coordinator.async_set_updated_data(
+            flatten(coordinator.bound, coordinator.entity_resources())
+        )
+        assert entity.is_on is (sample["position"] == "open")
+        assert coordinator.data["door_open"] is True
+        assert "subdevice1_reservoir_open" not in coordinator.data
+
+    for options in (
+        [],
+        None,
+        ["waterTankInSwitch_On"],
+        ["waterTankInSwitch_On", "waterTankOutSwitch_On"],
+    ):
+        coordinator._observe.apply("/mode/vs/0", {PREFIX + "options": options}, source="poll")
+        coordinator.async_set_updated_data(
+            flatten(coordinator.bound, coordinator.entity_resources())
+        )
+        assert entity.is_on is None
+    assert not _requests()
+
+
+async def test_lower_door_tracks_shared_door_without_changing_raw_resources(hass: HomeAssistant):
+    coordinator = await _discovered(hass)
+    lower = _lower(coordinator)
+    for open_state, expected in [("Close", False), ("Open", True), ("Close", False)]:
+        rep = {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": open_state}]}
+        coordinator._observe.apply("/doors/vs/0", rep, source="poll")
+        state = flatten(coordinator.bound, coordinator.entity_resources())
+        assert state["door_open"] is expected
+        assert state["subdevice1_door_open"] is expected
+        assert coordinator.canonical_resources(lower)["/doors/vs/0"] == rep
+        assert coordinator.device_resources(lower)["/doors/vs/0"] == {PREFIX + "items": []}
+        assert coordinator.resource("/doors/vs/1") == {PREFIX + "items": []}
+
+    coordinator._observe.apply("/doors/vs/0", {PREFIX + "items": []}, source="poll")
+    state = flatten(coordinator.bound, coordinator.entity_resources())
+    assert state["subdevice1_door_open"] is None
+
+
+@pytest.mark.parametrize(
+    "href,rep",
+    [
+        ("/information/vs/0", {PREFIX + "modelNum": "LCD_OV_WALL_OTHER|1|2"}),
+        ("/information/vs/1", {PREFIX + "description": "LCD_OV_WALL_16K"}),
+        ("/connected/vs/1", {PREFIX + "connected": "Off"}),
+        ("/doors/vs/0", {PREFIX + "items": [{PREFIX + "id": "0"}]}),
+        (
+            "/doors/vs/0",
+            {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": "Unknown"}]},
+        ),
+    ],
+)
+async def test_shared_door_requires_the_measured_model_and_a_known_state(
+    hass: HomeAssistant, href, rep
+):
+    coordinator = await _discovered(hass)
+    coordinator._observe.apply(href, rep, source="poll")
+    assert coordinator.entity_resources()["/doors/vs/1"] == {PREFIX + "items": []}
+
+
+async def test_shared_door_preserves_a_lower_cavitys_own_reading(hass: HomeAssistant):
+    coordinator = await _discovered(hass)
+    own_door = {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": "Open"}]}
+    coordinator._observe.apply("/doors/vs/1", own_door, source="poll")
+    state = flatten(coordinator.bound, coordinator.entity_resources())
+    assert state["door_open"] is False
+    assert state["subdevice1_door_open"] is True
+    assert coordinator.entity_resources()["/doors/vs/1"] == own_door
+
+
+async def test_legacy_oven_power_is_status_only_on_both_cavities(hass: HomeAssistant):
+    coordinator = await _discovered(hass)
+    for cavity in (MAIN, _lower(coordinator)):
+        power = [
+            b
+            for b in coordinator.bound
+            if b.subdevice == cavity
+            and b.desc.key == "power_switch"
+            and _is_included(b, coordinator)
+        ]
+        assert len(power) == 1
+        assert isinstance(power[0].desc, BinarySensorDesc)
+        assert not isinstance(power[0].desc, SwitchDesc)
+
+
+async def test_power_cleanup_removes_both_old_controls_and_preserves_other_entities(
+    hass: HomeAssistant,
+):
+    coordinator = await _discovered(hass)
+    registry = er.async_get(hass)
+    old_controls = []
+    keep = []
+    for bound in coordinator.bound:
+        if (
+            isinstance(bound.desc, BinarySensorDesc)
+            and bound.desc.key == "power_switch"
+            and _is_included(bound, coordinator)
+        ):
+            unique_id = LocalThingsBinarySensor(coordinator, bound).unique_id
+            assert unique_id is not None
+            old = registry.async_get_or_create(
+                "switch", DOMAIN, unique_id, config_entry=coordinator._entry
+            )
+            old_controls.append(
+                registry.async_update_entity(
+                    old.entity_id, new_entity_id=f"switch.renamed_power_{len(old_controls)}"
+                )
+            )
+            keep.append(
+                registry.async_get_or_create(
+                    "binary_sensor", DOMAIN, unique_id, config_entry=coordinator._entry
+                )
+            )
+    assert len(old_controls) == 2
+    keep.append(
+        registry.async_get_or_create(
+            "switch", DOMAIN, "TEST_UNRELATED", config_entry=coordinator._entry
+        )
+    )
+    other_entry = MockConfigEntry(domain=DOMAIN)
+    other_entry.add_to_hass(hass)
+    keep.append(
+        registry.async_get_or_create(
+            "switch", DOMAIN, "TEST_OTHER_power_switch", config_entry=other_entry
+        )
+    )
+
+    for _ in range(2):
+        _drop_power_switches_superseded_by_sensors(hass, coordinator._entry, coordinator)
+        assert all(registry.async_get(row.entity_id) is None for row in old_controls)
+        assert all(registry.async_get(row.entity_id) is not None for row in keep)
+
+
+@pytest.mark.parametrize("readonly", [False, True])
+async def test_power_cleanup_requires_status_support_and_the_owning_entry(
+    hass: HomeAssistant, readonly
+):
+    coordinator = await _discovered(hass)
+    if not readonly:
+        for index in (0, 1):
+            coordinator._observe.apply(
+                f"/information/vs/{index}",
+                {PREFIX + "modelNum": "OTHER_OVEN"},
+                source="poll",
+            )
+    power = next(
+        b
+        for b in coordinator.bound
+        if b.subdevice == MAIN
+        and isinstance(b.desc, BinarySensorDesc)
+        and b.desc.key == "power_switch"
+    )
+    unique_id = LocalThingsBinarySensor(coordinator, power).unique_id
+    assert unique_id is not None
+    other_entry = MockConfigEntry(domain=DOMAIN)
+    other_entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        unique_id,
+        config_entry=other_entry if readonly else coordinator._entry,
+    )
+
+    _drop_power_switches_superseded_by_sensors(hass, coordinator._entry, coordinator)
+
+    assert registry.async_get(old.entity_id) is not None
+
+
+async def test_both_discovered_setpoints_expose_numeric_box_attributes(hass: HomeAssistant):
+    hass.config.units = US_CUSTOMARY_SYSTEM
+    coordinator = await _discovered(hass)
+    for cavity in (MAIN, _lower(coordinator)):
+        bound = next(
+            b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "oven_setpoint"
+        )
+        entity = LocalThingsNumber(coordinator, bound)
+        entity.hass = hass
+        assert entity.capability_attributes == {
+            "mode": "box",
+            "min": 175.0,
+            "max": 480.0,
+            "step": 5.0,
+        }
+        assert entity.native_unit_of_measurement == "°F"
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("minutes", [0, 5, 599])
+async def test_cook_time_before_mode_is_held_and_survives_the_first_mode_selection(
+    hass: HomeAssistant, index, minutes
+):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    select = LocalThingsSelect(coordinator, bound["oven_mode"])
+    resources = coordinator._cavity_resources(cavity)
+    _FakeConnection.log.clear()
+
+    await timer.async_set_native_value(minutes)
+
+    assert timer.native_value == minutes
+    assert select.current_option == "no_operation"
+    held = coordinator._held_cooks[cavity]
+    assert held.values == {cook.PARAM_DURATION: minutes * 60}
+    with pytest.raises(cook.CookStartError, match="cook_mode_required"):
+        held.plan(resources)
+    for href, rep in resources.items():
+        coordinator._observe.apply(cavity.to_actual(href), rep, source="poll")
+    assert coordinator.entity_resources()[cavity.to_actual(cook.OPERATION_HREF)][
+        PREFIX + "operationTime"
+    ] == cook.format_hms(minutes * 60)
+
+    mode = "UpperConvectionBake" if index == 0 else "LowerBake"
+    await coordinator.async_send_command(bound["oven_mode"], mode)
+    await coordinator.async_send_command(bound["oven_setpoint"], 350)
+
+    assert timer.native_value == minutes
+    assert held.plan(resources) == cook.CookPlan(mode, 350, "Fahrenheit", minutes * 60)
+    assert not _requests()
+    assert coordinator._held_cooks.get(MAIN if index else _lower(coordinator)) is None
+
+
+@pytest.mark.parametrize("order", list(permutations(("oven_mode", "oven_setpoint", "cook_time"))))
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+async def test_idle_settings_can_be_entered_in_any_order(hass, order, index, divided, mode):
+    coordinator = await _discovered(hass, _routes(divided=divided))
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    select = LocalThingsSelect(coordinator, bound["oven_mode"])
+    resources = coordinator._cavity_resources(cavity)
+    _FakeConnection.log.clear()
+    values = {"oven_mode": mode, "oven_setpoint": 350, "cook_time": 5}
+    entered = set()
+
+    for key in order:
+        await coordinator.async_send_command(bound[key], values[key])
+        entered.add(key)
+        if "oven_setpoint" in entered:
+            assert target.native_value == 350
+        if "cook_time" in entered:
+            assert timer.native_value == 5
+        if "oven_mode" not in entered:
+            assert select.current_option == "no_operation"
+            with pytest.raises(cook.CookStartError, match="cook_mode_required"):
+                coordinator._held_cooks[cavity].plan(resources)
+
+    assert coordinator._held_cooks[cavity].plan(resources) == cook.CookPlan(
+        mode, 350, "Fahrenheit", 300
+    )
+    for href, rep in resources.items():
+        coordinator._observe.apply(cavity.to_actual(href), rep, source="poll")
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    assert target.native_value == 350
+    assert timer.native_value == 5
+    assert coordinator.resource(cavity.to_actual(cook.MODE_HREF))[PREFIX + "modes"] == [
+        "NoOperation"
+    ]
+    assert not _requests()
+
+
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+async def test_idle_cook_time_starts_blank_and_keeps_explicit_values(hass, index, divided, mode):
+    coordinator = await _discovered(hass, _routes(divided=divided))
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    resources = coordinator._cavity_resources(cavity)
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    _FakeConnection.log.clear()
+
+    assert coordinator.data[timer._state_key] == 0
+    assert timer.native_value is None
+    assert timer.native_min_value == 0
+    assert timer.native_max_value == 599
+    assert coordinator._held_cooks.get(cavity) is None
+
+    await coordinator.async_send_command(bound["oven_mode"], mode)
+    assert timer.native_value is None
+    await coordinator.async_send_command(bound["oven_setpoint"], 350)
+    assert timer.native_value is None
+    assert coordinator._held_cooks[cavity].plan(resources).duration is None
+
+    await timer.async_set_native_value(5)
+    assert timer.native_value == 5
+    await timer.async_set_native_value(0)
+    assert timer.native_value == 0
+    assert coordinator._held_cooks[cavity].plan(resources).duration == 0
+    assert (
+        coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))[PREFIX + "operationTime"]
+        == "00:00:00"
+    )
+    assert not _requests()
+
+
+@pytest.mark.parametrize("index", [0, 1])
+async def test_same_mode_reselection_preserves_settings_after_a_refused_start(hass, index):
+    path = f"/devices/{index}"
+
+    class RefuseFirstRun(dict):
+        def get(self, key, default=None):
+            if key == ("PUT", path) and _requests().count(key) == 2:
+                return (400, {"errorDescription": "Control fail, <Operation.state=Run>"})
+            return super().get(key, default)
+
+    coordinator = await _discovered(hass, RefuseFirstRun(_routes()))
+    cavity = _lower(coordinator) if index else MAIN
+    mode = "LowerBake" if index else "UpperConvectionBake"
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    _FakeConnection.log.clear()
+
+    await coordinator.async_send_command(bound["oven_mode"], mode)
+    await target.async_set_native_value(350)
+    with pytest.raises(HomeAssistantError) as err:
+        await coordinator.async_send_command(bound["start_cooking"], "")
+    assert err.value.translation_key == "command_refused"
+    assert [entry[:3] for entry in _FakeConnection.log] == [
+        ("GET", path + "/configuration", None),
+        (
+            "PUT",
+            path,
+            {
+                "Device": {
+                    "Mode": {"modes": [mode]},
+                    "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                }
+            },
+        ),
+        ("GET", path + "/configuration", None),
+        ("PUT", path, {"Device": {"Operation": {"state": "Run"}}}),
+    ]
+
+    await timer.async_set_native_value(5)
+    await coordinator.async_send_command(bound["oven_mode"], mode)
+
+    assert target.native_value == 350
+    assert timer.native_value == 5
+    assert _requests() == [("GET", path + "/configuration"), ("PUT", path)] * 2
+    await coordinator.async_send_command(bound["start_cooking"], "")
+    assert [entry[:3] for entry in _FakeConnection.log[4:]] == [
+        ("GET", path + "/configuration", None),
+        (
+            "PUT",
+            path,
+            {
+                "Device": {
+                    "Mode": {"modes": [mode]},
+                    "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                    "Operation": {"operationTime": "00:05:00"},
+                }
+            },
+        ),
+        ("GET", path + "/configuration", None),
+        ("PUT", path, {"Device": {"Operation": {"state": "Run"}}}),
+    ]
+
+
+@pytest.mark.parametrize("index", [0, 1])
+async def test_pending_mode_does_not_display_unused_values_from_the_previous_cook(hass, index):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    temp_href = cavity.to_actual(cook.TEMPERATURES_HREF)
+    time_href = cavity.to_actual(cook.OPERATION_HREF)
+    temperatures = coordinator.resource(temp_href)
+    coordinator._observe.apply(
+        temp_href,
+        {
+            **temperatures,
+            PREFIX + "items": [{**temperatures[PREFIX + "items"][0], PREFIX + "desired": 350}],
+        },
+        source="poll",
+    )
+    coordinator._observe.apply(
+        time_href,
+        {**coordinator.resource(time_href), PREFIX + "operationTime": "00:05:00"},
+        source="poll",
+    )
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    _FakeConnection.log.clear()
+    assert target.native_value == 350
+    assert timer.native_value == 5
+
+    recipe = "LowerHealthycook1" if index else "UpperHealthycook1"
+    await coordinator.async_send_command(bound["oven_mode"], recipe)
+    assert target.native_value == 375
+    assert timer.native_value is None
+
+    mode = "LowerBake" if index else "UpperConvectionBake"
+    await coordinator.async_send_command(bound["oven_mode"], mode)
+    assert target.native_value is None
+    assert timer.native_value is None
+    assert coordinator.resource(temp_href)[PREFIX + "items"][0][PREFIX + "desired"] == 350
+    assert coordinator.resource(time_href)[PREFIX + "operationTime"] == "00:05:00"
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_send_command(bound["start_cooking"], "")
+    assert err.value.translation_key == "cook_temperature_required"
+    assert not _requests()
+
+
+async def test_running_zero_cook_time_stays_visible_and_returns_to_blank_when_idle(hass):
+    running = {
+        **LOWER,
+        "Mode": {**LOWER["Mode"], "modes": ["LowerBake"]},
+        "Operation": {**LOWER["Operation"], "state": "Run", "operationTime": "00:00:00"},
+    }
+    coordinator = await _discovered(hass, _routes(lower=running))
+    cavity = _lower(coordinator)
+    bound = next(
+        b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "cook_time"
+    )
+    timer = LocalThingsNumber(coordinator, bound)
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+
+    assert timer.native_value == 0
+
+    coordinator._observe.apply(
+        "/mode/vs/1",
+        {**coordinator.resource("/mode/vs/1"), PREFIX + "modes": ["NoOperation"]},
+        source="poll",
+    )
+    coordinator._observe.apply(
+        "/operational/state/vs/1",
+        {**coordinator.resource("/operational/state/vs/1"), PREFIX + "state": "Ready"},
+        source="poll",
+    )
+    coordinator._observe.apply("/oven/vs/1", {PREFIX + "state": "Ready"}, source="poll")
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    assert timer.native_value is None
+
+
+async def test_other_oven_boards_keep_their_idle_zero_cook_time(hass):
+    coordinator = await _discovered(hass)
+    coordinator._observe.apply(
+        "/information/vs/0",
+        {**coordinator.resource("/information/vs/0"), PREFIX + "modelNum": "LCD_OV_WALL_20K"},
+        source="poll",
+    )
+    bound = next(b for b in coordinator.bound if b.subdevice == MAIN and b.desc.key == "cook_time")
+    timer = LocalThingsNumber(coordinator, bound)
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+
+    assert timer.native_value == 0
+
+
+@pytest.mark.parametrize(
+    "language,label", [("en", "Healthy Cook Baked Potato"), ("de", "Gesundes Garen Ofenkartoffel")]
+)
+@pytest.mark.parametrize("action", ["held_setpoint", "start"])
+async def test_cook_errors_use_the_cavitys_translated_recipe_label(
+    hass, enable_custom_integrations, language, label, action
+):
+    hass.config.language = language
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator)
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    coordinator._observe.apply(
+        "/remotectrl/vs/1", {PREFIX + "remoteControlEnabled": True}, source="poll"
+    )
+    _FakeConnection.log.clear()
+
+    if action == "held_setpoint":
+        await coordinator.async_send_command(bound["oven_mode"], "LowerHealthycook1")
+    with pytest.raises(ServiceValidationError) as err:
+        if action == "start":
+            await coordinator.async_start_cooking(cavity, mode="LowerHealthycook1", temperature=485)
+        else:
+            await coordinator.async_send_command(bound["oven_setpoint"], 485)
+
+    assert err.value.translation_key == "cook_temperature_out_of_range"
+    assert err.value.translation_placeholders == {"mode": label, "min": "175°F", "max": "480°F"}
+    assert not _requests()
+
+
+async def test_missing_mode_error_lists_friendly_names_without_starting(hass):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator)
+    coordinator._observe.apply(
+        "/remotectrl/vs/1", {PREFIX + "remoteControlEnabled": True}, source="poll"
+    )
+    _FakeConnection.log.clear()
+
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_start_cooking(cavity)
+
+    assert err.value.translation_key == "cook_mode_required"
+    assert err.value.translation_placeholders == {
+        "startable": "Bake, Convection bake, Convection roast, Healthy Cook Baked Potato, "
+        "Healthy Cook Grilled Chicken, Healthy Cook Salmon Steak, Healthy Cook White Fish Fillet"
+    }
+    assert not _requests()
+
+
+@pytest.mark.parametrize("index,prefix", [(0, "Upper"), (1, "Lower")])
+@pytest.mark.parametrize("recipe,temperature", [(1, 375), (2, 375), (3, 375), (4, 400)])
+async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
+    hass: HomeAssistant, index, prefix, recipe, temperature
+):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    select = LocalThingsSelect(coordinator, bound["oven_mode"])
+    assert select.translation_key == "oven_mode_lcd_wall_16k"
+    _FakeConnection.log.clear()
+
+    await select.async_select_option(f"{prefix.lower()}_healthycook{recipe}")
+
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    assert target.native_value == temperature
+    assert target.native_max_value == 480
+    await coordinator.async_send_command(bound["cook_time"], 599)
+    plan = coordinator._held_cooks[cavity].plan(coordinator._cavity_resources(cavity))
+    assert plan.mode == f"{prefix}Healthycook{recipe}"
+    assert plan.temperature == temperature
+    assert plan.duration == 35940
+    assert not _requests()
+    assert coordinator._held_cooks.get(MAIN if index else _lower(coordinator)) is None
+
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_send_command(bound["oven_setpoint"], 485)
+    with pytest.raises(ServiceValidationError):
+        await coordinator.async_send_command(bound["cook_time"], 600)
+
+
+async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged(hass):
+    running = {
+        **LOWER,
+        "Mode": {**LOWER["Mode"], "modes": ["LowerHealthycook4"]},
+        "Operation": {**LOWER["Operation"], "state": "Run"},
+    }
+    coordinator = await _discovered(hass, _routes(lower=running))
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == _lower(coordinator)}
+    timer = LocalThingsNumber(coordinator, bound["cook_time"])
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    assert timer.native_max_value == 599
+    assert target.native_max_value == 480
+
+    coordinator._observe.apply(
+        "/information/vs/1", {PREFIX + "modelNum": "OTHER_OVEN"}, source="poll"
+    )
+    assert timer.native_max_value == 1439
+    assert target.native_max_value == 550
+    assert LocalThingsSelect(coordinator, bound["oven_mode"]).translation_key == "oven_mode"
+
+
+def test_recipe_fallback_does_not_change_an_unverified_board():
+    modes = _supported(_seed(_transport("LCD_OV_WALL_20K"), 1), 1)
+    assert not any(m.startswith("LowerHealthycook") for m in modes)
+
+
+async def test_steam_minimum_and_whole_oven_maximum(hass):
+    coordinator = await _discovered(hass)
+    resources = coordinator._cavity_resources(MAIN)
+    assert cook.temp_bounds(resources, "UpperSteamBake") == (230, 480, 5)
+    coordinator = await _discovered(hass, _routes(divided=False))
+    resources = coordinator._cavity_resources(MAIN)
+    assert cook.temp_bounds(resources, "Bake") == (175, 550, 5)
+    assert cook.temp_bounds(resources, "SteamBake") == (230, 550, 5)
+
+
+async def test_live_mode_spec_takes_precedence_over_legacy_limits(hass):
+    coordinator = await _discovered(hass)
+    resources = coordinator._cavity_resources(MAIN)
+    resources = {
+        **resources,
+        cook.MODE_HREF: {
+            **resources[cook.MODE_HREF],
+            cook.MODE_SPEC: [
+                {
+                    "mode": "UpperConvectionBake",
+                    "control": "Start&Setting",
+                    "tempMinF": "200",
+                    "tempMaxF": "450",
+                    "tempIntervalF": "10",
+                    "timeMin": "00:01:00",
+                    "timeMax": "02:00:00",
+                }
+            ],
+        },
+    }
+    assert cook.temp_bounds(resources, "UpperConvectionBake") == (200, 450, 10)
+    assert cook.legacy_wall_time_max(resources) is None
+    assert cook.mode_specs(resources)["UpperConvectionBake"].time_max == 7200
+
+
+@pytest.mark.parametrize("index,mode", [(0, "UpperConvectionBake"), (1, "LowerBake")])
+@pytest.mark.parametrize("use_button", [False, True])
+async def test_normal_start_keeps_the_lock_through_both_writes(
+    hass: HomeAssistant, monkeypatch, index, mode, use_button
+):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+
+    def bound(key):
+        return next(b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == key)
+
+    if use_button:
+        await coordinator.async_send_command(bound("oven_mode"), mode)
+        await coordinator.async_send_command(bound("oven_setpoint"), 350)
+        await coordinator.async_send_command(bound("cook_time"), 5)
+    _FakeConnection.log.clear()
+
+    def settle(seconds):
+        assert seconds == 3.0
+        assert coordinator._session_lock.locked()
+        assert _requests() == [
+            ("GET", f"/devices/{index}/configuration"),
+            ("PUT", f"/devices/{index}"),
+        ]
+
+    sleep = Mock(side_effect=settle)
+    monkeypatch.setattr("custom_components.localthings.legacy_http_transport.time.sleep", sleep)
+
+    if use_button:
+        await coordinator.async_send_command(bound("start_cooking"), "")
+    else:
+        await coordinator.async_start_cooking(cavity, mode=mode, temperature=350, duration=300)
+
+    sleep.assert_called_once_with(3.0)
+    assert [entry[:3] for entry in _FakeConnection.log] == [
+        ("GET", f"/devices/{index}/configuration", None),
+        (
+            "PUT",
+            f"/devices/{index}",
+            {
+                "Device": {
+                    "Mode": {"modes": [mode]},
+                    "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                    "Operation": {"operationTime": "00:05:00"},
+                }
+            },
+        ),
+        ("GET", f"/devices/{index}/configuration", None),
+        ("PUT", f"/devices/{index}", {"Device": {"Operation": {"state": "Run"}}}),
+    ]
+    assert not coordinator._session_lock.locked()
+
+
+@pytest.mark.parametrize("index", [0, 1])
+async def test_legacy_start_still_requires_smart_control(hass: HomeAssistant, index):
+    coordinator = await _discovered(hass, _remote_control_off(_routes()))
+    cavity = _lower(coordinator) if index else MAIN
+    _FakeConnection.log.clear()
+
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_start_cooking(
+            cavity,
+            mode="LowerBake" if index else "UpperConvectionBake",
+            temperature=350,
+            duration=300,
+        )
+
+    assert err.value.translation_key == "remote_control_disabled"
+    assert _FakeConnection.log == []
+
+
 class _StopsOnStop(dict):
     """Routes where the lower cavity reads Run until a PUT reaches it."""
 
@@ -580,12 +1369,12 @@ async def test_other_writes_still_need_remote_control(hass: HomeAssistant):
     routes = _routes()
     routes["/devices/0/configuration"] = (200, off)
     coordinator = await _discovered(hass, routes)
-    power = next(
-        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "power_switch"
+    start = next(
+        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "start_cooking"
     )
 
     with pytest.raises(ServiceValidationError):
-        await coordinator.async_send_command(power, False)
+        await coordinator.async_send_command(start, "")
 
 
 async def test_a_refused_stop_reaches_the_user(hass: HomeAssistant):

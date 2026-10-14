@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Appareil actif"
       },
+      "reservoir_open": {
+        "name": "Réservoir"
+      },
       "door_open": {
         "name": "Porte"
       },
@@ -650,7 +653,24 @@
           "steam_roast": "Rôtissage vapeur",
           "upper_steam_bake": "Cuisson vapeur (cavité supérieure)",
           "descale": "Détartrage",
-          "drain": "Vidange"
+          "drain": "Vidange",
+          "lower_convection_roast": "Rôtissage à chaleur tournante (cavité inférieure)",
+          "autocook": "Cuisson automatique",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cuisson saine 1",
+          "healthycook2": "Cuisson saine 2",
+          "healthycook3": "Cuisson saine 3",
+          "healthycook4": "Cuisson saine 4",
+          "healthycook5": "Cuisson saine 5",
+          "healthycook6": "Cuisson saine 6",
+          "upper_healthycook1": "Cuisson saine 1 (cavité supérieure)",
+          "upper_healthycook2": "Cuisson saine 2 (cavité supérieure)",
+          "upper_healthycook3": "Cuisson saine 3 (cavité supérieure)",
+          "upper_healthycook4": "Cuisson saine 4 (cavité supérieure)",
+          "lower_healthycook1": "Cuisson saine 1 (cavité inférieure)",
+          "lower_healthycook2": "Cuisson saine 2 (cavité inférieure)",
+          "lower_healthycook3": "Cuisson saine 3 (cavité inférieure)",
+          "lower_healthycook4": "Cuisson saine 4 (cavité inférieure)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1142,54 @@
           "off": "Éteint",
           "low": "Faible",
           "high": "Élevé"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Mode de cuisson",
+        "state": {
+          "no_operation": "Inactif",
+          "bake": "Cuisson traditionnelle",
+          "broil": "Gril",
+          "convection": "Chaleur tournante",
+          "convection_bake": "Cuisson à chaleur tournante",
+          "convection_broil": "Gril ventilé",
+          "frozen_pizza_plus": "Pizza surgelée+",
+          "slow_cook": "Cuisson lente",
+          "plate_warm": "Chauffe-assiettes",
+          "air_fry": "Friture à air chaud",
+          "convection_roast": "Rôtissage à chaleur tournante",
+          "keep_warm": "Maintien au chaud",
+          "bread_proof": "Levée de pâte",
+          "dehydrate": "Déshydratation",
+          "self_clean": "Autonettoyage",
+          "air_fryer": "Friture à air chaud",
+          "upper_broil": "Gril",
+          "upper_convection_bake": "Cuisson à chaleur tournante",
+          "upper_convection_roast": "Rôtissage à chaleur tournante",
+          "lower_bake": "Cuisson traditionnelle",
+          "lower_convection_bake": "Cuisson à chaleur tournante",
+          "steam_bake": "Cuisson vapeur",
+          "steam_roast": "Rôtissage vapeur",
+          "upper_steam_bake": "Cuisson vapeur",
+          "descale": "Détartrage",
+          "drain": "Vidange",
+          "lower_convection_roast": "Rôtissage à chaleur tournante",
+          "autocook": "Cuisson automatique",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cuisson saine 1",
+          "healthycook2": "Cuisson saine 2",
+          "healthycook3": "Cuisson saine 3",
+          "healthycook4": "Cuisson saine 4",
+          "healthycook5": "Cuisson saine 5",
+          "healthycook6": "Cuisson saine 6",
+          "upper_healthycook1": "Cuisson saine Pomme de terre au four",
+          "upper_healthycook2": "Cuisson saine Poulet grillé",
+          "upper_healthycook3": "Cuisson saine Pavé de saumon",
+          "upper_healthycook4": "Cuisson saine Filet de poisson blanc",
+          "lower_healthycook1": "Cuisson saine Pomme de terre au four",
+          "lower_healthycook2": "Cuisson saine Poulet grillé",
+          "lower_healthycook3": "Cuisson saine Pavé de saumon",
+          "lower_healthycook4": "Cuisson saine Filet de poisson blanc"
         }
       }
     },
@@ -2209,6 +2277,9 @@
     },
     "command_failed": {
       "message": "La commande vers {href} a échoué même après reconnexion : {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Le démarrage de la cuisson n’a pas pu être confirmé et n’a pas été réessayé. Vérifiez l’appareil avant de réessayer. Détails : {error}"
     },
     "command_refused": {
       "message": "L'appareil a refusé la commande vers {href} : {error}"

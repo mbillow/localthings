@@ -6,6 +6,7 @@ from custom_components.localthings.registry.by_type import for_device_by_model
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
+    BinarySensorDesc,
     NumberDesc,
     SelectDesc,
     SwitchDesc,
@@ -347,6 +348,32 @@ def _mode_rep(*extra_opts):
             *extra_opts,
         ]
     }
+
+
+@pytest.mark.parametrize(
+    "options,expected",
+    [
+        (["waterTankInSwitch_On", "waterTankOutSwitch_Off"], False),
+        (["waterTankInSwitch_Off", "waterTankOutSwitch_On", "Sound_On"], True),
+        (["waterTankInSwitch_On", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_Off", "waterTankOutSwitch_Off"], None),
+        (["waterTankInSwitch_On"], None),
+        (["waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_Unknown", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_On", "waterTankInSwitch_Off", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_On", "waterTankOutSwitch_On", "waterTankOutSwitch_Off"], None),
+        ([None, 1, {}], None),
+        ([], None),
+        (None, None),
+        ("waterTankInSwitch_On", None),
+        ({"waterTankInSwitch_On": True}, None),
+        (42, None),
+    ],
+)
+def test_reservoir_reports_only_confirmed_position_pairs(options, expected):
+    desc = next(e for e in oven.OVEN_MODE.entities if e.key == "reservoir_open")
+    assert isinstance(desc, BinarySensorDesc)
+    assert desc.value_fn(options) is expected
 
 
 def test_lamp_write_is_single_token():

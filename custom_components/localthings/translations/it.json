@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Dispositivo attivo"
       },
+      "reservoir_open": {
+        "name": "Serbatoio"
+      },
       "door_open": {
         "name": "Sportello"
       },
@@ -650,7 +653,24 @@
           "steam_roast": "Arrosto a vapore",
           "upper_steam_bake": "Cottura a vapore (superiore)",
           "descale": "Decalcificazione",
-          "drain": "Scarico acqua"
+          "drain": "Scarico acqua",
+          "lower_convection_roast": "Arrosto ventilato (inferiore)",
+          "autocook": "Cottura automatica",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cottura salutare 1",
+          "healthycook2": "Cottura salutare 2",
+          "healthycook3": "Cottura salutare 3",
+          "healthycook4": "Cottura salutare 4",
+          "healthycook5": "Cottura salutare 5",
+          "healthycook6": "Cottura salutare 6",
+          "upper_healthycook1": "Cottura salutare 1 (superiore)",
+          "upper_healthycook2": "Cottura salutare 2 (superiore)",
+          "upper_healthycook3": "Cottura salutare 3 (superiore)",
+          "upper_healthycook4": "Cottura salutare 4 (superiore)",
+          "lower_healthycook1": "Cottura salutare 1 (inferiore)",
+          "lower_healthycook2": "Cottura salutare 2 (inferiore)",
+          "lower_healthycook3": "Cottura salutare 3 (inferiore)",
+          "lower_healthycook4": "Cottura salutare 4 (inferiore)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1142,54 @@
           "off": "Spenta",
           "low": "Bassa",
           "high": "Alta"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Modalità di cottura",
+        "state": {
+          "no_operation": "Nessuna operazione",
+          "bake": "Statico",
+          "broil": "Grill",
+          "convection": "Convezione",
+          "convection_bake": "Cottura a convezione",
+          "convection_broil": "Grill a convezione",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Cottura lenta",
+          "plate_warm": "Scalda piatti",
+          "air_fry": "Frittura ad aria",
+          "convection_roast": "Arrosto ventilato",
+          "keep_warm": "Mantieni in caldo",
+          "bread_proof": "Lievitazione",
+          "dehydrate": "Essiccazione",
+          "self_clean": "Autopulizia",
+          "air_fryer": "Friggitrice ad aria",
+          "upper_broil": "Grill",
+          "upper_convection_bake": "Cottura a convezione",
+          "upper_convection_roast": "Arrosto ventilato",
+          "lower_bake": "Statico",
+          "lower_convection_bake": "Cottura a convezione",
+          "steam_bake": "Cottura a vapore",
+          "steam_roast": "Arrosto a vapore",
+          "upper_steam_bake": "Cottura a vapore",
+          "descale": "Decalcificazione",
+          "drain": "Scarico acqua",
+          "lower_convection_roast": "Arrosto ventilato",
+          "autocook": "Cottura automatica",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cottura salutare 1",
+          "healthycook2": "Cottura salutare 2",
+          "healthycook3": "Cottura salutare 3",
+          "healthycook4": "Cottura salutare 4",
+          "healthycook5": "Cottura salutare 5",
+          "healthycook6": "Cottura salutare 6",
+          "upper_healthycook1": "Cottura salutare Patata al forno",
+          "upper_healthycook2": "Cottura salutare Pollo grigliato",
+          "upper_healthycook3": "Cottura salutare Trancio di salmone",
+          "upper_healthycook4": "Cottura salutare Filetto di pesce bianco",
+          "lower_healthycook1": "Cottura salutare Patata al forno",
+          "lower_healthycook2": "Cottura salutare Pollo grigliato",
+          "lower_healthycook3": "Cottura salutare Trancio di salmone",
+          "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
         }
       }
     },
@@ -2209,6 +2277,9 @@
     },
     "command_failed": {
       "message": "Il comando per {href} è fallito anche dopo la riconnessione: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Non è stato possibile confermare l’avvio della cottura e il tentativo non è stato ripetuto. Controllare l’apparecchio prima di riprovare. Dettagli: {error}"
     },
     "command_refused": {
       "message": "L'elettrodomestico ha rifiutato il comando per {href}: {error}"

@@ -19,7 +19,9 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
-from .entity import async_load_instance_names
+from .entity import _is_included, async_load_instance_names
+from .registry.adapter import _key
+from .registry.entities import BinarySensorDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -249,6 +251,34 @@ def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry)
         ent_reg.async_remove(registry_entry.entity_id)
 
 
+@callback
+def _drop_power_switches_superseded_by_sensors(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove old Power controls only where discovery now provides status."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, BinarySensorDesc)
+            or bound.desc.key != "power_switch"
+            or not _is_included(bound, coordinator)
+        ):
+            continue
+        unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(bound)}"
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        # A platform change leaves the old switch permanently unavailable,
+        # even though the same cavity now has a read-only Power sensor.
+        _LOGGER.info(
+            "Removing %s, superseded by a Power binary sensor on the same device; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -388,6 +418,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
+    _drop_power_switches_superseded_by_sensors(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
