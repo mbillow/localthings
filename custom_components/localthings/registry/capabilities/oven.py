@@ -803,6 +803,73 @@ def shared_door_view(resources: dict[str, dict]) -> dict[str, dict]:
     return {**resources, "/doors/vs/1": {**lower_door, prefix + "items": items}}
 
 
+_SHARED_DIVIDER = "_localthings_divider"
+_SHARED_RESERVOIR = "_localthings_reservoir"
+
+
+def shared_sensor_view(resources: dict[str, dict]) -> dict[str, dict]:
+    """Show the measured Flex Duo's shared parts on both cavity devices."""
+    view = shared_door_view(resources)
+    prefix = "x.com.samsung.da."
+    main = resources.get("/information/vs/0", {})
+    lower = resources.get("/information/vs/1", {})
+    if (
+        str(main.get(prefix + "modelNum", "")).split("|", 1)[0] != "LCD_OV_WALL_16K"
+        or lower.get(prefix + "description") != "LCD_OV_WALL_16K_DIV"
+    ):
+        return view
+    divider = resources.get("/connected/vs/1", {}).get(prefix + "connected")
+    view = {
+        **view,
+        "/information/vs/0": {
+            **main,
+            _SHARED_DIVIDER: True if divider == "On" else False if divider == "Off" else None,
+        },
+    }
+    main_mode = resources.get("/mode/vs/0", {})
+    lower_mode = resources.get("/mode/vs/1", {})
+    options = lower_mode.get(prefix + "options")
+    if options is not None and not isinstance(options, list):
+        return view
+    own_switch = any(
+        _option_value(options, name) is not None
+        for name in ("waterTankInSwitch", "waterTankOutSwitch")
+    )
+    if not own_switch and _has_reservoir(main_mode, {}):
+        # Only the read-only display value is shared; no sibling options
+        # enter the lower mode resource or any appliance write.
+        view["/information/vs/1"] = {
+            **lower,
+            _SHARED_RESERVOIR: _reservoir_open(main_mode.get(prefix + "options")),
+        }
+    return view
+
+
+OVEN_SHARED_SENSORS = Capability(
+    href="/information/vs/0",
+    match_fn=lambda rep, resources: cook.is_lcd_wall_16k(resources),
+    entities=(
+        BinarySensorDesc(
+            key="divider",
+            field=_SHARED_DIVIDER,
+            icon="mdi:view-split-horizontal",
+            exists_fn=lambda rep, resources: (
+                _SHARED_DIVIDER in resources.get("/information/vs/0", {})
+            ),
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field=_SHARED_RESERVOIR,
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=lambda rep, resources: (
+                _SHARED_RESERVOIR in resources.get("/information/vs/0", {})
+            ),
+        ),
+    ),
+)
+
+
 OVEN_DOOR = Capability(
     href="/doors/vs/0",
     poll_tier="hot",
@@ -846,7 +913,7 @@ OVEN_CONNECTED = Capability(
             field="x.com.samsung.da.connected",
             icon="mdi:view-split-horizontal",
             exists_fn=_is_lower_cavity,
-            value_fn=lambda v: v == "On",
+            value_fn=lambda v: True if v == "On" else False if v == "Off" else None,
         ),
     ),
 )

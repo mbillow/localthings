@@ -29,7 +29,8 @@ The fresh checks and no-replay behavior address weaknesses found in code review;
 they are not evidence that the reported incident's cause has been fixed.
 
 Before those safeguards, normal Start/Stop worked on both divided cavities,
-and the owner reported Smart Control operation with the divider removed.
+and the owner confirmed mode visibility with the divider removed. The owner
+later clarified that whole-oven cooking itself still needed confirmation.
 After installing the safeguards, one supervised lower-cavity test on October 14
 confirmed normal heating and Stop, with the dial remaining on Smart Control:
 
@@ -139,9 +140,23 @@ omission is not silently replaced with zero.
 - **Reservoir:** the owner confirmed Closed = In On / Out Off, and Open = In Off /
   Out On, while the main door stayed open. The read-only opening sensor belongs
   to the cavity reporting both switch tokens; missing or contradictory readings
-  are Unknown. The owner confirmed operation after installation. Other existing
-  fixtures with both tokens also bind the sensor, but their position mapping has
+  are Unknown. On LCD_OV_WALL_16K with its matching lower record, the entity view
+  also shows this shared reservoir on Lower. Any lower tank-switch tokens take
+  precedence over the shared reading. The owner confirmed the original sensor's
+  operation; the additional Lower display is software-tested and awaits installation.
+  Other existing fixtures with both tokens also bind the sensor, but their position mapping has
   not been independently hardware-tested. No reservoir actuator is added.
+- **Divider:** on that same measured board pair, both device pages display the
+  divider state from the lower record, including when it is removed. The Upper
+  copy uses a separate entity-view value, preserving Upper's connectivity flag.
+  It reuses the existing translated label; unknown source readings remain Unknown.
+  Both new copies are read-only, preserve existing entity identities and leave
+  raw diagnostics, polling and control routing unchanged. Their display in HA
+  awaits owner confirmation.
+- **Discovery with the divider removed:** the `OV` board token identifies the
+  oven even when Lower offers only NoOperation. Previously its `WALL` description
+  could fall through to the washer-prefix match during startup. Regression tests
+  now verify both shared sensor copies from divider-in and divider-out startup.
 - **Write verification:** items match by ID and requested fields, allowing extra
   returned fields and equivalent finite numeric setpoints. IDs and units remain
   exact; ambiguous, missing or mismatched items fail. Individual and batch writes
@@ -251,8 +266,9 @@ Connection mode and Diagnosis status remain. This is general owner acceptance,
 not a separate hardware test of every changed feature or cooking combination.
 
 That build passed all 3,202 tests on Python 3.14.8, plus formatting, lint and
-type checks. The submission's subsequent changes only update documentation;
-its integration code is identical to the installed build.
+type checks. Subsequent changes add the shared Divider and Reservoir displays
+described above; the installed build does not yet include those two copies.
+The updated branch passes all 3,210 tests, plus formatting, lint and type checks.
 
 ## Validation limits
 

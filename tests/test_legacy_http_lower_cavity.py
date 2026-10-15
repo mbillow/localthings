@@ -610,7 +610,7 @@ async def test_the_lower_cavity_becomes_its_own_device(hass: HomeAssistant):
 
 
 @pytest.mark.parametrize("divided", [False, True])
-async def test_reservoir_belongs_to_upper_and_tracks_position_independently_of_door(
+async def test_reservoir_is_shared_and_tracks_position_independently_of_door(
     hass: HomeAssistant, divided
 ):
     coordinator = await _discovered(hass, _routes(divided=divided))
@@ -619,12 +619,10 @@ async def test_reservoir_belongs_to_upper_and_tracks_position_independently_of_d
         for b in coordinator.bound
         if b.desc.key == "reservoir_open" and _is_included(b, coordinator)
     ]
-    assert len(reservoirs) == 1
-    bound = reservoirs[0]
-    assert bound.subdevice == MAIN
-    assert bound.href == "/mode/vs/0"
-    entity = LocalThingsBinarySensor(coordinator, bound)
-    assert entity.device_class == "opening"
+    assert {b.subdevice for b in reservoirs} == {MAIN, _lower(coordinator)}
+    entities = [LocalThingsBinarySensor(coordinator, b) for b in reservoirs]
+    assert len({e.unique_id for e in entities}) == 2
+    assert all(e.device_class == "opening" for e in entities)
     assert not any(b.desc.key == "lamp" and _is_included(b, coordinator) for b in coordinator.bound)
     assert flatten(coordinator.bound, coordinator.entity_resources())["reservoir_open"] is False
 
@@ -643,9 +641,14 @@ async def test_reservoir_belongs_to_upper_and_tracks_position_independently_of_d
         coordinator.async_set_updated_data(
             flatten(coordinator.bound, coordinator.entity_resources())
         )
-        assert entity.is_on is (sample["position"] == "open")
+        assert all(e.is_on is (sample["position"] == "open") for e in entities)
         assert coordinator.data["door_open"] is True
-        assert "subdevice1_reservoir_open" not in coordinator.data
+        assert coordinator.data["subdevice1_reservoir_open"] is coordinator.data["reservoir_open"]
+        assert PREFIX + "options" not in coordinator.resource("/mode/vs/1")
+        assert (
+            PREFIX + "options"
+            not in coordinator.device_resources(_lower(coordinator))["/mode/vs/0"]
+        )
 
     for options in (
         [],
@@ -657,8 +660,81 @@ async def test_reservoir_belongs_to_upper_and_tracks_position_independently_of_d
         coordinator.async_set_updated_data(
             flatten(coordinator.bound, coordinator.entity_resources())
         )
-        assert entity.is_on is None
+        assert all(e.is_on is None for e in entities)
     assert not _requests()
+
+
+@pytest.mark.parametrize("divided", [False, True])
+async def test_divider_is_shared_without_changing_raw_resources(hass: HomeAssistant, divided):
+    coordinator = await _discovered(hass, _routes(divided=divided))
+    assert resolve(coordinator.device_resources(_lower(coordinator))) is oven.REGISTRY
+    dividers = [
+        b for b in coordinator.bound if b.desc.key == "divider" and _is_included(b, coordinator)
+    ]
+    assert {b.subdevice for b in dividers} == {MAIN, _lower(coordinator)}
+    entities = [LocalThingsBinarySensor(coordinator, b) for b in dividers]
+    assert len({e.unique_id for e in entities}) == 2
+    raw_upper = dict(coordinator.resource("/information/vs/0"))
+    _FakeConnection.log.clear()
+    for value, expected in [("On", True), ("Off", False), ("Unknown", None), (None, None)]:
+        coordinator._observe.apply("/connected/vs/1", {PREFIX + "connected": value}, source="poll")
+        coordinator.async_set_updated_data(
+            flatten(coordinator.bound, coordinator.entity_resources())
+        )
+        assert all(e.is_on is expected for e in entities)
+        assert coordinator.resource("/information/vs/0") == raw_upper
+        assert coordinator.device_resources(MAIN)["/information/vs/0"] == raw_upper
+    assert not _requests()
+
+
+async def test_shared_sensors_are_included_on_offline_reload(hass: HomeAssistant):
+    coordinator = await _discovered(hass)
+    snapshot = coordinator.last_resources
+    coordinator._rehydrate_resources = snapshot
+    for key, cavity in [("divider", MAIN), ("reservoir_open", _lower(coordinator))]:
+        bound = next(
+            b
+            for b in coordinator.bound
+            if b.desc.key == key
+            and b.subdevice == cavity
+            and b.href == cavity.to_actual("/information/vs/0")
+        )
+        assert _is_included(bound, coordinator)
+    assert coordinator.discovery_resources == snapshot
+
+
+@pytest.mark.parametrize(
+    "href,rep",
+    [
+        ("/information/vs/0", {PREFIX + "modelNum": "LCD_OV_WALL_20K|1|2"}),
+        ("/information/vs/1", {PREFIX + "description": "OTHER"}),
+    ],
+)
+async def test_shared_divider_and_reservoir_require_the_measured_pair(
+    hass: HomeAssistant, href, rep
+):
+    coordinator = await _discovered(hass)
+    coordinator._observe.apply(href, rep, source="poll")
+    state = flatten(coordinator.bound, coordinator.entity_resources())
+    assert "divider" not in state
+    assert "subdevice1_reservoir_open" not in state
+
+
+@pytest.mark.parametrize(
+    "options,expected",
+    [
+        (["waterTankInSwitch_Off", "waterTankOutSwitch_On"], True),
+        (["waterTankInSwitch_Off"], None),
+        (["waterTankInSwitch_On", "waterTankOutSwitch_On"], None),
+    ],
+)
+async def test_a_lower_reservoir_reading_is_not_replaced(hass: HomeAssistant, options, expected):
+    coordinator = await _discovered(hass)
+    coordinator._observe.apply("/mode/vs/1", {PREFIX + "options": options}, source="poll")
+    state = flatten(coordinator.bound, coordinator.entity_resources())
+    assert state["reservoir_open"] is False
+    assert state.get("subdevice1_reservoir_open") is expected
+    assert coordinator.entity_resources()["/mode/vs/1"] == coordinator.resource("/mode/vs/1")
 
 
 async def test_lower_door_tracks_shared_door_without_changing_raw_resources(hass: HomeAssistant):

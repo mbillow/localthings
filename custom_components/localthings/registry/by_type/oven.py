@@ -8,7 +8,7 @@ REGISTRY = DeviceRegistry(
     name="oven",
     capabilities=_build(
         [
-            *ignored.without("/configuration/vs/0"),
+            *ignored.without("/configuration/vs/0", "/information/vs/0"),
             *common.UNIVERSAL,
             *common.POWER,
             oven.OVEN_CAVITY,
@@ -20,6 +20,7 @@ REGISTRY = DeviceRegistry(
             oven.OVEN_MODE,
             oven.OVEN_OPERATIONAL_STATE,
             oven.OVEN_DOOR,
+            oven.OVEN_SHARED_SENSORS,
             oven.OVEN_CONNECTED,
             oven.OVEN_SPEC,
             oven.OVEN_RECIPE_COOK,

@@ -602,7 +602,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         onto /course/vs/0 under cloudcourse.FIELD (issue #342), and for an
         oven the upper cavity's modeSpec shared with the lower one and each
         idle cavity's held cook choices (issue #473, see cook.py). The
-        measured Flex Duo model also shares its single door reading.
+        measured Flex Duo model also shares its door, divider and reservoir readings.
 
         Merged at read time rather than applied to the state cache, so the
         synthetic field can never be polled over or written to the device --
@@ -620,7 +620,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         this per-subdevice means keying the store by actual href the way
         LearnedModes does, and migrating the persisted shape.
         """
-        snapshot = oven.shared_door_view(
+        snapshot = oven.shared_sensor_view(
             self._with_held_cooks(self._cook_view(self.last_resources))
         )
         rep = snapshot.get(cloudcourse.COURSE_HREF)
@@ -709,7 +709,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         exists_fn counterpart to canonical_resources."""
         if self._rehydrate_resources is None:
             return self.canonical_resources(subdevice)
-        resources = self._cook_view(self._rehydrate_resources)
+        resources = oven.shared_sensor_view(self._cook_view(self._rehydrate_resources))
         return canonical_view(subdevice, resources, self.subdevices)
 
     # ------------------------------------------------------------------
