@@ -169,6 +169,21 @@
       },
       "oven_cavity_cycle_active": {
         "name": "{cavity}: Actief"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Kinderslot"
+      },
+      "oven_cavity_reservoir_open": {
+        "name": "{cavity}: Waterreservoir"
+      },
+      "oven_cavity_door_open": {
+        "name": "{cavity}: Deur"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Voeding"
+      },
+      "oven_cavity_remote_control": {
+        "name": "{cavity}: Smart Control"
       }
     },
     "button": {
@@ -225,6 +240,12 @@
       },
       "oven_cavity_start_cooking": {
         "name": "{cavity}: Starten"
+      },
+      "oven_cavity_diagnosis_start": {
+        "name": "{cavity}: Diagnose starten"
+      },
+      "oven_cavity_sync_clock": {
+        "name": "{cavity}: Klok synchroniseren"
       }
     },
     "climate": {
@@ -280,6 +301,9 @@
     "light": {
       "lamp": {
         "name": "Lamp"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Lamp"
       }
     },
     "number": {
@@ -333,6 +357,9 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Kooktijd minuten"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Bereidingstijd"
       }
     },
     "select": {
@@ -1267,6 +1294,54 @@
           "lower_healthycook3": "Gezond koken Zalmsteak",
           "lower_healthycook4": "Gezond koken Witvisfilet"
         }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity}: Bereidingsmodus",
+        "state": {
+          "no_operation": "Niet actief",
+          "bake": "Bakken",
+          "broil": "Grillen",
+          "convection": "Hetelucht",
+          "convection_bake": "Bakken met hetelucht",
+          "convection_broil": "Grillen met hetelucht",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Langzaam garen",
+          "plate_warm": "Borden warmhouden",
+          "air_fry": "Airfryen",
+          "convection_roast": "Heteluchtbraden",
+          "keep_warm": "Warmhouden",
+          "bread_proof": "Deeg rijzen",
+          "dehydrate": "Drogen",
+          "self_clean": "Zelfreiniging",
+          "air_fryer": "Airfryer",
+          "upper_broil": "Grillen (boven)",
+          "upper_convection_bake": "Bakken met hetelucht (boven)",
+          "upper_convection_roast": "Heteluchtbraden (boven)",
+          "lower_bake": "Bakken (onder)",
+          "lower_convection_bake": "Bakken met hetelucht (onder)",
+          "steam_bake": "Stoombakken",
+          "steam_roast": "Stoombraden",
+          "upper_steam_bake": "Stoombakken (boven)",
+          "descale": "Ontkalken",
+          "drain": "Water aftappen",
+          "lower_convection_roast": "Heteluchtbraden (onder)",
+          "autocook": "Automatisch koken",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Gezond koken 1",
+          "healthycook2": "Gezond koken 2",
+          "healthycook3": "Gezond koken 3",
+          "healthycook4": "Gezond koken 4",
+          "healthycook5": "Gezond koken 5",
+          "healthycook6": "Gezond koken 6",
+          "upper_healthycook1": "Gezond koken 1 (boven)",
+          "upper_healthycook2": "Gezond koken 2 (boven)",
+          "upper_healthycook3": "Gezond koken 3 (boven)",
+          "upper_healthycook4": "Gezond koken 4 (boven)",
+          "lower_healthycook1": "Gezond koken 1 (onder)",
+          "lower_healthycook2": "Gezond koken 2 (onder)",
+          "lower_healthycook3": "Gezond koken 3 (onder)",
+          "lower_healthycook4": "Gezond koken 4 (onder)"
+        }
       }
     },
     "sensor": {
@@ -1808,6 +1883,9 @@
           "active": "Actief",
           "pause": "Gepauzeerd"
         }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Bereidingstijd"
       }
     },
     "switch": {
@@ -2062,6 +2140,27 @@
       },
       "extra_rinse": {
         "name": "Extra spoelen"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Kinderslot"
+      },
+      "oven_cavity_fast_preheat": {
+        "name": "{cavity}: Snel voorverwarmen"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Lamp"
+      },
+      "oven_cavity_natural_steam": {
+        "name": "{cavity}: Natuurlijke stoom"
+      },
+      "oven_cavity_energy_saving": {
+        "name": "{cavity}: Energiebesparing"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Voeding"
+      },
+      "oven_cavity_sound": {
+        "name": "{cavity}: Geluid"
       }
     },
     "time": {
@@ -2486,7 +2585,7 @@
       "message": "De totale kooktijd mag niet langer zijn dan {max}."
     },
     "cooking_cavity_not_found": {
-      "message": "Dit apparaat heeft geen gecombineerd paar Flex Duo-ovenruimtes. Selecteer het bestaande apparaat voor de gewenste ovenruimte."
+      "message": "Dit apparaat heeft geen gecombineerd paar ovenruimtes. Selecteer het bestaande apparaat voor de gewenste ovenruimte."
     }
   },
   "selector": {
@@ -2512,7 +2611,7 @@
         "whiskey_ice_ball": "IJsballen",
         "oven_cavity_upper": "Boven",
         "oven_cavity_lower": "Onder",
-        "oven_cavity_whole": "Hele oven"
+        "oven_cavity_whole": "Oven"
       }
     },
     "oven_cavity": {

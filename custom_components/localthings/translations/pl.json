@@ -169,6 +169,21 @@
       },
       "oven_cavity_cycle_active": {
         "name": "{cavity}: Pracuje"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Blokada rodzicielska"
+      },
+      "oven_cavity_reservoir_open": {
+        "name": "{cavity}: Zbiornik wody"
+      },
+      "oven_cavity_door_open": {
+        "name": "{cavity}: Drzwi"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Zasilanie"
+      },
+      "oven_cavity_remote_control": {
+        "name": "{cavity}: Smart Control"
       }
     },
     "button": {
@@ -225,6 +240,12 @@
       },
       "oven_cavity_start_cooking": {
         "name": "{cavity}: Uruchom"
+      },
+      "oven_cavity_diagnosis_start": {
+        "name": "{cavity}: Rozpocznij diagnostykę"
+      },
+      "oven_cavity_sync_clock": {
+        "name": "{cavity}: Zsynchronizuj zegar"
       }
     },
     "climate": {
@@ -280,6 +301,9 @@
     "light": {
       "lamp": {
         "name": "Oświetlenie"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Oświetlenie"
       }
     },
     "number": {
@@ -333,6 +357,9 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minuty gotowania"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Czas gotowania"
       }
     },
     "select": {
@@ -1267,6 +1294,54 @@
           "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
           "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
         }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity}: Tryb pieczenia",
+        "state": {
+          "no_operation": "Brak pracy",
+          "bake": "Pieczenie",
+          "broil": "Opiekanie",
+          "convection": "Termoobieg",
+          "convection_bake": "Pieczenie z termoobiegiem",
+          "convection_broil": "Opiekanie z termoobiegiem",
+          "frozen_pizza_plus": "Pizza mrożona+",
+          "slow_cook": "Wolne gotowanie",
+          "plate_warm": "Podgrzewanie talerzy",
+          "air_fry": "Smażenie na gorącym powietrzu",
+          "convection_roast": "Pieczenie mięs z termoobiegiem",
+          "keep_warm": "Utrzymywanie ciepła",
+          "bread_proof": "Wyrastanie ciasta",
+          "dehydrate": "Suszenie żywności",
+          "self_clean": "Samoczyszczenie",
+          "air_fryer": "Smażenie na gorącym powietrzu",
+          "upper_broil": "Opiekanie (górna)",
+          "upper_convection_bake": "Pieczenie z termoobiegiem (górna)",
+          "upper_convection_roast": "Pieczenie mięs z termoobiegiem (górna)",
+          "lower_bake": "Pieczenie (dolna)",
+          "lower_convection_bake": "Pieczenie z termoobiegiem (dolna)",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą (górna)",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody",
+          "lower_convection_roast": "Pieczenie mięs z termoobiegiem (dolna)",
+          "autocook": "Automatyczne pieczenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdrowe gotowanie 1",
+          "healthycook2": "Zdrowe gotowanie 2",
+          "healthycook3": "Zdrowe gotowanie 3",
+          "healthycook4": "Zdrowe gotowanie 4",
+          "healthycook5": "Zdrowe gotowanie 5",
+          "healthycook6": "Zdrowe gotowanie 6",
+          "upper_healthycook1": "Zdrowe gotowanie 1 (górna)",
+          "upper_healthycook2": "Zdrowe gotowanie 2 (górna)",
+          "upper_healthycook3": "Zdrowe gotowanie 3 (górna)",
+          "upper_healthycook4": "Zdrowe gotowanie 4 (górna)",
+          "lower_healthycook1": "Zdrowe gotowanie 1 (dolna)",
+          "lower_healthycook2": "Zdrowe gotowanie 2 (dolna)",
+          "lower_healthycook3": "Zdrowe gotowanie 3 (dolna)",
+          "lower_healthycook4": "Zdrowe gotowanie 4 (dolna)"
+        }
       }
     },
     "sensor": {
@@ -1808,6 +1883,9 @@
           "active": "Aktywne",
           "pause": "Wstrzymane"
         }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Czas gotowania"
       }
     },
     "switch": {
@@ -2062,6 +2140,27 @@
       },
       "extra_rinse": {
         "name": "Dodatkowe płukanie"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Blokada rodzicielska"
+      },
+      "oven_cavity_fast_preheat": {
+        "name": "{cavity}: Szybkie nagrzewanie"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Oświetlenie"
+      },
+      "oven_cavity_natural_steam": {
+        "name": "{cavity}: Naturalna para"
+      },
+      "oven_cavity_energy_saving": {
+        "name": "{cavity}: Oszczędzanie energii"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Zasilanie"
+      },
+      "oven_cavity_sound": {
+        "name": "{cavity}: Dźwięk"
       }
     },
     "time": {
@@ -2486,7 +2585,7 @@
       "message": "Łączny czas gotowania nie może przekroczyć {max}."
     },
     "cooking_cavity_not_found": {
-      "message": "To urządzenie nie udostępnia połączonej pary komór Flex Duo. Wybierz istniejące urządzenie odpowiedniej komory."
+      "message": "To urządzenie nie udostępnia połączonej pary komór. Wybierz istniejące urządzenie odpowiedniej komory."
     }
   },
   "selector": {
@@ -2512,7 +2611,7 @@
         "whiskey_ice_ball": "Kule lodu",
         "oven_cavity_upper": "Górna komora",
         "oven_cavity_lower": "Dolna komora",
-        "oven_cavity_whole": "Cały piekarnik"
+        "oven_cavity_whole": "Piekarnik"
       }
     },
     "oven_cavity": {

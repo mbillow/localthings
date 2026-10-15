@@ -988,7 +988,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def combined_oven_lower(self) -> Subdevice | None:
-        return combined_lower(self.discovery_resources, self.subdevices)
+        return combined_lower(
+            self._cook_view(self.discovery_resources), self.subdevices, self.device_type_name
+        )
 
     def device_info_for(self, subdevice: Subdevice) -> DeviceInfo:
         """DeviceInfo for one logical subdevice on this connection (issue

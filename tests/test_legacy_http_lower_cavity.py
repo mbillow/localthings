@@ -1447,7 +1447,10 @@ async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged
     total = LocalThingsNumber(coordinator, bound["cook_time"])
     assert total.native_max_value == 1439
     assert target.native_max_value == 550
-    assert LocalThingsSelect(coordinator, bound["oven_mode"]).translation_key == "oven_mode"
+    assert (
+        LocalThingsSelect(coordinator, bound["oven_mode"]).translation_key
+        == "oven_cavity_oven_mode"
+    )
 
 
 def test_recipe_fallback_does_not_change_an_unverified_board():

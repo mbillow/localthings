@@ -286,6 +286,16 @@ async def _async_start_cooking(hass: HomeAssistant, call: ServiceCall) -> None:
                 translation_domain=DOMAIN, translation_key="cooking_cavity_not_found"
             )
         subdevice = lower if cavity == "lower" else MAIN
+        if (
+            subdevice == lower
+            and coordinator.resource(lower.to_actual(cook.CONNECTED_HREF)).get(
+                "x.com.samsung.da.connected"
+            )
+            == "Off"
+        ):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="cook_start_not_supported"
+            )
     temperature = call.data.get(ATTR_TEMPERATURE)
     if temperature is not None:
         # Given in Home Assistant's unit, as the setpoint entity shows it;

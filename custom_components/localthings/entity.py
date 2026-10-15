@@ -13,7 +13,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .oven_device import CAVITY_KEYS, cavity_label, is_shared_duplicate
+from .oven_device import (
+    CAVITY_KEYS,
+    OPTION_KEYS,
+    cavity_label,
+    divider_state,
+    is_shared_duplicate,
+    shared_keys,
+)
 from .registry.adapter import _key
 from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
@@ -45,7 +52,9 @@ def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> boo
     (issue #295) the live cache is still empty, and judging existence
     against it would filter every rehydrated entity away.
     """
-    if is_shared_duplicate(bound, getattr(coordinator, "combined_oven_lower", None)):
+    if is_shared_duplicate(
+        bound, getattr(coordinator, "combined_oven_lower", None), coordinator.discovery_resources
+    ):
         return False
     rep = coordinator.discovery_resources.get(bound.href)
     if rep is None:
@@ -120,7 +129,10 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
         lower = getattr(coordinator, "combined_oven_lower", None)
         self._oven_cavity = (
-            lower is not None and bound.subdevice in (MAIN, lower) and bound.desc.key in CAVITY_KEYS
+            lower is not None
+            and bound.subdevice in (MAIN, lower)
+            and bound.desc.key
+            in CAVITY_KEYS | (OPTION_KEYS - shared_keys(coordinator.discovery_resources, lower))
         )
         if bound.desc.translation_placeholders is not None:
             self._attr_translation_placeholders = dict(bound.desc.translation_placeholders)
@@ -146,7 +158,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         label = cavity_label(self.coordinator, self._bound.subdevice)
         name = self.coordinator.instance_names.get(
             f"oven_cavity_{label}",
-            {"upper": "Upper", "lower": "Lower", "whole": "Whole Oven"}[label],
+            {"upper": "Upper", "lower": "Lower", "whole": "Oven"}[label],
         )
         if self.translation_placeholders.get("cavity") == name:
             return False
@@ -219,8 +231,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         if (
             self._oven_cavity
             and self._bound.subdevice == self.coordinator.combined_oven_lower
-            and self.coordinator.resource("/connected/vs/1").get("x.com.samsung.da.connected")
-            != "On"
+            and divider_state(self.coordinator) == "Off"
         ):
             return False
         available_fn = self._bound.desc.available_fn

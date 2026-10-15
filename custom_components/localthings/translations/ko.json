@@ -169,6 +169,21 @@
       },
       "oven_cavity_cycle_active": {
         "name": "{cavity} 작동 중"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity} 어린이 보호 잠금"
+      },
+      "oven_cavity_reservoir_open": {
+        "name": "{cavity} 물통"
+      },
+      "oven_cavity_door_open": {
+        "name": "{cavity} 문"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity} 전원"
+      },
+      "oven_cavity_remote_control": {
+        "name": "{cavity} 스마트 컨트롤"
       }
     },
     "button": {
@@ -225,6 +240,12 @@
       },
       "oven_cavity_start_cooking": {
         "name": "{cavity} 시작"
+      },
+      "oven_cavity_diagnosis_start": {
+        "name": "{cavity} 진단 시작"
+      },
+      "oven_cavity_sync_clock": {
+        "name": "{cavity} 시계 동기화"
       }
     },
     "climate": {
@@ -280,6 +301,9 @@
     "light": {
       "lamp": {
         "name": "램프"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity} 램프"
       }
     },
     "number": {
@@ -333,6 +357,9 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity} 조리 시간(분)"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} 조리 시간"
       }
     },
     "select": {
@@ -1267,6 +1294,54 @@
           "lower_healthycook3": "건강 요리 연어 스테이크",
           "lower_healthycook4": "건강 요리 흰살 생선 필레"
         }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity} 조리 모드",
+        "state": {
+          "no_operation": "작동 안 함",
+          "bake": "베이크",
+          "broil": "브로일",
+          "convection": "컨벡션",
+          "convection_bake": "컨벡션 베이크",
+          "convection_broil": "컨벡션 브로일",
+          "frozen_pizza_plus": "냉동 피자+",
+          "slow_cook": "저온 조리",
+          "plate_warm": "접시 데우기",
+          "air_fry": "에어프라이",
+          "convection_roast": "컨벡션 로스트",
+          "keep_warm": "보온",
+          "bread_proof": "발효",
+          "dehydrate": "건조",
+          "self_clean": "자동 세척",
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일 (상단)",
+          "upper_convection_bake": "컨벡션 베이크 (상단)",
+          "upper_convection_roast": "컨벡션 로스트 (상단)",
+          "lower_bake": "베이크 (하단)",
+          "lower_convection_bake": "컨벡션 베이크 (하단)",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크 (상단)",
+          "descale": "석회 제거",
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트 (하단)",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
+        }
       }
     },
     "sensor": {
@@ -1808,6 +1883,9 @@
           "active": "작동 중",
           "pause": "일시 정지"
         }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} 조리 시간"
       }
     },
     "switch": {
@@ -2062,6 +2140,27 @@
       },
       "extra_rinse": {
         "name": "헹굼 추가"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity} 어린이 보호 잠금"
+      },
+      "oven_cavity_fast_preheat": {
+        "name": "{cavity} 빠른 예열"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity} 램프"
+      },
+      "oven_cavity_natural_steam": {
+        "name": "{cavity} 내추럴 스팀"
+      },
+      "oven_cavity_energy_saving": {
+        "name": "{cavity} 절전"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity} 전원"
+      },
+      "oven_cavity_sound": {
+        "name": "{cavity} 소리"
       }
     },
     "time": {
@@ -2486,7 +2585,7 @@
       "message": "총 조리 시간은 {max}을(를) 초과할 수 없습니다."
     },
     "cooking_cavity_not_found": {
-      "message": "이 기기에는 통합된 Flex Duo 조리실 쌍이 없습니다. 원하는 조리실의 기존 기기를 선택하세요."
+      "message": "이 기기에는 통합된 조리실 쌍이 없습니다. 원하는 조리실의 기존 기기를 선택하세요."
     }
   },
   "selector": {
@@ -2512,7 +2611,7 @@
         "whiskey_ice_ball": "볼 얼음",
         "oven_cavity_upper": "상부",
         "oven_cavity_lower": "하부",
-        "oven_cavity_whole": "전체 오븐"
+        "oven_cavity_whole": "오븐"
       }
     },
     "oven_cavity": {

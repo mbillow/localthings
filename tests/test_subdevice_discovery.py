@@ -597,20 +597,15 @@ async def test_multidevice_probe_never_reaches_discovery_or_the_cache(
     assert coordinator._multidevice == {"x.com.samsung.da.numofsubdevice": "2"}
 
 
-async def test_dual_cavity_oven_names_each_cavity_from_the_device(hass: HomeAssistant) -> None:
-    """Both cavities of the issue #490 wall oven report the same modelNum,
-    so the model-derived label named them identically and the reporter got
-    two indistinguishable devices. Each cavity's own `/mode/vs/0` says
-    which it is."""
+async def test_dual_cavity_oven_groups_the_declared_cavities(hass: HomeAssistant) -> None:
+    """The issue #490 capture identifies Upper and Lower over one connection."""
     coordinator = _coordinator(hass)
     _register_master(hass, coordinator)
     await _discover(coordinator, "oven_nv75n_dual_cook")
 
     assert [(s.kind, s.key) for s in coordinator.subdevices] == [("indexed", "1")]
     info = coordinator.device_info_for(coordinator.subdevices[0])
-    assert (info["name"] or "").endswith("Lower oven")
-    # The model is still recorded, just no longer doing the naming.
-    assert info["model"] == "ARTIK051_GB_WO_003"
+    assert info == coordinator.device_info
 
 
 async def test_a_subdevice_with_no_cavity_keeps_its_model_label(hass: HomeAssistant) -> None:
@@ -630,14 +625,13 @@ async def test_a_subdevice_with_no_cavity_keeps_its_model_label(hass: HomeAssist
     assert (coordinator.device_info_for(sub)["name"] or "").endswith("Artik051 Gb Wo 003")
 
 
-async def test_the_cavity_label_also_covers_the_flex_range(hass: HomeAssistant) -> None:
-    """The rule is not scoped to issue #490's wall oven: the flex range
-    (issue #183) reports Upper/LowerConvectionBake and has cavities in the
-    same sense, so its second one renames off the model label too. Pinned
-    because that is a user-visible rename on an already-shipped device."""
+async def test_cavity_grouping_also_covers_the_flex_range(hass: HomeAssistant) -> None:
+    """The range's oven has the same Upper/Lower declaration as the wall oven."""
     coordinator = _coordinator(hass)
     _register_master(hass, coordinator)
     await _discover(coordinator, "range_tp1x_da_ks_range_0101x")
 
-    labels = [(coordinator.device_info_for(s)["name"] or "") for s in coordinator.subdevices]
-    assert any(label.endswith("Lower oven") for label in labels), labels
+    assert coordinator.subdevices
+    assert all(
+        coordinator.device_info_for(s) == coordinator.device_info for s in coordinator.subdevices
+    )

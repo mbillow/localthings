@@ -169,6 +169,21 @@
       },
       "oven_cavity_cycle_active": {
         "name": "{cavity} Running"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity} Child Lock"
+      },
+      "oven_cavity_reservoir_open": {
+        "name": "{cavity} Reservoir"
+      },
+      "oven_cavity_door_open": {
+        "name": "{cavity} Door"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity} Power"
+      },
+      "oven_cavity_remote_control": {
+        "name": "{cavity} Smart Control"
       }
     },
     "button": {
@@ -225,6 +240,12 @@
       },
       "oven_cavity_start_cooking": {
         "name": "{cavity} Start"
+      },
+      "oven_cavity_diagnosis_start": {
+        "name": "{cavity} Start Diagnosis"
+      },
+      "oven_cavity_sync_clock": {
+        "name": "{cavity} Sync Clock"
       }
     },
     "climate": {
@@ -280,6 +301,9 @@
     "light": {
       "lamp": {
         "name": "Lamp"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity} Lamp"
       }
     },
     "number": {
@@ -333,6 +357,9 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity} Cook Time Minutes"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} Cook Time"
       }
     },
     "select": {
@@ -1267,6 +1294,54 @@
           "lower_healthycook3": "Healthy Cook Salmon Steak",
           "lower_healthycook4": "Healthy Cook White Fish Fillet"
         }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity} Cooking Mode",
+        "state": {
+          "no_operation": "No Operation",
+          "bake": "Bake",
+          "broil": "Broil",
+          "convection": "Convection",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
+          "dehydrate": "Dehydrate",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Upper Broil",
+          "upper_convection_bake": "Upper Convection Bake",
+          "upper_convection_roast": "Upper Convection Roast",
+          "lower_bake": "Lower Bake",
+          "lower_convection_bake": "Lower Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Upper Steam Bake",
+          "descale": "Descale",
+          "drain": "Drain",
+          "lower_convection_roast": "Lower Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook 1",
+          "healthycook2": "Healthy Cook 2",
+          "healthycook3": "Healthy Cook 3",
+          "healthycook4": "Healthy Cook 4",
+          "healthycook5": "Healthy Cook 5",
+          "healthycook6": "Healthy Cook 6",
+          "upper_healthycook1": "Upper Healthy Cook 1",
+          "upper_healthycook2": "Upper Healthy Cook 2",
+          "upper_healthycook3": "Upper Healthy Cook 3",
+          "upper_healthycook4": "Upper Healthy Cook 4",
+          "lower_healthycook1": "Lower Healthy Cook 1",
+          "lower_healthycook2": "Lower Healthy Cook 2",
+          "lower_healthycook3": "Lower Healthy Cook 3",
+          "lower_healthycook4": "Lower Healthy Cook 4"
+        }
       }
     },
     "sensor": {
@@ -1808,6 +1883,9 @@
           "active": "Active",
           "pause": "Paused"
         }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} Cook time"
       }
     },
     "switch": {
@@ -2062,6 +2140,27 @@
       },
       "extra_rinse": {
         "name": "Extra rinse"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity} Child lock"
+      },
+      "oven_cavity_fast_preheat": {
+        "name": "{cavity} Fast Preheat"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity} Lamp"
+      },
+      "oven_cavity_natural_steam": {
+        "name": "{cavity} Natural Steam"
+      },
+      "oven_cavity_energy_saving": {
+        "name": "{cavity} Energy Saving"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity} Power"
+      },
+      "oven_cavity_sound": {
+        "name": "{cavity} Sound"
       }
     },
     "time": {
@@ -2486,7 +2585,7 @@
       "message": "The combined cook time cannot exceed {max}."
     },
     "cooking_cavity_not_found": {
-      "message": "This appliance does not expose a combined Flex Duo cavity pair. Select its existing cavity device instead."
+      "message": "This appliance does not expose a combined cavity pair. Select its existing cavity device instead."
     }
   },
   "selector": {
@@ -2512,7 +2611,7 @@
         "whiskey_ice_ball": "Ice balls",
         "oven_cavity_upper": "Upper",
         "oven_cavity_lower": "Lower",
-        "oven_cavity_whole": "Whole Oven"
+        "oven_cavity_whole": "Oven"
       }
     },
     "oven_cavity": {

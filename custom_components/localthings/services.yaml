@@ -18,7 +18,7 @@ start_cooking:
     cavity:
       name: Cavity
       description: >-
-        For a combined Flex Duo device, choose Upper (the whole oven with
+        For a combined oven device, choose Upper (the whole oven with
         the divider removed) or Lower. Leave empty to use the selected
         device's default cavity.
       required: false
