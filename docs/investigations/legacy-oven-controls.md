@@ -223,8 +223,9 @@ omission is not silently replaced with zero.
   to the cavity reporting both switch tokens; missing or contradictory readings
   are Unknown. On LCD_OV_WALL_16K with its matching lower record, the entity view
   also shows this shared reservoir on Lower. Any lower tank-switch tokens take
-  precedence over the shared reading. The owner confirmed the original sensor's
-  operation; the additional Lower display is software-tested and awaits owner confirmation.
+  precedence over the shared reading. After installing d72b8da, the owner
+  confirmed that both device-page Reservoir sensors follow physical opening
+  and closing.
   Other existing fixtures with both tokens also bind the sensor, but their position mapping has
   not been independently hardware-tested. No reservoir actuator is added.
 - **Divider:** on that same measured board pair, both device pages display the
@@ -399,8 +400,8 @@ divider-transition checks: with the divider removed at restart, both Divider
 sensors show Removed and both Door sensors follow opening and closing;
 reinserting it without another restart changes both labels to Inserted and
 restores Lower Start Cooking availability. This confirms the display and
-entity-lifecycle fixes, not a new heating or Start/Stop test. Lower Reservoir
-position reporting still awaits its separate owner check.
+entity-lifecycle fixes, not a new heating or Start/Stop test. The owner then
+separately confirmed Reservoir Open/Closed reporting on both device pages.
 
 This test build retains the two-device layout. The requested combined-device
 presentation is deferred until the remaining pre-merger checks are finished.
