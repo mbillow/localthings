@@ -204,8 +204,8 @@ omission is not silently replaced with zero.
   sharing code incorrectly required the divider to be inserted; that condition
   is now removed. Tests cover open/close updates across repeated divider changes
   and startup in either position. An existing lower reading is preserved, and
-  raw reads and diagnostics remain unchanged. The correction awaits hardware
-  confirmation. The follow-up divider-out capture confirms Upper Close and an
+  raw reads and diagnostics remain unchanged. The owner confirmed the corrected
+  Door displays on both devices after installing d72b8da. The follow-up divider-out capture confirms Upper Close and an
   empty Lower door list; replaying it with the correction gives Closed on both.
 - **Idle readings with the divider removed:** the October 14 follow-up capture
   still reports Power On, remote control enabled, Ready and NoOperation for
@@ -234,8 +234,8 @@ omission is not silently replaced with zero.
   labels in all ten catalogs. The underlying on/off states remain unchanged for
   automations; unknown source readings remain Unknown.
   Both new copies are read-only, preserve existing entity identities and leave
-  raw diagnostics, polling and control routing unchanged. Their display in HA
-  awaits owner confirmation.
+  raw diagnostics, polling and control routing unchanged. The owner confirmed
+  both Inserted/Removed displays in d72b8da.
 - **Discovery with the divider removed:** the `OV` board token identifies the
   oven even when Lower offers only NoOperation. Previously its `WALL` description
   could fall through to the washer-prefix match during startup. Regression tests
@@ -253,8 +253,8 @@ omission is not silently replaced with zero.
   config entry; current capabilities, other devices and user names on valid
   entities are preserved. Tests cover startup with the divider in or out,
   repeated transitions without reload, Lower command routing and the English
-  Start Cooking label. The owner is testing 69eb069; the correction still awaits
-  confirmation.
+  Start Cooking label. In d72b8da, the owner confirmed that Lower Start Cooking
+  becomes available after reinserting the divider without restarting HA.
 - **Write verification:** items match by ID and requested fields, allowing extra
   returned fields and equivalent finite numeric setpoints. IDs and units remain
   exact; ambiguous, missing or mismatched items fail. Individual and batch writes
@@ -387,13 +387,20 @@ catalogs are checked for matching keys and placeholders; whole-oven recipe
 labels reuse the existing localized Upper/Lower labels. The owner installed
 244fb00 and confirmed that this presentation looked good, then reported the
 Lower control issue after reinserting the divider. The correction above
-addresses the reproduced startup failure; the newer Lower behavior still
-awaits hardware confirmation.
+addresses the reproduced startup failure.
 
 The Lower control correction passed all 3,239 tests, plus formatting, lint
 and type checks. The subsequent Divider state labels and divider-out door fix
 pass all 3,240 tests and the same checks. No appliance commands were sent during
 these software tests.
+
+After installing d72b8da on October 14, the owner confirmed the requested
+divider-transition checks: with the divider removed at restart, both Divider
+sensors show Removed and both Door sensors follow opening and closing;
+reinserting it without another restart changes both labels to Inserted and
+restores Lower Start Cooking availability. This confirms the display and
+entity-lifecycle fixes, not a new heating or Start/Stop test. Lower Reservoir
+position reporting still awaits its separate owner check.
 
 This test build retains the two-device layout. The requested combined-device
 presentation is deferred until the remaining pre-merger checks are finished.
