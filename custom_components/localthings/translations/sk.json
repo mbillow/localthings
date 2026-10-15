@@ -152,7 +152,11 @@
         "name": "Dvojitá požadovaná teplota zapnutá"
       },
       "divider": {
-        "name": "Priečka"
+        "name": "Priečka",
+        "state": {
+          "on": "Vložená",
+          "off": "Vybratá"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pokrčeniu aktívna"

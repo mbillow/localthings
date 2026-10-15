@@ -152,7 +152,11 @@
         "name": "Double consigne activée"
       },
       "divider": {
-        "name": "Séparateur"
+        "name": "Séparateur",
+        "state": {
+          "on": "Inséré",
+          "off": "Retiré"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Anti-froissage actif"

@@ -152,7 +152,11 @@
         "name": "Doppio setpoint attivo"
       },
       "divider": {
-        "name": "Divisorio"
+        "name": "Divisorio",
+        "state": {
+          "on": "Inserito",
+          "off": "Rimosso"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Antipiega attivo"

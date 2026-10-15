@@ -799,7 +799,6 @@ def shared_door_view(resources: dict[str, dict]) -> dict[str, dict]:
     if (
         str(main.get(prefix + "modelNum", "")).split("|", 1)[0] != "LCD_OV_WALL_16K"
         or lower.get(prefix + "description") != "LCD_OV_WALL_16K_DIV"
-        or resources.get("/connected/vs/1", {}).get(prefix + "connected") != "On"
     ):
         return resources
     lower_door = resources.get("/doors/vs/1", {})
@@ -813,8 +812,8 @@ def shared_door_view(resources: dict[str, dict]) -> dict[str, dict]:
         or items[0].get(prefix + "openState") not in ("Open", "Close")
     ):
         return resources
-    # Open/closed captures show only the upper record reports this shared
-    # door; raw reads and diagnostics must retain the lower record's [].
+    # The single physical door remains shared with the divider removed;
+    # raw reads and diagnostics must retain the lower record's [].
     return {**resources, "/doors/vs/1": {**lower_door, prefix + "items": items}}
 
 

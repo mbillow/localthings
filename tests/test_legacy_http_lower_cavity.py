@@ -738,18 +738,25 @@ async def test_a_lower_reservoir_reading_is_not_replaced(hass: HomeAssistant, op
     assert coordinator.entity_resources()["/mode/vs/1"] == coordinator.resource("/mode/vs/1")
 
 
-async def test_lower_door_tracks_shared_door_without_changing_raw_resources(hass: HomeAssistant):
-    coordinator = await _discovered(hass)
+@pytest.mark.parametrize("divided", [False, True])
+async def test_lower_door_tracks_shared_door_without_changing_raw_resources(
+    hass: HomeAssistant, divided
+):
+    coordinator = await _discovered(hass, _routes(divided=divided))
     lower = _lower(coordinator)
-    for open_state, expected in [("Close", False), ("Open", True), ("Close", False)]:
-        rep = {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": open_state}]}
-        coordinator._observe.apply("/doors/vs/0", rep, source="poll")
-        state = flatten(coordinator.bound, coordinator.entity_resources())
-        assert state["door_open"] is expected
-        assert state["subdevice1_door_open"] is expected
-        assert coordinator.canonical_resources(lower)["/doors/vs/0"] == rep
-        assert coordinator.device_resources(lower)["/doors/vs/0"] == {PREFIX + "items": []}
-        assert coordinator.resource("/doors/vs/1") == {PREFIX + "items": []}
+    for connected in ("Off", "On", "Off"):
+        coordinator._observe.apply(
+            "/connected/vs/1", {PREFIX + "connected": connected}, source="poll"
+        )
+        for open_state, expected in [("Close", False), ("Open", True), ("Close", False)]:
+            rep = {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": open_state}]}
+            coordinator._observe.apply("/doors/vs/0", rep, source="poll")
+            state = flatten(coordinator.bound, coordinator.entity_resources())
+            assert state["door_open"] is expected
+            assert state["subdevice1_door_open"] is expected
+            assert coordinator.canonical_resources(lower)["/doors/vs/0"] == rep
+            assert coordinator.device_resources(lower)["/doors/vs/0"] == {PREFIX + "items": []}
+            assert coordinator.resource("/doors/vs/1") == {PREFIX + "items": []}
 
     coordinator._observe.apply("/doors/vs/0", {PREFIX + "items": []}, source="poll")
     state = flatten(coordinator.bound, coordinator.entity_resources())
@@ -761,7 +768,6 @@ async def test_lower_door_tracks_shared_door_without_changing_raw_resources(hass
     [
         ("/information/vs/0", {PREFIX + "modelNum": "LCD_OV_WALL_OTHER|1|2"}),
         ("/information/vs/1", {PREFIX + "description": "LCD_OV_WALL_16K"}),
-        ("/connected/vs/1", {PREFIX + "connected": "Off"}),
         ("/doors/vs/0", {PREFIX + "items": [{PREFIX + "id": "0"}]}),
         (
             "/doors/vs/0",
@@ -777,8 +783,9 @@ async def test_shared_door_requires_the_measured_model_and_a_known_state(
     assert coordinator.entity_resources()["/doors/vs/1"] == {PREFIX + "items": []}
 
 
-async def test_shared_door_preserves_a_lower_cavitys_own_reading(hass: HomeAssistant):
-    coordinator = await _discovered(hass)
+@pytest.mark.parametrize("divided", [False, True])
+async def test_shared_door_preserves_a_lower_cavitys_own_reading(hass: HomeAssistant, divided):
+    coordinator = await _discovered(hass, _routes(divided=divided))
     own_door = {PREFIX + "items": [{PREFIX + "id": "0", PREFIX + "openState": "Open"}]}
     coordinator._observe.apply("/doors/vs/1", own_door, source="poll")
     state = flatten(coordinator.bound, coordinator.entity_resources())

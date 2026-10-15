@@ -152,7 +152,11 @@
         "name": "Doppelter Sollwert aktiviert"
       },
       "divider": {
-        "name": "Trennwand"
+        "name": "Trennwand",
+        "state": {
+          "on": "Eingesetzt",
+          "off": "Entfernt"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Knitterschutz aktiv"

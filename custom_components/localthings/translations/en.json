@@ -152,7 +152,11 @@
         "name": "Dual setpoint enabled"
       },
       "divider": {
-        "name": "Divider"
+        "name": "Divider",
+        "state": {
+          "on": "Inserted",
+          "off": "Removed"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Wrinkle prevent active"

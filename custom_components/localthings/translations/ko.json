@@ -152,7 +152,11 @@
         "name": "이중 설정 온도 사용"
       },
       "divider": {
-        "name": "칸막이"
+        "name": "칸막이",
+        "state": {
+          "on": "삽입됨",
+          "off": "제거됨"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "구김 방지 작동 중"

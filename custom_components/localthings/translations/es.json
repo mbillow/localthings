@@ -533,7 +533,11 @@
         "name": "Doble consigna activada"
       },
       "divider": {
-        "name": "Divisor"
+        "name": "Divisor",
+        "state": {
+          "on": "Insertado",
+          "off": "Retirado"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Anti-arrugas activo"

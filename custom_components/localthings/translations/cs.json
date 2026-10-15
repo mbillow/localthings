@@ -152,7 +152,11 @@
         "name": "Dvojí žádaná teplota zapnuta"
       },
       "divider": {
-        "name": "Přepážka"
+        "name": "Přepážka",
+        "state": {
+          "on": "Vložená",
+          "off": "Vyjmutá"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pomačkání aktivní"

@@ -197,10 +197,15 @@ omission is not silently replaced with zero.
   consistent with this owner's observations and #572. Setup removes only an old
   switch whose exact identity/config entry now has a discovered Power sensor.
   Power On does not establish heating.
-- **Door:** on the measured board with its connected lower record, the entity
+- **Door:** on the measured board with its matching lower record, the entity
   view shares the upper door reading when the lower items list is empty. This
-  was hardware-confirmed. An existing lower reading is preserved, and raw reads
-  and diagnostics remain unchanged.
+  was hardware-confirmed with the divider inserted. During testing of 69eb069,
+  the owner reported Lower becoming Unknown after removing the divider. The
+  sharing code incorrectly required the divider to be inserted; that condition
+  is now removed. Tests cover open/close updates across repeated divider changes
+  and startup in either position. An existing lower reading is preserved, and
+  raw reads and diagnostics remain unchanged. The correction awaits hardware
+  confirmation; other reported Unknown values still need a current capture.
 - **Reservoir:** the owner confirmed Closed = In On / Out Off, and Open = In Off /
   Out On, while the main door stayed open. The read-only opening sensor belongs
   to the cavity reporting both switch tokens; missing or contradictory readings
@@ -213,7 +218,9 @@ omission is not silently replaced with zero.
 - **Divider:** on that same measured board pair, both device pages display the
   divider state from the lower record, including when it is removed. The Upper
   copy uses a separate entity-view value, preserving Upper's connectivity flag.
-  It reuses the existing translated label; unknown source readings remain Unknown.
+  Both copies display Inserted for on and Removed for off, with equivalent state
+  labels in all ten catalogs. The underlying on/off states remain unchanged for
+  automations; unknown source readings remain Unknown.
   Both new copies are read-only, preserve existing entity identities and leave
   raw diagnostics, polling and control routing unchanged. Their display in HA
   awaits owner confirmation.
@@ -234,7 +241,8 @@ omission is not silently replaced with zero.
   config entry; current capabilities, other devices and user names on valid
   entities are preserved. Tests cover startup with the divider in or out,
   repeated transitions without reload, Lower command routing and the English
-  Start Cooking label. The correction awaits owner installation and confirmation.
+  Start Cooking label. The owner is testing 69eb069; the correction still awaits
+  confirmation.
 - **Write verification:** items match by ID and requested fields, allowing extra
   returned fields and equivalent finite numeric setpoints. IDs and units remain
   exact; ambiguous, missing or mismatched items fail. Individual and batch writes
@@ -370,8 +378,10 @@ Lower control issue after reinserting the divider. The correction above
 addresses the reproduced startup failure; the newer Lower behavior still
 awaits hardware confirmation.
 
-The Lower control correction passes all 3,239 tests, plus formatting, lint
-and type checks. No appliance commands were sent during these software tests.
+The Lower control correction passed all 3,239 tests, plus formatting, lint
+and type checks. The subsequent Divider state labels and divider-out door fix
+pass all 3,240 tests and the same checks. No appliance commands were sent during
+these software tests.
 
 This test build retains the two-device layout. The requested combined-device
 presentation is deferred until the remaining pre-merger checks are finished.

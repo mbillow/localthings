@@ -152,7 +152,11 @@
         "name": "Dubbel setpoint ingeschakeld"
       },
       "divider": {
-        "name": "Scheidingswand"
+        "name": "Scheidingswand",
+        "state": {
+          "on": "Geplaatst",
+          "off": "Verwijderd"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Kreukpreventie actief"

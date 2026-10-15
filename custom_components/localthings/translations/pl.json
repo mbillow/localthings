@@ -152,7 +152,11 @@
         "name": "Podwójna nastawa włączona"
       },
       "divider": {
-        "name": "Przegroda"
+        "name": "Przegroda",
+        "state": {
+          "on": "Włożona",
+          "off": "Wyjęta"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Bez zagnieceń aktywne"
