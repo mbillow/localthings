@@ -205,7 +205,19 @@ omission is not silently replaced with zero.
   is now removed. Tests cover open/close updates across repeated divider changes
   and startup in either position. An existing lower reading is preserved, and
   raw reads and diagnostics remain unchanged. The correction awaits hardware
-  confirmation; other reported Unknown values still need a current capture.
+  confirmation. The follow-up divider-out capture confirms Upper Close and an
+  empty Lower door list; replaying it with the correction gives Closed on both.
+- **Idle readings with the divider removed:** the October 14 follow-up capture
+  still reports Power On, remote control enabled, Ready and NoOperation for
+  both cavities. Lower exposes only NoOperation as a supported mode, so its
+  Start Cooking button is unavailable. Both temperatures report current 175 F
+  with desired 0; the existing idle-floor filter hides that sentinel, and zero
+  means no setpoint. Remaining and operation times are both 00:00:00, so there
+  is no Estimated Finish; paired cook-time controls are blank unless a duration
+  has been held. Main reservoir tokens are In On / Out Off, and replay produces
+  Closed for both Reservoir sensors. This snapshot explains those unset values,
+  but it does not include HA's entity states or held choices; any other Unknown
+  displays need their names or a screenshot before attributing a cause.
 - **Reservoir:** the owner confirmed Closed = In On / Out Off, and Open = In Off /
   Out On, while the main door stayed open. The read-only opening sensor belongs
   to the cavity reporting both switch tokens; missing or contradictory readings
