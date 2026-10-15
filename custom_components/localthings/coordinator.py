@@ -698,8 +698,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Deliberately separate from `last_resources`, which stays empty until
         the device answers -- that emptiness is what keeps a rehydrated
         entity `unavailable` instead of rendering a snapshot's stale value.
-        Only read while platforms are being forwarded; nothing consults it
-        once the entities exist.
+        Platforms also use this view to add optional sensors first detected
+        after setup.
         """
         if self._rehydrate_resources is None:
             return self.last_resources

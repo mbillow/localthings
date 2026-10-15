@@ -161,9 +161,23 @@ the `meatprobe_connected` spelling. The divider reports Off throughout.
 
 Both sensors remain read-only. These observations do not verify remote target
 adjustment, probe-specific remote starts, measurement accuracy, or reporting
-below 100°F. Idle zero handling is unchanged. No integration code changed for
-this verification, and it does not establish hardware acceptance of the later
-generalized device layout.
+below 100°F. The capture verification itself changed no integration code and
+does not establish hardware acceptance of the later generalized device layout.
+
+The subsequent sensor update adds a discovered probe sensor when its connection
+token and reading first become available during a normal coordinator update. No
+integration reload is needed. After creation, unplugging makes the sensors
+unavailable; reconnecting reuses the same entity IDs and custom names. Sensors
+that have not been detected remain absent. The same inclusion checks support
+legacy HTTPS, OCF vendor temperature arrays and the OCF probe fallback resources.
+Idle zero handling is unchanged when the probe remains connected.
+
+Regression tests start with the probe disconnected, connect it after HA setup,
+then exercise repeated unplug/reconnect updates and platform unload. They also
+cover a probe already connected at startup and identity retention after an
+unplugged restart. All 3,285 tests pass (67.44 seconds), along with formatting,
+lint and type checks. No probe writes are introduced. Automatic detection still
+awaits the owner's hardware check; the earlier capture verified the readings.
 
 ## NV51K7770S feature audit
 
@@ -182,7 +196,7 @@ that neither version exposes as standalone entities:
 
 | Captured field or capability | Evidence and remaining limit |
 | --- | --- |
-| Food probe | Existing conditional temperature/target sensors are verified during Bake with the probe connected; see the hardware check above. A reload may be needed because sensor creation is gated during setup. Remote target control remains unverified. |
+| Food probe | Existing conditional temperature/target sensors are verified during Bake with the probe connected; see the hardware check above. Sensors appear on detection without a reload, become unavailable on unplugging, and reuse their identities on reconnecting. Remote target control remains unverified. |
 | Steam/descale information | Options include `descaleAlarm_Normal`, `steamState_Standby`, `steamGeneratorLevel_Empty`, `descaleState_Standby`, `drainRequired_00` and related tokens. These are candidates for read-only diagnostic entities; the current captures do not demonstrate state transitions or establish all token meanings. |
 | Sabbath and temperature adjustment | `Sabbath_Off` and `AdjustingTemp_0` are present. No working remote setting or hardware-verified sensor mapping was established. |
 | Steam level and preheat options | `steamAddLevel_NULL` and `NoPreheat_Off` are present. `NULL` is not a measured steam setting, and these names alone do not establish writable controls. |
