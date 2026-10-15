@@ -130,12 +130,33 @@ The manual explicitly prohibits remote Self Clean; the other exclusions do
 not establish a universal firmware prohibition. The raw advertised modes and
 reported states remain available in diagnostics, and other models are unchanged.
 
-Whole-oven captures advertise Healthycook1 through Healthycook6. The manual
-lists Dehydrate and Bread Proof in addition to the four divided recipes, but
-their numbered codes remain unverified. Dehydrate has a 100–225 F (40–105 C)
-range and a 150 F preset; Bread Proof uses a fixed, non-adjustable temperature.
-Do not assign their labels or reuse the ordinary Bake limits without matching
-panel readings to the codes.
+Whole-oven captures advertise Healthycook1 through Healthycook6. Two additional
+panel-started recipes are verified:
+
+| Recipe | Whole-oven code | Reported Fahrenheit target | Adjustment |
+| --- | --- | --- | --- |
+| Dehydrate | Healthycook5 | 150 | 100–225 F (40–105 C), manual p.34 |
+| Bread Proof | Healthycook6 | 100 | Fixed; the panel shows no temperature control |
+
+On October 14 the owner started Dehydrate from the panel with the divider
+removed and confirmed its 150 F preset. The capture identifies Healthycook5,
+desired 150 F, Operation Run and Oven Cooking. Both cook-duration fields are
+00:00:00 and Smart Control is false. This verifies the whole-oven recipe code
+and preset, not a remote start or the reported current-temperature accuracy.
+The subsequent Bread Proof capture reports Healthycook6, desired 100 F,
+Operation Run and Oven Cooking, with zero cook-duration fields, Smart Control
+false and the divider out. The owner confirms that neither setup nor cooking
+shows a temperature. Both captures report current 175 F; it is not evidence of
+a measured 100 F cavity temperature.
+
+The model-specific labels are translated in all ten catalogs. Dehydrate uses
+its documented range and captured preset. Bread Proof's HA setpoint displays
+100 F with both bounds fixed to 100; other requested targets are rejected.
+Neither Celsius preset is guessed: Dehydrate requires a chosen temperature,
+and Bread Proof's setpoint control is unavailable in Celsius without a live
+modeSpec declaring usable bounds. These are mapping and software checks;
+remote starts for the two new recipes remain unverified. Healthycook1–4 still
+need whole-oven code-to-recipe confirmation and retain numbered labels.
 
 The [NV51K7770S manual][manual], pp.24, 29 and 34, supplies a 599-minute maximum;
 divided Bake/convection/Healthy Cook limits of 175–480 F (80–250 C); and whole-oven
@@ -144,8 +165,8 @@ These fallbacks are scoped to the measured board; live modeSpecs take precedence
 Celsius recipe presets are not guessed. The paired-cavity restrictions on pp.27–28
 are not interpolated, and the appliance can refuse incompatible combinations.
 LowerConvectionRoast remains the earlier #572 fallback, but its physical menu
-availability is unverified. Broil Hi/Lo and whole-oven recipe meanings need their
-own evidence. A recorded omitted-duration Run refusal also remains unexplained;
+availability is unverified. Broil Hi/Lo and whole-oven Healthycook1–4 meanings
+need their own evidence. A recorded omitted-duration Run refusal also remains unexplained;
 omission is not silently replaced with zero.
 
 ## Status and verification
@@ -299,8 +320,16 @@ not a separate hardware test of every changed feature or cooking combination.
 That build passed all 3,202 tests on Python 3.14.8, plus formatting, lint and
 type checks. Subsequent changes add the shared Divider and Reservoir displays
 described above; the installed build does not yet include those two copies.
-The updated branch, including the five mode exclusions, passes all 3,215 tests,
-plus formatting, lint and type checks. Those exclusions also await installation.
+The updated branch, including the five mode exclusions and the verified
+Dehydrate/Bread Proof mappings, passes all 3,222 tests, plus formatting, lint
+and type checks. All ten translation catalogs are checked for matching keys
+and placeholders; the new recipe labels reuse the existing localized terms.
+These additions also await installation and owner confirmation.
+
+This test build retains the two-device layout. The requested combined-device
+presentation is deferred until the remaining pre-merger checks are finished.
+It will use a separate feature branch and pull request, preserving this fixes
+branch as the fallback. No device-grouping migration is included here.
 
 ## Validation limits
 

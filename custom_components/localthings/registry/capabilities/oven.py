@@ -252,6 +252,8 @@ def _oven_setpoint_write(p, rep, href=None, resources=None):
     except (TypeError, ValueError):
         return None
     bounds = cook.temp_bounds(resources or {}) if cook.is_lcd_wall_16k(resources or {}) else None
+    if not _oven_setpoint_available(rep, resources or {}):
+        return None
     min_v, max_v, step_v = bounds or _setpoint_bounds(rep)
     temp_i = int(round(temp / step_v) * step_v)
     if not (min_v <= temp_i <= max_v):
@@ -352,6 +354,15 @@ def _mode_setpoint_bounds(rep, resources):
     back to the static per-unit bounds below."""
     bounds = cook.temp_bounds(resources)
     return tuple(float(b) for b in bounds) if bounds else None
+
+
+def _oven_setpoint_available(rep, resources):
+    # Bread Proof's fixed target has only been captured in Fahrenheit.
+    return not (
+        cook.is_lcd_wall_16k(resources)
+        and cook.current_mode(resources) == "Healthycook6"
+        and cook.temp_bounds(resources) is None
+    )
 
 
 def _cook_time_bounds(rep, resources):
@@ -619,6 +630,7 @@ OVEN_SETPOINT = Capability(
             native_max_fn=lambda rep: float(_setpoint_bounds(rep)[1]),
             step_fn=lambda rep: float(_setpoint_bounds(rep)[2]),
             bounds_fn=_mode_setpoint_bounds,
+            available_fn=_oven_setpoint_available,
             value_fn=lambda items: _setpoint(
                 items[0].get("x.com.samsung.da.desired") if items else None
             ),

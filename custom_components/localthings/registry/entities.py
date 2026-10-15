@@ -59,6 +59,8 @@ class SamsungEntityDescription:
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
+    # Dynamic usability without removing the entity or changing its identity.
+    available_fn: Callable[[dict, dict], bool] | None = None
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).

@@ -209,7 +209,13 @@ def legacy_wall_time_max(resources: dict) -> int | None:
 
 
 def _legacy_wall_temps(mode: str) -> dict[str, TempSpec] | None:
-    """Manual pp.29/34 ranges and panel-verified divided Healthy Cook defaults."""
+    """Manual pp.29/34 ranges and panel-verified Healthy Cook defaults."""
+    if mode == "Healthycook5":
+        return {"C": TempSpec(40, 105, None, 5), "F": TempSpec(100, 225, 150, 5)}
+    if mode == "Healthycook6":
+        # Bread Proof reports 100 F internally but offers no adjustment.
+        # Its Celsius preset has not been captured.
+        return {"F": TempSpec(100, 100, 100, 1)}
     divided = mode.startswith(("Upper", "Lower"))
     name = mode.removeprefix("Upper").removeprefix("Lower")
     healthy = divided and name in {f"Healthycook{i}" for i in range(1, 5)}

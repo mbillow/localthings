@@ -1284,6 +1284,97 @@ async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
         await coordinator.async_send_command(bound["cook_time_minutes"], 60)
 
 
+@pytest.mark.parametrize("recipe,preset,maximum", [(5, 150, 225), (6, 100, 100)])
+async def test_whole_oven_special_recipes_use_verified_presets_and_limits(
+    hass, recipe, preset, maximum
+):
+    coordinator = await _discovered(hass, _routes(divided=False))
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == MAIN}
+    select = LocalThingsSelect(coordinator, bound["oven_mode"])
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    _FakeConnection.log.clear()
+
+    await select.async_select_option(f"healthycook{recipe}")
+
+    assert target.native_value == preset
+    assert (target.native_min_value, target.native_max_value) == (100, maximum)
+    assert target.available
+    plan = coordinator._held_cooks[MAIN].plan(coordinator._cavity_resources(MAIN))
+    assert (plan.mode, plan.temperature) == (f"Healthycook{recipe}", preset)
+    assert not _requests()
+    with pytest.raises(ServiceValidationError) as err:
+        await target.async_set_native_value(maximum + 5)
+    assert err.value.translation_key == "cook_temperature_out_of_range"
+    assert target.native_value == preset
+    assert not _requests()
+
+
+@pytest.mark.parametrize("recipe,preset,maximum", [(5, 150, 225), (6, 100, 100)])
+async def test_panel_started_special_recipes_keep_fixed_and_adjustable_bounds(
+    hass, recipe, preset, maximum
+):
+    upper = {
+        **UPPER,
+        "Mode": {**UPPER["Mode"], "modes": [f"Healthycook{recipe}"]},
+        "Operation": {**UPPER["Operation"], "state": "Run"},
+        "Oven": {**UPPER["Oven"], "state": "Cooking"},
+        "Temperatures": [{**UPPER["Temperatures"][0], "desired": preset}],
+    }
+    coordinator = await _discovered(hass, _routes(divided=False, upper=upper))
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == MAIN}
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    assert target.native_value == preset
+    assert (target.native_min_value, target.native_max_value) == (100, maximum)
+    assert target.available
+    _FakeConnection.log.clear()
+
+    await coordinator.async_send_command(bound["oven_setpoint"], maximum + 5)
+
+    assert not _requests()
+    assert target.native_value == preset
+
+
+@pytest.mark.parametrize("recipe", [5, 6])
+async def test_special_recipes_do_not_guess_celsius_presets(hass, recipe):
+    upper = {
+        **UPPER,
+        "Temperatures": [{**UPPER["Temperatures"][0], "unit": "Celsius"}],
+    }
+    coordinator = await _discovered(hass, _routes(divided=False, upper=upper))
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == MAIN}
+    target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
+    _FakeConnection.log.clear()
+
+    await coordinator.async_send_command(bound["oven_mode"], f"Healthycook{recipe}")
+
+    assert target.native_value is None
+    assert target.available is (recipe == 5)
+    if recipe == 5:
+        assert (target.native_min_value, target.native_max_value) == (40, 105)
+        await target.async_set_native_value(40)
+        assert target.native_value == 40
+    else:
+        with pytest.raises(ServiceValidationError) as err:
+            await target.async_set_native_value(40)
+        assert err.value.translation_key == "cook_temperature_not_supported"
+    assert not _requests()
+    coordinator.last_update_success = False
+    assert not target.available
+
+
+def test_verified_whole_recipe_labels_are_translated_without_relabeling_other_ovens():
+    translations = Path(__file__).parent.parent / "custom_components/localthings/translations"
+    for path in translations.glob("*.json"):
+        selects = json.loads(path.read_text())["entity"]["select"]
+        generic = selects["oven_mode"]["state"]
+        measured = selects["oven_mode_lcd_wall_16k"]["state"]
+        assert measured["healthycook5"].casefold().endswith(generic["dehydrate"].casefold())
+        assert measured["healthycook6"].casefold().endswith(generic["bread_proof"].casefold())
+        assert generic["healthycook5"].endswith("5")
+        assert generic["healthycook6"].endswith("6")
+
+
 async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged(hass):
     running = {
         **LOWER,

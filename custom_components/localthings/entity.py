@@ -182,5 +182,14 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         return self.coordinator.canonical_resources(self._bound.subdevice)
 
     @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        available_fn = self._bound.desc.available_fn
+        return available_fn is None or available_fn(
+            self.coordinator.resource(self._bound.href), self._resources
+        )
+
+    @property
     def device_info(self) -> DeviceInfo:
         return self.coordinator.device_info_for(self._bound.subdevice)
