@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Pausiert"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: Läuft"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Garen starten"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Stopp"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Start"
       }
     },
     "climate": {
@@ -315,6 +324,18 @@
       },
       "cook_time_minutes": {
         "name": "Garzeit Minuten"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Kochzeit"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Sollwert"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Garzeit Stunden"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Garzeit Minuten"
       }
     },
     "select": {
@@ -1201,6 +1222,102 @@
           "lower_healthycook3": "Gesundes Garen Lachssteak",
           "lower_healthycook4": "Gesundes Garen Weißfischfilet"
         }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity}: Kochmodus",
+        "state": {
+          "no_operation": "Kein Betrieb",
+          "bake": "Backen",
+          "broil": "Grillen",
+          "convection": "Umluft",
+          "convection_bake": "Umluftbacken",
+          "convection_broil": "Umluftgrillen",
+          "frozen_pizza_plus": "Tiefkühlpizza+",
+          "slow_cook": "Langsam garen",
+          "plate_warm": "Tellerwärmen",
+          "air_fry": "Heißluftfritteuse",
+          "convection_roast": "Umluftbraten",
+          "keep_warm": "Warmhalten",
+          "bread_proof": "Teig gehen lassen",
+          "dehydrate": "Dörren",
+          "self_clean": "Selbstreinigung",
+          "air_fryer": "Heißluftfritteuse",
+          "upper_broil": "Grillen (oben)",
+          "upper_convection_bake": "Umluftbacken (oben)",
+          "upper_convection_roast": "Umluftbraten (oben)",
+          "lower_bake": "Backen (unten)",
+          "lower_convection_bake": "Umluftbacken (unten)",
+          "steam_bake": "Dampfbacken",
+          "steam_roast": "Dampfbraten",
+          "upper_steam_bake": "Dampfbacken (oben)",
+          "descale": "Entkalken",
+          "drain": "Wasser ablassen",
+          "lower_convection_roast": "Umluftbraten (unten)",
+          "autocook": "Automatikgaren",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen 1 (oben)",
+          "upper_healthycook2": "Gesundes Garen 2 (oben)",
+          "upper_healthycook3": "Gesundes Garen 3 (oben)",
+          "upper_healthycook4": "Gesundes Garen 4 (oben)",
+          "lower_healthycook1": "Gesundes Garen 1 (unten)",
+          "lower_healthycook2": "Gesundes Garen 2 (unten)",
+          "lower_healthycook3": "Gesundes Garen 3 (unten)",
+          "lower_healthycook4": "Gesundes Garen 4 (unten)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Kochmodus",
+        "state": {
+          "no_operation": "Kein Betrieb",
+          "bake": "Backen",
+          "broil": "Grillen",
+          "convection": "Umluft",
+          "convection_bake": "Umluftbacken",
+          "convection_broil": "Umluftgrillen",
+          "frozen_pizza_plus": "Tiefkühlpizza+",
+          "slow_cook": "Langsam garen",
+          "plate_warm": "Tellerwärmen",
+          "air_fry": "Heißluftfritteuse",
+          "convection_roast": "Umluftbraten",
+          "keep_warm": "Warmhalten",
+          "bread_proof": "Teig gehen lassen",
+          "dehydrate": "Dörren",
+          "self_clean": "Selbstreinigung",
+          "air_fryer": "Heißluftfritteuse",
+          "upper_broil": "Grillen",
+          "upper_convection_bake": "Umluftbacken",
+          "upper_convection_roast": "Umluftbraten",
+          "lower_bake": "Backen",
+          "lower_convection_bake": "Umluftbacken",
+          "steam_bake": "Dampfbacken",
+          "steam_roast": "Dampfbraten",
+          "upper_steam_bake": "Dampfbacken",
+          "descale": "Entkalken",
+          "drain": "Wasser ablassen",
+          "lower_convection_roast": "Umluftbraten",
+          "autocook": "Automatikgaren",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Gesundes Garen Ofenkartoffel",
+          "healthycook2": "Gesundes Garen Gegrilltes Hähnchen",
+          "healthycook3": "Gesundes Garen Lachssteak",
+          "healthycook4": "Gesundes Garen Weißfischfilet",
+          "healthycook5": "Gesundes Garen Dörren",
+          "healthycook6": "Gesundes Garen Teig gehen lassen",
+          "upper_healthycook1": "Gesundes Garen Ofenkartoffel",
+          "upper_healthycook2": "Gesundes Garen Gegrilltes Hähnchen",
+          "upper_healthycook3": "Gesundes Garen Lachssteak",
+          "upper_healthycook4": "Gesundes Garen Weißfischfilet",
+          "lower_healthycook1": "Gesundes Garen Ofenkartoffel",
+          "lower_healthycook2": "Gesundes Garen Gegrilltes Hähnchen",
+          "lower_healthycook3": "Gesundes Garen Lachssteak",
+          "lower_healthycook4": "Gesundes Garen Weißfischfilet"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1821,41 @@
       },
       "burner_pan_size": {
         "name": "Kochzone {number} Topfgröße"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Alarmcode"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Temperatur"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Diagnosestatus",
+        "state": {
+          "ready": "Bereit"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Voraussichtliches Ende"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Betriebszeit"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Ofenzustand"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Fortschritt in Prozent"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Maschinenzustand",
+        "state": {
+          "idle": "Leerlauf",
+          "active": "Aktiv",
+          "pause": "Pausiert"
+        }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Kochzeit"
       }
     },
     "switch": {
@@ -2402,7 +2554,9 @@
         "ice_maker": "Eisbereiter",
         "cubed_ice": "Eiswürfel",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Eiskugeln"
+        "whiskey_ice_ball": "Eiskugeln",
+        "oven_cavity_upper": "Oberer Garraum",
+        "oven_cavity_whole": "Ofen"
       }
     }
   }

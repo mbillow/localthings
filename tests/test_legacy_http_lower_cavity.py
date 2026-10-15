@@ -1269,7 +1269,9 @@ async def test_recipe_selection_holds_its_raw_code_and_preset(
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
-    assert select.translation_key == "oven_mode_lcd_wall_16k"
+    assert select.translation_key == (
+        "oven_mode_lcd_wall_16k" if index else "oven_cavity_oven_mode_lcd_wall_16k"
+    )
     _FakeConnection.log.clear()
 
     option_prefix = f"{prefix.lower()}_" if prefix else ""
