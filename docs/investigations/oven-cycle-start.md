@@ -183,8 +183,10 @@ response. The owner subsequently confirmed one normal lower-cavity start
 and stop; its log shows both fresh checks true and both start writes accepted.
 The owner later visually confirmed whole-oven Bake Start/Stop with the divider
 removed; the accompanying diagnostic is Ready, not an active-cook capture.
-The revised sequence has not yet been confirmed on the divided upper cavity;
-the original successful measurements above had no intervening read. See the [Smart Control follow-up](legacy-oven-controls.md#cooking-controls)
+The owner subsequently confirmed divided Upper Convection Bake with Lower Bake
+running concurrently, and independent Stop buttons, in build d72b8da. This
+confirms that combination with the revised sequence; the original successful
+measurements above had no intervening read. See the [Smart Control follow-up](legacy-oven-controls.md#cooking-controls)
 for the reported unexpected remote Bake and the remaining uncertainty.
 
 | Cavity and mode | Smart Control | Result |

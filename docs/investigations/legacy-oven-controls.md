@@ -422,13 +422,16 @@ at the same time, each stopping with its respective Stop button. The owner also
 confirmed that the obsolete Lower Start, Pause and Delay Start controls are gone.
 The planned pre-submission hardware checks are complete; remaining coverage
 limits below do not require repeating those checks. The Broil menu correction
-was made after this confirmation and has not yet been installed by the owner.
-It passes all 3,240 tests plus formatting, lint and type checks. The focused
+was made after this confirmation. At 22:36 America/Chicago on October 14, the
+owner reported checking the latest build, 4118021, and approved preparing it
+for submission. This is final-build acceptance, not another heating test.
+That build passes all 3,240 tests plus formatting, lint and type checks. The focused
 lifecycle tests also run independently after explicitly enabling custom
 integrations for their translation lookup.
 
 This test build retains the two-device layout. The requested combined-device
-presentation will use a separate feature branch and pull request, preserving this fixes
+presentation will use a separate feature branch and pull request, preserving
+this fixes
 branch as the fallback. No device-grouping migration is included here.
 
 ## Validation limits
