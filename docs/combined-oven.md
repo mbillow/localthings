@@ -178,8 +178,10 @@ cover a probe already connected at startup and identity retention after an
 unplugged restart. All 3,285 tests pass (67.44 seconds), along with formatting,
 lint and type checks. No probe writes are introduced. At 12:14 America/Chicago
 on October 15, the owner confirmed that unplugging the probe makes its sensor
-unavailable. Reconnection without a reload remains to be confirmed on hardware;
-the earlier capture verified the readings.
+unavailable. At 12:26 the owner confirmed that reconnecting restores availability
+after the next poll without reloading LocalThings. Both lifecycle transitions
+are hardware-confirmed on build `34de099`; the earlier capture verified the
+readings. The later label update has not yet been confirmed installed.
 
 English labels are Temperature Probe and Temperature Probe Target. The
 NV51K7770S main probe uses these appliance-level names without an Oven/Upper
