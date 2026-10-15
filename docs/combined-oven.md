@@ -144,6 +144,27 @@ The previous two-device build's hardware acceptance remains documented in
 [legacy-oven-controls.md](investigations/legacy-oven-controls.md). Software
 tests here send no commands to an appliance.
 
+### Food probe hardware check
+
+On October 15, the owner connected the probe and the existing sensor appeared.
+The 11:34 and 11:43 America/Chicago captures report `meatprobe_connected` with
+temperature item `id: "1"` at zero for both current and desired temperature,
+in Fahrenheit, while the oven reports Ready / NoOperation. The second capture
+still reports those values with Bake 350°F and a probe target of 150°F selected
+on the panel before Start; the oven target also remains zero in that capture.
+
+The 11:46 capture reports Bake / Run / Preheat, cavity target 350°F, and item
+`id: "1"` with desired 150°F. Its cached transport body contains current 100°F;
+the current resource snapshot contains 107°F. This confirms the existing probe
+temperature and target mapping on the NV51K7770S during probe cooking, including
+the `meatprobe_connected` spelling. The divider reports Off throughout.
+
+Both sensors remain read-only. These observations do not verify remote target
+adjustment, probe-specific remote starts, measurement accuracy, or reporting
+below 100°F. Idle zero handling is unchanged. No integration code changed for
+this verification, and it does not establish hardware acceptance of the later
+generalized device layout.
+
 ## NV51K7770S feature audit
 
 Compared with the submitted fixes commit `7122a33`, the merger preserves the
@@ -156,12 +177,12 @@ unchanged. The lower device target and removed duplicate IDs need the migration
 adjustments described above.
 
 The audit found no previously implemented oven function omitted by the merger.
-It did find fields in the existing captures that neither version exposes as
-standalone entities:
+The audit also checked the conditional probe sensors and fields in the captures
+that neither version exposes as standalone entities:
 
 | Captured field or capability | Evidence and remaining limit |
 | --- | --- |
-| Food probe | LocalThings already has conditional probe temperature/target sensors. This oven's captures report `meatprobe_disconnected`; a connected-probe capture is needed to establish whether it supplies the expected temperature item. A reload may be needed because sensor creation is gated during setup. |
+| Food probe | Existing conditional temperature/target sensors are verified during Bake with the probe connected; see the hardware check above. A reload may be needed because sensor creation is gated during setup. Remote target control remains unverified. |
 | Steam/descale information | Options include `descaleAlarm_Normal`, `steamState_Standby`, `steamGeneratorLevel_Empty`, `descaleState_Standby`, `drainRequired_00` and related tokens. These are candidates for read-only diagnostic entities; the current captures do not demonstrate state transitions or establish all token meanings. |
 | Sabbath and temperature adjustment | `Sabbath_Off` and `AdjustingTemp_0` are present. No working remote setting or hardware-verified sensor mapping was established. |
 | Steam level and preheat options | `steamAddLevel_NULL` and `NoPreheat_Off` are present. `NULL` is not a measured steam setting, and these names alone do not establish writable controls. |
