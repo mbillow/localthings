@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Cook Time Minutes"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} Cook Time"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity} Setpoint"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity} Cook Time Minutes"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} Cook Time"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Healthy Cook White Fish Fillet"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity} Cooking Mode",
-        "state": {
-          "no_operation": "No Operation",
-          "bake": "Bake",
-          "broil": "Broil",
-          "convection": "Convection",
-          "convection_bake": "Convection Bake",
-          "convection_broil": "Convection Broil",
-          "frozen_pizza_plus": "Frozen Pizza+",
-          "slow_cook": "Slow Cook",
-          "plate_warm": "Plate Warm",
-          "air_fry": "Air Fry",
-          "convection_roast": "Convection Roast",
-          "keep_warm": "Keep Warm",
-          "bread_proof": "Bread Proof",
-          "dehydrate": "Dehydrate",
-          "self_clean": "Self Clean",
-          "air_fryer": "Air Fry",
-          "upper_broil": "Broil",
-          "upper_convection_bake": "Convection Bake",
-          "upper_convection_roast": "Convection Roast",
-          "lower_bake": "Bake",
-          "lower_convection_bake": "Convection Bake",
-          "steam_bake": "Steam Bake",
-          "steam_roast": "Steam Roast",
-          "upper_steam_bake": "Steam Bake",
-          "descale": "Descale",
-          "drain": "Drain",
-          "lower_convection_roast": "Convection Roast",
-          "autocook": "Auto Cook",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Healthy Cook Baked Potato",
-          "healthycook2": "Healthy Cook Grilled Chicken",
-          "healthycook3": "Healthy Cook Salmon Steak",
-          "healthycook4": "Healthy Cook White Fish Fillet",
-          "healthycook5": "Healthy Cook Dehydrate",
-          "healthycook6": "Healthy Cook Bread Proof",
-          "upper_healthycook1": "Healthy Cook Baked Potato",
-          "upper_healthycook2": "Healthy Cook Grilled Chicken",
-          "upper_healthycook3": "Healthy Cook Salmon Steak",
-          "upper_healthycook4": "Healthy Cook White Fish Fillet",
-          "lower_healthycook1": "Healthy Cook Baked Potato",
-          "lower_healthycook2": "Healthy Cook Grilled Chicken",
-          "lower_healthycook3": "Healthy Cook Salmon Steak",
-          "lower_healthycook4": "Healthy Cook White Fish Fillet"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity} Cooking Mode",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Lower Healthy Cook 2",
           "lower_healthycook3": "Lower Healthy Cook 3",
           "lower_healthycook4": "Lower Healthy Cook 4"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity} Cooking Mode",
+        "state": {
+          "no_operation": "No Operation",
+          "bake": "Bake",
+          "broil": "Broil",
+          "convection": "Convection",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
+          "dehydrate": "Dehydrate",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Broil",
+          "upper_convection_bake": "Convection Bake",
+          "upper_convection_roast": "Convection Roast",
+          "lower_bake": "Bake",
+          "lower_convection_bake": "Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Steam Bake",
+          "descale": "Descale",
+          "drain": "Drain",
+          "lower_convection_roast": "Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook Baked Potato",
+          "healthycook2": "Healthy Cook Grilled Chicken",
+          "healthycook3": "Healthy Cook Salmon Steak",
+          "healthycook4": "Healthy Cook White Fish Fillet",
+          "healthycook5": "Healthy Cook Dehydrate",
+          "healthycook6": "Healthy Cook Bread Proof",
+          "upper_healthycook1": "Healthy Cook Baked Potato",
+          "upper_healthycook2": "Healthy Cook Grilled Chicken",
+          "upper_healthycook3": "Healthy Cook Salmon Steak",
+          "upper_healthycook4": "Healthy Cook White Fish Fillet",
+          "lower_healthycook1": "Healthy Cook Baked Potato",
+          "lower_healthycook2": "Healthy Cook Grilled Chicken",
+          "lower_healthycook3": "Healthy Cook Salmon Steak",
+          "lower_healthycook4": "Healthy Cook White Fish Fillet"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity} Temperature"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity} Temperature Probe"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity} Temperature Probe Target"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity} Diagnosis Status",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity} Cook time"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity} Temperature Probe"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity} Temperature Probe Target"
       }
     },
     "switch": {

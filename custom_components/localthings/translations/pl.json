@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Minuty gotowania"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Czas gotowania"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity}: Wartość zadana"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minuty gotowania"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity}: Czas gotowania"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity}: Tryb pieczenia",
-        "state": {
-          "no_operation": "Brak pracy",
-          "bake": "Pieczenie",
-          "broil": "Opiekanie",
-          "convection": "Termoobieg",
-          "convection_bake": "Pieczenie z termoobiegiem",
-          "convection_broil": "Opiekanie z termoobiegiem",
-          "frozen_pizza_plus": "Pizza mrożona+",
-          "slow_cook": "Wolne gotowanie",
-          "plate_warm": "Podgrzewanie talerzy",
-          "air_fry": "Smażenie na gorącym powietrzu",
-          "convection_roast": "Pieczenie mięs z termoobiegiem",
-          "keep_warm": "Utrzymywanie ciepła",
-          "bread_proof": "Wyrastanie ciasta",
-          "dehydrate": "Suszenie żywności",
-          "self_clean": "Samoczyszczenie",
-          "air_fryer": "Smażenie na gorącym powietrzu",
-          "upper_broil": "Opiekanie",
-          "upper_convection_bake": "Pieczenie z termoobiegiem",
-          "upper_convection_roast": "Pieczenie mięs z termoobiegiem",
-          "lower_bake": "Pieczenie",
-          "lower_convection_bake": "Pieczenie z termoobiegiem",
-          "steam_bake": "Pieczenie z parą",
-          "steam_roast": "Pieczenie mięs z parą",
-          "upper_steam_bake": "Pieczenie z parą",
-          "descale": "Odkamienianie",
-          "drain": "Opróżnianie wody",
-          "lower_convection_roast": "Pieczenie mięs z termoobiegiem",
-          "autocook": "Automatyczne pieczenie",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
-          "healthycook2": "Zdrowe gotowanie Grillowany kurczak",
-          "healthycook3": "Zdrowe gotowanie Stek z łososia",
-          "healthycook4": "Zdrowe gotowanie Filet z białej ryby",
-          "healthycook5": "Zdrowe gotowanie Suszenie żywności",
-          "healthycook6": "Zdrowe gotowanie Wyrastanie ciasta",
-          "upper_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
-          "upper_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
-          "upper_healthycook3": "Zdrowe gotowanie Stek z łososia",
-          "upper_healthycook4": "Zdrowe gotowanie Filet z białej ryby",
-          "lower_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
-          "lower_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
-          "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
-          "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity}: Tryb pieczenia",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Zdrowe gotowanie 2 (dolna)",
           "lower_healthycook3": "Zdrowe gotowanie 3 (dolna)",
           "lower_healthycook4": "Zdrowe gotowanie 4 (dolna)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Tryb pieczenia",
+        "state": {
+          "no_operation": "Brak pracy",
+          "bake": "Pieczenie",
+          "broil": "Opiekanie",
+          "convection": "Termoobieg",
+          "convection_bake": "Pieczenie z termoobiegiem",
+          "convection_broil": "Opiekanie z termoobiegiem",
+          "frozen_pizza_plus": "Pizza mrożona+",
+          "slow_cook": "Wolne gotowanie",
+          "plate_warm": "Podgrzewanie talerzy",
+          "air_fry": "Smażenie na gorącym powietrzu",
+          "convection_roast": "Pieczenie mięs z termoobiegiem",
+          "keep_warm": "Utrzymywanie ciepła",
+          "bread_proof": "Wyrastanie ciasta",
+          "dehydrate": "Suszenie żywności",
+          "self_clean": "Samoczyszczenie",
+          "air_fryer": "Smażenie na gorącym powietrzu",
+          "upper_broil": "Opiekanie",
+          "upper_convection_bake": "Pieczenie z termoobiegiem",
+          "upper_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "lower_bake": "Pieczenie",
+          "lower_convection_bake": "Pieczenie z termoobiegiem",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody",
+          "lower_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "autocook": "Automatyczne pieczenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "healthycook4": "Zdrowe gotowanie Filet z białej ryby",
+          "healthycook5": "Zdrowe gotowanie Suszenie żywności",
+          "healthycook6": "Zdrowe gotowanie Wyrastanie ciasta",
+          "upper_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "upper_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "upper_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "upper_healthycook4": "Zdrowe gotowanie Filet z białej ryby",
+          "lower_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "lower_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity}: Temperatura"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Sonda temperatury"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Docelowa temperatura sondy"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Stan diagnostyki",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity}: Czas gotowania"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonda temperatury"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Docelowa temperatura sondy"
       }
     },
     "switch": {

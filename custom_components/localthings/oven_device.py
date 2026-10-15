@@ -10,6 +10,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 from .devices import find_entry_device
+from .oven_labels import CAVITY_KEYS as COOKING_KEYS
 from .registry.adapter import _key
 from .registry.capabilities import cook
 from .registry.entities import PLATFORM_OF
@@ -38,26 +39,7 @@ SHARED_KEYS = frozenset(
 PROBE_KEYS = frozenset({"food_probe_temp", "food_probe_setpoint"})
 
 # Cooking state and fault reports remain attached to their own cavity.
-CAVITY_KEYS = PROBE_KEYS | frozenset(
-    {
-        "start_cooking",
-        "stop",
-        "oven_mode",
-        "oven_setpoint",
-        "cook_time_hours",
-        "cook_time_minutes",
-        "cook_time",
-        "machine_state",
-        "cycle_active",
-        "progress_percentage",
-        "operation_time_minutes",
-        "finish_time",
-        "oven_state",
-        "current_temp_c",
-        "alarm_code",
-        "diagnosis_status",
-    }
-)
+CAVITY_KEYS = PROBE_KEYS | COOKING_KEYS
 
 
 # These resources may be independent on another oven, even when their readings match.

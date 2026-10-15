@@ -1,6 +1,6 @@
 # One Home Assistant device for a dual-cavity oven
 
-The `feature/legacy-oven-single-device` branch builds on the accepted fixes in
+The `feature/legacy-oven-single-device` branch builds on the fixes proposed in
 PR #637. It automatically presents a declared Upper/Lower cavity pair as one
 physical oven. There is no layout option. Grouping uses the oven/range registry,
 two oven resource sets and the existing Lower cavity declaration, including
@@ -75,10 +75,12 @@ does not edit automations, dashboards or history.
 
 Create a Home Assistant configuration backup before installing, since this
 changes the device and entity registries as well as the integration files.
-The accepted two-device runtime build is
-`411802144f055ad2513761afc767fc7b59bd78c1`; the fixes branch at
-`7122a33c8fe3a58f35bf5ed70af037e15cc723e9` adds only its acceptance notes.
-Neither receives the combined-device commits.
+The owner-tested two-device runtime build is
+`411802144f055ad2513761afc767fc7b59bd78c1`. PR #637 now includes the probe and
+Upper/Oven label backports at `8e8cad386f97316cfd9bcc062ef04bbf02c399e0`.
+That fixes branch remains separate and receives no combined-device commits.
+This feature incorporates that baseline so the two changes can be reviewed
+and accepted independently, with #637 merged first.
 
 HA retains deleted registry identities. The regression suite simulates returning
 to the old layout and verifies restoration of the original Lower device ID,
@@ -114,6 +116,16 @@ captured pairs, or the index/prefix reported in another oven's diagnostics.
 This does not change the protocol's two-record layout.
 
 ## Verification
+
+The submission incorporates PR #637 through `8e8cad3`, including its probe and
+divider-label backports. All 3,322 tests pass (65.84 seconds) on Python 3.14.8 /
+HA 2026.9.4, with formatting, lint and type checks passing. The focused
+migration, label and probe run passes 82 cases. Upgrade coverage now includes
+the latest two-device labels in all ten locales, both initial divider states,
+subsequent On/Off/unknown readings and preserved custom names and retained IDs.
+This alignment changes no cooking behavior or translation values compared with
+the preceding combined build; the following records distinguish hardware
+observations from software verification.
 
 The initial October 15 test build passed all 3,259 tests on Python 3.14.8 and HA
 2026.9.4, plus `ruff format --check`, `ruff check` and `ty check`.

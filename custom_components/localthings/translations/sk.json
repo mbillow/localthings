@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Minúty varenia"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Čas varenia"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity}: Požadovaná teplota"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minúty varenia"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity}: Čas varenia"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity}: Režim varenia",
-        "state": {
-          "no_operation": "Nečinnosť",
-          "bake": "Pečenie",
-          "broil": "Grilovanie",
-          "convection": "Teplovzdušný ohrev",
-          "convection_bake": "Teplovzdušné pečenie",
-          "convection_broil": "Teplovzdušné grilovanie",
-          "frozen_pizza_plus": "Mrazená pizza+",
-          "slow_cook": "Pomalé varenie",
-          "plate_warm": "Ohrev tanierov",
-          "air_fry": "Teplovzdušné fritovanie",
-          "convection_roast": "Teplovzdušné opekanie",
-          "keep_warm": "Udržiavanie teploty",
-          "bread_proof": "Kysnutie cesta",
-          "dehydrate": "Sušenie",
-          "self_clean": "Samočistenie",
-          "air_fryer": "Teplovzdušné fritovanie",
-          "upper_broil": "Grilovanie",
-          "upper_convection_bake": "Teplovzdušné pečenie",
-          "upper_convection_roast": "Teplovzdušné opekanie",
-          "lower_bake": "Pečenie",
-          "lower_convection_bake": "Teplovzdušné pečenie",
-          "steam_bake": "Pečenie s parou",
-          "steam_roast": "Opekanie s parou",
-          "upper_steam_bake": "Pečenie s parou",
-          "descale": "Odvápnenie",
-          "drain": "Vypustenie vody",
-          "lower_convection_roast": "Teplovzdušné opekanie",
-          "autocook": "Automatické varenie",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Zdravé varenie Pečený zemiak",
-          "healthycook2": "Zdravé varenie Grilované kura",
-          "healthycook3": "Zdravé varenie Steak z lososa",
-          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
-          "healthycook5": "Zdravé varenie Sušenie",
-          "healthycook6": "Zdravé varenie Kysnutie cesta",
-          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
-          "upper_healthycook2": "Zdravé varenie Grilované kura",
-          "upper_healthycook3": "Zdravé varenie Steak z lososa",
-          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
-          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
-          "lower_healthycook2": "Zdravé varenie Grilované kura",
-          "lower_healthycook3": "Zdravé varenie Steak z lososa",
-          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity}: Režim varenia",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Zdravé varenie 2 (dolná)",
           "lower_healthycook3": "Zdravé varenie 3 (dolná)",
           "lower_healthycook4": "Zdravé varenie 4 (dolná)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Režim varenia",
+        "state": {
+          "no_operation": "Nečinnosť",
+          "bake": "Pečenie",
+          "broil": "Grilovanie",
+          "convection": "Teplovzdušný ohrev",
+          "convection_bake": "Teplovzdušné pečenie",
+          "convection_broil": "Teplovzdušné grilovanie",
+          "frozen_pizza_plus": "Mrazená pizza+",
+          "slow_cook": "Pomalé varenie",
+          "plate_warm": "Ohrev tanierov",
+          "air_fry": "Teplovzdušné fritovanie",
+          "convection_roast": "Teplovzdušné opekanie",
+          "keep_warm": "Udržiavanie teploty",
+          "bread_proof": "Kysnutie cesta",
+          "dehydrate": "Sušenie",
+          "self_clean": "Samočistenie",
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie",
+          "upper_convection_bake": "Teplovzdušné pečenie",
+          "upper_convection_roast": "Teplovzdušné opekanie",
+          "lower_bake": "Pečenie",
+          "lower_convection_bake": "Teplovzdušné pečenie",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie Pečený zemiak",
+          "healthycook2": "Zdravé varenie Grilované kura",
+          "healthycook3": "Zdravé varenie Steak z lososa",
+          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "healthycook5": "Zdravé varenie Sušenie",
+          "healthycook6": "Zdravé varenie Kysnutie cesta",
+          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
+          "upper_healthycook2": "Zdravé varenie Grilované kura",
+          "upper_healthycook3": "Zdravé varenie Steak z lososa",
+          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
+          "lower_healthycook2": "Zdravé varenie Grilované kura",
+          "lower_healthycook3": "Zdravé varenie Steak z lososa",
+          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity}: Teplota"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Teplotná sonda"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Cieľová teplota sondy"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Stav diagnostiky",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity}: Čas varenia"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Teplotná sonda"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Cieľová teplota sondy"
       }
     },
     "switch": {

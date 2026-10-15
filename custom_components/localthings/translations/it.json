@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Minuti di cottura"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Tempo di cottura"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity}: Valore impostato"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minuti di cottura"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity}: Tempo di cottura"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity}: Modalità di cottura",
-        "state": {
-          "no_operation": "Nessuna operazione",
-          "bake": "Statico",
-          "broil": "Grill",
-          "convection": "Convezione",
-          "convection_bake": "Cottura a convezione",
-          "convection_broil": "Grill a convezione",
-          "frozen_pizza_plus": "Frozen Pizza+",
-          "slow_cook": "Cottura lenta",
-          "plate_warm": "Scalda piatti",
-          "air_fry": "Frittura ad aria",
-          "convection_roast": "Arrosto ventilato",
-          "keep_warm": "Mantieni in caldo",
-          "bread_proof": "Lievitazione",
-          "dehydrate": "Essiccazione",
-          "self_clean": "Autopulizia",
-          "air_fryer": "Friggitrice ad aria",
-          "upper_broil": "Grill",
-          "upper_convection_bake": "Cottura a convezione",
-          "upper_convection_roast": "Arrosto ventilato",
-          "lower_bake": "Statico",
-          "lower_convection_bake": "Cottura a convezione",
-          "steam_bake": "Cottura a vapore",
-          "steam_roast": "Arrosto a vapore",
-          "upper_steam_bake": "Cottura a vapore",
-          "descale": "Decalcificazione",
-          "drain": "Scarico acqua",
-          "lower_convection_roast": "Arrosto ventilato",
-          "autocook": "Cottura automatica",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Cottura salutare Patata al forno",
-          "healthycook2": "Cottura salutare Pollo grigliato",
-          "healthycook3": "Cottura salutare Trancio di salmone",
-          "healthycook4": "Cottura salutare Filetto di pesce bianco",
-          "healthycook5": "Cottura salutare Essiccazione",
-          "healthycook6": "Cottura salutare Lievitazione",
-          "upper_healthycook1": "Cottura salutare Patata al forno",
-          "upper_healthycook2": "Cottura salutare Pollo grigliato",
-          "upper_healthycook3": "Cottura salutare Trancio di salmone",
-          "upper_healthycook4": "Cottura salutare Filetto di pesce bianco",
-          "lower_healthycook1": "Cottura salutare Patata al forno",
-          "lower_healthycook2": "Cottura salutare Pollo grigliato",
-          "lower_healthycook3": "Cottura salutare Trancio di salmone",
-          "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity}: Modalità di cottura",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Cottura salutare 2 (inferiore)",
           "lower_healthycook3": "Cottura salutare 3 (inferiore)",
           "lower_healthycook4": "Cottura salutare 4 (inferiore)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Modalità di cottura",
+        "state": {
+          "no_operation": "Nessuna operazione",
+          "bake": "Statico",
+          "broil": "Grill",
+          "convection": "Convezione",
+          "convection_bake": "Cottura a convezione",
+          "convection_broil": "Grill a convezione",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Cottura lenta",
+          "plate_warm": "Scalda piatti",
+          "air_fry": "Frittura ad aria",
+          "convection_roast": "Arrosto ventilato",
+          "keep_warm": "Mantieni in caldo",
+          "bread_proof": "Lievitazione",
+          "dehydrate": "Essiccazione",
+          "self_clean": "Autopulizia",
+          "air_fryer": "Friggitrice ad aria",
+          "upper_broil": "Grill",
+          "upper_convection_bake": "Cottura a convezione",
+          "upper_convection_roast": "Arrosto ventilato",
+          "lower_bake": "Statico",
+          "lower_convection_bake": "Cottura a convezione",
+          "steam_bake": "Cottura a vapore",
+          "steam_roast": "Arrosto a vapore",
+          "upper_steam_bake": "Cottura a vapore",
+          "descale": "Decalcificazione",
+          "drain": "Scarico acqua",
+          "lower_convection_roast": "Arrosto ventilato",
+          "autocook": "Cottura automatica",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cottura salutare Patata al forno",
+          "healthycook2": "Cottura salutare Pollo grigliato",
+          "healthycook3": "Cottura salutare Trancio di salmone",
+          "healthycook4": "Cottura salutare Filetto di pesce bianco",
+          "healthycook5": "Cottura salutare Essiccazione",
+          "healthycook6": "Cottura salutare Lievitazione",
+          "upper_healthycook1": "Cottura salutare Patata al forno",
+          "upper_healthycook2": "Cottura salutare Pollo grigliato",
+          "upper_healthycook3": "Cottura salutare Trancio di salmone",
+          "upper_healthycook4": "Cottura salutare Filetto di pesce bianco",
+          "lower_healthycook1": "Cottura salutare Patata al forno",
+          "lower_healthycook2": "Cottura salutare Pollo grigliato",
+          "lower_healthycook3": "Cottura salutare Trancio di salmone",
+          "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity}: Temperatura"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Sonda di temperatura"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Temperatura obiettivo della sonda"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Stato diagnosi",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity}: Tempo di cottura"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonda di temperatura"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Temperatura obiettivo della sonda"
       }
     },
     "switch": {

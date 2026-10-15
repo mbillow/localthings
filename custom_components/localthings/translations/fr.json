@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Minutes de cuisson"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Temps de cuisson"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity}: Consigne"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minutes de cuisson"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity}: Temps de cuisson"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Cuisson saine Filet de poisson blanc"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity}: Mode de cuisson",
-        "state": {
-          "no_operation": "Inactif",
-          "bake": "Cuisson traditionnelle",
-          "broil": "Gril",
-          "convection": "Chaleur tournante",
-          "convection_bake": "Cuisson à chaleur tournante",
-          "convection_broil": "Gril ventilé",
-          "frozen_pizza_plus": "Pizza surgelée+",
-          "slow_cook": "Cuisson lente",
-          "plate_warm": "Chauffe-assiettes",
-          "air_fry": "Friture à air chaud",
-          "convection_roast": "Rôtissage à chaleur tournante",
-          "keep_warm": "Maintien au chaud",
-          "bread_proof": "Levée de pâte",
-          "dehydrate": "Déshydratation",
-          "self_clean": "Autonettoyage",
-          "air_fryer": "Friture à air chaud",
-          "upper_broil": "Gril",
-          "upper_convection_bake": "Cuisson à chaleur tournante",
-          "upper_convection_roast": "Rôtissage à chaleur tournante",
-          "lower_bake": "Cuisson traditionnelle",
-          "lower_convection_bake": "Cuisson à chaleur tournante",
-          "steam_bake": "Cuisson vapeur",
-          "steam_roast": "Rôtissage vapeur",
-          "upper_steam_bake": "Cuisson vapeur",
-          "descale": "Détartrage",
-          "drain": "Vidange",
-          "lower_convection_roast": "Rôtissage à chaleur tournante",
-          "autocook": "Cuisson automatique",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Cuisson saine Pomme de terre au four",
-          "healthycook2": "Cuisson saine Poulet grillé",
-          "healthycook3": "Cuisson saine Pavé de saumon",
-          "healthycook4": "Cuisson saine Filet de poisson blanc",
-          "healthycook5": "Cuisson saine Déshydratation",
-          "healthycook6": "Cuisson saine Levée de pâte",
-          "upper_healthycook1": "Cuisson saine Pomme de terre au four",
-          "upper_healthycook2": "Cuisson saine Poulet grillé",
-          "upper_healthycook3": "Cuisson saine Pavé de saumon",
-          "upper_healthycook4": "Cuisson saine Filet de poisson blanc",
-          "lower_healthycook1": "Cuisson saine Pomme de terre au four",
-          "lower_healthycook2": "Cuisson saine Poulet grillé",
-          "lower_healthycook3": "Cuisson saine Pavé de saumon",
-          "lower_healthycook4": "Cuisson saine Filet de poisson blanc"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity}: Mode de cuisson",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Cuisson saine 2 (cavité inférieure)",
           "lower_healthycook3": "Cuisson saine 3 (cavité inférieure)",
           "lower_healthycook4": "Cuisson saine 4 (cavité inférieure)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Mode de cuisson",
+        "state": {
+          "no_operation": "Inactif",
+          "bake": "Cuisson traditionnelle",
+          "broil": "Gril",
+          "convection": "Chaleur tournante",
+          "convection_bake": "Cuisson à chaleur tournante",
+          "convection_broil": "Gril ventilé",
+          "frozen_pizza_plus": "Pizza surgelée+",
+          "slow_cook": "Cuisson lente",
+          "plate_warm": "Chauffe-assiettes",
+          "air_fry": "Friture à air chaud",
+          "convection_roast": "Rôtissage à chaleur tournante",
+          "keep_warm": "Maintien au chaud",
+          "bread_proof": "Levée de pâte",
+          "dehydrate": "Déshydratation",
+          "self_clean": "Autonettoyage",
+          "air_fryer": "Friture à air chaud",
+          "upper_broil": "Gril",
+          "upper_convection_bake": "Cuisson à chaleur tournante",
+          "upper_convection_roast": "Rôtissage à chaleur tournante",
+          "lower_bake": "Cuisson traditionnelle",
+          "lower_convection_bake": "Cuisson à chaleur tournante",
+          "steam_bake": "Cuisson vapeur",
+          "steam_roast": "Rôtissage vapeur",
+          "upper_steam_bake": "Cuisson vapeur",
+          "descale": "Détartrage",
+          "drain": "Vidange",
+          "lower_convection_roast": "Rôtissage à chaleur tournante",
+          "autocook": "Cuisson automatique",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cuisson saine Pomme de terre au four",
+          "healthycook2": "Cuisson saine Poulet grillé",
+          "healthycook3": "Cuisson saine Pavé de saumon",
+          "healthycook4": "Cuisson saine Filet de poisson blanc",
+          "healthycook5": "Cuisson saine Déshydratation",
+          "healthycook6": "Cuisson saine Levée de pâte",
+          "upper_healthycook1": "Cuisson saine Pomme de terre au four",
+          "upper_healthycook2": "Cuisson saine Poulet grillé",
+          "upper_healthycook3": "Cuisson saine Pavé de saumon",
+          "upper_healthycook4": "Cuisson saine Filet de poisson blanc",
+          "lower_healthycook1": "Cuisson saine Pomme de terre au four",
+          "lower_healthycook2": "Cuisson saine Poulet grillé",
+          "lower_healthycook3": "Cuisson saine Pavé de saumon",
+          "lower_healthycook4": "Cuisson saine Filet de poisson blanc"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity}: Température"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Sonde de température"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Température cible de la sonde"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: État du diagnostic",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity}: Temps de cuisson"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonde de température"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Température cible de la sonde"
       }
     },
     "switch": {

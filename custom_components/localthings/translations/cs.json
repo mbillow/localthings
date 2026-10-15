@@ -349,6 +349,9 @@
       "cook_time_minutes": {
         "name": "Minuty vaření"
       },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Doba vaření"
+      },
       "oven_cavity_oven_setpoint": {
         "name": "{cavity}: Požadovaná teplota"
       },
@@ -357,9 +360,6 @@
       },
       "oven_cavity_cook_time_minutes": {
         "name": "{cavity}: Minuty vaření"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity}: Doba vaření"
       }
     },
     "select": {
@@ -1247,54 +1247,6 @@
           "lower_healthycook4": "Zdravé vaření Filet z bílé ryby"
         }
       },
-      "oven_cavity_oven_mode_lcd_wall_16k": {
-        "name": "{cavity}: Režim vaření",
-        "state": {
-          "no_operation": "Bez provozu",
-          "bake": "Pečení",
-          "broil": "Gril",
-          "convection": "Konvekce",
-          "convection_bake": "Konvekční pečení",
-          "convection_broil": "Konvekční gril",
-          "frozen_pizza_plus": "Mražená pizza+",
-          "slow_cook": "Pomalé vaření",
-          "plate_warm": "Ohřev talířů",
-          "air_fry": "Fritéza na vzduch",
-          "convection_roast": "Pečení horkým vzduchem",
-          "keep_warm": "Udržování teploty",
-          "bread_proof": "Kynutí těsta",
-          "dehydrate": "Sušení",
-          "self_clean": "Samočištění",
-          "air_fryer": "Horkovzdušná fritéza",
-          "upper_broil": "Gril",
-          "upper_convection_bake": "Konvekční pečení",
-          "upper_convection_roast": "Pečení horkým vzduchem",
-          "lower_bake": "Pečení",
-          "lower_convection_bake": "Konvekční pečení",
-          "steam_bake": "Pečení s párou",
-          "steam_roast": "Pečení masa s párou",
-          "upper_steam_bake": "Pečení s párou",
-          "descale": "Odvápnění",
-          "drain": "Vypuštění vody",
-          "lower_convection_roast": "Pečení horkým vzduchem",
-          "autocook": "Automatické vaření",
-          "pyro_free": "Pyro Free",
-          "healthycook1": "Zdravé vaření Pečená brambora",
-          "healthycook2": "Zdravé vaření Grilované kuře",
-          "healthycook3": "Zdravé vaření Steak z lososa",
-          "healthycook4": "Zdravé vaření Filet z bílé ryby",
-          "healthycook5": "Zdravé vaření Sušení",
-          "healthycook6": "Zdravé vaření Kynutí těsta",
-          "upper_healthycook1": "Zdravé vaření Pečená brambora",
-          "upper_healthycook2": "Zdravé vaření Grilované kuře",
-          "upper_healthycook3": "Zdravé vaření Steak z lososa",
-          "upper_healthycook4": "Zdravé vaření Filet z bílé ryby",
-          "lower_healthycook1": "Zdravé vaření Pečená brambora",
-          "lower_healthycook2": "Zdravé vaření Grilované kuře",
-          "lower_healthycook3": "Zdravé vaření Steak z lososa",
-          "lower_healthycook4": "Zdravé vaření Filet z bílé ryby"
-        }
-      },
       "oven_cavity_oven_mode": {
         "name": "{cavity}: Režim vaření",
         "state": {
@@ -1341,6 +1293,54 @@
           "lower_healthycook2": "Zdravé vaření 2 (dolní)",
           "lower_healthycook3": "Zdravé vaření 3 (dolní)",
           "lower_healthycook4": "Zdravé vaření 4 (dolní)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Režim vaření",
+        "state": {
+          "no_operation": "Bez provozu",
+          "bake": "Pečení",
+          "broil": "Gril",
+          "convection": "Konvekce",
+          "convection_bake": "Konvekční pečení",
+          "convection_broil": "Konvekční gril",
+          "frozen_pizza_plus": "Mražená pizza+",
+          "slow_cook": "Pomalé vaření",
+          "plate_warm": "Ohřev talířů",
+          "air_fry": "Fritéza na vzduch",
+          "convection_roast": "Pečení horkým vzduchem",
+          "keep_warm": "Udržování teploty",
+          "bread_proof": "Kynutí těsta",
+          "dehydrate": "Sušení",
+          "self_clean": "Samočištění",
+          "air_fryer": "Horkovzdušná fritéza",
+          "upper_broil": "Gril",
+          "upper_convection_bake": "Konvekční pečení",
+          "upper_convection_roast": "Pečení horkým vzduchem",
+          "lower_bake": "Pečení",
+          "lower_convection_bake": "Konvekční pečení",
+          "steam_bake": "Pečení s párou",
+          "steam_roast": "Pečení masa s párou",
+          "upper_steam_bake": "Pečení s párou",
+          "descale": "Odvápnění",
+          "drain": "Vypuštění vody",
+          "lower_convection_roast": "Pečení horkým vzduchem",
+          "autocook": "Automatické vaření",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé vaření Pečená brambora",
+          "healthycook2": "Zdravé vaření Grilované kuře",
+          "healthycook3": "Zdravé vaření Steak z lososa",
+          "healthycook4": "Zdravé vaření Filet z bílé ryby",
+          "healthycook5": "Zdravé vaření Sušení",
+          "healthycook6": "Zdravé vaření Kynutí těsta",
+          "upper_healthycook1": "Zdravé vaření Pečená brambora",
+          "upper_healthycook2": "Zdravé vaření Grilované kuře",
+          "upper_healthycook3": "Zdravé vaření Steak z lososa",
+          "upper_healthycook4": "Zdravé vaření Filet z bílé ryby",
+          "lower_healthycook1": "Zdravé vaření Pečená brambora",
+          "lower_healthycook2": "Zdravé vaření Grilované kuře",
+          "lower_healthycook3": "Zdravé vaření Steak z lososa",
+          "lower_healthycook4": "Zdravé vaření Filet z bílé ryby"
         }
       }
     },
@@ -1852,12 +1852,6 @@
       "oven_cavity_current_temp_c": {
         "name": "{cavity}: Teplota"
       },
-      "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Teplotní sonda"
-      },
-      "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Cílová teplota sondy"
-      },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Stav diagnostiky",
         "state": {
@@ -1886,6 +1880,12 @@
       },
       "oven_cavity_cook_time": {
         "name": "{cavity}: Doba vaření"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Teplotní sonda"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Cílová teplota sondy"
       }
     },
     "switch": {

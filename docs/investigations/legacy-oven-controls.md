@@ -434,6 +434,65 @@ presentation will use a separate feature branch and pull request, preserving
 this fixes
 branch as the fallback. No device-grouping migration is included here.
 
+## Temperature probe follow-up
+
+On October 15, the NV51K7770S owner connected the probe. The 11:34 and 11:43
+America/Chicago captures report `meatprobe_connected`, Ready / NoOperation, and
+temperature item `id: "1"` with current and desired values of zero in Fahrenheit.
+Selecting Bake 350°F and a probe target of 150°F on the panel without starting
+does not change those reported values.
+
+The 11:46 running capture reports Bake / Run / Preheat, cavity target 350°F,
+and probe item `id: "1"` with desired 150°F. The cached transport body has
+current 100°F; the resource snapshot has 107°F. The divider reports Off. This
+confirms the current/target mapping and connected token on this model. It does
+not establish remote probe target writes, probe-specific remote starts,
+measurement accuracy or reporting below 100°F. Connected idle zero handling is
+unchanged; both entities remain read-only.
+
+Sensor setup now adds already-discovered optional sensors when their existing
+inclusion check first passes during a normal coordinator update. No integration
+reload is needed. Once created, probe sensors become unavailable when unplugged
+and reuse their existing IDs and custom names on reconnection. The owner
+confirmed unplugging at 12:14 and reconnection without a reload at 12:26 on the
+separate combined-device build `34de099`. That confirms the shared sensor logic;
+the two-device backport itself has software coverage, not a separate hardware
+installation check.
+
+The display names are Temperature Probe and Temperature Probe Target, with
+localized labels in all ten catalogs. Internal keys `food_probe_temp` and
+`food_probe_setpoint` and existing HA entity IDs remain unchanged. The tests
+cover legacy HTTPS, OCF vendor arrays and OCF fallback resources, initial and
+later detection, repeated unplug/reconnect updates, unload cleanup and label
+upgrades in all ten languages. The upper and lower devices remain separate.
+The backport passes all 3,257 tests (57.59 seconds) on Python 3.14.8, plus
+formatting, lint and type checks. Its 17 probe regression cases also pass
+independently. Translation checks do not constitute native-speaker review.
+
+## Divider-aware labels with separate devices
+
+The upper device's cavity controls and sensors now use Upper labels with the
+divider inserted and Oven labels when it reports Removed. For example, Upper
+Cooking Mode becomes Oven Cooking Mode, and Upper Start becomes Oven Start.
+The labels update during normal polling without a reload. A missing divider
+reading keeps Upper rather than asserting whole-oven operation.
+
+This applies to oven/range pairs with one declared Lower cavity and its divider
+resource, including modeSpec-derived declarations. Regression fixtures cover the
+NV51K7770S legacy pair, NV75N Dual Cook OCF oven, NE9801T Flex Duo range and
+NV7B6665IAA Dual Cook. Single-cavity and unrelated appliances retain their labels.
+This does not claim hardware validation for every model in those families.
+
+Both HA devices remain separate. Device names, lower-device labels, shared
+sensor and probe labels, command routes, entity IDs and custom names remain
+unchanged. No grouping migration, duplicate removal or new availability rule is
+introduced. All ten catalogs reuse the combined-device labels and retain their
+cooking-mode state translations. The new tests cover existing-ID upgrades,
+both initial divider states, repeated transitions and unknown divider readings.
+This separate-device label backport has not yet been hardware-tested.
+All 3,284 tests pass (60.22 seconds), with formatting, lint and type checks.
+The 44 focused probe/label cases pass independently, including all ten locales.
+
 ## Validation limits
 
 Regression coverage includes both cavity paths, held settings, mode labels,

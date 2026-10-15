@@ -578,7 +578,7 @@ def _probe_temp_unit(rep):
 
 def _probe_connected(rep, resources):
     """Empty sockets can retain zero readings; require the connection token
-    and a probe item (NV51K7770S evidence in docs/combined-oven.md)."""
+    and a probe item (NV51K7770S evidence in docs/investigations/legacy-oven-controls.md)."""
     if _probe_item(rep) is None:
         return False
     mode = resources.get("/mode/vs/0") or {}
