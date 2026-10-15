@@ -407,6 +407,9 @@ START_COOKING_BUTTON = ButtonDesc(
     icon="mdi:play",
     cook_param=cook.PARAM_START,
     exists_fn=cook.can_start,
+    available_fn=lambda rep, resources: (
+        not is_lcd_wall_oven(resources) or bool(cook.startable_modes(resources))
+    ),
 )
 
 

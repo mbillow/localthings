@@ -221,6 +221,20 @@ omission is not silently replaced with zero.
   oven even when Lower offers only NoOperation. Previously its `WALL` description
   could fall through to the washer-prefix match during startup. Regression tests
   now verify both shared sensor copies from divider-in and divider-out startup.
+- **Lower controls after reinserting the divider:** after installing 244fb00
+  with the divider removed, the owner reported an unavailable Start Cooking
+  button and obsolete Start, Pause and Delay Start controls. A regression test
+  reproduces the missing button: Lower's startup list contains only NoOperation,
+  so its Start Cooking entity was not registered and later mode updates could
+  not restore it. LCD_OV_WALL now retains the entity across divider changes,
+  making it unavailable while no modes are startable and available when they
+  return. Existing mode and Smart Control checks still validate every start.
+  Setup removes the three obsolete laundry controls left by the earlier type
+  misidentification, scoped to the identified Lower cavity's exact IDs and
+  config entry; current capabilities, other devices and user names on valid
+  entities are preserved. Tests cover startup with the divider in or out,
+  repeated transitions without reload, Lower command routing and the English
+  Start Cooking label. The correction awaits owner installation and confirmation.
 - **Write verification:** items match by ID and requested fields, allowing extra
   returned fields and equivalent finite numeric setpoints. IDs and units remain
   exact; ambiguous, missing or mismatched items fail. Individual and batch writes
@@ -346,12 +360,18 @@ mappings, and confirmed that the new modes are mapped correctly. That build
 passed all 3,222 tests plus formatting, lint and type checks. This confirmation
 does not establish remote recipe starts or confirm every other added display.
 
-The next build carries the existing recipe mappings into whole-oven
-Healthycook1–4 and alphabetizes cooking-mode choices. It passes all 3,228 tests,
+Build 244fb00 carries the existing recipe mappings into whole-oven
+Healthycook1–4 and alphabetizes cooking-mode choices. It passed all 3,228 tests,
 plus formatting, lint and type checks. All ten translation
 catalogs are checked for matching keys and placeholders; whole-oven recipe
-labels reuse the existing localized Upper/Lower labels. These latest changes
-await installation and owner confirmation.
+labels reuse the existing localized Upper/Lower labels. The owner installed
+244fb00 and confirmed that this presentation looked good, then reported the
+Lower control issue after reinserting the divider. The correction above
+addresses the reproduced startup failure; the newer Lower behavior still
+awaits hardware confirmation.
+
+The Lower control correction passes all 3,239 tests, plus formatting, lint
+and type checks. No appliance commands were sent during these software tests.
 
 This test build retains the two-device layout. The requested combined-device
 presentation is deferred until the remaining pre-merger checks are finished.

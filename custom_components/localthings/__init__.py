@@ -22,7 +22,7 @@ from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
 from .entity import _is_included, async_load_instance_names
 from .registry.adapter import _key
 from .registry.capabilities.common import is_lcd_wall_oven
-from .registry.entities import BinarySensorDesc, ButtonDesc, NumberDesc, SwitchDesc
+from .registry.entities import PLATFORM_OF, BinarySensorDesc, ButtonDesc, NumberDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -338,6 +338,48 @@ def _drop_unverified_oven_diagnosis_buttons(
 
 
 @callback
+def _drop_misidentified_oven_controls(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove laundry controls left by the old WALL-to-washer type match."""
+    current = {
+        (PLATFORM_OF[type(bound.desc)], _key(bound))
+        for bound in coordinator.bound
+        if _is_included(bound, coordinator)
+    }
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, ButtonDesc)
+            or bound.desc.key != "start_cooking"
+            or bound.subdevice.kind != "indexed"
+            or bound.subdevice.key != "1"
+            or not is_lcd_wall_oven(coordinator.discovery_canonical(bound.subdevice))
+            or not _is_included(bound, coordinator)
+        ):
+            continue
+        for platform, key in (
+            ("button", "start"),
+            ("button", "pause"),
+            ("number", "delay_start_hours"),
+        ):
+            state_key = f"{bound.subdevice.key_prefix}{key}"
+            if (platform, state_key) in current:
+                continue
+            unique_id = f"{DOMAIN}_{coordinator.device_key}_{state_key}"
+            entity_id = ent_reg.async_get_entity_id(platform, DOMAIN, unique_id)
+            old = ent_reg.async_get(entity_id) if entity_id else None
+            if old is None or old.config_entry_id != entry.entry_id:
+                continue
+            _LOGGER.info(
+                "Removing %s: an earlier discovery misidentified the lower oven as a washer; "
+                "update any automation or dashboard that referenced it",
+                old.entity_id,
+            )
+            ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_cook_times_superseded_by_parts(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -515,6 +557,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _drop_cook_times_superseded_by_parts(hass, entry, coordinator)
     _drop_unsupported_oven_sound_switches(hass, entry, coordinator)
     _drop_unverified_oven_diagnosis_buttons(hass, entry, coordinator)
+    _drop_misidentified_oven_controls(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

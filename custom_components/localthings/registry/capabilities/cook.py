@@ -29,7 +29,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .common import int_or_none
+from .common import int_or_none, is_lcd_wall_oven
 
 MODE_HREF = "/mode/vs/0"
 TEMPERATURES_HREF = "/temperatures/vs/0"
@@ -437,6 +437,10 @@ def can_start(rep: dict, resources: dict) -> bool:
     modeSpec is empty for now (#600). A press while nothing is startable is
     refused by plan_start."""
     spec = (resources.get(MODE_HREF) or {}).get(MODE_SPEC)
+    # LCD_OV_WALL's Lower reports only NoOperation with the divider out;
+    # keep its button registered so reinserting the divider needs no reload.
+    if spec is None and is_lcd_wall_oven(resources):
+        return True
     if _is_empty_spec(spec):
         return True
     return any(s.startable for s in mode_specs(resources).values())
