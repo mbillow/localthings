@@ -951,6 +951,7 @@ OVEN_MODE = Capability(
             field="x.com.samsung.da.modes",
             icon="mdi:tune",
             options=_oven_mode_options,
+            sort_options=True,
             value_fn=lambda v: v[0] if v else None,
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,

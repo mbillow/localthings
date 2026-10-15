@@ -18,6 +18,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -1252,23 +1253,25 @@ async def test_whole_oven_excluded_modes_cannot_be_held_or_written(hass, state):
     assert not _requests()
 
 
-@pytest.mark.parametrize("index,prefix", [(0, "Upper"), (1, "Lower")])
+@pytest.mark.parametrize("index,prefix", [(0, "Upper"), (1, "Lower"), (0, "")])
 @pytest.mark.parametrize("recipe,temperature", [(1, 375), (2, 375), (3, 375), (4, 400)])
-async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
+async def test_recipe_selection_holds_its_raw_code_and_preset(
     hass: HomeAssistant, index, prefix, recipe, temperature
 ):
-    coordinator = await _discovered(hass)
+    coordinator = await _discovered(hass, _routes(divided=bool(prefix)))
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
     assert select.translation_key == "oven_mode_lcd_wall_16k"
     _FakeConnection.log.clear()
 
-    await select.async_select_option(f"{prefix.lower()}_healthycook{recipe}")
+    option_prefix = f"{prefix.lower()}_" if prefix else ""
+    await select.async_select_option(f"{option_prefix}healthycook{recipe}")
 
     target = LocalThingsNumber(coordinator, bound["oven_setpoint"])
     assert target.native_value == temperature
-    assert target.native_max_value == 480
+    maximum = 480 if prefix else 550
+    assert (target.native_min_value, target.native_max_value) == (175, maximum)
     await coordinator.async_send_command(bound["cook_time_hours"], 9)
     await coordinator.async_send_command(bound["cook_time_minutes"], 59)
     plan = coordinator._held_cooks[cavity].plan(coordinator._cavity_resources(cavity))
@@ -1279,7 +1282,7 @@ async def test_verified_recipe_selection_holds_its_raw_code_and_preset(
     assert coordinator._held_cooks.get(MAIN if index else _lower(coordinator)) is None
 
     with pytest.raises(ServiceValidationError):
-        await coordinator.async_send_command(bound["oven_setpoint"], 485)
+        await coordinator.async_send_command(bound["oven_setpoint"], maximum + 5)
     with pytest.raises(ServiceValidationError):
         await coordinator.async_send_command(bound["cook_time_minutes"], 60)
 
@@ -1363,16 +1366,47 @@ async def test_special_recipes_do_not_guess_celsius_presets(hass, recipe):
     assert not target.available
 
 
-def test_verified_whole_recipe_labels_are_translated_without_relabeling_other_ovens():
+def test_whole_recipe_labels_are_translated_without_relabeling_other_ovens():
     translations = Path(__file__).parent.parent / "custom_components/localthings/translations"
     for path in translations.glob("*.json"):
         selects = json.loads(path.read_text())["entity"]["select"]
         generic = selects["oven_mode"]["state"]
         measured = selects["oven_mode_lcd_wall_16k"]["state"]
+        for recipe in range(1, 5):
+            assert (
+                measured[f"healthycook{recipe}"]
+                == measured[f"upper_healthycook{recipe}"]
+                == measured[f"lower_healthycook{recipe}"]
+            )
+            assert generic[f"healthycook{recipe}"].endswith(str(recipe))
         assert measured["healthycook5"].casefold().endswith(generic["dehydrate"].casefold())
         assert measured["healthycook6"].casefold().endswith(generic["bread_proof"].casefold())
         assert generic["healthycook5"].endswith("5")
         assert generic["healthycook6"].endswith("6")
+
+
+@pytest.mark.parametrize("language,order", [("en", [1, 6, 5, 2, 3, 4]), ("de", [5, 2, 3, 1, 6, 4])])
+async def test_oven_mode_order_uses_translated_labels_and_preserves_commands(
+    hass, enable_custom_integrations, language, order
+):
+    hass.config.language = language
+    coordinator = await _discovered(hass, _routes(divided=False))
+    bound = next(b for b in coordinator.bound if b.subdevice == MAIN and b.desc.key == "oven_mode")
+    strings = await async_get_translations(hass, language, "entity", {DOMAIN})
+    select = LocalThingsSelect(coordinator, bound, strings)
+    raw_before = select._raw_options()
+    assert [option for option in select.options if option.startswith("healthycook")] == [
+        f"healthycook{recipe}" for recipe in order
+    ]
+    assert select._raw_options() == raw_before
+    _FakeConnection.log.clear()
+
+    await select.async_select_option("healthycook4")
+
+    plan = coordinator._held_cooks[MAIN].plan(coordinator._cavity_resources(MAIN))
+    assert (plan.mode, plan.temperature) == ("Healthycook4", 400)
+    assert select.current_option == "healthycook4"
+    assert not _requests()
 
 
 async def test_legacy_limits_hold_during_cooking_and_keep_other_models_unchanged(hass):

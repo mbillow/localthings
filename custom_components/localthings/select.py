@@ -9,8 +9,9 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.translation import async_get_translations
 
-from .catalog import translated_states
+from .catalog import translated_state_label, translated_states
 from .catalog import translation_state as _translation_state
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
@@ -24,8 +25,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
+    state_translations = await async_get_translations(
+        hass, hass.config.language, "entity", {DOMAIN}
+    )
     async_add_entities(
-        LocalThingsSelect(coordinator, b)
+        LocalThingsSelect(coordinator, b, state_translations)
         for b in coordinator.bound
         if isinstance(b.desc, SelectDesc) and _is_included(b, coordinator)
     )
@@ -73,8 +77,14 @@ def _display(value, translation_key: str | None, fallback_fn=None):
 
 
 class LocalThingsSelect(LocalThingsEntity, SelectEntity):
-    def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
+    def __init__(
+        self,
+        coordinator: LocalThingsCoordinator,
+        bound,
+        state_translations: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(coordinator, bound)
+        self._state_translations = state_translations or {}
         desc = cast(SelectDesc, bound.desc)
         if not desc.options_field and not callable(desc.options):
             self._attr_options = [self._display_option(o) for o in desc.options]
@@ -106,8 +116,20 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
     def options(self) -> list[str]:
         desc = cast(SelectDesc, self._bound.desc)
         if desc.options_field or callable(desc.options):
-            return [self._display_option(o) for o in self._raw_options()]
-        return self._attr_options
+            options = [self._display_option(o) for o in self._raw_options()]
+        else:
+            options = self._attr_options
+        if desc.sort_options:
+            key = self.translation_key
+            return sorted(
+                options,
+                key=lambda option: (
+                    translated_state_label("select", key, option, self._state_translations)
+                    if key
+                    else option
+                ).casefold(),
+            )
+        return options
 
     @property
     def current_option(self):

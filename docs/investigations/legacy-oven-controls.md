@@ -119,9 +119,22 @@ Panel-started captures verified all eight divided Healthy Cook readback mappings
 
 The measured board's lower fallback now includes those four recipes. Recipe
 labels omit redundant cavity prefixes and are translated in all ten catalogs;
-Samsung's command codes stay unchanged. Other models and unverified whole-oven
-Healthy Cook codes retain their numbered labels. Removing the divider correctly
+Samsung's command codes stay unchanged. Other models retain their numbered
+Healthy Cook labels. Removing the divider correctly
 exposes whole-oven modes on Upper and no cooking modes on Lower, as owner-confirmed.
+
+At the owner's request, the same recipe order and Fahrenheit presets are also
+used for whole-oven Healthycook1–4: Baked potato, Grilled chicken and Salmon steak
+at 375 F, then White fish fillet at 400 F. These mappings are carried over from
+the divided-cavity evidence; no separate whole-oven panel capture for these four
+recipes has been supplied. Their limits use the manual's whole-oven range of
+175–550 F (80–285 C), rather than the divided range. Tests verify the whole-oven
+command codes, held presets and bounds without sending cavity-prefixed codes.
+
+Cooking-mode selectors sort choices by translated label using HA's configured
+language when the integration loads. This changes presentation only: raw device
+order, command codes and current state are preserved. Other selectors keep their
+existing order unless their descriptor explicitly requests sorting.
 
 On this board, the Cooking mode selector omits Drain, Autocook, SelfClean,
 PyroFree and Descale, and its mode write rejects those choices. The owner
@@ -154,19 +167,21 @@ its documented range and captured preset. Bread Proof's HA setpoint displays
 100 F with both bounds fixed to 100; other requested targets are rejected.
 Neither Celsius preset is guessed: Dehydrate requires a chosen temperature,
 and Bread Proof's setpoint control is unavailable in Celsius without a live
-modeSpec declaring usable bounds. These are mapping and software checks;
-remote starts for the two new recipes remain unverified. Healthycook1–4 still
-need whole-oven code-to-recipe confirmation and retain numbered labels.
+modeSpec declaring usable bounds. The owner confirmed that the new mode mappings
+appear correctly after installing build 81826e4. Remote starts for these two
+recipes remain unverified.
 
 The [NV51K7770S manual][manual], pp.24, 29 and 34, supplies a 599-minute maximum;
 divided Bake/convection/Healthy Cook limits of 175–480 F (80–250 C); and whole-oven
-Bake/convection limits of 175–550 F (80–285 C). Steam starts at 230 F (110 C).
+Bake/convection/Healthy Cook 1–4 limits of 175–550 F (80–285 C).
+Steam starts at 230 F (110 C).
 These fallbacks are scoped to the measured board; live modeSpecs take precedence.
 Celsius recipe presets are not guessed. The paired-cavity restrictions on pp.27–28
 are not interpolated, and the appliance can refuse incompatible combinations.
 LowerConvectionRoast remains the earlier #572 fallback, but its physical menu
-availability is unverified. Broil Hi/Lo and whole-oven Healthycook1–4 meanings
-need their own evidence. A recorded omitted-duration Run refusal also remains unexplained;
+availability is unverified. Broil Hi/Lo and the carried-over whole-oven
+Healthycook1–4 mappings still need their own hardware evidence.
+A recorded omitted-duration Run refusal also remains unexplained;
 omission is not silently replaced with zero.
 
 ## Status and verification
@@ -185,7 +200,7 @@ omission is not silently replaced with zero.
   are Unknown. On LCD_OV_WALL_16K with its matching lower record, the entity view
   also shows this shared reservoir on Lower. Any lower tank-switch tokens take
   precedence over the shared reading. The owner confirmed the original sensor's
-  operation; the additional Lower display is software-tested and awaits installation.
+  operation; the additional Lower display is software-tested and awaits owner confirmation.
   Other existing fixtures with both tokens also bind the sensor, but their position mapping has
   not been independently hardware-tested. No reservoir actuator is added.
 - **Divider:** on that same measured board pair, both device pages display the
@@ -318,13 +333,18 @@ Connection mode and Diagnosis status remain. This is general owner acceptance,
 not a separate hardware test of every changed feature or cooking combination.
 
 That build passed all 3,202 tests on Python 3.14.8, plus formatting, lint and
-type checks. Subsequent changes add the shared Divider and Reservoir displays
-described above; the installed build does not yet include those two copies.
-The updated branch, including the five mode exclusions and the verified
-Dehydrate/Bread Proof mappings, passes all 3,222 tests, plus formatting, lint
-and type checks. All ten translation catalogs are checked for matching keys
-and placeholders; the new recipe labels reuse the existing localized terms.
-These additions also await installation and owner confirmation.
+type checks. The owner then installed 81826e4, which includes shared Divider and
+Reservoir displays, five mode exclusions and the verified Dehydrate/Bread Proof
+mappings, and confirmed that the new modes are mapped correctly. That build
+passed all 3,222 tests plus formatting, lint and type checks. This confirmation
+does not establish remote recipe starts or confirm every other added display.
+
+The next build carries the existing recipe mappings into whole-oven
+Healthycook1–4 and alphabetizes cooking-mode choices. It passes all 3,228 tests,
+plus formatting, lint and type checks. All ten translation
+catalogs are checked for matching keys and placeholders; whole-oven recipe
+labels reuse the existing localized Upper/Lower labels. These latest changes
+await installation and owner confirmation.
 
 This test build retains the two-device layout. The requested combined-device
 presentation is deferred until the remaining pre-merger checks are finished.
