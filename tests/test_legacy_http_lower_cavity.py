@@ -1219,7 +1219,7 @@ async def test_missing_mode_error_lists_friendly_names_without_starting(hass):
 
     assert err.value.translation_key == "cook_mode_required"
     assert err.value.translation_placeholders == {
-        "startable": "Bake, Convection bake, Convection roast, Healthy Cook Baked Potato, "
+        "startable": "Bake, Convection Bake, Convection Roast, Healthy Cook Baked Potato, "
         "Healthy Cook Grilled Chicken, Healthy Cook Salmon Steak, Healthy Cook White Fish Fillet"
     }
     assert not _requests()

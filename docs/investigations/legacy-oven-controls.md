@@ -66,7 +66,7 @@ Other oven families retain their total Cook time number and native duration-unit
 conversion, including one-minute precision when displaying decimal hours. The
 coordinator holds one duration and the appliance receives HH:MM:SS.
 
-The LCD_OV_WALL legacy wall-oven family exposes **Cook time hours** and **Cook time minutes**
+The LCD_OV_WALL legacy wall-oven family exposes **Cook Time Hours** and **Cook Time Minutes**
 as two native number controls per cavity. They replace one component of the
 same duration: 1 h plus 30 min means 90 minutes, not two independent timers.
 Hours are limited to whole numbers from 0 to 9 and minutes from 0 to 59 in
@@ -75,7 +75,7 @@ the combined duration. Each edit preserves the other
 component, and idle edits remain held until Start. Invalid components and an
 unreadable current duration are rejected without guessing a replacement.
 
-The pair replaces the original **Cook time** total-duration entity for that family.
+The pair replaces the original **Cook Time** total-duration entity for that family.
 Setup removes its old number registry entry only where both replacements exist,
 including a renamed entry, and only within the owning config entry. Automations
 using that old entity need the paired controls or the existing start_cooking
@@ -135,6 +135,13 @@ Cooking-mode selectors sort choices by translated label using HA's configured
 language when the integration loads. This changes presentation only: raw device
 order, command codes and current state are preserved. Other selectors keep their
 existing order unless their descriptor explicitly requests sorting.
+
+English labels use Title Case across the oven registry, including controls,
+sensors, configuration, diagnostics and all known cooking-mode choices. Shared
+catalog entries use the same labels wherever they are reused; the Start Cooking
+action and its Cook Time field match the entities. Other languages retain their
+normal capitalization. These are display-text changes only: translation keys,
+entity identities and raw command values are unchanged.
 
 On this board, the Cooking mode selector omits Drain, Autocook, SelfClean,
 PyroFree and Descale, and its mode write rejects those choices. The owner
