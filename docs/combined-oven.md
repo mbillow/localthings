@@ -77,7 +77,7 @@ Create a Home Assistant configuration backup before installing, since this
 changes the device and entity registries as well as the integration files.
 The owner-tested two-device runtime build is
 `411802144f055ad2513761afc767fc7b59bd78c1`. PR #637 now includes the probe and
-Upper/Oven label backports at `8e8cad386f97316cfd9bcc062ef04bbf02c399e0`.
+Upper/Oven label updates at `1be7af8ad729db9d016cd335ec2d46ab12f9c001`.
 That fixes branch remains separate and receives no combined-device commits.
 This feature incorporates that baseline so the two changes can be reviewed
 and accepted independently, with #637 merged first.
@@ -117,8 +117,8 @@ This does not change the protocol's two-record layout.
 
 ## Verification
 
-The submission incorporates PR #637 through `8e8cad3`, including its probe and
-divider-label backports. All 3,322 tests pass (65.84 seconds) on Python 3.14.8 /
+The submission incorporates PR #637 through `1be7af8`, including its probe and
+divider-label updates. All 3,322 tests pass (65.84 seconds) on Python 3.14.8 /
 HA 2026.9.4, with formatting, lint and type checks passing. The focused
 migration, label and probe run passes 82 cases. Upgrade coverage now includes
 the latest two-device labels in all ten locales, both initial divider states,

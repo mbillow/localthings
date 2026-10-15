@@ -456,7 +456,7 @@ reload is needed. Once created, probe sensors become unavailable when unplugged
 and reuse their existing IDs and custom names on reconnection. The owner
 confirmed unplugging at 12:14 and reconnection without a reload at 12:26 on the
 separate combined-device build `34de099`. That confirms the shared sensor logic;
-the two-device backport itself has software coverage, not a separate hardware
+the two-device version itself has software coverage, not a separate hardware
 installation check.
 
 The display names are Temperature Probe and Temperature Probe Target, with
@@ -465,7 +465,7 @@ localized labels in all ten catalogs. Internal keys `food_probe_temp` and
 cover legacy HTTPS, OCF vendor arrays and OCF fallback resources, initial and
 later detection, repeated unplug/reconnect updates, unload cleanup and label
 upgrades in all ten languages. The upper and lower devices remain separate.
-The backport passes all 3,257 tests (57.59 seconds) on Python 3.14.8, plus
+This update passes all 3,257 tests (57.59 seconds) on Python 3.14.8, plus
 formatting, lint and type checks. Its 17 probe regression cases also pass
 independently. Translation checks do not constitute native-speaker review.
 
@@ -489,7 +489,7 @@ unchanged. No grouping migration, duplicate removal or new availability rule is
 introduced. All ten catalogs reuse the combined-device labels and retain their
 cooking-mode state translations. The new tests cover existing-ID upgrades,
 both initial divider states, repeated transitions and unknown divider readings.
-This separate-device label backport has not yet been hardware-tested.
+This separate-device label update has not yet been hardware-tested.
 All 3,284 tests pass (60.22 seconds), with formatting, lint and type checks.
 The 44 focused probe/label cases pass independently, including all ten locales.
 
