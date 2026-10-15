@@ -9,7 +9,7 @@ from typing import cast
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,13 +31,24 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = [
-        LocalThingsSensor(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, SensorDesc) and _is_included(b, coordinator)
-    ]
-    entities.append(LocalThingsConnectionModeSensor(coordinator))
-    async_add_entities(entities)
+    pending = [b for b in coordinator.bound if isinstance(b.desc, SensorDesc)]
+
+    @callback
+    def async_add_detected_sensors() -> None:
+        # Optional sensors such as the food probe can first appear after setup.
+        # Add each once so reconnecting preserves its identity and customizations.
+        entities: list[SensorEntity] = []
+        for bound in pending[:]:
+            if _is_included(bound, coordinator):
+                entities.append(LocalThingsSensor(coordinator, bound))
+                pending.remove(bound)
+        if entities:
+            async_add_entities(entities)
+
+    async_add_detected_sensors()
+    async_add_entities([LocalThingsConnectionModeSensor(coordinator)])
+    if pending:
+        entry.async_on_unload(coordinator.async_add_listener(async_add_detected_sensors))
 
 
 class LocalThingsSensor(LocalThingsEntity, SensorEntity):

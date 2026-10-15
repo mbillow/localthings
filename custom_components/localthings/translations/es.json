@@ -1732,10 +1732,10 @@
         "name": "Temperatura"
       },
       "food_probe_temp": {
-        "name": "Sonda de alimentos"
+        "name": "Sonda de temperatura"
       },
       "food_probe_setpoint": {
-        "name": "Objetivo de la sonda"
+        "name": "Temperatura objetivo de la sonda"
       },
       "current_temperature_c": {
         "name": "Temperatura"

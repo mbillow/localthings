@@ -1354,10 +1354,10 @@
         "name": "Temperature"
       },
       "food_probe_temp": {
-        "name": "Food Probe"
+        "name": "Temperature Probe"
       },
       "food_probe_setpoint": {
-        "name": "Food Probe Target"
+        "name": "Temperature Probe Target"
       },
       "current_temperature_c": {
         "name": "Temperature"

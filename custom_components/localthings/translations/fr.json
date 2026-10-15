@@ -1354,10 +1354,10 @@
         "name": "Température"
       },
       "food_probe_temp": {
-        "name": "Sonde de cuisson"
+        "name": "Sonde de température"
       },
       "food_probe_setpoint": {
-        "name": "Cible de la sonde de cuisson"
+        "name": "Température cible de la sonde"
       },
       "current_temperature_c": {
         "name": "Température"

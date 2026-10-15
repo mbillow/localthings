@@ -434,6 +434,41 @@ presentation will use a separate feature branch and pull request, preserving
 this fixes
 branch as the fallback. No device-grouping migration is included here.
 
+## Temperature probe follow-up
+
+On October 15, the NV51K7770S owner connected the probe. The 11:34 and 11:43
+America/Chicago captures report `meatprobe_connected`, Ready / NoOperation, and
+temperature item `id: "1"` with current and desired values of zero in Fahrenheit.
+Selecting Bake 350°F and a probe target of 150°F on the panel without starting
+does not change those reported values.
+
+The 11:46 running capture reports Bake / Run / Preheat, cavity target 350°F,
+and probe item `id: "1"` with desired 150°F. The cached transport body has
+current 100°F; the resource snapshot has 107°F. The divider reports Off. This
+confirms the current/target mapping and connected token on this model. It does
+not establish remote probe target writes, probe-specific remote starts,
+measurement accuracy or reporting below 100°F. Connected idle zero handling is
+unchanged; both entities remain read-only.
+
+Sensor setup now adds already-discovered optional sensors when their existing
+inclusion check first passes during a normal coordinator update. No integration
+reload is needed. Once created, probe sensors become unavailable when unplugged
+and reuse their existing IDs and custom names on reconnection. The owner
+confirmed unplugging at 12:14 and reconnection without a reload at 12:26 on the
+separate combined-device build `34de099`. That confirms the shared sensor logic;
+the two-device backport itself has software coverage, not a separate hardware
+installation check.
+
+The display names are Temperature Probe and Temperature Probe Target, with
+localized labels in all ten catalogs. Internal keys `food_probe_temp` and
+`food_probe_setpoint` and existing HA entity IDs remain unchanged. The tests
+cover legacy HTTPS, OCF vendor arrays and OCF fallback resources, initial and
+later detection, repeated unplug/reconnect updates, unload cleanup and label
+upgrades in all ten languages. The upper and lower devices remain separate.
+The backport passes all 3,257 tests (57.59 seconds) on Python 3.14.8, plus
+formatting, lint and type checks. Its 17 probe regression cases also pass
+independently. Translation checks do not constitute native-speaker review.
+
 ## Validation limits
 
 Regression coverage includes both cavity paths, held settings, mode labels,
