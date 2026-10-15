@@ -65,6 +65,7 @@ from .credentials import (
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
+from .oven_device import combined_lower
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
 from .registry.batch import parse_device0_batch
@@ -985,6 +986,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+    @property
+    def combined_oven_lower(self) -> Subdevice | None:
+        return combined_lower(self.discovery_resources, self.subdevices)
+
     def device_info_for(self, subdevice: Subdevice) -> DeviceInfo:
         """DeviceInfo for one logical subdevice on this connection (issue
         #177): the master's own device_info for MAIN, or a linked child
@@ -996,7 +1001,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when present anyway,
         but is informational only, not an identifier.
         """
-        if subdevice.kind == "main":
+        if subdevice.kind == "main" or subdevice == self.combined_oven_lower:
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})

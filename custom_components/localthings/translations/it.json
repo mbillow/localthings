@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "In pausa"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: In esecuzione"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Avvia cottura"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Arresto"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Avvio"
       }
     },
     "climate": {
@@ -315,6 +324,15 @@
       },
       "cook_time_minutes": {
         "name": "Minuti di cottura"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Valore impostato"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Ore di cottura"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minuti di cottura"
       }
     },
     "select": {
@@ -1201,6 +1219,54 @@
           "lower_healthycook3": "Cottura salutare Trancio di salmone",
           "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
         }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Modalità di cottura",
+        "state": {
+          "no_operation": "Nessuna operazione",
+          "bake": "Statico",
+          "broil": "Grill",
+          "convection": "Convezione",
+          "convection_bake": "Cottura a convezione",
+          "convection_broil": "Grill a convezione",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Cottura lenta",
+          "plate_warm": "Scalda piatti",
+          "air_fry": "Frittura ad aria",
+          "convection_roast": "Arrosto ventilato",
+          "keep_warm": "Mantieni in caldo",
+          "bread_proof": "Lievitazione",
+          "dehydrate": "Essiccazione",
+          "self_clean": "Autopulizia",
+          "air_fryer": "Friggitrice ad aria",
+          "upper_broil": "Grill",
+          "upper_convection_bake": "Cottura a convezione",
+          "upper_convection_roast": "Arrosto ventilato",
+          "lower_bake": "Statico",
+          "lower_convection_bake": "Cottura a convezione",
+          "steam_bake": "Cottura a vapore",
+          "steam_roast": "Arrosto a vapore",
+          "upper_steam_bake": "Cottura a vapore",
+          "descale": "Decalcificazione",
+          "drain": "Scarico acqua",
+          "lower_convection_roast": "Arrosto ventilato",
+          "autocook": "Cottura automatica",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cottura salutare Patata al forno",
+          "healthycook2": "Cottura salutare Pollo grigliato",
+          "healthycook3": "Cottura salutare Trancio di salmone",
+          "healthycook4": "Cottura salutare Filetto di pesce bianco",
+          "healthycook5": "Cottura salutare Essiccazione",
+          "healthycook6": "Cottura salutare Lievitazione",
+          "upper_healthycook1": "Cottura salutare Patata al forno",
+          "upper_healthycook2": "Cottura salutare Pollo grigliato",
+          "upper_healthycook3": "Cottura salutare Trancio di salmone",
+          "upper_healthycook4": "Cottura salutare Filetto di pesce bianco",
+          "lower_healthycook1": "Cottura salutare Patata al forno",
+          "lower_healthycook2": "Cottura salutare Pollo grigliato",
+          "lower_healthycook3": "Cottura salutare Trancio di salmone",
+          "lower_healthycook4": "Cottura salutare Filetto di pesce bianco"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1770,44 @@
       },
       "burner_pan_size": {
         "name": "Dimensione pentola della zona {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Codice allarme"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Temperatura"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonda per alimenti"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Target sonda"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Stato diagnosi",
+        "state": {
+          "ready": "Pronto"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Fine stimata"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Tempo di funzionamento"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Stato camera di cottura"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Avanzamento percentuale"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Stato macchina",
+        "state": {
+          "idle": "Inattivo",
+          "active": "Attivo",
+          "pause": "In pausa"
+        }
       }
     },
     "switch": {
@@ -2380,6 +2484,9 @@
     },
     "cook_duration_total_out_of_range": {
       "message": "Il tempo totale di cottura non può superare {max}."
+    },
+    "cooking_cavity_not_found": {
+      "message": "Questo elettrodomestico non espone una coppia di vani Flex Duo unificati. Seleziona invece il dispositivo esistente del vano desiderato."
     }
   },
   "selector": {
@@ -2402,7 +2509,16 @@
         "ice_maker": "Produttore di ghiaccio",
         "cubed_ice": "Produttore di cubetti",
         "ice_bites": "Produttore di Ice Bites",
-        "whiskey_ice_ball": "Produttore di sfere di ghiaccio"
+        "whiskey_ice_ball": "Produttore di sfere di ghiaccio",
+        "oven_cavity_upper": "Vano superiore",
+        "oven_cavity_lower": "Vano inferiore",
+        "oven_cavity_whole": "Forno intero"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "Vano superiore / forno intero",
+        "lower": "Vano inferiore"
       }
     }
   }

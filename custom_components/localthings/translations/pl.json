@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Wstrzymano"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: Pracuje"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Rozpocznij gotowanie"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Zatrzymaj"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Uruchom"
       }
     },
     "climate": {
@@ -315,6 +324,15 @@
       },
       "cook_time_minutes": {
         "name": "Minuty gotowania"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Wartość zadana"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Godziny gotowania"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minuty gotowania"
       }
     },
     "select": {
@@ -1201,6 +1219,54 @@
           "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
           "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
         }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Tryb pieczenia",
+        "state": {
+          "no_operation": "Brak pracy",
+          "bake": "Pieczenie",
+          "broil": "Opiekanie",
+          "convection": "Termoobieg",
+          "convection_bake": "Pieczenie z termoobiegiem",
+          "convection_broil": "Opiekanie z termoobiegiem",
+          "frozen_pizza_plus": "Pizza mrożona+",
+          "slow_cook": "Wolne gotowanie",
+          "plate_warm": "Podgrzewanie talerzy",
+          "air_fry": "Smażenie na gorącym powietrzu",
+          "convection_roast": "Pieczenie mięs z termoobiegiem",
+          "keep_warm": "Utrzymywanie ciepła",
+          "bread_proof": "Wyrastanie ciasta",
+          "dehydrate": "Suszenie żywności",
+          "self_clean": "Samoczyszczenie",
+          "air_fryer": "Smażenie na gorącym powietrzu",
+          "upper_broil": "Opiekanie",
+          "upper_convection_bake": "Pieczenie z termoobiegiem",
+          "upper_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "lower_bake": "Pieczenie",
+          "lower_convection_bake": "Pieczenie z termoobiegiem",
+          "steam_bake": "Pieczenie z parą",
+          "steam_roast": "Pieczenie mięs z parą",
+          "upper_steam_bake": "Pieczenie z parą",
+          "descale": "Odkamienianie",
+          "drain": "Opróżnianie wody",
+          "lower_convection_roast": "Pieczenie mięs z termoobiegiem",
+          "autocook": "Automatyczne pieczenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "healthycook4": "Zdrowe gotowanie Filet z białej ryby",
+          "healthycook5": "Zdrowe gotowanie Suszenie żywności",
+          "healthycook6": "Zdrowe gotowanie Wyrastanie ciasta",
+          "upper_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "upper_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "upper_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "upper_healthycook4": "Zdrowe gotowanie Filet z białej ryby",
+          "lower_healthycook1": "Zdrowe gotowanie Pieczony ziemniak",
+          "lower_healthycook2": "Zdrowe gotowanie Grillowany kurczak",
+          "lower_healthycook3": "Zdrowe gotowanie Stek z łososia",
+          "lower_healthycook4": "Zdrowe gotowanie Filet z białej ryby"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1770,44 @@
       },
       "burner_pan_size": {
         "name": "Rozmiar naczynia pola {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Kod alarmu"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Temperatura"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonda do żywności"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Docelowa temperatura sondy do żywności"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Stan diagnostyki",
+        "state": {
+          "ready": "Gotowe"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Szacowane zakończenie"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Czas operacji"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Stan komory"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Postęp w procentach"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Stan urządzenia",
+        "state": {
+          "idle": "Bezczynny",
+          "active": "Aktywne",
+          "pause": "Wstrzymane"
+        }
       }
     },
     "switch": {
@@ -2380,6 +2484,9 @@
     },
     "cook_duration_total_out_of_range": {
       "message": "Łączny czas gotowania nie może przekroczyć {max}."
+    },
+    "cooking_cavity_not_found": {
+      "message": "To urządzenie nie udostępnia połączonej pary komór Flex Duo. Wybierz istniejące urządzenie odpowiedniej komory."
     }
   },
   "selector": {
@@ -2402,7 +2509,16 @@
         "ice_maker": "Kostkarka do lodu",
         "cubed_ice": "Kostki lodu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Kule lodu"
+        "whiskey_ice_ball": "Kule lodu",
+        "oven_cavity_upper": "Górna komora",
+        "oven_cavity_lower": "Dolna komora",
+        "oven_cavity_whole": "Cały piekarnik"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "Górna komora / cały piekarnik",
+        "lower": "Dolna komora"
       }
     }
   }

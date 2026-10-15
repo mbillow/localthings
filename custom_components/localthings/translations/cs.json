@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastaveno"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: Běží"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Spustit vaření"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Zastavit"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Spustit"
       }
     },
     "climate": {
@@ -315,6 +324,15 @@
       },
       "cook_time_minutes": {
         "name": "Minuty vaření"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Požadovaná teplota"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Hodiny vaření"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minuty vaření"
       }
     },
     "select": {
@@ -1201,6 +1219,54 @@
           "lower_healthycook3": "Zdravé vaření Steak z lososa",
           "lower_healthycook4": "Zdravé vaření Filet z bílé ryby"
         }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Režim vaření",
+        "state": {
+          "no_operation": "Bez provozu",
+          "bake": "Pečení",
+          "broil": "Gril",
+          "convection": "Konvekce",
+          "convection_bake": "Konvekční pečení",
+          "convection_broil": "Konvekční gril",
+          "frozen_pizza_plus": "Mražená pizza+",
+          "slow_cook": "Pomalé vaření",
+          "plate_warm": "Ohřev talířů",
+          "air_fry": "Fritéza na vzduch",
+          "convection_roast": "Pečení horkým vzduchem",
+          "keep_warm": "Udržování teploty",
+          "bread_proof": "Kynutí těsta",
+          "dehydrate": "Sušení",
+          "self_clean": "Samočištění",
+          "air_fryer": "Horkovzdušná fritéza",
+          "upper_broil": "Gril",
+          "upper_convection_bake": "Konvekční pečení",
+          "upper_convection_roast": "Pečení horkým vzduchem",
+          "lower_bake": "Pečení",
+          "lower_convection_bake": "Konvekční pečení",
+          "steam_bake": "Pečení s párou",
+          "steam_roast": "Pečení masa s párou",
+          "upper_steam_bake": "Pečení s párou",
+          "descale": "Odvápnění",
+          "drain": "Vypuštění vody",
+          "lower_convection_roast": "Pečení horkým vzduchem",
+          "autocook": "Automatické vaření",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé vaření Pečená brambora",
+          "healthycook2": "Zdravé vaření Grilované kuře",
+          "healthycook3": "Zdravé vaření Steak z lososa",
+          "healthycook4": "Zdravé vaření Filet z bílé ryby",
+          "healthycook5": "Zdravé vaření Sušení",
+          "healthycook6": "Zdravé vaření Kynutí těsta",
+          "upper_healthycook1": "Zdravé vaření Pečená brambora",
+          "upper_healthycook2": "Zdravé vaření Grilované kuře",
+          "upper_healthycook3": "Zdravé vaření Steak z lososa",
+          "upper_healthycook4": "Zdravé vaření Filet z bílé ryby",
+          "lower_healthycook1": "Zdravé vaření Pečená brambora",
+          "lower_healthycook2": "Zdravé vaření Grilované kuře",
+          "lower_healthycook3": "Zdravé vaření Steak z lososa",
+          "lower_healthycook4": "Zdravé vaření Filet z bílé ryby"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1770,44 @@
       },
       "burner_pan_size": {
         "name": "Velikost nádoby zóny {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Kód alarmu"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Teplota"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Teplotní sonda"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Cílová teplota sondy"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Stav diagnostiky",
+        "state": {
+          "ready": "Připraveno"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Odhadované dokončení"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Doba provozu"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Stav trouby"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Průběh v procentech"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Stav stroje",
+        "state": {
+          "idle": "Nečinný",
+          "active": "Aktivní",
+          "pause": "Pozastaveno"
+        }
       }
     },
     "switch": {
@@ -2380,6 +2484,9 @@
     },
     "cook_duration_total_out_of_range": {
       "message": "Celková doba vaření nesmí překročit {max}."
+    },
+    "cooking_cavity_not_found": {
+      "message": "Tento spotřebič neposkytuje sloučenou dvojici prostorů Flex Duo. Vyberte jeho stávající zařízení pro příslušný prostor."
     }
   },
   "selector": {
@@ -2402,7 +2509,16 @@
         "ice_maker": "Výrobník ledu",
         "cubed_ice": "Kostky ledu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ledové koule"
+        "whiskey_ice_ball": "Ledové koule",
+        "oven_cavity_upper": "Horní prostor",
+        "oven_cavity_lower": "Dolní prostor",
+        "oven_cavity_whole": "Celá trouba"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "Horní prostor / celá trouba",
+        "lower": "Dolní prostor"
       }
     }
   }

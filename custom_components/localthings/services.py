@@ -49,6 +49,7 @@ ATTR_DEVICE_ID = "device_id"
 ATTR_MODE = "mode"
 ATTR_TEMPERATURE = "temperature"
 ATTR_DURATION = "duration"
+ATTR_CAVITY = "cavity"
 
 _WRITE_ITEM_SCHEMA = vol.Schema(
     {
@@ -99,6 +100,7 @@ _OBSERVE_RESOURCE_SCHEMA = vol.Schema(
 _START_COOKING_SCHEMA = vol.Schema(
     {
         **cv.TARGET_SERVICE_FIELDS,
+        vol.Optional(ATTR_CAVITY): vol.In(("upper", "lower")),
         vol.Optional(ATTR_MODE): cv.string,
         vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
         vol.Optional(ATTR_DURATION): cv.positive_time_period,
@@ -277,6 +279,13 @@ async def _async_observe_resource(hass: HomeAssistant, call: ServiceCall) -> Ser
 
 async def _async_start_cooking(hass: HomeAssistant, call: ServiceCall) -> None:
     coordinator, subdevice, _device_id = _resolve_target(hass, call)
+    if cavity := call.data.get(ATTR_CAVITY):
+        lower = coordinator.combined_oven_lower
+        if lower is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="cooking_cavity_not_found"
+            )
+        subdevice = lower if cavity == "lower" else MAIN
     temperature = call.data.get(ATTR_TEMPERATURE)
     if temperature is not None:
         # Given in Home Assistant's unit, as the setpoint entity shows it;

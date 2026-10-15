@@ -50,7 +50,10 @@ async def test_lower_start_survives_divider_changes_without_reload(
     unique_id = start.unique_id
     strings = await async_get_translations(hass, "en", "entity", {DOMAIN})
     assert (
-        strings[f"component.{DOMAIN}.entity.button.{start.translation_key}.name"] == "Start Cooking"
+        strings[f"component.{DOMAIN}.entity.button.{start.translation_key}.name"].format(
+            **start.translation_placeholders
+        )
+        == "Lower Start"
     )
 
     for divided in (False, True, False, True):

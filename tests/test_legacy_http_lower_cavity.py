@@ -598,11 +598,11 @@ def _lower(coordinator):
     return next(s for s in coordinator.subdevices if s.key == "1")
 
 
-async def test_the_lower_cavity_becomes_its_own_device(hass: HomeAssistant):
+async def test_the_lower_cavity_shares_the_physical_oven_device(hass: HomeAssistant):
     coordinator = await _discovered(hass)
     lower = _lower(coordinator)
 
-    assert coordinator.device_info_for(lower)["name"].endswith("Lower oven")
+    assert coordinator.device_info_for(lower) == coordinator.device_info_for(MAIN)
     state = flatten(coordinator.bound, coordinator._cache.snapshot())
     assert state["subdevice1_divider"] is True
     assert {"subdevice1_oven_mode", "subdevice1_machine_state"} <= set(state)
@@ -620,9 +620,9 @@ async def test_reservoir_is_shared_and_tracks_position_independently_of_door(
         for b in coordinator.bound
         if b.desc.key == "reservoir_open" and _is_included(b, coordinator)
     ]
-    assert {b.subdevice for b in reservoirs} == {MAIN, _lower(coordinator)}
+    assert {b.subdevice for b in reservoirs} == {MAIN}
     entities = [LocalThingsBinarySensor(coordinator, b) for b in reservoirs]
-    assert len({e.unique_id for e in entities}) == 2
+    assert len({e.unique_id for e in entities}) == 1
     assert all(e.device_class == "opening" for e in entities)
     assert not any(b.desc.key == "lamp" and _is_included(b, coordinator) for b in coordinator.bound)
     assert flatten(coordinator.bound, coordinator.entity_resources())["reservoir_open"] is False
@@ -672,9 +672,9 @@ async def test_divider_is_shared_without_changing_raw_resources(hass: HomeAssist
     dividers = [
         b for b in coordinator.bound if b.desc.key == "divider" and _is_included(b, coordinator)
     ]
-    assert {b.subdevice for b in dividers} == {MAIN, _lower(coordinator)}
+    assert {b.subdevice for b in dividers} == {_lower(coordinator)}
     entities = [LocalThingsBinarySensor(coordinator, b) for b in dividers]
-    assert len({e.unique_id for e in entities}) == 2
+    assert len({e.unique_id for e in entities}) == 1
     raw_upper = dict(coordinator.resource("/information/vs/0"))
     _FakeConnection.log.clear()
     for value, expected in [("On", True), ("Off", False), ("Unknown", None), (None, None)]:
@@ -700,7 +700,12 @@ async def test_shared_sensors_are_included_on_offline_reload(hass: HomeAssistant
             and b.subdevice == cavity
             and b.href == cavity.to_actual("/information/vs/0")
         )
-        assert _is_included(bound, coordinator)
+        assert not _is_included(bound, coordinator)
+    for key, cavity in [("divider", _lower(coordinator)), ("reservoir_open", MAIN)]:
+        assert any(
+            b.desc.key == key and b.subdevice == cavity and _is_included(b, coordinator)
+            for b in coordinator.bound
+        )
     assert coordinator.discovery_resources == snapshot
 
 
@@ -794,7 +799,7 @@ async def test_shared_door_preserves_a_lower_cavitys_own_reading(hass: HomeAssis
     assert coordinator.entity_resources()["/doors/vs/1"] == own_door
 
 
-async def test_legacy_oven_power_is_status_only_on_both_cavities(hass: HomeAssistant):
+async def test_legacy_oven_power_is_one_shared_read_only_sensor(hass: HomeAssistant):
     coordinator = await _discovered(hass)
     for cavity in (MAIN, _lower(coordinator)):
         power = [
@@ -804,6 +809,9 @@ async def test_legacy_oven_power_is_status_only_on_both_cavities(hass: HomeAssis
             and b.desc.key == "power_switch"
             and _is_included(b, coordinator)
         ]
+        if cavity != MAIN:
+            assert power == []
+            continue
         assert len(power) == 1
         assert isinstance(power[0].desc, BinarySensorDesc)
         assert not isinstance(power[0].desc, SwitchDesc)
@@ -811,7 +819,11 @@ async def test_legacy_oven_power_is_status_only_on_both_cavities(hass: HomeAssis
 
 async def test_power_cleanup_removes_both_old_controls_and_preserves_other_entities(
     hass: HomeAssistant,
+    monkeypatch,
 ):
+    monkeypatch.setattr(
+        "custom_components.localthings.coordinator.combined_lower", lambda *args: None
+    )
     coordinator = await _discovered(hass)
     registry = er.async_get(hass)
     old_controls = []
@@ -1269,7 +1281,7 @@ async def test_recipe_selection_holds_its_raw_code_and_preset(
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
-    assert select.translation_key == "oven_mode_lcd_wall_16k"
+    assert select.translation_key == "oven_cavity_oven_mode_lcd_wall_16k"
     _FakeConnection.log.clear()
 
     option_prefix = f"{prefix.lower()}_" if prefix else ""

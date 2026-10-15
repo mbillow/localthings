@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "일시 정지"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity} 작동 중"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "조리 시작"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity} 정지"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity} 시작"
       }
     },
     "climate": {
@@ -315,6 +324,15 @@
       },
       "cook_time_minutes": {
         "name": "조리 시간(분)"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity} 설정 온도"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity} 조리 시간(시)"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity} 조리 시간(분)"
       }
     },
     "select": {
@@ -1201,6 +1219,54 @@
           "lower_healthycook3": "건강 요리 연어 스테이크",
           "lower_healthycook4": "건강 요리 흰살 생선 필레"
         }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity} 조리 모드",
+        "state": {
+          "no_operation": "작동 안 함",
+          "bake": "베이크",
+          "broil": "브로일",
+          "convection": "컨벡션",
+          "convection_bake": "컨벡션 베이크",
+          "convection_broil": "컨벡션 브로일",
+          "frozen_pizza_plus": "냉동 피자+",
+          "slow_cook": "저온 조리",
+          "plate_warm": "접시 데우기",
+          "air_fry": "에어프라이",
+          "convection_roast": "컨벡션 로스트",
+          "keep_warm": "보온",
+          "bread_proof": "발효",
+          "dehydrate": "건조",
+          "self_clean": "자동 세척",
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일",
+          "upper_convection_bake": "컨벡션 베이크",
+          "upper_convection_roast": "컨벡션 로스트",
+          "lower_bake": "베이크",
+          "lower_convection_bake": "컨벡션 베이크",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크",
+          "descale": "석회 제거",
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 구운 감자",
+          "healthycook2": "건강 요리 그릴 치킨",
+          "healthycook3": "건강 요리 연어 스테이크",
+          "healthycook4": "건강 요리 흰살 생선 필레",
+          "healthycook5": "건강 요리 건조",
+          "healthycook6": "건강 요리 발효",
+          "upper_healthycook1": "건강 요리 구운 감자",
+          "upper_healthycook2": "건강 요리 그릴 치킨",
+          "upper_healthycook3": "건강 요리 연어 스테이크",
+          "upper_healthycook4": "건강 요리 흰살 생선 필레",
+          "lower_healthycook1": "건강 요리 구운 감자",
+          "lower_healthycook2": "건강 요리 그릴 치킨",
+          "lower_healthycook3": "건강 요리 연어 스테이크",
+          "lower_healthycook4": "건강 요리 흰살 생선 필레"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1770,44 @@
       },
       "burner_pan_size": {
         "name": "화구 {number} 용기 크기"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity} 알람 코드"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity} 온도"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity} 온도 프로브"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity} 온도 프로브 목표"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity} 진단 상태",
+        "state": {
+          "ready": "준비됨"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity} 예상 완료 시각"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity} 운전 시간"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity} 조리실 상태"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity} 진행률"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity} 기기 상태",
+        "state": {
+          "idle": "대기",
+          "active": "작동 중",
+          "pause": "일시 정지"
+        }
       }
     },
     "switch": {
@@ -2380,6 +2484,9 @@
     },
     "cook_duration_total_out_of_range": {
       "message": "총 조리 시간은 {max}을(를) 초과할 수 없습니다."
+    },
+    "cooking_cavity_not_found": {
+      "message": "이 기기에는 통합된 Flex Duo 조리실 쌍이 없습니다. 원하는 조리실의 기존 기기를 선택하세요."
     }
   },
   "selector": {
@@ -2402,7 +2509,16 @@
         "ice_maker": "제빙기",
         "cubed_ice": "각얼음",
         "ice_bites": "아이스 바이트",
-        "whiskey_ice_ball": "볼 얼음"
+        "whiskey_ice_ball": "볼 얼음",
+        "oven_cavity_upper": "상부",
+        "oven_cavity_lower": "하부",
+        "oven_cavity_whole": "전체 오븐"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "상부 / 전체 오븐",
+        "lower": "하부"
       }
     }
   }

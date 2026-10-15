@@ -166,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastavené"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: V prevádzke"
       }
     },
     "button": {
@@ -216,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Spustiť varenie"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Zastaviť"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Spustiť"
       }
     },
     "climate": {
@@ -315,6 +324,15 @@
       },
       "cook_time_minutes": {
         "name": "Minúty varenia"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Požadovaná teplota"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Hodiny varenia"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minúty varenia"
       }
     },
     "select": {
@@ -1201,6 +1219,54 @@
           "lower_healthycook3": "Zdravé varenie Steak z lososa",
           "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
         }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Režim varenia",
+        "state": {
+          "no_operation": "Nečinnosť",
+          "bake": "Pečenie",
+          "broil": "Grilovanie",
+          "convection": "Teplovzdušný ohrev",
+          "convection_bake": "Teplovzdušné pečenie",
+          "convection_broil": "Teplovzdušné grilovanie",
+          "frozen_pizza_plus": "Mrazená pizza+",
+          "slow_cook": "Pomalé varenie",
+          "plate_warm": "Ohrev tanierov",
+          "air_fry": "Teplovzdušné fritovanie",
+          "convection_roast": "Teplovzdušné opekanie",
+          "keep_warm": "Udržiavanie teploty",
+          "bread_proof": "Kysnutie cesta",
+          "dehydrate": "Sušenie",
+          "self_clean": "Samočistenie",
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie",
+          "upper_convection_bake": "Teplovzdušné pečenie",
+          "upper_convection_roast": "Teplovzdušné opekanie",
+          "lower_bake": "Pečenie",
+          "lower_convection_bake": "Teplovzdušné pečenie",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie Pečený zemiak",
+          "healthycook2": "Zdravé varenie Grilované kura",
+          "healthycook3": "Zdravé varenie Steak z lososa",
+          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "healthycook5": "Zdravé varenie Sušenie",
+          "healthycook6": "Zdravé varenie Kysnutie cesta",
+          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
+          "upper_healthycook2": "Zdravé varenie Grilované kura",
+          "upper_healthycook3": "Zdravé varenie Steak z lososa",
+          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
+          "lower_healthycook2": "Zdravé varenie Grilované kura",
+          "lower_healthycook3": "Zdravé varenie Steak z lososa",
+          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
+        }
       }
     },
     "sensor": {
@@ -1704,6 +1770,44 @@
       },
       "burner_pan_size": {
         "name": "Veľkosť nádoby zóny {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Kód alarmu"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Teplota"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Teplotná sonda"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Cieľová teplota sondy"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Stav diagnostiky",
+        "state": {
+          "ready": "Pripravené"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Odhadovaný koniec"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Čas prevádzky"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Stav vnútorného priestoru"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Priebeh v percentách"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Stav zariadenia",
+        "state": {
+          "idle": "Nečinnosť",
+          "active": "Aktívne",
+          "pause": "Pozastavené"
+        }
       }
     },
     "switch": {
@@ -2380,6 +2484,9 @@
     },
     "cook_duration_total_out_of_range": {
       "message": "Celkový čas varenia nesmie prekročiť {max}."
+    },
+    "cooking_cavity_not_found": {
+      "message": "Tento spotrebič neposkytuje zlúčenú dvojicu priestorov Flex Duo. Vyberte jeho existujúce zariadenie pre príslušný priestor."
     }
   },
   "selector": {
@@ -2402,7 +2509,16 @@
         "ice_maker": "Výrobník ľadu",
         "cubed_ice": "Kocky ľadu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ľadové gule"
+        "whiskey_ice_ball": "Ľadové gule",
+        "oven_cavity_upper": "Horná časť",
+        "oven_cavity_lower": "Dolná časť",
+        "oven_cavity_whole": "Celá rúra"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "Horná časť / celá rúra",
+        "lower": "Dolná časť"
       }
     }
   }

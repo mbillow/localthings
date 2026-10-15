@@ -20,6 +20,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
 from .entity import _is_included, async_load_instance_names
+from .oven_device import async_combine_oven_devices
 from .registry.adapter import _key
 from .registry.capabilities.common import is_lcd_wall_oven
 from .registry.entities import PLATFORM_OF, BinarySensorDesc, ButtonDesc, NumberDesc, SwitchDesc
@@ -558,6 +559,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _drop_unsupported_oven_sound_switches(hass, entry, coordinator)
     _drop_unverified_oven_diagnosis_buttons(hass, entry, coordinator)
     _drop_misidentified_oven_controls(hass, entry, coordinator)
+    async_combine_oven_devices(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
