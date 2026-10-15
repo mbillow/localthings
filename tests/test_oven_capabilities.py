@@ -228,6 +228,27 @@ def test_oven_mode_options_drop_homecare_wizard():
     assert desc.write_fn("HOMECARE_WIZARD_V2", resources["/mode/vs/0"]) is None
 
 
+@pytest.mark.parametrize("model", ["LCD_OV_WALL_16K|example", "LCD_OV_WALL_18K", "OTHER_OVEN"])
+def test_only_lcd_wall_16k_hides_cleaning_and_gourmet_commands(model):
+    desc = _oven_mode_desc()
+    local_modes = ["Drain", "Autocook", "SelfClean", "PyroFree", "Descale"]
+    cooking_modes = ["Bake", "KeepWarm", "Broil", "Healthycook5", "Healthycook6"]
+    live = ["NoOperation", *local_modes, *cooking_modes]
+    rep = {"x.com.samsung.da.supportedModes": live, "x.com.samsung.da.modes": ["SelfClean"]}
+    resources = {
+        "/mode/vs/0": rep,
+        "/information/vs/0": {"x.com.samsung.da.modelNum": model},
+    }
+
+    hidden = model.startswith("LCD_OV_WALL_16K|")
+    assert desc.options(resources) == (["NoOperation", *cooking_modes] if hidden else live)
+    for mode in local_modes:
+        assert (desc.write_fn(mode, rep, resources=resources) is None) == hidden
+    assert desc.write_fn("Bake", rep, resources=resources) is not None
+    assert rep["x.com.samsung.da.supportedModes"] == live
+    assert desc.value_fn(rep["x.com.samsung.da.modes"]) == "SelfClean"
+
+
 def _finish_desc():
     return next(e for e in oven.OVEN_OPERATIONAL_STATE.entities if e.key == "finish_time")
 

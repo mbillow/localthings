@@ -181,7 +181,9 @@ The October 14 authorization update adds a fresh configuration read before
 each write and disables automatic replay of cooking starts after a lost
 response. The owner subsequently confirmed one normal lower-cavity start
 and stop; its log shows both fresh checks true and both start writes accepted.
-The revised sequence has not yet been confirmed on the upper or whole oven;
+The owner later visually confirmed whole-oven Bake Start/Stop with the divider
+removed; the accompanying diagnostic is Ready, not an active-cook capture.
+The revised sequence has not yet been confirmed on the divided upper cavity;
 the original successful measurements above had no intervening read. See the [Smart Control follow-up](legacy-oven-controls.md#cooking-controls)
 for the reported unexpected remote Bake and the remaining uncertainty.
 
@@ -202,8 +204,8 @@ reported power as status rather than a cooking control.
 
 Those initial raw-write tests did not cover divider-out, timer-free or
 other-mode starts. Later owner checks mapped all eight divided Healthy
-Cook codes and confirmed divider-out mode visibility, without confirming
-whole-oven cooking. The later control log includes a refused omitted-duration
+Cook codes and confirmed divider-out mode visibility, followed by visual
+confirmation of whole-oven Bake Start/Stop. The later control log includes a refused omitted-duration
 start and a repeated-mode
 selection bug; see [the control follow-up](legacy-oven-controls.md) for
 the evidence, fixes and remaining hardware checks.

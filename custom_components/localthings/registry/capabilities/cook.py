@@ -145,12 +145,17 @@ _NEVER_STARTABLE = frozenset(
 )
 _NEVER_STARTABLE_FAMILIES = ("Autocook", "Broil", "Easycook", "HOMECARE", "Speed", "Toast")
 
+# NV51K7770S advertises these programs, but cleaning and Gourmet Cook are
+# excluded from its remote controls; retain the raw reports for diagnostics.
+_LCD_WALL_16K_LOCAL_MODES = frozenset({"Drain", "Autocook", "SelfClean", "PyroFree", "Descale"})
 
-def selectable_modes(live: list) -> list:
-    """`supportedModes` without HOMECARE_* codes, which LCD_R18 boards list
-    but have no modeSpec entry for (#600): a capability flag, as on the AC
-    (#235), not a cooking mode."""
-    return [m for m in live if not (isinstance(m, str) and m.startswith("HOMECARE"))]
+
+def selectable_modes(live: list, resources: dict | None = None) -> list:
+    """Hide HOMECARE capability flags (#600) and excluded NV51K7770S programs."""
+    excluded = _LCD_WALL_16K_LOCAL_MODES if is_lcd_wall_16k(resources or {}) else ()
+    return [
+        m for m in live if not (isinstance(m, str) and (m.startswith("HOMECARE") or m in excluded))
+    ]
 
 
 def _specless_startable(mode: str) -> bool:

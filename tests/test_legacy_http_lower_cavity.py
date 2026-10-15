@@ -1224,6 +1224,34 @@ async def test_missing_mode_error_lists_friendly_names_without_starting(hass):
     assert not _requests()
 
 
+@pytest.mark.parametrize("state", ["Ready", "Run"])
+async def test_whole_oven_excluded_modes_cannot_be_held_or_written(hass, state):
+    mode = "NoOperation" if state == "Ready" else "Bake"
+    upper = {
+        **UPPER,
+        "Mode": {**UPPER["Mode"], "modes": [mode]},
+        "Operation": {**UPPER["Operation"], "state": state},
+    }
+    coordinator = await _discovered(hass, _routes(divided=False, upper=upper))
+    bound = next(b for b in coordinator.bound if b.subdevice == MAIN and b.desc.key == "oven_mode")
+    select = LocalThingsSelect(coordinator, bound)
+    _FakeConnection.log.clear()
+
+    for excluded in ("Drain", "Autocook", "SelfClean", "PyroFree", "Descale"):
+        assert excluded in coordinator.resource(cook.MODE_HREF)[PREFIX + "supportedModes"]
+        assert excluded not in select._raw_options()
+        if state == "Ready":
+            with pytest.raises(ServiceValidationError) as err:
+                await coordinator.async_send_command(bound, excluded)
+            assert err.value.translation_key == "cook_mode_not_startable"
+        else:
+            await coordinator.async_send_command(bound, excluded)
+
+    assert "Bake" in select._raw_options()
+    assert coordinator.resource(cook.MODE_HREF)[PREFIX + "modes"] == [mode]
+    assert not _requests()
+
+
 @pytest.mark.parametrize("index,prefix", [(0, "Upper"), (1, "Lower")])
 @pytest.mark.parametrize("recipe,temperature", [(1, 375), (2, 375), (3, 375), (4, 400)])
 async def test_verified_recipe_selection_holds_its_raw_code_and_preset(

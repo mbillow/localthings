@@ -30,7 +30,7 @@ they are not evidence that the reported incident's cause has been fixed.
 
 Before those safeguards, normal Start/Stop worked on both divided cavities,
 and the owner confirmed mode visibility with the divider removed. The owner
-later clarified that whole-oven cooking itself still needed confirmation.
+later clarified that whole-oven cooking itself still needed confirmation at that stage.
 After installing the safeguards, one supervised lower-cavity test on October 14
 confirmed normal heating and Stop, with the dial remaining on Smart Control:
 
@@ -44,12 +44,19 @@ confirmed normal heating and Stop, with the dial remaining on Smart Control:
 
 The supplied raw reading was after Stop: Ready, NoOperation, zero setpoint and
 times, and remote control true. It is not an active-cook reading. The revised
-sequence has not been hardware-confirmed separately on Upper or the whole oven.
+sequence has not been hardware-confirmed separately on the divided Upper cavity.
 The owner reports having to reactivate Smart Control on the display after Stop;
 the relationship between that requirement and the reported true flag is unknown.
 The integration does not reactivate Smart Control. A permission read and write
 are not atomic at the appliance, and three seconds is a tested delay, not a
 measured minimum. No additional heating tests are required for this write-up.
+
+Later on October 14 the owner visually confirmed whole-oven Start and Stop
+from HA, using Upper with the divider removed, Bake, 350 F and five minutes.
+The accompanying diagnostic reports Bake, desired 350 F, both time fields
+00:05:00, Smart Control true and lower divider Off. Both operation and cavity
+states are Ready: this records the settings, not an active-cook sample or a
+request/response trace. Whole-oven Start/Stop evidence is the owner's observation.
 
 ## Settings and presentation
 
@@ -115,6 +122,20 @@ labels omit redundant cavity prefixes and are translated in all ten catalogs;
 Samsung's command codes stay unchanged. Other models and unverified whole-oven
 Healthy Cook codes retain their numbered labels. Removing the divider correctly
 exposes whole-oven modes on Upper and no cooking modes on Lower, as owner-confirmed.
+
+On this board, the Cooking mode selector omits Drain, Autocook, SelfClean,
+PyroFree and Descale, and its mode write rejects those choices. The owner
+requested excluding cleaning and Gourmet Cook controls from this submission.
+The manual explicitly prohibits remote Self Clean; the other exclusions do
+not establish a universal firmware prohibition. The raw advertised modes and
+reported states remain available in diagnostics, and other models are unchanged.
+
+Whole-oven captures advertise Healthycook1 through Healthycook6. The manual
+lists Dehydrate and Bread Proof in addition to the four divided recipes, but
+their numbered codes remain unverified. Dehydrate has a 100–225 F (40–105 C)
+range and a 150 F preset; Bread Proof uses a fixed, non-adjustable temperature.
+Do not assign their labels or reuse the ordinary Bake limits without matching
+panel readings to the codes.
 
 The [NV51K7770S manual][manual], pp.24, 29 and 34, supplies a 599-minute maximum;
 divided Bake/convection/Healthy Cook limits of 175–480 F (80–250 C); and whole-oven
@@ -256,6 +277,16 @@ optional future feature if new protocol evidence emerges; external sensors and
 actuators are outside the owner's requested scope. Detailed research is retained
 on the [investigation branch][research].
 
+## Kitchen timer investigation
+
+The owner supplied an idle capture and another with the separate kitchen timer
+running on October 14. The raw upper and lower bodies expose no countdown,
+timer-active flag or additional resource; cooking operationTime and remainingTime
+stay 00:00:00. The only device-body change was remoteControlEnabled becoming
+false. This provides no timer sensor or control through the examined local
+interface, without proving that no undiscovered endpoint exists. Cook duration
+must not be presented as the independent kitchen timer.
+
 ## Final build acceptance
 
 On October 14 the owner installed build
@@ -268,7 +299,8 @@ not a separate hardware test of every changed feature or cooking combination.
 That build passed all 3,202 tests on Python 3.14.8, plus formatting, lint and
 type checks. Subsequent changes add the shared Divider and Reservoir displays
 described above; the installed build does not yet include those two copies.
-The updated branch passes all 3,210 tests, plus formatting, lint and type checks.
+The updated branch, including the five mode exclusions, passes all 3,215 tests,
+plus formatting, lint and type checks. Those exclusions also await installation.
 
 ## Validation limits
 
@@ -277,7 +309,7 @@ duration conversion, paired hours/minutes in all 24 setting-entry orders,
 strict permission checks, timeout/refusal/no-replay paths,
 status migration, Sound capability gating, diagnosis-button cleanup, reservoir
 states and partial-item verification. Passing tests do not resolve the reported
-Smart Control incident. Revised-sequence Upper/whole operation, timer completion,
+Smart Control incident. Revised-sequence divided Upper operation, timer completion,
 the complete paired-timer entry-order and boundary matrix, simultaneous cavity
 combinations, all recipe starts and running adjustments remain hardware
 coverage gaps.
