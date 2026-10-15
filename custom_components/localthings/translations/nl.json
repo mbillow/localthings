@@ -1495,10 +1495,10 @@
         "name": "Temperatuur"
       },
       "food_probe_temp": {
-        "name": "Voedselsonde"
+        "name": "Temperatuursonde"
       },
       "food_probe_setpoint": {
-        "name": "Doeltemperatuur voedselsonde"
+        "name": "Doeltemperatuur van de sonde"
       },
       "current_temperature_c": {
         "name": "Temperatuur"
@@ -1853,10 +1853,10 @@
         "name": "{cavity}: Temperatuur"
       },
       "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Voedselsonde"
+        "name": "{cavity}: Temperatuursonde"
       },
       "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Doeltemperatuur voedselsonde"
+        "name": "{cavity}: Doeltemperatuur van de sonde"
       },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Diagnosestatus",

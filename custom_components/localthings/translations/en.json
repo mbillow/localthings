@@ -1495,10 +1495,10 @@
         "name": "Temperature"
       },
       "food_probe_temp": {
-        "name": "Food Probe"
+        "name": "Temperature Probe"
       },
       "food_probe_setpoint": {
-        "name": "Food Probe Target"
+        "name": "Temperature Probe Target"
       },
       "current_temperature_c": {
         "name": "Temperature"
@@ -1853,10 +1853,10 @@
         "name": "{cavity} Temperature"
       },
       "oven_cavity_food_probe_temp": {
-        "name": "{cavity} Food Probe"
+        "name": "{cavity} Temperature Probe"
       },
       "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity} Food Probe Target"
+        "name": "{cavity} Temperature Probe Target"
       },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity} Diagnosis Status",

@@ -1489,10 +1489,10 @@
         "name": "Temperatur"
       },
       "food_probe_temp": {
-        "name": "Bratenthermometer"
+        "name": "Temperaturfühler"
       },
       "food_probe_setpoint": {
-        "name": "Bratenthermometer-Zieltemperatur"
+        "name": "Zieltemperatur des Temperaturfühlers"
       },
       "current_temperature_c": {
         "name": "Temperatur"
@@ -1853,10 +1853,10 @@
         "name": "{cavity}: Temperatur"
       },
       "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Bratenthermometer"
+        "name": "{cavity}: Temperaturfühler"
       },
       "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Bratenthermometer-Zieltemperatur"
+        "name": "{cavity}: Zieltemperatur des Temperaturfühlers"
       },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Diagnosestatus",

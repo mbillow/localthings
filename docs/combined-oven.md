@@ -176,8 +176,18 @@ Regression tests start with the probe disconnected, connect it after HA setup,
 then exercise repeated unplug/reconnect updates and platform unload. They also
 cover a probe already connected at startup and identity retention after an
 unplugged restart. All 3,285 tests pass (67.44 seconds), along with formatting,
-lint and type checks. No probe writes are introduced. Automatic detection still
-awaits the owner's hardware check; the earlier capture verified the readings.
+lint and type checks. No probe writes are introduced. At 12:14 America/Chicago
+on October 15, the owner confirmed that unplugging the probe makes its sensor
+unavailable. Reconnection without a reload remains to be confirmed on hardware;
+the earlier capture verified the readings.
+
+English labels are Temperature Probe and Temperature Probe Target. The
+NV51K7770S main probe uses these appliance-level names without an Oven/Upper
+prefix; other paired oven families retain their cavity labels. The internal
+keys `food_probe_temp` and `food_probe_setpoint`, existing entity IDs and custom
+names are unchanged. All ten catalogs use the corresponding localized labels.
+The label update passes all 3,295 tests (63.08 seconds), formatting, lint and
+type checks. Ten locale-specific upgrade cases preserve pre-existing probe IDs.
 
 ## NV51K7770S feature audit
 

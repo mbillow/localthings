@@ -35,8 +35,10 @@ SHARED_KEYS = frozenset(
     }
 )
 
+PROBE_KEYS = frozenset({"food_probe_temp", "food_probe_setpoint"})
+
 # Cooking state and fault reports remain attached to their own cavity.
-CAVITY_KEYS = frozenset(
+CAVITY_KEYS = PROBE_KEYS | frozenset(
     {
         "start_cooking",
         "stop",
@@ -54,8 +56,6 @@ CAVITY_KEYS = frozenset(
         "current_temp_c",
         "alarm_code",
         "diagnosis_status",
-        "food_probe_temp",
-        "food_probe_setpoint",
     }
 )
 

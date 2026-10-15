@@ -1,11 +1,14 @@
 """Probe sensors appear after startup and retain their identity on reconnect."""
 
+import json
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
+from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.registry.adapter import flatten
 from tests.conftest import _load_device_full
 from tests.localthings.test_combined_oven import _load, _rows
@@ -78,6 +81,10 @@ async def test_probe_connects_without_reload_and_reuses_entities(
             state = hass.states.get(rows["sensor", key].entity_id)
             assert state is not None and float(state.state) == value
             assert state.attributes["unit_of_measurement"] == "°F"
+            name = "Temperature Probe" + (" Target" if key == "food_probe_setpoint" else "")
+            if family != "legacy":
+                name = "Upper " + name
+            assert rows["sensor", key].original_name == name
 
     registry = er.async_get(hass)
     probe = rows["sensor", "food_probe_temp"]
@@ -125,3 +132,38 @@ async def test_unloaded_pending_probe_listener_does_not_create_entities(hass, mo
     _probe_update(coordinator, "legacy", True)
     await hass.async_block_till_done()
     assert ("sensor", "food_probe_temp") not in _rows(hass, coordinator)
+
+
+@pytest.mark.parametrize("language", ["cs", "de", "en", "es", "fr", "it", "ko", "nl", "pl", "sk"])
+async def test_probe_label_upgrade_preserves_entity_ids(hass, monkeypatch, language):
+    hass.config.language = language
+    coordinator = await _discovered(hass)
+    _probe_update(coordinator, "legacy", True)
+    registry = er.async_get(hass)
+    previous = {}
+    for key, suffix in (("food_probe_temp", ""), ("food_probe_setpoint", "_target")):
+        previous[key] = registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{DOMAIN}_{coordinator.device_key}_{key}",
+            config_entry=coordinator._entry,
+            suggested_object_id="old_oven_food_probe" + suffix,
+            original_name="Oven Food Probe" + (" Target" if suffix else ""),
+            translation_key="oven_cavity_" + key,
+        )
+    await _load(hass, monkeypatch, coordinator)
+    catalog = json.loads(
+        (
+            Path(__file__).parents[2]
+            / "custom_components/localthings/translations"
+            / f"{language}.json"
+        ).read_text()
+    )
+    rows = _rows(hass, coordinator)
+    for key, old in previous.items():
+        row = rows["sensor", key]
+        assert row.entity_id == old.entity_id
+        assert row.unique_id == old.unique_id
+        assert row.original_name == catalog["entity"]["sensor"][key]["name"]
+        assert row.translation_key == key
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)

@@ -16,6 +16,7 @@ from .coordinator import LocalThingsCoordinator
 from .oven_device import (
     CAVITY_KEYS,
     OPTION_KEYS,
+    PROBE_KEYS,
     cavity_label,
     divider_state,
     is_shared_duplicate,
@@ -128,11 +129,17 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
         lower = getattr(coordinator, "combined_oven_lower", None)
+        shared = (
+            shared_keys(coordinator.discovery_resources, lower)
+            if lower is not None
+            else frozenset()
+        )
         self._oven_cavity = (
             lower is not None
             and bound.subdevice in (MAIN, lower)
-            and bound.desc.key
-            in CAVITY_KEYS | (OPTION_KEYS - shared_keys(coordinator.discovery_resources, lower))
+            and bound.desc.key in CAVITY_KEYS | (OPTION_KEYS - shared)
+            # NV51K7770S reports its appliance's single probe through MAIN.
+            and not (bound.subdevice == MAIN and bound.desc.key in PROBE_KEYS and shared)
         )
         if bound.desc.translation_placeholders is not None:
             self._attr_translation_placeholders = dict(bound.desc.translation_placeholders)

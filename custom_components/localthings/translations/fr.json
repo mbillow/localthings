@@ -1495,10 +1495,10 @@
         "name": "Température"
       },
       "food_probe_temp": {
-        "name": "Sonde de cuisson"
+        "name": "Sonde de température"
       },
       "food_probe_setpoint": {
-        "name": "Cible de la sonde de cuisson"
+        "name": "Température cible de la sonde"
       },
       "current_temperature_c": {
         "name": "Température"
@@ -1853,10 +1853,10 @@
         "name": "{cavity}: Température"
       },
       "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Sonde de cuisson"
+        "name": "{cavity}: Sonde de température"
       },
       "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Cible de la sonde de cuisson"
+        "name": "{cavity}: Température cible de la sonde"
       },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: État du diagnostic",

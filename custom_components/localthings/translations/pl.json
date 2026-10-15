@@ -1495,10 +1495,10 @@
         "name": "Temperatura"
       },
       "food_probe_temp": {
-        "name": "Sonda do żywności"
+        "name": "Sonda temperatury"
       },
       "food_probe_setpoint": {
-        "name": "Docelowa temperatura sondy do żywności"
+        "name": "Docelowa temperatura sondy"
       },
       "current_temperature_c": {
         "name": "Temperatura"
@@ -1853,10 +1853,10 @@
         "name": "{cavity}: Temperatura"
       },
       "oven_cavity_food_probe_temp": {
-        "name": "{cavity}: Sonda do żywności"
+        "name": "{cavity}: Sonda temperatury"
       },
       "oven_cavity_food_probe_setpoint": {
-        "name": "{cavity}: Docelowa temperatura sondy do żywności"
+        "name": "{cavity}: Docelowa temperatura sondy"
       },
       "oven_cavity_diagnosis_status": {
         "name": "{cavity}: Stan diagnostyki",
