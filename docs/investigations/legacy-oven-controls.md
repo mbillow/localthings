@@ -77,9 +77,10 @@ The pair uses fixed units, not HA duration-unit conversion. On the measured boar
 both are blank for an unset idle timer and show zero once explicitly set. HA
 determines their row layout; no custom frontend is added. Only the NV51K7770S has hardware evidence
 so far. Tests cover sibling family identifiers without claiming additional
-hardware captures. The owner confirmed both controls appear in Home Assistant;
-the duplicate-total removal and paired controls' behavior still need confirmation
-on the installation.
+hardware captures. The owner confirmed both controls appear in Home Assistant
+and later reported normal operation after installing the final build. Individual
+timer boundaries and the complete entry-order matrix remain software-tested;
+no separate hardware captures of those checks were supplied.
 
 Pending temperature and time may be entered before choosing a mode if at least
 one available mode accepts the combination. The first mode selection revalidates
@@ -240,16 +241,30 @@ optional future feature if new protocol evidence emerges; external sensors and
 actuators are outside the owner's requested scope. Detailed research is retained
 on the [investigation branch][research].
 
+## Final build acceptance
+
+On October 14 the owner installed build
+`a23a0109152ef2754c715b5e3a2199b3a2bcf9c3`, reported that everything seemed to
+work normally, and approved preparing the changes for submission. The supplied
+HA screenshot confirms that Start diagnosis is gone while Alarm code,
+Connection mode and Diagnosis status remain. This is general owner acceptance,
+not a separate hardware test of every changed feature or cooking combination.
+
+That build passed all 3,202 tests on Python 3.14.8, plus formatting, lint and
+type checks. The submission's subsequent changes only update documentation;
+its integration code is identical to the installed build.
+
 ## Validation limits
 
 Regression coverage includes both cavity paths, held settings, mode labels,
 duration conversion, paired hours/minutes in all 24 setting-entry orders,
 strict permission checks, timeout/refusal/no-replay paths,
-status migration, Sound capability gating, reservoir states and partial-item verification. Passing tests
-do not resolve the reported Smart Control incident. Revised-sequence Upper/whole
-operation, timer completion, native hours presentation and paired timer controls,
-simultaneous combinations,
-all recipe starts and running adjustments remain hardware coverage gaps.
+status migration, Sound capability gating, diagnosis-button cleanup, reservoir
+states and partial-item verification. Passing tests do not resolve the reported
+Smart Control incident. Revised-sequence Upper/whole operation, timer completion,
+the complete paired-timer entry-order and boundary matrix, simultaneous cavity
+combinations, all recipe starts and running adjustments remain hardware
+coverage gaps.
 
 [manual]: https://images.thdstatic.com/catalog/pdfImages/99/9900cc56-8433-4e1b-ba18-4271b575791d.pdf
 [research]: https://github.com/roweboat123/localthings/tree/117eade8c5e0ffea1a22799e42ad4c6f27eb3b08/docs/investigations
