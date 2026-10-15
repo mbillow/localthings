@@ -43,8 +43,7 @@ confirmed normal heating and Stop, with the dial remaining on Smart Control:
 | 09:06:35.622 | Stop | 2.04 |
 
 The supplied raw reading was after Stop: Ready, NoOperation, zero setpoint and
-times, and remote control true. It is not an active-cook reading. The revised
-sequence has not been hardware-confirmed separately on the divided Upper cavity.
+times, and remote control true. It is not an active-cook reading.
 The owner reports having to reactivate Smart Control on the display after Stop;
 the relationship between that requirement and the reported true flag is unknown.
 The integration does not reactivate Smart Control. A permission read and write
@@ -57,6 +56,12 @@ The accompanying diagnostic reports Bake, desired 350 F, both time fields
 00:05:00, Smart Control true and lower divider Off. Both operation and cavity
 states are Ready: this records the settings, not an active-cook sample or a
 request/response trace. Whole-oven Start/Stop evidence is the owner's observation.
+
+At 22:24 America/Chicago on October 14, the owner confirmed divided Upper
+Convection Bake starting through Smart Control in d72b8da, with Lower Bake
+started concurrently. Each cavity stopped using its own Stop button. This
+confirms the revised Upper start sequence and independent stopping for that
+simultaneous combination; it does not verify all paired modes or timer completion.
 
 ## Settings and presentation
 
@@ -144,11 +149,19 @@ normal capitalization. These are display-text changes only: translation keys,
 entity identities and raw command values are unchanged.
 
 On this board, the Cooking mode selector omits Drain, Autocook, SelfClean,
-PyroFree and Descale, and its mode write rejects those choices. The owner
+PyroFree, Descale, Broil and UpperBroil, and its mode write rejects those choices,
+including when the live list is missing and static choices are used. The owner
 requested excluding cleaning and Gourmet Cook controls from this submission.
 The manual explicitly prohibits remote Self Clean; the other exclusions do
 not establish a universal firmware prohibition. The raw advertised modes and
 reported states remain available in diagnostics, and other models are unchanged.
+
+During the divided-cavity test in d72b8da, selecting Broil exposed LocalThings'
+existing remote-start refusal while the menu still offered that choice. The
+specless start policy excludes the Broil family; this was an integration
+validation error, not a captured firmware rejection. Broil and UpperBroil are
+now hidden on this board to match that restriction. No remote Broil support or
+Hi/Lo mapping is inferred, and the start policy is unchanged.
 
 Whole-oven captures advertise Healthycook1 through Healthycook6. Two additional
 panel-started recipes are verified:
@@ -186,8 +199,9 @@ These fallbacks are scoped to the measured board; live modeSpecs take precedence
 Celsius recipe presets are not guessed. The paired-cavity restrictions on pp.27–28
 are not interpolated, and the appliance can refuse incompatible combinations.
 LowerConvectionRoast remains the earlier #572 fallback, but its physical menu
-availability is unverified. Broil Hi/Lo and the carried-over whole-oven
-Healthycook1–4 mappings still need their own hardware evidence.
+availability is unverified. Broil Hi/Lo remains unverified and is excluded from
+remote choices; the carried-over whole-oven Healthycook1–4 mappings still need
+their own hardware evidence.
 A recorded omitted-duration Run refusal also remains unexplained;
 omission is not silently replaced with zero.
 
@@ -403,9 +417,18 @@ restores Lower Start Cooking availability. This confirms the display and
 entity-lifecycle fixes, not a new heating or Start/Stop test. The owner then
 separately confirmed Reservoir Open/Closed reporting on both device pages.
 
+The owner subsequently confirmed Upper Convection Bake and Lower Bake running
+at the same time, each stopping with its respective Stop button. The owner also
+confirmed that the obsolete Lower Start, Pause and Delay Start controls are gone.
+The planned pre-submission hardware checks are complete; remaining coverage
+limits below do not require repeating those checks. The Broil menu correction
+was made after this confirmation and has not yet been installed by the owner.
+It passes all 3,240 tests plus formatting, lint and type checks. The focused
+lifecycle tests also run independently after explicitly enabling custom
+integrations for their translation lookup.
+
 This test build retains the two-device layout. The requested combined-device
-presentation is deferred until the remaining pre-merger checks are finished.
-It will use a separate feature branch and pull request, preserving this fixes
+presentation will use a separate feature branch and pull request, preserving this fixes
 branch as the fallback. No device-grouping migration is included here.
 
 ## Validation limits
@@ -415,9 +438,9 @@ duration conversion, paired hours/minutes in all 24 setting-entry orders,
 strict permission checks, timeout/refusal/no-replay paths,
 status migration, Sound capability gating, diagnosis-button cleanup, reservoir
 states and partial-item verification. Passing tests do not resolve the reported
-Smart Control incident. Revised-sequence divided Upper operation, timer completion,
-the complete paired-timer entry-order and boundary matrix, simultaneous cavity
-combinations, all recipe starts and running adjustments remain hardware
+Smart Control incident. Timer completion, the complete paired-timer entry-order
+and boundary matrix, simultaneous combinations beyond Upper Convection Bake
+with Lower Bake, all recipe starts and running adjustments remain hardware
 coverage gaps.
 
 [manual]: https://images.thdstatic.com/catalog/pdfImages/99/9900cc56-8433-4e1b-ba18-4271b575791d.pdf

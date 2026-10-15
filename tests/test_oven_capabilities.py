@@ -229,10 +229,10 @@ def test_oven_mode_options_drop_homecare_wizard():
 
 
 @pytest.mark.parametrize("model", ["LCD_OV_WALL_16K|example", "LCD_OV_WALL_18K", "OTHER_OVEN"])
-def test_only_lcd_wall_16k_hides_cleaning_and_gourmet_commands(model):
+def test_only_lcd_wall_16k_hides_excluded_remote_commands(model):
     desc = _oven_mode_desc()
-    local_modes = ["Drain", "Autocook", "SelfClean", "PyroFree", "Descale"]
-    cooking_modes = ["Bake", "KeepWarm", "Broil", "Healthycook5", "Healthycook6"]
+    local_modes = ["Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"]
+    cooking_modes = ["Bake", "KeepWarm", "UpperConvectionBake", "Healthycook5", "Healthycook6"]
     live = ["NoOperation", *local_modes, *cooking_modes]
     rep = {"x.com.samsung.da.supportedModes": live, "x.com.samsung.da.modes": ["SelfClean"]}
     resources = {
@@ -247,6 +247,11 @@ def test_only_lcd_wall_16k_hides_cleaning_and_gourmet_commands(model):
     assert desc.write_fn("Bake", rep, resources=resources) is not None
     assert rep["x.com.samsung.da.supportedModes"] == live
     assert desc.value_fn(rep["x.com.samsung.da.modes"]) == "SelfClean"
+
+    # Missing live modes must not reintroduce Broil through the static fallback.
+    fallback = {**resources, "/mode/vs/0": {}}
+    assert ("Broil" not in desc.options(fallback)) == hidden
+    assert (desc.write_fn("Broil", {}, resources=fallback) is None) == hidden
 
 
 def _finish_desc():

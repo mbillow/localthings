@@ -145,9 +145,11 @@ _NEVER_STARTABLE = frozenset(
 )
 _NEVER_STARTABLE_FAMILIES = ("Autocook", "Broil", "Easycook", "HOMECARE", "Speed", "Toast")
 
-# NV51K7770S advertises these programs, but cleaning and Gourmet Cook are
-# excluded from its remote controls; retain the raw reports for diagnostics.
-_LCD_WALL_16K_LOCAL_MODES = frozenset({"Drain", "Autocook", "SelfClean", "PyroFree", "Descale"})
+# NV51K7770S advertises these programs, but cleaning/Gourmet Cook are excluded
+# and remote Broil starts are blocked; see legacy-oven-controls.md.
+_LCD_WALL_16K_LOCAL_MODES = frozenset(
+    {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
+)
 
 
 def selectable_modes(live: list, resources: dict | None = None) -> list:

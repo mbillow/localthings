@@ -27,7 +27,9 @@ from tests.test_legacy_http_lower_cavity import (
 
 
 @pytest.mark.parametrize("initially_divided", [False, True])
-async def test_lower_start_survives_divider_changes_without_reload(hass, initially_divided):
+async def test_lower_start_survives_divider_changes_without_reload(
+    hass, enable_custom_integrations, initially_divided
+):
     coordinator = await _discovered(hass, _routes(divided=initially_divided))
     lower = _lower(coordinator)
     entry = coordinator._entry

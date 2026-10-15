@@ -294,7 +294,7 @@ def _oven_mode_options(resources):
     live = rep.get("x.com.samsung.da.supportedModes")
     # An empty list is a lower zone with its divider out (cook.share_mode_spec).
     if not live and not cook.zoned(resources):
-        return list(_OVEN_MODES)
+        live = list(_OVEN_MODES)
     live = cook.selectable_modes(live or [], resources)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
@@ -324,9 +324,8 @@ def _oven_mode_write(p, rep, href=None, resources=None):
     view = (resources or {}).get("/mode/vs/0") or rep
     live = view.get("x.com.samsung.da.supportedModes")
     if not live and not cook.zoned(resources or {}):
-        valid = _OVEN_MODES
-    else:
-        valid = cook.selectable_modes(live or [], resources)
+        live = list(_OVEN_MODES)
+    valid = cook.selectable_modes(live or [], resources)
     if p not in valid:
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
