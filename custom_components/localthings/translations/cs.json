@@ -2491,6 +2491,9 @@
     "command_failed": {
       "message": "Příkaz pro {href} selhal i po opětovném připojení: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Pečení bez časového omezení se nepodařilo potvrdit. Trouba může běžet s dočasně nastavenou dobou pečení. Před opětovným stisknutím tlačítka Start zkontrolujte troubu. Podrobnosti: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Spuštění vaření se nepodařilo potvrdit a nebylo zopakováno. Před dalším pokusem zkontrolujte spotřebič. Podrobnosti: {error}"
     },

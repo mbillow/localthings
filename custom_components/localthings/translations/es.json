@@ -286,6 +286,9 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "No se pudo confirmar la cocción sin límite de tiempo. Es posible que el horno esté funcionando con un tiempo de cocción temporal. Comprueba el horno antes de volver a pulsar Iniciar. Detalles: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "No se pudo confirmar el inicio de la cocción y no se volvió a intentar. Compruebe el aparato antes de intentarlo de nuevo. Detalles: {error}"
     },

@@ -106,6 +106,7 @@ from .transport import (
     AuthRejected,
     DecodeError,
     Transport,
+    UntimedStartUnconfirmed,
     create_transport,
     translates_resources,
 )
@@ -2650,6 +2651,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         on_retry: Callable[[], None] | None = None,
         *,
         retry_on_disconnect: bool = True,
+        request_budget: float | None = None,
     ) -> None:
         """PUT `body`, optionally reconnecting and retrying on a dead session."""
 
@@ -2659,7 +2661,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            code, response = sess.write(
+                path_segs,
+                body,
+                timeout=self._POST_TIMEOUT_S if request_budget is None else request_budget,
+            )
             self._log.info("PUT %s → code %#04x", write_href, code)
             return code, response
 
@@ -2686,7 +2692,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # replaying it could start or reconfigure an active cook.
                     raise HomeAssistantError(
                         translation_domain=DOMAIN,
-                        translation_key="cook_start_unconfirmed",
+                        translation_key=(
+                            "cook_untimed_unconfirmed"
+                            if isinstance(e, UntimedStartUnconfirmed)
+                            else "cook_start_unconfirmed"
+                        ),
                         translation_placeholders={"error": str(e)},
                     ) from e
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
@@ -2920,10 +2930,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # which started the NV7B6665IAA's lower zone (#597).
         body = plan.batch(None if subdevice == MAIN else subdevice.to_actual)
         self._log.info("starting cook on /%s: %s", "/".join(path), plan)
-        # No readback after the write: smartthings-local found the
-        # fetch-back itself is what reverts some boards, and neither
-        # measured start had one.
-        await self._async_put(path, body, "/" + "/".join(path), retry_on_disconnect=False)
+        # The legacy untimed workaround needs time to confirm Run and
+        # remove its temporary timer; other starts keep the normal budget.
+        budget = 30.0 if cook.is_lcd_wall_16k(resources) and plan.duration in (None, 0) else None
+        await self._async_put(
+            path, body, "/" + "/".join(path), retry_on_disconnect=False, request_budget=budget
+        )
         held.clear()
         self._canonical_cache.clear()
         await self.async_request_refresh()

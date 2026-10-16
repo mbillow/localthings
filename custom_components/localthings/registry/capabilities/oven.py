@@ -267,7 +267,7 @@ def _oven_setpoint_write(p, rep, href=None, resources=None):
 
 
 def _cook_time_write(p, rep, href=None, resources=None):
-    """Write operationTime + remainingTime (H:MM:SS) from minutes."""
+    """Write the requested cook duration from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
@@ -278,10 +278,12 @@ def _cook_time_write(p, rep, href=None, resources=None):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
-    return ["operational", "state", "vs", "0"], {
-        "x.com.samsung.da.operationTime": hms,
-        "x.com.samsung.da.remainingTime": hms,
-    }
+    body = {"x.com.samsung.da.operationTime": hms}
+    # The NV51K7770S rejects our two-field timer update; Samsung's oven
+    # plug-in's duration helper sends only operationTime.
+    if not cook.is_lcd_wall_16k(resources or {}):
+        body["x.com.samsung.da.remainingTime"] = hms
+    return ["operational", "state", "vs", "0"], body
 
 
 def _oven_mode_options(resources):
