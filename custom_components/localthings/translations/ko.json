@@ -58,6 +58,9 @@
       "device_active": {
         "name": "기기 작동 중"
       },
+      "reservoir_open": {
+        "name": "물통"
+      },
       "door_open": {
         "name": "문"
       },
@@ -149,7 +152,11 @@
         "name": "이중 설정 온도 사용"
       },
       "divider": {
-        "name": "칸막이"
+        "name": "칸막이",
+        "state": {
+          "on": "삽입됨",
+          "off": "제거됨"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "구김 방지 작동 중"
@@ -159,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "일시 정지"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity} 작동 중"
       }
     },
     "button": {
@@ -209,6 +219,12 @@
       },
       "start_cooking": {
         "name": "조리 시작"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity} 정지"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity} 시작"
       }
     },
     "climate": {
@@ -302,6 +318,24 @@
       },
       "zone_target_temperature": {
         "name": "구역 목표 온도"
+      },
+      "cook_time_hours": {
+        "name": "조리 시간(시)"
+      },
+      "cook_time_minutes": {
+        "name": "조리 시간(분)"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} 조리 시간"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity} 설정 온도"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity} 조리 시간(시)"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity} 조리 시간(분)"
       }
     },
     "select": {
@@ -650,7 +684,24 @@
           "steam_roast": "스팀 로스트",
           "upper_steam_bake": "스팀 베이크 (상단)",
           "descale": "석회 제거",
-          "drain": "배수"
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트 (하단)",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1173,150 @@
           "off": "꺼짐",
           "low": "약",
           "high": "강"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "조리 모드",
+        "state": {
+          "no_operation": "작동 안 함",
+          "bake": "베이크",
+          "broil": "브로일",
+          "convection": "컨벡션",
+          "convection_bake": "컨벡션 베이크",
+          "convection_broil": "컨벡션 브로일",
+          "frozen_pizza_plus": "냉동 피자+",
+          "slow_cook": "저온 조리",
+          "plate_warm": "접시 데우기",
+          "air_fry": "에어프라이",
+          "convection_roast": "컨벡션 로스트",
+          "keep_warm": "보온",
+          "bread_proof": "발효",
+          "dehydrate": "건조",
+          "self_clean": "자동 세척",
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일",
+          "upper_convection_bake": "컨벡션 베이크",
+          "upper_convection_roast": "컨벡션 로스트",
+          "lower_bake": "베이크",
+          "lower_convection_bake": "컨벡션 베이크",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크",
+          "descale": "석회 제거",
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 구운 감자",
+          "healthycook2": "건강 요리 그릴 치킨",
+          "healthycook3": "건강 요리 연어 스테이크",
+          "healthycook4": "건강 요리 흰살 생선 필레",
+          "healthycook5": "건강 요리 건조",
+          "healthycook6": "건강 요리 발효",
+          "upper_healthycook1": "건강 요리 구운 감자",
+          "upper_healthycook2": "건강 요리 그릴 치킨",
+          "upper_healthycook3": "건강 요리 연어 스테이크",
+          "upper_healthycook4": "건강 요리 흰살 생선 필레",
+          "lower_healthycook1": "건강 요리 구운 감자",
+          "lower_healthycook2": "건강 요리 그릴 치킨",
+          "lower_healthycook3": "건강 요리 연어 스테이크",
+          "lower_healthycook4": "건강 요리 흰살 생선 필레"
+        }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity} 조리 모드",
+        "state": {
+          "no_operation": "작동 안 함",
+          "bake": "베이크",
+          "broil": "브로일",
+          "convection": "컨벡션",
+          "convection_bake": "컨벡션 베이크",
+          "convection_broil": "컨벡션 브로일",
+          "frozen_pizza_plus": "냉동 피자+",
+          "slow_cook": "저온 조리",
+          "plate_warm": "접시 데우기",
+          "air_fry": "에어프라이",
+          "convection_roast": "컨벡션 로스트",
+          "keep_warm": "보온",
+          "bread_proof": "발효",
+          "dehydrate": "건조",
+          "self_clean": "자동 세척",
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일 (상단)",
+          "upper_convection_bake": "컨벡션 베이크 (상단)",
+          "upper_convection_roast": "컨벡션 로스트 (상단)",
+          "lower_bake": "베이크 (하단)",
+          "lower_convection_bake": "컨벡션 베이크 (하단)",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크 (상단)",
+          "descale": "석회 제거",
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트 (하단)",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity} 조리 모드",
+        "state": {
+          "no_operation": "작동 안 함",
+          "bake": "베이크",
+          "broil": "브로일",
+          "convection": "컨벡션",
+          "convection_bake": "컨벡션 베이크",
+          "convection_broil": "컨벡션 브로일",
+          "frozen_pizza_plus": "냉동 피자+",
+          "slow_cook": "저온 조리",
+          "plate_warm": "접시 데우기",
+          "air_fry": "에어프라이",
+          "convection_roast": "컨벡션 로스트",
+          "keep_warm": "보온",
+          "bread_proof": "발효",
+          "dehydrate": "건조",
+          "self_clean": "자동 세척",
+          "air_fryer": "에어프라이",
+          "upper_broil": "브로일",
+          "upper_convection_bake": "컨벡션 베이크",
+          "upper_convection_roast": "컨벡션 로스트",
+          "lower_bake": "베이크",
+          "lower_convection_bake": "컨벡션 베이크",
+          "steam_bake": "스팀 베이크",
+          "steam_roast": "스팀 로스트",
+          "upper_steam_bake": "스팀 베이크",
+          "descale": "석회 제거",
+          "drain": "배수",
+          "lower_convection_roast": "컨벡션 로스트",
+          "autocook": "자동 조리",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "건강 요리 구운 감자",
+          "healthycook2": "건강 요리 그릴 치킨",
+          "healthycook3": "건강 요리 연어 스테이크",
+          "healthycook4": "건강 요리 흰살 생선 필레",
+          "healthycook5": "건강 요리 건조",
+          "healthycook6": "건강 요리 발효",
+          "upper_healthycook1": "건강 요리 구운 감자",
+          "upper_healthycook2": "건강 요리 그릴 치킨",
+          "upper_healthycook3": "건강 요리 연어 스테이크",
+          "upper_healthycook4": "건강 요리 흰살 생선 필레",
+          "lower_healthycook1": "건강 요리 구운 감자",
+          "lower_healthycook2": "건강 요리 그릴 치킨",
+          "lower_healthycook3": "건강 요리 연어 스테이크",
+          "lower_healthycook4": "건강 요리 흰살 생선 필레"
         }
       }
     },
@@ -1626,6 +1821,41 @@
       },
       "burner_pan_size": {
         "name": "화구 {number} 용기 크기"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity} 알람 코드"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity} 온도"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity} 진단 상태",
+        "state": {
+          "ready": "준비됨"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity} 예상 완료 시각"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity} 운전 시간"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity} 조리실 상태"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity} 진행률"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity} 기기 상태",
+        "state": {
+          "idle": "대기",
+          "active": "작동 중",
+          "pause": "일시 정지"
+        }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} 조리 시간"
       }
     },
     "switch": {
@@ -2210,6 +2440,12 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "시간 제한 없는 조리가 확인되지 않았습니다. 오븐이 임시 조리 시간이 설정된 상태로 작동 중일 수 있습니다. 시작을 다시 누르기 전에 오븐을 확인하세요. 세부 정보: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "조리 시작을 확인할 수 없어 다시 시도하지 않았습니다. 다시 시도하기 전에 기기를 확인하세요. 세부 정보: {error}"
+    },
     "command_refused": {
       "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
     },
@@ -2290,6 +2526,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "선택한 코스에서는 추가 헹굼을 사용할 수 없습니다."
+    },
+    "cook_duration_part_invalid": {
+      "message": "시간은 0에서 9 사이의 정수로, 분은 0에서 59 사이의 정수로 입력하세요."
+    },
+    "cook_duration_unavailable": {
+      "message": "현재 조리 시간을 확인할 수 없습니다. 기기 상태가 업데이트된 후 시간이나 분을 변경하세요."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "총 조리 시간은 {max}을(를) 초과할 수 없습니다."
     }
   },
   "selector": {
@@ -2312,7 +2557,9 @@
         "ice_maker": "제빙기",
         "cubed_ice": "각얼음",
         "ice_bites": "아이스 바이트",
-        "whiskey_ice_ball": "볼 얼음"
+        "whiskey_ice_ball": "볼 얼음",
+        "oven_cavity_upper": "상부",
+        "oven_cavity_whole": "오븐"
       }
     }
   }

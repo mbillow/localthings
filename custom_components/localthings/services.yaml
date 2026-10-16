@@ -1,5 +1,5 @@
 start_cooking:
-  name: Start cooking
+  name: Start Cooking
   description: >-
     Start an oven, range or microwave cooking. Only modes the appliance
     itself says a remote may start can be used, with its own temperature
@@ -39,7 +39,7 @@ start_cooking:
           step: 1
           mode: box
     duration:
-      name: Cook time
+      name: Cook Time
       description: >-
         How long to cook, including preheat. Defaults to the mode's own
         default.

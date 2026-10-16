@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Zariadenie aktívne"
       },
+      "reservoir_open": {
+        "name": "Nádržka"
+      },
       "door_open": {
         "name": "Dvierka"
       },
@@ -149,7 +152,11 @@
         "name": "Dvojitá požadovaná teplota zapnutá"
       },
       "divider": {
-        "name": "Priečka"
+        "name": "Priečka",
+        "state": {
+          "on": "Vložená",
+          "off": "Vybratá"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pokrčeniu aktívna"
@@ -159,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastavené"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: V prevádzke"
       }
     },
     "button": {
@@ -209,6 +219,12 @@
       },
       "start_cooking": {
         "name": "Spustiť varenie"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Zastaviť"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Spustiť"
       }
     },
     "climate": {
@@ -302,6 +318,24 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
+      },
+      "cook_time_hours": {
+        "name": "Hodiny varenia"
+      },
+      "cook_time_minutes": {
+        "name": "Minúty varenia"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Čas varenia"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Požadovaná teplota"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Hodiny varenia"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minúty varenia"
       }
     },
     "select": {
@@ -650,7 +684,24 @@
           "steam_roast": "Opekanie s parou",
           "upper_steam_bake": "Pečenie s parou (horná)",
           "descale": "Odvápnenie",
-          "drain": "Vypustenie vody"
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie (dolná)",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie 1",
+          "healthycook2": "Zdravé varenie 2",
+          "healthycook3": "Zdravé varenie 3",
+          "healthycook4": "Zdravé varenie 4",
+          "healthycook5": "Zdravé varenie 5",
+          "healthycook6": "Zdravé varenie 6",
+          "upper_healthycook1": "Zdravé varenie 1 (horná)",
+          "upper_healthycook2": "Zdravé varenie 2 (horná)",
+          "upper_healthycook3": "Zdravé varenie 3 (horná)",
+          "upper_healthycook4": "Zdravé varenie 4 (horná)",
+          "lower_healthycook1": "Zdravé varenie 1 (dolná)",
+          "lower_healthycook2": "Zdravé varenie 2 (dolná)",
+          "lower_healthycook3": "Zdravé varenie 3 (dolná)",
+          "lower_healthycook4": "Zdravé varenie 4 (dolná)"
         }
       },
       "operating_mode": {
@@ -1122,6 +1173,150 @@
           "off": "Vypnuté",
           "low": "Nízka",
           "high": "Vysoká"
+        }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Režim varenia",
+        "state": {
+          "no_operation": "Nečinnosť",
+          "bake": "Pečenie",
+          "broil": "Grilovanie",
+          "convection": "Teplovzdušný ohrev",
+          "convection_bake": "Teplovzdušné pečenie",
+          "convection_broil": "Teplovzdušné grilovanie",
+          "frozen_pizza_plus": "Mrazená pizza+",
+          "slow_cook": "Pomalé varenie",
+          "plate_warm": "Ohrev tanierov",
+          "air_fry": "Teplovzdušné fritovanie",
+          "convection_roast": "Teplovzdušné opekanie",
+          "keep_warm": "Udržiavanie teploty",
+          "bread_proof": "Kysnutie cesta",
+          "dehydrate": "Sušenie",
+          "self_clean": "Samočistenie",
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie",
+          "upper_convection_bake": "Teplovzdušné pečenie",
+          "upper_convection_roast": "Teplovzdušné opekanie",
+          "lower_bake": "Pečenie",
+          "lower_convection_bake": "Teplovzdušné pečenie",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie Pečený zemiak",
+          "healthycook2": "Zdravé varenie Grilované kura",
+          "healthycook3": "Zdravé varenie Steak z lososa",
+          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "healthycook5": "Zdravé varenie Sušenie",
+          "healthycook6": "Zdravé varenie Kysnutie cesta",
+          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
+          "upper_healthycook2": "Zdravé varenie Grilované kura",
+          "upper_healthycook3": "Zdravé varenie Steak z lososa",
+          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
+          "lower_healthycook2": "Zdravé varenie Grilované kura",
+          "lower_healthycook3": "Zdravé varenie Steak z lososa",
+          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
+        }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity}: Režim varenia",
+        "state": {
+          "no_operation": "Nečinnosť",
+          "bake": "Pečenie",
+          "broil": "Grilovanie",
+          "convection": "Teplovzdušný ohrev",
+          "convection_bake": "Teplovzdušné pečenie",
+          "convection_broil": "Teplovzdušné grilovanie",
+          "frozen_pizza_plus": "Mrazená pizza+",
+          "slow_cook": "Pomalé varenie",
+          "plate_warm": "Ohrev tanierov",
+          "air_fry": "Teplovzdušné fritovanie",
+          "convection_roast": "Teplovzdušné opekanie",
+          "keep_warm": "Udržiavanie teploty",
+          "bread_proof": "Kysnutie cesta",
+          "dehydrate": "Sušenie",
+          "self_clean": "Samočistenie",
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie (horná)",
+          "upper_convection_bake": "Teplovzdušné pečenie (horná)",
+          "upper_convection_roast": "Teplovzdušné opekanie (horná)",
+          "lower_bake": "Pečenie (dolná)",
+          "lower_convection_bake": "Teplovzdušné pečenie (dolná)",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou (horná)",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie (dolná)",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie 1",
+          "healthycook2": "Zdravé varenie 2",
+          "healthycook3": "Zdravé varenie 3",
+          "healthycook4": "Zdravé varenie 4",
+          "healthycook5": "Zdravé varenie 5",
+          "healthycook6": "Zdravé varenie 6",
+          "upper_healthycook1": "Zdravé varenie 1 (horná)",
+          "upper_healthycook2": "Zdravé varenie 2 (horná)",
+          "upper_healthycook3": "Zdravé varenie 3 (horná)",
+          "upper_healthycook4": "Zdravé varenie 4 (horná)",
+          "lower_healthycook1": "Zdravé varenie 1 (dolná)",
+          "lower_healthycook2": "Zdravé varenie 2 (dolná)",
+          "lower_healthycook3": "Zdravé varenie 3 (dolná)",
+          "lower_healthycook4": "Zdravé varenie 4 (dolná)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Režim varenia",
+        "state": {
+          "no_operation": "Nečinnosť",
+          "bake": "Pečenie",
+          "broil": "Grilovanie",
+          "convection": "Teplovzdušný ohrev",
+          "convection_bake": "Teplovzdušné pečenie",
+          "convection_broil": "Teplovzdušné grilovanie",
+          "frozen_pizza_plus": "Mrazená pizza+",
+          "slow_cook": "Pomalé varenie",
+          "plate_warm": "Ohrev tanierov",
+          "air_fry": "Teplovzdušné fritovanie",
+          "convection_roast": "Teplovzdušné opekanie",
+          "keep_warm": "Udržiavanie teploty",
+          "bread_proof": "Kysnutie cesta",
+          "dehydrate": "Sušenie",
+          "self_clean": "Samočistenie",
+          "air_fryer": "Teplovzdušné fritovanie",
+          "upper_broil": "Grilovanie",
+          "upper_convection_bake": "Teplovzdušné pečenie",
+          "upper_convection_roast": "Teplovzdušné opekanie",
+          "lower_bake": "Pečenie",
+          "lower_convection_bake": "Teplovzdušné pečenie",
+          "steam_bake": "Pečenie s parou",
+          "steam_roast": "Opekanie s parou",
+          "upper_steam_bake": "Pečenie s parou",
+          "descale": "Odvápnenie",
+          "drain": "Vypustenie vody",
+          "lower_convection_roast": "Teplovzdušné opekanie",
+          "autocook": "Automatické varenie",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Zdravé varenie Pečený zemiak",
+          "healthycook2": "Zdravé varenie Grilované kura",
+          "healthycook3": "Zdravé varenie Steak z lososa",
+          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "healthycook5": "Zdravé varenie Sušenie",
+          "healthycook6": "Zdravé varenie Kysnutie cesta",
+          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
+          "upper_healthycook2": "Zdravé varenie Grilované kura",
+          "upper_healthycook3": "Zdravé varenie Steak z lososa",
+          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
+          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
+          "lower_healthycook2": "Zdravé varenie Grilované kura",
+          "lower_healthycook3": "Zdravé varenie Steak z lososa",
+          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
         }
       }
     },
@@ -1626,6 +1821,41 @@
       },
       "burner_pan_size": {
         "name": "Veľkosť nádoby zóny {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Kód alarmu"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Teplota"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Stav diagnostiky",
+        "state": {
+          "ready": "Pripravené"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Odhadovaný koniec"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Čas prevádzky"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Stav vnútorného priestoru"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Priebeh v percentách"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Stav zariadenia",
+        "state": {
+          "idle": "Nečinnosť",
+          "active": "Aktívne",
+          "pause": "Pozastavené"
+        }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Čas varenia"
       }
     },
     "switch": {
@@ -2210,6 +2440,12 @@
     "command_failed": {
       "message": "Príkaz pre {href} zlyhal aj po opätovnom pripojení: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Pečenie bez časového obmedzenia sa nepodarilo potvrdiť. Rúra môže bežať s dočasne nastaveným časom pečenia. Pred opätovným stlačením tlačidla Štart skontrolujte rúru. Podrobnosti: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Spustenie varenia sa nepodarilo potvrdiť a nebolo zopakované. Pred ďalším pokusom skontrolujte spotrebič. Podrobnosti: {error}"
+    },
     "command_refused": {
       "message": "Spotrebič odmietol príkaz pre {href}: {error}"
     },
@@ -2290,6 +2526,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra plákanie nie je pri vybranom cykle dostupné."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Zadajte celé hodiny od 0 do 9 a celé minúty od 0 do 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "Aktuálny čas varenia nie je dostupný. Pred zmenou hodín alebo minút počkajte na aktualizáciu zariadenia."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "Celkový čas varenia nesmie prekročiť {max}."
     }
   },
   "selector": {
@@ -2312,7 +2557,9 @@
         "ice_maker": "Výrobník ľadu",
         "cubed_ice": "Kocky ľadu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ľadové gule"
+        "whiskey_ice_ball": "Ľadové gule",
+        "oven_cavity_upper": "Horná časť",
+        "oven_cavity_whole": "Rúra"
       }
     }
   }

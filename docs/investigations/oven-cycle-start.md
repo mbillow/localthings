@@ -1,6 +1,6 @@
 # Starting an oven or microwave cycle
 
-A cook start has been measured working on two boards: an NV7000BS wall
+A single-write OCF cook start has been measured working on an NV7000BS wall
 oven and #473's NE63A6111SS range. The cook parameters and the run command
 go to the device collection in a single write, not to each resource
 separately, which is the one shape none of the attempts below used.
@@ -8,7 +8,8 @@ separately, which is the one shape none of the attempts below used.
 LocalThings now starts a cook this way (`registry/capabilities/cook.py`),
 only in a mode the board's own `modeSpec` declares `Start&Setting`, that
 the cavity's live `supportedModes` lists, and within that mode's limits.
-A board with no `modeSpec` gets no start.
+A board with no `modeSpec` uses its live modes and the family's temperature
+limits. The legacy HTTPS oven needs the separate sequence below.
 
 This file keeps the earlier results, because they still bound what the
 answer can be, and revises what they mean. The probe ladder at the end is
@@ -129,6 +130,116 @@ That board's lower zone lists no modes of its own (`/mode/vs/1`
 `supportedModes` is only `HOMECARE_WIZARD_V2` and its `modeSpec` is
 `"[]"`); the modes it runs are the ones `/mode/vs/0`'s `modeSpec` tags
 `cavity: Lower`. See `cook.share_mode_spec`.
+
+## Legacy HTTPS Flex Duo: settings, then Run
+
+Measured 2026-10-12 on a Samsung NV51K7770SG/AA, board
+`LCD_OV_WALL_16K` (lower record `LCD_OV_WALL_16K_DIV`), software
+`20201110.0138`, firmware `17071200,17041300`, with the divider installed.
+This is the local HTTPS interface on port 8888, not the OCF boards above.
+
+This follows the settings-first test proposed by the maintainer in
+[#572](https://github.com/mbillow/localthings/issues/572#issuecomment-6092402107).
+The existing Start cooking button performs the sequence internally with
+one press; the user does not need separate settings and start actions.
+
+A combined mode/temperature/time/Run write was refused with `4.00`
+(`Control fail`) on both cavities. Both started with this sequence:
+
+1. Write mode, temperature and duration together, **without** `Operation.state`.
+2. Wait three seconds, holding the session lock and making no intervening read.
+3. Write `Operation.state: Run` on its own to the same cavity.
+
+The lower-cavity HTTP bodies are:
+
+```json
+{"Device":{"Mode":{"modes":["LowerBake"]},"Temperatures":[{"id":"0","desired":350,"unit":"Fahrenheit"}],"Operation":{"operationTime":"00:05:00"}}}
+```
+
+After three seconds:
+
+```json
+{"Device":{"Operation":{"state":"Run"}}}
+```
+
+Both go to `PUT /devices/1`; the upper uses `/devices/0` and
+`UpperConvectionBake`. Temperature item ID stays `0` in either cavity.
+Both requests answered `2.04`. Delayed reads showed operational state
+`Run`, cavity state `Preheat`, setpoint 350 F and duration `00:05:00` on
+both cavities; the owner also confirmed the lower oven physically started.
+
+The test action used `hold_session_lock: true`, `readback: false` on both
+writes, `settle: 3` on the settings write, and `verify_after: 3`.
+It has not isolated whether the delay, absence of intervening reads, or
+both are necessary. `LegacyHttpTransport._start_oven` sends those settings
+and Run payloads within one transport write, with the added checks below.
+A settings refusal prevents Run; a Run refusal is returned to the caller.
+Settings-only writes and bare Run probes remain single writes. Other transport
+families retain their wire payloads; the no-replay rule below applies to all cooks.
+
+The October 14 authorization update adds a fresh configuration read before
+each write and disables automatic replay of cooking starts after a lost
+response. The owner subsequently confirmed one normal lower-cavity start
+and stop; its log shows both fresh checks true and both start writes accepted.
+The owner later visually confirmed whole-oven Bake Start/Stop with the divider
+removed; the accompanying diagnostic is Ready, not an active-cook capture.
+The owner subsequently confirmed divided Upper Convection Bake with Lower Bake
+running concurrently, and independent Stop buttons, in build d72b8da. This
+confirms that combination with the revised sequence; the original successful
+measurements above had no intervening read. See the [Smart Control follow-up](legacy-oven-controls.md#cooking-controls)
+for the reported unexpected remote Bake and the remaining uncertainty.
+
+| Cavity and mode | Smart Control | Result |
+|---|---|---|
+| Lower, `LowerBake`, 350 F, five minutes | On | Run / Preheat |
+| Upper, `UpperConvectionBake`, 350 F, five minutes | On | Run / Preheat |
+| Lower, same sequence, dial Off | Off | Settings accepted; Run refused with `4.00`; stayed Ready |
+| Lower, same sequence, dial Bake awaiting Start | Off | Settings accepted; Run refused with `4.00`; stayed Ready |
+
+`Operation.state: Ready` stopped manually started cooks in both cavities
+with Smart Control off. Immediate readback could still show Run; a read
+three seconds later showed Ready and zero remaining time. The owner
+confirmed both physical stops. `Operation.power` is separate: the owner
+and [the earlier report in #572](https://github.com/mbillow/localthings/issues/572#issuecomment-6003702886)
+observed no effect from the Power switch. This family now exposes the
+reported power as status rather than a cooking control.
+
+Those initial raw-write tests did not cover divider-out, timer-free or
+other-mode starts. Later owner checks mapped all eight divided Healthy
+Cook codes and confirmed divider-out mode visibility, followed by visual
+confirmation of whole-oven Bake Start/Stop. The later control log includes a refused omitted-duration
+start and a repeated-mode
+selection bug; see [the control follow-up](legacy-oven-controls.md) for
+the evidence, fixes and remaining hardware checks.
+
+### Shared door and write verification
+
+Read-only captures on 2026-10-13, with the divider installed, showed:
+
+| Physical door | `/doors/vs/0` | `/doors/vs/1` |
+|---|---|---|
+| Closed | Item `0`, `openState: Close` | Empty items list |
+| Open | Item `0`, `openState: Open` | Empty items list |
+
+The owner was using the oven for cooking during these reads. These captures
+establish door reporting, not idle behavior or a temperature fault.
+For board `LCD_OV_WALL_16K` with the connected `LCD_OV_WALL_16K_DIV` record,
+the entity view shares this single door's known Open/Close reading when the
+lower record's items list is empty. A lower record with its own items is
+preserved; other boards and an unknown upper reading receive no fallback.
+Raw reads and diagnostics still export exactly what each record reported.
+
+The successful start captures also exposed a separate verifier issue:
+`held` and the temperature element could be false even with the requested
+350 F setpoint present. Temperature reads include additional fields such as
+current temperature and increment, and legacy HTTPS returns a numeric
+setpoint even when the request used a string. Verification now matches
+items by ID, compares only written fields, and treats finite numeric
+setpoint strings and numbers equivalently. Units and IDs remain exact;
+missing, ambiguous or mismatched items do not verify. Batch verification
+uses the same comparison as each individual element, including merged
+option tokens. This does not change the payload sent or hide stale reads:
+a Stop that still reads Run remains unverified until Ready is observed.
 
 ## What is measured
 

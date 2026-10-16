@@ -5,9 +5,11 @@ and callable forms of SelectDesc.options.
 
 from typing import ClassVar, cast
 
+import pytest
+
 from custom_components.localthings import cloudcourse
 from custom_components.localthings.coordinator import LocalThingsCoordinator
-from custom_components.localthings.registry.capabilities import dryer
+from custom_components.localthings.registry.capabilities import dryer, oven
 from custom_components.localthings.registry.capabilities.laundry import (
     BUZZER_SOUND,
     cycle_select,
@@ -341,6 +343,37 @@ async def test_unknown_vendor_option_round_trips_to_exact_raw_value():
     assert entity.options[-1] == "Future Vendor Mode"
     await entity.async_select_option("Future Vendor Mode")
     assert coordinator.writes == ["FutureVendorMode"]
+
+
+@pytest.mark.parametrize(
+    "raw,state",
+    [
+        ("UpperHealthycook4", "upper_healthycook4"),
+        ("Healthycook6", "healthycook6"),
+        ("LowerConvectionRoast", "lower_convection_roast"),
+        ("Autocook", "autocook"),
+        ("PyroFree", "pyro_free"),
+    ],
+)
+async def test_oven_mode_labels_preserve_the_device_command(raw, state):
+    class _WritableCoordinator(_FakeCoordinator):
+        def __init__(self, resources):
+            super().__init__(resources)
+            self.data = {"oven_mode": raw}
+            self.writes = []
+
+        async def async_send_command(self, bound, value):
+            self.writes.append(value)
+
+    desc = next(e for e in oven.OVEN_MODE.entities if e.key == "oven_mode")
+    coordinator = _WritableCoordinator({"/mode/vs/0": {"x.com.samsung.da.supportedModes": [raw]}})
+    bound = BoundEntity(href="/mode/vs/0", capability=oven.OVEN_MODE, desc=desc)
+    entity = LocalThingsSelect(cast(LocalThingsCoordinator, coordinator), bound)
+
+    assert entity.current_option == state
+    assert state in entity.options
+    await entity.async_select_option(state)
+    assert coordinator.writes == [raw]
 
 
 async def test_washer_diagnostic_cycle_values_share_one_display_and_write_path():

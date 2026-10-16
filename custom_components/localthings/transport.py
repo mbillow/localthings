@@ -87,6 +87,10 @@ class AuthRejected(Exception):
     rather than retrying."""
 
 
+class UntimedStartUnconfirmed(Exception):
+    """Run was attempted, but a running cook with its temporary timer cleared is unconfirmed."""
+
+
 def _is_success(code: int) -> bool:
     """A 2.xx response class -- the only one whose body is CBOR by contract.
     An error response often carries a plain diagnostic string instead."""

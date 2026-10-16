@@ -23,10 +23,10 @@
         "name": "Burner {number} pan detected"
       },
       "child_lock": {
-        "name": "Child lock"
+        "name": "Child Lock"
       },
       "cloud_connected": {
-        "name": "Cloud connected"
+        "name": "Cloud Connected"
       },
       "dustbag_full": {
         "name": "Dust bag full"
@@ -58,6 +58,9 @@
       "device_active": {
         "name": "Device active"
       },
+      "reservoir_open": {
+        "name": "Reservoir"
+      },
       "door_open": {
         "name": "Door"
       },
@@ -68,7 +71,7 @@
         "name": "Filter door"
       },
       "firmware_update": {
-        "name": "Firmware update available"
+        "name": "Firmware Update Available"
       },
       "instance_open": {
         "name": "{instance_name} open"
@@ -149,7 +152,11 @@
         "name": "Dual setpoint enabled"
       },
       "divider": {
-        "name": "Divider"
+        "name": "Divider",
+        "state": {
+          "on": "Inserted",
+          "off": "Removed"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Wrinkle prevent active"
@@ -159,6 +166,9 @@
       },
       "cooktop_paused": {
         "name": "Paused"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity} Running"
       }
     },
     "button": {
@@ -166,7 +176,7 @@
         "name": "Cancel after run"
       },
       "diagnosis_start": {
-        "name": "Start diagnosis"
+        "name": "Start Diagnosis"
       },
       "auto_clean_stop": {
         "name": "Stop auto clean"
@@ -196,19 +206,25 @@
         "name": "Pause"
       },
       "selfcheck_start": {
-        "name": "Start self-check"
+        "name": "Start Self-Check"
       },
       "start": {
         "name": "Start"
       },
       "sync_clock": {
-        "name": "Sync clock"
+        "name": "Sync Clock"
       },
       "stop": {
         "name": "Stop"
       },
       "start_cooking": {
-        "name": "Start cooking"
+        "name": "Start Cooking"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity} Stop"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity} Start"
       }
     },
     "climate": {
@@ -268,7 +284,7 @@
     },
     "number": {
       "cook_time": {
-        "name": "Cook time"
+        "name": "Cook Time"
       },
       "delay_start_hours": {
         "name": "Delay start"
@@ -302,6 +318,24 @@
       },
       "zone_target_temperature": {
         "name": "Zone target temperature"
+      },
+      "cook_time_hours": {
+        "name": "Cook Time Hours"
+      },
+      "cook_time_minutes": {
+        "name": "Cook Time Minutes"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} Cook Time"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity} Setpoint"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity} Cook Time Hours"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity} Cook Time Minutes"
       }
     },
     "select": {
@@ -315,7 +349,7 @@
         }
       },
       "ai_energy_level": {
-        "name": "AI Energy Mode level"
+        "name": "AI Energy Mode Level"
       },
       "air_filter_threshold": {
         "name": "Filter alarm threshold"
@@ -623,34 +657,51 @@
         }
       },
       "oven_mode": {
-        "name": "Cooking mode",
+        "name": "Cooking Mode",
         "state": {
-          "no_operation": "No operation",
+          "no_operation": "No Operation",
           "bake": "Bake",
           "broil": "Broil",
           "convection": "Convection",
-          "convection_bake": "Convection bake",
-          "convection_broil": "Convection broil",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
           "frozen_pizza_plus": "Frozen Pizza+",
-          "slow_cook": "Slow cook",
-          "plate_warm": "Plate warm",
-          "air_fry": "Air fry",
-          "convection_roast": "Convection roast",
-          "keep_warm": "Keep warm",
-          "bread_proof": "Bread proof",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
           "dehydrate": "Dehydrate",
-          "self_clean": "Self clean",
-          "air_fryer": "Air fry",
-          "upper_broil": "Upper broil",
-          "upper_convection_bake": "Upper convection bake",
-          "upper_convection_roast": "Upper convection roast",
-          "lower_bake": "Lower bake",
-          "lower_convection_bake": "Lower convection bake",
-          "steam_bake": "Steam bake",
-          "steam_roast": "Steam roast",
-          "upper_steam_bake": "Upper steam bake",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Upper Broil",
+          "upper_convection_bake": "Upper Convection Bake",
+          "upper_convection_roast": "Upper Convection Roast",
+          "lower_bake": "Lower Bake",
+          "lower_convection_bake": "Lower Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Upper Steam Bake",
           "descale": "Descale",
-          "drain": "Drain"
+          "drain": "Drain",
+          "lower_convection_roast": "Lower Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook 1",
+          "healthycook2": "Healthy Cook 2",
+          "healthycook3": "Healthy Cook 3",
+          "healthycook4": "Healthy Cook 4",
+          "healthycook5": "Healthy Cook 5",
+          "healthycook6": "Healthy Cook 6",
+          "upper_healthycook1": "Upper Healthy Cook 1",
+          "upper_healthycook2": "Upper Healthy Cook 2",
+          "upper_healthycook3": "Upper Healthy Cook 3",
+          "upper_healthycook4": "Upper Healthy Cook 4",
+          "lower_healthycook1": "Lower Healthy Cook 1",
+          "lower_healthycook2": "Lower Healthy Cook 2",
+          "lower_healthycook3": "Lower Healthy Cook 3",
+          "lower_healthycook4": "Lower Healthy Cook 4"
         }
       },
       "operating_mode": {
@@ -1123,6 +1174,150 @@
           "low": "Low",
           "high": "High"
         }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Cooking Mode",
+        "state": {
+          "no_operation": "No Operation",
+          "bake": "Bake",
+          "broil": "Broil",
+          "convection": "Convection",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
+          "dehydrate": "Dehydrate",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Broil",
+          "upper_convection_bake": "Convection Bake",
+          "upper_convection_roast": "Convection Roast",
+          "lower_bake": "Bake",
+          "lower_convection_bake": "Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Steam Bake",
+          "descale": "Descale",
+          "drain": "Drain",
+          "lower_convection_roast": "Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook Baked Potato",
+          "healthycook2": "Healthy Cook Grilled Chicken",
+          "healthycook3": "Healthy Cook Salmon Steak",
+          "healthycook4": "Healthy Cook White Fish Fillet",
+          "healthycook5": "Healthy Cook Dehydrate",
+          "healthycook6": "Healthy Cook Bread Proof",
+          "upper_healthycook1": "Healthy Cook Baked Potato",
+          "upper_healthycook2": "Healthy Cook Grilled Chicken",
+          "upper_healthycook3": "Healthy Cook Salmon Steak",
+          "upper_healthycook4": "Healthy Cook White Fish Fillet",
+          "lower_healthycook1": "Healthy Cook Baked Potato",
+          "lower_healthycook2": "Healthy Cook Grilled Chicken",
+          "lower_healthycook3": "Healthy Cook Salmon Steak",
+          "lower_healthycook4": "Healthy Cook White Fish Fillet"
+        }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity} Cooking Mode",
+        "state": {
+          "no_operation": "No Operation",
+          "bake": "Bake",
+          "broil": "Broil",
+          "convection": "Convection",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
+          "dehydrate": "Dehydrate",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Upper Broil",
+          "upper_convection_bake": "Upper Convection Bake",
+          "upper_convection_roast": "Upper Convection Roast",
+          "lower_bake": "Lower Bake",
+          "lower_convection_bake": "Lower Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Upper Steam Bake",
+          "descale": "Descale",
+          "drain": "Drain",
+          "lower_convection_roast": "Lower Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook 1",
+          "healthycook2": "Healthy Cook 2",
+          "healthycook3": "Healthy Cook 3",
+          "healthycook4": "Healthy Cook 4",
+          "healthycook5": "Healthy Cook 5",
+          "healthycook6": "Healthy Cook 6",
+          "upper_healthycook1": "Upper Healthy Cook 1",
+          "upper_healthycook2": "Upper Healthy Cook 2",
+          "upper_healthycook3": "Upper Healthy Cook 3",
+          "upper_healthycook4": "Upper Healthy Cook 4",
+          "lower_healthycook1": "Lower Healthy Cook 1",
+          "lower_healthycook2": "Lower Healthy Cook 2",
+          "lower_healthycook3": "Lower Healthy Cook 3",
+          "lower_healthycook4": "Lower Healthy Cook 4"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity} Cooking Mode",
+        "state": {
+          "no_operation": "No Operation",
+          "bake": "Bake",
+          "broil": "Broil",
+          "convection": "Convection",
+          "convection_bake": "Convection Bake",
+          "convection_broil": "Convection Broil",
+          "frozen_pizza_plus": "Frozen Pizza+",
+          "slow_cook": "Slow Cook",
+          "plate_warm": "Plate Warm",
+          "air_fry": "Air Fry",
+          "convection_roast": "Convection Roast",
+          "keep_warm": "Keep Warm",
+          "bread_proof": "Bread Proof",
+          "dehydrate": "Dehydrate",
+          "self_clean": "Self Clean",
+          "air_fryer": "Air Fry",
+          "upper_broil": "Broil",
+          "upper_convection_bake": "Convection Bake",
+          "upper_convection_roast": "Convection Roast",
+          "lower_bake": "Bake",
+          "lower_convection_bake": "Convection Bake",
+          "steam_bake": "Steam Bake",
+          "steam_roast": "Steam Roast",
+          "upper_steam_bake": "Steam Bake",
+          "descale": "Descale",
+          "drain": "Drain",
+          "lower_convection_roast": "Convection Roast",
+          "autocook": "Auto Cook",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Healthy Cook Baked Potato",
+          "healthycook2": "Healthy Cook Grilled Chicken",
+          "healthycook3": "Healthy Cook Salmon Steak",
+          "healthycook4": "Healthy Cook White Fish Fillet",
+          "healthycook5": "Healthy Cook Dehydrate",
+          "healthycook6": "Healthy Cook Bread Proof",
+          "upper_healthycook1": "Healthy Cook Baked Potato",
+          "upper_healthycook2": "Healthy Cook Grilled Chicken",
+          "upper_healthycook3": "Healthy Cook Salmon Steak",
+          "upper_healthycook4": "Healthy Cook White Fish Fillet",
+          "lower_healthycook1": "Healthy Cook Baked Potato",
+          "lower_healthycook2": "Healthy Cook Grilled Chicken",
+          "lower_healthycook3": "Healthy Cook Salmon Steak",
+          "lower_healthycook4": "Healthy Cook White Fish Fillet"
+        }
       }
     },
     "sensor": {
@@ -1157,7 +1352,7 @@
         "name": "Air sensing state"
       },
       "alarm_code": {
-        "name": "Alarm code"
+        "name": "Alarm Code"
       },
       "auto_ventilation_action": {
         "name": "Auto ventilation action"
@@ -1184,9 +1379,9 @@
         "name": "Coffee brew status"
       },
       "connection_mode": {
-        "name": "Connection mode",
+        "name": "Connection Mode",
         "state": {
-          "observe": "Push (observe)",
+          "observe": "Push (Observe)",
           "poll": "Polling"
         }
       },
@@ -1276,10 +1471,10 @@
         "name": "Temperature"
       },
       "food_probe_temp": {
-        "name": "Food probe"
+        "name": "Temperature Probe"
       },
       "food_probe_setpoint": {
-        "name": "Food probe target"
+        "name": "Temperature Probe Target"
       },
       "current_temperature_c": {
         "name": "Temperature"
@@ -1291,7 +1486,7 @@
         }
       },
       "diagnosis_status": {
-        "name": "Diagnosis status",
+        "name": "Diagnosis Status",
         "state": {
           "ready": "Ready"
         }
@@ -1324,16 +1519,16 @@
         "name": "Energy"
       },
       "usage_runtime_hours": {
-        "name": "Running time"
+        "name": "Running Time"
       },
       "energy_last_month_kwh": {
-        "name": "Energy (last month)"
+        "name": "Energy (Last Month)"
       },
       "energy_saved_kwh": {
-        "name": "Energy saved"
+        "name": "Energy Saved"
       },
       "energy_this_month_kwh": {
-        "name": "Energy (this month)"
+        "name": "Energy (This Month)"
       },
       "fan_direction": {
         "name": "Fan direction"
@@ -1354,7 +1549,7 @@
         "name": "Fine dust"
       },
       "finish_time": {
-        "name": "Estimated finish"
+        "name": "Estimated Finish"
       },
       "completion_minutes": {
         "name": "Completion time"
@@ -1411,10 +1606,10 @@
         "name": "Last operation source"
       },
       "operation_time_minutes": {
-        "name": "Operation time"
+        "name": "Operation Time"
       },
       "oven_state": {
-        "name": "Cavity state"
+        "name": "Cavity State"
       },
       "cavity_state": {
         "name": "Cavity state"
@@ -1432,7 +1627,7 @@
         "name": "Paired hood model"
       },
       "power_energy_kwh": {
-        "name": "Power energy"
+        "name": "Power Energy"
       },
       "power_watts": {
         "name": "Power"
@@ -1467,16 +1662,16 @@
         }
       },
       "progress_percentage": {
-        "name": "Progress percent"
+        "name": "Progress Percent"
       },
       "selfcheck_error": {
-        "name": "Self-check error"
+        "name": "Self-Check Error"
       },
       "selfcheck_result": {
-        "name": "Self-check result"
+        "name": "Self-Check Result"
       },
       "selfcheck_status": {
-        "name": "Self-check status"
+        "name": "Self-Check Status"
       },
       "sterilize_last_time": {
         "name": "Sterilize last time"
@@ -1512,7 +1707,7 @@
         "name": "Last pour capacity"
       },
       "machine_state": {
-        "name": "Machine state",
+        "name": "Machine State",
         "state": {
           "idle": "Idle",
           "active": "Active",
@@ -1626,6 +1821,41 @@
       },
       "burner_pan_size": {
         "name": "Burner {number} pan size"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity} Alarm Code"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity} Temperature"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity} Diagnosis Status",
+        "state": {
+          "ready": "Ready"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity} Estimated Finish"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity} Operation Time"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity} Cavity State"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity} Progress Percent"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity} Machine State",
+        "state": {
+          "idle": "Idle",
+          "active": "Active",
+          "pause": "Paused"
+        }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity} Cook time"
       }
     },
     "switch": {
@@ -1726,7 +1956,7 @@
         "name": "Do not disturb"
       },
       "fast_preheat": {
-        "name": "Fast preheat"
+        "name": "Fast Preheat"
       },
       "favorite_capacity_enabled": {
         "name": "Favorite capacity"
@@ -1780,13 +2010,13 @@
         "name": "Mute once"
       },
       "natural_steam": {
-        "name": "Natural steam"
+        "name": "Natural Steam"
       },
       "energy_saving": {
-        "name": "Energy saving"
+        "name": "Energy Saving"
       },
       "cooktop_on_alert": {
-        "name": "Cooktop-on alert"
+        "name": "Cooktop-On Alert"
       },
       "power_switch": {
         "name": "Power"
@@ -2210,6 +2440,12 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Untimed cooking could not be confirmed. The oven may be running with a temporary cook timer. Check the oven before trying Start again. Details: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Cooking start could not be confirmed and was not retried. Check the appliance before trying again. Details: {error}"
+    },
     "command_refused": {
       "message": "The appliance refused the command to {href}: {error}"
     },
@@ -2290,6 +2526,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse isn't available on the selected cycle."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Enter whole hours from 0 to 9 and whole minutes from 0 to 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "The current cook time is unavailable. Wait for a device update before changing its hours or minutes."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "The combined cook time cannot exceed {max}."
     }
   },
   "selector": {
@@ -2312,7 +2557,9 @@
         "ice_maker": "Ice maker",
         "cubed_ice": "Cubed ice",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ice balls"
+        "whiskey_ice_ball": "Ice balls",
+        "oven_cavity_upper": "Upper",
+        "oven_cavity_whole": "Oven"
       }
     }
   }
