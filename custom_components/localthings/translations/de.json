@@ -2440,6 +2440,9 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Garen ohne Zeitbegrenzung konnte nicht bestätigt werden. Der Backofen läuft möglicherweise mit einer vorübergehend eingestellten Garzeit. Prüfe den Backofen, bevor du erneut Start drückst. Details: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Der Garstart konnte nicht bestätigt werden und wurde nicht wiederholt. Prüfen Sie das Gerät, bevor Sie es erneut versuchen. Details: {error}"
     },

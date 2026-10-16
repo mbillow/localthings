@@ -2440,6 +2440,9 @@
     "command_failed": {
       "message": "Príkaz pre {href} zlyhal aj po opätovnom pripojení: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Pečenie bez časového obmedzenia sa nepodarilo potvrdiť. Rúra môže bežať s dočasne nastaveným časom pečenia. Pred opätovným stlačením tlačidla Štart skontrolujte rúru. Podrobnosti: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Spustenie varenia sa nepodarilo potvrdiť a nebolo zopakované. Pred ďalším pokusom skontrolujte spotrebič. Podrobnosti: {error}"
     },

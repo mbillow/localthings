@@ -4,7 +4,7 @@ import asyncio
 from itertools import permutations
 
 import pytest
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -18,6 +18,7 @@ from custom_components.localthings.registry.subdevices import MAIN
 from tests.test_legacy_http_lower_cavity import (
     LOWER,
     PREFIX,
+    UPPER,
     _discovered,
     _fake_https,  # noqa: F401
     _FakeConnection,
@@ -182,23 +183,76 @@ async def test_concurrent_parts_keep_both_edits(hass):
     assert [number.native_value for number in numbers.values()] == [1, 30]
 
 
-async def test_running_part_write_preserves_other_component_and_cavity(hass):
-    lower = {
-        **LOWER,
-        "Mode": {**LOWER["Mode"], "modes": ["LowerBake"]},
-        "Operation": {**LOWER["Operation"], "state": "Run", "operationTime": "01:30:00"},
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+@pytest.mark.parametrize(
+    "initial,key,value,expected",
+    [
+        ("01:30:00", "cook_time_minutes", 45, "01:45:00"),
+        ("01:30:00", "cook_time_hours", 2, "02:30:00"),
+        ("00:02:00", "cook_time_minutes", 3, "00:03:00"),
+        ("00:02:00", "cook_time_minutes", 0, "00:00:00"),
+    ],
+)
+async def test_running_part_write_preserves_other_component_and_cavity(
+    hass, index, divided, mode, initial, key, value, expected
+):
+    base = LOWER if index else UPPER
+    running = {
+        **base,
+        "Mode": {**base["Mode"], "modes": [mode]},
+        "Operation": {**base["Operation"], "state": "Run", "operationTime": initial},
     }
-    coordinator = await _discovered(hass, _routes(lower=lower))
-    _, numbers = _numbers(coordinator, _lower(coordinator))
+    routes = _routes(divided=divided, **{"lower" if index else "upper": running})
+    coordinator = await _discovered(hass, routes)
+    cavity = _lower(coordinator) if index else MAIN
+    _, numbers = _numbers(coordinator, cavity)
+    remaining = coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))[
+        PREFIX + "remainingTime"
+    ]
     _FakeConnection.log.clear()
-    await numbers["cook_time_minutes"].async_set_native_value(45)
+    await numbers[key].async_set_native_value(value)
     writes = [(path, body) for method, path, body, _ in _FakeConnection.log if method == "PUT"]
     assert writes == [
         (
-            "/devices/1",
-            {"Device": {"Operation": {"operationTime": "01:45:00", "remainingTime": "01:45:00"}}},
+            f"/devices/{index}",
+            {"Device": {"Operation": {"operationTime": expected}}},
         )
     ]
+    assert (
+        coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))[PREFIX + "remainingTime"]
+        == remaining
+    )
+    assert not coordinator._held_cooks
+
+
+@pytest.mark.parametrize("value", [0, 3])
+async def test_running_timer_refusal_keeps_the_appliance_error_without_retry(hass, value):
+    lower = {
+        **LOWER,
+        "Mode": {**LOWER["Mode"], "modes": ["LowerBake"]},
+        "Operation": {**LOWER["Operation"], "state": "Run", "operationTime": "00:02:00"},
+    }
+    routes = _routes(lower=lower)
+    routes[("PUT", "/devices/1")] = (
+        400,
+        {"errorDescription": "the format of request json is wrong"},
+    )
+    coordinator = await _discovered(hass, routes)
+    _, numbers = _numbers(coordinator, _lower(coordinator))
+    _FakeConnection.log.clear()
+
+    with pytest.raises(HomeAssistantError) as err:
+        await numbers["cook_time_minutes"].async_set_native_value(value)
+
+    assert err.value.translation_key == "command_refused"
+    assert err.value.translation_placeholders == {
+        "href": "/operational/state/vs/1",
+        "error": "4.00 the format of request json is wrong",
+    }
+    assert _requests().count(("PUT", "/devices/1")) == 1
     assert not coordinator._held_cooks
 
 

@@ -465,14 +465,16 @@ def test_cycle_active_false_when_idle():
 # ---------------------------------------------------------------------------
 
 
-def test_cook_time_write_produces_hms():
+@pytest.mark.parametrize("board", [None, "TP2X_KS_WALLOVEN", "LCD_OV_WALL_20K"])
+def test_cook_time_write_produces_hms(board):
     desc = next(
         e
         for e in oven.OVEN_OPERATIONAL_STATE.entities
         if e.key == "cook_time" and isinstance(e, NumberDesc)
     )
-    assert desc.write_fn is not None
-    result = desc.write_fn(90, {})
+    assert desc.write_fn is oven._cook_time_write
+    resources = {"/information/vs/0": {"x.com.samsung.da.modelNum": board}} if board else {}
+    result = oven._cook_time_write(90, {}, resources=resources)
     assert result is not None
     path, body = result
     assert path == ["operational", "state", "vs", "0"]

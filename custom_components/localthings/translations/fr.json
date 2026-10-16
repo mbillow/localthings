@@ -2440,6 +2440,9 @@
     "command_failed": {
       "message": "La commande vers {href} a échoué même après reconnexion : {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "La cuisson sans limite de durée n’a pas pu être confirmée. Le four fonctionne peut-être avec une durée de cuisson temporaire. Vérifiez le four avant de relancer le démarrage. Détails : {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Le démarrage de la cuisson n’a pas pu être confirmé et n’a pas été réessayé. Vérifiez l’appareil avant de réessayer. Détails : {error}"
     },

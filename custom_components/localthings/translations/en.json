@@ -2440,6 +2440,9 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Untimed cooking could not be confirmed. The oven may be running with a temporary cook timer. Check the oven before trying Start again. Details: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Cooking start could not be confirmed and was not retried. Check the appliance before trying again. Details: {error}"
     },

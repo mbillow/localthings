@@ -7,7 +7,7 @@ Hardware evidence is from one NV51K7770SG/AA with `LCD_OV_WALL_16K`, the
 
 ## Cooking controls
 
-The measured start sequence loads settings without `Operation.state`, waits
+The timed start sequence loads settings without `Operation.state`, waits
 three seconds, then sends Run to the same cavity. The existing Start button
 performs the sequence; users do not need separate setup and start actions.
 See [the protocol measurements](oven-cycle-start.md#legacy-https-flex-duo-settings-then-run).
@@ -202,8 +202,49 @@ LowerConvectionRoast remains the earlier #572 fallback, but its physical menu
 availability is unverified. Broil Hi/Lo remains unverified and is excluded from
 remote choices; the carried-over whole-oven Healthycook1–4 mappings still need
 their own hardware evidence.
-A recorded omitted-duration Run refusal also remains unexplained;
-omission is not silently replaced with zero.
+Direct omitted/zero-duration Run is rejected on the measured board;
+see the untimed-start sequence below.
+
+## Untimed starts and running cook-time changes
+
+On `LCD_OV_WALL_16K`, Start with an omitted or zero cook duration now loads a
+one-minute timer, starts the selected cavity, confirms Run, then clears the
+timer by writing operationTime alone as `00:00:00`. Success requires a fresh
+read showing Run with both operationTime and remainingTime zero. The panel
+then displays None while cooking continues. Positive requested durations and
+other transport families retain their existing start behavior.
+
+Untimed preparation waits 0.5 seconds instead of three seconds. Confirmation
+reads immediately, with subsequent waits of 0.25, 0.25, 0.5 and 1 second. A
+fresh Smart Control check precedes each write, and the session lock and shared
+30-second request budget cover the complete sequence. Run and timer removal
+are each written at most once. A failure after attempting Run reports that
+the oven may be running with a temporary timer; it does not claim that untimed
+cooking succeeded. The error message is translated in all ten catalogs.
+
+Running cook-time edits on the same board also write operationTime alone;
+including remainingTime caused the measured appliance to reject the update.
+Other boards retain their existing payload. The owner confirmed Lower Bake
+changing from two to three minutes, then zero: zero removed the timer and
+displayed None without stopping the cook.
+
+On October 15, the owner confirmed automatic untimed Start on Lower Bake at
+400 F and Upper Convection Bake at 350 F using build `f1c8a82`, with both cook
+time controls set to zero. This is hardware evidence for both divided cavity
+paths on the measured NV51K7770S. The shared code has regression coverage in
+both the separate-device and combined-device layouts; the installation used
+for these hardware tests was the combined layout. Divider-removed automatic
+untimed Start has software coverage only.
+
+Regression coverage includes both Start buttons and the action, cavity routing,
+blank/zero/positive durations, fresh permission loss, refused or lost writes,
+delayed confirmation, mismatched timer readback, deadline exhaustion and no
+Start replay. Detailed protocol experiments remain on the
+[investigation branch](https://github.com/roweboat123/localthings/blob/investigate/oven-untimed-start/docs/investigations/legacy-oven-controls.md).
+
+This update passes all 3,366 tests (64.90 seconds) on Python 3.14.8,
+plus formatting, lint and type checks. All ten catalogs pass key and
+placeholder checks.
 
 ## Status and verification
 
@@ -502,8 +543,9 @@ status migration, Sound capability gating, diagnosis-button cleanup, reservoir
 states and partial-item verification. Passing tests do not resolve the reported
 Smart Control incident. Timer completion, the complete paired-timer entry-order
 and boundary matrix, simultaneous combinations beyond Upper Convection Bake
-with Lower Bake, all recipe starts and running adjustments remain hardware
-coverage gaps.
+with Lower Bake, all recipe starts, divider-removed automatic untimed starts
+and running adjustments beyond the Lower Bake timer changes above remain
+hardware coverage gaps.
 
 [manual]: https://images.thdstatic.com/catalog/pdfImages/99/9900cc56-8433-4e1b-ba18-4271b575791d.pdf
 [research]: https://github.com/roweboat123/localthings/tree/117eade8c5e0ffea1a22799e42ad4c6f27eb3b08/docs/investigations

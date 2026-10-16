@@ -2440,6 +2440,9 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "Koken zonder tijdslimiet kon niet worden bevestigd. De oven werkt mogelijk met een tijdelijk ingestelde kooktijd. Controleer de oven voordat je opnieuw op Start drukt. Details: {error}"
+    },
     "cook_start_unconfirmed": {
       "message": "Het starten van de bereiding kon niet worden bevestigd en is niet opnieuw geprobeerd. Controleer het apparaat voordat u het opnieuw probeert. Details: {error}"
     },

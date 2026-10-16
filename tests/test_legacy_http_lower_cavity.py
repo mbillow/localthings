@@ -403,7 +403,7 @@ class TestWrites:
         resources = {
             href.replace("/vs/1", "/vs/0"): rep for href, rep in _seed(transport, 1).items()
         }
-        plan = cook.plan_start(resources, "LowerBake", 350, None)
+        plan = cook.plan_start(resources, "LowerBake", 350, 300)
         _FakeConnection.log.clear()
 
         code, _ = transport.write(
@@ -416,7 +416,7 @@ class TestWrites:
         assert (method, path) == ("PUT", "/devices/1")
         assert body is not None
         assert body["Device"]["Mode"] == {"modes": ["LowerBake"]}
-        assert "Operation" not in body["Device"]
+        assert body["Device"]["Operation"] == {"operationTime": "00:05:00"}
         assert _FakeConnection.log[2][:3] == ("GET", "/devices/1/configuration", None)
         assert _FakeConnection.log[3][:3] == (
             "PUT",
@@ -1062,6 +1062,7 @@ async def test_same_mode_reselection_preserves_settings_after_a_refused_start(ha
                 "Device": {
                     "Mode": {"modes": [mode]},
                     "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                    "Operation": {"operationTime": "00:01:00"},
                 }
             },
         ),
@@ -1480,12 +1481,19 @@ async def test_live_mode_spec_takes_precedence_over_legacy_limits(hass):
     assert cook.mode_specs(resources)["UpperConvectionBake"].time_max == 7200
 
 
-@pytest.mark.parametrize("index,mode", [(0, "UpperConvectionBake"), (1, "LowerBake")])
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+@pytest.mark.parametrize(
+    "duration,wire_duration",
+    [(None, None), (0, "00:00:00"), (60, "00:01:00"), (300, "00:05:00")],
+)
 @pytest.mark.parametrize("use_button", [False, True])
-async def test_normal_start_keeps_the_lock_through_both_writes(
-    hass: HomeAssistant, monkeypatch, index, mode, use_button
+async def test_normal_start_keeps_the_lock_through_the_complete_sequence(
+    hass: HomeAssistant, monkeypatch, index, divided, mode, duration, wire_duration, use_button
 ):
-    coordinator = await _discovered(hass)
+    coordinator = await _discovered(hass, _UntimedStartRoutes(_routes(divided=divided)))
     cavity = _lower(coordinator) if index else MAIN
 
     def bound(key):
@@ -1494,11 +1502,23 @@ async def test_normal_start_keeps_the_lock_through_both_writes(
     if use_button:
         await coordinator.async_send_command(bound("oven_mode"), mode)
         await coordinator.async_send_command(bound("oven_setpoint"), 350)
-        await coordinator.async_send_command(bound("cook_time_minutes"), 5)
+        if duration is not None:
+            await coordinator.async_send_command(bound("cook_time_minutes"), duration // 60)
     _FakeConnection.log.clear()
 
+    transport = cast(LegacyHttpTransport, coordinator._session)
+    request = transport._request
+    untimed = duration in (None, 0)
+    settle_seconds = 0.5 if untimed else 3.0
+
+    def locked_request(*args, **kwargs):
+        assert coordinator._session_lock.locked()
+        return request(*args, **kwargs)
+
+    monkeypatch.setattr(coordinator._session, "_request", locked_request)
+
     def settle(seconds):
-        assert seconds == 3.0
+        assert seconds == settle_seconds
         assert coordinator._session_lock.locked()
         assert _requests() == [
             ("GET", f"/devices/{index}/configuration"),
@@ -1511,26 +1531,60 @@ async def test_normal_start_keeps_the_lock_through_both_writes(
     if use_button:
         await coordinator.async_send_command(bound("start_cooking"), "")
     else:
-        await coordinator.async_start_cooking(cavity, mode=mode, temperature=350, duration=300)
+        await coordinator.async_start_cooking(cavity, mode=mode, temperature=350, duration=duration)
 
-    sleep.assert_called_once_with(3.0)
-    assert [entry[:3] for entry in _FakeConnection.log] == [
+    sleep.assert_called_once_with(settle_seconds)
+    settings = {
+        "Mode": {"modes": [mode]},
+        "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+    }
+    settings["Operation"] = {"operationTime": "00:01:00" if untimed else wire_duration}
+    expected = [
         ("GET", f"/devices/{index}/configuration", None),
-        (
-            "PUT",
-            f"/devices/{index}",
-            {
-                "Device": {
-                    "Mode": {"modes": [mode]},
-                    "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
-                    "Operation": {"operationTime": "00:05:00"},
-                }
-            },
-        ),
+        ("PUT", f"/devices/{index}", {"Device": settings}),
         ("GET", f"/devices/{index}/configuration", None),
         ("PUT", f"/devices/{index}", {"Device": {"Operation": {"state": "Run"}}}),
     ]
+    if untimed:
+        expected.extend(
+            [
+                ("GET", f"/devices/{index}/operation", None),
+                ("GET", f"/devices/{index}/configuration", None),
+                (
+                    "PUT",
+                    f"/devices/{index}",
+                    {"Device": {"Operation": {"operationTime": "00:00:00"}}},
+                ),
+                ("GET", f"/devices/{index}/operation", None),
+            ]
+        )
+    assert [entry[:3] for entry in _FakeConnection.log] == expected
     assert not coordinator._session_lock.locked()
+
+
+class _UntimedStartRoutes(dict):
+    """Report Run and the last written timer only after a Run request."""
+
+    def get(self, key, default=None):
+        if isinstance(key, str) and key.endswith("/operation"):
+            path = key.removesuffix("/operation")
+            operations = [
+                body["Device"].get("Operation", {})
+                for method, target, body, _ in _FakeConnection.log
+                if method == "PUT" and target == path and body is not None
+            ]
+            if any(op.get("state") == "Run" for op in operations):
+                duration = next(
+                    op["operationTime"] for op in reversed(operations) if "operationTime" in op
+                )
+                return 200, {
+                    "Operation": {
+                        "state": "Run",
+                        "operationTime": duration,
+                        "remainingTime": duration,
+                    }
+                }
+        return super().get(key, default)
 
 
 @pytest.mark.parametrize("index", [0, 1])
