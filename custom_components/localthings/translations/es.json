@@ -1995,6 +1995,21 @@
       },
       "burner_pan_size": {
         "name": "Tamaño del recipiente de la zona {number}"
+      },
+      "cooktop_timer_remaining": {
+        "name": "Tiempo restante del temporizador"
+      },
+      "cooktop_timer_status": {
+        "name": "Estado del temporizador"
+      },
+      "cooktop_ring_size": {
+        "name": "Tamaño de la zona {number}",
+        "state": {
+          "idle": "Inactiva",
+          "single": "Simple",
+          "dual": "Doble",
+          "triple": "Triple"
+        }
       }
     },
     "switch": {

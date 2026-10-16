@@ -3,6 +3,8 @@
 Burners keep their protocol slots (0, 1, 3, 4, 5); pan sizes occur only on 3 and 5.
 """
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 
@@ -54,8 +56,8 @@ def test_per_zone_power_level_hot_surface_and_state():
 
 def test_only_slots_3_and_5_report_pan_size():
     state = _state()
-    assert state["burner_3_pan_size"] == "Idle"
-    assert state["burner_5_pan_size"] == "Single"
+    assert state["burner_3_pan_size"] == "idle"
+    assert state["burner_5_pan_size"] == "single"
     assert "burner_0_pan_size" not in state
     assert "burner_1_pan_size" not in state
     assert "burner_4_pan_size" not in state
@@ -78,7 +80,12 @@ def test_burner_entities_keep_their_slot_numbers(name):
             key = f"burner_{number}_{reading}"
             entity = LocalThingsEntity(coordinator, by_key[key])
             assert entity.translation_placeholders == {"number": str(number)}
-            assert entity.translation_key == f"burner_{reading}"
+            expected_translation = (
+                "cooktop_ring_size"
+                if name == NAME and reading == "pan_size"
+                else f"burner_{reading}"
+            )
+            assert entity.translation_key == expected_translation
             assert entity.unique_id == f"localthings_TEST-SERIAL_{key}"
 
 
@@ -111,7 +118,7 @@ def test_legacy_mode_options_surface():
     assert state["cooktop_paused"] is False
     assert state["cooktop_sync_control"] is False
     assert state["cooktop_flex_coil"] == "0"
-    assert state["main_timer_current"] == 0
+    assert "main_timer_current" not in state
     assert state["main_timer_set"] == 0
     assert state["main_timer_state"] == "Ready"
 
@@ -169,7 +176,7 @@ def test_legacy_envelopes_bind_to_cooktop_sensors():
     assert state["cooktop_device_type"] == "NV9300K-/AA2"
     assert state["burner_0_state"] == "Ready"
     assert state["burner_1_state"] == "Ready"
-    assert state["burner_3_pan_size"] == "Idle"
+    assert state["burner_3_pan_size"] == "idle"
     assert state["main_timer_set"] == 0
     assert state["diagnosis_status"] == "ready"
     assert state["alarm_code"] == "none"
@@ -177,3 +184,85 @@ def test_legacy_envelopes_bind_to_cooktop_sensors():
     assert "cooktop_sync_control" not in state
     assert "cooktop_flex_coil" not in state
     assert "diagnosis_start" not in state
+
+
+@pytest.mark.parametrize(
+    ("capture", "minutes", "timer_state", "size_3", "size_5", "active"),
+    [
+        ("timer_10_minutes", 10, "Run", "single", "single", False),
+        ("timer_8_minutes", 8, "Run", "single", "single", False),
+        ("timer_alert_snapshot", 0, "Ready", "single", "single", False),
+        ("burner_3_triple_ready", 0, "Ready", "triple", "single", False),
+        ("burner_3_triple_running", 0, "Ready", "triple", "single", True),
+        ("burner_5_dual_running", 0, "Ready", "single", "dual", True),
+    ],
+)
+def test_captured_timer_and_ring_changes(capture, minutes, timer_state, size_3, size_5, active):
+    observations = json.loads(
+        (Path(__file__).parent / "fixtures/legacy_cooktop_observations.json").read_text()
+    )
+    resources = _load_device(NAME)
+    resources["/mode/vs/0"]["x.com.samsung.da.options"] = observations[capture]
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    assert len({b.desc.key for b in bound}) == len(bound)
+    state = flatten(bound, resources)
+    assert state["main_timer_set"] == minutes
+    assert "main_timer_current" not in state
+    assert state["main_timer_state"] == timer_state
+    assert state["burner_3_pan_size"] == size_3
+    assert state["burner_5_pan_size"] == size_5
+    assert state["any_burner_active"] is active
+    assert state["cooktop_flex_coil"] == "0"
+
+
+@pytest.mark.parametrize("name", [NAME, "cooktop", "cooktop_nv9300k", "cooktop_nv8000t"])
+def test_timer_units_only_for_verified_legacy_family(name):
+    resources = _load_device(name)
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    descriptions = {b.desc.key: b.desc for b in bound}
+    timer = cast(SensorDesc, descriptions["main_timer_set"])
+    if "cooktop_paused" in descriptions:
+        assert descriptions["cooktop_paused"].enabled_default is (name != NAME)
+    if name == NAME:
+        assert (timer.unit, timer.device_class, timer.translation_key) == (
+            "min",
+            "duration",
+            "cooktop_timer_remaining",
+        )
+        assert timer.enabled_default is True
+        assert "main_timer_current" not in descriptions
+    else:
+        duplicate = cast(SensorDesc, descriptions["main_timer_current"])
+        assert timer.unit is None
+        assert timer.device_class is None
+        assert timer.translation_key is None
+        assert duplicate.entity_category is None
+        assert duplicate.enabled_default is False
+
+
+def test_unknown_ring_size_and_finished_status_are_not_discarded():
+    resources = _load_device(NAME)
+    options = resources["/mode/vs/0"]["x.com.samsung.da.options"]
+    options[options.index("PanSize3_Idle")] = "PanSize3_FutureSize"
+    options[options.index("MainTimerState_Ready")] = "MainTimerState_Finished"
+    reg = resolve(resources)
+    assert reg is not None
+    state = flatten(discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
+    assert state["burner_3_pan_size"] == "FutureSize"
+    assert state["main_timer_state"] == "Finished"
+
+
+def test_legacy_mode_stub_keeps_typed_timer_sensors():
+    resources = _load_device(NAME)
+    resources["/mode/vs/0"] = {"href": "/mode/vs/0"}
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    timers = [b.desc for b in bound if b.desc.key == "main_timer_set"]
+    assert len(timers) == 1
+    assert cast(SensorDesc, timers[0]).unit == "min"
+    assert all(b.desc.key != "main_timer_current" for b in bound)

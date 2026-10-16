@@ -1,0 +1,46 @@
+{
+  "/power/vs/0": {
+    "x.com.samsung.da.power": "Off"
+  },
+  "/mode/vs/0": {
+    "x.com.samsung.da.options": [
+      "DeviceType_NULL",
+      "BTState_Idle",
+      "Bluetooth_Off",
+      "FanSpeed_0",
+      "Lamp_Off",
+      "ShutOffTimerSet_0",
+      "ShutOffTimerCurrent_0",
+      "ShutOffTimerState_Ready"
+    ]
+  },
+  "/remotectrl/vs/0": {
+    "x.com.samsung.da.remoteControlEnabled": true
+  },
+  "/information/vs/0": {
+    "x.com.samsung.da.Versions": [
+      {
+        "x.com.samsung.da.id": "0",
+        "x.com.samsung.da.newVersionAvailable": false,
+        "x.com.samsung.da.number": "01031A200320",
+        "x.com.samsung.da.type": "Software"
+      },
+      {
+        "x.com.samsung.da.id": "1",
+        "x.com.samsung.da.newVersionAvailable": false,
+        "x.com.samsung.da.number": "16081900,16071400",
+        "x.com.samsung.da.type": "Firmware"
+      }
+    ],
+    "x.com.samsung.da.description": "TP6X_CT_16K_HOOD",
+    "x.com.samsung.da.deviceSubType": "Cooktop",
+    "x.com.samsung.da.manufacturer": "Samsung Electronics",
+    "x.com.samsung.da.modelNum": "TP6X_CT_16K|40403241|"
+  },
+  "/alarms/vs/0": {
+    "x.com.samsung.da.items": []
+  },
+  "/connected/vs/0": {
+    "x.com.samsung.da.connected": "On"
+  }
+}

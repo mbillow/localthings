@@ -1626,6 +1626,21 @@
       },
       "burner_pan_size": {
         "name": "Kochzone {number} Topfgröße"
+      },
+      "cooktop_timer_remaining": {
+        "name": "Verbleibende Timerzeit"
+      },
+      "cooktop_timer_status": {
+        "name": "Timerstatus"
+      },
+      "cooktop_ring_size": {
+        "name": "Kochzonengröße {number}",
+        "state": {
+          "idle": "Inaktiv",
+          "single": "Einfach",
+          "dual": "Zweifach",
+          "triple": "Dreifach"
+        }
       }
     },
     "switch": {

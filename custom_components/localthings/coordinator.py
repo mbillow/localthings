@@ -1860,8 +1860,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._skipped_subdevices = skipped
         for skip in skipped:
             self._log.info(
-                "subdevice %s (%s) answered its seed but produced no live "
-                "primary state; not materialized (hrefs=%s)",
+                "subdevice %s (%s) answered its seed but failed the "
+                "liveness check; not materialized (hrefs=%s)",
                 skip.subdevice.key,
                 skip.subdevice.kind,
                 list(skip.hrefs),

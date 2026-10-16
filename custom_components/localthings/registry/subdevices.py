@@ -32,6 +32,9 @@ meter exclusion (issue #214) covers a second failure mode: an unused slot
 reporting a populated whole-appliance energy counter, which is the
 appliance's own bookkeeping, not evidence of a second indoor unit -- see
 `_has_live_primary_entity`.
+
+The captured unpaired legacy cooktop hood slot is also excluded: it reports
+constant power and remote-control values despite having no paired hardware.
 """
 
 from __future__ import annotations
@@ -601,6 +604,7 @@ def discover_partitioned(
     # fully loaded; adapter.py imports discovery.py, so the same applies to
     # flatten()/_key().
     from .adapter import flatten
+    from .capabilities.cooktop import is_empty_legacy_hood_slot
     from .discovery import discover
 
     # Same computation canonical_view does for MAIN -- reuse it rather than
@@ -631,7 +635,11 @@ def discover_partitioned(
         )
         probe_bound = discover(view, su_caps, su_pats, subdevice=su)
         probe_state = flatten(probe_bound, resources)
-        if _has_live_primary_entity(probe_bound, probe_state):
+        # An unpaired NZ36K7570R hood slot reports constant power and remote
+        # status, which otherwise pass the generic liveness gate.
+        if not is_empty_legacy_hood_slot(view) and _has_live_primary_entity(
+            probe_bound, probe_state
+        ):
             materialized.append(su)
             bound = bound + discover(
                 view,
