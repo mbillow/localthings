@@ -6,6 +6,7 @@ from custom_components.localthings.registry.by_type import for_device_by_model
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
+    BinarySensorDesc,
     NumberDesc,
     SelectDesc,
     SwitchDesc,
@@ -227,6 +228,32 @@ def test_oven_mode_options_drop_homecare_wizard():
     assert desc.write_fn("HOMECARE_WIZARD_V2", resources["/mode/vs/0"]) is None
 
 
+@pytest.mark.parametrize("model", ["LCD_OV_WALL_16K|example", "LCD_OV_WALL_18K", "OTHER_OVEN"])
+def test_only_lcd_wall_16k_hides_excluded_remote_commands(model):
+    desc = _oven_mode_desc()
+    local_modes = ["Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"]
+    cooking_modes = ["Bake", "KeepWarm", "UpperConvectionBake", "Healthycook5", "Healthycook6"]
+    live = ["NoOperation", *local_modes, *cooking_modes]
+    rep = {"x.com.samsung.da.supportedModes": live, "x.com.samsung.da.modes": ["SelfClean"]}
+    resources = {
+        "/mode/vs/0": rep,
+        "/information/vs/0": {"x.com.samsung.da.modelNum": model},
+    }
+
+    hidden = model.startswith("LCD_OV_WALL_16K|")
+    assert desc.options(resources) == (["NoOperation", *cooking_modes] if hidden else live)
+    for mode in local_modes:
+        assert (desc.write_fn(mode, rep, resources=resources) is None) == hidden
+    assert desc.write_fn("Bake", rep, resources=resources) is not None
+    assert rep["x.com.samsung.da.supportedModes"] == live
+    assert desc.value_fn(rep["x.com.samsung.da.modes"]) == "SelfClean"
+
+    # Missing live modes must not reintroduce Broil through the static fallback.
+    fallback = {**resources, "/mode/vs/0": {}}
+    assert ("Broil" not in desc.options(fallback)) == hidden
+    assert (desc.write_fn("Broil", {}, resources=fallback) is None) == hidden
+
+
 def _finish_desc():
     return next(e for e in oven.OVEN_OPERATIONAL_STATE.entities if e.key == "finish_time")
 
@@ -349,6 +376,32 @@ def _mode_rep(*extra_opts):
     }
 
 
+@pytest.mark.parametrize(
+    "options,expected",
+    [
+        (["waterTankInSwitch_On", "waterTankOutSwitch_Off"], False),
+        (["waterTankInSwitch_Off", "waterTankOutSwitch_On", "Sound_On"], True),
+        (["waterTankInSwitch_On", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_Off", "waterTankOutSwitch_Off"], None),
+        (["waterTankInSwitch_On"], None),
+        (["waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_Unknown", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_On", "waterTankInSwitch_Off", "waterTankOutSwitch_On"], None),
+        (["waterTankInSwitch_On", "waterTankOutSwitch_On", "waterTankOutSwitch_Off"], None),
+        ([None, 1, {}], None),
+        ([], None),
+        (None, None),
+        ("waterTankInSwitch_On", None),
+        ({"waterTankInSwitch_On": True}, None),
+        (42, None),
+    ],
+)
+def test_reservoir_reports_only_confirmed_position_pairs(options, expected):
+    desc = next(e for e in oven.OVEN_MODE.entities if e.key == "reservoir_open")
+    assert isinstance(desc, BinarySensorDesc)
+    assert desc.value_fn(options) is expected
+
+
 def test_lamp_write_is_single_token():
     desc = next(e for e in oven.OVEN_MODE.entities if e.key == "lamp" and isinstance(e, SwitchDesc))
     assert desc.write_fn is not None
@@ -412,14 +465,16 @@ def test_cycle_active_false_when_idle():
 # ---------------------------------------------------------------------------
 
 
-def test_cook_time_write_produces_hms():
+@pytest.mark.parametrize("board", [None, "TP2X_KS_WALLOVEN", "LCD_OV_WALL_20K"])
+def test_cook_time_write_produces_hms(board):
     desc = next(
         e
         for e in oven.OVEN_OPERATIONAL_STATE.entities
         if e.key == "cook_time" and isinstance(e, NumberDesc)
     )
-    assert desc.write_fn is not None
-    result = desc.write_fn(90, {})
+    assert desc.write_fn is oven._cook_time_write
+    resources = {"/information/vs/0": {"x.com.samsung.da.modelNum": board}} if board else {}
+    result = oven._cook_time_write(90, {}, resources=resources)
     assert result is not None
     path, body = result
     assert path == ["operational", "state", "vs", "0"]

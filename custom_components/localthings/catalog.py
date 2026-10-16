@@ -24,7 +24,10 @@ state or a course table is a one-file change, and the two can't drift.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+
+from .const import DOMAIN
 
 # Read at import, not lazily: custom integrations are imported in an executor
 # thread, so this stays off the event loop no matter who asks first.
@@ -48,3 +51,26 @@ def translated_states(platform: str, translation_key: str) -> frozenset[str]:
     """
     entry = _ENTITY_CATALOG.get(platform, {}).get(translation_key)
     return frozenset(entry.get("state", ())) if entry else frozenset()
+
+
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def translation_state(value: str, known: frozenset[str]) -> str | None:
+    """Normalize a vendor option only when the catalog contains that state."""
+    direct = value.lower().replace(" ", "_")
+    if direct in known:
+        return direct
+    snake = _CAMEL_BOUNDARY_RE.sub("_", value).lower().replace(" ", "_")
+    return snake if snake in known else None
+
+
+def translated_state_label(
+    platform: str, translation_key: str, value: str, strings: dict[str, str]
+) -> str:
+    """Use the same state label in errors as in a select, with an English fallback."""
+    state = translation_state(value, translated_states(platform, translation_key))
+    if state is None:
+        return value
+    key = f"component.{DOMAIN}.entity.{platform}.{translation_key}.state.{state}"
+    return strings.get(key, _ENTITY_CATALOG[platform][translation_key]["state"][state])

@@ -13,9 +13,19 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
+from .oven_device import (
+    CAVITY_KEYS,
+    OPTION_KEYS,
+    PROBE_KEYS,
+    cavity_label,
+    divider_state,
+    is_shared_duplicate,
+    shared_keys,
+)
 from .registry.adapter import _key
 from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
+from .registry.subdevices import MAIN
 
 
 def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> bool:
@@ -43,6 +53,10 @@ def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> boo
     (issue #295) the live cache is still empty, and judging existence
     against it would filter every rehydrated entity away.
     """
+    if is_shared_duplicate(
+        bound, getattr(coordinator, "combined_oven_lower", None), coordinator.discovery_resources
+    ):
+        return False
     rep = coordinator.discovery_resources.get(bound.href)
     if rep is None:
         return False
@@ -114,6 +128,19 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._bound = bound
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
+        lower = getattr(coordinator, "combined_oven_lower", None)
+        shared = (
+            shared_keys(coordinator.discovery_resources, lower)
+            if lower is not None
+            else frozenset()
+        )
+        self._oven_cavity = (
+            lower is not None
+            and bound.subdevice in (MAIN, lower)
+            and bound.desc.key in CAVITY_KEYS | (OPTION_KEYS - shared)
+            # NV51K7770S reports its appliance's single probe through MAIN.
+            and not (bound.subdevice == MAIN and bound.desc.key in PROBE_KEYS and shared)
+        )
         if bound.desc.translation_placeholders is not None:
             self._attr_translation_placeholders = dict(bound.desc.translation_placeholders)
         elif bound.desc.use_instance_name:
@@ -122,6 +149,8 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
                     _instance_display_name(bound, self._state_key), coordinator.instance_names
                 )
             }
+        if self._oven_cavity:
+            self._update_cavity_name()
 
         # _attr_name is deliberately left unset: HA gives an explicitly-set
         # name precedence over the translation catalog, so setting it here
@@ -131,6 +160,18 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         raw_cat = bound.desc.entity_category
         self._attr_entity_category = EntityCategory(raw_cat) if raw_cat else None
         self._attr_entity_registry_enabled_default = bound.desc.enabled_default
+
+    def _update_cavity_name(self) -> bool:
+        label = cavity_label(self.coordinator, self._bound.subdevice)
+        name = self.coordinator.instance_names.get(
+            f"oven_cavity_{label}",
+            {"upper": "Upper", "lower": "Lower", "whole": "Oven"}[label],
+        )
+        if self.translation_placeholders.get("cavity") == name:
+            return False
+        self._attr_translation_placeholders = {**self.translation_placeholders, "cavity": name}
+        self.__dict__.pop("name", None)
+        return True
 
     @property
     def translation_key(self) -> str | None:
@@ -150,16 +191,25 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         """
         tk = self._bound.desc.translation_key
         if callable(tk):
-            return tk(
-                self._resources or self.coordinator.discovery_canonical(self._bound.subdevice)
-            )
-        return tk if tk is not None else self._bound.desc.key
+            key = tk(self._resources or self.coordinator.discovery_canonical(self._bound.subdevice))
+        else:
+            key = tk if tk is not None else self._bound.desc.key
+        return f"oven_cavity_{key}" if self._oven_cavity and key is not None else key
 
     @callback
     def _handle_coordinator_update(self) -> None:
         # The frontend translates state from the registry's copy of the key,
         # which HA never refreshes on its own (issue #531).
         entry = self.registry_entry
+        if (
+            self._oven_cavity
+            and self._update_cavity_name()
+            and entry is not None
+            and isinstance(name := self.name, str)
+        ):
+            entry = self.registry_entry = er.async_get(self.hass).async_update_entity(
+                entry.entity_id, original_name=name
+            )
         if (
             entry is not None
             and callable(self._bound.desc.translation_key)
@@ -180,6 +230,21 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         could leak into this entity's view. For MAIN this is exactly
         `coordinator.last_resources`."""
         return self.coordinator.canonical_resources(self._bound.subdevice)
+
+    @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        if (
+            self._oven_cavity
+            and self._bound.subdevice == self.coordinator.combined_oven_lower
+            and divider_state(self.coordinator) == "Off"
+        ):
+            return False
+        available_fn = self._bound.desc.available_fn
+        return available_fn is None or available_fn(
+            self.coordinator.resource(self._bound.href), self._resources
+        )
 
     @property
     def device_info(self) -> DeviceInfo:

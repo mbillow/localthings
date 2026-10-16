@@ -232,12 +232,18 @@ _POWER_ON_OFF_FIELD = "x.com.samsung.da.isModelSettingPowerOnOff"
 _WITHOUT_SC_FIELD = "x.com.samsung.da.isModelSettingWithoutSC"
 
 
+def is_lcd_wall_oven(resources: dict) -> bool:
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return board == "LCD_OV_WALL" or board.startswith("LCD_OV_WALL_")
+
+
 def model_allows_power_on_off(resources: dict) -> bool:
-    """True unless firmware explicitly declares remote power on/off
-    unsupported. isModelSettingPowerOnOff is "false" on many laundry
-    boards: /power/0 and /power/vs/0 still report state, but CoAP writes
-    are ignored. Absent setinfo (non-laundry families) keeps the writable
-    switch."""
+    """Power is read-only on LCD_OV_WALL (#572) and laundry boards whose
+    isModelSettingPowerOnOff flag is false; other boards keep the switch.
+    """
+    if is_lcd_wall_oven(resources):
+        return False
     setinfo = resources.get(_SETINFO_HREF)
     if setinfo is None:
         return True

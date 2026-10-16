@@ -286,6 +286,12 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "cook_untimed_unconfirmed": {
+      "message": "No se pudo confirmar la cocción sin límite de tiempo. Es posible que el horno esté funcionando con un tiempo de cocción temporal. Comprueba el horno antes de volver a pulsar Iniciar. Detalles: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "No se pudo confirmar el inicio de la cocción y no se volvió a intentar. Compruebe el aparato antes de intentarlo de nuevo. Detalles: {error}"
+    },
     "command_refused": {
       "message": "El electrodoméstico rechazó el comando para {href}: {error}"
     },
@@ -366,6 +372,18 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "El aclarado extra no está disponible en el ciclo seleccionado."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Introduzca horas enteras de 0 a 9 y minutos enteros de 0 a 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "El tiempo de cocción actual no está disponible. Espere a que se actualice el dispositivo antes de cambiar las horas o los minutos."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "El tiempo total de cocción no puede superar {max}."
+    },
+    "cooking_cavity_not_found": {
+      "message": "Este electrodoméstico no dispone de un par de zonas combinadas. Selecciona el dispositivo existente de la zona correspondiente."
     }
   },
   "entity": {
@@ -423,6 +441,9 @@
       },
       "device_active": {
         "name": "Dispositivo activo"
+      },
+      "reservoir_open": {
+        "name": "Depósito de agua"
       },
       "door_open": {
         "name": "Puerta"
@@ -518,7 +539,11 @@
         "name": "Doble consigna activada"
       },
       "divider": {
-        "name": "Divisor"
+        "name": "Divisor",
+        "state": {
+          "on": "Insertado",
+          "off": "Retirado"
+        }
       },
       "wrinkle_prevent_active": {
         "name": "Anti-arrugas activo"
@@ -528,6 +553,24 @@
       },
       "cooktop_paused": {
         "name": "En pausa"
+      },
+      "oven_cavity_cycle_active": {
+        "name": "{cavity}: En funcionamiento"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Bloqueo infantil"
+      },
+      "oven_cavity_reservoir_open": {
+        "name": "{cavity}: Depósito de agua"
+      },
+      "oven_cavity_door_open": {
+        "name": "{cavity}: Puerta"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Energía"
+      },
+      "oven_cavity_remote_control": {
+        "name": "{cavity}: Control inteligente"
       }
     },
     "button": {
@@ -578,6 +621,18 @@
       },
       "start_cooking": {
         "name": "Iniciar cocción"
+      },
+      "oven_cavity_stop": {
+        "name": "{cavity}: Detener"
+      },
+      "oven_cavity_start_cooking": {
+        "name": "{cavity}: Iniciar"
+      },
+      "oven_cavity_diagnosis_start": {
+        "name": "{cavity}: Iniciar diagnóstico"
+      },
+      "oven_cavity_sync_clock": {
+        "name": "{cavity}: Sincronizar reloj"
       }
     },
     "climate": {
@@ -633,6 +688,9 @@
     "light": {
       "lamp": {
         "name": "Lámpara"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Lámpara"
       }
     },
     "number": {
@@ -671,6 +729,24 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura objetivo de zona"
+      },
+      "cook_time_hours": {
+        "name": "Horas de cocción"
+      },
+      "cook_time_minutes": {
+        "name": "Minutos de cocción"
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Tiempo de cocción"
+      },
+      "oven_cavity_oven_setpoint": {
+        "name": "{cavity}: Punto de ajuste"
+      },
+      "oven_cavity_cook_time_hours": {
+        "name": "{cavity}: Horas de cocción"
+      },
+      "oven_cavity_cook_time_minutes": {
+        "name": "{cavity}: Minutos de cocción"
       }
     },
     "select": {
@@ -1019,7 +1095,24 @@
           "steam_roast": "Asar al vapor",
           "upper_steam_bake": "Hornear al vapor (superior)",
           "descale": "Descalcificación",
-          "drain": "Vaciado de agua"
+          "drain": "Vaciado de agua",
+          "lower_convection_roast": "Asar por convección (inferior)",
+          "autocook": "Cocción automática",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cocción saludable 1",
+          "healthycook2": "Cocción saludable 2",
+          "healthycook3": "Cocción saludable 3",
+          "healthycook4": "Cocción saludable 4",
+          "healthycook5": "Cocción saludable 5",
+          "healthycook6": "Cocción saludable 6",
+          "upper_healthycook1": "Cocción saludable 1 (superior)",
+          "upper_healthycook2": "Cocción saludable 2 (superior)",
+          "upper_healthycook3": "Cocción saludable 3 (superior)",
+          "upper_healthycook4": "Cocción saludable 4 (superior)",
+          "lower_healthycook1": "Cocción saludable 1 (inferior)",
+          "lower_healthycook2": "Cocción saludable 2 (inferior)",
+          "lower_healthycook3": "Cocción saludable 3 (inferior)",
+          "lower_healthycook4": "Cocción saludable 4 (inferior)"
         }
       },
       "operating_mode": {
@@ -1492,6 +1585,150 @@
           "low": "Baja",
           "high": "Alta"
         }
+      },
+      "oven_mode_lcd_wall_16k": {
+        "name": "Modo de cocción",
+        "state": {
+          "no_operation": "Sin operación",
+          "bake": "Hornear",
+          "broil": "Gratinar",
+          "convection": "Convección",
+          "convection_bake": "Hornear por convección",
+          "convection_broil": "Gratinar por convección",
+          "frozen_pizza_plus": "Pizza congelada+",
+          "slow_cook": "Cocción lenta",
+          "plate_warm": "Calentar platos",
+          "air_fry": "Freidora de aire",
+          "convection_roast": "Asar por convección",
+          "keep_warm": "Mantener caliente",
+          "bread_proof": "Fermentar masa",
+          "dehydrate": "Deshidratar",
+          "self_clean": "Autolimpieza",
+          "air_fryer": "Freidora de aire",
+          "upper_broil": "Gratinar",
+          "upper_convection_bake": "Hornear por convección",
+          "upper_convection_roast": "Asar por convección",
+          "lower_bake": "Hornear",
+          "lower_convection_bake": "Hornear por convección",
+          "steam_bake": "Hornear al vapor",
+          "steam_roast": "Asar al vapor",
+          "upper_steam_bake": "Hornear al vapor",
+          "descale": "Descalcificación",
+          "drain": "Vaciado de agua",
+          "lower_convection_roast": "Asar por convección",
+          "autocook": "Cocción automática",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cocción saludable Patata al horno",
+          "healthycook2": "Cocción saludable Pollo a la parrilla",
+          "healthycook3": "Cocción saludable Filete de salmón",
+          "healthycook4": "Cocción saludable Filete de pescado blanco",
+          "healthycook5": "Cocción saludable Deshidratar",
+          "healthycook6": "Cocción saludable Fermentar masa",
+          "upper_healthycook1": "Cocción saludable Patata al horno",
+          "upper_healthycook2": "Cocción saludable Pollo a la parrilla",
+          "upper_healthycook3": "Cocción saludable Filete de salmón",
+          "upper_healthycook4": "Cocción saludable Filete de pescado blanco",
+          "lower_healthycook1": "Cocción saludable Patata al horno",
+          "lower_healthycook2": "Cocción saludable Pollo a la parrilla",
+          "lower_healthycook3": "Cocción saludable Filete de salmón",
+          "lower_healthycook4": "Cocción saludable Filete de pescado blanco"
+        }
+      },
+      "oven_cavity_oven_mode": {
+        "name": "{cavity}: Modo de cocción",
+        "state": {
+          "no_operation": "Sin operación",
+          "bake": "Hornear",
+          "broil": "Gratinar",
+          "convection": "Convección",
+          "convection_bake": "Hornear por convección",
+          "convection_broil": "Gratinar por convección",
+          "frozen_pizza_plus": "Pizza congelada+",
+          "slow_cook": "Cocción lenta",
+          "plate_warm": "Calentar platos",
+          "air_fry": "Freidora de aire",
+          "convection_roast": "Asar por convección",
+          "keep_warm": "Mantener caliente",
+          "bread_proof": "Fermentar masa",
+          "dehydrate": "Deshidratar",
+          "self_clean": "Autolimpieza",
+          "air_fryer": "Freidora de aire",
+          "upper_broil": "Gratinar (superior)",
+          "upper_convection_bake": "Hornear por convección (superior)",
+          "upper_convection_roast": "Asar por convección (superior)",
+          "lower_bake": "Hornear (inferior)",
+          "lower_convection_bake": "Hornear por convección (inferior)",
+          "steam_bake": "Hornear al vapor",
+          "steam_roast": "Asar al vapor",
+          "upper_steam_bake": "Hornear al vapor (superior)",
+          "descale": "Descalcificación",
+          "drain": "Vaciado de agua",
+          "lower_convection_roast": "Asar por convección (inferior)",
+          "autocook": "Cocción automática",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cocción saludable 1",
+          "healthycook2": "Cocción saludable 2",
+          "healthycook3": "Cocción saludable 3",
+          "healthycook4": "Cocción saludable 4",
+          "healthycook5": "Cocción saludable 5",
+          "healthycook6": "Cocción saludable 6",
+          "upper_healthycook1": "Cocción saludable 1 (superior)",
+          "upper_healthycook2": "Cocción saludable 2 (superior)",
+          "upper_healthycook3": "Cocción saludable 3 (superior)",
+          "upper_healthycook4": "Cocción saludable 4 (superior)",
+          "lower_healthycook1": "Cocción saludable 1 (inferior)",
+          "lower_healthycook2": "Cocción saludable 2 (inferior)",
+          "lower_healthycook3": "Cocción saludable 3 (inferior)",
+          "lower_healthycook4": "Cocción saludable 4 (inferior)"
+        }
+      },
+      "oven_cavity_oven_mode_lcd_wall_16k": {
+        "name": "{cavity}: Modo de cocción",
+        "state": {
+          "no_operation": "Sin operación",
+          "bake": "Hornear",
+          "broil": "Gratinar",
+          "convection": "Convección",
+          "convection_bake": "Hornear por convección",
+          "convection_broil": "Gratinar por convección",
+          "frozen_pizza_plus": "Pizza congelada+",
+          "slow_cook": "Cocción lenta",
+          "plate_warm": "Calentar platos",
+          "air_fry": "Freidora de aire",
+          "convection_roast": "Asar por convección",
+          "keep_warm": "Mantener caliente",
+          "bread_proof": "Fermentar masa",
+          "dehydrate": "Deshidratar",
+          "self_clean": "Autolimpieza",
+          "air_fryer": "Freidora de aire",
+          "upper_broil": "Gratinar",
+          "upper_convection_bake": "Hornear por convección",
+          "upper_convection_roast": "Asar por convección",
+          "lower_bake": "Hornear",
+          "lower_convection_bake": "Hornear por convección",
+          "steam_bake": "Hornear al vapor",
+          "steam_roast": "Asar al vapor",
+          "upper_steam_bake": "Hornear al vapor",
+          "descale": "Descalcificación",
+          "drain": "Vaciado de agua",
+          "lower_convection_roast": "Asar por convección",
+          "autocook": "Cocción automática",
+          "pyro_free": "Pyro Free",
+          "healthycook1": "Cocción saludable Patata al horno",
+          "healthycook2": "Cocción saludable Pollo a la parrilla",
+          "healthycook3": "Cocción saludable Filete de salmón",
+          "healthycook4": "Cocción saludable Filete de pescado blanco",
+          "healthycook5": "Cocción saludable Deshidratar",
+          "healthycook6": "Cocción saludable Fermentar masa",
+          "upper_healthycook1": "Cocción saludable Patata al horno",
+          "upper_healthycook2": "Cocción saludable Pollo a la parrilla",
+          "upper_healthycook3": "Cocción saludable Filete de salmón",
+          "upper_healthycook4": "Cocción saludable Filete de pescado blanco",
+          "lower_healthycook1": "Cocción saludable Patata al horno",
+          "lower_healthycook2": "Cocción saludable Pollo a la parrilla",
+          "lower_healthycook3": "Cocción saludable Filete de salmón",
+          "lower_healthycook4": "Cocción saludable Filete de pescado blanco"
+        }
       }
     },
     "sensor": {
@@ -1642,10 +1879,10 @@
         "name": "Temperatura"
       },
       "food_probe_temp": {
-        "name": "Sonda de alimentos"
+        "name": "Sonda de temperatura"
       },
       "food_probe_setpoint": {
-        "name": "Objetivo de la sonda"
+        "name": "Temperatura objetivo de la sonda"
       },
       "current_temperature_c": {
         "name": "Temperatura"
@@ -1995,6 +2232,47 @@
       },
       "burner_pan_size": {
         "name": "Tamaño del recipiente de la zona {number}"
+      },
+      "oven_cavity_alarm_code": {
+        "name": "{cavity}: Código de alarma"
+      },
+      "oven_cavity_current_temp_c": {
+        "name": "{cavity}: Temperatura"
+      },
+      "oven_cavity_diagnosis_status": {
+        "name": "{cavity}: Estado del diagnóstico",
+        "state": {
+          "ready": "Listo"
+        }
+      },
+      "oven_cavity_finish_time": {
+        "name": "{cavity}: Finalización estimada"
+      },
+      "oven_cavity_operation_time_minutes": {
+        "name": "{cavity}: Tiempo de funcionamiento"
+      },
+      "oven_cavity_oven_state": {
+        "name": "{cavity}: Estado de la cavidad"
+      },
+      "oven_cavity_progress_percentage": {
+        "name": "{cavity}: Porcentaje de progreso"
+      },
+      "oven_cavity_machine_state": {
+        "name": "{cavity}: Estado de la máquina",
+        "state": {
+          "idle": "Inactiva",
+          "active": "Activa",
+          "pause": "En pausa"
+        }
+      },
+      "oven_cavity_cook_time": {
+        "name": "{cavity}: Tiempo de cocción"
+      },
+      "oven_cavity_food_probe_temp": {
+        "name": "{cavity}: Sonda de temperatura"
+      },
+      "oven_cavity_food_probe_setpoint": {
+        "name": "{cavity}: Temperatura objetivo de la sonda"
       }
     },
     "switch": {
@@ -2249,6 +2527,27 @@
       },
       "extra_rinse": {
         "name": "Aclarado extra"
+      },
+      "oven_cavity_child_lock": {
+        "name": "{cavity}: Bloqueo infantil"
+      },
+      "oven_cavity_fast_preheat": {
+        "name": "{cavity}: Precalentamiento rápido"
+      },
+      "oven_cavity_lamp": {
+        "name": "{cavity}: Lámpara"
+      },
+      "oven_cavity_natural_steam": {
+        "name": "{cavity}: Vapor natural"
+      },
+      "oven_cavity_energy_saving": {
+        "name": "{cavity}: Ahorro de energía"
+      },
+      "oven_cavity_power_switch": {
+        "name": "{cavity}: Energía"
+      },
+      "oven_cavity_sound": {
+        "name": "{cavity}: Sonido"
       }
     },
     "time": {
@@ -2312,7 +2611,16 @@
         "ice_maker": "Máquina de hielo",
         "cubed_ice": "Máquina de cubitos",
         "ice_bites": "Máquina de Ice Bites",
-        "whiskey_ice_ball": "Máquina de bolas de hielo"
+        "whiskey_ice_ball": "Máquina de bolas de hielo",
+        "oven_cavity_upper": "Zona superior",
+        "oven_cavity_lower": "Zona inferior",
+        "oven_cavity_whole": "Horno"
+      }
+    },
+    "oven_cavity": {
+      "options": {
+        "upper": "Zona superior / horno completo",
+        "lower": "Zona inferior"
       }
     }
   }

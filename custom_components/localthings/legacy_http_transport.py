@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .legacy_http import (
+    LCD_OV_WALL,
     TP6X_RAC,
     Resource,
     StagedKey,
@@ -59,7 +60,7 @@ from .registry.capabilities.laundry import (
     course_option_mask,
 )
 from .registry.subdevices import Subdevice
-from .transport import AuthRejected
+from .transport import AuthRejected, UntimedStartUnconfirmed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,6 +91,9 @@ _AUTH_HEADER = "Authorization"
 # How long a start is given to take before its state is read back. The
 # composed start has been measured loading the programme without running it.
 _START_SETTLE_S = 3.0
+_OVEN_START_SETTLE_S = 3.0
+_OVEN_UNTIMED_START_SETTLE_S = 0.5
+_OVEN_CONFIRM_RETRY_DELAYS_S = (0.25, 0.25, 0.5, 1.0)
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 # What the stop button sends; see _already_ready.
@@ -354,6 +358,8 @@ class LegacyHttpTransport:
             # chose, so a patch this family has no resource for is refused.
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
+        if self._table is LCD_OV_WALL and is_start(aggregate) and "Mode" in aggregate["Device"]:
+            return self._start_oven(index, aggregate, timeout)
         sendable, staged = split_start_only(aggregate, self._table)
         if any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
             # A new course brings its own settings, on the panel as well, so
@@ -446,6 +452,112 @@ class LegacyHttpTransport:
     def _idle(self, index: int) -> bool:
         operation = self._state_at(index).last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
+
+    def _start_oven(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
+        """Load settings and Run with fresh permission, verifying any requested timer clear."""
+        deadline = time.monotonic() + timeout
+        blocked = self._oven_start_permission(index, "before settings", _remaining(deadline))
+        if blocked is not None:
+            return blocked
+        device = dict(aggregate["Device"])
+        operation = {key: value for key, value in device["Operation"].items() if key != "state"}
+        untimed = (
+            self._family == "LCD_OV_WALL_16K"
+            and operation.get("operationTime", "00:00:00") == "00:00:00"
+        )
+        if untimed:
+            # NV51K7770S rejects Run with zero time, but accepts clearing the timer
+            # once running; see docs/investigations/legacy-oven-controls.md.
+            operation["operationTime"] = "00:01:00"
+        if operation:
+            device["Operation"] = operation
+        else:
+            del device["Operation"]
+        path = _device_path(index)
+        status, response = self._request(
+            "PUT", path, body={"Device": device}, timeout=_remaining(deadline)
+        )
+        _LOGGER.debug("%s: oven %s settings response: HTTP %s", self._host, index, status)
+        if not 200 <= status < 300:
+            return http_status_to_coap(status), response
+        time.sleep(_OVEN_UNTIMED_START_SETTLE_S if untimed else _OVEN_START_SETTLE_S)
+        blocked = self._oven_start_permission(index, "before Run", _remaining(deadline))
+        if blocked is not None:
+            return blocked
+        try:
+            status, response = self._request("PUT", path, body=_RUN, timeout=_remaining(deadline))
+            if untimed and 200 <= status < 300:
+                self._clear_oven_start_timer(index, deadline)
+        except Exception as err:
+            if untimed:
+                raise UntimedStartUnconfirmed(str(err)) from err
+            raise
+        _LOGGER.debug("%s: oven %s Run response: HTTP %s", self._host, index, status)
+        return http_status_to_coap(status), response
+
+    def _clear_oven_start_timer(self, index: int, deadline: float) -> None:
+        """Clear only after confirmed Run, then verify the untimed cook without replaying Start."""
+        self._confirm_oven_operation(index, deadline, timer_cleared=False)
+        blocked = self._oven_start_permission(index, "before timer clear", _remaining(deadline))
+        if blocked is not None:
+            raise UntimedStartUnconfirmed(blocked[1])
+        status, response = self._request(
+            "PUT",
+            _device_path(index),
+            body={"Device": {"Operation": {"operationTime": "00:00:00"}}},
+            timeout=_remaining(deadline),
+        )
+        if not 200 <= status < 300:
+            raise UntimedStartUnconfirmed(f"Timer clear refused (HTTP {status}): {response}")
+        self._confirm_oven_operation(index, deadline, timer_cleared=True)
+
+    def _confirm_oven_operation(self, index: int, deadline: float, *, timer_cleared: bool) -> None:
+        """A success status alone does not establish Run or that the countdown was removed."""
+        phase = "after timer clear" if timer_cleared else "after Run"
+        operation = None
+        for delay in (0.0, *_OVEN_CONFIRM_RETRY_DELAYS_S):
+            if delay:
+                time.sleep(min(delay, _remaining(deadline)))
+            status, body = self._request(
+                "GET", f"{_device_path(index)}/operation", timeout=_remaining(deadline)
+            )
+            operation = body.get("Operation") if isinstance(body, dict) else None
+            if status != 200 or not isinstance(operation, dict):
+                raise UntimedStartUnconfirmed(f"Operation unreadable {phase} (HTTP {status})")
+            state = operation.get("state")
+            if state == "Run" and (
+                not timer_cleared
+                or (
+                    operation.get("operationTime") == "00:00:00"
+                    and operation.get("remainingTime") == "00:00:00"
+                )
+            ):
+                return
+            if state not in ("Ready", "Run") or (timer_cleared and state != "Run"):
+                break
+        raise UntimedStartUnconfirmed(f"Operation not confirmed {phase}: {operation}")
+
+    def _oven_start_permission(
+        self, index: int, phase: str, timeout: float
+    ) -> tuple[int, str] | None:
+        """A staged oven start requires explicit, current permission from its own cavity."""
+        status, body = self._request("GET", f"{_device_path(index)}/configuration", timeout=timeout)
+        if status != 200:
+            code = http_status_to_coap(status) if status >= 400 else 0xA2
+            return (
+                code,
+                f"Smart Control could not be verified {phase} (HTTP {status})",
+            )
+        configuration = body.get("Configuration") if isinstance(body, dict) else None
+        enabled = (
+            configuration.get("remoteControlEnabled") if isinstance(configuration, dict) else None
+        )
+        _LOGGER.debug("%s: oven %s Smart Control %s: %r", self._host, index, phase, enabled)
+        if enabled is True or (isinstance(enabled, str) and enabled.lower() == "true"):
+            return None
+        if enabled is False or (isinstance(enabled, str) and enabled.lower() == "false"):
+            return 0x83, f"Smart Control is off {phase}"
+        return 0xA2, f"Smart Control status is missing or invalid {phase}"
 
     def _already_ready(self, index: int, timeout: float) -> bool:
         """Whether a fresh read says the appliance is idle.

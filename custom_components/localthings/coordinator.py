@@ -10,6 +10,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 from urllib.parse import unquote, urlsplit
 
@@ -23,11 +24,13 @@ from homeassistant.exceptions import (
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
 from . import cloudcourse, probing
+from .catalog import translated_state_label
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
@@ -62,11 +65,12 @@ from .credentials import (
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
+from .oven_device import combined_lower
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
 from .registry.batch import parse_device0_batch
 from .registry.by_type import resolve as resolve_registry
-from .registry.capabilities import cook
+from .registry.capabilities import cook, oven
 from .registry.capabilities.common import (
     REMOTE_CONTROL_HREFS,
     merge_items_field,
@@ -102,6 +106,7 @@ from .transport import (
     AuthRejected,
     DecodeError,
     Transport,
+    UntimedStartUnconfirmed,
     create_transport,
     translates_resources,
 )
@@ -285,16 +290,43 @@ def _refusal(code: int, response: Any) -> str:
 
 
 def _field_present_in(key: str, value: Any, readback: dict) -> bool:
-    """Whether one written field shows in `readback`.
-
-    An options[] write carries only the changed `<Prefix>_<Value>` tokens
-    and the appliance merges them into its full array (issue #54), so the
-    read-back holds every sibling token too: each written token being in it
-    is what "took" means there. Every other field compares whole."""
+    """Compare written fields, allowing the device's merged options and items."""
+    if key not in readback:
+        return False
     current = readback.get(key)
     if key == "x.com.samsung.da.options" and isinstance(value, list) and isinstance(current, list):
         return all(token in current for token in value)
+    if key == "x.com.samsung.da.items" and isinstance(value, list) and isinstance(current, list):
+        return _items_present_in(value, current)
+    if key == "x.com.samsung.da.desired":
+        # Legacy HTTPS returns numeric setpoints even when the request used
+        # strings. IDs and units must still match exactly.
+        if type(value) not in (str, int, float) or type(current) not in (str, int, float):
+            return False
+        try:
+            wanted, actual = Decimal(str(value)), Decimal(str(current))
+        except InvalidOperation:
+            return False
+        return wanted.is_finite() and actual.is_finite() and wanted == actual
     return current == value
+
+
+def _items_present_in(written: list, current: list) -> bool:
+    """Match identified items by ID and only compare fields actually written."""
+    id_key = "x.com.samsung.da.id"
+    if not written or not all(
+        isinstance(item, dict) and isinstance(item.get(id_key), str)
+        for item in [*written, *current]
+    ):
+        return current == written
+    indexed = {item[id_key]: item for item in current}
+    if len(indexed) != len(current) or len({item[id_key] for item in written}) != len(written):
+        return False
+    return all(
+        item[id_key] in indexed
+        and all(_field_present_in(k, v, indexed[item[id_key]]) for k, v in item.items())
+        for item in written
+    )
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -309,7 +341,7 @@ def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     if isinstance(payload, dict):
         return all(_field_present_in(k, v, readback) for k, v in payload.items())
     return all(
-        all((readback.get(element_href) or {}).get(k) == v for k, v in rep.items())
+        _payload_present_in(rep, readback.get(element_href) or {})
         for element_href, rep in _batch_element_reps(payload).items()
     )
 
@@ -571,7 +603,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         own reps, plus this integration's discovered cloud programs merged
         onto /course/vs/0 under cloudcourse.FIELD (issue #342), and for an
         oven the upper cavity's modeSpec shared with the lower one and each
-        idle cavity's held cook choices (issue #473, see cook.py).
+        idle cavity's held cook choices (issue #473, see cook.py). The
+        measured Flex Duo model also shares its door, divider and reservoir readings.
 
         Merged at read time rather than applied to the state cache, so the
         synthetic field can never be polled over or written to the device --
@@ -589,7 +622,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         this per-subdevice means keying the store by actual href the way
         LearnedModes does, and migrating the persisted shape.
         """
-        snapshot = self._with_held_cooks(self._cook_view(self.last_resources))
+        snapshot = oven.shared_sensor_view(
+            self._with_held_cooks(self._cook_view(self.last_resources))
+        )
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
             return snapshot
@@ -664,8 +699,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Deliberately separate from `last_resources`, which stays empty until
         the device answers -- that emptiness is what keeps a rehydrated
         entity `unavailable` instead of rendering a snapshot's stale value.
-        Only read while platforms are being forwarded; nothing consults it
-        once the entities exist.
+        Platforms also use this view to add optional sensors first detected
+        after setup.
         """
         if self._rehydrate_resources is None:
             return self.last_resources
@@ -676,7 +711,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         exists_fn counterpart to canonical_resources."""
         if self._rehydrate_resources is None:
             return self.canonical_resources(subdevice)
-        resources = self._cook_view(self._rehydrate_resources)
+        resources = oven.shared_sensor_view(self._cook_view(self._rehydrate_resources))
         return canonical_view(subdevice, resources, self.subdevices)
 
     # ------------------------------------------------------------------
@@ -952,6 +987,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+    @property
+    def combined_oven_lower(self) -> Subdevice | None:
+        return combined_lower(
+            self._cook_view(self.discovery_resources), self.subdevices, self.device_type_name
+        )
+
     def device_info_for(self, subdevice: Subdevice) -> DeviceInfo:
         """DeviceInfo for one logical subdevice on this connection (issue
         #177): the master's own device_info for MAIN, or a linked child
@@ -963,7 +1004,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when present anyway,
         but is informational only, not an identifier.
         """
-        if subdevice.kind == "main":
+        if subdevice.kind == "main" or subdevice == self.combined_oven_lower:
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -2413,13 +2454,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
+        if cook_param in cook.DURATION_PARTS:
+            resources = self.canonical_resources(bound_entity.subdevice)
+            try:
+                payload = cook.duration_with_part(cook_param, payload, resources)
+            except cook.CookStartError as err:
+                raise await self._async_cook_error(err, bound_entity.subdevice, resources) from err
+            cook_param = cook.PARAM_DURATION
         if cook_param == cook.PARAM_START:
             await self.async_start_cooking(bound_entity.subdevice)
             return
         if cook_param is not None and self._holds_cook(bound_entity.subdevice):
             # Nothing reaches the appliance, so Remote Control is only
             # checked at the start.
-            self._hold_cook(bound_entity.subdevice, desc, cook_param, payload)
+            await self._async_hold_cook(bound_entity.subdevice, desc, cook_param, payload)
             return
         write_fn = getattr(desc, "write_fn", None)
         if write_fn is None:
@@ -2601,9 +2649,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         body: dict | list,
         write_href: str,
         on_retry: Callable[[], None] | None = None,
+        *,
+        retry_on_disconnect: bool = True,
+        request_budget: float | None = None,
     ) -> None:
-        """PUT `body`, reconnecting and retrying once on a dead session.
-        Raises HomeAssistantError if the retry fails too."""
+        """PUT `body`, optionally reconnecting and retrying on a dead session."""
 
         def _do_put():
             if self._session is None:
@@ -2611,7 +2661,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
-            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            code, response = sess.write(
+                path_segs,
+                body,
+                timeout=self._POST_TIMEOUT_S if request_budget is None else request_budget,
+            )
             self._log.info("PUT %s → code %#04x", write_href, code)
             return code, response
 
@@ -2622,7 +2676,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
-                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
+                self._log.warning("command failed for %s: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
                 # subscriptions on it are too -- downgrade here, before the
@@ -2633,6 +2687,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._observe.mode == MODE_OBSERVE:
                     self._observe.downgrade_to_poll()
                     self._resubscribe_due = True
+                if not retry_on_disconnect:
+                    # A lost response does not prove that Start was lost;
+                    # replaying it could start or reconfigure an active cook.
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key=(
+                            "cook_untimed_unconfirmed"
+                            if isinstance(e, UntimedStartUnconfirmed)
+                            else "cook_start_unconfirmed"
+                        ),
+                        translation_placeholders={"error": str(e)},
+                    ) from e
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     code, response = await self.hass.async_add_executor_job(_do_put)
@@ -2721,6 +2787,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         input. Held choices are not in it."""
         return canonical_view(subdevice, self._cook_view(self.last_resources), self.subdevices)
 
+    def cook_time_is_unset(self, subdevice: Subdevice) -> bool:
+        """Distinguish this wall oven's idle zero from an explicitly held timer."""
+        resources = self._cavity_resources(subdevice)
+        if not cook.is_lcd_wall_16k(resources) or not cook.is_idle(resources):
+            return False
+        held = self._held_cooks.get(subdevice)
+        view = held.overlay(resources) if held is not None else resources
+        if held is not None and cook.PARAM_DURATION in held.values:
+            return False
+        duration = (view.get(cook.OPERATION_HREF) or {}).get("x.com.samsung.da.operationTime")
+        return cook.parse_hms(duration) == 0
+
     def _with_held_cooks(self, snapshot: dict[str, dict]) -> dict[str, dict]:
         """Each idle cavity's held choices, written over its own actual
         hrefs in `snapshot` (a copy this method may change)."""
@@ -2760,7 +2838,40 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         resources = self._cavity_resources(subdevice)
         return cook.is_idle(resources) and bool(cook.startable_modes(resources))
 
-    def _hold_cook(self, subdevice: Subdevice, desc: Any, param: str, payload: Any) -> None:
+    async def _async_cook_error(
+        self, error: cook.CookStartError, subdevice: Subdevice, resources: dict
+    ) -> ServiceValidationError:
+        placeholders = dict(error.placeholders)
+        mode_entity = next(
+            (
+                b
+                for b in self.bound
+                if b.subdevice == subdevice and b.desc.cook_param == cook.PARAM_MODE
+            ),
+            None,
+        )
+        if mode_entity is not None and {"mode", "startable"} & placeholders.keys():
+            tk = mode_entity.desc.translation_key
+            key = tk(resources) if callable(tk) else tk or mode_entity.desc.key
+            if key is not None:
+                strings = await async_get_translations(
+                    self.hass, self.hass.config.language, "entity", {DOMAIN}
+                )
+                for field in ("mode", "startable"):
+                    if field in placeholders:
+                        placeholders[field] = ", ".join(
+                            translated_state_label("select", key, value, strings)
+                            for value in placeholders[field].split(", ")
+                        )
+        return ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key=error.key,
+            translation_placeholders=placeholders,
+        )
+
+    async def _async_hold_cook(
+        self, subdevice: Subdevice, desc: Any, param: str, payload: Any
+    ) -> None:
         validate_fn = getattr(desc, "validate_fn", None)
         resources = self._cavity_resources(subdevice)
         if validate_fn is not None and (error := validate_fn(payload, {}, resources)):
@@ -2770,11 +2881,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             self._held_cooks.setdefault(subdevice, cook.HeldCook()).hold(param, value, resources)
         except cook.CookStartError as err:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key=err.key,
-                translation_placeholders=err.placeholders,
-            ) from err
+            raise await self._async_cook_error(err, subdevice, resources) from err
         self._log.info("holding %s=%r until the cook starts", param, value)
         self._canonical_cache.clear()
         self.async_set_updated_data(flatten(self.bound, self.entity_resources()))
@@ -2817,20 +2924,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             else:
                 plan = cook.plan_start(resources, mode, temperature, duration)
         except cook.CookStartError as err:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key=err.key,
-                translation_placeholders=err.placeholders,
-            ) from err
+            raise await self._async_cook_error(err, subdevice, resources) from err
         path = list(subdevice.seed_path)
         # Inner hrefs as this cavity's reads and writes already spell them,
         # which started the NV7B6665IAA's lower zone (#597).
         body = plan.batch(None if subdevice == MAIN else subdevice.to_actual)
         self._log.info("starting cook on /%s: %s", "/".join(path), plan)
-        # No readback after the write: smartthings-local found the
-        # fetch-back itself is what reverts some boards, and neither
-        # measured start had one.
-        await self._async_put(path, body, "/" + "/".join(path))
+        # The legacy untimed workaround needs time to confirm Run and
+        # remove its temporary timer; other starts keep the normal budget.
+        budget = 30.0 if cook.is_lcd_wall_16k(resources) and plan.duration in (None, 0) else None
+        await self._async_put(
+            path, body, "/" + "/".join(path), retry_on_disconnect=False, request_budget=budget
+        )
         held.clear()
         self._canonical_cache.clear()
         await self.async_request_refresh()

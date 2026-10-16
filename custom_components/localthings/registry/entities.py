@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import time as dt_time
-from typing import Any
+from typing import Any, Literal
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
@@ -59,6 +59,8 @@ class SamsungEntityDescription:
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
+    # Dynamic usability without removing the entity or changing its identity.
+    available_fn: Callable[[dict, dict], bool] | None = None
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -108,6 +110,8 @@ class SelectDesc(SamsungEntityDescription):
     # snapshot (not just this entity's own href) and returns raw device
     # option values; see select.py's LocalThingsSelect._raw_options().
     options_field: str | None = None  # resource field that contains the live options list
+    # Opt in when device order has no meaning, using HA's configured language.
+    sort_options: bool = False
     # Optional device-specific fallback for values absent from the translation
     # catalog. Receives (raw_value, canonical_resources); select.py applies it
     # identically to the current state and every option.
@@ -143,6 +147,7 @@ class ButtonDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class NumberDesc(SamsungEntityDescription):
+    mode: Literal["auto", "box", "slider"] = "slider"
     device_class: str | None = None
     unit: str | None = None
     unit_fn: Callable[[dict], str] | None = None  # overrides `unit` from the live rep, when set

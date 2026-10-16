@@ -29,7 +29,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .common import int_or_none
+from .common import int_or_none, is_lcd_wall_oven
 
 MODE_HREF = "/mode/vs/0"
 TEMPERATURES_HREF = "/temperatures/vs/0"
@@ -145,12 +145,19 @@ _NEVER_STARTABLE = frozenset(
 )
 _NEVER_STARTABLE_FAMILIES = ("Autocook", "Broil", "Easycook", "HOMECARE", "Speed", "Toast")
 
+# NV51K7770S advertises these programs, but cleaning/Gourmet Cook are excluded
+# and remote Broil starts are blocked; see legacy-oven-controls.md.
+_LCD_WALL_16K_LOCAL_MODES = frozenset(
+    {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
+)
 
-def selectable_modes(live: list) -> list:
-    """`supportedModes` without HOMECARE_* codes, which LCD_R18 boards list
-    but have no modeSpec entry for (#600): a capability flag, as on the AC
-    (#235), not a cooking mode."""
-    return [m for m in live if not (isinstance(m, str) and m.startswith("HOMECARE"))]
+
+def selectable_modes(live: list, resources: dict | None = None) -> list:
+    """Hide HOMECARE capability flags (#600) and excluded NV51K7770S programs."""
+    excluded = _LCD_WALL_16K_LOCAL_MODES if is_lcd_wall_16k(resources or {}) else ()
+    return [
+        m for m in live if not (isinstance(m, str) and (m.startswith("HOMECARE") or m in excluded))
+    ]
 
 
 def _specless_startable(mode: str) -> bool:
@@ -190,6 +197,46 @@ def _specless_temps(live: list) -> dict[str, TempSpec]:
 _OPEN_TIME_MAX = parse_hms("23:59:00")
 
 
+def is_lcd_wall_16k(resources: dict) -> bool:
+    info = resources.get("/information/vs/0") or {}
+    model = info.get("x.com.samsung.da.modelNum")
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+def legacy_wall_time_max(resources: dict) -> int | None:
+    """NV51K7770S manual, p.24: 9h59m; a live modeSpec remains authoritative."""
+    if is_lcd_wall_16k(resources) and (resources.get(MODE_HREF) or {}).get(MODE_SPEC) is None:
+        return 599 * 60
+    return None
+
+
+def _legacy_wall_temps(mode: str) -> dict[str, TempSpec] | None:
+    """Manual pp.29/34 ranges and Healthy Cook presets; see legacy-oven-controls.md."""
+    if mode == "Healthycook5":
+        return {"C": TempSpec(40, 105, None, 5), "F": TempSpec(100, 225, 150, 5)}
+    if mode == "Healthycook6":
+        # Bread Proof reports 100 F internally but offers no adjustment.
+        # Its Celsius preset has not been captured.
+        return {"F": TempSpec(100, 100, 100, 1)}
+    divided = mode.startswith(("Upper", "Lower"))
+    name = mode.removeprefix("Upper").removeprefix("Lower")
+    healthy = name in {f"Healthycook{i}" for i in range(1, 5)}
+    if not healthy and name not in {
+        "Bake",
+        "ConvectionBake",
+        "ConvectionRoast",
+        "SteamBake",
+        "SteamRoast",
+    }:
+        return None
+    steam = name.startswith("Steam")
+    default_f = (400 if name == "Healthycook4" else 375) if healthy else None
+    return {
+        "C": TempSpec(110 if steam else 80, 250 if divided else 285, None, 5),
+        "F": TempSpec(230 if steam else 175, 480 if divided else 550, default_f, 5),
+    }
+
+
 def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
     """A board with no modeSpec starts the same way (the NW9000KD started
     Bake from Ready, #300), so its own live modes are offered, bounded by its
@@ -201,8 +248,10 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
         mode: ModeSpec(
             mode=mode,
             control=START_CONTROL,
-            temps=temps,
-            time_max=_OPEN_TIME_MAX,
+            temps=(
+                _legacy_wall_temps(mode) or temps if is_lcd_wall_16k(resources) and temps else temps
+            ),
+            time_max=legacy_wall_time_max(resources) or _OPEN_TIME_MAX,
             time_optional=True,
         )
         for mode in live
@@ -390,6 +439,10 @@ def can_start(rep: dict, resources: dict) -> bool:
     modeSpec is empty for now (#600). A press while nothing is startable is
     refused by plan_start."""
     spec = (resources.get(MODE_HREF) or {}).get(MODE_SPEC)
+    # LCD_OV_WALL's Lower reports only NoOperation with the divider out;
+    # keep its button registered so reinserting the divider needs no reload.
+    if spec is None and is_lcd_wall_oven(resources):
+        return True
     if _is_empty_spec(spec):
         return True
     return any(s.startable for s in mode_specs(resources).values())
@@ -436,6 +489,15 @@ def temp_bounds(resources: dict, mode: str | None = None) -> tuple[int, int, int
     spec = mode_specs(resources).get(mode or current_mode(resources) or "")
     unit = _UNIT_KEYS.get(device_unit(resources) or "")
     temp = spec.temps.get(unit) if spec and unit else None
+    if temp is None and legacy_wall_time_max(resources) is not None and unit:
+        live = (resources.get(MODE_HREF) or {}).get(_SUPPORTED_MODES) or []
+        divided = cavity(resources) == "Lower" or any(
+            isinstance(m, str) and m.startswith("Upper") for m in live
+        )
+        # An idle cavity still needs usable bounds before a mode is held.
+        if current_mode(resources) in (None, "NoOperation"):
+            temps = _legacy_wall_temps("LowerBake" if divided else "Bake")
+            temp = temps.get(unit) if temps else None
     if temp is None or temp.choices:
         return None
     return temp.minimum, temp.maximum, _step(temp, resources)
@@ -597,8 +659,38 @@ def _check_temperature(temp, temperature, mode, unit, resources, complete=True) 
 PARAM_MODE = "mode"
 PARAM_TEMPERATURE = "temperature"
 PARAM_DURATION = "duration"
+PARAM_DURATION_HOURS = "duration_hours"
+PARAM_DURATION_MINUTES = "duration_minutes"
+DURATION_PARTS = (PARAM_DURATION_HOURS, PARAM_DURATION_MINUTES)
 # The start button's own marker.
 PARAM_START = "start"
+
+
+def duration_parts_max(resources: dict) -> int:
+    """The paired controls' maximum, narrowed by the current mode when known."""
+    maximum = 599 * 60
+    spec = mode_specs(resources).get(current_mode(resources) or "")
+    return min(maximum, spec.time_max) if spec and spec.time_max is not None else maximum
+
+
+def duration_with_part(param: str, payload: Any, resources: dict) -> int:
+    """Replace one timer component, preserving the cavity's other component."""
+    try:
+        value = float(payload)
+    except (TypeError, ValueError):
+        value = float("nan")
+    maximum_part = 9 if param == PARAM_DURATION_HOURS else 59
+    if not value.is_integer() or not 0 <= value <= maximum_part:
+        raise CookStartError("cook_duration_part_invalid")
+    seconds = parse_hms((resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME))
+    if seconds is None:
+        raise CookStartError("cook_duration_unavailable")
+    hours, minutes = divmod(-(-seconds // 60), 60)
+    total = int(value) * 60 + minutes if param == PARAM_DURATION_HOURS else hours * 60 + int(value)
+    maximum = duration_parts_max(resources)
+    if total * 60 > maximum:
+        raise CookStartError("cook_duration_total_out_of_range", max=format_hms(maximum))
+    return total
 
 
 def _device_values(resources: dict) -> tuple:
@@ -614,10 +706,9 @@ class HeldCook:
     kept here rather than written (the board discards them from `Ready`)
     until a start sends them.
 
-    Same rules as the 8888 washer's held course (#519): a new mode brings
-    its own defaults, so it drops a held setpoint and time; and everything
-    is dropped once the oven leaves `Ready` or its own mode, setpoint or
-    time changes, since the panel has been used.
+    A mode change brings its own defaults. Values entered before the first
+    mode are kept if that mode accepts them. Panel changes or leaving `Ready`
+    discard held choices.
     """
 
     def __init__(self) -> None:
@@ -635,21 +726,57 @@ class HeldCook:
         # Checked as the start would be: against the held mode (else the
         # board's default) and whatever else is already held.
         if param == PARAM_MODE:
-            plan_start(resources, mode=value, complete=False)
+            # Selecting the same mode again must not erase the pending recipe.
+            keep_values = PARAM_MODE not in self.values or self.values.get(PARAM_MODE) == value
+            temperature = self.values.get(PARAM_TEMPERATURE) if keep_values else None
+            duration = self.values.get(PARAM_DURATION) if keep_values else None
+            plan = plan_start(
+                resources, mode=value, temperature=temperature, duration=duration, complete=False
+            )
             held = {PARAM_MODE: value}
+            if temperature is not None:
+                held[PARAM_TEMPERATURE] = plan.temperature
+            if duration is not None:
+                held[PARAM_DURATION] = plan.duration
         else:
             held = {**self.values, param: value}
-            plan = plan_start(
-                resources,
-                mode=held.get(PARAM_MODE),
-                temperature=held.get(PARAM_TEMPERATURE),
-                duration=held.get(PARAM_DURATION),
-                complete=False,
-            )
-            held = {
-                **held,
-                param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
-            }
+            try:
+                plan = plan_start(
+                    resources,
+                    mode=held.get(PARAM_MODE),
+                    temperature=held.get(PARAM_TEMPERATURE),
+                    duration=held.get(PARAM_DURATION),
+                    complete=False,
+                )
+            except CookStartError as err:
+                if err.key != "cook_mode_required" or param not in (
+                    PARAM_TEMPERATURE,
+                    PARAM_DURATION,
+                ):
+                    raise
+                # Preparing settings must not require a mode or select one.
+                # At least one available mode must accept the pending combination.
+                for candidate in startable_modes(resources):
+                    try:
+                        plan_start(
+                            resources,
+                            mode=candidate,
+                            temperature=held.get(PARAM_TEMPERATURE),
+                            duration=held.get(PARAM_DURATION),
+                            complete=False,
+                        )
+                    except CookStartError:
+                        continue
+                    break
+                else:
+                    raise
+                # Keep the requested value until the chosen mode determines
+                # rounding; the candidate is only evidence that it can be held.
+            else:
+                held = {
+                    **held,
+                    param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
+                }
         if not self.values:
             self._base = _device_values(resources)
         self.values = held
@@ -679,13 +806,17 @@ class HeldCook:
         temp = spec.temps.get(unit) if spec and unit else None
         target = self.values.get(PARAM_TEMPERATURE, temp.default if temp else None)
         items = (view.get(TEMPERATURES_HREF) or {}).get(_ITEMS)
-        if target is not None and items:
+        # A previous cook's raw values are not inputs to the pending start.
+        if items and (target is not None or mode is not None):
             items = [dict(i) for i in items]
-            items[0][_DESIRED] = str(target)
+            items[0][_DESIRED] = str(target if target is not None else 0)
             view[TEMPERATURES_HREF] = {**view[TEMPERATURES_HREF], _ITEMS: items}
         seconds = self.values.get(PARAM_DURATION, spec.time_default if spec else None)
-        if seconds is not None and OPERATION_HREF in view:
-            view[OPERATION_HREF] = {**view[OPERATION_HREF], _OPERATION_TIME: format_hms(seconds)}
+        if OPERATION_HREF in view and (seconds is not None or mode is not None):
+            view[OPERATION_HREF] = {
+                **view[OPERATION_HREF],
+                _OPERATION_TIME: format_hms(seconds if seconds is not None else 0),
+            }
         return view
 
     def plan(self, resources: dict) -> CookPlan:
