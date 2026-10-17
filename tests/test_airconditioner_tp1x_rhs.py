@@ -117,3 +117,32 @@ async def test_dry_writes_the_devices_dehumidification_mode(climate):
 
     sent = [call.args[1] for call in climate.coordinator.async_send_command.call_args_list]
     assert ("mode", "IndoorDehumidification") in sent
+
+
+@pytest.mark.parametrize(
+    "climate", [{"/power/vs/0": {"x.com.samsung.da.power": "On"}}], indirect=True
+)
+def test_ai_comfort_is_not_a_preset(climate):
+    assert "ai_comfort" not in (climate.preset_modes or [])
+    assert climate.preset_mode != "ai_comfort"
+
+
+@pytest.mark.parametrize(
+    "climate",
+    [
+        {
+            "/power/vs/0": {"x.com.samsung.da.power": "On"},
+            "/mode/vs/0": {
+                "x.com.samsung.da.modes": ["Cool"],
+                "x.com.samsung.da.supportedModes": ["Cool", "Auto", "AIComfort"],
+            },
+        }
+    ],
+    indirect=True,
+)
+async def test_auto_prefers_ai_comfort_over_plain_auto(climate):
+    await climate.async_set_hvac_mode(HVACMode.AUTO)
+
+    sent = [call.args[1] for call in climate.coordinator.async_send_command.call_args_list]
+    assert ("mode", "AIComfort") in sent
+    assert ("mode", "Auto") not in sent

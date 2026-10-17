@@ -216,7 +216,6 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
-              "ai_comfort": "KI-Komfort",
               "quiet": "Leise",
               "speed": "Schnell",
               "nanosleep": "WindFree Schlaf",

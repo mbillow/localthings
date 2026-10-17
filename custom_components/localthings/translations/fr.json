@@ -222,7 +222,6 @@
           },
           "preset_mode": {
             "state": {
-              "ai_comfort": "Confort IA",
               "quiet": "Silencieux",
               "smart": "Intelligent",
               "speed": "Rapide",

@@ -131,12 +131,11 @@ _HVAC_TO_DEVICE = {v: k for k, v in _DEVICE_TO_HVAC.items()}
 # AI-driven auto-comfort mode (issue #93, A-CAWW-TP2-20-COMMON): 'AIComfort'
 # isn't a distinct thermodynamic operation like Cool/Dry/Heat, it's an AI
 # overlay on the device's own 'Auto' -- the unit reports both as separate,
-# mutually-exclusive supportedModes entries. hvac_mode reports AUTO (same as
-# plain 'Auto') and a dedicated 'ai_comfort' preset carries the distinction.
-# Not reachable via async_set_hvac_mode -- entered/left only through the
-# preset, since there's no HVACMode value for it to write back to.
+# mutually-exclusive supportedModes entries. Both read as HVACMode.AUTO, and
+# selecting AUTO writes AIComfort whenever the unit offers it (see
+# _device_code_for_hvac), so it is the unit's auto operation mode rather than
+# a preset.
 _AI_COMFORT_MODE = "AIComfort"
-PRESET_AI_COMFORT = "ai_comfort"
 
 # Codes in /mode/vs/0's supportedModes that are option/capability flags, not
 # selectable thermodynamic operations -- dropped silently rather than
@@ -675,17 +674,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def preset_mode(self):
-        if _first(self._rep(MODE_HREF).get(_MODES_FIELD)) == _AI_COMFORT_MODE:
-            return PRESET_AI_COMFORT
         code = _first(self._rep(CONVENIENT_HREF).get(_MODES_FIELD))
         return _preset_to_ha(code) if code is not None else None
 
     @property
     def preset_modes(self) -> list[str]:
-        modes = [_preset_to_ha(c) for c in self._supported(CONVENIENT_HREF)]
-        if _AI_COMFORT_MODE in self._supported(MODE_HREF):
-            modes.append(PRESET_AI_COMFORT)
-        return modes
+        return [_preset_to_ha(c) for c in self._supported(CONVENIENT_HREF)]
 
     # -- writes -------------------------------------------------------------
 
@@ -700,11 +694,11 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         if _DEVICE_TO_HVAC.get(current) == hvac_mode:
             return current
         supported = self._supported(MODE_HREF)
+        if hvac_mode == HVACMode.AUTO and _AI_COMFORT_MODE in supported:
+            return _AI_COMFORT_MODE
         for code in supported:
             if _DEVICE_TO_HVAC.get(code) == hvac_mode:
                 return code
-        if hvac_mode == HVACMode.AUTO and _AI_COMFORT_MODE in supported:
-            return _AI_COMFORT_MODE  # same reasoning as hvac_modes' AUTO fallback
         return _HVAC_TO_DEVICE.get(hvac_mode)
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -815,12 +809,6 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         await asyncio.sleep(_NANO_AFTER_MODE_DELAY)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        if preset_mode == PRESET_AI_COMFORT:
-            # Writes the primary mode resource, not the convenient one --
-            # 'AIComfort' lives in /mode/vs/0 alongside Cool/Dry/Auto, not in
-            # /mode/convenient/vs/0 with Quiet/Smart/Speed/Sleep.
-            await self.coordinator.async_send_command(self._bound, ("mode", _AI_COMFORT_MODE))
-            return
         # Reverse-resolve against the unit's own supportedModes (codes aren't
         # a fixed transform of the HA value -- e.g. 'NanoSleep' -> 'nanosleep').
         for code in self._supported(CONVENIENT_HREF):

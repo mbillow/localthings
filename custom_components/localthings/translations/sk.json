@@ -222,7 +222,6 @@
           },
           "preset_mode": {
             "state": {
-              "ai_comfort": "AI komfort",
               "quiet": "Tichý",
               "smart": "Inteligentný",
               "speed": "Rýchly",
