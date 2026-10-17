@@ -11,7 +11,6 @@ from custom_components.localthings.climate import (
     _AI_COMFORT_MODE,
     _DEVICE_TO_HVAC,
     _HVAC_TO_DEVICE,
-    PRESET_AI_COMFORT,
     _preset_to_ha,
 )
 
@@ -27,17 +26,16 @@ def test_auto_maps_to_hvac_auto():
 
 def test_aicomfort_not_in_flat_hvac_map():
     """AIComfort isn't a flat _DEVICE_TO_HVAC entry -- it's an AI overlay on
-    top of 'Auto', modeled as hvac_mode=AUTO + a dedicated preset instead of
-    a distinct HVACMode value (see the climate.py module comment)."""
+    top of 'Auto', modeled as hvac_mode=AUTO instead of a distinct HVACMode
+    value (see the climate.py module comment)."""
     assert _AI_COMFORT_MODE not in _DEVICE_TO_HVAC
 
 
-def test_hvac_auto_writes_back_to_plain_auto_not_aicomfort():
-    """HVACMode.AUTO is reachable via async_set_hvac_mode -- it writes the
-    device's plain 'Auto' code. AIComfort stays reachable only through the
-    ai_comfort preset, since it isn't a flat _DEVICE_TO_HVAC entry (see
-    test_aicomfort_not_in_flat_hvac_map) and so can never win the reverse
-    {v: k} dict even though both map to HVACMode.AUTO conceptually."""
+def test_hvac_auto_fallback_is_plain_auto():
+    """_HVAC_TO_DEVICE is only the fallback for a unit reporting no
+    supportedModes. AIComfort isn't a flat _DEVICE_TO_HVAC entry (see
+    test_aicomfort_not_in_flat_hvac_map), so it can never win the reverse
+    {v: k} dict; _device_code_for_hvac() picks it from supportedModes."""
     assert _HVAC_TO_DEVICE[HVACMode.AUTO] == "Auto"
 
 
@@ -61,10 +59,6 @@ def test_fan_only_reverse_fallback_prefers_wind():
     flipping to whichever of the two duplicate-value entries happens to
     come last in _DEVICE_TO_HVAC."""
     assert _HVAC_TO_DEVICE[HVACMode.FAN_ONLY] == "Wind"
-
-
-def test_preset_ai_comfort_constant():
-    assert PRESET_AI_COMFORT == "ai_comfort"
 
 
 def test_preset_to_ha_off_maps_to_preset_none():

@@ -16,7 +16,6 @@
           },
           "preset_mode": {
             "state": {
-              "ai_comfort": "mdi:creation",
               "quiet": "mdi:volume-off",
               "smart": "mdi:brain",
               "speed": "mdi:speedometer",

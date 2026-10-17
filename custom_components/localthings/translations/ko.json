@@ -222,7 +222,6 @@
           },
           "preset_mode": {
             "state": {
-              "ai_comfort": "AI 쾌적",
               "quiet": "저소음",
               "smart": "스마트",
               "speed": "스피드",
