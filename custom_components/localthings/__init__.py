@@ -19,7 +19,8 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
-from .entity import async_load_instance_names
+from .entity import _is_included, async_load_instance_names
+from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -249,6 +250,34 @@ def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry)
         ent_reg.async_remove(registry_entry.entity_id)
 
 
+@callback
+def _drop_duplicate_cooktop_timer(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove the redundant timer entity only where Timer Remaining replaces it."""
+    resources = coordinator.discovery_resources
+    rep = resources.get("/mode/vs/0") or {}
+    if not is_legacy_radiant_cooktop(rep, resources) or not any(
+        bound.desc.key == "main_timer_set" and _is_included(bound, coordinator)
+        for bound in coordinator.bound
+    ):
+        return
+    ent_reg = er.async_get(hass)
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_main_timer_current"
+    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
+    old = ent_reg.async_get(entity_id) if entity_id else None
+    if old is None or old.config_entry_id != entry.entry_id:
+        return
+    # NZ36K7570R reports the same countdown in both fields; retaining the
+    # registry row would leave an unavailable duplicate after this upgrade.
+    _LOGGER.info(
+        "Removing %s, superseded by Timer Remaining on the same cooktop; "
+        "update any automation or dashboard that referenced it",
+        old.entity_id,
+    )
+    ent_reg.async_remove(old.entity_id)
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -388,6 +417,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
+    _drop_duplicate_cooktop_timer(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

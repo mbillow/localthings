@@ -25,7 +25,6 @@
     "cooktop_paused",
     "cooktop_sync_control",
     "diagnosis_status",
-    "main_timer_current",
     "main_timer_set",
     "main_timer_state",
     "power_state",

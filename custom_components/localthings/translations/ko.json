@@ -1626,6 +1626,21 @@
       },
       "burner_pan_size": {
         "name": "화구 {number} 용기 크기"
+      },
+      "cooktop_timer_remaining": {
+        "name": "타이머 남은 시간"
+      },
+      "cooktop_timer_status": {
+        "name": "타이머 상태"
+      },
+      "cooktop_ring_size": {
+        "name": "화구 {number} 크기",
+        "state": {
+          "idle": "대기",
+          "single": "단일",
+          "dual": "이중",
+          "triple": "삼중"
+        }
       }
     },
     "switch": {

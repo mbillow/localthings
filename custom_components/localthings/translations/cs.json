@@ -1626,6 +1626,21 @@
       },
       "burner_pan_size": {
         "name": "Velikost nádoby zóny {number}"
+      },
+      "cooktop_timer_remaining": {
+        "name": "Zbývající čas časovače"
+      },
+      "cooktop_timer_status": {
+        "name": "Stav časovače"
+      },
+      "cooktop_ring_size": {
+        "name": "Velikost zóny {number}",
+        "state": {
+          "idle": "Nečinná",
+          "single": "Jednoduchá",
+          "dual": "Dvojitá",
+          "triple": "Trojitá"
+        }
       }
     },
     "switch": {

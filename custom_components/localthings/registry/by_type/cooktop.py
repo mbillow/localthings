@@ -30,6 +30,10 @@ _OPTIONS_POWER = dataclasses.replace(
     cooktop.COOKTOP_POWER,
     match_fn=lambda rep, resources: not _burner_list_board(rep, resources),
 )
+_OPTIONS_MODE = dataclasses.replace(
+    cooktop.COOKTOP_MODE,
+    match_fn=lambda rep, resources: not cooktop.is_legacy_radiant_cooktop(rep, resources),
+)
 # POWER_VS_FALLBACK's own rule (the OCF-standard /power/0 wins) plus the
 # surface split.
 _BURNER_LIST_POWER = dataclasses.replace(
@@ -57,7 +61,8 @@ REGISTRY = DeviceRegistry(
                 _OPTIONS_POWER,
                 _BURNER_LIST_POWER,
                 # /mode/vs/0 options-array boards.
-                cooktop.COOKTOP_MODE,
+                _OPTIONS_MODE,
+                cooktop.LEGACY_RADIANT_MODE,
                 cooktop.DIAGNOSIS,
                 cooktop.COOKTOP_CONNECTED,
                 # /cooktop/status/vs/0 burnerList boards.

@@ -1626,6 +1626,21 @@
       },
       "burner_pan_size": {
         "name": "Rozmiar naczynia pola {number}"
+      },
+      "cooktop_timer_remaining": {
+        "name": "Pozostały czas minutnika"
+      },
+      "cooktop_timer_status": {
+        "name": "Stan minutnika"
+      },
+      "cooktop_ring_size": {
+        "name": "Rozmiar pola {number}",
+        "state": {
+          "idle": "Nieaktywne",
+          "single": "Pojedyncze",
+          "dual": "Podwójne",
+          "triple": "Potrójne"
+        }
       }
     },
     "switch": {
