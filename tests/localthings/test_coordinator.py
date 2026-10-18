@@ -1262,6 +1262,29 @@ def test_poll_hrefs_blocking_stops_between_hrefs(hass: HomeAssistant, mock_entry
     assert reads == [["a", "vs", "0"]]
 
 
+def test_poll_hrefs_blocking_stops_when_the_session_is_dropped(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """async_close cancels a sub-poll without waiting for its thread, then
+    drops the session. The thread used to read on and hit None."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    reads: list[list[str]] = []
+
+    class _Session:
+        def pace(self) -> None:
+            pass
+
+        def read(self, path, timeout):
+            reads.append(path)
+            coordinator._session = None
+            return 0x45, {}
+
+    coordinator._session = cast(Any, _Session())
+    coordinator._poll_hrefs_blocking(["/a/vs/0", "/b/vs/0"], apply=False)
+
+    assert reads == [["a", "vs", "0"]]
+
+
 async def test_observe_mode_subpolls_only_silent_hrefs(
     hass: HomeAssistant, mock_entry, mock_coordinator_observe_session
 ) -> None:

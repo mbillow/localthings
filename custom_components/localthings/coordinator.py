@@ -1380,13 +1380,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         `stop`, once set, skips the hrefs not yet read.
         """
-        if self._session is None:
+        session = self._session
+        if session is None:
             return {}
         results = {}
         first = True
         deadline = time.monotonic() + budget if budget is not None else None
         for href in hrefs:
             if stop is not None and stop.is_set():
+                break
+            # async_close cancels the sub-poll without waiting for this
+            # thread, then drops the session; reading on would hit None.
+            if self._session is not session:
                 break
             if deadline is not None:
                 remaining = deadline - time.monotonic()
@@ -1395,11 +1400,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     continue
                 timeout = min(timeout, remaining)
             if not first:
-                self._session.pace()
+                session.pace()
             first = False
             try:
                 path = href.strip("/").split("/")
-                code, rep = self._session.read(path, timeout=timeout)
+                code, rep = session.read(path, timeout=timeout)
                 if code == 0x45 and isinstance(rep, dict):
                     if apply:
                         self._observe.apply(href, rep, source="poll")
