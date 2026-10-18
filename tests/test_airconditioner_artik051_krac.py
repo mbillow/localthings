@@ -21,6 +21,8 @@ gating handles the same way it handles newer boards.
 
 from typing import ClassVar, cast
 
+from homeassistant.components.climate import HVACMode
+
 from custom_components.localthings.climate import LocalThingsClimate
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.adapter import flatten
@@ -459,6 +461,40 @@ async def test_fan_and_swing_writes_target_the_airflow_resource():
     assert [payload for _, payload in coordinator.commands] == [
         ("fan_legacy", "4"),
         ("swing_legacy", "All"),
+    ]
+
+
+async def test_the_current_mode_is_not_written_again():
+    resources = _load_device(FIXTURE)
+    resources["/power/vs/0"]["x.com.samsung.da.power"] = "On"
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_hvac_mode(HVACMode.COOL)
+
+    assert coordinator.commands == []
+
+
+async def test_a_different_mode_is_still_written():
+    resources = _load_device(FIXTURE)
+    resources["/power/vs/0"]["x.com.samsung.da.power"] = "On"
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_hvac_mode(HVACMode.HEAT)
+
+    assert [payload for _, payload in coordinator.commands] == [("mode", "Heat")]
+
+
+async def test_turning_on_in_the_last_mode_still_sets_the_temperature():
+    resources = _load_device(FIXTURE)
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_temperature(
+        hvac_mode=HVACMode.COOL, temperature=20
+    )
+
+    assert [payload for _, payload in coordinator.commands] == [
+        ("power", True),
+        ("temperature_ocf", 20),
     ]
 
 

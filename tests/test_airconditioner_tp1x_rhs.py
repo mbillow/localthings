@@ -91,6 +91,9 @@ def test_the_dumps_ai_comfort_mode_reads_as_an_offered_mode(climate):
     assert climate.hvac_mode in climate.hvac_modes
 
 
+@pytest.mark.parametrize(
+    "climate", [{"/mode/vs/0": {"x.com.samsung.da.modes": ["FreshAirIntake"]}}], indirect=True
+)
 async def test_auto_writes_ai_comfort(climate):
     await climate.async_set_hvac_mode(HVACMode.AUTO)
 

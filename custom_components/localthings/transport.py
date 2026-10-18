@@ -17,6 +17,7 @@ import time
 import zlib
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
+from uuid import UUID
 
 import cbor2
 from smartthings_local.protocol.auth import AuthenticationProvider
@@ -153,6 +154,18 @@ def _is_index(segment: str) -> bool:
     return segment.isascii() and segment.isdigit()
 
 
+def _is_device_collection(path: Sequence[str]) -> bool:
+    if len(path) == 3:
+        try:
+            prefix = UUID(path[0])
+        except ValueError:
+            return False
+        if str(prefix) != path[0].lower():
+            return False
+        path = path[1:]
+    return len(path) == 2 and path[0] == "device" and _is_index(path[1])
+
+
 class DtlsTransport:
     """CoAP over DTLS -- the transport every supported device speaks.
 
@@ -230,11 +243,9 @@ class DtlsTransport:
     ) -> tuple[int, Any]:
         session = self._live()
         path = list(path_segs)
-        # LCD_R18 boards answer /device/0 and /device/1 (#597) with links
-        # unless asked for the batch, which discovery and polling need. Any
-        # board's /device/<n> gets the same fallback; a caller that named
-        # its own query gets exactly what it asked for.
-        seed = not query and len(path) == 2 and path[0] == "device" and _is_index(path[1])
+        # LCD_R18 collections (#597) and the R18_BIXBY wall unit's
+        # UUID-prefixed collection return links unless asked for the batch.
+        seed = not query and _is_device_collection(path)
         if seed and tuple(path) in self._batch_paths:
             return _decode_read(*session.get(path, query=list(_BATCH_QUERY), timeout=timeout))
         deadline = time.monotonic() + timeout

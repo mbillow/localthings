@@ -15,6 +15,14 @@ import pytest
 
 from custom_components.localthings.transport import DecodeError, DtlsTransport
 
+_SUBDEVICE_ID = "11111111-2222-3333-aaaa-555555555555"
+_COLLECTION_PATHS = [
+    ["device", "0"],
+    ["device", "1"],
+    [_SUBDEVICE_ID, "device", "0"],
+    [_SUBDEVICE_ID.upper(), "device", "0"],
+]
+
 
 class _FakeCoapSession:
     """Stand-in for smartthings_local's DtlsCoapSession: CBOR on the wire,
@@ -155,14 +163,12 @@ class TestRead:
 
         assert transport.read(["power", "vs", "0"], timeout=1.0) == (0x80, b"bad option")
 
-    @pytest.mark.parametrize("index", ["0", "1"])
-    def test_device_directory_requests_batch_representations(self, transport, monkeypatch, index):
-        """/device/1 too: the LCD_R18 Dual Cook's lower zone answers links
-        until asked for its batch (#597)."""
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_device_directory_requests_batch_representations(self, transport, monkeypatch, path):
+        """The R18 wall unit's prefixed collection also defaults to links."""
         from custom_components.localthings.registry.batch import parse_device0_batch
 
-        path = ["device", index]
-        href = f"/temperature/current/cook/{index}"
+        href = "/temperature/current/0"
         rep = {"rt": ["oic.r.temperature"], "temperature": 21}
         directory = {"links": [{"href": href, "rt": rep["rt"]}]}
         batch = [{"href": href, "rep": rep}]
@@ -181,7 +187,10 @@ class TestRead:
         assert 0 < calls[1][2] <= 10.0
         assert fake_of(transport).paced == 1
 
-    def test_a_path_that_needed_the_batch_asks_for_it_first_next_time(self, transport, monkeypatch):
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_a_path_that_needed_the_batch_asks_for_it_first_next_time(
+        self, transport, monkeypatch, path
+    ):
         """One GET per poll instead of two on a board that always answers
         links first (#597)."""
         batch = [{"href": "/power/vs/1", "rep": {"x.com.samsung.da.power": "Off"}}]
@@ -192,13 +201,14 @@ class TestRead:
             return 0x45, cbor2.dumps(batch if query else {"links": []})
 
         monkeypatch.setattr(fake_of(transport), "get", get)
-        transport.read(["device", "1"], timeout=10.0)
+        transport.read(path, timeout=10.0)
         queries.clear()
 
-        assert transport.read(["device", "1"], timeout=10.0) == (0x45, batch)
+        assert transport.read(path, timeout=10.0) == (0x45, batch)
         assert queries == [("if=oic.if.b",)]
 
-    def test_a_failed_batch_is_not_remembered(self, transport, monkeypatch):
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_a_failed_batch_is_not_remembered(self, transport, monkeypatch, path):
         queries = []
 
         def get(path_segs, *, timeout, query=()):
@@ -206,11 +216,32 @@ class TestRead:
             return (0x84, b"") if query else (0x45, cbor2.dumps({"links": []}))
 
         monkeypatch.setattr(fake_of(transport), "get", get)
-        transport.read(["device", "1"], timeout=10.0)
+        transport.read(path, timeout=10.0)
         queries.clear()
-        transport.read(["device", "1"], timeout=10.0)
+        transport.read(path, timeout=10.0)
 
         assert queries == [(), ("if=oic.if.b",)]
+
+    def test_batch_preference_is_kept_per_full_subdevice_path(self, transport, monkeypatch):
+        other = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        calls = []
+
+        def get(path_segs, *, timeout, query=()):
+            calls.append((path_segs, tuple(query)))
+            return 0x45, cbor2.dumps([] if query else {"links": []})
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        first, second = [_SUBDEVICE_ID, "device", "0"], [other, "device", "0"]
+        transport.read(first, timeout=10.0)
+        calls.clear()
+        transport.read(second, timeout=10.0)
+        transport.read(first, timeout=10.0, query=["if=oic.if.ll"])
+
+        assert calls == [
+            (second, ()),
+            (second, ("if=oic.if.b",)),
+            (first, ("if=oic.if.ll",)),
+        ]
 
     @pytest.mark.parametrize(
         ("path", "code", "body"),
@@ -223,6 +254,11 @@ class TestRead:
             (["device", "x"], 0x45, {"links": []}),
             (["device", "\u00b2"], 0x45, {"links": []}),
             (["uuid", "device", "0"], 0x45, {"links": []}),
+            ([_SUBDEVICE_ID.replace("-", ""), "device", "0"], 0x45, {"links": []}),
+            ([_SUBDEVICE_ID, "device", "x"], 0x45, {"links": []}),
+            ([_SUBDEVICE_ID, "device", "\u00b2"], 0x45, {"links": []}),
+            ([_SUBDEVICE_ID, "power", "0"], 0x45, {"links": []}),
+            (["extra", _SUBDEVICE_ID, "device", "0"], 0x45, {"links": []}),
             (["power", "0"], 0x45, {"value": True}),
         ],
     )
@@ -238,7 +274,8 @@ class TestRead:
         assert calls == [path]
         assert fake_of(transport).paced == 0
 
-    def test_a_callers_own_query_is_sent_and_not_second_guessed(self, transport, monkeypatch):
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_a_callers_own_query_is_sent_and_not_second_guessed(self, transport, monkeypatch, path):
         """/device/0 with an explicit query gets one GET under that query,
         not the links-then-batch fallback."""
         calls = []
@@ -248,12 +285,13 @@ class TestRead:
             return 0x45, cbor2.dumps({"links": []})
 
         monkeypatch.setattr(fake_of(transport), "get", get)
-        assert transport.read(["device", "0"], timeout=1.0, query=["if=oic.if.ll"]) == (
+        assert transport.read(path, timeout=1.0, query=["if=oic.if.ll"]) == (
             0x45,
             {"links": []},
         )
-        assert calls == [(["device", "0"], ("if=oic.if.ll",))]
+        assert calls == [(path, ("if=oic.if.ll",))]
 
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
     @pytest.mark.parametrize(
         ("code", "payload", "expected"),
         [
@@ -263,7 +301,7 @@ class TestRead:
         ],
     )
     def test_batch_fallback_preserves_response_contract(
-        self, transport, monkeypatch, code, payload, expected
+        self, transport, monkeypatch, code, payload, expected, path
     ):
         queries = []
 
@@ -272,20 +310,24 @@ class TestRead:
             return (code, payload) if query else (0x45, cbor2.dumps({"links": []}))
 
         monkeypatch.setattr(fake_of(transport), "get", get)
-        assert transport.read(["device", "0"], timeout=1.0) == (code, expected)
+        assert transport.read(path, timeout=1.0) == (code, expected)
         assert queries == [(), ["if=oic.if.b"]]
 
-    def test_batch_decode_error_retains_payload(self, transport, monkeypatch):
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_batch_decode_error_retains_payload(self, transport, monkeypatch, path):
         def get(path_segs, *, timeout, query=()):
             return 0x45, b"\x18" if query else cbor2.dumps({"links": []})
 
         monkeypatch.setattr(fake_of(transport), "get", get)
         with pytest.raises(DecodeError) as caught:
-            transport.read(["device", "0"], timeout=1.0)
+            transport.read(path, timeout=1.0)
         assert (caught.value.code, caught.value.payload) == (0x45, b"\x18")
 
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
     @pytest.mark.parametrize("elapsed", [3.0, 10.0, 11.0])
-    def test_batch_read_shares_timeout_including_pacing(self, transport, monkeypatch, elapsed):
+    def test_batch_read_shares_timeout_including_pacing(
+        self, transport, monkeypatch, elapsed, path
+    ):
         now = [100.0]
         timeouts = []
 
@@ -304,10 +346,10 @@ class TestRead:
         monkeypatch.setattr(fake_of(transport), "pace", pace)
         if elapsed >= 10:
             with pytest.raises(TimeoutError, match="batch read"):
-                transport.read(["device", "0"], timeout=10.0)
+                transport.read(path, timeout=10.0)
             assert timeouts == [10.0]
         else:
-            assert transport.read(["device", "0"], timeout=10.0) == (0x45, [])
+            assert transport.read(path, timeout=10.0) == (0x45, [])
             assert timeouts == [10.0, 7.0]
 
 
@@ -408,3 +450,87 @@ def test_a_links_only_lower_zone_is_discovered_through_its_batch(transport, monk
 
     assert [s.key for s in subdevices] == ["1"]
     assert fetched["/oven/vs/1"] == {"x.com.samsung.da.state": "Ready"}
+
+
+@pytest.mark.parametrize("prefixed_hrefs", [False, True])
+async def test_links_only_prefixed_collection_discovers_wall_unit_swing(
+    hass, transport, monkeypatch, prefixed_hrefs
+):
+    """The wall unit has swing even when the floor unit has no such href."""
+    from custom_components.localthings.climate import LocalThingsClimate
+    from custom_components.localthings.registry.entities import ClimateDesc
+    from custom_components.localthings.registry.identity import DeviceIdentity
+    from tests.test_subdevice_discovery import _coordinator
+
+    main = {
+        "/information/vs/0": {"x.com.samsung.da.modelNum": "R18_BIXBY_FAC_TIME_23K"},
+        "/subdevices/vs/0": {"x.com.samsung.da.subdeviceIdList": [_SUBDEVICE_ID]},
+        "/power/vs/0": {"x.com.samsung.da.power": "Off"},
+        "/mode/vs/0": {
+            "x.com.samsung.da.modes": ["Cool"],
+            "x.com.samsung.da.supportedModes": ["Cool", "Dry", "Wind"],
+        },
+        "/wind/strength/vs/0": {
+            "x.com.samsung.da.modes": "0",
+            "x.com.samsung.da.supportedModes": ["0"],
+        },
+    }
+    direction = {
+        "rt": ["x.com.samsung.da.wind.direction"],
+        "x.com.samsung.da.modes": "Fix",
+        "x.com.samsung.da.supportedModes": ["Fix", "Up_And_Low", "Left_And_Right", "All"],
+    }
+    wall = {
+        "/mode/vs/0": main["/mode/vs/0"],
+        "/power/vs/0": {"x.com.samsung.da.power": "On"},
+        "/wind/direction/vs/0": direction,
+    }
+    batch = [
+        {"href": f"/{_SUBDEVICE_ID}{href}" if prefixed_hrefs else href, "rep": rep}
+        for href, rep in wall.items()
+    ]
+    reads = []
+
+    def get(path_segs, *, timeout, query=()):
+        reads.append((list(path_segs), tuple(query)))
+        if list(path_segs) != [_SUBDEVICE_ID, "device", "0"]:
+            return 0x84, b""
+        return 0x45, cbor2.dumps(
+            batch if query else {"links": [{"href": item["href"]} for item in batch]}
+        )
+
+    monkeypatch.setattr(fake_of(transport), "get", get)
+    coordinator = _coordinator(hass)
+    coordinator._session = transport
+    coordinator._identity = DeviceIdentity(
+        manufacturer="Samsung Electronics",
+        model="R18_BIXBY_FAC_TIME_23K",
+        name="",
+        serial=None,
+        device_types=(),
+        raw={"/oic/res": []},
+    )
+    merged = await hass.async_add_executor_job(coordinator._enumerate_subdevices_blocking, main)
+    coordinator._run_discovery(merged)
+    for href, rep in coordinator._live_subdevice_resources(merged).items():
+        coordinator._observe.apply(href, rep, source="poll")
+    climates = {
+        bound.subdevice.key: LocalThingsClimate(coordinator, bound)
+        for bound in coordinator.bound
+        if isinstance(bound.desc, ClimateDesc)
+    }
+
+    assert _SUBDEVICE_ID in climates
+    assert climates[_SUBDEVICE_ID].swing_modes == ["off", "vertical", "horizontal", "both"]
+    assert climates[_SUBDEVICE_ID].swing_mode == "off"
+    assert climates[_SUBDEVICE_ID].hvac_mode == "cool"
+    assert climates[""].hvac_mode == "off"
+    assert climates[""].swing_modes == []
+    assert not coordinator.resource("/wind/direction/vs/0")
+    assert coordinator.resource(f"/{_SUBDEVICE_ID}/wind/direction/vs/0") == direction
+    assert f"/{_SUBDEVICE_ID}/wind/direction/vs/0" in coordinator._warm_hrefs
+    assert fake_of(transport).posts == []
+    assert [read for read in reads if read[0][0] == _SUBDEVICE_ID] == [
+        ([_SUBDEVICE_ID, "device", "0"], ()),
+        ([_SUBDEVICE_ID, "device", "0"], ("if=oic.if.b",)),
+    ]

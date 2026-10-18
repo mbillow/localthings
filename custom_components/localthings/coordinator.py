@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import logging
 import threading
 import time
@@ -813,7 +814,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _push_cache_snapshot is what actually gets a change here in front
         of a user, not just correct on the next read: select.py's
         current_option comes from coordinator.data, which only moves on
-        async_set_updated_data, and nothing prompts Home Assistant to
+        a poll or _publish_data, and nothing prompts Home Assistant to
         re-read a live `options` property (cycle's callable options included)
         without the state-changed signal that call sends. Without it, both
         this and a name applied through apply_cloud_courses -- which has
@@ -1013,6 +1014,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         step, not one per poll. The new port is written to the entry by
         `_persist_moved_port` once a poll has come through on it.
         """
+        # A poll or write still in flight when async_close runs would
+        # otherwise reconnect on its retry path, leaving a session that
+        # nothing ever closes after unload or shutdown.
+        if self._closed:
+            raise RuntimeError("coordinator closed")
         port = self._entry.data[CONF_PORT]
         try:
             self._open_session_retrying_collision(port)
@@ -1104,6 +1110,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sess.close()
             raise
         self._session = sess
+        # Checked after publishing: if async_close ran during the handshake,
+        # its own _close_session found no session yet, so this one is ours
+        # to close.
+        if self._closed:
+            self._close_session()
+            raise RuntimeError("coordinator closed")
         self._identity = identity
         self._log.debug("connected to %s:%d", host, port)
 
@@ -1186,7 +1198,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         with self._push_pending_lock:
             self._push_pending = False
         if self.bound:
-            self.async_set_updated_data(flatten(self.bound, self.entity_resources()))
+            self._publish_data()
+
+    @callback
+    def _publish_data(self) -> None:
+        """Hand listeners the current state without async_set_updated_data,
+        which also reschedules the next poll a full interval out: an
+        appliance pushing changes more often than every 30 s would postpone
+        the summary poll (sweep, liveness check, resubscribe) indefinitely.
+        Availability stays the poll's verdict."""
+        self.data = flatten(self.bound, self.entity_resources())
+        self.async_update_listeners()
 
     def _poll_once(self) -> dict[str, dict]:
         """GET /device/0, return parsed resources. Blocking.
@@ -1330,6 +1352,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         timeout: float = 10.0,
         apply: bool = True,
         budget: float | None = None,
+        stop: threading.Event | None = None,
     ) -> dict[str, dict]:
         """GET individual hrefs sequentially. Does not reconnect on failure. Blocking.
 
@@ -1346,6 +1369,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         each remaining GET is clamped to what is left of it. Without one, a
         long href list multiplies `timeout` by its length while holding the
         session.
+
+        `stop`, once set, skips the hrefs not yet read.
         """
         if self._session is None:
             return {}
@@ -1353,6 +1378,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         first = True
         deadline = time.monotonic() + budget if budget is not None else None
         for href in hrefs:
+            if stop is not None and stop.is_set():
+                break
             if deadline is not None:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
@@ -1429,8 +1456,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not hrefs:
                 continue
             async with self._session_lock:
+                stop = threading.Event()
+                job = self.hass.async_add_executor_job(
+                    functools.partial(self._poll_hrefs_blocking, hrefs, stop=stop)
+                )
                 try:
-                    await self.hass.async_add_executor_job(self._poll_hrefs_blocking, hrefs)
+                    await asyncio.shield(job)
+                except asyncio.CancelledError:
+                    # Cancelling doesn't stop the thread, and the summary poll
+                    # takes the lock straight after cancelling this task: hold
+                    # it until the read in flight returns, skipping the rest.
+                    stop.set()
+                    await asyncio.wait({job})
+                    raise
                 except Exception as e:
                     self._log.debug("sub-poll batch failed: %s", e)
 
@@ -2215,6 +2253,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self.hass.async_add_executor_job(self._close_session)
                 raise ConfigEntryAuthFailed(str(e)) from e
             except Exception as e:
+                if self._closed:
+                    # async_close closed the session under this read: nothing
+                    # to reconnect, and no device failure to report.
+                    await self.hass.async_add_executor_job(self._close_session)
+                    return flatten(self.bound, self.entity_resources())
                 if self._defer_reconnect_for(e):
                     self._log.debug(
                         "poll failed (%s), not yet treated as session "
@@ -2777,7 +2820,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ) from err
         self._log.info("holding %s=%r until the cook starts", param, value)
         self._canonical_cache.clear()
-        self.async_set_updated_data(flatten(self.bound, self.entity_resources()))
+        self._publish_data()
 
     async def async_start_cooking(
         self,

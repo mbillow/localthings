@@ -1414,7 +1414,13 @@
         "name": "Doba provozu"
       },
       "oven_state": {
-        "name": "Stav trouby"
+        "name": "Stav trouby",
+        "state": {
+          "ready": "Připraveno",
+          "preheat": "Předehřev",
+          "cooking": "Vaření",
+          "finish": "Dokončeno"
+        }
       },
       "cavity_state": {
         "name": "Stav trouby"

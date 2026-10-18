@@ -256,9 +256,13 @@ class LegacyHttpTransport:
             except TimeoutError:
                 _LOGGER.debug("%s: no time left for %s's linked resources", self._host, base)
                 break
-            linked_status, linked = self._request(
-                "GET", f"{base}/{endpoint}", timeout=linked_timeout
-            )
+            try:
+                linked_status, linked = self._request(
+                    "GET", f"{base}/{endpoint}", timeout=linked_timeout
+                )
+            except (OSError, http.client.HTTPException) as err:
+                _LOGGER.debug("%s: %s/%s failed: %s", self._host, base, endpoint, err)
+                continue
             if linked_status == 200 and isinstance(linked, dict):
                 bodies.update(unwrap(linked))
             else:

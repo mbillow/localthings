@@ -39,8 +39,15 @@ def int_or_none(v):
         return None
 
 
+# 0xFEFE, which FAC_BORA boards report as instantaneousPower while off or in
+# standby and a real reading while running (issue #625).
+_NO_READING_POWER = 65278.0
+
+
 def clamp_power(v):
     n = _num(v)
+    if n == _NO_READING_POWER:
+        return None
     return 0.0 if (n is not None and n < 0) else n
 
 

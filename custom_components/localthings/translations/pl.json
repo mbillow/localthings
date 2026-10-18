@@ -1414,7 +1414,13 @@
         "name": "Czas operacji"
       },
       "oven_state": {
-        "name": "Stan komory"
+        "name": "Stan komory",
+        "state": {
+          "ready": "Gotowe",
+          "preheat": "Nagrzewanie wstępne",
+          "cooking": "Gotowanie",
+          "finish": "Zakończono"
+        }
       },
       "cavity_state": {
         "name": "Stan komory"

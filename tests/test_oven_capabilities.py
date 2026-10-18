@@ -494,3 +494,84 @@ def _progress_desc():
 def test_progress_percentage_reads_zero_unless_active(state, raw, expected):
     rep = {"x.com.samsung.da.state": state, "x.com.samsung.da.progressPercentage": raw}
     assert _progress_desc().rep_fn(rep) == expected
+
+
+# ---------------------------------------------------------------------------
+# OVEN_CAVITY — cook stage enum
+# ---------------------------------------------------------------------------
+
+
+def _range_state(name):
+    from custom_components.localthings.registry.adapter import flatten
+    from custom_components.localthings.registry.by_type import resolve
+    from tests.conftest import _load_device
+
+    resources = _load_device(name)
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    return flatten(bound, resources)
+
+
+def _oven_state_desc():
+    return next(e for e in oven.OVEN_CAVITY.entities if e.key == "oven_state")
+
+
+def test_oven_state_is_a_translated_enum():
+    from custom_components.localthings.catalog import translated_states
+
+    desc = _oven_state_desc()
+    assert desc.device_class == "enum"
+    assert set(desc.options) == {"ready", "preheat", "cooking", "finish"}
+    assert translated_states("sensor", "oven_state") == set(desc.options)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("Ready", "ready"),  # every fixture
+        ("Preheat", "preheat"),  # #183, and the running 8888 Flex Duo fixture
+        ("Cooking", "cooking"),  # #183, mid-bake
+        ("Finish", "finish"),  # #183, end of the countdown
+    ],
+)
+def test_oven_state_reads_each_reported_stage(raw, expected):
+    assert _oven_state_desc().value_fn(raw) == expected
+
+
+def test_oven_state_from_range_fixture():
+    assert _range_state("range_ne6516a")["oven_state"] == "ready"
+
+
+def test_oven_state_passes_an_unseen_stage_through():
+    """An unseen stage still reports rather than taking the entity out."""
+    from typing import cast
+
+    from custom_components.localthings.coordinator import LocalThingsCoordinator
+    from custom_components.localthings.registry.adapter import flatten
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.sensor import LocalThingsSensor
+
+    bound = BoundEntity(href="/oven/vs/0", capability=oven.OVEN_CAVITY, desc=_oven_state_desc())
+    rep = {"x.com.samsung.da.state": "SomeFutureStage"}
+
+    class _Entry:
+        options: dict = {}  # noqa: RUF012
+
+    class _Coordinator:
+        device_key = "TEST-SERIAL"
+        config_entry = _Entry()
+
+        def resource(self, href):
+            return rep
+
+        def canonical_resources(self, _subdevice):
+            return {"/oven/vs/0": rep}
+
+        @property
+        def data(self):
+            return flatten([bound], {"/oven/vs/0": rep})
+
+    sensor = LocalThingsSensor(cast(LocalThingsCoordinator, _Coordinator()), bound)
+    assert sensor.native_value == "somefuturestage"
+    assert sensor.options == ["ready", "preheat", "cooking", "finish", "somefuturestage"]

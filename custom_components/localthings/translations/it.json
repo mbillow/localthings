@@ -1414,7 +1414,13 @@
         "name": "Tempo di funzionamento"
       },
       "oven_state": {
-        "name": "Stato camera di cottura"
+        "name": "Stato camera di cottura",
+        "state": {
+          "ready": "Pronto",
+          "preheat": "Preriscaldamento",
+          "cooking": "Cottura",
+          "finish": "Completato"
+        }
       },
       "cavity_state": {
         "name": "Stato camera di cottura"

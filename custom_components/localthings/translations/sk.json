@@ -1414,7 +1414,13 @@
         "name": "Čas prevádzky"
       },
       "oven_state": {
-        "name": "Stav vnútorného priestoru"
+        "name": "Stav vnútorného priestoru",
+        "state": {
+          "ready": "Pripravené",
+          "preheat": "Predhrievanie",
+          "cooking": "Varenie",
+          "finish": "Dokončené"
+        }
       },
       "cavity_state": {
         "name": "Stav vnútorného priestoru"

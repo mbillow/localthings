@@ -277,7 +277,6 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.FAN_MODE
-            | ClimateEntityFeature.SWING_MODE
             | ClimateEntityFeature.PRESET_MODE
             | ClimateEntityFeature.TURN_ON
             | ClimateEntityFeature.TURN_OFF
@@ -286,6 +285,14 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         # these properties are read on every refresh, so an un-deduped
         # warning would spam the log for a genuinely unrecognized code.
         self._warned_unmapped: set[tuple[str, str]] = set()
+
+    @property
+    def supported_features(self) -> ClimateEntityFeature:
+        # HA renders an empty swing menu if this flag has no matching options.
+        features = self._attr_supported_features
+        if self.swing_modes:
+            features |= ClimateEntityFeature.SWING_MODE
+        return features
 
     # -- resource helpers ---------------------------------------------------
 
@@ -733,6 +740,9 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
             return
         if not self._is_on():
             await self.coordinator.async_send_command(self._bound, ("power", True))
+        # The board might answer 4.00 to a write of the mode it is already in
+        if device == _first(self._rep(MODE_HREF).get(_MODES_FIELD)):
+            return
         await self.coordinator.async_send_command(self._bound, ("mode", device))
 
     async def async_turn_on(self) -> None:
