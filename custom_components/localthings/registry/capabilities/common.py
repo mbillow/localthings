@@ -414,9 +414,13 @@ KIDS_LOCK_GENERIC = Capability(
         # device_class='lock', both surfaces read with the same polarity
         # ('On' = open/unlocked, per HA convention); value_fn here inverts
         # the wire value to match (value=False on /kidslock/0 means kids
-        # lock is NOT active).
+        # lock is NOT active). An empty rep reads unknown, not unlocked
+        # (issue #626's filter reports /kidslock/0 as {}).
         BinarySensorDesc(
-            key="child_lock", field="value", device_class="lock", value_fn=lambda v: not bool(v)
+            key="child_lock",
+            field="value",
+            device_class="lock",
+            value_fn=lambda v: None if v is None else not bool(v),
         ),
     ),
 )
@@ -434,7 +438,7 @@ KIDS_LOCK_VS_FALLBACK = Capability(
             key="child_lock",
             field="x.com.samsung.da.kidsLock",
             device_class="lock",
-            value_fn=lambda v: v == "Ready",
+            value_fn=lambda v: None if v is None else v == "Ready",
         ),
     ),
 )

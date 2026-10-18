@@ -40,6 +40,14 @@ def test_kids_lock_vs_value_fn():
     assert desc.value_fn("Ready") is True
 
 
+def test_kids_lock_with_no_reading_is_unknown():
+    """An empty kids-lock rep (issue #626's filter reports /kidslock/0 as {})
+    reads unknown, not unlocked on the OCF href or locked on the vendor one."""
+    assert common.KIDS_LOCK_GENERIC.entities[0].value_fn(None) is None
+    assert common.KIDS_LOCK_VS_FALLBACK.entities[0].value_fn(None) is None
+    assert common.KIDS_LOCK_GENERIC.entities[0].value_fn(False) is True
+
+
 def test_common_caps_discover_on_dishwasher(dishwasher_resources):
     bound = discover(dishwasher_resources, _reg())
     keys = {b.desc.key for b in bound}
