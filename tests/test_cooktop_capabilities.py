@@ -95,3 +95,17 @@ def test_option_sensors_survive_an_unfetched_mode_resource():
         "cooktop_sync_control",
         "cooktop_device_type",
     } <= keys
+
+
+def test_an_empty_operational_state_is_covered():
+    """Issue #621's Dacor DTI36P876BB reports /operational/state/vs/0 as {},
+    which raised the coverage repair."""
+    resources = {**_load_device("cooktop"), "/operational/state/vs/0": {}}
+    unbound = []
+    discover(
+        resources,
+        cooktop.REGISTRY.capabilities,
+        cooktop.REGISTRY.pattern_capabilities,
+        log=unbound.append,
+    )
+    assert unbound == []

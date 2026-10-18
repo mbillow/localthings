@@ -19,6 +19,7 @@ import dataclasses
 
 from ..capabilities import common, cooktop, ignored
 from ..capabilities import range as range_caps
+from ..capability import Capability
 from ._base import DeviceRegistry, _build
 
 
@@ -69,6 +70,9 @@ REGISTRY = DeviceRegistry(
                 common.FIRMWARE_UPDATE,
                 common.ALARMS,
                 common.KIDS_LOCK_VS_FALLBACK,
+                # Empty ({}) on the only cooktop that reports it, a Dacor
+                # DTI36P876BB (issue #621), so there is no state to model.
+                Capability(href="/operational/state/vs/0"),
                 # registry.PROBE_HREFS is global, so every registry carries
                 # these (issue #301).
                 common.FILE_LIST,
