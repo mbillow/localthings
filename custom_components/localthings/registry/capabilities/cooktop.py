@@ -219,7 +219,8 @@ def is_legacy_radiant_cooktop(rep, resources):
     information = resources.get("/information/vs/0") or {}
     board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
     model = _option_value(rep.get("x.com.samsung.da.options"), "DeviceType")
-    return board == "TP6X_CT_16K" and (is_stub_rep(rep) or str(model).startswith("NV9300K"))
+    # Only this reported identity has verified timer units and ring-size meanings.
+    return board == "TP6X_CT_16K" and model == "NV9300K-/AA2"
 
 
 def is_empty_legacy_hood_slot(resources):

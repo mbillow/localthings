@@ -218,7 +218,7 @@ def test_captured_timer_and_ring_changes(capture, minutes, timer_state, size_3, 
 
 
 @pytest.mark.parametrize("name", [NAME, "cooktop", "cooktop_nv9300k", "cooktop_nv8000t"])
-def test_timer_units_only_for_verified_legacy_family(name):
+def test_timer_units_only_for_verified_legacy_model(name):
     resources = _load_device(name)
     reg = resolve(resources)
     assert reg is not None
@@ -256,13 +256,43 @@ def test_unknown_ring_size_and_finished_status_are_not_discarded():
     assert state["main_timer_state"] == "Finished"
 
 
-def test_legacy_mode_stub_keeps_typed_timer_sensors():
+@pytest.mark.parametrize("rep", [{}, {"href": "/mode/vs/0"}])
+def test_missing_model_keeps_generic_timer_sensors(rep):
     resources = _load_device(NAME)
-    resources["/mode/vs/0"] = {"href": "/mode/vs/0"}
+    resources["/mode/vs/0"] = rep
     reg = resolve(resources)
     assert reg is not None
     bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     timers = [b.desc for b in bound if b.desc.key == "main_timer_set"]
     assert len(timers) == 1
-    assert cast(SensorDesc, timers[0]).unit == "min"
-    assert all(b.desc.key != "main_timer_current" for b in bound)
+    assert cast(SensorDesc, timers[0]).unit is None
+    assert any(b.desc.key == "main_timer_current" for b in bound)
+
+
+@pytest.mark.parametrize(
+    ("board", "model"),
+    [
+        ("TP6X_CT_16K", "NV9300K-/AA1"),
+        ("TP6X_CT_16K", "NV9300K-OTHER"),
+        ("TP6X_CT_16K", "NV9300K"),
+        ("TP6X_CT_16K", None),
+        ("OTHER_BOARD", "NV9300K-/AA2"),
+    ],
+)
+def test_unverified_model_keeps_original_units_labels_and_defaults(board, model):
+    resources = _load_device(NAME)
+    resources["/information/vs/0"]["x.com.samsung.da.modelNum"] = board
+    options = resources["/mode/vs/0"]["x.com.samsung.da.options"]
+    options.remove("DeviceType_NV9300K-/AA2")
+    if model is not None:
+        options.append(f"DeviceType_{model}")
+    reg = resolve(resources)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    descriptions = {b.desc.key: b.desc for b in bound}
+    timer = cast(SensorDesc, descriptions["main_timer_set"])
+    assert (timer.unit, timer.device_class, timer.translation_key) == (None, None, None)
+    assert "main_timer_current" in descriptions
+    assert descriptions["burner_3_pan_size"].translation_key == "burner_pan_size"
+    assert descriptions["cooktop_paused"].enabled_default is True
+    assert descriptions["cooktop_flex_coil"].enabled_default is True

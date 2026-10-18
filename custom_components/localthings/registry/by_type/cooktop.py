@@ -50,35 +50,50 @@ def _unique(caps):
     return [c for c in caps if not (id(c) in seen or seen.add(id(c)))]
 
 
+def _exclude_empty_hood(cap):
+    # The unpaired NZ36K7570R hood reports constant power and remote status.
+    # Excluding its entities lets the generic subdevice liveness check reject it.
+    return dataclasses.replace(
+        cap,
+        match_fn=lambda rep, resources: (
+            not cooktop.is_empty_legacy_hood_slot(resources)
+            and (cap.match_fn is None or cap.match_fn(rep, resources))
+        ),
+    )
+
+
 REGISTRY = DeviceRegistry(
     name="cooktop",
     capabilities=_build(
-        _unique(
-            [
-                *ignored.IGNORED,
-                *common.UNIVERSAL,
-                common.POWER_GENERIC,
-                _OPTIONS_POWER,
-                _BURNER_LIST_POWER,
-                # /mode/vs/0 options-array boards.
-                _OPTIONS_MODE,
-                cooktop.LEGACY_RADIANT_MODE,
-                cooktop.DIAGNOSIS,
-                cooktop.COOKTOP_CONNECTED,
-                # /cooktop/status/vs/0 burnerList boards.
-                range_caps.COOKTOP_STATUS,
-                range_caps.COOKTOP_SPEC,
-                range_caps.COOKTOP_SAFETY,
-                range_caps.PROBE_STATUS,
-                cooktop.PAIRED_HOOD_STATUS,
-                common.FIRMWARE_UPDATE,
-                common.ALARMS,
-                common.KIDS_LOCK_VS_FALLBACK,
-                # registry.PROBE_HREFS is global, so every registry carries
-                # these (issue #301).
-                common.FILE_LIST,
-                common.FILE_TRANSFER,
-            ]
-        )
+        [
+            _exclude_empty_hood(cap)
+            for cap in _unique(
+                [
+                    *ignored.IGNORED,
+                    *common.UNIVERSAL,
+                    common.POWER_GENERIC,
+                    _OPTIONS_POWER,
+                    _BURNER_LIST_POWER,
+                    # /mode/vs/0 options-array boards.
+                    _OPTIONS_MODE,
+                    cooktop.LEGACY_RADIANT_MODE,
+                    cooktop.DIAGNOSIS,
+                    cooktop.COOKTOP_CONNECTED,
+                    # /cooktop/status/vs/0 burnerList boards.
+                    range_caps.COOKTOP_STATUS,
+                    range_caps.COOKTOP_SPEC,
+                    range_caps.COOKTOP_SAFETY,
+                    range_caps.PROBE_STATUS,
+                    cooktop.PAIRED_HOOD_STATUS,
+                    common.FIRMWARE_UPDATE,
+                    common.ALARMS,
+                    common.KIDS_LOCK_VS_FALLBACK,
+                    # registry.PROBE_HREFS is global, so every registry carries
+                    # these (issue #301).
+                    common.FILE_LIST,
+                    common.FILE_TRANSFER,
+                ]
+            )
+        ]
     ),
 )

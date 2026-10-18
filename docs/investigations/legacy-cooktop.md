@@ -2,7 +2,9 @@
 
 Hardware observations on 2026-10-16, using the TP6X_CT_16K legacy HTTPS
 interface. The device reports DeviceType_NV9300K-/AA2. The observations
-below do not establish units or ring-size meanings for other board families.
+below do not establish units or ring-size meanings for other models, including
+those using the same board. The mappings require both TP6X_CT_16K and the
+exact DeviceType_NV9300K-/AA2 value; missing identity data keeps the generic profile.
 
 ## Timer
 
@@ -77,7 +79,8 @@ FanSpeed and both shutoff timer values are 0, Lamp and Power are Off, and
 ShutOffTimerState is Ready. Generic power/remote-control readings previously
 caused this placeholder to appear as a second cooktop with eight entities.
 
-Discovery now skips this exact empty-slot signature. Missing or different
+The cooktop registry excludes entities for this exact empty-slot signature,
+so the existing subdevice liveness check skips the placeholder. Missing or different
 identity/state fields keep the existing discovery behavior. The skipped
 resources remain in diagnostic downloads, and Home Assistant can remove an
 existing placeholder device after reload using the normal Delete device action.
