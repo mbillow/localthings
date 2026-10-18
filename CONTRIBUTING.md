@@ -21,8 +21,10 @@ python3.13 -m venv .venv
 .venv/bin/ruff format --check custom_components tests
 .venv/bin/ruff check custom_components tests
 .venv/bin/ty check custom_components tests
-.venv/bin/pytest tests/ -q
+.venv/bin/pytest tests/ -q -n auto
 ```
+
+`-n auto` runs the suite on every core through pytest-xdist, which `pytest-homeassistant-custom-component` already installs. Leave it off when running a single file: each worker pays a few seconds of Home Assistant import before its first test. Tests mustn't wait on real time; patch the delay or the clock, as `tests/test_sensor_sticky.py` does.
 
 CI runs these four checks on Python 3.14. Use Python 3.13 or newer locally. On 3.12 or older, pip finds no compatible `pytest-homeassistant-custom-component` and the install fails. `requirements-dev.txt` installs Home Assistant, pytest, ruff and ty at matching versions, and pins `smartthings-local` the same way `manifest.json` does, so the tests run against the published protocol library.
 
