@@ -904,6 +904,21 @@ def _cabinet_light_write(p, rep, href=None):
     }
 
 
+def _cabinet_light_available(rep, resources):
+    # RF23DB9750QLAA keeps its lights on with an open door, overriding manual off.
+    # Prefer the individual door reports, as DOORS_FALLBACK does below.
+    doors = [
+        door
+        for href, door in resources.items()
+        if href.startswith("/door/")
+        and ("openState" in door or "x.com.samsung.da.openState" in door)
+    ]
+    if doors:
+        return not any(_door_open_state(door) for door in doors)
+    items = (resources.get("/doors/vs/0") or {}).get("x.com.samsung.da.items") or []
+    return not any(_door_open_state(door) for door in items)
+
+
 CABINET_LIGHT = Capability(
     href="/cabinet/light/total/vs/0",
     poll_tier="warm",
@@ -914,6 +929,7 @@ CABINET_LIGHT = Capability(
             icon="mdi:fridge-outline",
             value_fn=lambda v: v == "On",
             write_fn=_cabinet_light_write,
+            available_fn=_cabinet_light_available,
         ),
         SwitchDesc(
             key="cabinet_light_dim",
@@ -1072,7 +1088,7 @@ DOOR_GENERIC = Capability(
         BinarySensorDesc(
             key="open",
             rep_fn=_door_open_state,
-            translation_key="instance_open",
+            translation_key="instance_door",
             use_instance_name=True,
             device_class="door",
         ),

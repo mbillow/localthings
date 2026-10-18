@@ -121,6 +121,8 @@ class SwitchDesc(SamsungEntityDescription):
     device_class: str | None = None
     write_fn: WriteFn = None
     validate_fn: ValidateFn = None
+    # Live control availability; unlike exists_fn, this keeps the entity registered.
+    available_fn: Callable[[dict, dict], bool] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

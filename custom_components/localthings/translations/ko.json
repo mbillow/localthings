@@ -70,6 +70,9 @@
       "firmware_update": {
         "name": "펌웨어 업데이트 가능"
       },
+      "instance_door": {
+        "name": "{instance_name}"
+      },
       "instance_open": {
         "name": "{instance_name} 열림"
       },

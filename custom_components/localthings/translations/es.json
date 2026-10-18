@@ -436,6 +436,9 @@
       "firmware_update": {
         "name": "Actualización de firmware disponible"
       },
+      "instance_door": {
+        "name": "{instance_name}"
+      },
       "instance_open": {
         "name": "{instance_name}: abierta"
       },

@@ -70,6 +70,9 @@
       "firmware_update": {
         "name": "Firmware update available"
       },
+      "instance_door": {
+        "name": "{instance_name}"
+      },
       "instance_open": {
         "name": "{instance_name} open"
       },
@@ -2303,12 +2306,12 @@
         "onedoor": "Kimchi compartment",
         "winecellar_top": "Top wine zone",
         "winecellar_bottom": "Bottom wine zone",
-        "door_freezer": "Freezer door",
-        "door_cooler": "Fridge door",
-        "door_cvroom": "Flex zone door",
-        "door_winecellar": "Wine cellar door",
-        "door_onedoorfreezer": "Main door",
-        "door_onedoorkimchi": "Main door",
+        "door_freezer": "Freezer Door",
+        "door_cooler": "Fridge Door",
+        "door_cvroom": "Flex Zone Door",
+        "door_winecellar": "Wine Cellar Door",
+        "door_onedoorfreezer": "Main Door",
+        "door_onedoorkimchi": "Main Door",
         "ice_maker": "Ice maker",
         "cubed_ice": "Cubed ice",
         "ice_bites": "Ice Bites",

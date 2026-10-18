@@ -70,6 +70,9 @@
       "firmware_update": {
         "name": "Mise à jour du micrologiciel disponible"
       },
+      "instance_door": {
+        "name": "{instance_name}"
+      },
       "instance_open": {
         "name": "{instance_name} : ouverture"
       },

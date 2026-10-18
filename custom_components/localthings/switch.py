@@ -37,6 +37,15 @@ class LocalThingsSwitch(LocalThingsEntity, SwitchEntity):
         )
 
     @property
+    def available(self) -> bool:
+        if not super().available:
+            return False
+        desc = cast(SwitchDesc, self._bound.desc)
+        if desc.available_fn is None:
+            return True
+        return desc.available_fn(self.coordinator.entity_rep(self._bound.href), self._resources)
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return entity specific state attributes."""
         desc = cast(SwitchDesc, self._bound.desc)

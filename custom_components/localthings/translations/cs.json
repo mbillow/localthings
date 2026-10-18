@@ -67,6 +67,9 @@
       "firmware_update": {
         "name": "Dostupná aktualizace firmwaru"
       },
+      "instance_door": {
+        "name": "{instance_name}"
+      },
       "instance_open": {
         "name": "{instance_name} – otevřeno"
       },
