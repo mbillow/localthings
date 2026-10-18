@@ -582,12 +582,13 @@ async def test_write_resource_verified_is_keyed_by_canonical_href_for_subdevice(
     fake.queue_get("/mode/vs/1", {"x": 1})
     coordinator._session = fake
 
-    response = await _call_write(
-        hass,
-        device.id,
-        writes=[{"href": "/mode/vs/0", "payload": {"x": 1}}],
-        verify_after=1,
-    )
+    with patch(_SLEEP_TARGET, new_callable=AsyncMock):
+        response = await _call_write(
+            hass,
+            device.id,
+            writes=[{"href": "/mode/vs/0", "payload": {"x": 1}}],
+            verify_after=1,
+        )
 
     assert list(response["verified"]) == ["/mode/vs/0"]
     assert response["verified"]["/mode/vs/0"]["held"] is True
@@ -647,12 +648,13 @@ async def test_write_resource_held_is_none_when_the_verify_read_fails(hass, coor
 
     coordinator._session = _FailingVerifyRead()
 
-    response = await _call_write(
-        hass,
-        device_id,
-        writes=[{"href": "/mode/vs/0", "payload": {"x": 1}}],
-        verify_after=1,
-    )
+    with patch(_SLEEP_TARGET, new_callable=AsyncMock):
+        response = await _call_write(
+            hass,
+            device_id,
+            writes=[{"href": "/mode/vs/0", "payload": {"x": 1}}],
+            verify_after=1,
+        )
 
     verified = response["verified"]["/mode/vs/0"]
     assert verified["held"] is None

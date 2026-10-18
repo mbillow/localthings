@@ -41,7 +41,7 @@ def _fast_guided_waits(monkeypatch):
     from custom_components.localthings import config_flow as cf
 
     monkeypatch.setattr(cf, "_CLOUD_PROBE_INTERVAL_S", 0.01)
-    monkeypatch.setattr(cf, "_CLOUD_WAIT_TIMEOUT_S", 0.5)
+    monkeypatch.setattr(cf, "_CLOUD_WAIT_TIMEOUT_S", 0.1)
 
 
 FIXTURE = "washer_ww5000c_cloud"

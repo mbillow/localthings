@@ -105,7 +105,9 @@ def test_find_live_ports_detects_silent_port(socket_enabled) -> None:
         result = find_live_ports(
             "127.0.0.1",
             [closed_ports[0], live_port, closed_ports[1]],
-            0.8,
+            # A silent port is only known silent once the window ends;
+            # loopback refusals arrive in microseconds, so keep it short.
+            0.25,
         )
     finally:
         live_sock.close()
@@ -153,7 +155,7 @@ def test_sweep_ports_rescues_preferred_ports_the_sweep_missed(
     live_port = live_sock.getsockname()[1]
 
     try:
-        sweep, candidates = sweep_ports("127.0.0.1", [preferred_port, live_port], 0.8)
+        sweep, candidates = sweep_ports("127.0.0.1", [preferred_port, live_port], 0.25)
     finally:
         live_sock.close()
 

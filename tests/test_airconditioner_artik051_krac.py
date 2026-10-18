@@ -23,6 +23,7 @@ from typing import ClassVar, cast
 
 from homeassistant.components.climate import HVACMode
 
+from custom_components.localthings import climate as climate_module
 from custom_components.localthings.climate import LocalThingsClimate
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.adapter import flatten
@@ -729,11 +730,12 @@ def test_the_active_code_is_always_listed_even_where_the_rules_deny_it():
     assert "2step" in entity.preset_modes
 
 
-async def test_nano_in_auto_switches_the_board_to_cool_first():
+async def test_nano_in_auto_switches_the_board_to_cool_first(monkeypatch):
     """Comode_Nano written while the unit is in Auto is answered 2.04 Changed and
     dropped; the same token after a separate mode write holds. Putting modes and
     options in one POST does not work either, so the mode goes first, on its own.
     """
+    monkeypatch.setattr(climate_module, "_NANO_AFTER_MODE_DELAY", 0)
     resources = _load_device(FIXTURE)
     resources["/mode/vs/0"]["x.com.samsung.da.modes"] = ["Auto"]
     coordinator = _FakeCoordinator(resources)

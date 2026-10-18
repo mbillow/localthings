@@ -10,15 +10,40 @@ production desync bug by hand-computing the two independently.
 
 from __future__ import annotations
 
-import time
 from dataclasses import replace
+from types import SimpleNamespace
 from typing import cast
 
+import pytest
+
+from custom_components.localthings import sensor as sensor_module
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
 from custom_components.localthings.registry.discovery import BoundEntity
 from custom_components.localthings.sensor import LocalThingsSensor
+
+
+class _Clock:
+    """The sticky window's monotonic clock, advanced by hand so a window
+    test neither waits it out nor depends on how fast the machine is."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch) -> _Clock:
+    fake = _Clock()
+    monkeypatch.setattr(sensor_module, "time", SimpleNamespace(monotonic=fake.monotonic))
+    return fake
+
 
 _PROGRESS_DESC = next(e for e in OPERATIONAL_STATE.entities if e.key == "progress")
 _PROGRESS_PERCENTAGE_DESC = next(
@@ -165,7 +190,7 @@ def test_a_new_cycle_starting_overrides_the_hold():
     assert sensor.native_value == "wash"
 
 
-def test_a_running_stage_after_finish_does_not_break_the_hold():
+def test_a_running_stage_after_finish_does_not_break_the_hold(clock):
     """Issue #358: the reporting dryer resets `progress` to its course's
     first stage in the same moment `state` goes idle -- observed twice,
     identically, as Cooling -> +60s Finish -> +24s 'Drying' -> +4s
@@ -193,11 +218,11 @@ def test_a_running_stage_after_finish_does_not_break_the_hold():
     _replace(coordinator, state="Ready", progress="None")
     assert sensor.native_value == "finish"
 
-    time.sleep(0.25)
+    clock.sleep(0.25)
     assert sensor.native_value == "idle"
 
 
-def test_progress_percentage_survives_the_same_tail():
+def test_progress_percentage_survives_the_same_tail(clock):
     """#358's tail hits progress_percentage through the identical bypass;
     it must stay pinned at 100 rather than being released back to a raw
     mid-cycle figure."""
@@ -210,11 +235,11 @@ def test_progress_percentage_survives_the_same_tail():
     _replace(coordinator, state="Ready", progress="Drying", progressPercentage="40")
     assert sensor.native_value == 100
 
-    time.sleep(0.25)
+    clock.sleep(0.25)
     assert sensor.native_value == 0
 
 
-def test_a_paused_new_cycle_is_left_to_the_window_rather_than_released():
+def test_a_paused_new_cycle_is_left_to_the_window_rather_than_released(clock):
     """'Paused' isn't positive evidence of a new cycle, and #358's tail is
     indistinguishable from it. Nothing live is withheld by waiting --
     rep_fn shows 'Idle' while paused with or without a hold -- so the
@@ -228,14 +253,14 @@ def test_a_paused_new_cycle_is_left_to_the_window_rather_than_released():
     _replace(coordinator, state="Pause", progress="Wash")
     assert sensor.native_value == "finish"  # held out, not released
 
-    time.sleep(0.1)
+    clock.sleep(0.1)
     assert sensor.native_value == "idle"  # what a paused appliance always shows
 
     _replace(coordinator, state="Run", progress="Wash")
     assert sensor.native_value == "wash"
 
 
-def test_a_flapping_finish_cannot_ratchet_an_open_window_forward():
+def test_a_flapping_finish_cannot_ratchet_an_open_window_forward(clock):
     """Edge-triggering stops a *stuck* Finish from extending the hold; a
     progress that flaps out of and back into Finish must not restart it
     either, or the bound stops being a bound."""
@@ -246,7 +271,7 @@ def test_a_flapping_finish_cannot_ratchet_an_open_window_forward():
     assert sensor.native_value == "finish"
 
     for _ in range(3):
-        time.sleep(0.05)
+        clock.sleep(0.05)
         _replace(coordinator, state="Ready", progress="None")
         assert sensor.native_value == "finish"
         _replace(coordinator, state="Ready", progress="Finish")
@@ -254,12 +279,12 @@ def test_a_flapping_finish_cannot_ratchet_an_open_window_forward():
 
     # 0.15s of flapping so far -- the window still ends 0.3s after the
     # first Finish, not 0.3s after the most recent re-entry.
-    time.sleep(0.2)
+    clock.sleep(0.2)
     _replace(coordinator, state="Ready", progress="Finish")
     assert sensor.native_value == "idle"
 
 
-def test_a_finish_after_the_window_closes_does_not_re_arm_it():
+def test_a_finish_after_the_window_closes_does_not_re_arm_it(clock):
     """Expiry doesn't re-open the door: with no new cycle in between, a
     second Finish is the same Finish. Re-arming on it would strobe the
     entity Finish -> Idle -> Finish once per window, re-firing exactly the
@@ -276,7 +301,7 @@ def test_a_finish_after_the_window_closes_does_not_re_arm_it():
     _replace(coordinator, state="Ready", progress="Finish")
     assert sensor.native_value == "finish"
 
-    time.sleep(0.1)
+    clock.sleep(0.1)
     assert sensor.native_value == "idle"
 
     _replace(coordinator, state="Ready", progress="None")
@@ -293,7 +318,7 @@ def test_a_finish_after_the_window_closes_does_not_re_arm_it():
     assert sensor.native_value == "finish"
 
 
-def test_hold_expires_after_sticky_seconds():
+def test_hold_expires_after_sticky_seconds(clock):
     # A fresh desc (frozen dataclass -- replace(), not mutation, so the
     # module-level _PROGRESS_DESC other tests share stays untouched) with
     # a short real window -- consistent with this codebase's own
@@ -309,11 +334,11 @@ def test_hold_expires_after_sticky_seconds():
     _replace(coordinator, state="Ready")
     assert sensor.native_value == "finish"  # still within the window
 
-    time.sleep(0.1)
+    clock.sleep(0.1)
     assert sensor.native_value == "idle"
 
 
-def test_a_progress_stuck_at_finish_does_not_hold_open_the_window_forever():
+def test_a_progress_stuck_at_finish_does_not_hold_open_the_window_forever(clock):
     """Edge-triggering: sticky_fn keeps matching on every poll if the
     device's own `progress` field never resets on its own (the same class
     of quirk _completion_minutes' remainingTime-freeze workaround already
@@ -327,13 +352,13 @@ def test_a_progress_stuck_at_finish_does_not_hold_open_the_window_forever():
     _replace(coordinator, state="Ready", progress="Finish")
     assert sensor.native_value == "finish"
 
-    time.sleep(0.03)
+    clock.sleep(0.03)
     # Device still (incorrectly) reports Finish on every subsequent poll --
     # must not restart the window.
     _replace(coordinator, state="Ready", progress="Finish")
     assert sensor.native_value == "finish"
 
-    time.sleep(0.03)  # 0.06s total since the first sighting -- past 0.05s
+    clock.sleep(0.03)  # 0.06s total since the first sighting -- past 0.05s
     _replace(coordinator, state="Ready", progress="Finish")
     assert sensor.native_value == "idle"
 
