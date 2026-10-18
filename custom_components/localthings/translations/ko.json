@@ -1190,6 +1190,20 @@
           "poll": "폴링"
         }
       },
+      "last_response": {
+        "name": "마지막 응답"
+      },
+      "filter_activity": {
+        "name": "필터 동작",
+        "state": {
+          "none": "대기",
+          "filtering": "필터링",
+          "bypassing": "우회",
+          "waiting": "대기 중",
+          "stopping": "정지 중",
+          "sensing": "감지 중"
+        }
+      },
       "cooktop_running_state": {
         "name": "쿡탑 작동 상태"
       },

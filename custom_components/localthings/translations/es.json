@@ -1556,6 +1556,20 @@
           "poll": "Sondeo"
         }
       },
+      "last_response": {
+        "name": "Última respuesta"
+      },
+      "filter_activity": {
+        "name": "Actividad del filtro",
+        "state": {
+          "none": "Inactiva",
+          "filtering": "Filtrando",
+          "bypassing": "Derivación",
+          "waiting": "En espera",
+          "stopping": "Deteniéndose",
+          "sensing": "Detectando"
+        }
+      },
       "cooktop_running_state": {
         "name": "Estado de funcionamiento de la placa"
       },

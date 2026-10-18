@@ -1190,6 +1190,20 @@
           "poll": "Interrogation périodique"
         }
       },
+      "last_response": {
+        "name": "Dernière réponse"
+      },
+      "filter_activity": {
+        "name": "Activité du filtre",
+        "state": {
+          "none": "Inactif",
+          "filtering": "Filtration",
+          "bypassing": "Dérivation",
+          "waiting": "En attente",
+          "stopping": "Arrêt en cours",
+          "sensing": "Détection"
+        }
+      },
       "cooktop_running_state": {
         "name": "État de fonctionnement de la plaque de cuisson"
       },

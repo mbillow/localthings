@@ -1190,6 +1190,20 @@
           "poll": "Dotazování"
         }
       },
+      "last_response": {
+        "name": "Poslední odpověď"
+      },
+      "filter_activity": {
+        "name": "Činnost filtru",
+        "state": {
+          "none": "Nečinný",
+          "filtering": "Filtrace",
+          "bypassing": "Obtok",
+          "waiting": "Čekání",
+          "stopping": "Zastavování",
+          "sensing": "Snímání"
+        }
+      },
       "cooktop_running_state": {
         "name": "Provozní stav varné desky"
       },

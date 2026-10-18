@@ -12,7 +12,8 @@ from __future__ import annotations
 import re
 from unittest.mock import patch
 
-from homeassistant.config_entries import SOURCE_DHCP, ConfigEntryState
+import pytest
+from homeassistant.config_entries import SOURCE_DHCP, ConfigEntryState, ConfigFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
@@ -179,6 +180,72 @@ async def test_a_sighting_at_the_same_address_wakes_a_retrying_entry(
     reload.assert_called_once_with(entry.entry_id)
 
 
+@pytest.fixture
+def no_listener_reload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Core 2026.12 stops reloading an entry with an update listener through
+    `updates=` or async_update_reload_and_abort (issue #647), and ours has
+    one, so a flow that leans on either fails here."""
+    abort = ConfigFlow._abort_if_unique_id_configured
+
+    def _abort(self, updates=None, *args, **kwargs):
+        assert updates is None, "reload left to _abort_if_unique_id_configured(updates=...)"
+        return abort(self, None, *args, **kwargs)
+
+    def _helper(self, *args, **kwargs):
+        raise AssertionError("reload left to async_update_reload_and_abort")
+
+    monkeypatch.setattr(ConfigFlow, "_abort_if_unique_id_configured", _abort)
+    monkeypatch.setattr(ConfigFlow, "async_update_reload_and_abort", _helper)
+
+
+async def _listener(*_) -> None:
+    pass
+
+
+async def test_a_move_reloads_an_entry_with_an_update_listener(
+    hass: HomeAssistant,
+    enable_custom_integrations,
+    no_listener_reload,
+):
+    entry = _entry(hass, **{CONF_MAC: MAC})
+    entry.mock_state(hass, ConfigEntryState.LOADED)
+    entry.add_update_listener(_listener)
+
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        result = await _dhcp(hass, _sighting("10.0.0.77"))
+
+    assert result["reason"] == "already_configured"
+    assert entry.data[CONF_HOST] == "10.0.0.77"
+    reload.assert_called_once_with(entry.entry_id)
+
+
+async def test_a_move_reloads_a_retrying_entry_once(
+    hass: HomeAssistant,
+    enable_custom_integrations,
+):
+    entry = _entry(hass, **{CONF_MAC: MAC})
+    entry.mock_state(hass, ConfigEntryState.SETUP_RETRY)
+
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        await _dhcp(hass, _sighting("10.0.0.77"))
+
+    assert entry.data[CONF_HOST] == "10.0.0.77"
+    reload.assert_called_once_with(entry.entry_id)
+
+
+async def test_a_sighting_at_the_same_address_leaves_a_loaded_entry_alone(
+    hass: HomeAssistant,
+    enable_custom_integrations,
+):
+    entry = _entry(hass, **{CONF_MAC: MAC})
+    entry.mock_state(hass, ConfigEntryState.LOADED)
+
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        await _dhcp(hass, _sighting("10.0.0.5"))
+
+    reload.assert_not_called()
+
+
 async def test_a_sighting_brings_the_address_in_the_title_with_it(
     hass: HomeAssistant,
     enable_custom_integrations,
@@ -272,6 +339,20 @@ async def _reconfigure(hass: HomeAssistant, entry: MockConfigEntry, host: str, p
         patch.object(hass.config_entries, "async_schedule_reload"),
     ):
         return await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: host})
+
+
+async def test_reconfigure_reloads_an_entry_with_an_update_listener(
+    hass: HomeAssistant,
+    enable_custom_integrations,
+    no_listener_reload,
+):
+    entry = _entry(hass, **{CONF_MAC: MAC})
+    entry.add_update_listener(_listener)
+
+    result = await _reconfigure(hass, entry, "10.0.0.77", _probe_result())
+
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_HOST] == "10.0.0.77"
 
 
 async def test_reconfigure_moves_the_entry_and_learns_its_mac(

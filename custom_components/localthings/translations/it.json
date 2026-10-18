@@ -1190,6 +1190,20 @@
           "poll": "Interrogazione"
         }
       },
+      "last_response": {
+        "name": "Ultima risposta"
+      },
+      "filter_activity": {
+        "name": "Attività del filtro",
+        "state": {
+          "none": "Inattivo",
+          "filtering": "Filtraggio",
+          "bypassing": "Bypass",
+          "waiting": "In attesa",
+          "stopping": "Arresto in corso",
+          "sensing": "Rilevamento"
+        }
+      },
       "cooktop_running_state": {
         "name": "Stato di funzionamento piano cottura"
       },

@@ -1190,6 +1190,20 @@
           "poll": "Odpytywanie"
         }
       },
+      "last_response": {
+        "name": "Ostatnia odpowiedź"
+      },
+      "filter_activity": {
+        "name": "Aktywność filtra",
+        "state": {
+          "none": "Bezczynny",
+          "filtering": "Filtrowanie",
+          "bypassing": "Obejście",
+          "waiting": "Oczekiwanie",
+          "stopping": "Zatrzymywanie",
+          "sensing": "Wykrywanie"
+        }
+      },
       "cooktop_running_state": {
         "name": "Stan pracy płyty grzejnej"
       },

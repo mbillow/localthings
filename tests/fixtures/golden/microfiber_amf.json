@@ -1,0 +1,15 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "diagnosis_status",
+    "energy_kwh",
+    "filter_activity",
+    "filter_blockage",
+    "filter_status",
+    "filter_usage",
+    "firmware_update",
+    "machine_state",
+    "power_switch",
+    "remote_control"
+  ]
+}

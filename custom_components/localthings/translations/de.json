@@ -1190,6 +1190,20 @@
           "poll": "Abfrage"
         }
       },
+      "last_response": {
+        "name": "Letzte Antwort"
+      },
+      "filter_activity": {
+        "name": "Filteraktivität",
+        "state": {
+          "none": "Leerlauf",
+          "filtering": "Filtert",
+          "bypassing": "Umgehung",
+          "waiting": "Wartet",
+          "stopping": "Wird gestoppt",
+          "sensing": "Erkennung"
+        }
+      },
       "cooktop_running_state": {
         "name": "Kochfeld-Laufzustand"
       },

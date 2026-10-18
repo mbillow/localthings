@@ -6,7 +6,7 @@ surface as a standalone oven) and adds the cooktop-specific capabilities
 for the burner half.
 """
 
-from ..capabilities import common, ignored, oven
+from ..capabilities import common, dishwasher, ignored, oven
 from ..capabilities import range as range_caps
 from ._base import DeviceRegistry, _build
 
@@ -28,6 +28,9 @@ REGISTRY = DeviceRegistry(
             oven.OVEN_DOOR,
             oven.OVEN_CONNECTED,
             oven.OVEN_SPEC,
+            # The diagnosisStart shape the oven registry binds (#300), here on
+            # an NX58K7850SS Flex Duo's two cavities (#624).
+            dishwasher.DIAGNOSIS,
             range_caps.RANGE_CLOCK_SYNC,
             range_caps.COOKTOP_STATUS,
             range_caps.COOKTOP_SPEC,

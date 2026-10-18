@@ -1588,7 +1588,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not _identity_matches(entry, info, self._host):
                 return self._legacy_token_form({"base": "wrong_device"})
             # The leaf too: fallback_ca may have replaced it with a CA-signed one.
-            return self.async_update_reload_and_abort(
+            return self._update_reload_and_abort(
                 entry,
                 data_updates={
                     CONF_DEVICE_TOKEN: token,
@@ -1601,6 +1601,25 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._legacy_token = token
         info = {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
         return await self._finish_probe(info, self.hass.config_entries.async_entries(DOMAIN))
+
+    @callback
+    def _update_reload_and_abort(
+        self,
+        entry: config_entries.ConfigEntry,
+        *,
+        data_updates: dict[str, Any],
+        title: str | UndefinedType = UNDEFINED,
+    ) -> ConfigFlowResult:
+        """async_update_reload_and_abort without its reload, which Core
+        2026.12 stops making for an entry with an update listener (issue
+        #647); ours refreshes cloud courses on an options change."""
+        self.hass.config_entries.async_update_entry(
+            entry, title=title, data={**entry.data, **data_updates}
+        )
+        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        if self.source == config_entries.SOURCE_RECONFIGURE:
+            return self.async_abort(reason="reconfigure_successful")
+        return self.async_abort(reason="reauth_successful")
 
     def _legacy_token_form(self, errors: dict[str, str] | None = None) -> ConfigFlowResult:
         return self.async_show_form(
@@ -1655,16 +1674,22 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         await self.async_set_unique_id(entry.unique_id)
         # The address the title names moves with the entry; one the user has
-        # made their own stays as it is (see _followed_title). Separate from
-        # the update below because `updates` writes entry data only.
-        if (title := _followed_title(entry, discovery_info.ip)) is not UNDEFINED:
-            self.hass.config_entries.async_update_entry(entry, title=title)
-        # Writes the new host and schedules a reload when the address moved.
-        # When it hasn't, the sighting still reloads an entry sitting in
-        # SETUP_RETRY -- Home Assistant's own handling for a discovery
-        # source, and the "this appliance is back on the network" signal a
-        # poll of an unreachable device can't produce (issue #295).
-        self._abort_if_unique_id_configured(updates={CONF_HOST: discovery_info.ip})
+        # made their own stays as it is (see _followed_title).
+        moved = self.hass.config_entries.async_update_entry(
+            entry,
+            title=_followed_title(entry, discovery_info.ip),
+            data={**entry.data, CONF_HOST: discovery_info.ip},
+        )
+        # Reloaded here rather than through `updates=`, which Core 2026.12
+        # stops honouring for an entry with an update listener (issue #647).
+        # A retrying entry reloads even when the address didn't move: the
+        # sighting is the "back on the network" signal a poll can't produce
+        # (issue #295).
+        state = entry.state
+        if state is config_entries.ConfigEntryState.SETUP_RETRY or (
+            moved and state is config_entries.ConfigEntryState.LOADED
+        ):
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
         return self.async_abort(reason="already_configured")
 
     async def async_step_reconfigure(
@@ -1749,7 +1774,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     errors["base"] = "wrong_device"
                 else:
-                    return self.async_update_reload_and_abort(
+                    return self._update_reload_and_abort(
                         entry,
                         title=_followed_title(entry, host),
                         data_updates={

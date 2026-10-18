@@ -17,7 +17,9 @@ from ..capability import Capability
 from ..entities import BinarySensorDesc, SensorDesc
 from . import dishwasher
 
-_INACTIVE_OPERATION_STATES = {"Off", "Ready"}
+# NotSupported marks a slot the board advertises but has no burner for:
+# issue #621's Dacor reports it for slot 2 of five real burners.
+_INACTIVE_OPERATION_STATES = {"Off", "Ready", "NotSupported"}
 
 
 def _option_value(options, prefix):
@@ -90,7 +92,15 @@ def _option_present(prefix):
 
 
 def _slot_option_present(prefix, slot):
-    return _option_present(f"{prefix}{slot}")
+    present = _option_present(f"{prefix}{slot}")
+    # A NotSupported slot has no burner behind it (issue #621).
+    return lambda rep, resources: (
+        present(rep, resources)
+        and (
+            _option_value(rep.get("x.com.samsung.da.options"), f"OperationState{slot}")
+            != "NotSupported"
+        )
+    )
 
 
 def _option_on(options, prefix):

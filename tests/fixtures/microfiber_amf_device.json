@@ -1,0 +1,241 @@
+{
+  "seeds_note": "Verbatim from the issue #626 reporter's diagnostics download (AMF-WW-TP1-22-COMMON microfiber filter), with the serial and OTN DUID replaced. /file/list/vs/0 is a probe-tier read mixed into the diagnostics cache, so it lives in `probes`; /file/transfer/vs/0's usage-database blob is left out.",
+  "device0": [
+    {
+      "x.com.samsung.devcol": "collection"
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "0000000000",
+        "x.com.samsung.da.countryCode": "FR"
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_0180",
+          "UpdateAllow_NotAllowed",
+          "BypassMode_Enable",
+          "UsagesDB_ok",
+          "EnergyKW_396",
+          "DrumCleanLog_Empty",
+          "TimeSync_NotSupported"
+        ]
+      }
+    },
+    {
+      "href": "/cycleinterface/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/energy/consumption/0",
+      "rep": {}
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.cumulativePower": "1300",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativeDate": "1791896400",
+        "x.com.samsung.da.cumulativeDateUTC": "1791892800"
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+01:00"
+      }
+    },
+    {
+      "href": "/filter/waterfilter/vs/0",
+      "rep": {
+        "x.com.samsung.da.filterUsage": "0",
+        "x.com.samsung.da.filterUsageResolution": "1",
+        "x.com.samsung.da.filterDesiredUsage": "12",
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.filterCapacity": "12",
+        "x.com.samsung.da.filterCapacityUnit": "Hour",
+        "x.com.samsung.da.filterResetType": [
+          "replaceable"
+        ]
+      }
+    },
+    {
+      "href": "/filterstatus/vs/0",
+      "rep": {
+        "supportedFilterStatusNotice": [
+          "Blockage",
+          "Normal"
+        ],
+        "filterStatusNotice": "Normal"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "AMF-WW-TP1-22-COMMON|20349241|3A000000001511000A90020200000000",
+        "x.com.samsung.da.description": "AMF-WW-TP1-22-COMMON_FT-MF/DC92-03492A_0001",
+        "x.com.samsung.da.serialNum": "FIXTURE-SERIAL",
+        "x.com.samsung.da.otnDUID": "FIXTURE-DUID",
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "WM0",
+        "x.com.samsung.da.diagMinVersion": "1.0",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "AMF-WW-TP1-22-COMMON|20349241|3A000000001511000A90020200000000",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "03334A230323(A603)",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Firmware_1_DB_20349241230510571FFFFFFFFFFFFFFFFFFFFFFFFFFE(018020349241FFFFFFFF_30000000)(FileDown:0)(Type:0)",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "23051057,FFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {}
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "jobStates": [
+          "None",
+          "Filtering",
+          "Bypassing",
+          "Waiting",
+          "Stopping",
+          "Sensing"
+        ],
+        "currentJobState": "Waiting"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.progress": "Waiting",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Filtering",
+          "Bypassing",
+          "Waiting",
+          "Stopping",
+          "Sensing"
+        ]
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "Micom",
+        "x.com.samsung.da.newVersionAvailable": "false"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": true
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {}
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/setting/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/st/washercourse/vs/0",
+      "rep": {
+        "x.com.samsung.da.st.washerMode": "Table_02_Course_",
+        "x.com.samsung.da.st.courseTable": "Table_02"
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/wm/editcourse/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/wm/jobbeginingstatus/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/wm/setinfo/vs/0",
+      "rep": {
+        "x.com.samsung.da.isModelSettingWithoutSC": "false",
+        "x.com.samsung.da.isModelSettingPowerOnOff": "false"
+      }
+    }
+  ],
+  "probes": {
+    "/file/list/vs/0": {
+      "x.com.samsung.items": [
+        {
+          "x.com.samsung.id": "0",
+          "x.com.samsung.name": "/opt/data/energy.db"
+        },
+        {
+          "x.com.samsung.id": "1",
+          "x.com.samsung.name": "/opt/data/hass.db"
+        }
+      ]
+    }
+  }
+}

@@ -73,3 +73,93 @@ async def test_connection_mode_sensor_reflects_coordinator_mode(
 
     coordinator._observe._set_mode("observe")
     assert sensor.native_value == "observe"
+
+
+async def test_last_response_sensor_registered_disabled_by_default(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    ent_reg = er.async_get(hass)
+    entries = er.async_entries_for_config_entry(ent_reg, mock_entry.entry_id)
+    (entry,) = [e for e in entries if e.unique_id.endswith("_last_response")]
+    assert entry.disabled_by is not None
+    assert entry.entity_category == "diagnostic"
+
+
+async def test_last_response_holds_through_an_outage(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """Issue #648: entities carry their last values while the appliance is
+    dark (issue #295); this sensor keeps the time the last poll got through,
+    and stays available so an automation can read how stale they are."""
+    from custom_components.localthings.sensor import LocalThingsLastResponseSensor
+
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    sensor = LocalThingsLastResponseSensor(coordinator)
+    answered = sensor.native_value
+    assert answered is not None
+
+    coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+    coordinator.last_update_success = False
+
+    assert sensor.native_value == answered
+    assert sensor.available
+
+
+async def test_last_response_moves_on_a_notification(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """An observe notification is the appliance answering too."""
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator.last_response = None
+    coordinator._on_cache_changed(False, "observe")
+    assert coordinator.last_response is not None
+
+    coordinator.last_response = None
+    coordinator._on_cache_changed(True, "optimistic")
+    assert coordinator.last_response is None
+
+
+async def test_last_response_is_restored_after_a_restart(
+    hass: HomeAssistant, mock_entry, mock_coordinator_session
+) -> None:
+    """A restart while the appliance is dark keeps the last known time
+    rather than reading unknown next to rehydrated values."""
+    from datetime import UTC, datetime
+
+    from homeassistant.components.sensor import SensorExtraStoredData
+    from homeassistant.core import State
+    from pytest_homeassistant_custom_component.common import mock_restore_cache_with_extra_data
+
+    from custom_components.localthings.sensor import LocalThingsLastResponseSensor
+
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    coordinator.last_response = None
+
+    seen = datetime(2026, 10, 15, 4, 56, tzinfo=UTC)
+    sensor = LocalThingsLastResponseSensor(coordinator)
+    sensor.hass = hass
+    sensor.entity_id = "sensor.test_last_response"
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(sensor.entity_id, seen.isoformat()),
+                SensorExtraStoredData(seen, None).as_dict(),
+            )
+        ],
+    )
+
+    await sensor.async_added_to_hass()
+
+    assert coordinator.last_response == seen

@@ -1,21 +1,15 @@
 {
   "state_keys": [
     "alarm_code",
-    "child_lock",
-    "cycle_active",
-    "delay_start_hours",
     "diagnosis_status",
     "energy_kwh",
+    "filter_activity",
     "filter_blockage",
     "filter_status",
     "filter_usage",
-    "finish_time",
     "firmware_update",
-    "job_beginning_status",
     "machine_state",
     "power_switch",
-    "progress",
-    "progress_percentage",
     "remote_control"
   ]
 }

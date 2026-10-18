@@ -289,6 +289,18 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == "dryer"
 
+    def test_microfiber_filter_routes_by_its_board_token(self):
+        """Issue #626: the filter's /oic/d answered empty, so its AMF board
+        token is all there is to route on."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+
+        reg = for_device_by_model(
+            "AMF-WW-TP1-22-COMMON|20349241|3A000000001511000A90020200000000",
+            "AMF-WW-TP1-22-COMMON_FT-MF/DC92-03492A_0001",
+        )
+        assert reg is not None
+        assert reg.name == "microfiber_filter"
+
     def test_dryer_dve50a8600_paired_model_numbers_in_description(self):
         """Issue #79: description pairs two model numbers
         ('..._DVE50A8800_8600/DC92-...'), so the 'DV' consumer token is one

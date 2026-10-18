@@ -1190,6 +1190,20 @@
           "poll": "Polling"
         }
       },
+      "last_response": {
+        "name": "Laatste antwoord"
+      },
+      "filter_activity": {
+        "name": "Filteractiviteit",
+        "state": {
+          "none": "Inactief",
+          "filtering": "Filteren",
+          "bypassing": "Omzeilen",
+          "waiting": "Wachten",
+          "stopping": "Stoppen",
+          "sensing": "Detecteren"
+        }
+      },
       "cooktop_running_state": {
         "name": "Bedrijfsstatus kookplaat"
       },
