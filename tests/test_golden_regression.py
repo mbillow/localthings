@@ -1669,8 +1669,8 @@ def test_registry_reproduces_golden_state_keys_for_vacuum_station_vs9700():
 
 def test_registry_reproduces_golden_state_keys_for_microfiber():
     """Microfiber laundry-lint filter appliance (issue #475) -- resolves to
-    the washer registry via /oic/d's x.com.st.d.microfiberfilter, and binds
-    its water/microfiber filter plus /filterstatus/vs/0 blockage notice."""
+    its own registry via /oic/d's x.com.st.d.microfiberfilter, and binds its
+    water/microfiber filter plus /filterstatus/vs/0 blockage notice."""
     from tests.conftest import _load_device
 
     resources = _load_device("microfiber")
@@ -1887,6 +1887,30 @@ def test_registry_reproduces_golden_state_keys_for_range_nx58k7850ss():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_microfiber_amf():
+    """Issue #626's microfiber filter, whose /oic/d answered empty: routed by
+    its AMF board token, with every href bound and none of the washer's
+    cycle entities."""
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.discovery import discover
+    from tests.conftest import _load_device
+
+    name = "microfiber_amf"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+    reg = resolve(resources)
+    assert reg is not None
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
 
 
 def test_registry_reproduces_golden_state_keys_for_washer_ww90dg6u25le():

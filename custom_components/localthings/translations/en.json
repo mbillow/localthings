@@ -1190,6 +1190,17 @@
           "poll": "Polling"
         }
       },
+      "filter_activity": {
+        "name": "Filter activity",
+        "state": {
+          "none": "Idle",
+          "filtering": "Filtering",
+          "bypassing": "Bypassing",
+          "waiting": "Waiting",
+          "stopping": "Stopping",
+          "sensing": "Sensing"
+        }
+      },
       "cooktop_running_state": {
         "name": "Cooktop running state"
       },

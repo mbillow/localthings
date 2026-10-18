@@ -20,6 +20,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
 from .entity import async_load_instance_names
+from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -249,6 +250,34 @@ def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry)
         ent_reg.async_remove(registry_entry.entity_id)
 
 
+@callback
+def _drop_washer_entities_from_filters(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Drop the washer rows a microfiber filter kept from #475's routing.
+
+    Runs on every setup for the same reason as
+    _drop_sensors_superseded_by_selects: idempotent, and a version bump would
+    fail the whole entry on a downgrade. Gated on the device type, since
+    every key here is real on a washer. The keys are derived from the two
+    registries, so a washer entity added later is covered too.
+    """
+    if coordinator.device_type_name != "microfiber_filter":
+        return
+    ent_reg = er.async_get(hass)
+    prefix = f"{DOMAIN}_{coordinator.device_key}_"
+    for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        key = registry_entry.unique_id.removeprefix(prefix)
+        if (registry_entry.domain, key) not in WASHER_ONLY_ENTITIES:
+            continue
+        _LOGGER.info(
+            "Removing %s, which a microfiber filter has no hardware for; "
+            "update any automation or dashboard that referenced it",
+            registry_entry.entity_id,
+        )
+        ent_reg.async_remove(registry_entry.entity_id)
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -388,6 +417,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
+    _drop_washer_entities_from_filters(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

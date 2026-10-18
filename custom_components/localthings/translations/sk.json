@@ -1190,6 +1190,17 @@
           "poll": "Pravidelné dopytovanie"
         }
       },
+      "filter_activity": {
+        "name": "Činnosť filtra",
+        "state": {
+          "none": "Nečinnosť",
+          "filtering": "Filtrovanie",
+          "bypassing": "Obtok",
+          "waiting": "Čakanie",
+          "stopping": "Zastavovanie",
+          "sensing": "Snímanie"
+        }
+      },
       "cooktop_running_state": {
         "name": "Stav prevádzky varnej dosky"
       },

@@ -13,6 +13,7 @@ from . import (
     dishwasher,
     dryer,
     ehs,
+    microfiber_filter,
     microwave,
     oven,
     range_hood,
@@ -48,6 +49,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "dishwasher": dishwasher.REGISTRY,
     "dryer": dryer.REGISTRY,
     "ehs": ehs.REGISTRY,
+    "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
     "oven": oven.REGISTRY,
     "range": _range.REGISTRY,
@@ -115,6 +117,8 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "AIR": "air_purifier",  # issue #130 (TP1X_DA-AC-AIR)
     "WATERPURIFIER": "water_purifier",  # issue #90
     "ADW": "dishwasher",
+    # issue #626 -- the microfiber filter, whose /oic/d can answer empty.
+    "AMF": "microfiber_filter",
     "AHD": "range_hood",
     "RANGE": "range",  # issue #44 -- cooktop+oven combo
     "OVEN": "oven",  # issue #55 -- wall oven, no burners
@@ -224,11 +228,9 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "x.com.st.d.airqualitysensor": "air_monitor",
     "x.com.st.d.dehumidifier": "dehumidifier",
     "x.com.st.d.hood": "range_hood",  # AHD-WW-TP1-22-COMMON
-    # Microfiber laundry-lint filter appliance (AMF-WW-TP1-22-COMMON, issue
-    # #475). Reports the washer resource surface -- washer course/settings,
-    # job-beginning status, operational state -- plus its microfiber/water
-    # filter, so it shares the washer registry rather than getting its own.
-    "x.com.st.d.microfiberfilter": "washer",
+    # Microfiber laundry-lint filter (AMF-WW-TP1-22-COMMON, issue #475). It
+    # reports washer resources too, but nothing that runs a cycle (#626).
+    "x.com.st.d.microfiberfilter": "microfiber_filter",
     "x.com.st.d.stickcleaner": "vacuum_station",
     "x.com.st.d.steamcloset": "air_dresser",
     "x.com.st.d.winecellar": "refrigerator",  # issue #328 -- same TP1X_REF_21K board
