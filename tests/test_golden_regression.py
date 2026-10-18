@@ -6,6 +6,14 @@ import pytest
 GOLDEN = Path(__file__).parent / "fixtures" / "golden"
 
 
+def test_registry_reproduces_golden_state_keys_for_legacy_dryer():
+    from tests.conftest import _load_device
+
+    resources = _load_device("dryer_tp6x_8888")
+    golden = json.loads((GOLDEN / "dryer_tp6x_8888.json").read_text())
+    assert _new_state_keys("dryer_tp6x_8888", resources) == golden["state_keys"]
+
+
 def _new_state_keys(name, resources, device_types=()):
     from custom_components.localthings.registry.adapter import flatten
     from custom_components.localthings.registry.by_type import resolve

@@ -1,0 +1,64 @@
+{
+  "capture_note": "Read values reconstructed from the TP6X_DV80M8214AW diagnostics. ModelID suffix, version arrays and unrelated Mode flags omitted. No active-cycle or write capture.",
+  "bodies": {
+    "Information": {
+      "description": "TP6X_DRYER",
+      "deviceSubType": "Dryer",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "TP6X_DV80M8214AW"
+    },
+    "Operation": {
+      "kidsLock": "Ready",
+      "power": "On",
+      "progress": "None",
+      "progressPercentage": 1,
+      "remainingTime": "02:49:00",
+      "state": "Ready",
+      "supportedProgress": [
+        "None",
+        "Drying",
+        "Cooling",
+        "Finish"
+      ]
+    },
+    "Washer": {
+      "dryLevel": "2",
+      "dryTime": "00:00:00",
+      "dryerType": "Electricity",
+      "supportedDryLevel": [
+        "None",
+        "1",
+        "2",
+        "3"
+      ],
+      "supportedDryTime": [
+        "00:00:00",
+        "00:30:00",
+        "01:00:00",
+        "01:30:00",
+        "02:00:00",
+        "02:30:00"
+      ],
+      "wrinklePrevent": "Off"
+    },
+    "Configuration": {
+      "remoteControlEnabled": true
+    },
+    "Mode": {
+      "options": [
+        "Course_9A",
+        "MixedLoadBell_Disable"
+      ],
+      "supportedOptions": [
+        "292D10EE00093D102E000A2D204E000B5D102E00094D20EE000A5D204E000B4D204E00096D000E10E97D000E10E95D000E33E98D000E000B6D20EE00099D20EE0009AD20EE000"
+      ]
+    },
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "Alarms": [],
+    "EnergyConsumption": {
+      "saveLocation": "/files/usage.db"
+    }
+  }
+}

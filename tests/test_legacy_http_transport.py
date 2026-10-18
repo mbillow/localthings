@@ -577,7 +577,7 @@ class TestUnmappedFamily:
     @pytest.fixture
     def unmapped(self, transport):
         device = LegacyHttpTransport(
-            "10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t", family="TP6X_DRYER"
+            "10.0.0.7", 8888, cert_pem="C", key_pem="K", token="t", family="TP6X_UNMAPPED"
         )
         device.connect()
         return device
@@ -596,7 +596,7 @@ class TestUnmappedFamily:
 
         diag = unmapped.diagnostics()
 
-        assert diag["family"] == "TP6X_DRYER"
+        assert diag["family"] == "TP6X_UNMAPPED"
         assert diag["family_mapped"] is False
         assert diag["unmapped_resources"] == [
             "Alarms",

@@ -107,6 +107,25 @@ TP6X_WASHER: tuple[Resource, ...] = (
 )
 
 
+# TP6X_DV80M8214AW reports the laundry vocabulary inside a Washer wrapper.
+# Only reads are captured; to_write refuses this table until writes are measured.
+TP6X_DRYER: tuple[Resource, ...] = (
+    Resource(
+        endpoint="operation",
+        wrapper="Operation",
+        href="/operational/state/vs/0",
+        fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
+        numeric=frozenset({"progressPercentage"}),
+    ),
+    Resource(endpoint="mode", wrapper="Mode", href="/course/vs/0"),
+    Resource(endpoint="washer", wrapper="Washer", href="/washer/vs/0"),
+    Resource(endpoint="configuration", wrapper="Configuration", href="/remotectrl/vs/0"),
+    INFORMATION,
+    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
+    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+)
+
+
 # TP6X_RAC_16K (issue #563), read from a diagnostics dump. The fields are the
 # ones the ARTIK051 boards serve over CoAP, so each resource lands on that
 # generation's href: Wind is /airflow/vs/0, not /wind/strength/vs/0. The
@@ -197,6 +216,7 @@ TP6X_CT: tuple[Resource, ...] = (
 # every size of a model line. A family not listed here is read with IDENTITY.
 FAMILIES: dict[str, tuple[Resource, ...]] = {
     "TP6X_WASHER": TP6X_WASHER,
+    "TP6X_DRYER": TP6X_DRYER,
     "TP6X_CT": TP6X_CT,
     "TP6X_RAC": TP6X_RAC,
     "LCD_OV_WALL": LCD_OV_WALL,
@@ -467,6 +487,8 @@ def to_write(
     Always the aggregate endpoint: a bare body on a resource endpoint
     (`PUT /devices/0/mode`) has never been tested on this hardware.
     """
+    if table is TP6X_DRYER:
+        return {"Device": {}}
     device: dict[str, Any] = {}
     items = {resource.href: resource for resource in table if resource.as_items}
     for href, patch in steps:

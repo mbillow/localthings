@@ -159,6 +159,12 @@
       },
       "cooktop_paused": {
         "name": "Wstrzymano"
+      },
+      "legacy_dryer_wrinkle_prevent": {
+        "name": "Bez zagnieceń"
+      },
+      "legacy_dryer_damp_alert": {
+        "name": "Alert wilgotnego wsadu"
       }
     },
     "button": {
@@ -1661,6 +1667,15 @@
           "dual": "Podwójne",
           "triple": "Potrójne"
         }
+      },
+      "legacy_dryer_dry_level": {
+        "name": "Poziom wysuszenia"
+      },
+      "legacy_dryer_dry_time": {
+        "name": "Czas suszenia"
+      },
+      "legacy_dryer_cycle_code": {
+        "name": "Kod programu"
       }
     },
     "switch": {

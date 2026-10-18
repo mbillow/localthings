@@ -403,9 +403,9 @@ class TestFamilies:
         assert is_mapped("TP6X_WASHER")
 
     def test_an_unmapped_family_gets_identity_only(self):
-        assert table_for("TP6X_DRYER") == IDENTITY
+        assert table_for("TP6X_UNMAPPED") == IDENTITY
         assert table_for(None) == IDENTITY
-        assert not is_mapped("TP6X_DRYER")
+        assert not is_mapped("TP6X_UNMAPPED")
         assert not is_mapped(None)
 
 

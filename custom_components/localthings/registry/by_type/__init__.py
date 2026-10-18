@@ -13,6 +13,7 @@ from . import (
     dishwasher,
     dryer,
     ehs,
+    legacy_dryer,
     microfiber_filter,
     microwave,
     oven,
@@ -49,6 +50,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "dishwasher": dishwasher.REGISTRY,
     "dryer": dryer.REGISTRY,
     "ehs": ehs.REGISTRY,
+    "legacy_dryer": legacy_dryer.REGISTRY,
     "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
     "oven": oven.REGISTRY,
@@ -92,6 +94,7 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
 # air-conditioner spellings below), which is a statement about the
 # hardware, not a shortcut.
 _BOARD_TOKEN_TO_KEY: dict[str, str] = {
+    "DRYER": "legacy_dryer",  # TP6X_DRYER description on the HTTPS/8888 bridge.
     "REF": "refrigerator",
     # Air conditioners: distinct board families sharing one resource
     # surface -- room, package, Korean (#136), window (#87), 2-in-1

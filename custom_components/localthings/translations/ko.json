@@ -159,6 +159,12 @@
       },
       "cooktop_paused": {
         "name": "일시 정지"
+      },
+      "legacy_dryer_wrinkle_prevent": {
+        "name": "구김 방지"
+      },
+      "legacy_dryer_damp_alert": {
+        "name": "다림질 알림"
       }
     },
     "button": {
@@ -1661,6 +1667,15 @@
           "dual": "이중",
           "triple": "삼중"
         }
+      },
+      "legacy_dryer_dry_level": {
+        "name": "건조 단계"
+      },
+      "legacy_dryer_dry_time": {
+        "name": "건조 시간"
+      },
+      "legacy_dryer_cycle_code": {
+        "name": "프로그램 코드"
       }
     },
     "switch": {
