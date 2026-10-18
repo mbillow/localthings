@@ -1190,6 +1190,9 @@
           "poll": "Polling"
         }
       },
+      "last_response": {
+        "name": "Last response"
+      },
       "filter_activity": {
         "name": "Filter activity",
         "state": {

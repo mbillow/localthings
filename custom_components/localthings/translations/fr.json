@@ -1190,6 +1190,9 @@
           "poll": "Interrogation périodique"
         }
       },
+      "last_response": {
+        "name": "Dernière réponse"
+      },
       "filter_activity": {
         "name": "Activité du filtre",
         "state": {

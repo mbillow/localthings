@@ -1190,6 +1190,9 @@
           "poll": "Pravidelné dopytovanie"
         }
       },
+      "last_response": {
+        "name": "Posledná odpoveď"
+      },
       "filter_activity": {
         "name": "Činnosť filtra",
         "state": {

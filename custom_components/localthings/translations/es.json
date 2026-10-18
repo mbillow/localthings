@@ -1556,6 +1556,9 @@
           "poll": "Sondeo"
         }
       },
+      "last_response": {
+        "name": "Última respuesta"
+      },
       "filter_activity": {
         "name": "Actividad del filtro",
         "state": {

@@ -1190,6 +1190,9 @@
           "poll": "Dotazování"
         }
       },
+      "last_response": {
+        "name": "Poslední odpověď"
+      },
       "filter_activity": {
         "name": "Činnost filtru",
         "state": {

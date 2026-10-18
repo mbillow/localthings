@@ -1190,6 +1190,9 @@
           "poll": "폴링"
         }
       },
+      "last_response": {
+        "name": "마지막 응답"
+      },
       "filter_activity": {
         "name": "필터 동작",
         "state": {

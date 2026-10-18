@@ -1190,6 +1190,9 @@
           "poll": "Polling"
         }
       },
+      "last_response": {
+        "name": "Laatste antwoord"
+      },
       "filter_activity": {
         "name": "Filteractiviteit",
         "state": {

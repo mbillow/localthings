@@ -1190,6 +1190,9 @@
           "poll": "Interrogazione"
         }
       },
+      "last_response": {
+        "name": "Ultima risposta"
+      },
       "filter_activity": {
         "name": "Attività del filtro",
         "state": {
