@@ -1,0 +1,407 @@
+{
+  "seeds_note": "Verbatim from the issue #624 reporter's diagnostics download (NX58K7850SS Flex Duo gas range), with the serial replaced. device0 is the master (upper cavity and cooktop); seeds['/device/1'] is the lower cavity, de-canonicalized back to the '/vs/1' hrefs it answers on the wire. Probe-tier reads mixed into the diagnostics cache live in `probes`. oic_res is reduced to the two /device/N links the dump's /oic/res advertises (subdevice_probes: /device/1 true, /multidevice/vs/0 false).",
+  "device0": [
+    {
+      "x.com.samsung.devcol": "collection"
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "RG_T_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-10-13T02:55:03"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.currentTime": "2026-10-13T02:54:44"
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Door",
+            "x.com.samsung.da.openState": "Close",
+            "x.com.samsung.da.lock": "Unlock"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "ARTIK051_GB_RG_001|40395441|5001001E031011410100000000000000",
+        "x.com.samsung.da.description": "ARTIK051_GLOBAL_RANGE",
+        "x.com.samsung.da.serialNum": "FIXTURE-SERIAL",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "20081000",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "17102500,16010600",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/mode/0",
+      "rep": {
+        "supportedModes": [
+          ""
+        ],
+        "modes": [
+          "NoOperation"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          ""
+        ],
+        "x.com.samsung.da.modes": [
+          "NoOperation"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_NX7000KW/AA0",
+          "SettingPossible_7",
+          "keepWarmReservation_NotSupported",
+          "meatprobe_disconnected",
+          "UpperTimerState_NotSupported",
+          "UpperLamp_NotSupported",
+          "waterInlet_NotSupported",
+          "drain_NotSupported",
+          "ShowerLighting_NotSupported",
+          "Sound_On",
+          "RecipeConversion_Off",
+          "AdjustingTemp_0",
+          "VirtualFlame_NotSupported",
+          "Sabbath_Off",
+          "EnergySaving_On"
+        ]
+      }
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "remainingTime": "00:00:00",
+        "progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.operationTime": "00:00:00",
+        "x.com.samsung.da.remainingTime": "00:00:00",
+        "x.com.samsung.da.progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/oven/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": true
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    },
+    {
+      "href": "/temperature/current/cook/0",
+      "rep": {
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/current/prob/0",
+      "rep": {
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/desired/cook/0",
+      "rep": {
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperature/desired/prob/0",
+      "rep": {
+        "units": "F",
+        "temperature": 0.0
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "0",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "0",
+            "x.com.samsung.da.current": "0",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          }
+        ]
+      }
+    }
+  ],
+  "oic_res": [
+    {
+      "href": "/device/0"
+    },
+    {
+      "href": "/device/1"
+    }
+  ],
+  "seeds": {
+    "/device/1": [
+      {
+        "x.com.samsung.devcol": "collection"
+      },
+      {
+        "href": "/alarms/vs/1",
+        "rep": {
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.description": "Alarm",
+              "x.com.samsung.da.alarmType": "Device",
+              "x.com.samsung.da.code": "RG_T_OFF",
+              "x.com.samsung.da.triggeredTime": "2026-10-13T02:55:03"
+            }
+          ]
+        }
+      },
+      {
+        "href": "/configuration/vs/1",
+        "rep": {
+          "x.com.samsung.da.currentTime": "2026-10-13T02:54:44"
+        }
+      },
+      {
+        "href": "/connected/vs/1",
+        "rep": {
+          "x.com.samsung.da.connected": "On"
+        }
+      },
+      {
+        "href": "/diagnosis/vs/1",
+        "rep": {}
+      },
+      {
+        "href": "/information/vs/1",
+        "rep": {
+          "x.com.samsung.da.modelNum": "ARTIK051_GB_RG_001|40395441|5001001E031011410100000000000000",
+          "x.com.samsung.da.description": "ARTIK051_GLOBAL_RANGE",
+          "x.com.samsung.da.serialNum": "FIXTURE-SERIAL"
+        }
+      },
+      {
+        "href": "/kidslock/1",
+        "rep": {
+          "value": false
+        }
+      },
+      {
+        "href": "/kidslock/vs/1",
+        "rep": {
+          "x.com.samsung.da.kidsLock": "Ready"
+        }
+      },
+      {
+        "href": "/mode/1",
+        "rep": {
+          "supportedModes": [
+            ""
+          ]
+        }
+      },
+      {
+        "href": "/mode/vs/1",
+        "rep": {
+          "x.com.samsung.da.supportedModes": [
+            ""
+          ],
+          "x.com.samsung.da.options": [
+            "DeviceType_NX7000KW/AA0",
+            "Sound_On",
+            "RecipeConversion_Off",
+            "AdjustingTemp_0",
+            "Sabbath_Off",
+            "EnergySaving_On",
+            "WarmingCenter_Off",
+            "WarmingDrawer_Off",
+            "Cooktop_0"
+          ]
+        }
+      },
+      {
+        "href": "/operational/state/1",
+        "rep": {
+          "currentMachineState": "**REDACTED**",
+          "machineStates": "**REDACTED**",
+          "remainingTime": "00:00:00",
+          "progressPercentage": "1"
+        }
+      },
+      {
+        "href": "/operational/state/vs/1",
+        "rep": {
+          "x.com.samsung.da.state": "Ready",
+          "x.com.samsung.da.operationTime": "00:00:00",
+          "x.com.samsung.da.remainingTime": "00:00:00",
+          "x.com.samsung.da.progressPercentage": "1"
+        }
+      },
+      {
+        "href": "/oven/vs/1",
+        "rep": {
+          "x.com.samsung.da.state": "Ready"
+        }
+      },
+      {
+        "href": "/power/1",
+        "rep": {
+          "value": true
+        }
+      },
+      {
+        "href": "/power/vs/1",
+        "rep": {
+          "x.com.samsung.da.power": "On"
+        }
+      },
+      {
+        "href": "/remotectrl/1",
+        "rep": {
+          "value": false
+        }
+      },
+      {
+        "href": "/remotectrl/vs/1",
+        "rep": {
+          "x.com.samsung.da.remoteControlEnabled": "false"
+        }
+      },
+      {
+        "href": "/temperature/current/cook/1",
+        "rep": {
+          "units": "F",
+          "temperature": 0.0
+        }
+      },
+      {
+        "href": "/temperature/desired/cook/1",
+        "rep": {
+          "units": "F",
+          "temperature": 0.0
+        }
+      },
+      {
+        "href": "/temperatures/vs/1",
+        "rep": {
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.description": "Temperature",
+              "x.com.samsung.da.desired": "0",
+              "x.com.samsung.da.current": "0",
+              "x.com.samsung.da.unit": "Fahrenheit"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "probes": {
+    "/file/list/vs/0": {
+      "x.com.samsung.items": [
+        {
+          "x.com.samsung.id": "0",
+          "x.com.samsung.name": "/opt/data/energy.db"
+        },
+        {
+          "x.com.samsung.id": "1",
+          "x.com.samsung.name": "/opt/data/hass.db"
+        }
+      ]
+    }
+  }
+}

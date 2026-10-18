@@ -1875,6 +1875,20 @@ def test_registry_reproduces_golden_state_keys_for_oven_nv75n_dual_cook():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_range_nx58k7850ss():
+    """The issue #624 Flex Duo gas range: its lower cavity is an indexed
+    subdevice, and both cavities report the oven's diagnosisStart shape,
+    which left them with unbound hrefs before the range bound it."""
+    name = "range_nx58k7850ss"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.range"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_ww90dg6u25le():
     """A Table_02 front-loader with bubble soak, pre-wash and intensive
     availability bitmaps in a different course order from its

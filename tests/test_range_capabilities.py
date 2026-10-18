@@ -154,3 +154,18 @@ def test_probe_status_connected_value_fn():  # issue #86
     desc = next(e for e in range_caps.PROBE_STATUS.entities if e.key == "probe_connected")
     assert desc.value_fn("Connected") is True
     assert desc.value_fn("Disconnected") is False
+
+
+def test_nx58k7850ss_has_no_unbound_hrefs():
+    """Issue #624's Flex Duo range reports the oven's diagnosisStart shape
+    on /diagnosis/vs/0, which raised the coverage repair until the range
+    bound it the way the oven registry does."""
+    from custom_components.localthings.registry.by_type import resolve
+
+    resources = _load_device("range_nx58k7850ss")
+    reg = resolve(resources, device_types=("oic.wk.d", "oic.d.range"))
+    assert reg is not None and reg.name == "range"
+    unbound = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+    assert flatten(bound, resources)["diagnosis_status"] == "ready"
