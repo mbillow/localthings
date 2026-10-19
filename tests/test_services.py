@@ -17,8 +17,13 @@ from unittest.mock import AsyncMock, patch
 
 import cbor2
 import pytest
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.core import Context, HomeAssistant
+from homeassistant.exceptions import (
+    HomeAssistantError,
+    ServiceValidationError,
+    Unauthorized,
+    UnknownUser,
+)
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -136,6 +141,18 @@ async def _call_write(hass: HomeAssistant, device: str, **data):
         target={"device_id": device},
         blocking=True,
         return_response=True,
+    )
+
+
+async def _call_read_as(hass: HomeAssistant, device: str, context: Context, **data):
+    return await hass.services.async_call(
+        DOMAIN,
+        SERVICE_READ_RESOURCE,
+        data,
+        target={"device_id": device},
+        blocking=True,
+        return_response=True,
+        context=context,
     )
 
 
@@ -901,6 +918,66 @@ async def test_read_resource_without_href_returns_cached_snapshot_and_does_not_g
     response = await _call_read(hass, device_id)
 
     assert fake.get_calls == []
+    assert response["resources"]["/mode/vs/0"] == {"x.field": "cached"}
+
+
+# ----------------------------------------------------------------------
+# The raw actions are admin-only
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [
+        (SERVICE_READ_RESOURCE, {}),
+        (SERVICE_WRITE_RESOURCE, {"writes": [{"href": "/mode/vs/0", "payload": {"x": 1}}]}),
+        (SERVICE_OBSERVE_RESOURCE, {"href": "/mode/vs/0", "duration": 1}),
+    ],
+)
+async def test_raw_actions_refuse_a_non_admin_user(
+    hass, coordinator, device_id, hass_read_only_user, service, data
+):
+    fake = _FakeSession()
+    coordinator._session = fake
+
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            DOMAIN,
+            service,
+            data,
+            target={"device_id": device_id},
+            blocking=True,
+            return_response=True,
+            context=Context(user_id=hass_read_only_user.id),
+        )
+
+    assert fake.get_calls == []
+    assert fake.post_calls == []
+
+
+async def test_read_resource_refuses_an_unknown_user(hass, coordinator, device_id):
+    coordinator._session = _FakeSession()
+
+    with pytest.raises(UnknownUser):
+        await _call_read_as(hass, device_id, Context(user_id="no-such-user"))
+
+
+async def test_read_resource_still_answers_an_admin_user(
+    hass, coordinator, device_id, hass_admin_user
+):
+    coordinator._session = _FakeSession()
+    coordinator._observe.apply("/mode/vs/0", {"x.field": "cached"}, source="poll")
+
+    response = await hass.services.async_call(
+        DOMAIN,
+        SERVICE_READ_RESOURCE,
+        {},
+        target={"device_id": device_id},
+        blocking=True,
+        return_response=True,
+        context=Context(user_id=hass_admin_user.id),
+    )
+
     assert response["resources"]["/mode/vs/0"] == {"x.field": "cached"}
 
 
