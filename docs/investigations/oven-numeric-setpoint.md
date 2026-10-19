@@ -1,6 +1,6 @@
 # NV51K7770S numeric setpoint
 
-The owner confirmed numeric Setpoint entry on the NV51K7770S in the
+Confirmed numeric Setpoint entry on the NV51K7770S in the
 [original hardware investigation](https://github.com/roweboat123/localthings/blob/b9c485da9606f2dab5c8b1a4f35a6325582e56f8/docs/investigations/legacy-oven-controls.md).
 This change exposes that control as Home Assistant's native numeric box
 for the exact `LCD_OV_WALL_16K` board token reported in `modelNum`.
@@ -9,8 +9,6 @@ The upper and lower cavities report the same token; the lower cavity's
 
 The former combined patch applied boxes to shared oven descriptors. This
 change opts in only the measured board's `oven_setpoint` descriptor.
-Other oven models, ranges, microwaves and other appliances keep sliders.
-Cook-time controls are a separate change.
 
 The number platform uses the descriptor's `box_fn` predicate to enable
 the numeric field for this model, using the entity's own cavity view.
