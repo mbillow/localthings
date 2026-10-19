@@ -11,8 +11,7 @@ A recipe that calls for 1 hour 30 minutes should be entered as **1 h** and
 reading or adjusting the setting: changing the minutes to 45 should keep the
 hour already entered.
 
-Numeric entry also keeps it consistent with the OSD UI. Numeric entry also makes 
-it easier to choose an exact time on a phone. A slider
+These seperated numerica entries also keep it consistent with the OSD UI. Numeric entry also makes it easier to choose an exact time on a phone. A slider
 spanning hundreds of minutes puts many values into a short track, where a small
 finger movement can overshoot the intended setting. Two whole-number boxes let
 the user type the desired hours and minutes directly. Keeping the minute field
