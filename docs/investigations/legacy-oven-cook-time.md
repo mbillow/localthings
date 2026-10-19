@@ -13,7 +13,7 @@ hour already entered.
 
 These seperated numeric entries also keep it consistent with the OSD UI. Numeric entry also makes it easier to choose an exact time on a phone. A slider
 spanning hundreds of minutes puts many values into a short track, where a small
-finger movement can overshoot the intended setting. Two whole-number boxes let
+finger movement can overshoot the intended setting [a frustration immediately apparent]. Two whole-number boxes let
 the user type the desired hours and minutes directly. Keeping the minute field
 between 0 and 59 makes the pair read like a familiar hours-and-minutes timer.
 
