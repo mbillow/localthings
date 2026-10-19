@@ -21,8 +21,7 @@ This makes numeric entry a better fit for an exact temperature target.
 
 The box still uses the existing temperature units, increments and mode
 limits. It does not make unsupported temperatures valid: conversion and
-validation can still round or reject an entry. Sliders can remain useful
-for relative adjustments, such as making a light brighter. A consistent
+validation can still round or reject an entry. A consistent
 interface can use numeric entry for exact targets without making every
 number control look the same.
 
