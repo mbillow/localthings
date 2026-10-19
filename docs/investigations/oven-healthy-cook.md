@@ -30,18 +30,6 @@ Owner-confirmed mappings for Oven, Upper and Lower cooking:
 | Dehydrate | `Healthycook5` | — | 150°F | 65°C |
 | Bread Proof | `Healthycook6` | — | Fixed internal target: 100°F | Fixed fallback: 40°C (inferred) |
 
-Panel-started captures on 14 October 2026 identified all eight Upper/Lower
-recipe codes and their presets. Divider-removed captures identified
-`Healthycook5` at 150°F and `Healthycook6` at 100°F, both reporting
-Operation `Run` and Oven `Cooking`. The owner confirmed the recipe labels
-in Home Assistant. These captures identify the settings; they do not
-establish remote-start support for Dehydrate or Bread Proof.
-
-Panel photographs supplied on 19 October 2026 show the native Celsius
-presets for recipes 1–5: `1086.jpg` for Upper, `1087.jpg` for Lower, and `1088.jpg`
-for Oven. Recipes 1–4 have the same presets in all three views; Dehydrate
-and Bread Proof appear only in the Oven view.
-
 Bread Proof has no temperature adjustment or temperature readout on the
 oven's screen. Its 100°F target is an internal setting, not a measured
 cavity temperature. At the owner's request, the native Celsius fallback
@@ -61,11 +49,6 @@ pages 34–35, gives these ranges and the Fahrenheit presets above:
 | Recipes 1–4 | 175–550°F / 80–285°C | 175–480°F / 80–250°C |
 | Dehydrate | 100–225°F / 40–105°C | Not offered |
 | Bread Proof | Factory-set, not adjustable | Not offered |
-
-Adjustable recipes use the existing five-degree step. Their native Celsius
-presets come from the panel photographs. HA still converts Fahrenheit
-values for display and input when HA's preferred unit is Celsius; that
-display conversion is separate from the native Celsius fallback.
 
 These are fallbacks only. A live `modeSpec` takes precedence, and other
 board tokens retain their existing labels and limits. Cross-cavity
