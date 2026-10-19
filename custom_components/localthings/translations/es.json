@@ -366,6 +366,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "El aclarado extra no está disponible en el ciclo seleccionado."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Introduzca horas enteras de 0 a 9 y minutos enteros de 0 a 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "El tiempo de cocción actual no está disponible. Espere a que se actualice el dispositivo antes de cambiar las horas o los minutos."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "El tiempo total de cocción no puede superar {max}."
     }
   },
   "entity": {
@@ -671,6 +680,12 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura objetivo de zona"
+      },
+      "cook_time_hours": {
+        "name": "Horas de cocción"
+      },
+      "cook_time_minutes": {
+        "name": "Minutos de cocción"
       }
     },
     "select": {

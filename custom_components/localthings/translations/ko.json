@@ -302,6 +302,12 @@
       },
       "zone_target_temperature": {
         "name": "구역 목표 온도"
+      },
+      "cook_time_hours": {
+        "name": "조리 시간(시)"
+      },
+      "cook_time_minutes": {
+        "name": "조리 시간(분)"
       }
     },
     "select": {
@@ -2325,6 +2331,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "선택한 코스에서는 추가 헹굼을 사용할 수 없습니다."
+    },
+    "cook_duration_part_invalid": {
+      "message": "시간은 0에서 9 사이의 정수로, 분은 0에서 59 사이의 정수로 입력하세요."
+    },
+    "cook_duration_unavailable": {
+      "message": "현재 조리 시간을 확인할 수 없습니다. 기기 상태가 업데이트된 후 시간이나 분을 변경하세요."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "총 조리 시간은 {max}을(를) 초과할 수 없습니다."
     }
   },
   "selector": {

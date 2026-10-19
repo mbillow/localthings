@@ -302,6 +302,12 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura obiettivo zona"
+      },
+      "cook_time_hours": {
+        "name": "Ore di cottura"
+      },
+      "cook_time_minutes": {
+        "name": "Minuti di cottura"
       }
     },
     "select": {
@@ -2325,6 +2331,15 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Risciacquo extra non è disponibile per il ciclo selezionato."
+    },
+    "cook_duration_part_invalid": {
+      "message": "Inserisci ore intere da 0 a 9 e minuti interi da 0 a 59."
+    },
+    "cook_duration_unavailable": {
+      "message": "Il tempo di cottura attuale non è disponibile. Attendi un aggiornamento del dispositivo prima di modificare le ore o i minuti."
+    },
+    "cook_duration_total_out_of_range": {
+      "message": "Il tempo totale di cottura non può superare {max}."
     }
   },
   "selector": {

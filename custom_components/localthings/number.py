@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
+from .registry.capabilities import cook
 from .registry.entities import NumberDesc
 
 
@@ -29,11 +30,10 @@ async def async_setup_entry(
 
 
 class LocalThingsNumber(LocalThingsEntity, NumberEntity):
-    _attr_mode = NumberMode.SLIDER
-
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         desc = cast(NumberDesc, bound.desc)
+        self._attr_mode = NumberMode(desc.mode)
         self._attr_native_unit_of_measurement = desc.unit
         self._attr_device_class = (
             NumberDeviceClass(desc.device_class) if desc.device_class else None
@@ -109,7 +109,14 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     @property
     def native_value(self):
-        return (self.coordinator.data or {}).get(self._state_key)
+        value = (self.coordinator.data or {}).get(self._state_key)
+        if (
+            value == 0
+            and self._bound.desc.cook_param in cook.DURATION_PARTS
+            and self.coordinator.cook_time_is_unset(self._bound.subdevice)
+        ):
+            return None
+        return value
 
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_send_command(self._bound, value)
