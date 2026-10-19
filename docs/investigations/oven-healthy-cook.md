@@ -4,6 +4,19 @@ Scope: the `LCD_OV_WALL_16K` board reported by the NV51K7770S. Its legacy
 8888 API supplies no `modeSpec` and reports a static mode list that omits
 the lower cavity's Healthy Cook codes.
 
+## Why map the recipes
+
+A numbered Healthy Cook option does not tell the user which food it prepares.
+For this oven, `Healthycook3` means **Healthy Cook Salmon Steak**. Showing that
+name lets the user match Home Assistant to the oven's menu without memorizing
+recipe numbers. The command still uses the original code.
+
+The matching temperature presets and limits matter as much as the label. A
+named recipe should begin with its intended preset, and its setpoint control
+should reflect the range that recipe permits in the selected cavity. Bread
+Proof has a fixed internal target, so presenting the ordinary adjustable Bake
+range would imply a temperature choice the oven does not offer.
+
 ## Recipe mappings
 
 Owner-confirmed mappings for Oven, Upper and Lower cooking:
@@ -66,3 +79,47 @@ HA unit conversion, preservation of probe items in writes, live
 `modeSpec` precedence, and isolation from other boards. The tests use the
 existing redacted legacy fixture and simulated responses; they do not send
 commands to an appliance.
+
+## Contributor guide
+
+| File | What to inspect or change |
+| --- | --- |
+| [`registry/capabilities/oven.py`](../../custom_components/localthings/registry/capabilities/oven.py) | `OVEN_MODE` selects the `oven_mode_lcd_wall_16k` translation key for the verified board. `_mode_setpoint_bounds`, `_oven_setpoint_available` and `_oven_setpoint_write` keep the displayed limits, availability and writes consistent. |
+| [`translations/en.json`](../../custom_components/localthings/translations/en.json) and the other [`translation catalogs`](../../custom_components/localthings/translations/) | `entity.select.oven_mode_lcd_wall_16k.state` maps normalized option keys such as `healthycook3` and `lower_healthycook3` to readable recipe names. |
+| [`registry/capabilities/cook.py`](../../custom_components/localthings/registry/capabilities/cook.py) | `healthy_cook_temps` supplies the per-recipe `TempSpec` values. `_specless_specs` uses them when a board has no live `modeSpec`; `mode_specs` gives live declarations precedence. |
+| [`legacy_http.py`](../../custom_components/localthings/legacy_http.py) | `with_cavity_modes` adds the four verified Lower Healthy Cook codes missing from this board's static list. This is a model-specific correction, not a general rule for ovens. |
+| [`tests/test_oven_healthy_cook.py`](../../tests/test_oven_healthy_cook.py) | Checks labels against raw codes, presets and limits in both units, cavity routing, probe preservation, live declarations and other-model isolation. |
+
+For another model, record a mapping table like the one above from panel choices
+and corresponding resource captures. Confirm which cavities offer each recipe,
+its preset, permitted range and whether its target is adjustable. Keep native
+Celsius settings separate from Home Assistant's conversion of Fahrenheit
+readings. Record the source of each value and clearly identify any inference.
+
+Then make the corresponding changes in these locations:
+
+1. Add a model-specific translation key selected by the capability and supply
+   its recipe names in every catalog. Preserve the raw mode codes and existing
+   entity key. Do not give another board this oven's recipe meanings merely
+   because both report `Healthycook1` through `Healthycook6`.
+2. Add verified fallback temperatures in the cooking capability. `TempSpec`
+   takes minimum, maximum, default and step, in that order. For example,
+   `TempSpec(80, 285, 190, 5)` describes the native Celsius fallback for this
+   oven's undivided recipes 1–3. Keep a fixed target fixed and allow a live
+   `modeSpec` to override the fallback.
+3. Change `with_cavity_modes` only if captures establish that the model's
+   reported list omits a real mode. Do not infer remote-start support from a
+   label or a panel-started capture; that needs its own control evidence.
+
+Use the existing tests as a template for each raw code and cavity. Include a
+nearby model that must retain its original labels and limits, a live declaration
+that overrides the fallback, and a probe item that must survive a setpoint
+write. For a focused check after setting up the development environment:
+
+```sh
+.venv/bin/pytest tests/test_oven_healthy_cook.py -q
+```
+
+Compare the displayed recipe names and presets with the target oven's panel,
+record any hardware checks, and follow [CONTRIBUTING.md](../../CONTRIBUTING.md)
+for the full checks before submitting a code change.
