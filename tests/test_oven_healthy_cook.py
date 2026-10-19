@@ -15,6 +15,7 @@ from custom_components.localthings.registry.capabilities.oven import _oven_setpo
 from custom_components.localthings.registry.subdevices import MAIN
 from custom_components.localthings.select import LocalThingsSelect
 from tests.test_legacy_http_lower_cavity import (
+    LOWER,
     PREFIX,
     UPPER,
     _discovered,
@@ -31,10 +32,14 @@ from tests.test_legacy_http_lower_cavity import (
 
 @pytest.mark.parametrize("index,prefix", [(0, "Upper"), (1, "Lower"), (0, "")])
 @pytest.mark.parametrize("recipe,preset", [(1, 375), (2, 375), (3, 375), (4, 400)])
+@pytest.mark.parametrize("unit", ["Fahrenheit", "Celsius"])
 async def test_recipe_selection_keeps_raw_code_preset_and_cavity(
-    hass, index, prefix, recipe, preset
+    hass, index, prefix, recipe, preset, unit
 ):
-    coordinator = await _discovered(hass, _routes(divided=bool(prefix)))
+    upper, lower = deepcopy(UPPER), deepcopy(LOWER)
+    for cavity_data in (upper, lower):
+        cavity_data["Temperatures"][0]["unit"] = unit
+    coordinator = await _discovered(hass, _routes(divided=bool(prefix), upper=upper, lower=lower))
     cavity = _lower(coordinator) if index else MAIN
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
     select = LocalThingsSelect(coordinator, bound["oven_mode"])
@@ -47,10 +52,14 @@ async def test_recipe_selection_keeps_raw_code_preset_and_cavity(
     await coordinator.async_send_command(bound["cook_time"], 5)
 
     maximum = 480 if prefix else 550
+    minimum = 175
+    if unit == "Celsius":
+        minimum, maximum = 80, 250 if prefix else 285
+        preset = 205 if recipe == 4 else 190
     assert select.current_option == option
     assert target.native_value == preset
     assert (target.native_min_value, target.native_max_value, target.native_step) == (
-        175,
+        minimum,
         maximum,
         5,
     )
@@ -60,6 +69,7 @@ async def test_recipe_selection_keeps_raw_code_preset_and_cavity(
         preset,
         300,
     )
+    assert plan.unit == unit
     elements = plan.batch(cavity.to_actual)
     assert {e["href"] for e in elements} <= {
         cavity.to_actual(href)
@@ -131,18 +141,15 @@ async def test_panel_started_special_recipes_reject_out_of_range_write(
 
 @pytest.mark.parametrize("prefix,maximum", [("Upper", 250), ("Lower", 250), ("", 285)])
 @pytest.mark.parametrize("recipe", [1, 2, 3, 4])
-async def test_native_celsius_has_manual_limits_and_requires_a_target(
-    hass, prefix, maximum, recipe
-):
+async def test_native_celsius_has_manual_limits_and_panel_presets(hass, prefix, maximum, recipe):
     coordinator = await _discovered(hass, _routes(divided=bool(prefix)))
     cavity = _lower(coordinator) if prefix == "Lower" else MAIN
     resources = deepcopy(coordinator._cavity_resources(cavity))
     resources[cook.TEMPERATURES_HREF][PREFIX + "items"][0][PREFIX + "unit"] = "Celsius"
     mode = f"{prefix}Healthycook{recipe}"
     assert cook.temp_bounds(resources, mode) == (80, maximum, 5)
-    with pytest.raises(cook.CookStartError) as err:
-        cook.plan_start(resources, mode=mode)
-    assert err.value.key == "cook_temperature_required"
+    plan = cook.plan_start(resources, mode=mode)
+    assert (plan.temperature, plan.unit) == (205 if recipe == 4 else 190, "Celsius")
     plan = cook.plan_start(resources, mode=mode, temperature=maximum)
     assert (plan.temperature, plan.unit) == (maximum, "Celsius")
     with pytest.raises(cook.CookStartError):
@@ -165,9 +172,9 @@ async def test_native_celsius_dehydrate_and_proof_recover_on_mode_change(hass):
     await coordinator.async_send_command(bound["oven_mode"], "Healthycook5")
     assert target.available
     assert (target.native_min_value, target.native_max_value) == (40, 105)
-    with pytest.raises(cook.CookStartError) as err:
-        coordinator._held_cooks[MAIN].plan(coordinator._cavity_resources(MAIN))
-    assert err.value.key == "cook_temperature_required"
+    assert target.native_value == 65
+    plan = coordinator._held_cooks[MAIN].plan(coordinator._cavity_resources(MAIN))
+    assert (plan.temperature, plan.unit) == (65, "Celsius")
     await target.async_set_native_value(40)
     assert target.native_value == 40
     assert not _requests()

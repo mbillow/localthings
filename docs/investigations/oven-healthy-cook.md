@@ -8,14 +8,14 @@ the lower cavity's Healthy Cook codes.
 
 Owner-confirmed mappings for Oven, Upper and Lower cooking:
 
-| Recipe | Oven code | Upper/lower codes | Fahrenheit preset |
-| --- | --- | --- | --- |
-| Baked Potato | `Healthycook1` | `UpperHealthycook1` / `LowerHealthycook1` | 375°F |
-| Grilled Chicken | `Healthycook2` | `UpperHealthycook2` / `LowerHealthycook2` | 375°F |
-| Salmon Steak | `Healthycook3` | `UpperHealthycook3` / `LowerHealthycook3` | 375°F |
-| White Fish Fillet | `Healthycook4` | `UpperHealthycook4` / `LowerHealthycook4` | 400°F |
-| Dehydrate | `Healthycook5` | — | 150°F |
-| Bread Proof | `Healthycook6` | — | Fixed internal target: 100°F |
+| Recipe | Oven code | Upper/lower codes | Fahrenheit preset | Celsius preset |
+| --- | --- | --- | --- | --- |
+| Baked Potato | `Healthycook1` | `UpperHealthycook1` / `LowerHealthycook1` | 375°F | 190°C |
+| Grilled Chicken | `Healthycook2` | `UpperHealthycook2` / `LowerHealthycook2` | 375°F | 190°C |
+| Salmon Steak | `Healthycook3` | `UpperHealthycook3` / `LowerHealthycook3` | 375°F | 190°C |
+| White Fish Fillet | `Healthycook4` | `UpperHealthycook4` / `LowerHealthycook4` | 400°F | 205°C |
+| Dehydrate | `Healthycook5` | — | 150°F | 65°C |
+| Bread Proof | `Healthycook6` | — | Fixed internal target: 100°F | Not displayed |
 
 Panel-started captures on 14 October 2026 identified all eight Upper/Lower
 recipe codes and their presets. Divider-removed captures identified
@@ -23,6 +23,11 @@ recipe codes and their presets. Divider-removed captures identified
 Operation `Run` and Oven `Cooking`. The owner confirmed the recipe labels
 in Home Assistant. These captures identify the settings; they do not
 establish remote-start support for Dehydrate or Bread Proof.
+
+Panel photographs supplied on 19 October 2026 show the native Celsius
+presets above: `1086.jpg` for Upper, `1087.jpg` for Lower, and `1088.jpg`
+for Oven. Recipes 1–4 have the same presets in all three views; Dehydrate
+and Bread Proof appear only in the Oven view.
 
 Bread Proof has no temperature adjustment or temperature readout on the
 oven's screen. Its 100°F target is an internal setting, not a measured
@@ -39,15 +44,12 @@ pages 34–35, gives these ranges and the Fahrenheit presets above:
 | Dehydrate | 100–225°F / 40–105°C | Not offered |
 | Bread Proof | Factory-set, not adjustable | Not offered |
 
-Adjustable recipes use the existing five-degree step. Celsius presets are
-left unspecified: the owner uses Fahrenheit and the manual does not list
-the native Celsius presets. The English and Canadian French sections of
-the [2018 revision](https://content.syndigo.com/asset/6e33f7a4-87cf-4a27-9be2-ffe895f73977/original.pdf)
-also show only Fahrenheit presets (page 35 in each language).
-A Celsius-configured oven requires an explicit
-target for adjustable recipes; Bread Proof's setpoint is unavailable unless
-a live `modeSpec` declares a usable target. HA can still convert Fahrenheit
-values for display and input when HA's preferred unit is Celsius.
+Adjustable recipes use the existing five-degree step. Their native Celsius
+presets come from the panel photographs. Bread Proof shows no temperature
+in either unit; its native Celsius target remains unspecified, so its
+setpoint is unavailable on a Celsius-configured oven unless a live
+`modeSpec` declares a usable target. HA can still convert Fahrenheit values
+for display and input when HA's preferred unit is Celsius.
 
 These are fallbacks only. A live `modeSpec` takes precedence, and other
 board tokens retain their existing labels and limits. Cross-cavity
@@ -56,8 +58,8 @@ temperature combinations remain subject to the oven's own restrictions.
 ## Regression coverage
 
 `tests/test_oven_healthy_cook.py` checks translated selections against raw
-codes, presets, each cavity's limits, fixed Bread Proof, native Celsius
-ranges, HA unit conversion, preservation of probe items in writes, live
+codes, presets in both units, each cavity's limits, fixed Bread Proof,
+HA unit conversion, preservation of probe items in writes, live
 `modeSpec` precedence, and isolation from other boards. The tests use the
 existing redacted legacy fixture and simulated responses; they do not send
 commands to an appliance.
