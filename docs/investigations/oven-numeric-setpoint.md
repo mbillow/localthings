@@ -1,5 +1,9 @@
 # NV51K7770S numeric setpoint
 
+The default slider is difficult to position at an exact temperature
+on a touchscreen. A numeric box lets the user enter a target
+such as 375°F directly while keeping the existing limits and increments.
+
 Confirmed numeric Setpoint entry on the NV51K7770S in the
 [original hardware investigation](https://github.com/roweboat123/localthings/blob/b9c485da9606f2dab5c8b1a4f35a6325582e56f8/docs/investigations/legacy-oven-controls.md).
 This change exposes that control as Home Assistant's native numeric box
