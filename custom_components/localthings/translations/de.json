@@ -1284,10 +1284,10 @@
         "name": "Temperatur"
       },
       "food_probe_temp": {
-        "name": "Bratenthermometer"
+        "name": "Temperaturfühler"
       },
       "food_probe_setpoint": {
-        "name": "Bratenthermometer-Zieltemperatur"
+        "name": "Zieltemperatur des Temperaturfühlers"
       },
       "current_temperature_c": {
         "name": "Temperatur"

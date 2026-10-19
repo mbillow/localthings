@@ -1,0 +1,270 @@
+"""Probe sensors appear after startup and retain their identity on reconnect."""
+
+import json
+from dataclasses import replace
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+
+from custom_components.localthings.const import CONF_DEVICE_KEY, DOMAIN
+from custom_components.localthings.registry.adapter import flatten
+from tests.conftest import _load_device_full
+from tests.test_legacy_http_lower_cavity import (
+    PREFIX,
+    _discovered,
+    _fake_https,  # noqa: F401
+)
+from tests.test_subdevice_discovery import _coordinator, _discover_with
+
+
+async def _load(hass, monkeypatch, coordinator):
+    await hass.async_block_till_done()
+    entry = coordinator._entry
+    hass.config_entries.async_update_entry(
+        entry, version=4, data={**entry.data, CONF_DEVICE_KEY: coordinator.device_key}
+    )
+    monkeypatch.setattr(
+        "custom_components.localthings.LocalThingsCoordinator", lambda *args: coordinator
+    )
+    monkeypatch.setattr(coordinator, "async_load_mode_specs", AsyncMock())
+    monkeypatch.setattr(coordinator, "async_config_entry_first_refresh", AsyncMock())
+    monkeypatch.setattr(coordinator, "async_close", AsyncMock())
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+def _rows(hass, coordinator):
+    prefix = f"{DOMAIN}_{coordinator.device_key}_"
+    return {
+        (row.domain, row.unique_id.removeprefix(prefix)): row
+        for row in er.async_entries_for_config_entry(
+            er.async_get(hass), coordinator._entry.entry_id
+        )
+    }
+
+
+def _probe_update(coordinator, family, connected, *, current=107, target=150):
+    mode = coordinator.resource("/mode/vs/0")
+    options = [o for o in mode[PREFIX + "options"] if not o.startswith("meatprobe_")]
+    options.append("meatprobe_connected" if connected else "meatprobe_disconnected")
+    coordinator._observe.apply("/mode/vs/0", {**mode, PREFIX + "options": options}, source="poll")
+    if family == "ocf_fallback":
+        for kind, value in (("current", current), ("desired", target)):
+            coordinator._observe.apply(
+                f"/temperature/{kind}/prob/0",
+                {"temperature": value, "units": "F"},
+                source="poll",
+            )
+    else:
+        rep = coordinator.resource("/temperatures/vs/0")
+        items = [i for i in rep[PREFIX + "items"] if i[PREFIX + "id"] != "1"]
+        items.append(
+            {
+                PREFIX + "id": "1",
+                PREFIX + "current": current,
+                PREFIX + "desired": target,
+                PREFIX + "unit": "Fahrenheit",
+            }
+        )
+        coordinator._observe.apply(
+            "/temperatures/vs/0", {**rep, PREFIX + "items": items}, source="poll"
+        )
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+
+
+@pytest.mark.parametrize("family", ["legacy", "ocf_vendor", "ocf_fallback"])
+@pytest.mark.parametrize("initially_connected", [False, True])
+async def test_probe_connects_without_reload_and_reuses_entities(
+    hass, monkeypatch, family, initially_connected
+):
+    hass.config.units = US_CUSTOMARY_SYSTEM
+    if family == "legacy":
+        coordinator = await _discovered(hass)
+    else:
+        coordinator = _coordinator(hass)
+        resources, links, seeds = _load_device_full("oven_nv75n_dual_cook")
+        if family == "ocf_fallback":
+            del resources["/temperatures/vs/0"]
+        await _discover_with(coordinator, resources, links, seeds)
+    if initially_connected:
+        _probe_update(coordinator, family, True)
+    await _load(hass, monkeypatch, coordinator)
+    reload_requested = Mock()
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", reload_requested)
+
+    probe_keys = {("sensor", "food_probe_temp"), ("sensor", "food_probe_setpoint")}
+    before = _rows(hass, coordinator)
+    assert len({row.device_id for row in before.values()}) == 2
+    assert probe_keys.issubset(before) is initially_connected
+    for current in (107, 108):
+        _probe_update(coordinator, family, True, current=current)
+        await hass.async_block_till_done()
+        rows = _rows(hass, coordinator)
+        assert rows.keys() == before.keys() | probe_keys
+        for key, value in (("food_probe_temp", current), ("food_probe_setpoint", 150)):
+            state = hass.states.get(rows["sensor", key].entity_id)
+            assert state is not None and float(state.state) == value
+            assert state.attributes["unit_of_measurement"] == "°F"
+            name = "Temperature Probe" + (" Target" if key == "food_probe_setpoint" else "")
+            assert rows["sensor", key].original_name == name
+
+    registry = er.async_get(hass)
+    probe = rows["sensor", "food_probe_temp"]
+    registry.async_update_entity(probe.entity_id, name="My Food Probe")
+    for connected in (False, True, False, True):
+        # Retained readings must not remain available after the socket disconnects.
+        _probe_update(coordinator, family, connected, current=112)
+        await hass.async_block_till_done()
+        after = _rows(hass, coordinator)
+        assert after.keys() == rows.keys()
+        for key in probe_keys:
+            assert after[key].entity_id == rows[key].entity_id
+            assert after[key].unique_id == rows[key].unique_id
+            state = hass.states.get(after[key].entity_id)
+            assert state is not None
+            assert (state.state == "unavailable") is not connected
+        assert registry.async_get(probe.entity_id).name == "My Food Probe"
+    reload_requested.assert_not_called()
+
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+    # A deferred-add listener must not add entities after the platform unloads.
+    restored = hass.states.get(probe.entity_id)
+    assert restored is not None and restored.state == "unavailable"
+    _probe_update(coordinator, family, True)
+    await hass.async_block_till_done()
+    assert hass.states.get(probe.entity_id) is restored
+
+    _probe_update(coordinator, family, False)
+    await _load(hass, monkeypatch, coordinator)
+    _probe_update(coordinator, family, True)
+    await hass.async_block_till_done()
+    after_restart = _rows(hass, coordinator)
+    for key in probe_keys:
+        assert after_restart[key].entity_id == rows[key].entity_id
+        assert hass.states.get(after_restart[key].entity_id).state != "unavailable"
+    assert registry.async_get(probe.entity_id).name == "My Food Probe"
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+
+
+async def test_unloaded_pending_probe_listener_does_not_create_entities(hass, monkeypatch):
+    coordinator = await _discovered(hass)
+    await _load(hass, monkeypatch, coordinator)
+    assert ("sensor", "food_probe_temp") not in _rows(hass, coordinator)
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+    _probe_update(coordinator, "legacy", True)
+    await hass.async_block_till_done()
+    assert ("sensor", "food_probe_temp") not in _rows(hass, coordinator)
+
+
+async def test_probe_waits_for_item_and_socket_state_and_keeps_idle_zero(hass, monkeypatch):
+    hass.config.units = US_CUSTOMARY_SYSTEM
+    coordinator = await _discovered(hass)
+    _probe_update(coordinator, "legacy", True, current=0, target=0)
+    temperatures = coordinator.resource("/temperatures/vs/0")
+    cavity_only = {
+        **temperatures,
+        PREFIX + "items": [
+            item for item in temperatures[PREFIX + "items"] if item[PREFIX + "id"] != "1"
+        ],
+    }
+    coordinator._observe.apply("/temperatures/vs/0", cavity_only, source="poll")
+    await _load(hass, monkeypatch, coordinator)
+    assert ("sensor", "food_probe_temp") not in _rows(hass, coordinator)
+
+    _probe_update(coordinator, "legacy", False, current=0, target=0)
+    await hass.async_block_till_done()
+    assert ("sensor", "food_probe_temp") not in _rows(hass, coordinator)
+
+    # Repeated updates before HA finishes adding the entities must add each once.
+    for _ in range(3):
+        _probe_update(coordinator, "legacy", True, current=0, target=0)
+    await hass.async_block_till_done()
+    rows = _rows(hass, coordinator)
+    for key in ("food_probe_temp", "food_probe_setpoint"):
+        assert float(hass.states.get(rows["sensor", key].entity_id).state) == 0
+    assert len([key for key in rows if "food_probe" in key[1]]) == 2
+
+    coordinator._observe.apply("/temperatures/vs/0", cavity_only, source="poll")
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+    await hass.async_block_till_done()
+    for key in ("food_probe_temp", "food_probe_setpoint"):
+        assert hass.states.get(rows["sensor", key].entity_id).state == "unavailable"
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+
+
+async def test_probe_reconnection_preserves_user_disabled_entity(hass, monkeypatch):
+    coordinator = await _discovered(hass)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{DOMAIN}_{coordinator.device_key}_food_probe_temp",
+        config_entry=coordinator._entry,
+        suggested_object_id="my_disabled_probe",
+        disabled_by=er.RegistryEntryDisabler.USER,
+    )
+    await _load(hass, monkeypatch, coordinator)
+    for connected in (True, False, True):
+        _probe_update(coordinator, "legacy", connected)
+        await hass.async_block_till_done()
+        row = _rows(hass, coordinator)["sensor", "food_probe_temp"]
+        assert row.entity_id == old.entity_id
+        assert row.disabled_by == er.RegistryEntryDisabler.USER
+        assert hass.states.get(row.entity_id) is None
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+
+
+async def test_late_sensor_creation_requires_descriptor_opt_in(hass, monkeypatch):
+    coordinator = await _discovered(hass)
+    coordinator.bound = [
+        replace(bound, desc=replace(bound.desc, dynamic_presence=False))
+        if bound.desc.key == "food_probe_temp"
+        else bound
+        for bound in coordinator.bound
+    ]
+    await _load(hass, monkeypatch, coordinator)
+    _probe_update(coordinator, "legacy", True)
+    await hass.async_block_till_done()
+    rows = _rows(hass, coordinator)
+    assert ("sensor", "food_probe_setpoint") in rows
+    assert ("sensor", "food_probe_temp") not in rows
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
+
+
+@pytest.mark.parametrize("language", ["cs", "de", "en", "es", "fr", "it", "ko", "nl", "pl", "sk"])
+async def test_probe_label_upgrade_preserves_entity_ids(hass, monkeypatch, language):
+    hass.config.language = language
+    coordinator = await _discovered(hass)
+    _probe_update(coordinator, "legacy", True)
+    registry = er.async_get(hass)
+    previous = {}
+    for key, suffix in (("food_probe_temp", ""), ("food_probe_setpoint", "_target")):
+        previous[key] = registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{DOMAIN}_{coordinator.device_key}_{key}",
+            config_entry=coordinator._entry,
+            suggested_object_id="old_food_probe" + suffix,
+            original_name="Food Probe" + (" Target" if suffix else ""),
+            translation_key=key,
+        )
+    await _load(hass, monkeypatch, coordinator)
+    catalog = json.loads(
+        (
+            Path(__file__).parents[2]
+            / "custom_components/localthings/translations"
+            / f"{language}.json"
+        ).read_text()
+    )
+    rows = _rows(hass, coordinator)
+    for key, old in previous.items():
+        row = rows["sensor", key]
+        assert row.entity_id == old.entity_id
+        assert row.unique_id == old.unique_id
+        assert row.original_name == catalog["entity"]["sensor"][key]["name"]
+        assert row.translation_key == key
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
