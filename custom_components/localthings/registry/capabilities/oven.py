@@ -212,14 +212,19 @@ def _option_write(prefix, new_value):
 # ---------------------------------------------------------------------------
 
 
-def _oven_setpoint_write(p, rep, href=None):
+def _oven_setpoint_write(p, rep, href=None, resources=None):
     """RMW write to /temperatures/vs/0 items array."""
     try:
         temp = float(p)
     except (TypeError, ValueError):
         return None
-    min_v, max_v, step_v = _setpoint_bounds(rep)
-    temp_i = int(round(temp / step_v) * step_v)
+    resources = resources or {}
+    if not _oven_setpoint_available(rep, resources):
+        return None
+    bounds = cook.temp_bounds(resources) if cook.healthy_cook_temps(resources) else None
+    min_v, max_v, step_v = bounds or _setpoint_bounds(rep)
+    origin = min_v if bounds else 0
+    temp_i = origin + round((temp - origin) / step_v) * step_v
     if not (min_v <= temp_i <= max_v):
         return None
     items = rep.get("x.com.samsung.da.items")
@@ -316,6 +321,16 @@ def _mode_setpoint_bounds(rep, resources):
     back to the static per-unit bounds below."""
     bounds = cook.temp_bounds(resources)
     return tuple(float(b) for b in bounds) if bounds else None
+
+
+def _oven_setpoint_available(rep, resources):
+    # Bread Proof's fixed Fahrenheit target must not become an adjustable
+    # generic range when the oven itself reports Celsius.
+    return not (
+        cook.is_lcd_wall_16k(resources)
+        and cook.current_mode(resources) == "Healthycook6"
+        and cook.temp_bounds(resources) is None
+    )
 
 
 def _cook_time_bounds(rep, resources):
@@ -512,6 +527,7 @@ OVEN_SETPOINT = Capability(
             native_max_fn=lambda rep: float(_setpoint_bounds(rep)[1]),
             step_fn=lambda rep: float(_setpoint_bounds(rep)[2]),
             bounds_fn=_mode_setpoint_bounds,
+            available_fn=_oven_setpoint_available,
             value_fn=lambda items: _setpoint(
                 items[0].get("x.com.samsung.da.desired") if items else None
             ),
@@ -730,6 +746,9 @@ OVEN_MODE = Capability(
         # SelectDesc first — test_oven_mode_options_nonempty uses entities[0]
         SelectDesc(
             key="oven_mode",
+            translation_key=lambda resources: (
+                "oven_mode_lcd_wall_16k" if cook.is_lcd_wall_16k(resources) else "oven_mode"
+            ),
             field="x.com.samsung.da.modes",
             icon="mdi:tune",
             options=_oven_mode_options,

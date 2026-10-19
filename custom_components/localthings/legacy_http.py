@@ -243,6 +243,10 @@ def with_cavity_modes(
         return bodies
     supported = [m for m in supported if isinstance(m, str)]
     if index:
+        # Panel-started recipes on the NV51K7770S; the static list omits
+        # their Lower codes. See docs/investigations/oven-healthy-cook.md.
+        if family == "LCD_OV_WALL_16K":
+            lower = (*lower, *(f"LowerHealthycook{i}" for i in range(1, 5)))
         modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *lower]
     elif divided is None:
         return bodies

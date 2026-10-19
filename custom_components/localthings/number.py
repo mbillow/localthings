@@ -46,6 +46,14 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
             self._attr_native_step = desc.step
 
     @property
+    def available(self) -> bool:
+        desc = cast(NumberDesc, self._bound.desc)
+        return super().available and (
+            desc.available_fn is None
+            or desc.available_fn(self.coordinator.resource(self._bound.href), self._resources)
+        )
+
+    @property
     def native_unit_of_measurement(self):
         desc = cast(NumberDesc, self._bound.desc)
         if desc.unit_fn is not None:
