@@ -494,6 +494,12 @@ def _setpoint_bounds(rep):
     return _bounds_for_unit(_oven_temp_unit(rep))
 
 
+def _setpoint_uses_box(resources):
+    # Numeric entry was confirmed on the NV51K7770S; keep other boards' sliders.
+    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
 OVEN_SETPOINT = Capability(
     href="/temperatures/vs/0",
     poll_tier="hot",
@@ -501,6 +507,7 @@ OVEN_SETPOINT = Capability(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(
             key="oven_setpoint",
+            box_fn=_setpoint_uses_box,
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_oven_temp_unit,

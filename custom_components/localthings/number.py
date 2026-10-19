@@ -46,6 +46,13 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
             self._attr_native_step = desc.step
 
     @property
+    def mode(self) -> NumberMode:
+        desc = cast(NumberDesc, self._bound.desc)
+        if desc.box_fn is not None and desc.box_fn(self._resources):
+            return NumberMode.BOX
+        return super().mode
+
+    @property
     def native_unit_of_measurement(self):
         desc = cast(NumberDesc, self._bound.desc)
         if desc.unit_fn is not None:

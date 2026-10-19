@@ -143,6 +143,7 @@ class ButtonDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class NumberDesc(SamsungEntityDescription):
+    box_fn: Callable[[dict], bool] | None = None
     device_class: str | None = None
     unit: str | None = None
     unit_fn: Callable[[dict], str] | None = None  # overrides `unit` from the live rep, when set
