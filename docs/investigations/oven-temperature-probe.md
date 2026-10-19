@@ -6,8 +6,7 @@ unavailable; reconnecting reuses the same entities without reloading
 LocalThings. Existing entity IDs, custom names and disabled settings are kept.
 
 The sensor platform rechecks presence only for descriptors that opt in. This
-change opts in the existing vendor-array and OCF fallback probe sensors. It
-does not discover unadvertised resources or change other sensors' setup rules.
+change opts in the existing vendor-array and OCF fallback probe sensors.
 The labels are **Temperature Probe** and **Temperature Probe Target**, with
 localized names checked in all ten catalogs. Internal keys remain
 `food_probe_temp` and `food_probe_setpoint`.
