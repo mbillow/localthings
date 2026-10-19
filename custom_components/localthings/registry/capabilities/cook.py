@@ -604,6 +604,7 @@ PARAM_START = "start"
 def _device_values(resources: dict) -> tuple:
     return (
         current_mode(resources),
+        device_unit(resources),
         _temp_item(resources).get(_DESIRED),
         (resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME),
     )
@@ -614,10 +615,9 @@ class HeldCook:
     kept here rather than written (the board discards them from `Ready`)
     until a start sends them.
 
-    Same rules as the 8888 washer's held course (#519): a new mode brings
-    its own defaults, so it drops a held setpoint and time; and everything
-    is dropped once the oven leaves `Ready` or its own mode, setpoint or
-    time changes, since the panel has been used.
+    The first mode selection validates earlier entries; reselecting it
+    preserves them. A different mode brings its own defaults. Panel
+    changes or leaving `Ready` discard held choices.
     """
 
     def __init__(self) -> None:
@@ -635,21 +635,56 @@ class HeldCook:
         # Checked as the start would be: against the held mode (else the
         # board's default) and whatever else is already held.
         if param == PARAM_MODE:
-            plan_start(resources, mode=value, complete=False)
+            keep_values = PARAM_MODE not in self.values or self.values[PARAM_MODE] == value
+            temperature = self.values.get(PARAM_TEMPERATURE) if keep_values else None
+            duration = self.values.get(PARAM_DURATION) if keep_values else None
+            plan = plan_start(
+                resources, mode=value, temperature=temperature, duration=duration, complete=False
+            )
             held = {PARAM_MODE: value}
+            if temperature is not None:
+                held[PARAM_TEMPERATURE] = plan.temperature
+            if duration is not None:
+                held[PARAM_DURATION] = plan.duration
         else:
             held = {**self.values, param: value}
-            plan = plan_start(
-                resources,
-                mode=held.get(PARAM_MODE),
-                temperature=held.get(PARAM_TEMPERATURE),
-                duration=held.get(PARAM_DURATION),
-                complete=False,
-            )
-            held = {
-                **held,
-                param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
-            }
+            try:
+                plan = plan_start(
+                    resources,
+                    mode=held.get(PARAM_MODE),
+                    temperature=held.get(PARAM_TEMPERATURE),
+                    duration=held.get(PARAM_DURATION),
+                    complete=False,
+                )
+            except CookStartError as err:
+                if err.key != "cook_mode_required" or param not in (
+                    PARAM_TEMPERATURE,
+                    PARAM_DURATION,
+                ):
+                    raise
+                # No default mode on the NV51K7770S: accept preparation only
+                # if one available mode accepts the whole pending recipe.
+                for candidate in startable_modes(resources):
+                    try:
+                        plan_start(
+                            resources,
+                            mode=candidate,
+                            temperature=held.get(PARAM_TEMPERATURE),
+                            duration=held.get(PARAM_DURATION),
+                            complete=False,
+                        )
+                    except CookStartError:
+                        continue
+                    break
+                else:
+                    raise
+                # The candidate must not select a mode or round its input;
+                # the first explicit mode selection does that.
+            else:
+                held = {
+                    **held,
+                    param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
+                }
         if not self.values:
             self._base = _device_values(resources)
         self.values = held
@@ -679,13 +714,17 @@ class HeldCook:
         temp = spec.temps.get(unit) if spec and unit else None
         target = self.values.get(PARAM_TEMPERATURE, temp.default if temp else None)
         items = (view.get(TEMPERATURES_HREF) or {}).get(_ITEMS)
-        if target is not None and items:
+        # Raw values from a previous cook are not inputs to the pending start.
+        if items:
             items = [dict(i) for i in items]
-            items[0][_DESIRED] = str(target)
+            items[0][_DESIRED] = str(target) if target is not None else None
             view[TEMPERATURES_HREF] = {**view[TEMPERATURES_HREF], _ITEMS: items}
         seconds = self.values.get(PARAM_DURATION, spec.time_default if spec else None)
-        if seconds is not None and OPERATION_HREF in view:
-            view[OPERATION_HREF] = {**view[OPERATION_HREF], _OPERATION_TIME: format_hms(seconds)}
+        if OPERATION_HREF in view:
+            view[OPERATION_HREF] = {
+                **view[OPERATION_HREF],
+                _OPERATION_TIME: format_hms(seconds) if seconds is not None else None,
+            }
         return view
 
     def plan(self, resources: dict) -> CookPlan:
