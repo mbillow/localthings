@@ -324,8 +324,8 @@ def _mode_setpoint_bounds(rep, resources):
 
 
 def _oven_setpoint_available(rep, resources):
-    # Bread Proof's fixed Fahrenheit target must not become an adjustable
-    # generic range when the oven itself reports Celsius.
+    # A live modeSpec without a usable Bread Proof target must not fall
+    # back to the generic adjustable range.
     return not (
         cook.is_lcd_wall_16k(resources)
         and cook.current_mode(resources) == "Healthycook6"

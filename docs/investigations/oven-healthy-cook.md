@@ -15,7 +15,7 @@ Owner-confirmed mappings for Oven, Upper and Lower cooking:
 | Salmon Steak | `Healthycook3` | `UpperHealthycook3` / `LowerHealthycook3` | 375°F | 190°C |
 | White Fish Fillet | `Healthycook4` | `UpperHealthycook4` / `LowerHealthycook4` | 400°F | 205°C |
 | Dehydrate | `Healthycook5` | — | 150°F | 65°C |
-| Bread Proof | `Healthycook6` | — | Fixed internal target: 100°F | Not displayed |
+| Bread Proof | `Healthycook6` | — | Fixed internal target: 100°F | Fixed fallback: 40°C (inferred) |
 
 Panel-started captures on 14 October 2026 identified all eight Upper/Lower
 recipe codes and their presets. Divider-removed captures identified
@@ -25,13 +25,18 @@ in Home Assistant. These captures identify the settings; they do not
 establish remote-start support for Dehydrate or Bread Proof.
 
 Panel photographs supplied on 19 October 2026 show the native Celsius
-presets above: `1086.jpg` for Upper, `1087.jpg` for Lower, and `1088.jpg`
+presets for recipes 1–5: `1086.jpg` for Upper, `1087.jpg` for Lower, and `1088.jpg`
 for Oven. Recipes 1–4 have the same presets in all three views; Dehydrate
 and Bread Proof appear only in the Oven view.
 
 Bread Proof has no temperature adjustment or temperature readout on the
 oven's screen. Its 100°F target is an internal setting, not a measured
-cavity temperature. Home Assistant therefore offers only that fixed value.
+cavity temperature. At the owner's request, the native Celsius fallback
+is inferred as 40°C: 100°F converts to about 37.8°C, rounded to the nearest
+five degrees. This matches the rounding in the observed preset pairs
+375°F/190°C, 400°F/205°C and 150°F/65°C. The 40°C value is an estimate,
+not a panel readout or measured cavity temperature. Home Assistant offers
+only the fixed target for the oven's configured unit.
 
 ## Limits and units
 
@@ -45,11 +50,9 @@ pages 34–35, gives these ranges and the Fahrenheit presets above:
 | Bread Proof | Factory-set, not adjustable | Not offered |
 
 Adjustable recipes use the existing five-degree step. Their native Celsius
-presets come from the panel photographs. Bread Proof shows no temperature
-in either unit; its native Celsius target remains unspecified, so its
-setpoint is unavailable on a Celsius-configured oven unless a live
-`modeSpec` declares a usable target. HA can still convert Fahrenheit values
-for display and input when HA's preferred unit is Celsius.
+presets come from the panel photographs. HA still converts Fahrenheit
+values for display and input when HA's preferred unit is Celsius; that
+display conversion is separate from the native Celsius fallback.
 
 These are fallbacks only. A live `modeSpec` takes precedence, and other
 board tokens retain their existing labels and limits. Cross-cavity

@@ -204,9 +204,9 @@ def healthy_cook_temps(resources: dict, mode: str | None = None) -> dict[str, Te
     if mode == "Healthycook5":
         return {"C": TempSpec(40, 105, 65, 5), "F": TempSpec(100, 225, 150, 5)}
     if mode == "Healthycook6":
-        # The panel has no adjustable target. The captured internal target
-        # is 100 F; a native Celsius target has not been established.
-        return {"F": TempSpec(100, 100, 100, 1)}
+        # The fixed 40 C fallback is inferred from the captured 100 F target
+        # using the five-degree rounding seen in the other recipe presets.
+        return {"C": TempSpec(40, 40, 40, 1), "F": TempSpec(100, 100, 100, 1)}
     recipe = mode.removeprefix("Upper").removeprefix("Lower")
     if recipe not in {f"Healthycook{i}" for i in range(1, 5)}:
         return None

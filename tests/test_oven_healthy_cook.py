@@ -156,7 +156,7 @@ async def test_native_celsius_has_manual_limits_and_panel_presets(hass, prefix, 
         cook.plan_start(resources, mode=mode, temperature=maximum + 5)
 
 
-async def test_native_celsius_dehydrate_and_proof_recover_on_mode_change(hass):
+async def test_native_celsius_proof_is_fixed_and_dehydrate_is_adjustable(hass):
     upper = {**UPPER, "Temperatures": [{**UPPER["Temperatures"][0], "unit": "Celsius"}]}
     coordinator = await _discovered(hass, _routes(divided=False, upper=upper))
     bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == MAIN}
@@ -165,10 +165,13 @@ async def test_native_celsius_dehydrate_and_proof_recover_on_mode_change(hass):
 
     await coordinator.async_send_command(bound["oven_mode"], "Healthycook6")
 
-    assert not target.available
+    assert target.available
+    assert (target.native_value, target.native_min_value, target.native_max_value) == (40, 40, 40)
+    plan = coordinator._held_cooks[MAIN].plan(coordinator._cavity_resources(MAIN))
+    assert (plan.temperature, plan.unit) == (40, "Celsius")
     with pytest.raises(ServiceValidationError) as err:
-        await target.async_set_native_value(40)
-    assert err.value.translation_key == "cook_temperature_not_supported"
+        await target.async_set_native_value(45)
+    assert err.value.translation_key == "cook_temperature_out_of_range"
     await coordinator.async_send_command(bound["oven_mode"], "Healthycook5")
     assert target.available
     assert (target.native_min_value, target.native_max_value) == (40, 105)
@@ -210,6 +213,7 @@ async def test_fahrenheit_oven_uses_ha_celsius_display_and_input_conversion(hass
         ("Healthycook5", "Fahrenheit", 100, 225),
         ("Healthycook6", "Fahrenheit", 100, 100),
         ("Healthycook5", "Celsius", 40, 105),
+        ("Healthycook6", "Celsius", 40, 40),
     ],
 )
 async def test_running_setpoint_bounds_preserve_probe_item(hass, mode, unit, minimum, maximum):
