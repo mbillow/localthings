@@ -3,7 +3,7 @@
 These suggestions describe how future contributions could give
 LocalThings controls a more consistent appearance. The accompanying
 code change enables numeric Setpoint entry only on the measured
-NV51K7770S (`LCD_OV_WALL_16K`); other models keep their existing controls.
+NV51K7770S (`LCD_OV_WALL_16K`).
 
 | Input style | Suggested use |
 | --- | --- |
