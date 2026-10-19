@@ -2,8 +2,7 @@
 
 This change replaces the total Cook Time number with **Cook Time Hours** and
 **Cook Time Minutes** for `LCD_OV_WALL_16K`, the board reported by the owner's
-NV51K7770SG/AA. The upper and lower cavities each retain one duration. Other
-board identifiers keep their existing total-duration control.
+NV51K7770SG/AA. The upper and lower cavities each retain one duration.
 
 ## Why separate hours and minutes
 
