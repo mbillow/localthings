@@ -1,0 +1,15 @@
+{
+  "note": "Extracted position and door fields from LCD_OV_WALL_16K /device/0 reads on October 14, 2026. The main oven door stayed open while the owner opened and closed the internal reservoir. Other fields are omitted, not reconstructed.",
+  "samples": [
+    {
+      "position": "open",
+      "options": ["waterTankInSwitch_Off", "waterTankOutSwitch_On"],
+      "door": "Open"
+    },
+    {
+      "position": "closed",
+      "options": ["waterTankInSwitch_On", "waterTankOutSwitch_Off"],
+      "door": "Open"
+    }
+  ]
+}

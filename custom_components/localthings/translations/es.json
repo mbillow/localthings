@@ -520,6 +520,9 @@
       "divider": {
         "name": "Divisor"
       },
+      "reservoir_open": {
+        "name": "Depósito de agua"
+      },
       "wrinkle_prevent_active": {
         "name": "Anti-arrugas activo"
       },

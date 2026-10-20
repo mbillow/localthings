@@ -151,6 +151,9 @@
       "divider": {
         "name": "Trennwand"
       },
+      "reservoir_open": {
+        "name": "Wassertank"
+      },
       "wrinkle_prevent_active": {
         "name": "Knitterschutz aktiv"
       },
