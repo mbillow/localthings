@@ -76,6 +76,9 @@ def _fake_https(monkeypatch):
         "custom_components.localthings.legacy_http_transport.client_context",
         lambda cert_pem, key_pem: object(),
     )
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.time.sleep", lambda _: None
+    )
     _FakeConnection.log = []
     _FakeConnection.routes = _routes()
 
@@ -381,7 +384,7 @@ class TestWrites:
         resources = {
             href.replace("/vs/1", "/vs/0"): rep for href, rep in _seed(transport, 1).items()
         }
-        plan = cook.plan_start(resources, "LowerBake", 350, None)
+        plan = cook.plan_start(resources, "LowerBake", 350, 300)
         _FakeConnection.log.clear()
 
         code, _ = transport.write(
@@ -389,11 +392,17 @@ class TestWrites:
         )
 
         assert code == 0x44
-        method, path, body, _ = _FakeConnection.log[0]
-        assert (method, path) == ("PUT", "/devices/1")
+        assert _requests() == [
+            ("GET", "/devices/1/configuration"),
+            ("PUT", "/devices/1"),
+            ("GET", "/devices/1/configuration"),
+            ("PUT", "/devices/1"),
+        ]
+        body = _FakeConnection.log[1][2]
         assert body is not None
         assert body["Device"]["Mode"] == {"modes": ["LowerBake"]}
-        assert body["Device"]["Operation"]["state"] == "Run"
+        assert body["Device"]["Operation"] == {"operationTime": "00:05:00"}
+        assert _FakeConnection.log[3][2] == {"Device": {"Operation": {"state": "Run"}}}
 
     def test_a_batch_naming_the_other_cavity_is_refused(self):
         batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]

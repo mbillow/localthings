@@ -2245,6 +2245,9 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Cooking start could not be confirmed and was not retried. Check the appliance before trying again. Details: {error}"
+    },
     "command_refused": {
       "message": "The appliance refused the command to {href}: {error}"
     },
