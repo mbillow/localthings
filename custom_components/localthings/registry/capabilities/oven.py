@@ -17,6 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -809,5 +810,25 @@ OVEN_MODE = Capability(
             value_fn=lambda opts: _option_value(opts, "BurnerOnAlert") == "On",
             write_fn=_option_switch_write("BurnerOnAlert"),
         ),
+    ),
+)
+
+
+def _is_lcd_wall_16k(resources):
+    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+OVEN_MODE_FALLBACK = replace(
+    OVEN_MODE, match_fn=lambda rep, resources: not _is_lcd_wall_16k(resources)
+)
+# NV51K7770S reports no Sound token at either panel volume extreme.
+# Keep this gate off the shared OVEN_MODE used by ranges and microwaves.
+LCD_WALL_MODE = replace(
+    OVEN_MODE,
+    match_fn=lambda rep, resources: _is_lcd_wall_16k(resources),
+    entities=tuple(
+        replace(desc, exists_fn=_has_option("Sound")) if desc.key == "sound" else desc
+        for desc in OVEN_MODE.entities
     ),
 )
