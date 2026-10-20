@@ -348,3 +348,30 @@ def test_duration_translations_and_error_placeholders(language):
         message = data["exceptions"][key]["message"]
         assert message.strip()
         assert {field for _, field, _, _ in Formatter().parse(message) if field} == expected
+
+
+@pytest.mark.parametrize(
+    "key,value,expected", [("cook_time_hours", 1, [1, 0]), ("cook_time_minutes", 20, [0, 20])]
+)
+async def test_first_part_accepts_an_unset_pending_timer(hass, monkeypatch, key, value, expected):
+    coordinator = await _prepared(hass)
+    cavity = _lower(coordinator)
+    _, numbers = _numbers(coordinator, cavity)
+    original_overlay = cook.HeldCook.overlay
+
+    def pending_overlay(self, resources):
+        view = original_overlay(self, resources)
+        if cook.PARAM_DURATION not in self.values:
+            view = {
+                **view,
+                cook.OPERATION_HREF: {**view[cook.OPERATION_HREF], PREFIX + "operationTime": None},
+            }
+        return view
+
+    monkeypatch.setattr(cook.HeldCook, "overlay", pending_overlay)
+    coordinator._canonical_cache.clear()
+    assert coordinator.cook_time_is_unset(cavity)
+    _FakeConnection.log.clear()
+    await numbers[key].async_set_native_value(value)
+    assert [number.native_value for number in numbers.values()] == expected
+    assert not _requests()

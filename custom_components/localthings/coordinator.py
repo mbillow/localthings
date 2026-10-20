@@ -2473,7 +2473,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if cook_param in cook.DURATION_PARTS:
             resources = self.canonical_resources(bound_entity.subdevice)
             try:
-                payload = cook.duration_with_part(cook_param, payload, resources)
+                payload = cook.duration_with_part(
+                    cook_param,
+                    payload,
+                    resources,
+                    unset=self.cook_time_is_unset(bound_entity.subdevice),
+                )
             except cook.CookStartError as err:
                 raise ServiceValidationError(
                     translation_domain=DOMAIN,
@@ -2799,7 +2804,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if held is not None and cook.PARAM_DURATION in held.values:
             return False
         duration = (view.get(cook.OPERATION_HREF) or {}).get("x.com.samsung.da.operationTime")
-        return cook.parse_hms(duration) == 0
+        # A pending mode without a timer default has no duration yet.
+        return cook.parse_hms(duration) == 0 or (
+            duration is None and held is not None and bool(held.values)
+        )
 
     def _with_held_cooks(self, snapshot: dict[str, dict]) -> dict[str, dict]:
         """Each idle cavity's held choices, written over its own actual

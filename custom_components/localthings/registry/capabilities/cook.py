@@ -617,7 +617,7 @@ def duration_parts_max(resources: dict) -> int:
     return min(maximum, spec.time_max) if spec and spec.time_max is not None else maximum
 
 
-def duration_with_part(param: str, payload: Any, resources: dict) -> int:
+def duration_with_part(param: str, payload: Any, resources: dict, *, unset: bool = False) -> int:
     """Replace one timer component, preserving the cavity's other component."""
     try:
         value = float(payload)
@@ -626,7 +626,8 @@ def duration_with_part(param: str, payload: Any, resources: dict) -> int:
     maximum_part = 9 if param == PARAM_DURATION_HOURS else 59
     if not value.is_integer() or not 0 <= value <= maximum_part:
         raise CookStartError("cook_duration_part_invalid")
-    seconds = parse_hms((resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME))
+    raw = (resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME)
+    seconds = 0 if raw is None and unset else parse_hms(raw)
     if seconds is None:
         raise CookStartError("cook_duration_unavailable")
     hours, minutes = divmod(-(-seconds // 60), 60)
