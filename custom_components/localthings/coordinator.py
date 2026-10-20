@@ -11,6 +11,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 from urllib.parse import unquote, urlsplit
 
@@ -287,16 +288,45 @@ def _refusal(code: int, response: Any) -> str:
 
 
 def _field_present_in(key: str, value: Any, readback: dict) -> bool:
-    """Whether one written field shows in `readback`.
-
-    An options[] write carries only the changed `<Prefix>_<Value>` tokens
-    and the appliance merges them into its full array (issue #54), so the
-    read-back holds every sibling token too: each written token being in it
-    is what "took" means there. Every other field compares whole."""
+    """Compare written fields, allowing the device's merged options and items."""
+    if key not in readback:
+        return False
     current = readback.get(key)
     if key == "x.com.samsung.da.options" and isinstance(value, list) and isinstance(current, list):
         return all(token in current for token in value)
+    if key == "x.com.samsung.da.items" and isinstance(value, list) and isinstance(current, list):
+        return _items_present_in(value, current)
+    if key == "x.com.samsung.da.desired":
+        # Legacy HTTPS returns numeric setpoints even when the request used
+        # strings. IDs, units and other fields still compare without coercion.
+        if type(value) not in (str, int, float) or type(current) not in (str, int, float):
+            return False
+        try:
+            wanted, actual = Decimal(str(value)), Decimal(str(current))
+        except InvalidOperation:
+            return False
+        return wanted.is_finite() and actual.is_finite() and wanted == actual
     return current == value
+
+
+def _items_present_in(written: list, current: list) -> bool:
+    """Match partial writes by unique ID; reads also carry metadata and sibling items."""
+    if not written:
+        return current == written
+    id_key = "x.com.samsung.da.id"
+    if not all(
+        isinstance(item, dict) and isinstance(item.get(id_key), str) and item[id_key]
+        for item in [*written, *current]
+    ):
+        return False
+    indexed = {item[id_key]: item for item in current}
+    if len(indexed) != len(current) or len({item[id_key] for item in written}) != len(written):
+        return False
+    return all(
+        item[id_key] in indexed
+        and all(_field_present_in(k, v, indexed[item[id_key]]) for k, v in item.items())
+        for item in written
+    )
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -311,7 +341,7 @@ def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     if isinstance(payload, dict):
         return all(_field_present_in(k, v, readback) for k, v in payload.items())
     return all(
-        all((readback.get(element_href) or {}).get(k) == v for k, v in rep.items())
+        _payload_present_in(rep, readback.get(element_href) or {})
         for element_href, rep in _batch_element_reps(payload).items()
     )
 
