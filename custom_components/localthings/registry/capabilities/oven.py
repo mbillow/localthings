@@ -17,6 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -809,5 +810,43 @@ OVEN_MODE = Capability(
             value_fn=lambda opts: _option_value(opts, "BurnerOnAlert") == "On",
             write_fn=_option_switch_write("BurnerOnAlert"),
         ),
+    ),
+)
+
+
+# The NV51K7770S menu offered Broil despite the existing start refusal.
+# Cleaning and Gourmet Cook are owner-excluded; see oven-remote-mode-choices.md.
+_LCD_WALL_EXCLUDED_MODES = frozenset(
+    {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
+)
+
+
+def _is_lcd_wall_16k(resources):
+    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+def _lcd_wall_mode_options(resources):
+    return [m for m in _oven_mode_options(resources) if m not in _LCD_WALL_EXCLUDED_MODES]
+
+
+def _lcd_wall_mode_write(p, rep, href=None, resources=None):
+    if p in _LCD_WALL_EXCLUDED_MODES:
+        return None
+    return _oven_mode_write(p, rep, href, resources)
+
+
+OVEN_MODE_FALLBACK = replace(
+    OVEN_MODE,
+    match_fn=lambda rep, resources: not _is_lcd_wall_16k(resources),
+)
+LCD_WALL_MODE = replace(
+    OVEN_MODE,
+    match_fn=lambda rep, resources: _is_lcd_wall_16k(resources),
+    entities=tuple(
+        replace(desc, options=_lcd_wall_mode_options, write_fn=_lcd_wall_mode_write)
+        if isinstance(desc, SelectDesc) and desc.key == "oven_mode"
+        else desc
+        for desc in OVEN_MODE.entities
     ),
 )
