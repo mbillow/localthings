@@ -1,0 +1,252 @@
+"""Fresh permission and at-most-once dispatch for legacy oven starts."""
+
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
+from homeassistant.exceptions import HomeAssistantError
+
+from custom_components.localthings.const import CONF_BYPASS_REMOTE_CONTROL
+from custom_components.localthings.registry.capabilities import cook
+from custom_components.localthings.registry.subdevices import MAIN
+from custom_components.localthings.transport import OvenStartUnconfirmed
+from tests.test_legacy_http_lower_cavity import (
+    _discovered,
+    _lower,
+    _requests,
+    _routes,
+    _transport,
+)
+from tests.test_legacy_http_lower_cavity import (
+    _fake_https as _fake_https,
+)
+from tests.test_legacy_http_transport import _FakeConnection
+
+
+def _batch(index):
+    mode = "LowerBake" if index else "UpperConvectionBake"
+    return cook.CookPlan(mode, 350, "Fahrenheit", 300).batch(lambda href: href[:-1] + str(index))
+
+
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+async def test_start_button_uses_the_held_recipe_and_its_own_cavity(hass, index, divided, mode):
+    coordinator = await _discovered(hass, _routes(divided=divided))
+    cavity = _lower(coordinator) if index else MAIN
+    bound = {b.desc.key: b for b in coordinator.bound if b.subdevice == cavity}
+    for key, value in [("oven_mode", mode), ("oven_setpoint", 350), ("cook_time", 5)]:
+        await coordinator.async_send_command(bound[key], value)
+    _FakeConnection.log.clear()
+
+    await coordinator.async_send_command(bound["start_cooking"], "")
+
+    path = f"/devices/{index}"
+    assert [entry[:3] for entry in _FakeConnection.log] == [
+        ("GET", path + "/configuration", None),
+        (
+            "PUT",
+            path,
+            {
+                "Device": {
+                    "Mode": {"modes": [mode]},
+                    "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
+                    "Operation": {"operationTime": "00:05:00"},
+                }
+            },
+        ),
+        ("GET", path + "/configuration", None),
+        ("PUT", path, {"Device": {"Operation": {"state": "Run"}}}),
+    ]
+    assert coordinator._held_cooks[cavity].values == {}
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("failed_step", [0, 1])
+def test_a_refusal_stops_the_sequence_and_keeps_the_reason(index, failed_step, monkeypatch):
+    transport = _transport()
+    permission = (200, {"Configuration": {"remoteControlEnabled": True}})
+    responses = [permission, (204, None)] * failed_step + [
+        permission,
+        (400, "Control fail, <Operation.state=Run>"),
+    ]
+    request = Mock(side_effect=responses)
+    monkeypatch.setattr(transport, "_request", request)
+
+    code, response = transport.write(["device", str(index)], _batch(index), timeout=8.0)
+
+    assert code == 0x80
+    assert response == "Control fail, <Operation.state=Run>"
+    assert request.call_count == (failed_step + 1) * 2
+
+
+def test_other_lcd_wall_boards_keep_one_combined_write():
+    code, _ = _transport("LCD_OV_WALL_30K").write(["device", "0"], _batch(0), timeout=8.0)
+
+    assert code == 0x44
+    assert _requests() == [("PUT", "/devices/0")]
+    body = _FakeConnection.log[0][2]
+    assert body is not None
+    assert body["Device"]["Operation"] == {"operationTime": "00:05:00", "state": "Run"}
+
+
+@pytest.mark.parametrize("index", [0, 1])
+def test_settings_only_and_bare_run_keep_separate_single_writes(index):
+    transport = _transport()
+    settings = _batch(index)
+    settings[-1]["rep"].pop("x.com.samsung.da.state")
+    code, _ = transport.write(["device", str(index)], settings, timeout=8.0)
+    assert code == 0x44
+    assert _requests() == [("PUT", f"/devices/{index}")]
+
+    _FakeConnection.log.clear()
+    code, _ = transport.write(
+        ["operational", "state", "vs", str(index)],
+        {"x.com.samsung.da.state": "Run"},
+        timeout=8.0,
+    )
+    assert code == 0x44
+    assert [entry[:3] for entry in _FakeConnection.log] == [
+        ("PUT", f"/devices/{index}", {"Device": {"Operation": {"state": "Run"}}})
+    ]
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("phase", ["before settings", "before Run"])
+@pytest.mark.parametrize(
+    "response",
+    [
+        (200, {"Configuration": {"remoteControlEnabled": False}}),
+        (200, {"Configuration": {"remoteControlEnabled": "false"}}),
+        (200, {"Configuration": {"remoteControlEnabled": 1}}),
+        (200, {"Configuration": {}}),
+        (200, {"Configuration": None}),
+        (200, "not JSON"),
+        (204, None),
+        (403, {"errorCode": "SHE-001"}),
+        (500, None),
+    ],
+)
+def test_unconfirmed_permission_never_sends_the_next_write(index, phase, response, monkeypatch):
+    path = f"/devices/{index}"
+
+    def disable(_seconds=None):
+        _FakeConnection.routes[path + "/configuration"] = response
+
+    if phase == "before settings":
+        disable()
+    else:
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", disable
+        )
+
+    code, reason = _transport().write(["device", str(index)], _batch(index), timeout=8.0)
+
+    assert code >> 5 != 2
+    assert phase in reason
+    puts = [entry for entry in _FakeConnection.log if entry[0] == "PUT"]
+    assert len(puts) == (phase == "before Run")
+    for _, _, body, _ in puts:
+        assert body is not None
+        assert "state" not in body["Device"]["Operation"]
+    assert all(request_path.startswith(path) for _, request_path in _requests())
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("bypass", [False, True])
+async def test_live_off_blocks_start_even_with_stale_true_cache(hass, index, bypass):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+    assert coordinator._remote_control_enabled(cavity)
+    hass.config_entries.async_update_entry(
+        coordinator._entry, options={CONF_BYPASS_REMOTE_CONTROL: bypass}
+    )
+    _FakeConnection.routes[f"/devices/{index}/configuration"] = (
+        200,
+        {"Configuration": {"remoteControlEnabled": False}},
+    )
+    _FakeConnection.log.clear()
+
+    with pytest.raises(HomeAssistantError):
+        await coordinator.async_start_cooking(
+            cavity,
+            mode="LowerBake" if index else "UpperConvectionBake",
+            temperature=350,
+            duration=300,
+        )
+
+    assert _requests() == [("GET", f"/devices/{index}/configuration")]
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("failed_request", [1, 2, 3, 4])
+async def test_start_is_not_replayed_after_a_lost_response(
+    hass, monkeypatch, index, failed_request
+):
+    coordinator = await _discovered(hass)
+    cavity = _lower(coordinator) if index else MAIN
+    transport = coordinator._session
+    attempts = []
+
+    def request(method, path, **kwargs):
+        attempts.append((method, path, kwargs.get("body")))
+        if len(attempts) == failed_request:
+            raise TimeoutError("response lost")
+        return (
+            (200, {"Configuration": {"remoteControlEnabled": True}})
+            if method == "GET"
+            else (204, None)
+        )
+
+    monkeypatch.setattr(transport, "_request", request)
+    reconnect = Mock()
+    monkeypatch.setattr(coordinator, "_connect_session", reconnect)
+
+    with pytest.raises(HomeAssistantError) as error:
+        await coordinator.async_start_cooking(
+            cavity,
+            mode="LowerBake" if index else "UpperConvectionBake",
+            temperature=350,
+            duration=300,
+        )
+
+    assert error.value.translation_key == "cook_start_unconfirmed"
+    assert len(attempts) == failed_request
+    reconnect.assert_not_called()
+    assert not coordinator._session_lock.locked()
+
+
+@pytest.mark.parametrize("budget", [0.0, 2.0, 8.0])
+def test_all_start_requests_share_one_timeout_budget(monkeypatch, budget):
+    now = 0.0
+    timeouts = []
+
+    def sleep(seconds):
+        nonlocal now
+        now += seconds
+
+    def request(method, _path, **kwargs):
+        timeouts.append(kwargs["timeout"])
+        sleep(1)
+        return (
+            (200, {"Configuration": {"remoteControlEnabled": True}})
+            if method == "GET"
+            else (204, None)
+        )
+
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.time",
+        SimpleNamespace(monotonic=lambda: now, sleep=sleep),
+    )
+    transport = _transport()
+    monkeypatch.setattr(transport, "_request", request)
+
+    if budget < 8:
+        with pytest.raises(OvenStartUnconfirmed) as error:
+            transport.write(["device", "0"], _batch(0), timeout=budget)
+        assert isinstance(error.value.__cause__, TimeoutError)
+        assert timeouts == ([] if budget == 0 else [2.0, 1.0])
+    else:
+        assert transport.write(["device", "0"], _batch(0), timeout=budget)[0] == 0x44
+        assert timeouts == [8.0, 7.0, 5.5, 4.5]

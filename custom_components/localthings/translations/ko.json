@@ -2245,6 +2245,9 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "조리 시작을 확인할 수 없어 다시 시도하지 않았습니다. 다시 시도하기 전에 기기를 확인하세요. 세부 정보: {error}"
+    },
     "command_refused": {
       "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
     },

@@ -2245,6 +2245,9 @@
     "command_failed": {
       "message": "La commande vers {href} a échoué même après reconnexion : {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Le démarrage de la cuisson n’a pas pu être confirmé et n’a pas été réessayé. Vérifiez l’appareil avant de réessayer. Détails : {error}"
+    },
     "command_refused": {
       "message": "L'appareil a refusé la commande vers {href} : {error}"
     },
