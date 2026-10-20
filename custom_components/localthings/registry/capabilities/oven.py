@@ -230,8 +230,8 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
-def _cook_time_write(p, rep, href=None):
-    """Write operationTime + remainingTime (H:MM:SS) from minutes."""
+def _cook_time_write(p, rep, href=None, resources=None):
+    """Write the requested cook duration from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
@@ -240,10 +240,13 @@ def _cook_time_write(p, rep, href=None):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
-    return ["operational", "state", "vs", "0"], {
-        "x.com.samsung.da.operationTime": hms,
-        "x.com.samsung.da.remainingTime": hms,
-    }
+    body = {"x.com.samsung.da.operationTime": hms}
+    model = ((resources or {}).get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    # The NV51K7770S rejects timer edits that also send remainingTime;
+    # see docs/investigations/oven-running-cook-time.md.
+    if not (isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"):
+        body["x.com.samsung.da.remainingTime"] = hms
+    return ["operational", "state", "vs", "0"], body
 
 
 def _oven_mode_options(resources):
