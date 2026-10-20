@@ -17,6 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -29,9 +30,39 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
 )
-from . import cook
+from . import common, cook
 from .common import normalize_temp_unit
 from .operational import STOP_BUTTON
+
+
+def _has_read_only_power(resources):
+    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+OVEN_POWER_VS = replace(
+    common.POWER_VS_FALLBACK,
+    match_fn=lambda rep, resources: (
+        "/power/0" not in resources and not _has_read_only_power(resources)
+    ),
+)
+# NV51K7770S power writes did not operate the oven; its On report also
+# persists while idle. Keep the reading without offering a control.
+OVEN_POWER_STATUS = replace(
+    common.POWER_VS_FALLBACK,
+    match_fn=lambda rep, resources: "/power/0" not in resources and _has_read_only_power(resources),
+    entities=tuple(
+        replace(
+            desc,
+            exists_fn=None,
+            value_fn=lambda value: (
+                {"On": True, "Off": False}.get(value) if isinstance(value, str) else None
+            ),
+        )
+        for desc in common.POWER_VS_FALLBACK.entities
+        if isinstance(desc, BinarySensorDesc)
+    ),
+)
 
 # ---------------------------------------------------------------------------
 # Constants

@@ -577,15 +577,17 @@ async def test_a_stop_not_shown_with_remote_control_off_says_so(hass: HomeAssist
 
 async def test_other_writes_still_need_remote_control(hass: HomeAssistant):
     off = {"Configuration": {"remoteControlEnabled": False}}
-    routes = _routes()
+    routes = _routes(upper=_running(UPPER))
     routes["/devices/0/configuration"] = (200, off)
     coordinator = await _discovered(hass, routes)
-    power = next(
-        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "power_switch"
+    setpoint = next(
+        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "oven_setpoint"
     )
 
-    with pytest.raises(ServiceValidationError):
-        await coordinator.async_send_command(power, False)
+    with pytest.raises(ServiceValidationError) as error:
+        await coordinator.async_send_command(setpoint, 350)
+    assert error.value.translation_key == "remote_control_disabled"
+    assert not any(method == "PUT" for method, _ in _requests())
 
 
 async def test_a_refused_stop_reaches_the_user(hass: HomeAssistant):

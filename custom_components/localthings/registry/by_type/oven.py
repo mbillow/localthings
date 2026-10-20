@@ -10,7 +10,9 @@ REGISTRY = DeviceRegistry(
         [
             *ignored.without("/configuration/vs/0"),
             *common.UNIVERSAL,
-            *common.POWER,
+            common.POWER_GENERIC,
+            oven.OVEN_POWER_VS,
+            oven.OVEN_POWER_STATUS,
             oven.OVEN_CAVITY,
             oven.OVEN_SETPOINT,
             oven.OVEN_TEMP_CURRENT_OCF,
