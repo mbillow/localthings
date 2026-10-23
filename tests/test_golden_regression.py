@@ -1974,6 +1974,20 @@ def test_registry_reproduces_golden_state_keys_for_microwave_nw9300md():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_microwave_tp6x_ov_17k_8888():
+    """NQ70M6650DS combo over 8888 (issue #674): the microwave is the master,
+    the oven an indexed subdevice at /device/2, and the blank /device/1 is
+    skipped."""
+    name = "microwave_tp6x_ov_17k_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_rac_01011_aimotionwind():
     """AR80H12CAAWNSK (issue #554): the TP1X_DA-AC-RAC-01011 board with the
     AI motion wind picker."""

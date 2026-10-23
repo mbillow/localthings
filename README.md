@@ -107,9 +107,9 @@ About half of Samsung's appliances report their Wi-Fi MAC address. For those, Ho
 
 ### Older appliances on TCP 8888
 
-Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven and an NZ36K7570R cooktop. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven, an NQ70M6650DS microwave/oven combo and an NZ36K7570R cooktop. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
 
-For the tested NZ36K7570R cooktop and NV51K777OS oven, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
+For the tested NZ36K7570R cooktop, NV51K777OS oven and NQ70M6650DS combo, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
 
 On these appliances, a chosen cycle, temperature, rinse count or spin speed takes effect only when the cycle starts. The selects hold your choice, and the **Start** button sends it. If you turn the dial on the appliance, the dial's setting replaces the held choice.
 

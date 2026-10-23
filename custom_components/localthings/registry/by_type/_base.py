@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from ..capability import Capability
@@ -49,3 +51,17 @@ def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
             )
 
     return out
+
+
+def exclude_when(cap: Capability, placeholder: Callable[[dict], bool]) -> Capability:
+    """`cap`, binding nothing on a device `placeholder(resources)` recognizes.
+
+    For a sibling slot that answers with constant filler: once none of its
+    entities bind, the generic subdevice liveness gate rejects it.
+    """
+    return dataclasses.replace(
+        cap,
+        match_fn=lambda rep, resources: (
+            not placeholder(resources) and (cap.match_fn is None or cap.match_fn(rep, resources))
+        ),
+    )

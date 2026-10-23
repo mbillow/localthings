@@ -197,6 +197,21 @@ def _has_option(prefix):
     )
 
 
+def is_empty_legacy_oven_slot(resources):
+    """The blank `/devices/1` the NQ70M6650DS combo's 8888 bridge answers
+    between its microwave (0) and oven (2), and leaves out of `/devices`
+    (#674): no cavity type, no modes, powered off."""
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    mode = resources.get("/mode/vs/0") or {}
+    return (
+        board.startswith("TP6X_OV_")
+        and _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
+        and not mode.get("x.com.samsung.da.supportedModes")
+        and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+    )
+
+
 def _option_write(prefix, new_value):
     """A one-token x.com.samsung.da.options write, mirroring
     laundry.option_write. NOT independently confirmed on an oven -- issue

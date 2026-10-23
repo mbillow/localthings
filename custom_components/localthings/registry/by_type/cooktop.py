@@ -20,7 +20,7 @@ import dataclasses
 from ..capabilities import common, cooktop, ignored
 from ..capabilities import range as range_caps
 from ..capability import Capability
-from ._base import DeviceRegistry, _build
+from ._base import DeviceRegistry, _build, exclude_when
 
 
 def _burner_list_board(rep, resources):
@@ -51,23 +51,13 @@ def _unique(caps):
     return [c for c in caps if not (id(c) in seen or seen.add(id(c)))]
 
 
-def _exclude_empty_hood(cap):
-    # The unpaired NZ36K7570R hood reports constant power and remote status.
-    # Excluding its entities lets the generic subdevice liveness check reject it.
-    return dataclasses.replace(
-        cap,
-        match_fn=lambda rep, resources: (
-            not cooktop.is_empty_legacy_hood_slot(resources)
-            and (cap.match_fn is None or cap.match_fn(rep, resources))
-        ),
-    )
-
-
 REGISTRY = DeviceRegistry(
     name="cooktop",
     capabilities=_build(
         [
-            _exclude_empty_hood(cap)
+            # The unpaired NZ36K7570R hood reports constant power and remote
+            # status.
+            exclude_when(cap, cooktop.is_empty_legacy_hood_slot)
             for cap in _unique(
                 [
                     *ignored.IGNORED,
