@@ -34,12 +34,16 @@ from .registry.capabilities.air_purifier import HREF_MODE as AIR_PURIFIER_FAN_HR
 from .registry.capabilities.air_purifier import (
     HREF_WIND_STRENGTH as AIR_PURIFIER_WIND_STRENGTH_HREF,
 )
+from .registry.capabilities.common import option_value
+from .registry.capabilities.cooktop import HOOD_FAN_SPEEDS, PAIRED_HOOD_FAN_KEY
 from .registry.entities import FanDesc
 
 _LOGGER = logging.getLogger(__name__)
 
 POWER_HREF = "/power/0"
 POWER_VS_HREF = "/power/vs/0"
+MODE_VS_HREF = "/mode/vs/0"
+_PAIRED_HOOD_SPEEDS = list(HOOD_FAN_SPEEDS)
 _FAN_SPEED_FIELD = "x.com.samsung.da.hood.fanSpeed"
 _SUPPORTED_FAN_SPEED_FIELD = "x.com.samsung.da.hood.supportedFanSpeed"
 _MIN_FAN_SPEED_FIELD = "x.com.samsung.da.hood.settableMinFanSpeed"
@@ -61,7 +65,9 @@ async def async_setup_entry(
     for bound in coordinator.bound:
         if not (isinstance(bound.desc, FanDesc) and _is_included(bound, coordinator)):
             continue
-        if bound.href in (AIR_PURIFIER_FAN_HREF, AIR_PURIFIER_WIND_STRENGTH_HREF):
+        if bound.desc.key == PAIRED_HOOD_FAN_KEY:
+            entities.append(LocalThingsPairedHoodFan(coordinator, bound))
+        elif bound.href in (AIR_PURIFIER_FAN_HREF, AIR_PURIFIER_WIND_STRENGTH_HREF):
             entities.append(LocalThingsAirPurifierFan(coordinator, bound))
         elif bound.href == HREF_AIRFLOW:
             entities.append(LocalThingsAirflowFan(coordinator, bound))
@@ -216,6 +222,64 @@ class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):
                 self._power_payload(True),
             )
         code = percentage_to_ordered_list_item(codes, percentage)
+        await self.coordinator.async_send_command(self._bound, ("speed", code))
+
+
+class LocalThingsPairedHoodFan(LocalThingsEntity, FanEntity):
+    """A legacy cooktop's paired hood (issue #676): power on its slot's
+    /power/vs/0, speed as a FanSpeed_ option on its /mode/vs/0.
+
+    Power On starts the fan on Low, and a speed written while the fan is
+    off is ignored, so a speed is always its own write after power On.
+    Reads go through _resources: the hood is a subdevice, and
+    coordinator.resource() would return the cooktop's own hrefs."""
+
+    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = (
+        FanEntityFeature.SET_SPEED | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
+    )
+    _attr_speed_count = len(_PAIRED_HOOD_SPEEDS)
+
+    def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
+        super().__init__(coordinator, bound)
+        self._attr_name = None
+
+    @property
+    def is_on(self) -> bool:
+        power = self._resources.get(POWER_VS_HREF) or {}
+        return str(power.get("x.com.samsung.da.power", "")).lower() == "on"
+
+    @property
+    def percentage(self) -> int | None:
+        if not self.is_on:
+            return 0
+        mode = self._resources.get(MODE_VS_HREF) or {}
+        current = option_value(mode.get("x.com.samsung.da.options"), "FanSpeed")
+        if current not in HOOD_FAN_SPEEDS:
+            return None
+        return ordered_list_item_to_percentage(_PAIRED_HOOD_SPEEDS, current)
+
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs,
+    ) -> None:
+        if percentage is not None:
+            await self.async_set_percentage(percentage)
+            return
+        await self.coordinator.async_send_command(self._bound, ("power", True))
+
+    async def async_turn_off(self, **kwargs) -> None:
+        await self.coordinator.async_send_command(self._bound, ("power", False))
+
+    async def async_set_percentage(self, percentage: int) -> None:
+        if percentage <= 0:
+            await self.async_turn_off()
+            return
+        if not self.is_on:
+            await self.coordinator.async_send_command(self._bound, ("power", True))
+        code = percentage_to_ordered_list_item(_PAIRED_HOOD_SPEEDS, percentage)
         await self.coordinator.async_send_command(self._bound, ("speed", code))
 
 

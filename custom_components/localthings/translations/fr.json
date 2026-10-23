@@ -264,6 +264,9 @@
     "light": {
       "lamp": {
         "name": "Lampe"
+      },
+      "paired_hood_light": {
+        "name": "Éclairage de la hotte associée"
       }
     },
     "number": {
@@ -1442,6 +1445,16 @@
       "power_level": {
         "name": "Niveau de puissance"
       },
+      "paired_hood_fan_setting": {
+        "name": "Réglage du ventilateur de la hotte associée",
+        "state": {
+          "off": "Arrêt",
+          "low": "Faible",
+          "medium": "Moyenne",
+          "high": "Élevée",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Vitesse du ventilateur de la hotte associée"
       },
@@ -1450,6 +1463,15 @@
       },
       "paired_hood_model": {
         "name": "Modèle de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_remaining": {
+        "name": "Temps restant de la minuterie d'arrêt de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Minuterie d'arrêt réglée de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "État de la minuterie d'arrêt de la hotte associée"
       },
       "power_energy_kwh": {
         "name": "Énergie consommée"

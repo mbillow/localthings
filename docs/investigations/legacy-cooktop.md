@@ -87,9 +87,41 @@ existing placeholder device after reload using the normal Delete device action.
 The fixture legacy_cooktop_empty_hood.json retains the captured canonical
 resources without connection or account identifiers. No paired hood was tested.
 
-No new hood mapping or control is included: no compatible hood is available
-for hardware verification. The existing upstream hood resources for other
-appliances are unchanged.
+No new hood mapping or control was included at the time: no compatible hood
+was available for hardware verification. The existing upstream hood
+resources for other appliances are unchanged.
+
+An NZ30K7570RS with a paired NK9300KM hood (issue #676) later showed the
+populated slot: DeviceType_NK9300KM, Bluetooth_On, FanSpeed_1 and Lamp_Off,
+with no BTState option. Its fan speed, light, Bluetooth link and model now
+read as paired-hood sensors, and the burner and timer entities no longer bind
+on that slot. A second capture with the hood running showed power On,
+FanSpeed_2, Lamp_On, ShutOffTimerSet_10, ShutOffTimerCurrent_9 and
+ShutOffTimerState_Run. Three more captures over the next seven minutes
+showed the timer counting down in minutes (9 to 4 over five minutes) and the
+fan at speeds 1 to 3. Once the hood turned off, power read Off while
+FanSpeed_3 and Lamp_On held, so the slot's power reads as the paired hood's
+power. The reporter confirmed the light runs on its own and the fan offers
+Low, Med, High and Boost, with FanSpeed_2 as Med. A later capture with the
+fan on Boost showed power On and FanSpeed_4, with the shutoff timer at Ready
+and the last set value of 10 retained. The fan reads as a named setting.
+
+With the reporter watching the hood on 2026-10-23, every write below was a
+one-token aggregate `PUT /devices/1`, accepted with 204:
+
+| Write | What the hood did |
+| --- | --- |
+| Lamp_On, Lamp_Off | Light on and off, with the fan off |
+| power On | Fan started on Low, even with FanSpeed_4 stored |
+| power Off | Fan stopped; FanSpeed kept its value |
+| FanSpeed_2, 3, 4 while running | Med, High, Boost |
+| FanSpeed_2 while off | Accepted, ignored |
+| power On and FanSpeed_2 in one body | Started on Low; the speed was ignored |
+| power On, then FanSpeed_3 0.4 s later | Started, then High |
+
+The hood is therefore exposed as a fan whose speed is written after power
+On, and a light. The shutoff timer stays read-only: no timer write was
+tried.
 
 The fixture legacy_cooktop_observations.json contains only the relevant
 options arrays extracted from the user's diagnostics. Its state reflects

@@ -341,6 +341,19 @@ def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_8888():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_hood_8888():
+    """NZ30K7570RS with a paired NK9300KM hood (issue #676): the hood is an
+    indexed subdevice at /device/1 with hood entities and no burners."""
+    name = "cooktop_tp6x_ct_16k_hood_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_cooktop():
     from tests.conftest import _load_device
 
