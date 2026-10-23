@@ -457,7 +457,13 @@
           "7f": "Asciugatura a tempo",
           "98": "Asciugatura rapida 35",
           "eb": "Delicati",
-          "b6": "Sintetici"
+          "b6": "Sintetici",
+          "94": "Asciugamani",
+          "a1": "Antipiega",
+          "ad": "Camicie/bluse",
+          "ae": "Intimo",
+          "af": "Maglioni",
+          "b0": "Accessori"
         }
       },
       "dryer_cycle_table_03": {

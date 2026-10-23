@@ -76,6 +76,14 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     "DW": "dishwasher",
 }
 
+# These FlexDry sections report a board description rather than a consumer
+# model number. Keep the match exact; a generic TP6X_DRYER description is
+# not enough to identify either section.
+_CONSUMER_DESCRIPTION_TO_KEY: dict[str, str] = {
+    "TP6X_DRYER_DRUM": "dryer",
+    "TP6X_DRYER_TOPLOAD": "dryer",
+}
+
 # Board-family token -> registry key, matched against whole tokens of
 # `modelNum`/`description` (see `_board_tokens`).
 #
@@ -180,6 +188,8 @@ def _consumer_model_key(description: str) -> str | None:
     But issue #79's dryer pairs two model numbers in one description, so
     the true consumer token sits one segment before the actual last
     segment -- scan from the end and take the first segment that resolves.
+    Two FlexDry sections have no consumer-model suffix, so their exact
+    descriptions are handled before that scan.
 
     Splits on '_' only, unlike `_board_tokens` above: widening the split to
     '-' would start reading board-family segments as consumer models (the
@@ -191,7 +201,10 @@ def _consumer_model_key(description: str) -> str | None:
     for_device_by_model() consults the board-family table first and this
     only as a fallback, so that ambiguity resolves correctly.
     """
-    segments = (description or "").split("/", 1)[0].split("_")
+    head = (description or "").split("/", 1)[0]
+    if key := _CONSUMER_DESCRIPTION_TO_KEY.get(head.upper()):
+        return key
+    segments = head.split("_")
     for segment in reversed(segments):
         key = _CONSUMER_PREFIX_TO_KEY.get(segment[:2].upper())
         if key is not None:

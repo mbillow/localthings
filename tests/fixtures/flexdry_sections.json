@@ -1,0 +1,56 @@
+{
+  "root": {
+    "Information": {
+      "description": "TP6X_DRYER_DRUM",
+      "modelID": "TP6X_DM9900M"
+    },
+    "Mode": {
+      "options": [
+        "Course_A1"
+      ],
+      "supportedOptions": [
+        "3018410D33EE0009C8520D33EE000948520D33EE000A58520D33EE000A28102D33EE000278520D000E000A18520D000E13E9B8520D520E0009E8410D33EE000A38410D308E000A4853ED000E33EA08000D000E13E"
+      ]
+    },
+    "Washer": {
+      "dryLevel": "None",
+      "dryTime": "00:20:00",
+      "dryerType": "Electricity",
+      "supportedDryLevel": [
+        "None",
+        "Damp",
+        "Less",
+        "Normal",
+        "More",
+        "Very"
+      ],
+      "supportedDryTime": [
+        "00:00:00",
+        "00:20:00",
+        "00:30:00",
+        "00:40:00",
+        "00:50:00",
+        "01:00:00"
+      ],
+      "wrinklePrevent": "Off"
+    }
+  },
+  "upper": {
+    "Information": {
+      "description": "TP6X_DRYER_TOPLOAD",
+      "modelID": "TP6X_DM9900M"
+    },
+    "Mode": {
+      "options": [
+        "Course_AD"
+      ],
+      "supportedOptions": [
+        "0ADAEAFB0"
+      ]
+    },
+    "Washer": {
+      "dryerType": "Electricity"
+    }
+  },
+  "seeds_note": "Sanitized excerpt from the Home Assistant LocalThings Download diagnostics captured 2026-10-22; both dryer sections are from one config entry. Selected Course_* values and supportedOptions are copied from the device bodies; unit-specific model IDs, non-course Mode options, and unrelated resources are omitted. Appliance-observed labels: drum 94=Towels and A1=Wrinkle Away; top-load AD=Shirt/Blouse, AE=Undergarment, AF=Sweater, and B0=Accessory."
+}

@@ -457,7 +457,13 @@
           "7f": "Séchage minuté",
           "98": "Séchage rapide 35",
           "eb": "Délicat",
-          "b6": "Synthétiques"
+          "b6": "Synthétiques",
+          "94": "Serviettes",
+          "a1": "Anti-froissement",
+          "ad": "Chemise/chemisier",
+          "ae": "Sous-vêtements",
+          "af": "Pull",
+          "b0": "Accessoire"
         }
       },
       "dryer_cycle_table_03": {

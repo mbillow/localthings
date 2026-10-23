@@ -1,0 +1,39 @@
+{
+  "root": {
+    "state_keys": [
+      "cycle",
+      "dry_level",
+      "dry_time",
+      "dryer_type",
+      "wrinkle_prevent"
+    ],
+    "cycle_codes": [
+      "01",
+      "9C",
+      "94",
+      "A5",
+      "A2",
+      "27",
+      "A1",
+      "9B",
+      "9E",
+      "A3",
+      "A4",
+      "A0"
+    ],
+    "current_course_code": "A1"
+  },
+  "upper": {
+    "state_keys": [
+      "cycle",
+      "dryer_type"
+    ],
+    "cycle_codes": [
+      "AD",
+      "AE",
+      "AF",
+      "B0"
+    ],
+    "current_course_code": "AD"
+  }
+}

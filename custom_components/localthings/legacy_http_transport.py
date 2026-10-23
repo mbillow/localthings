@@ -275,14 +275,18 @@ class LegacyHttpTransport:
         resources = to_resources(
             self._with_modes(index, self._with_staged(index, bodies)), self._table
         )
+        # Composite sections may use a different family from the config entry.
+        course_family = self._family
+        if index:
+            record_family = record.get("description")
+            course_family = record_family if isinstance(record_family, str) else ""
+        resources.update(course_table(course_family, indexed=bool(index)))
         if index:
             if listed is not None:
                 resources[_LISTED_HREF] = listed
             sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
             resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
         else:
-            # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
-            resources.update(course_table(self._family))
             # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
             resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]

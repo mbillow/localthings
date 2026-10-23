@@ -826,7 +826,13 @@
           "7f": "Secado por tiempo",
           "98": "Secado rápido 35",
           "eb": "Delicados",
-          "b6": "Sintéticos"
+          "b6": "Sintéticos",
+          "94": "Toallas",
+          "a1": "Antiarrugas",
+          "ad": "Camisa/blusa",
+          "ae": "Ropa interior",
+          "af": "Suéter",
+          "b0": "Accesorios"
         }
       },
       "dryer_cycle_table_03": {
