@@ -424,6 +424,62 @@ def test_confirmed_ww6500_table_00_course_names():
     )
 
 
+def test_confirmed_wv9900_table_00_course_names():
+    """A live WV9900M's owner selected each cycle and checked its HA raw code.
+
+    Use the WV9900M manual's English/French/Spanish wording where it differs
+    from the catalog's generic equivalents.
+    """
+    manual_overrides = {
+        "en": {"9d": "Rinse+Spin"},
+        "fr": {
+            "91": "Auto-nettoyage",
+            "9c": "Grand rendement",
+            "9d": "Rinçage+essorage",
+            "9e": "Infroissables",
+            "9f": "Lavage express",
+            "a9": "Stérilisation",
+            "aa": "Vêtements blancs",
+            "ab": "Éco - froid",
+            "b1": "Auto-nettoyage+",
+        },
+        "es": {
+            "9c": "Acción fuerte",
+            "9d": "Enjuague+Centrifugado",
+            "9e": "Plancha permanente",
+            "a2": "Delicada",
+            "aa": "Ropa blanca",
+        },
+    }
+    shared = {
+        "94": ("washer_cycle_table_02", "70"),  # Towels
+        "9c": ("washer_cycle_table_00", "70"),  # Heavy Duty
+        "9d": ("washer_cycle_table_00", "73"),  # Rinse + Spin
+        "9e": ("washer_cycle_table_00", "77"),  # Perm Press
+        "9f": ("washer_cycle_table_00", "78"),  # Quick Wash
+        "a2": ("washer_cycle_table_00", "75"),  # Delicates
+        "a3": ("washer_cycle_table_00", "74"),  # Active Wear
+        "a5": ("washer_cycle_table_00", "71"),  # Bedding
+        "a9": ("washer_cycle_table_00", "72"),  # Sanitize
+        "aa": ("washer_cycle_table_00", "55"),  # Whites
+        "ab": ("washer_cycle_table_02", "52"),  # Eco Cold
+        "b1": ("washer_cycle_table_00", "57"),  # Self Clean+
+    }
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t00 = select["washer_cycle_table_00"]["state"]
+        overrides = manual_overrides.get(language, {})
+        for code, (table, anchor) in shared.items():
+            expected = overrides.get(code, select[table]["state"][anchor])
+            assert t00[code] == expected, (language, code, expected)
+        self_clean = (
+            overrides.get("91", "Self Clean")
+            if language == "en"
+            else overrides.get("91", select["washer_cycle_table_02"]["state"]["7e"])
+        )
+        assert t00["91"] == self_clean, language
+
+
 def test_confirmed_dryer_dry_level_labels():
     """dryer_dry_level's word vocabulary (None/Damp/Less/Normal/More/Very),
     confirmed across the TP1_21 dryer fixtures. The numeric vocabulary
