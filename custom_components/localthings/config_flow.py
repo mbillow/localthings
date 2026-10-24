@@ -58,6 +58,7 @@ from .const import (
     CONF_LEAF_KEY_PEM,
     CONF_LEARN_MODES,
     CONF_LEGACY_FAMILY,
+    CONF_LOCAL_PORT_ATTEMPT,
     CONF_MAC,
     CONF_MANUFACTURER,
     CONF_MODEL,
@@ -72,6 +73,7 @@ from .const import (
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
     DOMAIN,
+    DTLS_LOCAL_PORT_MAX_ATTEMPT,
     LEGACY_HTTP_PORT,
     PROBE_GET_TIMEOUT_S,
     PROBE_PORT_RANGE,
@@ -1045,6 +1047,27 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # refused on, for reading its doxm (#540).
         self._plaintext_port: int | None = None
         self._credential_hint = probing.CredentialHint()
+        # Retries of the user step step the source port up one slot: a
+        # handshake that timed out can leave the appliance ignoring that
+        # address/port pair, and a retry from it then fails no matter how
+        # healthy the appliance is (see transport.local_source_port).
+        self._source_port_attempt = 0
+        self._source_port_host = ""
+
+    def _note_setup_attempt(self, host: str) -> None:
+        """Step the setup source port for a re-submit at the same appliance.
+
+        The form is re-rendered only after an attempt failed, so a re-submit
+        for the same host is the signal that the previous peer may be dead.
+        A different host starts over at its own base port.
+        """
+        if host == self._source_port_host:
+            self._source_port_attempt = min(
+                self._source_port_attempt + 1, DTLS_LOCAL_PORT_MAX_ATTEMPT
+            )
+        else:
+            self._source_port_attempt = 0
+        self._source_port_host = host
 
     def _setup_source_port(self, host: str) -> int | None:
         """The fixed source port to handshake from, or None for an ephemeral one.
@@ -1055,11 +1078,17 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         from that same port, and the library binds it with SO_REUSEADDR, so a
         second socket there would share its address pair and our ClientHello
         would tear down its live session.
+
+        The port steps up one slot per failed attempt at the same appliance:
+        an appliance that timed out on a handshake can ignore that
+        address/port pair from then on, so re-submitting the form on the same
+        port would retry a dead peer forever (see
+        transport.local_source_port).
         """
         entries = self.hass.config_entries.async_entries(DOMAIN)
         if any(entry.data.get(CONF_HOST) == host for entry in entries):
             return None
-        return local_source_port(host)
+        return local_source_port(host, self._source_port_attempt)
 
     @staticmethod
     @callback
@@ -1091,6 +1120,10 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data={
                 CONF_HOST: self._host,
                 CONF_PORT: info["port"],
+                # The slot this setup succeeded from: the coordinator must not
+                # reopen on the base port when that one is the peer the
+                # appliance stopped answering (see transport.local_source_port).
+                CONF_LOCAL_PORT_ATTEMPT: self._source_port_attempt,
                 **credential,
                 CONF_DEVICE_KEY: info["device_key"],
                 **(
@@ -1129,6 +1162,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            self._note_setup_attempt(user_input[CONF_HOST].strip())
             self._host = user_input[CONF_HOST].strip()
             existing_leaf = None
             if has_creds:

@@ -24,9 +24,11 @@ from custom_components.localthings.const import (
     CONF_DEVICE_TOKEN,
     CONF_HOST,
     CONF_LEGACY_FAMILY,
+    CONF_LOCAL_PORT_ATTEMPT,
     CONF_TRANSPORT,
     DOMAIN,
     DTLS_LOCAL_PORT_BASE,
+    DTLS_LOCAL_PORT_MAX_ATTEMPT,
     SUMMARY_INTERVAL_S,
     TRANSPORT_LEGACY_HTTP,
 )
@@ -2328,6 +2330,57 @@ def test_local_source_port_non_ipv4_falls_back_to_hash() -> None:
     assert DTLS_LOCAL_PORT_BASE <= port <= DTLS_LOCAL_PORT_BASE + 0xFF
 
 
+def test_local_source_port_steps_a_slot_per_attempt() -> None:
+    """A retry must not re-dial a peer that may be dead.
+
+    Measured on a DA_WM_TP2_20_COMMON washer and dryer: a handshake that
+    timed out left that address/port pair ignored for good, while a fresh
+    source port completed the same handshake in under a second. So each
+    attempt moves one stride up and never lands on another device's base.
+    """
+    host = "192.168.1.217"
+    assert _local_source_port(host, 0) == DTLS_LOCAL_PORT_BASE + 217
+    ports = {_local_source_port(host, n) for n in range(DTLS_LOCAL_PORT_MAX_ATTEMPT + 1)}
+    assert len(ports) == DTLS_LOCAL_PORT_MAX_ATTEMPT + 1
+    assert all(DTLS_LOCAL_PORT_BASE < port <= 65535 for port in ports)
+    other = {_local_source_port("192.168.1.216", n) for n in range(DTLS_LOCAL_PORT_MAX_ATTEMPT + 1)}
+    assert not ports & other
+
+
+def test_local_source_port_attempt_is_capped() -> None:
+    """The cap bounds the peer entries a run of failures can leave behind."""
+    host = "192.168.1.217"
+    assert _local_source_port(host, DTLS_LOCAL_PORT_MAX_ATTEMPT + 5) == _local_source_port(
+        host, DTLS_LOCAL_PORT_MAX_ATTEMPT
+    )
+
+
+def test_local_source_port_rejects_a_bad_attempt() -> None:
+    with pytest.raises(TypeError):
+        _local_source_port("192.168.1.217", True)
+    with pytest.raises(ValueError):
+        _local_source_port("192.168.1.217", -1)
+
+
+def test_coordinator_rotates_the_source_port_after_a_second_failed_connect(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """An appliance that stopped answering a peer keeps the port for one
+    failure (ordinary sleep, and replacing that peer is what the fixed port
+    is for), then the reconnect loop steps to the next slot instead of
+    re-dialling a pair that may never answer again."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+
+    coordinator._note_connect_failure()
+    assert coordinator._source_port_attempt == 0
+    coordinator._note_connect_failure()
+    assert coordinator._source_port_attempt == 1
+
+    for _ in range(DTLS_LOCAL_PORT_MAX_ATTEMPT + 5):
+        coordinator._note_connect_failure()
+    assert coordinator._source_port_attempt == DTLS_LOCAL_PORT_MAX_ATTEMPT
+
+
 # ----------------------------------------------------------------------
 # Issue #254: a pre-discovery poll failure must never look like a
 # successful first refresh. See `_defer_reconnect_for` for the mechanism.
@@ -2475,3 +2528,30 @@ async def test_a_rejected_token_asks_for_reauth(hass: HomeAssistant, mock_entry)
 
     with pytest.raises(ConfigEntryAuthFailed):
         await coordinator._async_update_data()
+
+
+async def test_coordinator_starts_at_the_slot_setup_stored(hass: HomeAssistant, mock_entry) -> None:
+    """A restart must not walk back onto the peer setup already found dead."""
+    mock_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_entry, data={**mock_entry.data, CONF_LOCAL_PORT_ATTEMPT: 3}
+    )
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+
+    assert coordinator._source_port_attempt == 3
+
+
+async def test_coordinator_persists_a_rotated_source_port(hass: HomeAssistant, mock_entry) -> None:
+    """The slot a connect proved is written from the loop, once."""
+    mock_entry.add_to_hass(hass)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._source_port_attempt = 2
+    coordinator._source_port_to_persist = 2
+
+    coordinator._persist_source_port()
+
+    assert mock_entry.data[CONF_LOCAL_PORT_ATTEMPT] == 2
+    assert coordinator._source_port_to_persist is None
+    coordinator._persist_source_port()
+    assert mock_entry.data[CONF_LOCAL_PORT_ATTEMPT] == 2

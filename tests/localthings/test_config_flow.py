@@ -21,6 +21,7 @@ from custom_components.localthings.const import (
     CONF_LEAF_CERT_PEM,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
+    CONF_LOCAL_PORT_ATTEMPT,
     CONF_PORT,
     CONF_SERIAL,
     DOMAIN,
@@ -2116,6 +2117,74 @@ async def test_new_device_handshakes_from_its_fixed_source_port(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert FakeSession.instances[0].local_port == local_source_port(MOCK_HOST)
+
+
+async def test_retrying_setup_dials_the_next_source_port(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """A failed attempt can leave the appliance ignoring that address/port
+    pair for good, so re-submitting the form must not re-dial it.
+
+    Measured on a DA_WM_TP2_20_COMMON washer and dryer: the timed-out port
+    kept timing out on every later attempt while a fresh source port
+    completed the same handshake in under a second.
+    """
+    from custom_components.localthings.transport import local_source_port
+
+    _patch_clienthello(monkeypatch, {49154})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    def _timeout(self):
+        raise TimeoutError("DTLS handshake timeout")
+
+    original_connect = FakeSession.connect
+    monkeypatch.setattr(FakeSession, "connect", _timeout)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert FakeSession.instances[-1].local_port == local_source_port(MOCK_HOST, 0)
+
+    monkeypatch.setattr(FakeSession, "connect", original_connect)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert FakeSession.instances[-1].local_port == local_source_port(MOCK_HOST, 1)
+    # Stored, so the entry's coordinator reopens on the slot that worked
+    # instead of walking back onto the dead one.
+    assert result["data"][CONF_LOCAL_PORT_ATTEMPT] == 1
+
+
+async def test_retrying_a_different_host_starts_at_its_own_base_port(
+    hass: HomeAssistant, monkeypatch, fake_dtls
+) -> None:
+    """Retargeting the form is not a retry at the appliance that failed, so
+    the new host gets its own first slot -- not the previous host's step."""
+    from custom_components.localthings.transport import local_source_port
+
+    _patch_clienthello(monkeypatch, {49154})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    def _timeout(self):
+        raise TimeoutError("DTLS handshake timeout")
+
+    original_connect = FakeSession.connect
+    monkeypatch.setattr(FakeSession, "connect", _timeout)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["type"] == FlowResultType.FORM
+
+    monkeypatch.setattr(FakeSession, "connect", original_connect)
+    other_host = "192.168.1.99"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: other_host}
+    )
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert FakeSession.instances[-1].local_port == local_source_port(other_host, 0)
 
 
 async def test_host_with_an_entry_handshakes_from_an_ephemeral_port(

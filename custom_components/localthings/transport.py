@@ -32,12 +32,14 @@ from .const import (
     CONF_PORT,
     CONF_TRANSPORT,
     DTLS_LOCAL_PORT_BASE,
+    DTLS_LOCAL_PORT_MAX_ATTEMPT,
+    DTLS_LOCAL_PORT_STRIDE,
     TRANSPORT_LEGACY_HTTP,
 )
 from .session import authentication_provider_from_entry, entry_endpoint
 
 
-def local_source_port(host: str) -> int:
+def local_source_port(host: str, attempt: int = 0) -> int:
     """Deterministic UDP source port for this device's DTLS socket.
 
     This firmware's peer table has no cap, no idle timeout and no LRU, so
@@ -50,6 +52,16 @@ def local_source_port(host: str) -> int:
     coordinator and the config flow, so setup attempts land on the same peer
     entry the entry's session later replaces (issue #504).
 
+    `attempt` steps one slot up the range for a retry. The reuse above only
+    holds while the appliance still answers: on a `DA_WM_TP2_20_COMMON`
+    washer and dryer, a handshake that timed out left that exact address/port
+    pair ignored from then on, so every later attempt from it timed out too,
+    while a fresh source port completed the same handshake in under a second
+    and kept working when re-used afterwards. A successful peer and a dead
+    one are therefore not interchangeable, and the callers that retry pass an
+    incremented attempt instead of re-dialling a port that may be dead. The
+    cap bounds the peer entries a run of failures can leave behind.
+
     Must stay unique per device on this host too. That used to be load-
     bearing for demuxing: an unconnected socket handed every device's
     datagrams to whichever recvfrom() happened to be listening on their
@@ -60,11 +72,16 @@ def local_source_port(host: str) -> int:
     depending on it, and keeps captures/logs unambiguous. Last IPv4 octet
     as offset for the common case; a stable CRC32 fold otherwise.
     """
+    if isinstance(attempt, bool) or not isinstance(attempt, int):
+        raise TypeError("attempt must be an int")
+    if attempt < 0:
+        raise ValueError("attempt must be zero or greater")
     try:
         offset = int(ipaddress.IPv4Address(host)) & 0xFF
     except (ipaddress.AddressValueError, ValueError):
         offset = zlib.crc32(host.encode()) & 0xFF
-    return DTLS_LOCAL_PORT_BASE + offset
+    step = min(attempt, DTLS_LOCAL_PORT_MAX_ATTEMPT)
+    return DTLS_LOCAL_PORT_BASE + offset + step * DTLS_LOCAL_PORT_STRIDE
 
 
 class DecodeError(ValueError):
