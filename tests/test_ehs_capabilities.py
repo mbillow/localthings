@@ -579,3 +579,26 @@ def test_all_fsv_sensors_are_disabled_diagnostic():
 
 def test_fsv_capability_poll_tier_is_cold():
     assert ehs_fsv.EHS_FSV.poll_tier == "cold"
+
+
+def test_fsv_and_cycle_decode_on_the_two_zone_01002_board():
+    """The decoders were written against the 01001 dump; issue #581's
+    TP1X_DA_AC_EHS_01002_0000 is an independent check. Its FSV #4061 reads
+    1 (2-zone control) on the one board that does expose /power/zone2/vs/0,
+    where 01001 reads 0."""
+    resources = _load_device("ehs_01002")
+    info = resources["/information/vs/0"]
+    reg = for_device_by_model(
+        info["x.com.samsung.da.modelNum"],
+        info["x.com.samsung.da.description"],
+    )
+    assert reg is not None
+    state = flatten(discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
+    assert "/power/zone2/vs/0" in resources
+    assert state["fsv_zone_control_application"] == 1.0
+    assert _state()["fsv_zone_control_application"] == 0.0
+    assert state["fsv_heating_outlet_temperature_minimum"] == 23.0
+    assert state["fsv_heating_outlet_temperature_maximum"] == 40.0
+    assert state["cycle_flow_temperature"] == 44.0
+    assert state["cycle_return_temperature"] == 41.0
+    assert state["zone_water_law_offset"] == -1.0
