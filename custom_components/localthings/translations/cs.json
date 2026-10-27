@@ -2128,6 +2128,7 @@
         "title": "Možnosti LocalThings",
         "menu_options": {
           "settings": "Nastavení zápisu pro dálkové ovládání",
+          "subdevices": "Podřízená zařízení",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
           "debug_write": "Ladění: zápis do prostředku"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Odhadovaný konec -- minimální změna (minuty)",
           "learn_device_modes": "Pamatovat si režimy, které zařízení hlásí, ale neuvádí jako podporované",
           "cloud_courses_enabled": "Nabízet stažené cykly"
+        }
+      },
+      "subdevices": {
+        "title": "Podřízená zařízení",
+        "description": "Některé spotřebiče zpřístupňují více než jedno zařízení: každou vnitřní jednotku multi-split systému nebo každý prostor dvojité trouby. Jiné hlásí další slot, kterému neodpovídá žádný skutečný hardware, a ten se zobrazí jako duplicitní nebo prázdné zařízení. Zrušte zaškrtnutí u každého podřízeného zařízení, které neodpovídá ničemu na vašem spotřebiči. Jeho zařízení se odebere a integrace se znovu načte bez něj; opětovným zaškrtnutím ho vrátíte.",
+        "data": {
+          "enabled_subdevices": "Ponechat tato podřízená zařízení"
         }
       },
       "forget_learned_modes": {

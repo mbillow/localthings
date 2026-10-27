@@ -2128,6 +2128,7 @@
         "title": "LocalThings 옵션",
         "menu_options": {
           "settings": "기기 설정",
+          "subdevices": "하위 기기",
           "cloud_courses": "다운로드 코스",
           "forget_learned_modes": "기억된 모드 지우기",
           "debug_write": "디버그: 리소스에 쓰기"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "예상 완료 시각 - 최소 변경량(분)",
           "learn_device_modes": "기기가 보고하지만 지원 목록에 없는 모드 기억하기",
           "cloud_courses_enabled": "다운로드 코스 제공"
+        }
+      },
+      "subdevices": {
+        "title": "하위 기기",
+        "description": "일부 가전은 둘 이상의 기기를 제공합니다. 멀티 에어컨의 각 실내기나 듀얼 오븐의 각 조리실이 그 예입니다. 실제 하드웨어가 없는 추가 슬롯을 보고하는 가전도 있으며, 이 슬롯은 중복되거나 비어 있는 기기로 표시됩니다. 가전에 해당하는 것이 없는 하위 기기는 선택을 해제하세요. 해당 기기가 제거되고 통합 구성요소가 그 기기 없이 다시 로드됩니다. 다시 선택하면 복원됩니다.",
+        "data": {
+          "enabled_subdevices": "유지할 하위 기기"
         }
       },
       "forget_learned_modes": {

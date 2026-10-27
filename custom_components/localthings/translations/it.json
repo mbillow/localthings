@@ -2128,6 +2128,7 @@
         "title": "Opzioni LocalThings",
         "menu_options": {
           "settings": "Impostazioni dispositivo",
+          "subdevices": "Sottodispositivi",
           "cloud_courses": "Cicli scaricati",
           "forget_learned_modes": "Dimentica le modalità memorizzate",
           "debug_write": "Debug: scrivi su una risorsa"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Tempo finale stimato - variazione minima (minuti)",
           "learn_device_modes": "Memorizza le modalità che il dispositivo segnala ma non dichiara supportate",
           "cloud_courses_enabled": "Offri cicli scaricati"
+        }
+      },
+      "subdevices": {
+        "title": "Sottodispositivi",
+        "description": "Alcuni elettrodomestici espongono più di un dispositivo: ogni unità interna di un sistema multi-split o ogni cavità di un forno doppio. Altri segnalano uno slot aggiuntivo che non corrisponde a nessun hardware reale e compare come dispositivo duplicato o vuoto. Deseleziona ogni sottodispositivo che non corrisponde a nulla sul tuo elettrodomestico. Il suo dispositivo viene rimosso e l'integrazione si ricarica senza di esso; selezionalo di nuovo per ripristinarlo.",
+        "data": {
+          "enabled_subdevices": "Mantieni questi sottodispositivi"
         }
       },
       "forget_learned_modes": {

@@ -156,6 +156,7 @@
         "title": "Opciones de LocalThings",
         "menu_options": {
           "settings": "Ajustes del dispositivo",
+          "subdevices": "Subdispositivos",
           "cloud_courses": "Ciclos descargados",
           "forget_learned_modes": "Olvidar los modos recordados",
           "debug_write": "Depuración: escribir en un recurso"
@@ -169,6 +170,13 @@
           "finish_time_hysteresis_minutes": "Finalización estimada -- cambio mínimo (minutos)",
           "learn_device_modes": "Recordar los modos que el dispositivo notifica pero no anuncia",
           "cloud_courses_enabled": "Ofrecer ciclos descargados"
+        }
+      },
+      "subdevices": {
+        "title": "Subdispositivos",
+        "description": "Algunos electrodomésticos exponen más de un dispositivo: cada unidad interior de un sistema multisplit o cada cavidad de un horno doble. Otros informan de una ranura adicional que no corresponde a ningún hardware real y aparece como un dispositivo duplicado o vacío. Desmarca cualquier subdispositivo que no se corresponda con nada de tu electrodoméstico. Su dispositivo se elimina y la integración se recarga sin él; vuelve a marcarlo para recuperarlo.",
+        "data": {
+          "enabled_subdevices": "Conservar estos subdispositivos"
         }
       },
       "forget_learned_modes": {

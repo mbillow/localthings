@@ -2128,6 +2128,7 @@
         "title": "Možnosti LocalThings",
         "menu_options": {
           "settings": "Nastavenia zariadenia",
+          "subdevices": "Podriadené zariadenia",
           "cloud_courses": "Stiahnuté cykly",
           "forget_learned_modes": "Zabudnúť zapamätané režimy",
           "debug_write": "Ladenie: zápis do prostriedku"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Odhadovaný koniec – minimálna zmena (minúty)",
           "learn_device_modes": "Pamätať si režimy, ktoré zariadenie hlási, ale neuvádza ako podporované",
           "cloud_courses_enabled": "Ponúkať stiahnuté cykly"
+        }
+      },
+      "subdevices": {
+        "title": "Podriadené zariadenia",
+        "description": "Niektoré spotrebiče sprístupňujú viac ako jedno zariadenie: každú vnútornú jednotku multi-split systému alebo každý priestor dvojitej rúry. Iné hlásia ďalší slot, ktorému nezodpovedá žiadny skutočný hardvér, a ten sa zobrazí ako duplicitné alebo prázdne zariadenie. Zrušte začiarknutie pri každom podriadenom zariadení, ktoré nezodpovedá ničomu na vašom spotrebiči. Jeho zariadenie sa odstráni a integrácia sa znova načíta bez neho; opätovným začiarknutím ho vrátite.",
+        "data": {
+          "enabled_subdevices": "Ponechať tieto podriadené zariadenia"
         }
       },
       "forget_learned_modes": {

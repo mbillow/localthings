@@ -18,7 +18,12 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
-from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
+from .coordinator import (
+    LocalThingsCoordinator,
+    disabled_subdevice_keys,
+    mode_spec_store,
+    snapshot_store,
+)
 from .entity import _is_included, async_load_instance_names
 from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
@@ -437,13 +442,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # toggle not working. Every other option (CONF_LEARN_MODES,
     # CONF_BYPASS_REMOTE_CONTROL, ...) is read live on its own next use and
     # has no comparable standing state to refresh, so this listener exists
-    # for cloud courses specifically rather than as a general
-    # options-changed hook. Must be a coroutine function -- HA wraps
+    # for cloud courses and the subdevice choice, which reloads, rather than
+    # as a general options-changed hook. Must be a coroutine function -- HA wraps
     # whatever an update listener returns in async_create_task, which raises
     # on a plain callback's None.
-    async def _async_options_updated(_hass: HomeAssistant, _entry: ConfigEntry) -> None:
-        coordinator._on_cloud_courses_changed()
-
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
@@ -451,6 +453,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """React to an options-flow save (see async_setup_entry)."""
+    coordinator: LocalThingsCoordinator | None = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is None:
+        return
+    # Subdevices are chosen at discovery, so a changed choice needs a fresh
+    # setup. Reloading here, after the save, is what lets it see the new one.
+    if disabled_subdevice_keys(entry.options) != coordinator.disabled_keys:
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+        return
+    coordinator._on_cloud_courses_changed()
 
 
 async def async_remove_config_entry_device(

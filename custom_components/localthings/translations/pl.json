@@ -2128,6 +2128,7 @@
         "title": "Opcje LocalThings",
         "menu_options": {
           "settings": "Ustawienia urządzenia",
+          "subdevices": "Urządzenia podrzędne",
           "cloud_courses": "Pobrane cykle",
           "forget_learned_modes": "Zapomnij zapamiętane tryby",
           "debug_write": "Debugowanie: zapis do zasobu"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",
           "learn_device_modes": "Zapamiętuj tryby, które urządzenie zgłasza, ale ich nie ogłasza",
           "cloud_courses_enabled": "Udostępniaj pobrane cykle"
+        }
+      },
+      "subdevices": {
+        "title": "Urządzenia podrzędne",
+        "description": "Niektóre urządzenia udostępniają więcej niż jedno urządzenie: każdą jednostkę wewnętrzną systemu multi-split lub każdą komorę podwójnego piekarnika. Inne zgłaszają dodatkowe gniazdo, któremu nie odpowiada żaden prawdziwy sprzęt — pojawia się ono jako zdublowane lub puste urządzenie. Odznacz każde urządzenie podrzędne, które nie odpowiada niczemu w Twoim urządzeniu. Zostanie ono usunięte, a integracja przeładowana bez niego; zaznacz je ponownie, aby je przywrócić.",
+        "data": {
+          "enabled_subdevices": "Zachowaj te urządzenia podrzędne"
         }
       },
       "forget_learned_modes": {

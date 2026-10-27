@@ -2128,6 +2128,7 @@
         "title": "LocalThings-opties",
         "menu_options": {
           "settings": "Apparaatinstellingen",
+          "subdevices": "Subapparaten",
           "cloud_courses": "Gedownloade programma's",
           "forget_learned_modes": "Onthouden modi vergeten",
           "debug_write": "Foutopsporing: naar een resource schrijven"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Geschatte eindtijd -- minimale wijziging (minuten)",
           "learn_device_modes": "Modi onthouden die het apparaat meldt maar niet als ondersteund opgeeft",
           "cloud_courses_enabled": "Gedownloade programma's aanbieden"
+        }
+      },
+      "subdevices": {
+        "title": "Subapparaten",
+        "description": "Sommige apparaten tonen meer dan één apparaat: elke binnenunit van een multi-splitsysteem, of elke ovenruimte van een dubbele oven. Andere melden een extra plek zonder echte hardware, die verschijnt als een dubbel of leeg apparaat. Vink elk subapparaat uit dat niet overeenkomt met iets aan je apparaat. Het apparaat wordt verwijderd en de integratie herlaadt zonder; vink het weer aan om het terug te halen.",
+        "data": {
+          "enabled_subdevices": "Deze subapparaten behouden"
         }
       },
       "forget_learned_modes": {

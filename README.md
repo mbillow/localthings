@@ -89,6 +89,8 @@ Each appliance has a **Configure** option in **Settings > Devices & Services**, 
 - **"Estimated finish -- minimum change (minutes)".** LocalThings holds a washer's, dryer's or dishwasher's finish time until the appliance's estimate changes by at least this many minutes. This keeps one-minute jitter out of your history. The default is 3. Set 0 to report every change.
 - **"Remember modes the device reports but doesn't advertise".** Some appliances run in a mode they never list as available. With this setting on, which is the default, LocalThings remembers such a mode and keeps offering it. **Forget remembered modes** in the same menu clears the list.
 
+An appliance that exposes more than one device, such as each indoor unit of a multi-split system or each cavity of a dual oven, also gets **Subdevices** in the same menu. Some appliances report an extra slot that isn't real hardware, which shows up as a duplicate or empty device. Untick it there: LocalThings removes that device and stops reading it. Tick it again to bring it back.
+
 ---
 
 ## Known device behavior

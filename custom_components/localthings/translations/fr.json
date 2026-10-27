@@ -2128,6 +2128,7 @@
         "title": "Options de LocalThings",
         "menu_options": {
           "settings": "Paramètres de l'appareil",
+          "subdevices": "Sous-appareils",
           "cloud_courses": "Programmes téléchargés",
           "forget_learned_modes": "Oublier les modes mémorisés",
           "debug_write": "Débogage : écrire dans une ressource"
@@ -2141,6 +2142,13 @@
           "finish_time_hysteresis_minutes": "Fin estimée — variation minimale (minutes)",
           "learn_device_modes": "Mémoriser les modes signalés par l'appareil mais non annoncés",
           "cloud_courses_enabled": "Proposer les programmes téléchargés"
+        }
+      },
+      "subdevices": {
+        "title": "Sous-appareils",
+        "description": "Certains appareils exposent plusieurs appareils : chaque unité intérieure d'un système multi-split, ou chaque cavité d'un four double. D'autres signalent un emplacement supplémentaire qui ne correspond à aucun matériel réel et apparaît comme un appareil en double ou vide. Décochez tout sous-appareil qui ne correspond à rien sur votre appareil. Son appareil est supprimé et l'intégration est rechargée sans lui ; cochez-le de nouveau pour le rétablir.",
+        "data": {
+          "enabled_subdevices": "Conserver ces sous-appareils"
         }
       },
       "forget_learned_modes": {
