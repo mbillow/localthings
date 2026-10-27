@@ -337,6 +337,10 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
             if "/cooktopmonitoring/vs/0" in resources or "/cooktop/status/vs/0" in resources:
                 return _REGISTRY_BY_KEY["range"]
             return _REGISTRY_BY_KEY["oven"]
+        # An 8888 lower cavity with its divider out offers only NoOperation;
+        # its /connected/vs/0 is whether the divider is in (#681).
+        if list(supported_modes) == ["NoOperation"] and "/connected/vs/0" in resources:
+            return _REGISTRY_BY_KEY["oven"]
     return None
 
 

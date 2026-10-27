@@ -214,11 +214,12 @@ def _family_key(family: str | None) -> str:
     return _CAPACITY.sub("", family or "")
 
 
-# Families whose `supportedModes` is one static list on every cavity, divider
-# in or out, mapped to the lower cavity's modes, which that list never names.
-# On the NV51K777OS (#572), cooks started at the panel ran as
+# Families whose cavities share one static `supportedModes`, divider in or
+# out, mapped to the lower cavity's modes, which that list never names. On
+# the NV51K777OS (#572), cooks started at the panel ran as
 # UpperConvectionBake and LowerConvectionBake with the divider in; the other
-# two Lower modes are the reporter's reading of the panel.
+# two Lower modes are the reporter's reading of the panel. A lower cavity
+# that names its own Lower modes, as the NW9300MD's does (#681), keeps them.
 _LOWER_CAVITY_MODES: dict[str, tuple[str, ...]] = {
     "LCD_OV_WALL": ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast"),
 }
@@ -230,25 +231,39 @@ def has_cavities(family: str | None) -> bool:
     return _family_key(family) in _LOWER_CAVITY_MODES
 
 
+def cavity_slots(family: str | None, main_bodies: Mapping[str, Any]) -> tuple[int, int] | None:
+    """The (upper, lower) device indices of a divided oven, from device 0's
+    bodies, or None for a family without cavities. The NW9300MD combo (#681)
+    has its microwave on 0 and an empty slot on 1, so its oven is on 2 and 3."""
+    if not has_cavities(family):
+        return None
+    mode = main_bodies.get("Mode")
+    supported = _split_joined(mode.get("supportedModes")) if isinstance(mode, Mapping) else None
+    if isinstance(supported, list) and "MicroWave" in supported:
+        return 2, 3
+    return 0, 1
+
+
 def with_cavity_modes(
-    family: str | None, bodies: dict[str, Any], index: int, divided: bool | None
+    family: str | None, bodies: dict[str, Any], lower: bool, divided: bool | None
 ) -> dict[str, Any]:
     """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
-    run: Upper modes on device 0 with the divider in, unprefixed ones with
-    it out, the family's Lower modes on device 1 and none with the divider
-    out. Device 0's is left as reported while the divider state is unknown.
-    The mode the cavity reports is always kept, so a running cook still
-    reads as one of its options."""
-    lower = _LOWER_CAVITY_MODES.get(_family_key(family))
+    run: Upper modes on the upper cavity with the divider in, unprefixed ones
+    with it out, Lower modes on the lower cavity and none with the divider
+    out. The upper cavity's is left as reported while the divider state is
+    unknown. The mode the cavity reports is always kept, so a running cook
+    still reads as one of its options."""
+    static_lower = _LOWER_CAVITY_MODES.get(_family_key(family))
     mode = bodies.get("Mode")
-    if lower is None or not isinstance(mode, Mapping):
+    if static_lower is None or not isinstance(mode, Mapping):
         return bodies
     supported = _split_joined(mode.get("supportedModes"))
     if not isinstance(supported, list):
         return bodies
     supported = [m for m in supported if isinstance(m, str)]
-    if index:
-        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *lower]
+    if lower:
+        own = [m for m in supported if m.startswith("Lower")]
+        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or static_lower)]
     elif divided is None:
         return bodies
     elif divided:

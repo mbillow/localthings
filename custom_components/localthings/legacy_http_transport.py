@@ -35,8 +35,8 @@ from .legacy_http import (
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_slots,
     course_table,
-    has_cavities,
     http_status_to_coap,
     is_mapped,
     is_start,
@@ -236,19 +236,20 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
-            if has_cavities(self._family):
+            if slots := cavity_slots(self._family, record):
                 # Whether the divider is in decides which modes the upper
-                # cavity offers (with_cavity_modes). An unanswered listing
-                # leaves the divider unknown rather than failing the sweep.
+                # cavity offers (with_cavity_modes): the lower cavity is
+                # listed only while it is in. An unanswered listing leaves
+                # the divider unknown rather than failing the sweep.
                 try:
                     _, listing = self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
                     listing = None
                 if listing is None:
-                    self._state_at(1).listed = None
+                    self._state_at(slots[1]).listed = None
                 else:
-                    self._listed_rep(1, listing)
+                    self._listed_rep(slots[1], listing)
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -525,8 +526,13 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        # Device 1's listing is the divider, for either cavity.
-        return with_cavity_modes(self._family, bodies, index, self._state_at(index or 1).listed)
+        # The lower cavity's listing is the divider, for either cavity.
+        main = bodies if index == 0 else self._state_at(0).last_bodies
+        slots = cavity_slots(self._family, main)
+        if slots is None or index not in slots:
+            return bodies
+        lower = slots[1]
+        return with_cavity_modes(self._family, bodies, index == lower, self._state_at(lower).listed)
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]
