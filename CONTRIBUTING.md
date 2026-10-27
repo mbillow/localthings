@@ -52,8 +52,9 @@ custom_components/localthings/
                        One module per Home Assistant platform
   catalog.py           Reads which keys and states the translation catalog has
   translations/        Config flow text and entity names and states, one file per language.
-                       en.json is the source. There is no strings.json, because Home Assistant
-                       doesn't read one from a custom integration.
+                       en.json is the source. Older locales may omit action descriptions
+                       (services) and fall back to English. There is no strings.json,
+                       because Home Assistant doesn't read one from a custom integration.
   registry/
     registry.py        Builds the capability registry and checks for href collisions
     capability.py      The Capability dataclass: an href, its entities, and transforms
