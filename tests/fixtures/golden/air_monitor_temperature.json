@@ -1,0 +1,19 @@
+{
+  "state_keys": [
+    "air_quality_standard",
+    "alarm_code",
+    "battery",
+    "battery_charging",
+    "clean_level",
+    "co2",
+    "current_temperature_c",
+    "dnd",
+    "dnd_end",
+    "dnd_start",
+    "dust",
+    "fine_dust",
+    "humidity",
+    "odor",
+    "super_fine_dust"
+  ]
+}

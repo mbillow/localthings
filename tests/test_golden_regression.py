@@ -1220,6 +1220,15 @@ def test_registry_reproduces_golden_state_keys_for_air_monitor():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_air_monitor_temperature():
+    """An Air Monitor Plus unit that also reports /temperatures/vs/0 (#683)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("air_monitor_temperature")
+    golden = json.loads((GOLDEN / "air_monitor_temperature.json").read_text())
+    assert set(_new_state_keys("air_monitor_temperature", resources)) == set(golden["state_keys"])
+
+
 def test_registry_reproduces_golden_state_keys_for_air_purifier_vtww():
     """A-VTWW-TP2-21-COMMON BESPOKE Cube Air (issue #151) -- reports no
     oneUiVersion; resolved via the '-VTWW-' modelNum token fallback into
