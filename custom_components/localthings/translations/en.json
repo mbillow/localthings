@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "Ice balls"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Start cooking",
+      "description": "Start an oven, range or microwave cooking. Only modes the appliance itself says a remote may start can be used, with its own temperature and time limits for that mode. Remote Control has to be on at the appliance, and it has to be idle. Leave every field empty to start what the mode, setpoint and cook-time entities are holding; otherwise anything left out uses the mode's own default.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The oven, range or microwave to start."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "The cooking mode, as the appliance names it (for example Bake or ConvectionBake). Defaults to the appliance's own default mode."
+        },
+        "temperature": {
+          "name": "Temperature",
+          "description": "In Home Assistant's temperature unit. Rounded to the mode's step. Defaults to the mode's own default. Leave it out for a mode with no temperature."
+        },
+        "duration": {
+          "name": "Cook time",
+          "description": "How long to cook, including preheat. Defaults to the mode's own default."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Write resource",
+      "description": "Send one or more raw partial-rep writes straight to a device's OCF resources, in order, with an optional settle delay between steps and a delayed re-read at the end -- for reverse-engineering a device's write contract (issue #300), not day-to-day control. This bypasses the remote-control-off block and every write_fn/validate_fn a normal entity write goes through, and sends exactly the fields you give it verbatim: it can misconfigure your appliance. Prefer a real entity, or the Debug write panel in the integration's Configure menu, for anything this integration already models.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The appliance to write to, or one of its subdevices."
+        },
+        "writes": {
+          "name": "Writes",
+          "description": "1-10 writes to perform in order. Each item needs href (the canonical resource, e.g. /mode/vs/0) and payload (a non-empty object sent verbatim as a partial-rep POST, or a list of elements containing href and optionally rep sent verbatim as an OCF Collection batch -- the shape /device/0 answers on a read, and the one measured to start an oven cook; an element may omit rep, and a batch's inner hrefs are never rewritten, not even for a subdevice); settle is how many seconds to wait after that write before starting the next one (0-30, default 0); readback (default true) is whether to read the resource straight back for the \"after\"/\"changed\" fields. Set it false on a board where a write is accepted and then reverted -- on some firmware that immediate GET is itself what triggers the revert, so leaving it on makes the readback part of the experiment. Without it \"changed\" comes back null and verify_after is the only check."
+        },
+        "hold_session_lock": {
+          "name": "Hold the session for the whole sequence",
+          "description": "Keep the device session for the entire sequence, settle delays included, so nothing else -- a routine poll, another entity's write -- can land between two steps and blur which write the appliance was reacting to. On by default. Turning it off takes the session per write and frees it across the waits, which lets entities keep updating during a long sequence at the cost of that certainty."
+        },
+        "verify_after": {
+          "name": "Verify after",
+          "description": "Seconds to wait after the whole sequence finishes before re-reading every href touched, to see whether the values held or were reverted by the board. 0 (default) skips verification."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Read resource",
+      "description": "Read a device's OCF resources directly, bypassing this integration's entity model. Give an href for a live GET straight from the device -- deliberately not the cache, which can be up to a poll interval stale -- or omit it to get the cached snapshot of every resource this integration currently tracks on that device.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The appliance to read from, or one of its subdevices."
+        },
+        "href": {
+          "name": "Resource href",
+          "description": "Canonical resource href to read (e.g. /mode/vs/0). Add a query after ? to send it with the GET, e.g. /device/1?if=oic.if.b, with & between parameters. Omit to get the cached snapshot of every tracked resource instead of a live GET."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Observe resource",
+      "description": "Subscribe to one of a device's OCF resources with CoAP OBSERVE for a while, and return every notification it pushed alongside a plain GET of the same resource. For finding fields a device only sends in notifications, not day-to-day use. Polling and writes carry on while it listens. Not available on appliances on TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The appliance to observe, or one of its subdevices."
+        },
+        "href": {
+          "name": "Resource href",
+          "description": "Canonical resource href to observe (e.g. /energy/consumption/vs/0). Add a query after ? to send it with the subscription, as with Read resource."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How many seconds to listen for, up to 120."
+        }
+      }
+    }
   }
 }
