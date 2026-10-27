@@ -338,8 +338,7 @@ class TestAgainstTheDeviceDump:
         }
 
     def test_the_device_types_as_a_washer(self):
-        """Through `description` ('TP6X_WASHER') and the consumer-prefix
-        rule, with no new board token and no change to by_type."""
+        """Through the 'WASHER' token in `description` ('TP6X_WASHER')."""
         registry = resolve(self._resources())
 
         assert registry is not None

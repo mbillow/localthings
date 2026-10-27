@@ -301,6 +301,17 @@ class TestForDeviceByModel:
         assert reg is not None
         assert reg.name == "microfiber_filter"
 
+    def test_a_word_in_the_description_is_not_a_consumer_model(self):
+        """Issue #681: the NW9300MD's blank 8888 slot describes itself
+        'LCD_OV_WALL_16K_DIV', whose 'WALL' must not read as a 'WA' washer.
+        The bare 'DW' board segment still counts."""
+        from custom_components.localthings.registry.by_type import for_device_by_model
+
+        model = "LCD_OV_WALL_16K|40407941|5002011e021123550100000000000000"
+        assert for_device_by_model(model, "LCD_OV_WALL_16K_DIV") is None
+        reg = for_device_by_model("", "DA_DW_TP1_21_COMMON")
+        assert reg is not None and reg.name == "dishwasher"
+
     def test_dryer_dve50a8600_paired_model_numbers_in_description(self):
         """Issue #79: description pairs two model numbers
         ('..._DVE50A8800_8600/DC92-...'), so the 'DV' consumer token is one
