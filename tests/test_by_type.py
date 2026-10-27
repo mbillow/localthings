@@ -130,6 +130,7 @@ class TestBoardTokenTable:
     def test_every_token_resolves_to_a_real_registry(self):
         from custom_components.localthings.registry.by_type import (
             _BOARD_TOKEN_TO_KEY,
+            _CONSUMER_DESCRIPTION_TO_KEY,
             _CONSUMER_PREFIX_TO_KEY,
             _REGISTRY_BY_KEY,
         )
@@ -138,6 +139,8 @@ class TestBoardTokenTable:
             assert key in _REGISTRY_BY_KEY, f"{token!r} -> unknown registry {key!r}"
         for prefix, key in _CONSUMER_PREFIX_TO_KEY.items():
             assert key in _REGISTRY_BY_KEY, f"{prefix!r} -> unknown registry {key!r}"
+        for description, key in _CONSUMER_DESCRIPTION_TO_KEY.items():
+            assert key in _REGISTRY_BY_KEY, f"{description!r} -> unknown registry {key!r}"
 
     def test_tokens_are_upper_case(self):
         """`_board_tokens` upper-cases before lookup, so a lower-case entry
@@ -300,6 +303,16 @@ class TestForDeviceByModel:
         )
         assert reg is not None
         assert reg.name == "microfiber_filter"
+
+    def test_flexdry_sections_resolve_by_exact_description(self):
+        from custom_components.localthings.registry.by_type import for_device_by_model
+
+        for description in ("TP6X_DRYER_DRUM", "TP6X_DRYER_TOPLOAD"):
+            reg = for_device_by_model("TP6X_DM9900M", description)
+            assert reg is not None
+            assert reg.name == "dryer"
+
+        assert for_device_by_model("TP6X_DM9900M", "TP6X_DRYER") is None
 
     def test_dryer_dve50a8600_paired_model_numbers_in_description(self):
         """Issue #79: description pairs two model numbers

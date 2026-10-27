@@ -192,11 +192,18 @@ TP6X_CT: tuple[Resource, ...] = (
 )
 
 
+# The FlexDry drum and top-load sections use the TP6X washer's legacy
+# wrappers, but expose the existing dryer capability surface.
+TP6X_DRYER: tuple[Resource, ...] = TP6X_WASHER
+
+
 # Keyed by the appliance's own `description` (/devices/0/information's,
 # e.g. 'TP6X_WASHER'), less any trailing capacity (`_16K`), so one row covers
 # every size of a model line. A family not listed here is read with IDENTITY.
 FAMILIES: dict[str, tuple[Resource, ...]] = {
     "TP6X_WASHER": TP6X_WASHER,
+    "TP6X_DRYER_DRUM": TP6X_DRYER,
+    "TP6X_DRYER_TOPLOAD": TP6X_DRYER,
     "TP6X_CT": TP6X_CT,
     "TP6X_RAC": TP6X_RAC,
     "LCD_OV_WALL": LCD_OV_WALL,
@@ -363,15 +370,23 @@ def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict
     return out
 
 
-# Where cycle_select reads a washer's course-table id to pick its labels.
+# Where cycle_select reads a washer's or dryer's course-table id to pick labels.
 COURSE_TABLE_HREF = "/st/washercourse/vs/0"
+DRYER_COURSE_TABLE_HREF = "/st/dryercourse/vs/0"
 _COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
 
-# This family serves no /st/washercourse/vs/0, so its table is declared per
-# family. TP6X_WASHER is Table_00: a dial walk through all 14 panel positions
-# on a WW6500 matched the existing washer_cycle_table_00 catalog on 13 codes,
-# and the fourteenth (0x6C) is Denim by elimination.
-FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00"}
+# These legacy families do not serve their course-table resource, so the href
+# and table are declared per family. TP6X_WASHER is Table_00: a dial walk
+# through all 14 panel positions on a WW6500 matched the catalog on 13 codes;
+# 0x6C is Denim by elimination. FlexDry reports no table id; the selected
+# code/name pairs observed for issue #649 match Table_00.
+FAMILY_COURSE_TABLES: dict[str, tuple[str, str]] = {
+    "TP6X_WASHER": (COURSE_TABLE_HREF, "Table_00"),
+    "TP6X_DRYER_DRUM": (DRYER_COURSE_TABLE_HREF, "Table_00"),
+    "TP6X_DRYER_TOPLOAD": (DRYER_COURSE_TABLE_HREF, "Table_00"),
+}
+
+_INDEXED_COURSE_TABLE_FAMILIES = frozenset({"TP6X_DRYER_DRUM", "TP6X_DRYER_TOPLOAD"})
 
 
 # Where model_allows_power_on_off reads whether remote power on/off works.
@@ -413,13 +428,14 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "true" if flags & 1 else "false"}}
 
 
-def course_table(family: str) -> dict[str, dict]:
-    """A `/st/washercourse/vs/0` rep for `family`; empty (raw course codes)
-    for a family nobody has walked the dial on."""
-    table = FAMILY_COURSE_TABLES.get(family)
-    if not table:
+def course_table(family: str, *, indexed: bool = False) -> dict[str, dict]:
+    """Return the configured synthetic course-table rep for a legacy family."""
+    family_key = _family_key(family)
+    course_table = FAMILY_COURSE_TABLES.get(family_key)
+    if not course_table or (indexed and family_key not in _INDEXED_COURSE_TABLE_FAMILIES):
         return {}
-    return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
+    href, table = course_table
+    return {href: {_COURSE_TABLE_FIELD: table}}
 
 
 def _bare(name: str) -> str:

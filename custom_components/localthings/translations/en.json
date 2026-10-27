@@ -457,7 +457,13 @@
           "7f": "Time Dry",
           "98": "Quick Dry 35",
           "eb": "Delicates",
-          "b6": "Synthetics"
+          "b6": "Synthetics",
+          "94": "Towels",
+          "a1": "Wrinkle Away",
+          "ad": "Shirt/Blouse",
+          "ae": "Undergarment",
+          "af": "Sweater",
+          "b0": "Accessory"
         }
       },
       "dryer_cycle_table_03": {
