@@ -167,6 +167,20 @@ ZONE_TEMPERATURE = Capability(
     entities=(
         _zone_temperature_sensor("zone_temperature"),
         _zone_climate("zone_climate", HREF_ZONE1_POWER, HREF_ZONE1_TEMPERATURE),
+        # Water-law (weather-compensation) offset applied to the calculated
+        # flow setpoint. 'diagnostic' specifically because it's read-only on
+        # this dump -- reclassify to 'config' if/when a write_fn is added.
+        # No min/max/step bound to it: the rep's minimum/maximum/increment
+        # fields scope `desired` (see the NumberDesc below), not `offset`.
+        SensorDesc(
+            key="zone_water_law_offset",
+            field="x.com.samsung.da.offset",
+            device_class="temperature",
+            unit_fn=_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            value_fn=_num,
+        ),
         NumberDesc(
             key="zone_target_temperature",
             field="x.com.samsung.da.desired",
@@ -266,12 +280,19 @@ AWAY_MODE = Capability(
 # EHS-scoped coverage: opaque vendor plumbing or resources with no
 # confirmed write contract on this dump. Not in the global ignored.IGNORED
 # since these are EHS-only shapes needing their own verification elsewhere.
+# Hex-encoded does not mean unreadable -- the cycle and FSV blobs both
+# decoded cleanly once read, so treat an entry here as "not read yet".
+#
+# /availablecontrolsets/vs/0 reads as a leading byte then 5-byte
+# [id][min][max] records, x10-scaled: id 0x01 is the zone's 5.0..25.0 and
+# id 0x0B the DHW's 40.0..62.0. It stays ignored because the numbers above
+# already take those bounds from the resources that own them.
 _EHS_IGNORED = [
-    "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
+    "/availablecontrolsets/vs/0",  # control-range summary, duplicates the zone/DHW bounds
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
-    "/ehscycle/vs/0",  # opaque hex-encoded indoor/outdoor cycle log
-    "/ehsfsv/vs/0",  # opaque hex-encoded factory setting values
+    # /ehscycle/vs/0 is bound -- see ehs_cycle.EHS_CYCLE.
+    # /ehsfsv/vs/0 is bound -- see ehs_fsv.EHS_FSV.
     "/option/dhwdisplay/vs/0",  # front-panel DHW-display show/hide, cosmetic only
     "/reserverulesets/vs/0",  # opaque hex-encoded schedule reservation blob
     "/sac/installationinfo/vs/0",  # static outdoor/indoor installation info, diagnostic only
