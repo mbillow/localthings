@@ -223,6 +223,20 @@ LEGACY_HTTP_PROBE_TIMEOUT_S = 2.0
 # on a host-networked install (issue #486). Requires smartthings-local >= 0.1.1.
 DTLS_LOCAL_PORT_BASE = 61000
 
+# How far to step the source port after a failed handshake, and how many
+# steps are tried. A handshake that times out can leave the appliance
+# ignoring that address/port pair for good (see transport.local_source_port),
+# so a retry that reuses the port can never succeed; a different port can.
+# The stride equals the offset space (0-255, one slot per device), so a
+# rotated port never collides with another appliance's base port on the
+# same host: 61000 + 255 + 7 * 256 = 63047, still below 65535.
+DTLS_LOCAL_PORT_STRIDE = 256
+DTLS_LOCAL_PORT_MAX_ATTEMPT = 7
+
+# Which slot in that range an entry dials from, carried in the entry data so a
+# restart does not walk back onto a peer the appliance has stopped answering.
+CONF_LOCAL_PORT_ATTEMPT = "local_port_attempt"
+
 SUMMARY_INTERVAL_S = 30.0
 
 DEVICE_SUPPORT_ISSUE_URL = (

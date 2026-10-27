@@ -41,6 +41,7 @@ from .const import (
     CONF_HOST,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
+    CONF_LOCAL_PORT_ATTEMPT,
     CONF_MAC,
     CONF_MANUFACTURER,
     CONF_MODEL,
@@ -52,6 +53,7 @@ from .const import (
     DEFAULT_LEARN_MODES,
     DEVICE_SUPPORT_ISSUE_URL,
     DOMAIN,
+    DTLS_LOCAL_PORT_MAX_ATTEMPT,
     SUMMARY_INTERVAL_S,
     TRANSPORT_LEGACY_HTTP,
 )
@@ -555,6 +557,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # observe; consumed once to trigger an immediate resubscribe
         # instead of waiting out _RECOVERY_RETRY_S.
         self._resubscribe_due = False
+        # Consecutive failed connects, and the source-port slot they have
+        # stepped to. An appliance that timed out on a handshake can ignore
+        # that address/port pair from then on, so a reconnect loop pinned to
+        # one port never recovers on its own (see
+        # transport.local_source_port). One failure is ordinary appliance
+        # sleep and keeps the port, which is what preserves the stale-peer
+        # replacement the fixed port exists for; the second steps up.
+        self._connect_failures = 0
+        # The slot the setup flow succeeded from, so a restart does not walk
+        # back onto a peer the appliance has stopped answering.
+        self._source_port_attempt = int(self._entry.data.get(CONF_LOCAL_PORT_ATTEMPT, 0))
+        # Set by a connect that ran on a rotated slot; written to the entry
+        # from the event loop, because _open_session runs in an executor.
+        self._source_port_to_persist: int | None = None
 
     # ------------------------------------------------------------------
     # Session management (all blocking — must run in executor)
@@ -1097,9 +1113,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = create_transport(
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
-            local_port=_local_source_port(host),
+            local_port=_local_source_port(host, self._source_port_attempt),
         )
-        sess.connect()
+        try:
+            sess.connect()
+        except Exception:
+            self._note_connect_failure()
+            raise
+        self._connect_failures = 0
+        if self._entry.data.get(CONF_LOCAL_PORT_ATTEMPT) != self._source_port_attempt:
+            self._source_port_to_persist = self._source_port_attempt
         identity = None
         try:
             identity = read_identity(sess, None)
@@ -1123,6 +1146,35 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise RuntimeError("coordinator closed")
         self._identity = identity
         self._log.debug("connected to %s:%d", host, port)
+
+    def _persist_source_port(self) -> None:
+        """Record a rotated source-port slot once a connect proved it.
+
+        Called from the event loop, next to `_persist_moved_port`: without it
+        a restart would walk back onto the slot a setup already found dead,
+        and the entry would have to fail twice again to climb off it.
+        """
+        attempt, self._source_port_to_persist = self._source_port_to_persist, None
+        if attempt is None or self._entry.data.get(CONF_LOCAL_PORT_ATTEMPT) == attempt:
+            return
+        self.hass.config_entries.async_update_entry(
+            self._entry, data={**self._entry.data, CONF_LOCAL_PORT_ATTEMPT: attempt}
+        )
+
+    def _note_connect_failure(self) -> None:
+        """Step the source port up once consecutive connects have failed.
+
+        The first failure keeps the port: an appliance that is merely asleep
+        answers at the same peer when it wakes, and replacing that peer is
+        what the fixed port is for. From the second failure on, the peer may
+        be one the appliance has stopped answering, so the next attempt dials
+        from the next slot. The cap is what bounds the peer entries a long
+        outage can leave behind.
+        """
+        self._connect_failures += 1
+        if self._connect_failures < 2:
+            return
+        self._source_port_attempt = min(self._source_port_attempt + 1, DTLS_LOCAL_PORT_MAX_ATTEMPT)
 
     def _check_device_binding(self, identity: DeviceIdentity | None) -> None:
         """Refuse a session that authenticated against a different appliance.
@@ -2215,6 +2267,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Clear the bookkeeping a poll getting through invalidates."""
         self.last_response = dt_util.utcnow()
         self._persist_moved_port()
+        self._persist_source_port()
         self._consecutive_poll_timeouts = 0
         if self._failed_cycles:
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
