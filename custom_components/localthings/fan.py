@@ -2,11 +2,10 @@
 
 Four FanDesc-bound hrefs exist, dispatched by href in async_setup_entry
 below since each needs different HA fan semantics: the range hood's fan
-speed and the older ARTIK051_TVTL air-purifier family's Auto/Sleep/Low/
-Medium/High (issue #56) are both an ordered set of numeric levels
-(SET_SPEED), confirmed monotonic in capabilities/air_purifier.py's module
-docstring, with no named-mode list since this board never self-reports one.
-The TP1X air-purifier family's modes (Smart/Max/Mid/WindFree/Sleep, issue
+speed is an ordered set of numeric levels (SET_SPEED). The older
+ARTIK051_TVTL air-purifier family (issue #56) reports Auto/Sleep/Low/
+Medium/High as one numeric code, split into Low/Medium/High speeds and
+Auto/Sleep presets (#658). The TP1X air-purifier family's modes (Smart/Max/Mid/WindFree/Sleep, issue
 #130) and the A-VTWW-TP2-21 family's /wind/strength/vs/0 modes (issue #151)
 are both named behaviors with no linear order (PRESET_MODE) --
 LocalThingsAirPurifierFan handles both hrefs, the only difference being
@@ -314,24 +313,31 @@ class LocalThingsAirPurifierFan(LocalThingsEntity, FanEntity):
 
 
 _AIRFLOW_SPEED_FIELD = "speed"
-# Raw `speed` codes, low-to-high -- confirmed monotonic (Auto=0, Sleep=1,
-# Low=2, Medium=3, High=4) via air_purifier.py's module docstring. Treated
-# as plain ordered strings, same as the range hood's numeric levels.
-_AIRFLOW_SPEED_CODES = ["0", "1", "2", "3", "4"]
+# Raw `speed` codes, confirmed as Auto=0, Sleep=1, Low=2, Medium=3, High=4
+# (air_purifier.py's module docstring). Auto and Sleep aren't speeds, so
+# they are presets and only Low/Medium/High map to a percentage (#658).
+_AIRFLOW_PRESET_CODES = {"auto": "0", "sleep": "1"}
+_AIRFLOW_SPEED_CODES = ["2", "3", "4"]
 
 
 class LocalThingsAirflowFan(LocalThingsEntity, FanEntity):
-    """ARTIK051_TVTL-class air purifier fan (issue #56): an ordered numeric
-    speed range, same SET_SPEED shape as LocalThingsRangeHoodFan above."""
+    """ARTIK051_TVTL-class air purifier fan (issue #56): Low/Medium/High as
+    speeds, Auto and Sleep as presets, which HomeKit bridges as a speed
+    slider plus one switch per preset."""
 
     _enable_turn_on_off_backwards_compatibility = False
     _attr_supported_features = (
-        FanEntityFeature.SET_SPEED | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
+        FanEntityFeature.SET_SPEED
+        | FanEntityFeature.PRESET_MODE
+        | FanEntityFeature.TURN_ON
+        | FanEntityFeature.TURN_OFF
     )
+    _attr_speed_count = len(_AIRFLOW_SPEED_CODES)
 
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         self._attr_name = None
+        self._attr_preset_modes = list(_AIRFLOW_PRESET_CODES)
 
     def _rep(self, href: str) -> dict:
         return self.coordinator.resource(href) or {}
@@ -348,6 +354,9 @@ class LocalThingsAirflowFan(LocalThingsEntity, FanEntity):
         target = POWER_HREF if POWER_HREF in resources else POWER_VS_HREF
         return "power", enabled, target
 
+    def _code(self) -> str:
+        return str(self._rep(self._bound.href).get(_AIRFLOW_SPEED_FIELD, ""))
+
     @property
     def is_on(self) -> bool:
         power = self._rep(POWER_HREF)
@@ -356,17 +365,20 @@ class LocalThingsAirflowFan(LocalThingsEntity, FanEntity):
         return str(self._rep(POWER_VS_HREF).get("x.com.samsung.da.power", "")).lower() == "on"
 
     @property
-    def speed_count(self) -> int:
-        return len(_AIRFLOW_SPEED_CODES)
-
-    @property
     def percentage(self) -> int | None:
         if not self.is_on:
             return 0
-        current = str(self._rep(self._bound.href).get(_AIRFLOW_SPEED_FIELD, ""))
+        current = self._code()
         if current not in _AIRFLOW_SPEED_CODES:
             return None
         return ordered_list_item_to_percentage(_AIRFLOW_SPEED_CODES, current)
+
+    @property
+    def preset_mode(self) -> str | None:
+        if not self.is_on:
+            return None
+        current = self._code()
+        return next((name for name, code in _AIRFLOW_PRESET_CODES.items() if code == current), None)
 
     async def async_turn_on(
         self,
@@ -374,18 +386,39 @@ class LocalThingsAirflowFan(LocalThingsEntity, FanEntity):
         preset_mode: str | None = None,
         **kwargs,
     ) -> None:
-        await self.coordinator.async_send_command(self._bound, self._power_payload(True))
-        if percentage is not None:
+        if preset_mode is not None:
+            await self.async_set_preset_mode(preset_mode)
+        elif percentage is not None:
             await self.async_set_percentage(percentage)
+        elif self.preset_mode is not None:
+            # HomeKit turns a preset switch off with a bare turn_on, so on
+            # an already-running fan that means "leave the preset".
+            await self._write_code(_AIRFLOW_SPEED_CODES[0])
+        else:
+            await self.coordinator.async_send_command(self._bound, self._power_payload(True))
 
     async def async_turn_off(self, **kwargs) -> None:
         await self.coordinator.async_send_command(self._bound, self._power_payload(False))
+
+    async def _write_code(self, code: str) -> None:
+        if not self.is_on:
+            await self.coordinator.async_send_command(self._bound, self._power_payload(True))
+        await self.coordinator.async_send_command(self._bound, ("speed", int(code)))
 
     async def async_set_percentage(self, percentage: int) -> None:
         if percentage <= 0:
             await self.async_turn_off()
             return
-        if not self.is_on:
-            await self.coordinator.async_send_command(self._bound, self._power_payload(True))
-        code = percentage_to_ordered_list_item(_AIRFLOW_SPEED_CODES, percentage)
-        await self.coordinator.async_send_command(self._bound, ("speed", int(code)))
+        await self._write_code(percentage_to_ordered_list_item(_AIRFLOW_SPEED_CODES, percentage))
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        code = _AIRFLOW_PRESET_CODES.get(preset_mode)
+        if code is None:
+            _LOGGER.warning(
+                "%s: %r is not a valid preset mode (supported: %s)",
+                self.entity_id,
+                preset_mode,
+                self.preset_modes,
+            )
+            return
+        await self._write_code(code)

@@ -251,6 +251,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automaticky",
               "smart": "Chytrý",
               "max": "Max",
               "mid": "Střední",

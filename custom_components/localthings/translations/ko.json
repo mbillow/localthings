@@ -251,6 +251,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "자동",
               "smart": "스마트",
               "max": "최대",
               "mid": "중간",

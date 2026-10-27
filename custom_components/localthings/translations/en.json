@@ -251,6 +251,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Auto",
               "smart": "Smart",
               "max": "Max",
               "mid": "Mid",
