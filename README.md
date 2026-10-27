@@ -99,6 +99,8 @@ An appliance that exposes more than one device, such as each indoor unit of a mu
 
 **Keep appliances registered in SmartThings.** If you remove an appliance from SmartThings, it resets its network settings the next time it reaches Samsung's servers. It then drops off Wi-Fi until you set it up in the app again. This happens even if you block its internet access most of the time.
 
+**Some washers and dryers stop counting energy without SmartThings.** On the DA_WM_TP2_20_COMMON board (for example the WW80T654ALX and DV80T6220LX), the energy total stops increasing while the appliance can't reach SmartThings, and resumes once it reconnects. LocalThings can only show what the appliance records, so if your energy sensor stays at one value while cycles run, check that the appliance can reach Samsung's servers.
+
 ### Restarting while an appliance is powered off
 
 If Home Assistant restarts while an appliance is off, LocalThings loads the appliance's device and entities from the last successful setup. They show `unavailable` until the appliance answers, then recover without any action from you. This works for any appliance LocalThings has reached at least once. A new appliance must be reachable to set it up.
