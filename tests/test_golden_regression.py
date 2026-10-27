@@ -753,6 +753,15 @@ def test_registry_reproduces_golden_state_keys_for_induction_cooktop_nv9000d():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_range_nx60t8311ss_full():
+    """The NX60T8311SS's full 33-href dump (issue #670)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("range_nx60t8311ss_full")
+    golden = json.loads((GOLDEN / "range_nx60t8311ss_full.json").read_text())
+    assert set(_new_state_keys("range_nx60t8311ss_full", resources)) == set(golden["state_keys"])
+
+
 def test_registry_reproduces_golden_state_keys_for_range_no_info():
     """NE63B8411SS (issue #74) -- reports no oneUiVersion *and* no
     /information/vs/0 at all, so neither for_device nor
