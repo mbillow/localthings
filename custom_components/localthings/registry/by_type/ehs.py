@@ -28,6 +28,9 @@ REGISTRY = DeviceRegistry(
             ehs.DHW,
             *ehs.DHW_CONSUMED,
             ehs.AWAY_MODE,
+            ehs.OUTDOOR_TEMPERATURE,
+            ehs.HEAT_GENERATED,
+            ehs.CONTROLLER_STATUS,
             *ehs.COVERAGE,
         ]
     ),

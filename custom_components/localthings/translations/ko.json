@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "일시 정지"
+      },
+      "booster_heater": {
+        "name": "보조 히터"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "이중",
           "triple": "삼중"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "생산 열량"
+      },
+      "three_way_valve": {
+        "name": "3방 밸브"
       }
     },
     "switch": {

@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "In pausa"
+      },
+      "booster_heater": {
+        "name": "Resistenza integrativa"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Doppia",
           "triple": "Tripla"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Calore prodotto"
+      },
+      "three_way_valve": {
+        "name": "Valvola a 3 vie"
       }
     },
     "switch": {

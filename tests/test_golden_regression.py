@@ -1374,6 +1374,19 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_fac_bora_2in1(
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_ehs_mim_h04en():
+    """Issue #682's MIM-H04EN Wi-Fi kit: the kit itself binds nothing, and
+    its SAC_EHS_MONO heat pump materializes as a UUID-prefixed subdevice."""
+    name = "ehs_mim_h04en"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.airconditioner"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_airconditioner_fac_bora_205_flat():
     """The same reporter's same physical TP2X_FAC_BORA_21K unit as the _2in1
     fixture above, but a later capture (issue #205) where /<uuid>/device/0 doesn't

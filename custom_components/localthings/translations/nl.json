@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Gepauzeerd"
+      },
+      "booster_heater": {
+        "name": "Bijverwarming"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Dubbel",
           "triple": "Drievoudig"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Opgewekte warmte"
+      },
+      "three_way_valve": {
+        "name": "Driewegklep"
       }
     },
     "switch": {

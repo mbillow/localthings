@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastaveno"
+      },
+      "booster_heater": {
+        "name": "Pomocné topné těleso"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Dvojitá",
           "triple": "Trojitá"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Vyrobené teplo"
+      },
+      "three_way_valve": {
+        "name": "Trojcestný ventil"
       }
     },
     "switch": {

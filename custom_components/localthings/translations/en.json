@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Paused"
+      },
+      "booster_heater": {
+        "name": "Booster heater"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Dual",
           "triple": "Triple"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Heat generated"
+      },
+      "three_way_valve": {
+        "name": "3-way valve"
       }
     },
     "switch": {

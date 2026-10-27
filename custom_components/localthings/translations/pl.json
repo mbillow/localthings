@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Wstrzymano"
+      },
+      "booster_heater": {
+        "name": "Grzałka wspomagająca"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Podwójne",
           "triple": "Potrójne"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Wytworzone ciepło"
+      },
+      "three_way_valve": {
+        "name": "Zawór trójdrogowy"
       }
     },
     "switch": {

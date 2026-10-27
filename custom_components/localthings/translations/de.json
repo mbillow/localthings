@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Pausiert"
+      },
+      "booster_heater": {
+        "name": "Zusatzheizung"
       }
     },
     "button": {
@@ -1697,6 +1700,12 @@
           "dual": "Zweifach",
           "triple": "Dreifach"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Erzeugte Wärme"
+      },
+      "three_way_valve": {
+        "name": "3-Wege-Ventil"
       }
     },
     "switch": {
