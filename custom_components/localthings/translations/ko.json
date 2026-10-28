@@ -151,6 +151,9 @@
       "divider": {
         "name": "칸막이"
       },
+      "reservoir_open": {
+        "name": "물통"
+      },
       "wrinkle_prevent_active": {
         "name": "구김 방지 작동 중"
       },

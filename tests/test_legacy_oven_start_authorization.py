@@ -26,8 +26,8 @@ from tests.test_legacy_http_lower_cavity import (
 from tests.test_legacy_http_transport import _FakeConnection
 
 
-def _transport(family="LCD_OV_WALL_16K", *, bypass_remote_control=False):
-    transport = _unseeded_transport(family, bypass_remote_control=bypass_remote_control)
+def _transport(family="LCD_OV_WALL_16K"):
+    transport = _unseeded_transport(family)
     if family == "LCD_OV_WALL_16K":
         _seed(transport, 0)
         _seed(transport, 1)
@@ -167,7 +167,7 @@ def test_unconfirmed_permission_never_sends_the_next_write(index, phase, respons
 
 @pytest.mark.parametrize("index", [0, 1])
 @pytest.mark.parametrize("bypass", [False, True])
-async def test_live_permission_respects_bypass_with_stale_true_cache(
+async def test_bypass_changes_apply_without_reconnecting_with_stale_true_cache(
     hass, monkeypatch, index, bypass
 ):
     coordinator = await _discovered(hass)
@@ -207,24 +207,34 @@ async def test_live_permission_respects_bypass_with_stale_true_cache(
         "custom_components.localthings.coordinator.read_identity", lambda *args: None
     )
     coordinator._open_session(8888)
-    if bypass:
-        await coordinator.async_start_cooking(
-            cavity,
-            mode="LowerBake" if index else "UpperConvectionBake",
-            temperature=350,
-            duration=300,
+    transport = coordinator._session
+    reconnect = Mock()
+    monkeypatch.setattr(coordinator, "_connect_session", reconnect)
+    for enabled in (bypass, not bypass, bypass):
+        hass.config_entries.async_update_entry(
+            coordinator._entry, options={CONF_BYPASS_REMOTE_CONTROL: enabled}
         )
-        assert _requests() == [("PUT", f"/devices/{index}")] * 2
-    else:
-        with pytest.raises(HomeAssistantError) as error:
+        _FakeConnection.log.clear()
+        if enabled:
             await coordinator.async_start_cooking(
                 cavity,
                 mode="LowerBake" if index else "UpperConvectionBake",
                 temperature=350,
                 duration=300,
             )
-        assert error.value.translation_key == "command_refused"
-        assert _requests() == [("GET", f"/devices/{index}/configuration")]
+            assert _requests() == [("PUT", f"/devices/{index}")] * 2
+        else:
+            with pytest.raises(HomeAssistantError) as error:
+                await coordinator.async_start_cooking(
+                    cavity,
+                    mode="LowerBake" if index else "UpperConvectionBake",
+                    temperature=350,
+                    duration=300,
+                )
+            assert error.value.translation_key == "command_refused"
+            assert _requests() == [("GET", f"/devices/{index}/configuration")]
+        assert coordinator._session is transport
+        reconnect.assert_not_called()
 
 
 @pytest.mark.parametrize("index", [0, 1])

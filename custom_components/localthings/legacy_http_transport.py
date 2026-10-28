@@ -25,7 +25,7 @@ import logging
 import re
 import ssl
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -146,7 +146,7 @@ class LegacyHttpTransport:
         key_pem: str,
         token: str,
         family: str | None = None,
-        bypass_remote_control: bool = False,
+        bypass_remote_control: Callable[[], bool] | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -282,6 +282,8 @@ class LegacyHttpTransport:
         resources = to_resources(
             self._with_modes(index, self._with_staged(index, bodies)), self._table
         )
+        # Each cavity needs its own canonical power capability before remapping.
+        resources.update(model_settings(self._family, bodies))
         if index:
             if listed is not None:
                 resources[_LISTED_HREF] = listed
@@ -290,8 +292,6 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
-            # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
-            resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     def _sibling_record(
@@ -468,7 +468,7 @@ class LegacyHttpTransport:
         self, index: int, phase: str, timeout: float
     ) -> tuple[int, str] | None:
         """Require current permission from the cavity receiving the next start write."""
-        if self._bypass_remote_control:
+        if self._bypass_remote_control is not None and self._bypass_remote_control():
             return None
         status, body = self._request("GET", f"{_device_path(index)}/configuration", timeout=timeout)
         if status != 200:

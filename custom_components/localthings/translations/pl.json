@@ -151,6 +151,9 @@
       "divider": {
         "name": "Przegroda"
       },
+      "reservoir_open": {
+        "name": "Zbiornik wody"
+      },
       "wrinkle_prevent_active": {
         "name": "Bez zagnieceń aktywne"
       },

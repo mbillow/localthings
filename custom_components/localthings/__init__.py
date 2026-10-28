@@ -24,9 +24,10 @@ from .coordinator import (
     mode_spec_store,
     snapshot_store,
 )
-from .entity import _is_included, async_load_instance_names
+from .entity import LocalThingsEntity, _is_included, async_load_instance_names
 from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
+from .registry.entities import BinarySensorDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -285,6 +286,35 @@ def _drop_duplicate_cooktop_timer(
 
 
 @callback
+def _drop_read_only_power_switches(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove an old Power switch when discovery now selects its read-only sensor."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            bound.desc.key != "power_switch"
+            or not isinstance(bound.desc, BinarySensorDesc)
+            or not _is_included(bound, coordinator)
+            or bound.desc.field not in coordinator.discovery_resources.get(bound.href, {})
+        ):
+            continue
+        unique_id = LocalThingsEntity(coordinator, bound).unique_id
+        assert unique_id is not None
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        # A platform change cannot reuse the switch's registry row.
+        _LOGGER.info(
+            "Removing %s, superseded by a Power binary sensor; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_washer_entities_from_filters(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -449,6 +479,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
+    _drop_read_only_power_switches(hass, entry, coordinator)
     _drop_washer_entities_from_filters(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

@@ -296,7 +296,7 @@ def create_transport(
     *,
     on_notification: Callable[[str, bytes], None] | None = None,
     local_port: int | None = None,
-    bypass_remote_control: bool = False,
+    bypass_remote_control: Callable[[], bool] | None = None,
 ) -> Transport:
     """The transport an entry's appliance speaks.
 

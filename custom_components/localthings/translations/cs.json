@@ -151,6 +151,9 @@
       "divider": {
         "name": "Přepážka"
       },
+      "reservoir_open": {
+        "name": "Nádržka"
+      },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pomačkání aktivní"
       },

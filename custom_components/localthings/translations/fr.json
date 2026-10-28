@@ -151,6 +151,9 @@
       "divider": {
         "name": "Séparateur"
       },
+      "reservoir_open": {
+        "name": "Réservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Anti-froissage actif"
       },

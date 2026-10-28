@@ -1159,7 +1159,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
-            bypass_remote_control=self._entry.options.get(CONF_BYPASS_REMOTE_CONTROL, False),
+            # Saving options does not reopen the session.
+            bypass_remote_control=lambda: self._entry.options.get(
+                CONF_BYPASS_REMOTE_CONTROL, False
+            ),
         )
         sess.connect()
         identity = None
