@@ -151,6 +151,9 @@
       "divider": {
         "name": "Divisória"
       },
+      "reservoir_open": {
+        "name": "Reservatório"
+      },
       "wrinkle_prevent_active": {
         "name": "Antiamassado ativo"
       },
@@ -159,6 +162,9 @@
       },
       "cooktop_paused": {
         "name": "Pausado"
+      },
+      "booster_heater": {
+        "name": "Aquecedor auxiliar"
       }
     },
     "button": {
@@ -265,6 +271,9 @@
     "light": {
       "lamp": {
         "name": "Lâmpada"
+      },
+      "paired_hood_light": {
+        "name": "Luz da coifa pareada"
       }
     },
     "number": {
@@ -285,6 +294,9 @@
       },
       "oven_setpoint": {
         "name": "Temperatura de ajuste"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Temporizador de desligamento da coifa pareada"
       },
       "sensing_interval": {
         "name": "Intervalo da purificação com IA"
@@ -1456,6 +1468,16 @@
       "power_level": {
         "name": "Nível de potência"
       },
+      "paired_hood_fan_setting": {
+        "name": "Ajuste do ventilador da coifa pareada",
+        "state": {
+          "off": "Desligado",
+          "low": "Baixo",
+          "medium": "Médio",
+          "high": "Alto",
+          "boost": "Potência extra"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Velocidade do ventilador da coifa pareada"
       },
@@ -1464,6 +1486,12 @@
       },
       "paired_hood_model": {
         "name": "Modelo da coifa pareada"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Ajuste do temporizador de desligamento da coifa pareada"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Estado do temporizador de desligamento da coifa pareada"
       },
       "power_energy_kwh": {
         "name": "Energia elétrica"
@@ -1675,6 +1703,12 @@
           "dual": "Duplo",
           "triple": "Triplo"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Calor gerado"
+      },
+      "three_way_valve": {
+        "name": "Válvula de 3 vias"
       }
     },
     "switch": {
@@ -2347,6 +2381,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "O enxágue extra não está disponível no ciclo selecionado."
+    },
+    "paired_hood_fan_off": {
+      "message": "Ligue o ventilador da coifa antes de definir o temporizador de desligamento."
     }
   },
   "selector": {
