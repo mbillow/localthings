@@ -151,6 +151,9 @@
       "divider": {
         "name": "Divider"
       },
+      "reservoir_open": {
+        "name": "Reservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Wrinkle prevent active"
       },

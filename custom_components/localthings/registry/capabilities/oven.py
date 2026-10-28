@@ -197,6 +197,34 @@ def _has_option(prefix):
     )
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, name) is not None
+            for name in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """NV51K7770S observations confirmed these positions with the door open (#666)."""
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
 def is_tp6x_ov_board(resources):
     """The NQ70M6650DS combo's 8888 board (#674). It answers every write
     `204`, but runs a remote cook only once Start is pressed at the panel,
@@ -252,6 +280,11 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
+def is_lcd_ov_wall_16k(model):
+    """Exact board token used by the NV51K7770S (#572, #662)."""
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
 def _cook_time_write(p, rep, href=None, resources=None):
     """Write the requested cook duration from minutes."""
     try:
@@ -266,7 +299,7 @@ def _cook_time_write(p, rep, href=None, resources=None):
     model = ((resources or {}).get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
     # The NV51K7770S answers a running timer edit that also sends
     # remainingTime with 4.00; operationTime alone is accepted (#662).
-    if not (isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"):
+    if not is_lcd_ov_wall_16k(model):
         body["x.com.samsung.da.remainingTime"] = hms
     return ["operational", "state", "vs", "0"], body
 
@@ -466,9 +499,9 @@ _PROBE_ITEM_ID = "1"
 def _probe_item(rep):
     """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
 
-    Keyed by id rather than array position. Item 1 was inferred from #490's
-    dump and confirmed on the NV51K7770S with a 150°F target and 107°F
-    current reading (#665).
+    Keyed by id rather than array position: #490's probe cavity alone has
+    item 1 with increment 1 against the cavity's 5. Confirmed on the
+    NV51K7770S with a 150°F target and 107°F current reading (#665).
     """
     for item in rep.get("x.com.samsung.da.items") or []:
         if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
@@ -490,9 +523,10 @@ def _probe_temp_unit(rep):
 def _probe_connected(rep, resources):
     """True only while a probe is actually plugged in.
 
-    An empty socket can still report a probe item with zero readings.
-    Use the mode's meatprobe state; the NV51K7770S reports connected and
-    disconnected. Preserve the existing non-disconnected gate for other boards.
+    An empty socket can still report zero readings, so use the
+    `meatprobe_<state>` token in `/mode/vs/0`'s options[]. The NV51K7770S
+    confirms connected/disconnected; retain the non-disconnected gate for
+    other boards.
     """
     if _probe_item(rep) is None:
         return False
@@ -761,6 +795,14 @@ OVEN_MODE = Capability(
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
         ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's

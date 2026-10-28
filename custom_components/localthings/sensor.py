@@ -55,7 +55,7 @@ async def async_setup_entry(
         # keeps its identity and user customizations.
         detected = []
         for bound in pending[:]:
-            if _is_included(bound, coordinator):
+            if _is_included(bound, coordinator, live=True):
                 detected.append(LocalThingsSensor(coordinator, bound))
                 pending.remove(bound)
         if detected:
@@ -88,7 +88,7 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
     def available(self) -> bool:
         desc = cast(SensorDesc, self._bound.desc)
         return super().available and (
-            not desc.dynamic_presence or _is_included(self._bound, self.coordinator)
+            not desc.dynamic_presence or _is_included(self._bound, self.coordinator, live=True)
         )
 
     @property

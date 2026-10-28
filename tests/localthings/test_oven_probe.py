@@ -1,6 +1,7 @@
 """Probe sensors appear after startup and retain their identity on reconnect."""
 
 import json
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
@@ -78,8 +79,9 @@ def _probe_update(coordinator, family, connected, *, current=107, target=150):
 
 @pytest.mark.parametrize("family", ["legacy", "ocf_vendor", "ocf_fallback"])
 @pytest.mark.parametrize("initially_connected", [False, True])
+@pytest.mark.parametrize("from_snapshot", [False, True])
 async def test_probe_connects_without_reload_and_reuses_entities(
-    hass, monkeypatch, family, initially_connected
+    hass, monkeypatch, family, initially_connected, from_snapshot
 ):
     hass.config.units = US_CUSTOMARY_SYSTEM
     if family == "legacy":
@@ -92,6 +94,8 @@ async def test_probe_connects_without_reload_and_reuses_entities(
         await _discover_with(coordinator, resources, links, seeds)
     if initially_connected:
         _probe_update(coordinator, family, True)
+    if from_snapshot:
+        coordinator._rehydrate_resources = deepcopy(coordinator.last_resources)
     await _load(hass, monkeypatch, coordinator)
     reload_requested = Mock()
     monkeypatch.setattr(hass.config_entries, "async_schedule_reload", reload_requested)

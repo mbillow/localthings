@@ -19,6 +19,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from .registry.capabilities.oven import is_lcd_ov_wall_16k
+
 # The prefix every OCF-side field carries and no 8888-side field does.
 PREFIX = "x.com.samsung.da."
 
@@ -407,9 +409,8 @@ _SETINFO_FAMILIES = frozenset({"TP6X_WASHER"})
 
 def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, dict]:
     """A `/wm/setinfo/vs/0` rep carrying the power on/off flag this family
-    states in Information.modelID, which CoAP boards serve as a resource of
-    its own; empty when the model id doesn't carry it, or for a family
-    outside the laundry ones.
+    states in Information.modelID, or a confirmed model-specific override.
+    CoAP boards serve this flag as a resource of its own.
 
     The third `|` field of modelID is a hex feature string. Samsung's own
     washer plugin reads remote power control from bit 0 of the byte at
@@ -417,10 +418,16 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     whose byte is 00: `Operation.power = Off` answers
     `400 Control fail, <Operation.power=Off>` and the washer stays on.
     """
+    info = bodies.get("Information")
+    if not isinstance(info, Mapping):
+        return {}
+    model_id = info.get("modelID")
+    # NV51K7770S power writes do not operate either cavity (#664, #572).
+    # The same board also serves CombiOven models whose behavior is unverified.
+    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") == "WallOven":
+        return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
     if _family_key(family) not in _SETINFO_FAMILIES:
         return {}
-    info = bodies.get("Information")
-    model_id = info.get("modelID") if isinstance(info, Mapping) else None
     if not isinstance(model_id, str):
         return {}
     parts = model_id.split("|")
