@@ -14,7 +14,6 @@ class _FakeCoordinator:
 
     def __init__(self, resources):
         self.last_resources = resources
-        self.instance_names = {}
 
     def resource(self, href):
         return self.last_resources.get(href) or {}

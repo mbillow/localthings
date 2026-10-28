@@ -35,11 +35,10 @@ async def async_setup_entry(
 
 
 class LocalThingsNumber(LocalThingsEntity, NumberEntity):
-    _attr_mode = NumberMode.SLIDER
-
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         desc = cast(NumberDesc, bound.desc)
+        self._attr_mode = NumberMode(desc.mode)
         self._attr_native_unit_of_measurement = desc.unit
         self._attr_device_class = (
             NumberDeviceClass(desc.device_class) if desc.device_class else None
@@ -50,13 +49,6 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
             self._attr_native_max_value = desc.native_max
         if desc.step is not None:
             self._attr_native_step = desc.step
-
-    @property
-    def mode(self) -> NumberMode:
-        desc = cast(NumberDesc, self._bound.desc)
-        if desc.box_fn is not None and desc.box_fn(self._resources):
-            return NumberMode.BOX
-        return super().mode
 
     @property
     def native_unit_of_measurement(self):

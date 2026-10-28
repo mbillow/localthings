@@ -151,6 +151,9 @@
       "divider": {
         "name": "Scheidingswand"
       },
+      "reservoir_open": {
+        "name": "Waterreservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Kreukpreventie actief"
       },

@@ -23,6 +23,7 @@
     "subdevice2_operation_time_minutes",
     "subdevice2_oven_state",
     "subdevice2_progress_percentage",
-    "subdevice2_remote_control"
+    "subdevice2_remote_control",
+    "subdevice2_reservoir_open"
   ]
 }

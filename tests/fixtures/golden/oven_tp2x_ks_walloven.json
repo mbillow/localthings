@@ -19,6 +19,7 @@
     "power_switch",
     "progress_percentage",
     "remote_control",
+    "reservoir_open",
     "sound"
   ]
 }

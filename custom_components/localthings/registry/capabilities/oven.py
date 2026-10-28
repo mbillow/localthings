@@ -197,6 +197,34 @@ def _has_option(prefix):
     )
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, name) is not None
+            for name in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """NV51K7770S observations confirmed these positions with the door open (#666)."""
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
 def is_tp6x_ov_board(resources):
     """The NQ70M6650DS combo's 8888 board (#674). It answers every write
     `204`, but runs a remote cook only once Start is pressed at the panel,
@@ -420,6 +448,7 @@ OVEN_OPERATIONAL_STATE = Capability(
         ),
         NumberDesc(
             key="cook_time",
+            mode="box",
             field="x.com.samsung.da.operationTime",
             unit="min",
             native_min=0,
@@ -524,15 +553,6 @@ def _setpoint_bounds(rep):
     return _bounds_for_unit(_oven_temp_unit(rep))
 
 
-def _setpoint_uses_box(resources):
-    # The measured NV51K7770S is a WallOven; #681's combo shares its board.
-    info = resources.get("/information/vs/0") or {}
-    return (
-        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
-        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
-    )
-
-
 OVEN_SETPOINT = Capability(
     href="/temperatures/vs/0",
     poll_tier="hot",
@@ -540,7 +560,7 @@ OVEN_SETPOINT = Capability(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(
             key="oven_setpoint",
-            box_fn=_setpoint_uses_box,
+            mode="box",
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_oven_temp_unit,
@@ -777,6 +797,14 @@ OVEN_MODE = Capability(
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
         ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's

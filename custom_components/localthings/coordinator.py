@@ -107,7 +107,6 @@ from .transport import (
     DecodeError,
     Transport,
     create_transport,
-    translates_resources,
 )
 from .transport import local_source_port as _local_source_port
 
@@ -178,12 +177,6 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 # NV7000BS is four; the headroom is for permutation testing, not for
 # writing a whole device at once.
 _DEBUG_MAX_BATCH_ELEMENTS = 16
-
-
-def _unrecognized(*_args, **_kwargs) -> None:
-    """A registry resolver that recognizes nothing -- see
-    transport.translates_resources."""
-    return
 
 
 def _href_to_path_segs(href: str) -> list[str]:
@@ -1974,7 +1967,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         bound, device_type_name, materialized, skipped = discover_partitioned(
             self._without_disabled(resources),
             [s for s in self.subdevices if s.key not in self.disabled_keys],
-            resolve_registry if translates_resources(self._entry.data) else _unrecognized,
+            resolve_registry,
             CAPABILITIES,
             log=unbound.append,
             tier_log=_tier_log,

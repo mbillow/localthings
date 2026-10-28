@@ -29,10 +29,9 @@ TRANSPORT_LEGACY_HTTP = "legacy_http"
 # legacy_http_token.py). Stored on the entry beside the leaf.
 CONF_DEVICE_TOKEN = "device_token"
 
-# Which envelope table that appliance's responses are read with -- the
-# `description` it reports for itself, e.g. 'TP6X_WASHER'. Recorded even
-# when it names no table this integration knows, so a diagnostics dump
-# from an unmapped family says which one it was.
+# The `description` that appliance reports for itself, e.g. 'TP6X_WASHER',
+# which its course table and model settings are still keyed by; diagnostics
+# show it so a dump says which family it came from.
 CONF_LEGACY_FAMILY = "legacy_family"
 
 CONF_CA_CERT_PEM = "ca_cert_pem"
