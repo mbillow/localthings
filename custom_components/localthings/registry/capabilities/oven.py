@@ -500,11 +500,9 @@ _PROBE_ITEM_ID = "1"
 def _probe_item(rep):
     """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
 
-    Keyed by reported id, not position, so a board listing them the other
-    way round can't swap the two readings. That id 1 is the probe is
-    inferred from issue #490's dump, not confirmed: only the cavity with a
-    probe socket reports a second item, and it carries `increment` 1
-    against the cavity's 5.
+    Keyed by id rather than array position: #490's probe cavity alone has
+    item 1 with increment 1 against the cavity's 5. Confirmed on the
+    NV51K7770S with a 150°F target and 107°F current reading (#665).
     """
     for item in rep.get("x.com.samsung.da.items") or []:
         if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
@@ -526,12 +524,10 @@ def _probe_temp_unit(rep):
 def _probe_connected(rep, resources):
     """True only while a probe is actually plugged in.
 
-    The socket's state lives on a different resource -- `/mode/vs/0`'s
-    options[] carries a `meatprobe_<state>` token -- so an oven with a
-    socket and nothing in it reports a full items[1] reading 0, which as a
-    permanent entity is worse than no entity. Gated on "reports a state and
-    it isn't disconnected" rather than on the connected spelling, which no
-    dump has shown yet.
+    An empty socket can still report zero readings, so use the
+    `meatprobe_<state>` token in `/mode/vs/0`'s options[]. The NV51K7770S
+    confirms connected/disconnected; retain the non-disconnected gate for
+    other boards.
     """
     if _probe_item(rep) is None:
         return False
@@ -592,6 +588,7 @@ OVEN_SETPOINT = Capability(
         # setpoint writes from idle (docs/investigations/oven-cycle-start.md).
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             device_class="temperature",
             state_class="measurement",
             unit_fn=_probe_temp_unit,
@@ -600,6 +597,7 @@ OVEN_SETPOINT = Capability(
         ),
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             device_class="temperature",
             unit_fn=_probe_temp_unit,
             entity_category="diagnostic",
@@ -702,6 +700,7 @@ OVEN_PROBE_CURRENT_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             state_class="measurement",
@@ -718,6 +717,7 @@ OVEN_PROBE_DESIRED_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             entity_category="diagnostic",

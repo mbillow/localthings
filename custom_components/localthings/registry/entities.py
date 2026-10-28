@@ -70,6 +70,8 @@ class SamsungEntityDescription:
 
 @dataclass(frozen=True, kw_only=True)
 class SensorDesc(SamsungEntityDescription):
+    # Recheck inclusion after setup: add when present, unavailable when absent.
+    dynamic_presence: bool = False
     device_class: str | None = None
     state_class: str | None = None
     unit: str | None = None

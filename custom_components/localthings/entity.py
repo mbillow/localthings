@@ -18,7 +18,9 @@ from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
 
 
-def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> bool:
+def _is_included(
+    bound: BoundEntity, coordinator: LocalThingsCoordinator, *, live: bool = False
+) -> bool:
     """Return False if the entity should not be registered for this device.
 
     Explicit exists_fn takes priority. Otherwise, if the entity has a
@@ -39,15 +41,17 @@ def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> boo
     same rule as everywhere else a whole-resources-dict scan happens --
     this is a free function, so it can't use self._resources.
 
-    Reads `discovery_resources`, not `last_resources`: on an offline load
-    (issue #295) the live cache is still empty, and judging existence
-    against it would filter every rehydrated entity away.
+    Setup uses discovery resources so an empty live cache during an offline
+    load (issue #295) doesn't filter rehydrated entities away. Runtime
+    presence checks use `live=True` so the saved snapshot can't freeze them.
     """
-    rep = coordinator.discovery_resources.get(bound.href)
+    resources = coordinator.last_resources if live else coordinator.discovery_resources
+    rep = resources.get(bound.href)
     if rep is None:
         return False
     if bound.desc.exists_fn is not None:
-        return bound.desc.exists_fn(rep, coordinator.discovery_canonical(bound.subdevice))
+        canonical = coordinator.canonical_resources if live else coordinator.discovery_canonical
+        return bound.desc.exists_fn(rep, canonical(bound.subdevice))
     if bound.desc.field:
         if not rep or is_stub_rep(rep):
             return True
