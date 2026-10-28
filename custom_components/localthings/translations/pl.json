@@ -280,10 +280,10 @@
         "name": "Good Sleep"
       },
       "instance_setpoint": {
-        "name": "{instance_name} — temperatura"
+        "name": "{instance_name} — temperatura zadana"
       },
       "oven_setpoint": {
-        "name": "Temperatura"
+        "name": "Temperatura zadana"
       },
       "sensing_interval": {
         "name": "Interwał AI Purify"
@@ -555,7 +555,7 @@
       "flex_zone_mode": {
         "name": "Tryb strefy Flex",
         "state": {
-          "cv_ttype_rf9000a_fridge": "Lodówka",
+          "cv_ttype_rf9000a_fridge": "Chłodzenie",
           "cv_ttype_rf9000a_freeze": "Zamrażanie",
           "cv_ttype_rf9000a_softfreeze": "Lekkie mrożenie",
           "cv_ttype_rf9000a_meat_fish": "Mięso/ryby",
@@ -567,7 +567,7 @@
           "cv_fdr_meat": "Mięso",
           "cv_fdr_soft_freezer": "Lekkie mrożenie",
           "fconvert_freezer": "Zamrażanie",
-          "fconvert_fridge": "Chłodziarka",
+          "fconvert_fridge": "Chłodzenie",
           "fconvert_off": "Wył."
         }
       },
@@ -697,7 +697,7 @@
           "fdr_deli": "Wędliny",
           "fdr_drinks": "Napoje",
           "ttype_meat_fish": "Mięso/ryby",
-          "ttype_rf9000a_fridge": "Chłodziarka"
+          "ttype_rf9000a_fridge": "Chłodzenie"
         }
       },
       "winecellar_pantry_zone_mode": {
