@@ -5,9 +5,10 @@ from homeassistant.util.unit_system import METRIC_SYSTEM
 
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.number import LocalThingsNumber
+from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.entities import NumberDesc
-from custom_components.localthings.registry.subdevices import MAIN
+from custom_components.localthings.registry.subdevices import MAIN, canonical_view
 from tests.conftest import _discover_full, _load_device_full
 from tests.test_legacy_http_lower_cavity import (
     PREFIX,
@@ -96,11 +97,13 @@ async def test_nw9300md_cavities_keep_their_setpoint_sliders(hass, divided):
 )
 def test_other_appliances_and_oven_models_keep_their_number_presentation(name):
     resources, oic_res, seeds = _load_device_full(name)
-    bound, _, _, _, _ = _discover_full(resources, oic_res, seeds)
-    numbers = [b for b in bound if isinstance(b.desc, NumberDesc)]
+    bound, subdevices, _, resources, _ = _discover_full(resources, oic_res, seeds)
+    # Shared capabilities also bind optional controls that this model excludes.
+    numbers = [b for b in bound if isinstance(b.desc, NumberDesc) and flatten([b], resources)]
     assert numbers
     for entity in numbers:
-        assert _number(entity.desc, resources).mode == "slider"
+        view = canonical_view(entity.subdevice, resources, subdevices)
+        assert _number(entity.desc, view).mode == "slider"
 
 
 async def test_lower_mode_uses_its_own_identity_and_updates_when_info_arrives(hass):
