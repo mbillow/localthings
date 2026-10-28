@@ -136,6 +136,12 @@ CONF_CLOUD_COURSES = "cloud_courses"
 CONF_CLOUD_COURSES_ENABLED = "cloud_courses_enabled"
 DEFAULT_CLOUD_COURSES_ENABLED = True
 
+# The subdevices the user switched off in the options flow, as {key: name};
+# the name labels one whose device is gone. A slot can pass the liveness
+# gate without being hardware (#670, #681), and only the owner can tell;
+# absent means every discovered subdevice is kept.
+CONF_DISABLED_SUBDEVICES = "disabled_subdevices"
+
 # Options-flow key (entry.options, not entry.data): lets a user override
 # the device-wide remote-control-off write block for a specific device
 # (issue #54). Some devices accept certain writes even while reporting

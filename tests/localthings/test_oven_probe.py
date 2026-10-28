@@ -109,7 +109,7 @@ async def test_probe_connects_without_reload_and_reuses_entities(
             state = hass.states.get(rows["sensor", key].entity_id)
             assert state is not None and float(state.state) == value
             assert state.attributes["unit_of_measurement"] == "°F"
-            name = "Temperature Probe" + (" Target" if key == "food_probe_setpoint" else "")
+            name = "Food probe" + (" target" if key == "food_probe_setpoint" else "")
             assert rows["sensor", key].original_name == name
 
     registry = er.async_get(hass)
@@ -238,11 +238,18 @@ async def test_late_sensor_creation_requires_descriptor_opt_in(hass, monkeypatch
 
 
 @pytest.mark.parametrize("language", ["cs", "de", "en", "es", "fr", "it", "ko", "nl", "pl", "sk"])
-async def test_probe_label_upgrade_preserves_entity_ids(hass, monkeypatch, language):
+async def test_probe_detection_preserves_existing_names_and_entity_ids(hass, monkeypatch, language):
     hass.config.language = language
     coordinator = await _discovered(hass)
     _probe_update(coordinator, "legacy", True)
     registry = er.async_get(hass)
+    catalog = json.loads(
+        (
+            Path(__file__).parents[2]
+            / "custom_components/localthings/translations"
+            / f"{language}.json"
+        ).read_text()
+    )
     previous = {}
     for key, suffix in (("food_probe_temp", ""), ("food_probe_setpoint", "_target")):
         previous[key] = registry.async_get_or_create(
@@ -251,22 +258,15 @@ async def test_probe_label_upgrade_preserves_entity_ids(hass, monkeypatch, langu
             f"{DOMAIN}_{coordinator.device_key}_{key}",
             config_entry=coordinator._entry,
             suggested_object_id="old_food_probe" + suffix,
-            original_name="Food Probe" + (" Target" if suffix else ""),
+            original_name=catalog["entity"]["sensor"][key]["name"],
             translation_key=key,
         )
     await _load(hass, monkeypatch, coordinator)
-    catalog = json.loads(
-        (
-            Path(__file__).parents[2]
-            / "custom_components/localthings/translations"
-            / f"{language}.json"
-        ).read_text()
-    )
     rows = _rows(hass, coordinator)
     for key, old in previous.items():
         row = rows["sensor", key]
         assert row.entity_id == old.entity_id
         assert row.unique_id == old.unique_id
-        assert row.original_name == catalog["entity"]["sensor"][key]["name"]
+        assert row.original_name == old.original_name == catalog["entity"]["sensor"][key]["name"]
         assert row.translation_key == key
     await hass.config_entries.async_unload(coordinator._entry.entry_id)

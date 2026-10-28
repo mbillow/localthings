@@ -35,8 +35,8 @@ from .legacy_http import (
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_slots,
     course_table,
-    has_cavities,
     http_status_to_coap,
     is_mapped,
     is_start,
@@ -83,6 +83,7 @@ _LISTED_FIELD = "x.com.samsung.da.connected"
 # a suffix (`LCD_OV_WALL_16K_DIV`, #572); only such a suffix is carried over,
 # since the record's description can otherwise carry the serial.
 _RECORD_SUFFIX = re.compile(r"_[A-Z]+")
+_RECORD_TOKEN = re.compile(r"[A-Z0-9]+(?:_[A-Z0-9]+)*")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
@@ -235,19 +236,20 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
-            if has_cavities(self._family):
+            if slots := cavity_slots(self._family, record):
                 # Whether the divider is in decides which modes the upper
-                # cavity offers (with_cavity_modes). An unanswered listing
-                # leaves the divider unknown rather than failing the sweep.
+                # cavity offers (with_cavity_modes): the lower cavity is
+                # listed only while it is in. An unanswered listing leaves
+                # the divider unknown rather than failing the sweep.
                 try:
                     _, listing = self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
                     listing = None
                 if listing is None:
-                    self._state_at(1).listed = None
+                    self._state_at(slots[1]).listed = None
                 else:
-                    self._listed_rep(1, listing)
+                    self._listed_rep(slots[1], listing)
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -269,6 +271,7 @@ class LegacyHttpTransport:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
+            bodies = _with_record_name(bodies, record.get("name"))
         self._state_at(index).last_bodies = bodies
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
@@ -523,8 +526,13 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        # Device 1's listing is the divider, for either cavity.
-        return with_cavity_modes(self._family, bodies, index, self._state_at(index or 1).listed)
+        # The lower cavity's listing is the divider, for either cavity.
+        main = bodies if index == 0 else self._state_at(0).last_bodies
+        slots = cavity_slots(self._family, main)
+        if slots is None or index not in slots:
+            return bodies
+        lower = slots[1]
+        return with_cavity_modes(self._family, bodies, index == lower, self._state_at(lower).listed)
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]
@@ -660,16 +668,41 @@ def _remaining(deadline: float) -> float:
 
 def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:
     """`bodies` with a sibling record's description on its Information, when
-    it is that Information's own description plus a suffix (_RECORD_SUFFIX)."""
+    it is that Information's own description plus a suffix (_RECORD_SUFFIX).
+
+    With no Information at all, because its linked read ran out of the
+    sibling's budget on a slow appliance (PR #677), a description that is a
+    plain board token (_RECORD_TOKEN) stands in for it: it says what the
+    sibling is, which the hood slot's bindings depend on."""
+    if not isinstance(description, str):
+        return bodies
     information = bodies.get("Information")
+    if information is None:
+        if not _RECORD_TOKEN.fullmatch(description):
+            return bodies
+        return {**bodies, "Information": {"description": description}}
     if not isinstance(information, dict):
         return bodies
     own = information.get("description")
-    if not (isinstance(own, str) and isinstance(description, str)):
+    if not isinstance(own, str):
         return bodies
     if not (description.startswith(own) and _RECORD_SUFFIX.fullmatch(description[len(own) :])):
         return bodies
     return {**bodies, "Information": {**information, "description": description}}
+
+
+def _with_record_name(bodies: dict[str, Any], name: Any) -> dict[str, Any]:
+    """`bodies` with a sibling record's name (`Hood`, #676) on its
+    Information, which otherwise names only the board it shares with the
+    main unit. It names the sibling's type, not anything the owner sets."""
+    if not (isinstance(name, str) and name):
+        return bodies
+    information = bodies.get("Information")
+    if information is None:
+        information = {}
+    if not isinstance(information, dict):
+        return bodies
+    return {**bodies, "Information": {**information, "deviceName": name}}
 
 
 def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:

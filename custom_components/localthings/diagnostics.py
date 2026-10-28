@@ -137,6 +137,8 @@ async def async_get_config_entry_diagnostics(
                 }
                 for skip in coordinator._skipped_subdevices
             ],
+            # Candidates the user switched off in the options flow.
+            "subdevices_disabled": [su.key for su in coordinator.disabled_subdevices],
             # What each enumeration probe returned ({} vs a batch), keyed by the
             # seed href attempted -- lets a report distinguish "checked, nothing
             # there" from "never checked".

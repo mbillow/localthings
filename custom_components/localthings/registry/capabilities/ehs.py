@@ -22,6 +22,7 @@ Verified against a real TP1X_DA_AC_EHS_01001_0000 diagnostics dump
 
 from ..capability import Capability
 from ..entities import (
+    BinarySensorDesc,
     NumberDesc,
     SelectDesc,
     SensorDesc,
@@ -29,7 +30,7 @@ from ..entities import (
     WaterHeaterDesc,
     ZoneClimateDesc,
 )
-from .common import normalize_temp_unit
+from .common import lifetime_wh_to_kwh, normalize_temp_unit
 
 
 def _num(v):
@@ -263,6 +264,60 @@ AWAY_MODE = Capability(
     ),
 )
 
+# Read on the MIM-H04EN Wi-Fi kit's heat pump (#682); the TP1X boards don't
+# report these.
+OUTDOOR_TEMPERATURE = Capability(
+    href="/temperatures/outside/vs/0",
+    poll_tier="cold",
+    entities=(
+        SensorDesc(
+            key="outdoor_temperature",
+            field="x.com.samsung.da.current",
+            device_class="temperature",
+            state_class="measurement",
+            unit="°C",
+            unit_fn=_temp_unit,
+            value_fn=_num,
+        ),
+    ),
+)
+
+# The heat delivered, next to /energy/consumption/vs/0's electricity used.
+HEAT_GENERATED = Capability(
+    href="/energy/generation/vs/0",
+    poll_tier="cold",
+    entities=(
+        SensorDesc(
+            key="heat_generated_kwh",
+            field="x.com.samsung.da.cumulativeGeneration",
+            device_class="energy",
+            state_class="total_increasing",
+            unit="kWh",
+            value_fn=lifetime_wh_to_kwh,
+        ),
+    ),
+)
+
+CONTROLLER_STATUS = Capability(
+    href="/controllerstatus/ehs/vs/0",
+    poll_tier="warm",
+    entities=(
+        BinarySensorDesc(
+            key="booster_heater",
+            field="x.com.samsung.da.ehs.boosterHeater",
+            device_class="running",
+            value_fn=lambda v: v is True or v == "true",
+        ),
+        # Only "Room" seen so far, so the raw value rather than an enum.
+        SensorDesc(
+            key="three_way_valve",
+            field="x.com.samsung.da.ehs.3wayValve",
+            icon="mdi:valve",
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
 # EHS-scoped coverage: opaque vendor plumbing or resources with no
 # confirmed write contract on this dump. Not in the global ignored.IGNORED
 # since these are EHS-only shapes needing their own verification elsewhere.
@@ -278,6 +333,8 @@ _EHS_IGNORED = [
     "/actions/zone1/vs/0",  # zone1 schedule/timer program -- unmodeled for now
     "/actions/zone2/vs/0",  # zone2 schedule/timer program -- unmodeled for now
     "/actions/dhw/vs/0",  # DHW schedule/timer program -- unmodeled for now
+    "/frequencyratio/vs/0",  # compressor frequency ratio with no unit or scale (#682)
+    "/subdevice/vs/0",  # the Wi-Fi kit's registration record for this heat pump (#682)
 ]
 
 COVERAGE = [Capability(href=h) for h in _EHS_IGNORED]

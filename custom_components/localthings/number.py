@@ -7,11 +7,13 @@ from typing import cast
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
+from .registry.capabilities.cooktop import LEGACY_HOOD_MODE, paired_hood_running
 from .registry.entities import NumberDesc
 
 
@@ -22,7 +24,11 @@ async def async_setup_entry(
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        LocalThingsNumber(coordinator, b)
+        (
+            LocalThingsPairedHoodTimer(coordinator, b)
+            if b.capability is LEGACY_HOOD_MODE
+            else LocalThingsNumber(coordinator, b)
+        )
         for b in coordinator.bound
         if isinstance(b.desc, NumberDesc) and _is_included(b, coordinator)
     )
@@ -113,3 +119,18 @@ class LocalThingsNumber(LocalThingsEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_send_command(self._bound, value)
+
+
+class LocalThingsPairedHoodTimer(LocalThingsNumber):
+    """A legacy cooktop's paired hood shutoff timer (issue #676), in
+    minutes with 0 to cancel. The hood ignores a timer set while its fan is
+    off, so that's refused rather than silently dropped. Cancelling always
+    goes through."""
+
+    async def async_set_native_value(self, value: float) -> None:
+        if value > 0 and not paired_hood_running(self._resources):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="paired_hood_fan_off",
+            )
+        await super().async_set_native_value(value)

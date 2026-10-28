@@ -21,7 +21,9 @@ def parse_device0_batch(device0: list) -> dict[str, dict]:
     Most devices put a collection representation without an ``href`` at
     index 0, while some firmware starts directly with resource entries.
     Iterate the whole list and let the existing href check ignore collection
-    metadata so the first real resource is preserved in either shape.
+    metadata so the first real resource is preserved in either shape. The
+    MIM-H04EN Wi-Fi kit (#682) lists the collection itself with an href; it
+    is skipped by its `oic.wk.col` type, since it is no resource of its own.
 
     A stub rep is passed through unchanged rather than collapsed to {} --
     downstream code (entity._is_included, capability exists_fns) uses
@@ -35,6 +37,6 @@ def parse_device0_batch(device0: list) -> dict[str, dict]:
         rep = entry.get("rep")
         if not href:
             continue
-        if isinstance(rep, dict):
+        if isinstance(rep, dict) and "oic.wk.col" not in (rep.get("rt") or ()):
             out[href] = rep
     return out
