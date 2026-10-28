@@ -82,10 +82,27 @@ def rac(monkeypatch):
         family="TP6X_RAC_16K",
     )
     device.connect()
+    device._state_at(0).device_type = "Air_Conditioner"
     return device
 
 
 class TestTp6xRacWriteRoutes:
+    def test_a_write_before_any_sweep_reads_the_type_first(self, rac):
+        """An air conditioner's writes go per endpoint; sent before a sweep
+        had said what it is, one would go as an aggregate it refuses."""
+        rac._state_at(0).device_type = None
+        _FakeConnection.routes[("GET", "/devices/0")] = (
+            200,
+            {"Device": {"id": "0", "type": "Air_Conditioner"}},
+        )
+
+        rac.write(["mode", "vs", "0"], {PREFIX + "modes": ["Cool"]}, timeout=8.0)
+
+        assert [entry[:2] for entry in _FakeConnection.log] == [
+            ("GET", "/devices/0"),
+            ("PUT", "/devices/0/mode"),
+        ]
+
     def test_power_uses_the_aggregate_path_without_the_device_wrapper(self, rac):
         code, _ = rac.write(["power", "vs", "0"], {PREFIX + "power": "Off"}, timeout=8.0)
 

@@ -401,7 +401,7 @@ class TestWrites:
         code, _ = _transport().write(["device", "1"], batch, timeout=8.0)
 
         assert code == 0x84
-        assert _FakeConnection.log == []
+        assert ("PUT", "/devices/1") not in _requests()
 
     def test_an_unlisted_sibling_takes_no_command(self):
         _FakeConnection.routes = _routes(divided=False, lower=_running(LOWER))

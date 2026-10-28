@@ -42,6 +42,7 @@ AGGREGATE = {
         "description": "TP6X_WW6500(REDACTED)",
         "id": "0",
         "name": "Washer",
+        "type": "Washer",
     }
 }
 CONFIGURATION = {"Configuration": {"remoteControlEnabled": True}}
@@ -124,6 +125,8 @@ def transport(monkeypatch):
         "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_WASHER"
     )
     device.connect()
+    # What its record says, as a sweep would have learned before any write.
+    device._state_at(0).device_type = "Washer"
     return device
 
 
@@ -570,9 +573,8 @@ class TestCapabilities:
 
 
 class TestUnmappedFamily:
-    """A family with no envelope table is read for its identity alone, so it
-    sets up like an unrecognized DTLS device rather than borrowing another
-    family's field map."""
+    """A family nobody has mapped reads through the shared table by the type
+    it reports, so discovery can route it like any other device."""
 
     @pytest.fixture
     def unmapped(self, transport):
@@ -582,14 +584,24 @@ class TestUnmappedFamily:
         device.connect()
         return device
 
-    def test_the_seed_carries_identity_and_nothing_else(self, unmapped):
+    def test_the_seed_carries_every_mapped_resource(self, unmapped):
         code, body = unmapped.read(["device", "0"], timeout=10.0)
 
         assert code == 0x45
-        assert [entry["href"] for entry in body] == ["/information/vs/0"]
+        assert {entry["href"] for entry in body} >= {
+            "/information/vs/0",
+            "/course/vs/0",
+            "/washer/vs/0",
+            "/power/vs/0",
+        }
 
-    def test_a_washer_href_is_not_served(self, unmapped):
-        assert unmapped.read(["washer", "vs", "0"], timeout=10.0) == (0x84, None)
+    def test_a_washer_href_is_served(self, unmapped):
+        unmapped.read(["device", "0"], timeout=10.0)
+
+        code, rep = unmapped.read(["washer", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        assert rep[PREFIX + "spinLevel"] == "1400"
 
     def test_diagnostics_carry_the_untranslated_bodies(self, unmapped):
         unmapped.read(["device", "0"], timeout=10.0)
@@ -597,16 +609,7 @@ class TestUnmappedFamily:
         diag = unmapped.diagnostics()
 
         assert diag["family"] == "TP6X_DRYER"
-        assert diag["family_mapped"] is False
-        assert diag["unmapped_resources"] == [
-            "Alarms",
-            "Configuration",
-            "Diagnosis",
-            "EnergyConsumption",
-            "Mode",
-            "Operation",
-            "Washer",
-        ]
+        assert diag["unmapped_resources"] == ["EnergyConsumption"]
         assert diag["bodies"]["Washer"] == AGGREGATE["Device"]["Washer"]
         # The aggregate's description can carry the serial; name is user-set.
         assert "description" not in diag["bodies"]
@@ -735,6 +738,7 @@ class TestWallOvenStart:
             "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
         )
         device.connect()
+        device._state_at(0).device_type = "Oven"
         return device
 
     def test_a_start_goes_as_one_aggregate_body(self, oven):
@@ -784,6 +788,7 @@ class TestWallOvenStart:
             "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_16K"
         )
         rac.connect()
+        rac._state_at(0).device_type = "Air_Conditioner"
         batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
 
         code, _ = rac.write(["device", "0"], batch, timeout=8.0)

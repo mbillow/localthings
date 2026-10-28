@@ -11,13 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.localthings.legacy_http import (
-    LCD_OV_WALL,
-    PREFIX,
-    is_mapped,
-    table_for,
-    to_resources,
-)
+from custom_components.localthings.legacy_http import PREFIX, table_for, to_resources
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import BinarySensorDesc, SensorDesc
@@ -25,27 +19,22 @@ from custom_components.localthings.registry.subdevices import Subdevice
 from tests.conftest import _discover_full, _load_device_full
 
 NAME = "microwave_tp6x_ov_17k_8888"
+OVEN = table_for("Oven")
 FIXTURE = json.loads(
     (Path(__file__).parent / "fixtures" / f"{NAME}_device.json").read_text(encoding="utf-8")
 )
 
 
-def test_the_family_reads_with_the_flex_duo_table():
-    for family in ("TP6X_OV_17K", "TP6X_OV_16K"):
-        assert table_for(family) is LCD_OV_WALL
-        assert is_mapped(family)
-
-
 def test_the_fixture_is_the_translation_of_its_bodies():
     device0 = {e["href"]: e["rep"] for e in FIXTURE["device0"]}
-    assert device0 == to_resources(FIXTURE["bodies"], LCD_OV_WALL)
+    assert device0 == to_resources(FIXTURE["bodies"], OVEN)
     for index, bodies in FIXTURE["device_bodies"].items():
         sibling = Subdevice(kind="indexed", key=index, seed_path=("device", index))
         seed = {
             sibling.to_canonical(e["href"]): e["rep"] for e in FIXTURE["seeds"][f"/device/{index}"]
         }
         seed.pop("/connected/vs/0")
-        assert seed == to_resources(bodies, LCD_OV_WALL)
+        assert seed == to_resources(bodies, OVEN)
 
 
 def test_the_microwave_is_the_master_with_nothing_unbound():

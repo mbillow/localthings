@@ -13,7 +13,7 @@ from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.fan import LocalThingsPairedHoodFan
-from custom_components.localthings.legacy_http import TP6X_CT, to_resources
+from custom_components.localthings.legacy_http import table_for, to_resources
 from custom_components.localthings.legacy_http_transport import (
     LegacyHttpTransport,
     _with_record_description,
@@ -40,11 +40,11 @@ FIXTURE = json.loads(
 
 def test_the_fixture_is_the_translation_of_its_bodies():
     device0 = {e["href"]: e["rep"] for e in FIXTURE["device0"]}
-    assert device0 == to_resources(FIXTURE["bodies"], TP6X_CT)
+    assert device0 == to_resources(FIXTURE["bodies"], table_for("Cooktop"))
     hood = Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
     seed = {hood.to_canonical(e["href"]): e["rep"] for e in FIXTURE["seeds"]["/device/1"]}
     seed.pop("/connected/vs/0")
-    assert seed == to_resources(FIXTURE["device_bodies"]["1"], TP6X_CT)
+    assert seed == to_resources(FIXTURE["device_bodies"]["1"], table_for("Cooktop"))
 
 
 HOOD = Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
@@ -381,7 +381,8 @@ def test_the_transport_sends_hood_writes_to_its_slot(monkeypatch):
     sent = []
 
     def request(method, path, *, body=None, timeout):
-        sent.append((method, path, body))
+        if method == "PUT":
+            sent.append((method, path, body))
         return 204, None
 
     monkeypatch.setattr(transport, "_request", request)
@@ -425,7 +426,7 @@ async def test_the_hood_device_is_named_by_its_own_record(bare_coordinator, monk
 def test_a_sibling_record_names_its_information():
     bodies = _with_record_name(FIXTURE["device_bodies"]["1"], "Hood")
 
-    information = to_resources(bodies, TP6X_CT)["/information/vs/0"]
+    information = to_resources(bodies, table_for("Cooktop"))["/information/vs/0"]
     assert information["x.com.samsung.da.deviceName"] == "Hood"
     assert _with_record_name(FIXTURE["device_bodies"]["1"], None) == FIXTURE["device_bodies"]["1"]
 

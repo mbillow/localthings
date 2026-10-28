@@ -1,6 +1,6 @@
 """TP6X_RAC heat pumps offer Heat although supportedModes omits it (issue #589).
 
-The 8888 bridge lists Cool/Dry/Wind/Auto on every TP6X_RAC dump on record,
+The 8888 bridge lists Cool/Dry/Wind/Auto on every table_for("Air_Conditioner") dump on record,
 yet each rates a heating capacity (`WarmCapa_<n>`), and the #589 unit reports
 `Heat` while heating from its own remote. Cool-only units report WarmCapa_0.
 """
@@ -15,7 +15,7 @@ from homeassistant.components.climate import HVACMode
 from homeassistant.core import HomeAssistant
 
 from custom_components.localthings.climate import LocalThingsClimate
-from custom_components.localthings.legacy_http import TP6X_RAC, to_resources, to_write
+from custom_components.localthings.legacy_http import table_for, to_resources, to_write
 from custom_components.localthings.registry.capabilities.airconditioner import (
     _climate_write,
     has_heating_capacity,
@@ -34,7 +34,7 @@ async def _climate(coordinator) -> LocalThingsClimate:
 async def _tp6x_climate(hass: HomeAssistant, name: str) -> LocalThingsClimate:
     bodies = json.loads((_FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["bodies"]
     coordinator = _coordinator(hass)
-    await _discover_with(coordinator, to_resources(bodies, TP6X_RAC), [], {})
+    await _discover_with(coordinator, to_resources(bodies, table_for("Air_Conditioner")), [], {})
     return await _climate(coordinator)
 
 
@@ -65,7 +65,7 @@ async def test_heat_reaches_the_mode_wrapper(hass: HomeAssistant):
 
     segs, body = _climate_write(("mode", "Heat"), rep, resources={})
 
-    wire = to_write([("/" + "/".join(segs), body)], TP6X_RAC)["Device"]
+    wire = to_write([("/" + "/".join(segs), body)], table_for("Air_Conditioner"))["Device"]
     assert wire == {"Mode": {"modes": ["Heat"]}}
 
 
