@@ -1201,7 +1201,14 @@
         "name": "Burner {number} power level"
       },
       "clean_level": {
-        "name": "Clean level"
+        "name": "Air Quality",
+        "state": {
+          "good": "Good",
+          "moderate": "Moderate",
+          "unhealthy": "Unhealthy",
+          "very_unhealthy": "Very unhealthy",
+          "hazardous": "Hazardous"
+        }
       },
       "co2": {
         "name": "CO2"
@@ -1358,7 +1365,17 @@
         }
       },
       "dust": {
-        "name": "Dust"
+        "name": "PM10"
+      },
+      "dust_grade": {
+        "name": "PM10 Grade",
+        "state": {
+          "good": "Good",
+          "moderate": "Normal",
+          "unhealthy": "Poor",
+          "very_unhealthy": "Very Poor",
+          "hazardous": "Hazardous"
+        }
       },
       "energy_kwh": {
         "name": "Energy"
@@ -1391,7 +1408,17 @@
         "name": "Filter usage"
       },
       "fine_dust": {
-        "name": "Fine dust"
+        "name": "PM2.5"
+      },
+      "fine_dust_grade": {
+        "name": "PM2.5 Grade",
+        "state": {
+          "good": "Good",
+          "moderate": "Normal",
+          "unhealthy": "Poor",
+          "very_unhealthy": "Very Poor",
+          "hazardous": "Hazardous"
+        }
       },
       "finish_time": {
         "name": "Estimated finish"
@@ -1442,7 +1469,7 @@
         "name": "Timer state"
       },
       "odor": {
-        "name": "Odor"
+        "name": "Gas"
       },
       "operating_mode": {
         "name": "Operating mode"
@@ -1553,7 +1580,17 @@
         "name": "Sterilize run time"
       },
       "super_fine_dust": {
-        "name": "Super fine dust"
+        "name": "PM1.0"
+      },
+      "super_fine_dust_grade": {
+        "name": "PM1.0 Grade",
+        "state": {
+          "good": "Good",
+          "moderate": "Normal",
+          "unhealthy": "Poor",
+          "very_unhealthy": "Very Poor",
+          "hazardous": "Hazardous"
+        }
       },
       "warming_center_state": {
         "name": "Warming center state"

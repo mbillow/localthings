@@ -46,5 +46,10 @@ def flatten(bound: list[BoundEntity], resources: dict) -> dict[str, Any]:
         if b.desc.rep_fn is not None:
             out[_key(b)] = b.desc.rep_fn(rep)
         elif b.desc.field:
-            out[_key(b)] = b.desc.value_fn(rep.get(b.desc.field))
+            if b.desc.resources_value_fn is not None:
+                out[_key(b)] = b.desc.resources_value_fn(
+                    rep.get(b.desc.field), resources
+                )
+            else:
+                out[_key(b)] = b.desc.value_fn(rep.get(b.desc.field))
     return out
