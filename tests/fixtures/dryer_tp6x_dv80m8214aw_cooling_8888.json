@@ -1,6 +1,7 @@
 {
-  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #646 (cooling, 82%, six minutes remaining). Information.modelID suffix removed; Versions and link/collection metadata omitted; EnergyConsumption.saveLocation replaced with a generic path; alarm id and triggeredTime replaced with placeholders. All retained operational, setting and Mode fields are unchanged. No write capture.",
+  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #646 (cooling, 82%, six minutes remaining). Information.modelID suffix removed; Versions and link/collection metadata omitted, except the record's own `type`; EnergyConsumption.saveLocation replaced with a generic path; alarm id and triggeredTime replaced with placeholders. All retained operational, setting and Mode fields are unchanged. No write capture.",
   "bodies": {
+    "type": "Dryer",
     "Information": {
       "description": "TP6X_DRYER",
       "deviceSubType": "Dryer",

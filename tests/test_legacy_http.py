@@ -405,8 +405,8 @@ class TestAgainstTheDryerCapture:
 
     @staticmethod
     def _resources():
-        capture = json.loads(DRYER_CAPTURE.read_text(encoding="utf-8"))
-        return to_resources(capture["bodies"], table_for("Dryer"))
+        bodies = json.loads(DRYER_CAPTURE.read_text(encoding="utf-8"))["bodies"]
+        return to_resources(bodies, table_for(bodies["type"]))
 
     def test_it_types_as_a_dryer(self):
         registry = resolve(self._resources())
