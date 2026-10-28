@@ -118,20 +118,24 @@ RESOURCES: tuple[Resource, ...] = (
     Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
 )
 
-# Resources a device type keeps somewhere else, keyed by the `type` its own
-# record reports. A washer's Mode is its cycle (`Course_XX`), which CoAP
-# washers serve as /course/vs/0 and the TP6X_WW6500 takes only with a start.
-# An air conditioner's Configuration is its region, the ARTIK051 ACs'
-# /configuration/vs/0 (#563).
-_BY_TYPE: dict[str, tuple[Resource, ...]] = {
-    "Washer": (
-        Resource(
-            endpoint="mode",
-            wrapper="Mode",
-            href="/course/vs/0",
-            start_only=frozenset({"Course"}),
-        ),
+# A washer's or dryer's Mode is its cycle (`Course_XX`), which CoAP laundry
+# serves as /course/vs/0 and the TP6X_WW6500 takes only with a start. The
+# DV80M8214AW's start behavior is unmeasured (#646), so it is held the same way.
+_LAUNDRY = (
+    Resource(
+        endpoint="mode",
+        wrapper="Mode",
+        href="/course/vs/0",
+        start_only=frozenset({"Course"}),
     ),
+)
+
+# Resources a device type keeps somewhere else, keyed by the `type` its own
+# record reports. An air conditioner's Configuration is its region, the
+# ARTIK051 ACs' /configuration/vs/0 (#563).
+_BY_TYPE: dict[str, tuple[Resource, ...]] = {
+    "Washer": _LAUNDRY,
+    "Dryer": _LAUNDRY,
     "Air_Conditioner": (
         Resource(endpoint="configuration", wrapper="Configuration", href="/configuration/vs/0"),
     ),

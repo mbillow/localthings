@@ -174,6 +174,48 @@ class TestConsumerModelKey:
         assert _consumer_model_key("ARTIK051_DONGLE_REF") is None
 
 
+class TestForDeviceBySubtype:
+    """An 8888 record's own `deviceSubType`, which only that family reports."""
+
+    def test_every_subtype_resolves_to_a_real_registry(self):
+        from custom_components.localthings.registry.by_type import (
+            _DEVICE_SUBTYPE_TO_KEY,
+            _REGISTRY_BY_KEY,
+        )
+
+        for subtype, key in _DEVICE_SUBTYPE_TO_KEY.items():
+            assert key in _REGISTRY_BY_KEY, f"{subtype!r} -> unknown registry {key!r}"
+
+    @pytest.mark.parametrize(
+        "description, subtype, expected",
+        [
+            ("TP6X_DRYER", "Dryer", "dryer"),
+            ("TP6X_WASHER", "Washer", "washer"),
+            # FlexDry's sections (#649) name no consumer model either.
+            ("TP6X_DRYER_DRUM", "Dryer", "dryer"),
+        ],
+    )
+    def test_a_record_with_no_model_token_types_by_its_subtype(
+        self, description, subtype, expected
+    ):
+        from custom_components.localthings.registry.by_type import resolve
+
+        info = {
+            "x.com.samsung.da.description": description,
+            "x.com.samsung.da.deviceSubType": subtype,
+        }
+        registry = resolve({"/information/vs/0": info})
+
+        assert registry is not None
+        assert registry.name == expected
+
+    def test_a_combi_oven_is_left_to_its_resources(self):
+        """`CombiOven` covers a microwave (#674) and an oven (#681)."""
+        from custom_components.localthings.registry.by_type import for_device_by_subtype
+
+        assert for_device_by_subtype("CombiOven") is None
+
+
 class TestForDeviceByOicType:
     """Primary device-type detection from /oic/d's `rt`."""
 

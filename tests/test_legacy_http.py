@@ -45,6 +45,7 @@ from custom_components.localthings.registry.capabilities.common import model_all
 from custom_components.localthings.registry.discovery import discover
 
 FIXTURE = Path(__file__).parent / "fixtures" / "washer_tp6x_ww6500_8888.json"
+DRYER_CAPTURE = Path(__file__).parent / "fixtures" / "dryer_tp6x_dv80m8214aw_cooling_8888.json"
 
 WASHER = table_for("Washer")
 AIR_CONDITIONER = table_for("Air_Conditioner")
@@ -339,7 +340,7 @@ class TestAgainstTheDeviceDump:
         }
 
     def test_the_device_types_as_a_washer(self):
-        """Through the 'WASHER' token in `description` ('TP6X_WASHER')."""
+        """Through the `deviceSubType` its record reports ('Washer')."""
         registry = resolve(self._resources())
 
         assert registry is not None
@@ -397,14 +398,57 @@ class TestAgainstTheDeviceDump:
         assert len(cycle_options(self._resources())) == 14
 
 
+class TestAgainstTheDryerCapture:
+    """The DV80M8214AW mid-cycle (#646), through the washer's shared table and
+    the CoAP dryer registry. Its record names no board token; its
+    `deviceSubType` ('Dryer') types it."""
+
+    @staticmethod
+    def _resources():
+        capture = json.loads(DRYER_CAPTURE.read_text(encoding="utf-8"))
+        return to_resources(capture["bodies"], table_for("Dryer"))
+
+    def test_it_types_as_a_dryer(self):
+        registry = resolve(self._resources())
+
+        assert registry is not None
+        assert registry.name == "dryer"
+
+    def test_nothing_is_left_unbound(self):
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        unbound: list[str] = []
+
+        discover(
+            resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+        )
+
+        assert unbound == []
+
+    def test_the_cooling_phase_and_course_read_through(self):
+        """Cooling is reported although `supportedProgress` omits it."""
+        from custom_components.localthings.registry.adapter import flatten
+
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        state = flatten(discover(resources, registry.capabilities), resources)
+
+        assert state["progress"] == "cooling"
+        assert state["progress_percentage"] == 82
+        assert state["cycle"] == "96"
+
+
 class TestDeviceTypes:
-    def test_a_washers_mode_is_its_course(self):
-        resources = to_resources({"Mode": {"options": ["Course_1C"]}}, table_for("Washer"))
+    @pytest.mark.parametrize("device_type", ["Washer", "Dryer"])
+    def test_laundrys_mode_is_its_course(self, device_type):
+        resources = to_resources({"Mode": {"options": ["Course_1C"]}}, table_for(device_type))
 
         assert resources == {"/course/vs/0": {PREFIX + "options": ["Course_1C"]}}
 
     def test_any_other_types_mode_is_its_mode(self):
-        for device_type in ("Oven", "Cooktop", "Air_Conditioner", "Dryer", None):
+        for device_type in ("Oven", "Cooktop", "Air_Conditioner", "Unmapped", None):
             resources = to_resources({"Mode": {"options": ["X_1"]}}, table_for(device_type))
 
             assert resources == {"/mode/vs/0": {PREFIX + "options": ["X_1"]}}
@@ -417,7 +461,7 @@ class TestDeviceTypes:
                 "Operation": {"power": "On", "state": "Ready"},
                 "Configuration": {"remoteControlEnabled": True},
             },
-            table_for("Dryer"),
+            table_for("Unmapped"),
         )
 
         assert resources == {

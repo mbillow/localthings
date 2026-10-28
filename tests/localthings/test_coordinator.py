@@ -183,6 +183,7 @@ def test_run_discovery_routes_an_unmapped_legacy_family_like_any_device(
         "/information/vs/0": {
             "x.com.samsung.da.modelNum": "TP6X_WW9000|FF18E000|2001",
             "x.com.samsung.da.description": "TP6X_WASHER_NEXT",
+            "x.com.samsung.da.deviceSubType": "Washer",
             "x.com.samsung.da.serialNum": "TEST-SERIAL",
         },
     }

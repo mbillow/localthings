@@ -93,7 +93,6 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
 # hardware, not a shortcut.
 _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "REF": "refrigerator",
-    "WASHER": "washer",  # the 8888 WW6500's 'TP6X_WASHER' description
     # Air conditioners: distinct board families sharing one resource
     # surface -- room, package, Korean (#136), window (#87), 2-in-1
     # floor+wall (#150/#153), system/commercial (#52), cassette (#191), and
@@ -257,6 +256,27 @@ def for_device_by_oic_type(device_types: Sequence[str]) -> DeviceRegistry | None
     return None
 
 
+# The type an 8888 bridge record reports for itself (`deviceSubType`, which
+# legacy_http carries into /information/vs/0) -> registry key. Only the 8888
+# family reports it, so it names the type where `/oic/d` can't: the bridge
+# serves none. `CombiOven` is left out because it covers both the NQ70M6650DS's
+# microwave and the NW9300MD's oven (#674, #681), which the resource
+# signatures tell apart.
+_DEVICE_SUBTYPE_TO_KEY: dict[str, str] = {
+    "Cooktop": "cooktop",
+    "Dryer": "dryer",  # TP6X_DRYER, DV80M8214AW (#636, #646)
+    "Room_Air_Conditioner": "airconditioner",
+    "WallOven": "oven",
+    "Washer": "washer",  # TP6X_WASHER, WW6500
+}
+
+
+def for_device_by_subtype(subtype: object) -> DeviceRegistry | None:
+    """Device-type detection from an 8888 record's own `deviceSubType`."""
+    key = _DEVICE_SUBTYPE_TO_KEY.get(subtype) if isinstance(subtype, str) else None
+    return _REGISTRY_BY_KEY[key] if key is not None else None
+
+
 def for_device_by_model(model_num: str, description: str) -> DeviceRegistry | None:
     """Device-type detection from /information/vs/0's model strings.
 
@@ -358,8 +378,9 @@ def resolve(
     live capability surface a registry must bind; `for_device_by_resources`
     is deliberately strict (multiple independent details required) so this
     can correct misleading metadata without a common href overriding an
-    unrelated family. When no signature matches, `/oic/d`'s `rt` wins over
-    model-string parsing.
+    unrelated family. When no signature matches, the type the device names
+    itself -- `/oic/d`'s `rt`, or an 8888 record's `deviceSubType` -- wins
+    over model-string parsing.
 
     `/otninformation/vs/0`'s oneUiVersion is deliberately not consulted:
     only a minority of hardware populates it, every device that does is
@@ -371,6 +392,7 @@ def resolve(
     return (
         for_device_by_resources(resources)
         or for_device_by_oic_type(device_types)
+        or for_device_by_subtype(info.get("x.com.samsung.da.deviceSubType", ""))
         or for_device_by_model(
             info.get("x.com.samsung.da.modelNum", ""),
             info.get("x.com.samsung.da.description", ""),

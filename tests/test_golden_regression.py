@@ -117,6 +117,20 @@ def test_registry_reproduces_golden_state_keys_for_dryer():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_dryer_tp6x_8888():
+    """DV80M8214AW over 8888 (#646), typed by its record's `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "dryer_tp6x_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
     """DVE50A8600V/A3 (issue #79) -- description pairs two model numbers
     ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
