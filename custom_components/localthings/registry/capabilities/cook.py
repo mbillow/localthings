@@ -597,39 +597,8 @@ def _check_temperature(temp, temperature, mode, unit, resources, complete=True) 
 PARAM_MODE = "mode"
 PARAM_TEMPERATURE = "temperature"
 PARAM_DURATION = "duration"
-PARAM_DURATION_HOURS = "duration_hours"
-PARAM_DURATION_MINUTES = "duration_minutes"
-DURATION_PARTS = (PARAM_DURATION_HOURS, PARAM_DURATION_MINUTES)
 # The start button's own marker.
 PARAM_START = "start"
-
-
-def duration_parts_max(resources: dict) -> int:
-    """The paired controls' maximum, narrowed by the current mode when known."""
-    maximum = 599 * 60
-    spec = mode_specs(resources).get(current_mode(resources) or "")
-    return min(maximum, spec.time_max) if spec and spec.time_max is not None else maximum
-
-
-def duration_with_part(param: str, payload: Any, resources: dict, *, unset: bool = False) -> int:
-    """Replace one timer component, preserving the cavity's other component."""
-    try:
-        value = float(payload)
-    except (TypeError, ValueError):
-        value = float("nan")
-    maximum_part = 9 if param == PARAM_DURATION_HOURS else 59
-    if not value.is_integer() or not 0 <= value <= maximum_part:
-        raise CookStartError("cook_duration_part_invalid")
-    raw = (resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME)
-    seconds = 0 if raw is None and unset else parse_hms(raw)
-    if seconds is None:
-        raise CookStartError("cook_duration_unavailable")
-    hours, minutes = divmod(-(-seconds // 60), 60)
-    total = int(value) * 60 + minutes if param == PARAM_DURATION_HOURS else hours * 60 + int(value)
-    maximum = duration_parts_max(resources)
-    if total * 60 > maximum:
-        raise CookStartError("cook_duration_total_out_of_range", max=format_hms(maximum))
-    return total
 
 
 def _device_values(resources: dict) -> tuple:

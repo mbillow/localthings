@@ -70,7 +70,7 @@ from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
 from .registry.batch import parse_device0_batch
 from .registry.by_type import resolve as resolve_registry
-from .registry.capabilities import cook, oven
+from .registry.capabilities import cook
 from .registry.capabilities.common import (
     REMOTE_CONTROL_HREFS,
     merge_items_field,
@@ -2549,22 +2549,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         or the write's own descriptor doesn't need it (needs_remote_control)."""
         desc = bound_entity.desc
         cook_param = getattr(desc, "cook_param", None)
-        if cook_param in cook.DURATION_PARTS:
-            resources = self.canonical_resources(bound_entity.subdevice)
-            try:
-                payload = cook.duration_with_part(
-                    cook_param,
-                    payload,
-                    resources,
-                    unset=self.cook_time_is_unset(bound_entity.subdevice),
-                )
-            except cook.CookStartError as err:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key=err.key,
-                    translation_placeholders=err.placeholders,
-                ) from err
-            cook_param = cook.PARAM_DURATION
         if cook_param == cook.PARAM_START:
             await self.async_start_cooking(bound_entity.subdevice)
             return
@@ -2874,21 +2858,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         view, with the upper cavity's modeSpec shared -- the cook checks'
         input. Held choices are not in it."""
         return canonical_view(subdevice, self._cook_view(self.last_resources), self.subdevices)
-
-    def cook_time_is_unset(self, subdevice: Subdevice) -> bool:
-        """Distinguish this wall oven's idle zero from an explicitly held timer."""
-        resources = self._cavity_resources(subdevice)
-        if not oven.has_paired_cook_time(resources) or not cook.is_idle(resources):
-            return False
-        held = self._held_cooks.get(subdevice)
-        view = held.overlay(resources) if held is not None else resources
-        if held is not None and cook.PARAM_DURATION in held.values:
-            return False
-        duration = (view.get(cook.OPERATION_HREF) or {}).get("x.com.samsung.da.operationTime")
-        # A pending mode without a timer default has no duration yet.
-        return cook.parse_hms(duration) == 0 or (
-            duration is None and held is not None and bool(held.values)
-        )
 
     def _with_held_cooks(self, snapshot: dict[str, dict]) -> dict[str, dict]:
         """Each idle cavity's held choices, written over its own actual

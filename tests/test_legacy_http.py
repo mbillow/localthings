@@ -679,7 +679,15 @@ class TestLcdOvWall:
         }
 
     def test_the_washer_power_flag_is_not_read_off_an_oven(self):
-        assert model_settings("LCD_OV_WALL_16K", self._bodies()) == {}
+        bodies = self._bodies()
+        # The wall oven uses measured behavior, not the washer's feature byte.
+        for feature_byte in ("00", "01"):
+            model_id = bodies["Information"]["modelID"].split("|")
+            model_id[2] = model_id[2][:26] + feature_byte + model_id[2][28:]
+            bodies["Information"]["modelID"] = "|".join(model_id)
+            assert model_settings("LCD_OV_WALL_16K", bodies) == {
+                "/wm/setinfo/vs/0": {PREFIX + "isModelSettingPowerOnOff": "false"}
+            }
 
 
 _MODE = {"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}

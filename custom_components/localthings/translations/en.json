@@ -151,6 +151,9 @@
       "divider": {
         "name": "Divider"
       },
+      "reservoir_open": {
+        "name": "Reservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Wrinkle prevent active"
       },
@@ -312,12 +315,6 @@
       },
       "zone_target_temperature": {
         "name": "Zone target temperature"
-      },
-      "cook_time_hours": {
-        "name": "Cook time hours"
-      },
-      "cook_time_minutes": {
-        "name": "Cook time minutes"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Turn the range hood's fan on before setting its shutoff timer."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Enter whole hours from 0 to 9 and whole minutes from 0 to 59."
-    },
-    "cook_duration_unavailable": {
-      "message": "The current cook time is unavailable. Wait for a device update before changing its hours or minutes."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "The combined cook time cannot exceed {max}."
     }
   },
   "selector": {

@@ -278,6 +278,8 @@ class LegacyHttpTransport:
         resources = to_resources(
             self._with_modes(index, self._with_staged(index, bodies)), self._table
         )
+        # Each cavity needs its own canonical power capability before remapping.
+        resources.update(model_settings(self._family, bodies))
         if index:
             if listed is not None:
                 resources[_LISTED_HREF] = listed
@@ -286,8 +288,6 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
-            # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
-            resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     def _sibling_record(

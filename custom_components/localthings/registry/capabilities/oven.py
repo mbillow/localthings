@@ -197,6 +197,34 @@ def _has_option(prefix):
     )
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, name) is not None
+            for name in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """NV51K7770S observations confirmed these positions with the door open (#666)."""
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
 def is_tp6x_ov_board(resources):
     """The NQ70M6650DS combo's 8888 board (#674). It answers every write
     `204`, but runs a remote cook only once Start is pressed at the panel,
@@ -360,39 +388,6 @@ def _cook_time_bounds(rep, resources):
     return float(-(-(spec.time_min or 0) // 60)), float(spec.time_max // 60), 1.0
 
 
-def has_paired_cook_time(resources):
-    """The measured 9:59 wall oven, excluding the same-board combo (#681)."""
-    info = resources.get("/information/vs/0") or {}
-    return (
-        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
-        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
-    )
-
-
-def _cook_time_part_exists(rep, resources):
-    return has_paired_cook_time(resources) and "x.com.samsung.da.operationTime" in rep
-
-
-def _cook_time_total_exists(rep, resources):
-    return not has_paired_cook_time(resources) and (
-        not rep or is_stub_rep(rep) or "x.com.samsung.da.operationTime" in rep
-    )
-
-
-def _cook_hours(op_time):
-    minutes = _op_minutes(op_time)
-    return minutes // 60 if minutes is not None else None
-
-
-def _cook_minutes(op_time):
-    minutes = _op_minutes(op_time)
-    return minutes % 60 if minutes is not None else None
-
-
-def _cook_hours_bounds(rep, resources):
-    return 0.0, float(cook.duration_parts_max(resources) // 3600), 1.0
-
-
 START_COOKING_BUTTON = ButtonDesc(
     key="start_cooking",
     icon="mdi:play",
@@ -453,48 +448,17 @@ OVEN_OPERATIONAL_STATE = Capability(
         ),
         NumberDesc(
             key="cook_time",
+            mode="box",
             field="x.com.samsung.da.operationTime",
             unit="min",
             native_min=0,
             native_max=1439,
             step=1.0,
             icon="mdi:timer",
-            exists_fn=_cook_time_total_exists,
             bounds_fn=_cook_time_bounds,
             value_fn=_op_minutes,
             write_fn=_cook_time_write,
             cook_param=cook.PARAM_DURATION,
-        ),
-        # Components keep fixed units; HA's duration conversion would turn a
-        # minute remainder into fractional hours rather than the paired timer.
-        NumberDesc(
-            key="cook_time_hours",
-            mode="box",
-            field="x.com.samsung.da.operationTime",
-            unit="h",
-            native_min=0,
-            native_max=9,
-            step=1.0,
-            icon="mdi:timer",
-            exists_fn=_cook_time_part_exists,
-            bounds_fn=_cook_hours_bounds,
-            value_fn=_cook_hours,
-            write_fn=_cook_time_write,
-            cook_param=cook.PARAM_DURATION_HOURS,
-        ),
-        NumberDesc(
-            key="cook_time_minutes",
-            mode="box",
-            field="x.com.samsung.da.operationTime",
-            unit="min",
-            native_min=0,
-            native_max=59,
-            step=1.0,
-            icon="mdi:timer",
-            exists_fn=_cook_time_part_exists,
-            value_fn=_cook_minutes,
-            write_fn=_cook_time_write,
-            cook_param=cook.PARAM_DURATION_MINUTES,
         ),
         STOP_BUTTON,
         START_COOKING_BUTTON,
@@ -832,6 +796,14 @@ OVEN_MODE = Capability(
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
         ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's

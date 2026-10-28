@@ -151,6 +151,9 @@
       "divider": {
         "name": "Séparateur"
       },
+      "reservoir_open": {
+        "name": "Réservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Anti-froissage actif"
       },
@@ -312,12 +315,6 @@
       },
       "zone_target_temperature": {
         "name": "Température cible de la zone"
-      },
-      "cook_time_hours": {
-        "name": "Heures de cuisson"
-      },
-      "cook_time_minutes": {
-        "name": "Minutes de cuisson"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Allumez le ventilateur de la hotte avant de régler sa minuterie d'arrêt."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Saisissez des heures entières de 0 à 9 et des minutes entières de 0 à 59."
-    },
-    "cook_duration_unavailable": {
-      "message": "La durée de cuisson actuelle est indisponible. Attendez une mise à jour de l’appareil avant de modifier les heures ou les minutes."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "La durée totale de cuisson ne peut pas dépasser {max}."
     }
   },
   "selector": {

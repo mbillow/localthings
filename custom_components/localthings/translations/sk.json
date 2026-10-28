@@ -151,6 +151,9 @@
       "divider": {
         "name": "Priečka"
       },
+      "reservoir_open": {
+        "name": "Nádržka"
+      },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pokrčeniu aktívna"
       },
@@ -312,12 +315,6 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
-      },
-      "cook_time_hours": {
-        "name": "Hodiny varenia"
-      },
-      "cook_time_minutes": {
-        "name": "Minúty varenia"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Pred nastavením časovača vypnutia zapnite ventilátor digestora."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Zadajte celé hodiny od 0 do 9 a celé minúty od 0 do 59."
-    },
-    "cook_duration_unavailable": {
-      "message": "Aktuálny čas varenia nie je dostupný. Pred zmenou hodín alebo minút počkajte na aktualizáciu zariadenia."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "Celkový čas varenia nesmie prekročiť {max}."
     }
   },
   "selector": {

@@ -151,6 +151,9 @@
       "divider": {
         "name": "Przegroda"
       },
+      "reservoir_open": {
+        "name": "Zbiornik wody"
+      },
       "wrinkle_prevent_active": {
         "name": "Bez zagnieceń aktywne"
       },
@@ -312,12 +315,6 @@
       },
       "zone_target_temperature": {
         "name": "Docelowa temperatura strefy"
-      },
-      "cook_time_hours": {
-        "name": "Godziny gotowania"
-      },
-      "cook_time_minutes": {
-        "name": "Minuty gotowania"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Włącz wentylator okapu przed ustawieniem wyłącznika czasowego."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Wprowadź całkowite godziny od 0 do 9 i całkowite minuty od 0 do 59."
-    },
-    "cook_duration_unavailable": {
-      "message": "Bieżący czas gotowania jest niedostępny. Poczekaj na aktualizację urządzenia przed zmianą godzin lub minut."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "Łączny czas gotowania nie może przekroczyć {max}."
     }
   },
   "selector": {

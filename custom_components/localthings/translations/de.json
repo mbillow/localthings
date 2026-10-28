@@ -151,6 +151,9 @@
       "divider": {
         "name": "Trennwand"
       },
+      "reservoir_open": {
+        "name": "Wassertank"
+      },
       "wrinkle_prevent_active": {
         "name": "Knitterschutz aktiv"
       },
@@ -312,12 +315,6 @@
       },
       "good_sleep": {
         "name": "Guter Schlaf"
-      },
-      "cook_time_hours": {
-        "name": "Garzeit Stunden"
-      },
-      "cook_time_minutes": {
-        "name": "Garzeit Minuten"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Schalten Sie den Lüfter der Dunstabzugshaube ein, bevor Sie den Abschalttimer einstellen."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Geben Sie ganze Stunden von 0 bis 9 und ganze Minuten von 0 bis 59 ein."
-    },
-    "cook_duration_unavailable": {
-      "message": "Die aktuelle Garzeit ist nicht verfügbar. Warten Sie auf eine Aktualisierung des Geräts, bevor Sie Stunden oder Minuten ändern."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "Die gesamte Garzeit darf {max} nicht überschreiten."
     }
   },
   "selector": {

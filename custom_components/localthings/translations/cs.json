@@ -151,6 +151,9 @@
       "divider": {
         "name": "Přepážka"
       },
+      "reservoir_open": {
+        "name": "Nádržka"
+      },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pomačkání aktivní"
       },
@@ -312,12 +315,6 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
-      },
-      "cook_time_hours": {
-        "name": "Hodiny vaření"
-      },
-      "cook_time_minutes": {
-        "name": "Minuty vaření"
       }
     },
     "select": {
@@ -2387,15 +2384,6 @@
     },
     "paired_hood_fan_off": {
       "message": "Před nastavením časovače vypnutí zapněte ventilátor digestoře."
-    },
-    "cook_duration_part_invalid": {
-      "message": "Zadejte celé hodiny od 0 do 9 a celé minuty od 0 do 59."
-    },
-    "cook_duration_unavailable": {
-      "message": "Aktuální doba vaření není dostupná. Před změnou hodin nebo minut počkejte na aktualizaci zařízení."
-    },
-    "cook_duration_total_out_of_range": {
-      "message": "Celková doba vaření nesmí překročit {max}."
     }
   },
   "selector": {
