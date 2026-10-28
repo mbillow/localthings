@@ -19,12 +19,16 @@ from pathlib import Path
 import pytest
 
 from custom_components.localthings.legacy_http import (
+    CAVITY_LOWER,
+    CAVITY_UPPER,
     COURSE_TABLE_HREF,
     PREFIX,
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_role,
     course_table,
+    divider_in,
     http_status_to_coap,
     is_start,
     model_settings,
@@ -421,6 +425,45 @@ class TestDeviceTypes:
             "/operational/state/vs/0": {PREFIX + "state": "Ready"},
             "/remotectrl/vs/0": {PREFIX + "remoteControlEnabled": True},
         }
+
+
+class TestCavities:
+    """A divided oven's cavities, from what each slot reports for itself."""
+
+    @staticmethod
+    def _record(description, modes):
+        return {"description": description, "Mode": {"supportedModes": [modes]}}
+
+    def test_a_div_slot_with_modes_is_the_lower_cavity(self):
+        """The NV51K777OS's lower slot reports the upper's list; the suffix
+        decides."""
+        record = self._record("LCD_OV_WALL_16K_DIV", "UpperBake,Bake,NoOperation")
+
+        assert cavity_role(record) == CAVITY_LOWER
+
+    def test_a_slot_offering_upper_modes_is_the_upper_cavity(self):
+        """Whatever its description: the NW9300MD's oven is `_LOWER`."""
+        for description in ("LCD_OV_WALL_16K", "LCD_OV_WALL_16K_LOWER", None):
+            record = self._record(description, "UpperConvectionBake,Bake,NoOperation")
+
+            assert cavity_role(record) == CAVITY_UPPER
+
+    def test_an_empty_div_slot_is_no_cavity(self):
+        """The NW9300MD's slot 1 (#681)."""
+        assert cavity_role(self._record("LCD_OV_WALL_16K_DIV", "")) is None
+
+    def test_an_undivided_appliance_has_no_cavities(self):
+        for modes in ("MicroWave,SpeedBroil,NoOperation", "Bake,Broil,NoOperation"):
+            assert cavity_role(self._record("TP6X_OV_17K", modes)) is None
+        assert cavity_role({"description": "TP6X_WW6500"}) is None
+
+    def test_the_divider_is_in_while_devices_lists_a_lower_cavity(self):
+        upper = self._record("LCD_OV_WALL_16K", "UpperBake,Bake")
+        lower = self._record("LCD_OV_WALL_16K_DIV", "LowerBake")
+
+        assert divider_in([upper, lower])
+        assert not divider_in([upper])
+        assert not divider_in([upper, self._record("LCD_OV_WALL_16K_DIV", "")])
 
 
 class TestStaging:

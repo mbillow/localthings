@@ -80,7 +80,7 @@ def _fake_https(monkeypatch):
     _FakeConnection.routes = _routes()
 
 
-def _transport(family: str = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
+def _transport(family: str | None = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
     device = LegacyHttpTransport(
         "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family=family
     )
@@ -126,6 +126,15 @@ class TestReads:
 
         assert resources["/connected/vs/1"] == {PREFIX + "connected": "Off"}
         assert ("GET", "/devices/1") in _requests()
+
+    @pytest.mark.parametrize("family", ["LCD_OV_WALL_16K", None])
+    def test_the_cavities_come_from_the_records_not_the_family(self, family):
+        transport = _transport(family)
+        _seed(transport, 0)
+
+        lower = _seed(transport, 1)["/mode/vs/1"][PREFIX + "supportedModes"]
+
+        assert lower == ["NoOperation", "LowerBake", "LowerConvectionBake", "LowerConvectionRoast"]
 
     def test_a_listed_sibling_reads_as_listed(self):
         assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "On"}

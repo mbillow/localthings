@@ -31,12 +31,15 @@ from functools import cache
 from typing import Any
 
 from .legacy_http import (
+    CAVITY_LOWER,
+    CAVITY_UPPER,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
-    cavity_slots,
+    cavity_role,
     course_table,
+    divider_in,
     http_status_to_coap,
     is_start,
     model_settings,
@@ -126,6 +129,11 @@ class _ApplianceState:
     # The `type` its record reports ('Washer', 'Oven'), which picks where
     # its resources land (legacy_http.table_for).
     device_type: str | None = None
+    # Which cavity of a divided oven its record says it is, if any.
+    cavity: str | None = None
+    # On device 0's state, for the whole appliance: whether the last
+    # `/devices` listing showed a lower cavity, None while unknown.
+    divided: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -256,20 +264,15 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
-            if slots := cavity_slots(self._family, record):
+            if cavity_role(record) == CAVITY_UPPER:
                 # Whether the divider is in decides which modes the upper
-                # cavity offers (with_cavity_modes): the lower cavity is
-                # listed only while it is in. An unanswered listing leaves
-                # the divider unknown rather than failing the sweep.
+                # cavity offers (with_cavity_modes). An unanswered listing
+                # leaves it unknown rather than failing the sweep.
                 try:
-                    _, listing = self._list_devices(timeout)
+                    self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
-                    listing = None
-                if listing is None:
-                    self._state_at(slots[1]).listed = None
-                else:
-                    self._listed_rep(slots[1], listing)
+                    self._state_at(0).divided = None
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -295,6 +298,7 @@ class LegacyHttpTransport:
         state = self._state_at(index)
         state.last_bodies = bodies
         state.device_type = _record_type(record)
+        state.cavity = cavity_role(record)
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
         resources = to_resources(
@@ -339,13 +343,17 @@ class LegacyHttpTransport:
         return 0x45, record, devices
 
     def _list_devices(self, timeout: float) -> tuple[int, list | None]:
-        """`/devices`'s list, or None with the code its failure reads as."""
+        """`/devices`'s list, or None with the code its failure reads as.
+        Every listing read also says whether a divider is in."""
+        main = self._state_at(0)
+        main.divided = None
         status, body = self._request("GET", "/devices", timeout=timeout)
         if status != 200:
             return http_status_to_coap(status), None
         devices = body.get("Devices") if isinstance(body, dict) else None
         if not isinstance(devices, list):
             return 0xA2, None  # 5.02: the bridge answered, with no device list
+        main.divided = divider_in(devices)
         return 0x45, devices
 
     def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
@@ -550,13 +558,12 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        # The lower cavity's listing is the divider, for either cavity.
-        main = bodies if index == 0 else self._state_at(0).last_bodies
-        slots = cavity_slots(self._family, main)
-        if slots is None or index not in slots:
-            return bodies
-        lower = slots[1]
-        return with_cavity_modes(self._family, bodies, index == lower, self._state_at(lower).listed)
+        state = self._state_at(index)
+        if state.cavity == CAVITY_UPPER:
+            return with_cavity_modes(bodies, False, self._state_at(0).divided)
+        if state.cavity == CAVITY_LOWER:
+            return with_cavity_modes(bodies, True, state.listed)
+        return bodies
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]
