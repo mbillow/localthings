@@ -775,7 +775,7 @@ def _read_device(transport, host: str, port: int) -> dict:
         "device_type_name": registry.name if registry is not None else None,
         "device_type_recognized": registry is not None,
         # What the appliance calls its own family ('TP6X_WASHER'); the 8888
-        # bridge still keys its course table and cavity layout by it (#168).
+        # bridge still keys its course table and model settings by it (#168).
         "description": info.get("x.com.samsung.da.description", ""),
     }
 

@@ -311,6 +311,19 @@ class TestCavityModes:
 
         assert "ConvectionBake" in modes
 
+    def test_a_siblings_failed_listing_keeps_the_divider(self):
+        transport = _transport()
+        _seed(transport, 0)
+        _FakeConnection.routes["/devices"] = (503, None)
+
+        _seed(transport, 1)
+        _FakeConnection.routes = _routes()
+        code, rep = transport.read(["mode", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        modes = rep[PREFIX + "supportedModes"]
+        assert "UpperConvectionBake" in modes and "ConvectionBake" not in modes
+
     def test_a_listing_that_times_out_still_reads_the_upper_cavity(self, monkeypatch):
         transport = _transport()
         _seed(transport, 0)

@@ -127,8 +127,10 @@ class _ApplianceState:
     # For a sibling: whether `/devices` listed it at the last read.
     listed: bool | None = None
     # The `type` its record reports ('Washer', 'Oven'), which picks where
-    # its resources land (legacy_http.table_for).
+    # its resources land (legacy_http.table_for), and whether its record has
+    # been read for it at all: a record need not report one.
     device_type: str | None = None
+    typed: bool = False
     # Which cavity of a divided oven its record says it is, if any.
     cavity: str | None = None
     # On device 0's state, for the whole appliance: whether the last
@@ -194,15 +196,23 @@ class LegacyHttpTransport:
         """The device type this index's last record reported for itself."""
         return self._state_at(index).device_type
 
-    def _learn_type(self, index: int, timeout: float) -> str | None:
-        """`_type_at`, reading the record when no sweep has yet: a write
-        routed by the wrong type would reach the wrong endpoint."""
+    def _learn_type(self, index: int, timeout: float) -> int | None:
+        """Read the record for its type when no sweep has: a write routed by
+        the wrong type would reach the wrong endpoint. The code a failed
+        read reads as, or None once the type is known."""
         state = self._state_at(index)
-        if state.device_type is None:
-            status, body = self._request("GET", _device_path(index), timeout=timeout)
-            if status == 200 and isinstance(body, dict):
-                state.device_type = _record_type(unwrap(body))
-        return state.device_type
+        if state.typed:
+            return None
+        status, body = self._request("GET", _device_path(index), timeout=timeout)
+        if status != 200 or not isinstance(body, dict):
+            return http_status_to_coap(status) if status != 200 else 0xA2
+        record = unwrap(body)
+        if index and record.get("id") != str(index):
+            # A bridge echoing device 0 at any index (see _sibling_record).
+            return 0x84
+        state.device_type = _record_type(record)
+        state.typed = True
+        return None
 
     def _locate(self, href: str) -> tuple[int, str]:
         """The device index an href names and its canonical form. A sibling
@@ -269,9 +279,11 @@ class LegacyHttpTransport:
                 # cavity offers (with_cavity_modes). An unanswered listing
                 # leaves it unknown rather than failing the sweep.
                 try:
-                    self._list_devices(timeout)
+                    _, listing = self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
+                    listing = None
+                if listing is None:
                     self._state_at(0).divided = None
         base = _device_path(index)
         bodies = dict(record)
@@ -298,6 +310,7 @@ class LegacyHttpTransport:
         state = self._state_at(index)
         state.last_bodies = bodies
         state.device_type = _record_type(record)
+        state.typed = True
         state.cavity = cavity_role(record)
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
@@ -344,16 +357,15 @@ class LegacyHttpTransport:
 
     def _list_devices(self, timeout: float) -> tuple[int, list | None]:
         """`/devices`'s list, or None with the code its failure reads as.
-        Every listing read also says whether a divider is in."""
-        main = self._state_at(0)
-        main.divided = None
+        Every listing read also says whether a divider is in; a failed one
+        leaves that to the main sweep's own listing."""
         status, body = self._request("GET", "/devices", timeout=timeout)
         if status != 200:
             return http_status_to_coap(status), None
         devices = body.get("Devices") if isinstance(body, dict) else None
         if not isinstance(devices, list):
             return 0xA2, None  # 5.02: the bridge answered, with no device list
-        main.divided = divider_in(devices)
+        self._state_at(0).divided = divider_in(devices)
         return 0x45, devices
 
     def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
@@ -368,7 +380,13 @@ class LegacyHttpTransport:
             # Untested what the appliance does with it; the Flex Duo still
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
-        device_type = self._learn_type(index, timeout)
+        deadline = time.monotonic() + timeout
+        refused = self._learn_type(index, timeout)
+        if refused is not None:
+            _LOGGER.warning("%s: device %d's type is unknown; write refused", self._host, index)
+            return refused, None
+        timeout = _remaining(deadline)
+        device_type = state.device_type
         table = table_for(device_type)
         steps: list[tuple[str, Mapping[str, Any]]] | None
         if isinstance(body, list):

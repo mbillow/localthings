@@ -30,7 +30,7 @@ TRANSPORT_LEGACY_HTTP = "legacy_http"
 CONF_DEVICE_TOKEN = "device_token"
 
 # The `description` that appliance reports for itself, e.g. 'TP6X_WASHER',
-# which its course table and cavity layout are still keyed by; diagnostics
+# which its course table and model settings are still keyed by; diagnostics
 # show it so a dump says which family it came from.
 CONF_LEGACY_FAMILY = "legacy_family"
 

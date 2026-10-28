@@ -103,6 +103,13 @@ def _fresh_appliance_state(monkeypatch):
     monkeypatch.setattr("custom_components.localthings.legacy_http_transport._STATE", {})
 
 
+def _swept_as(device: LegacyHttpTransport, device_type: str, index: int = 0) -> None:
+    """What a sweep of `index` would have learned of its type, for a test
+    whose write needs no sweep of its own."""
+    state = device._state_at(index)
+    state.device_type, state.typed = device_type, True
+
+
 @pytest.fixture
 def transport(monkeypatch):
     _FakeConnection.log = []
@@ -126,7 +133,7 @@ def transport(monkeypatch):
     )
     device.connect()
     # What its record says, as a sweep would have learned before any write.
-    device._state_at(0).device_type = "Washer"
+    _swept_as(device, "Washer")
     return device
 
 
@@ -738,7 +745,7 @@ class TestWallOvenStart:
             "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
         )
         device.connect()
-        device._state_at(0).device_type = "Oven"
+        _swept_as(device, "Oven")
         return device
 
     def test_a_start_goes_as_one_aggregate_body(self, oven):
@@ -788,7 +795,7 @@ class TestWallOvenStart:
             "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_16K"
         )
         rac.connect()
-        rac._state_at(0).device_type = "Air_Conditioner"
+        _swept_as(rac, "Air_Conditioner")
         batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]
 
         code, _ = rac.write(["device", "0"], batch, timeout=8.0)

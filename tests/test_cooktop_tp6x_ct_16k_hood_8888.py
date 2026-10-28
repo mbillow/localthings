@@ -30,7 +30,7 @@ from custom_components.localthings.registry.entities import FanDesc, LightDesc, 
 from custom_components.localthings.registry.subdevices import Subdevice
 from tests.conftest import _discover_full, _load_device_full
 from tests.test_coordinator_cook_start import bare_coordinator  # noqa: F401
-from tests.test_legacy_http_transport import _FakeConnection
+from tests.test_legacy_http_transport import _FakeConnection, _swept_as
 
 NAME = "cooktop_tp6x_ct_16k_hood_8888"
 FIXTURE = json.loads(
@@ -381,11 +381,11 @@ def test_the_transport_sends_hood_writes_to_its_slot(monkeypatch):
     sent = []
 
     def request(method, path, *, body=None, timeout):
-        if method == "PUT":
-            sent.append((method, path, body))
+        sent.append((method, path, body))
         return 204, None
 
     monkeypatch.setattr(transport, "_request", request)
+    _swept_as(transport, "Cooktop", index=1)
 
     transport.write(["power", "vs", "1"], {"x.com.samsung.da.power": "On"}, timeout=10.0)
     transport.write(["mode", "vs", "1"], {"x.com.samsung.da.options": ["FanSpeed_2"]}, timeout=10.0)
