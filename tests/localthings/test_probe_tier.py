@@ -387,3 +387,47 @@ async def test_the_probe_reaches_discovery_rather_than_only_the_cache(hass, mock
     for href in PROBE_HREFS:
         assert href in seen, f"MAIN's {href} never reached discovery"
         assert f"/{uuid}{href}" in seen, f"the sibling's {href} never reached discovery"
+
+
+async def test_a_disabled_sibling_is_never_probed(hass, mock_entry):
+    """A subdevice the owner switched off (#685) costs no probe round trips."""
+    from custom_components.localthings.const import CONF_DISABLED_SUBDEVICES
+
+    uuid = "6c2dff6d-ee5c-dad1-6a5e-000000000001"
+    sibling = Subdevice(kind="prefixed", key=uuid, seed_path=(uuid, "device", "0"))
+    answers = {f"/{uuid}{href}": PROBE_REPS[href] for href in PROBE_HREFS}
+    answers.update(PROBE_REPS)
+    session = _ProbeSession(answers=answers)
+    hass.config_entries.async_update_entry(
+        mock_entry, options={CONF_DISABLED_SUBDEVICES: {uuid: ""}}
+    )
+
+    def _connect(self):
+        self._session = session
+
+    def _enumerate(self, res):
+        self._session = session
+        self.subdevices = [sibling]
+        return res
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.LocalThingsCoordinator._connect_session",
+            _connect,
+        ),
+        patch(
+            "custom_components.localthings.coordinator.LocalThingsCoordinator._poll_once",
+            return_value=_load_fridge(),
+        ),
+        patch(
+            "custom_components.localthings.coordinator.LocalThingsCoordinator"
+            "._enumerate_subdevices_blocking",
+            _enumerate,
+        ),
+        patch("custom_components.localthings.coordinator.LocalThingsCoordinator._close_session"),
+    ):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert any(href in session.gets for href in PROBE_HREFS)
+    assert not any(href.startswith(f"/{uuid}") for href in session.gets)

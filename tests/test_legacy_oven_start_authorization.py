@@ -9,18 +9,30 @@ from homeassistant.exceptions import HomeAssistantError
 from custom_components.localthings.const import CONF_BYPASS_REMOTE_CONTROL
 from custom_components.localthings.registry.capabilities import cook
 from custom_components.localthings.registry.subdevices import MAIN
-from custom_components.localthings.transport import OvenStartUnconfirmed
+from custom_components.localthings.transport import AuthRejected
 from tests.test_legacy_http_lower_cavity import (
     _discovered,
     _lower,
     _requests,
     _routes,
-    _transport,
+    _seed,
 )
 from tests.test_legacy_http_lower_cavity import (
     _fake_https as _fake_https,
 )
+from tests.test_legacy_http_lower_cavity import (
+    _transport as _unseeded_transport,
+)
 from tests.test_legacy_http_transport import _FakeConnection
+
+
+def _transport(family="LCD_OV_WALL_16K", *, bypass_remote_control=False):
+    transport = _unseeded_transport(family, bypass_remote_control=bypass_remote_control)
+    if family == "LCD_OV_WALL_16K":
+        _seed(transport, 0)
+        _seed(transport, 1)
+    _FakeConnection.log.clear()
+    return transport
 
 
 def _batch(index):
@@ -155,7 +167,9 @@ def test_unconfirmed_permission_never_sends_the_next_write(index, phase, respons
 
 @pytest.mark.parametrize("index", [0, 1])
 @pytest.mark.parametrize("bypass", [False, True])
-async def test_live_off_blocks_start_even_with_stale_true_cache(hass, index, bypass):
+async def test_live_permission_respects_bypass_with_stale_true_cache(
+    hass, monkeypatch, index, bypass
+):
     coordinator = await _discovered(hass)
     cavity = _lower(coordinator) if index else MAIN
     assert coordinator._remote_control_enabled(cavity)
@@ -168,22 +182,54 @@ async def test_live_off_blocks_start_even_with_stale_true_cache(hass, index, byp
     )
     _FakeConnection.log.clear()
 
-    with pytest.raises(HomeAssistantError):
+    from custom_components.localthings.const import (
+        CONF_DEVICE_TOKEN,
+        CONF_HOST,
+        CONF_LEGACY_FAMILY,
+        CONF_PORT,
+        CONF_TRANSPORT,
+        TRANSPORT_LEGACY_HTTP,
+    )
+
+    # Exercise the actual coordinator -> factory -> transport option plumbing.
+    hass.config_entries.async_update_entry(
+        coordinator._entry,
+        data={
+            **coordinator._entry.data,
+            CONF_HOST: "10.0.0.8",
+            CONF_PORT: 8888,
+            CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
+            CONF_LEGACY_FAMILY: "LCD_OV_WALL_16K",
+            CONF_DEVICE_TOKEN: "tok",
+        },
+    )
+    monkeypatch.setattr(
+        "custom_components.localthings.coordinator.read_identity", lambda *args: None
+    )
+    coordinator._open_session(8888)
+    if bypass:
         await coordinator.async_start_cooking(
             cavity,
             mode="LowerBake" if index else "UpperConvectionBake",
             temperature=350,
             duration=300,
         )
-
-    assert _requests() == [("GET", f"/devices/{index}/configuration")]
+        assert _requests() == [("PUT", f"/devices/{index}")] * 2
+    else:
+        with pytest.raises(HomeAssistantError) as error:
+            await coordinator.async_start_cooking(
+                cavity,
+                mode="LowerBake" if index else "UpperConvectionBake",
+                temperature=350,
+                duration=300,
+            )
+        assert error.value.translation_key == "command_refused"
+        assert _requests() == [("GET", f"/devices/{index}/configuration")]
 
 
 @pytest.mark.parametrize("index", [0, 1])
-@pytest.mark.parametrize("failed_request", [1, 2, 3, 4])
-async def test_start_is_not_replayed_after_a_lost_response(
-    hass, monkeypatch, index, failed_request
-):
+async def test_start_is_not_replayed_after_a_lost_response(hass, monkeypatch, index):
+    failed_request = 4
     coordinator = await _discovered(hass)
     cavity = _lower(coordinator) if index else MAIN
     transport = coordinator._session
@@ -217,6 +263,85 @@ async def test_start_is_not_replayed_after_a_lost_response(
     assert not coordinator._session_lock.locked()
 
 
+@pytest.mark.parametrize("failed_request", [1, 2, 3])
+def test_failures_before_run_remain_connection_errors(monkeypatch, failed_request):
+    transport = _transport()
+    permission = (200, {"Configuration": {"remoteControlEnabled": True}})
+    responses = [permission, (204, None), permission][: failed_request - 1]
+    request = Mock(side_effect=[*responses, TimeoutError("connection failed")])
+    monkeypatch.setattr(transport, "_request", request)
+    with pytest.raises(TimeoutError):
+        transport.write(["device", "0"], _batch(0), timeout=8.0)
+    assert request.call_count == failed_request
+    assert not any(
+        call.kwargs.get("body") == {"Device": {"Operation": {"state": "Run"}}}
+        for call in request.call_args_list
+    )
+
+
+def test_explicit_auth_refusal_of_run_is_not_an_uncertain_start(monkeypatch):
+    transport = _transport()
+    permission = (200, {"Configuration": {"remoteControlEnabled": True}})
+    request = Mock(side_effect=[permission, (204, None), permission, AuthRejected("token refused")])
+    monkeypatch.setattr(transport, "_request", request)
+    assert transport.write(["device", "0"], _batch(0), timeout=8.0) == (0x81, "token refused")
+    assert request.call_count == 4
+
+
+@pytest.mark.parametrize("failed_request", [1, 2, 3])
+@pytest.mark.parametrize("lost_run_response", [False, True])
+async def test_pre_run_failures_reconnect_without_replaying_run(
+    hass, monkeypatch, failed_request, lost_run_response
+):
+    coordinator = await _discovered(hass)
+    transport = coordinator._session
+    attempts = []
+    run = {"Device": {"Operation": {"state": "Run"}}}
+
+    def request(method, path, **kwargs):
+        body = kwargs.get("body")
+        attempts.append((method, path, body))
+        if len(attempts) == failed_request or (lost_run_response and body == run):
+            raise TimeoutError("response lost")
+        return (
+            (200, {"Configuration": {"remoteControlEnabled": True}})
+            if method == "GET"
+            else (204, None)
+        )
+
+    monkeypatch.setattr(transport, "_request", request)
+    reconnect = Mock(side_effect=lambda: setattr(coordinator, "_session", transport))
+    monkeypatch.setattr(coordinator, "_connect_session", reconnect)
+    monkeypatch.setattr(coordinator, "_RECONNECT_PAUSE_S", 0)
+    if lost_run_response:
+        with pytest.raises(HomeAssistantError) as error:
+            await coordinator.async_start_cooking(
+                MAIN, mode="UpperConvectionBake", temperature=350, duration=300
+            )
+        assert error.value.translation_key == "cook_start_unconfirmed"
+    else:
+        await coordinator.async_start_cooking(
+            MAIN, mode="UpperConvectionBake", temperature=350, duration=300
+        )
+    reconnect.assert_called_once()
+    assert sum(body == run for _, _, body in attempts) == 1
+    assert len(attempts) == failed_request + 4
+
+
+def test_same_board_combo_keeps_a_combined_start():
+    from tests.test_legacy_http_nw9300md import _seed as combo_seed
+    from tests.test_legacy_http_nw9300md import _sweep
+
+    transport = _sweep(divided=True)
+    for index in (0, 2, 3):
+        combo_seed(transport, index)
+        _FakeConnection.log.clear()
+        transport.write(["device", str(index)], _batch(index), timeout=8.0)
+        assert _requests() == [("PUT", f"/devices/{index}")]
+        body = _FakeConnection.log[0][2]
+        assert body is not None and body["Device"]["Operation"]["state"] == "Run"
+
+
 @pytest.mark.parametrize("budget", [0.0, 2.0, 8.0])
 def test_all_start_requests_share_one_timeout_budget(monkeypatch, budget):
     now = 0.0
@@ -243,9 +368,8 @@ def test_all_start_requests_share_one_timeout_budget(monkeypatch, budget):
     monkeypatch.setattr(transport, "_request", request)
 
     if budget < 8:
-        with pytest.raises(OvenStartUnconfirmed) as error:
+        with pytest.raises(TimeoutError):
             transport.write(["device", "0"], _batch(0), timeout=budget)
-        assert isinstance(error.value.__cause__, TimeoutError)
         assert timeouts == ([] if budget == 0 else [2.0, 1.0])
     else:
         assert transport.write(["device", "0"], _batch(0), timeout=budget)[0] == 0x44

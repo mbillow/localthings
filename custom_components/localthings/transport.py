@@ -296,6 +296,7 @@ def create_transport(
     *,
     on_notification: Callable[[str, bytes], None] | None = None,
     local_port: int | None = None,
+    bypass_remote_control: bool = False,
 ) -> Transport:
     """The transport an entry's appliance speaks.
 
@@ -314,6 +315,7 @@ def create_transport(
             key_pem=data[CONF_LEAF_KEY_PEM],
             token=data[CONF_DEVICE_TOKEN],
             family=data.get(CONF_LEGACY_FAMILY),
+            bypass_remote_control=bypass_remote_control,
         )
     host, port = entry_endpoint(data)
     return DtlsTransport(

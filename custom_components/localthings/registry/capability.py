@@ -30,3 +30,7 @@ class Capability:
     # Rare optional hook — only operational-state-style resources use this.
     on_observation: Callable[[dict, dict], None] | None = None
     project: Callable[[dict, dict], dict] | None = None
+    # For a subdevice whose identity resource reports another model (#676's
+    # hood slot reports the cooktop's board): its resources -> its own
+    # model, or None when it doesn't apply.
+    model_fn: Callable[[dict], str | None] | None = None

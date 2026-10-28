@@ -160,6 +160,9 @@ class NumberDesc(SamsungEntityDescription):
     bounds_fn: Callable[[dict, dict], tuple[float, float, float] | None] | None = None
     range_field: str | None = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
+    # Wire body -> the body to merge into the cache, for a write whose effect
+    # the device reports in fields it never accepts. The wire body is unchanged.
+    optimistic_fn: Callable[[dict], dict] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

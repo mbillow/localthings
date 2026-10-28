@@ -1455,6 +1455,50 @@ async def test_send_command_applies_write_optimistically_before_settling(
     assert coordinator._cache.get("/some/path") == {"value": 5}
 
 
+async def test_optimistic_fn_shapes_the_cache_but_not_the_wire_body(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """A write the device reports in fields it doesn't accept (the paired
+    hood's timer, #677) shows those fields at once, without sending them."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    options = "x.com.samsung.da.options"
+    coordinator._cache.apply_rep(
+        "/some/path", {options: ["Set_0", "Current_0", "Other_1"]}, source="test"
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (["some", "path"], {options: [f"Set_{payload}"]})
+
+    def _optimistic_fn(body):
+        return {**body, options: [*body[options], f"Current_{body[options][0][4:]}"]}
+
+    desc = NumberDesc(
+        key="test",
+        field=options,
+        write_fn=_write_fn,
+        optimistic_fn=_optimistic_fn,
+    )
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+    sent = []
+
+    with patch.object(fake, "subscribe"):
+        fake.write = lambda path, body, **k: sent.append(body) or (0x44, None)
+        await coordinator.async_send_command(bound, 5)
+
+    assert sent == [{options: ["Set_5"]}]
+    # The extra token survives the merge with the cached options.
+    assert coordinator._cache.get("/some/path") == {options: ["Set_5", "Current_5", "Other_1"]}
+
+
 async def test_write_only_button_does_not_manufacture_cache_state(
     hass: HomeAssistant,
     mock_entry,

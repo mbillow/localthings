@@ -732,6 +732,11 @@ class TestWallOvenStart:
         )
         bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
         _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        for wrapper in ("Information", "Configuration"):
+            _FakeConnection.routes[f"/devices/0/{wrapper.lower()}"] = (
+                200,
+                {wrapper: bodies[wrapper]},
+            )
         _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
         device = LegacyHttpTransport(
             "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"

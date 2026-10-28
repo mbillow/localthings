@@ -35,8 +35,8 @@ from .legacy_http import (
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_slots,
     course_table,
-    has_cavities,
     http_status_to_coap,
     is_mapped,
     is_start,
@@ -58,6 +58,7 @@ from .registry.capabilities.laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     course_option_mask,
 )
+from .registry.capabilities.oven import is_lcd_ov_wall_16k
 from .registry.subdevices import Subdevice
 from .transport import AuthRejected, OvenStartUnconfirmed
 
@@ -83,6 +84,7 @@ _LISTED_FIELD = "x.com.samsung.da.connected"
 # a suffix (`LCD_OV_WALL_16K_DIV`, #572); only such a suffix is carried over,
 # since the record's description can otherwise carry the serial.
 _RECORD_SUFFIX = re.compile(r"_[A-Z]+")
+_RECORD_TOKEN = re.compile(r"[A-Z0-9]+(?:_[A-Z0-9]+)*")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
@@ -144,6 +146,7 @@ class LegacyHttpTransport:
         key_pem: str,
         token: str,
         family: str | None = None,
+        bypass_remote_control: bool = False,
     ) -> None:
         self._host = host
         self._port = port
@@ -151,6 +154,7 @@ class LegacyHttpTransport:
         self._key_pem = key_pem
         self._token = token
         self._family = family or ""
+        self._bypass_remote_control = bypass_remote_control
         self._table = table_for(family)
         self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
@@ -236,19 +240,20 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
-            if has_cavities(self._family):
+            if slots := cavity_slots(self._family, record):
                 # Whether the divider is in decides which modes the upper
-                # cavity offers (with_cavity_modes). An unanswered listing
-                # leaves the divider unknown rather than failing the sweep.
+                # cavity offers (with_cavity_modes): the lower cavity is
+                # listed only while it is in. An unanswered listing leaves
+                # the divider unknown rather than failing the sweep.
                 try:
                     _, listing = self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
                     listing = None
                 if listing is None:
-                    self._state_at(1).listed = None
+                    self._state_at(slots[1]).listed = None
                 else:
-                    self._listed_rep(1, listing)
+                    self._listed_rep(slots[1], listing)
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -270,6 +275,7 @@ class LegacyHttpTransport:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
+            bodies = _with_record_name(bodies, record.get("name"))
         self._state_at(index).last_bodies = bodies
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
@@ -359,16 +365,6 @@ class LegacyHttpTransport:
             # chose, so a patch this family has no resource for is refused.
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
-        if (
-            self._family == "LCD_OV_WALL_16K"
-            and is_start(aggregate)
-            and "Mode" in aggregate["Device"]
-        ):
-            try:
-                return self._start_oven(index, aggregate, timeout)
-            except Exception as err:
-                # A lost response cannot establish whether Run reached the oven.
-                raise OvenStartUnconfirmed(str(err)) from err
         sendable, staged = split_start_only(aggregate, self._table)
         if any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
             # A new course brings its own settings, on the panel as well, so
@@ -379,8 +375,14 @@ class LegacyHttpTransport:
         for key, value in staged.items():
             state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and state.staged and self._idle(index):
-            return self._start(index, sendable, timeout)
+        info = state.last_bodies.get("Information") or {}
+        settings_first = (
+            is_lcd_ov_wall_16k(info.get("modelID"))
+            and info.get("deviceSubType") == "WallOven"
+            and "Mode" in sendable["Device"]
+        )
+        if is_start(sendable) and (settings_first or (state.staged and self._idle(index))):
+            return self._start(index, sendable, timeout, settings_first=settings_first)
         if not sendable["Device"]:
             return 0x44, None
         if sendable == _READY and self._already_ready(index, timeout):
@@ -462,35 +464,12 @@ class LegacyHttpTransport:
         operation = self._state_at(index).last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
 
-    def _start_oven(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
-        """NV51K7770S takes settings, then Run; see docs/investigations/legacy-oven-start.md."""
-        deadline = time.monotonic() + timeout
-        blocked = self._oven_start_permission(index, "before settings", _remaining(deadline))
-        if blocked is not None:
-            return blocked
-        device = dict(aggregate["Device"])
-        operation = {key: value for key, value in device["Operation"].items() if key != "state"}
-        if operation:
-            device["Operation"] = operation
-        else:
-            del device["Operation"]
-        path = _device_path(index)
-        status, response = self._request(
-            "PUT", path, body={"Device": device}, timeout=_remaining(deadline)
-        )
-        if not 200 <= status < 300:
-            return http_status_to_coap(status), response
-        time.sleep(min(_OVEN_START_SETTLE_S, _remaining(deadline)))
-        blocked = self._oven_start_permission(index, "before Run", _remaining(deadline))
-        if blocked is not None:
-            return blocked
-        status, response = self._request("PUT", path, body=_RUN, timeout=_remaining(deadline))
-        return http_status_to_coap(status), response
-
     def _oven_start_permission(
         self, index: int, phase: str, timeout: float
     ) -> tuple[int, str] | None:
         """Require current permission from the cavity receiving the next start write."""
+        if self._bypass_remote_control:
+            return None
         status, body = self._request("GET", f"{_device_path(index)}/configuration", timeout=timeout)
         if status != 200:
             code = http_status_to_coap(status) if status >= 400 else 0xA2
@@ -516,29 +495,52 @@ class LegacyHttpTransport:
         """
         return self._operation_state(index, timeout) == "Ready"
 
-    def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
-        """Start with every held value in the same body -- the only way this
-        firmware takes them -- then make sure it actually runs.
-
-        Measured on a TP6X_WW6500: the composed body loads the programme and
-        leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
-        That second `Run` is sent only when a fresh read says it isn't
-        running.
-        """
+    def _start(
+        self, index: int, aggregate: dict[str, Any], timeout: float, *, settings_first: bool = False
+    ) -> tuple[int, Any]:
+        """Load settings, then Run if needed. WW6500 takes Run in both writes;
+        NV51K7770S requires it omitted from the first, with a 0.5s pause (#667)."""
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
-        status, response = self._request("PUT", base, body=body, timeout=timeout)
+        deadline = time.monotonic() + timeout
+        if settings_first:
+            blocked = self._oven_start_permission(index, "before settings", _remaining(deadline))
+            if blocked is not None:
+                return blocked
+            operation = body["Device"]["Operation"]
+            operation.pop("state", None)
+            if not operation:
+                del body["Device"]["Operation"]
+        status, response = self._request(
+            "PUT", base, body=body, timeout=_remaining(deadline) if settings_first else timeout
+        )
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
         held.clear()
-        time.sleep(_START_SETTLE_S)
-        if self._running(index, timeout):
+        time.sleep(
+            min(_OVEN_START_SETTLE_S, _remaining(deadline)) if settings_first else _START_SETTLE_S
+        )
+        if settings_first:
+            blocked = self._oven_start_permission(index, "before Run", _remaining(deadline))
+            if blocked is not None:
+                return blocked
+        elif self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
-        if not 200 <= run_status < 300 and self._running(index, timeout):
-            # It got there by itself between the read and the Run.
+        run_timeout = _remaining(deadline) if settings_first else timeout
+        try:
+            run_status, run_response = self._request("PUT", base, body=_RUN, timeout=run_timeout)
+        except AuthRejected as err:
+            if settings_first:
+                return 0x81, str(err)
+            raise
+        except Exception as err:
+            if settings_first:
+                # Only this request can have started the oven; never replay it.
+                raise OvenStartUnconfirmed(str(err)) from err
+            raise
+        if not settings_first and not 200 <= run_status < 300 and self._running(index, timeout):
             return http_status_to_coap(status), response
         return http_status_to_coap(run_status), run_response
 
@@ -577,8 +579,13 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        # Device 1's listing is the divider, for either cavity.
-        return with_cavity_modes(self._family, bodies, index, self._state_at(index or 1).listed)
+        # The lower cavity's listing is the divider, for either cavity.
+        main = bodies if index == 0 else self._state_at(0).last_bodies
+        slots = cavity_slots(self._family, main)
+        if slots is None or index not in slots:
+            return bodies
+        lower = slots[1]
+        return with_cavity_modes(self._family, bodies, index == lower, self._state_at(lower).listed)
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]
@@ -714,16 +721,41 @@ def _remaining(deadline: float) -> float:
 
 def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:
     """`bodies` with a sibling record's description on its Information, when
-    it is that Information's own description plus a suffix (_RECORD_SUFFIX)."""
+    it is that Information's own description plus a suffix (_RECORD_SUFFIX).
+
+    With no Information at all, because its linked read ran out of the
+    sibling's budget on a slow appliance (PR #677), a description that is a
+    plain board token (_RECORD_TOKEN) stands in for it: it says what the
+    sibling is, which the hood slot's bindings depend on."""
+    if not isinstance(description, str):
+        return bodies
     information = bodies.get("Information")
+    if information is None:
+        if not _RECORD_TOKEN.fullmatch(description):
+            return bodies
+        return {**bodies, "Information": {"description": description}}
     if not isinstance(information, dict):
         return bodies
     own = information.get("description")
-    if not (isinstance(own, str) and isinstance(description, str)):
+    if not isinstance(own, str):
         return bodies
     if not (description.startswith(own) and _RECORD_SUFFIX.fullmatch(description[len(own) :])):
         return bodies
     return {**bodies, "Information": {**information, "description": description}}
+
+
+def _with_record_name(bodies: dict[str, Any], name: Any) -> dict[str, Any]:
+    """`bodies` with a sibling record's name (`Hood`, #676) on its
+    Information, which otherwise names only the board it shares with the
+    main unit. It names the sibling's type, not anything the owner sets."""
+    if not (isinstance(name, str) and name):
+        return bodies
+    information = bodies.get("Information")
+    if information is None:
+        information = {}
+    if not isinstance(information, dict):
+        return bodies
+    return {**bodies, "Information": {**information, "deviceName": name}}
 
 
 def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:

@@ -83,9 +83,17 @@ def _fake_https(monkeypatch):
     _FakeConnection.routes = _routes()
 
 
-def _transport(family: str = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
+def _transport(
+    family: str = "LCD_OV_WALL_16K", *, bypass_remote_control: bool = False
+) -> LegacyHttpTransport:
     device = LegacyHttpTransport(
-        "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family=family
+        "10.0.0.8",
+        8888,
+        cert_pem="CERT",
+        key_pem="KEY",
+        token="tok",
+        family=family,
+        bypass_remote_control=bypass_remote_control,
     )
     device.connect()
     return device

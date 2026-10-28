@@ -6,7 +6,7 @@ so this registry is almost entirely sensors. No common.POWER: there's no
 `/power/*` resource on this board, only `/energy/battery/vs/0`.
 """
 
-from ..capabilities import air_monitor, common, ignored
+from ..capabilities import air_monitor, airconditioner, common, ignored
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -18,6 +18,8 @@ REGISTRY = DeviceRegistry(
             *air_monitor.COVERAGE,
             air_monitor.SENSORS,
             air_monitor.HUMIDITY,
+            # Some units report the Tizen Lite AC's items[] temperature (#683).
+            airconditioner.CURRENT_TEMPERATURE_VS,
             air_monitor.BATTERY,
             air_monitor.AIR_QUALITY_STANDARD,
             air_monitor.DND,
