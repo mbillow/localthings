@@ -197,6 +197,28 @@ def _has_option(prefix):
     )
 
 
+def is_tp6x_ov_board(resources):
+    """The NQ70M6650DS combo's 8888 board (#674). It answers every write
+    `204`, but runs a remote cook only once Start is pressed at the panel,
+    and a setpoint written while idle clears the chosen mode."""
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return board.startswith("TP6X_OV_")
+
+
+def is_empty_legacy_oven_slot(resources):
+    """The blank `/devices/1` the NQ70M6650DS combo's 8888 bridge answers
+    between its microwave (0) and oven (2), and leaves out of `/devices`
+    (#674): no cavity type, no modes, powered off."""
+    mode = resources.get("/mode/vs/0") or {}
+    return (
+        is_tp6x_ov_board(resources)
+        and _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
+        and not mode.get("x.com.samsung.da.supportedModes")
+        and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+    )
+
+
 def _option_write(prefix, new_value):
     """A one-token x.com.samsung.da.options write, mirroring
     laundry.option_write. NOT independently confirmed on an oven -- issue
@@ -230,8 +252,13 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
-def _cook_time_write(p, rep, href=None):
-    """Write operationTime + remainingTime (H:MM:SS) from minutes."""
+def is_lcd_ov_wall_16k(model):
+    """Exact board token used by the NV51K7770S (#572, #662)."""
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+def _cook_time_write(p, rep, href=None, resources=None):
+    """Write the requested cook duration from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
@@ -240,10 +267,13 @@ def _cook_time_write(p, rep, href=None):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
-    return ["operational", "state", "vs", "0"], {
-        "x.com.samsung.da.operationTime": hms,
-        "x.com.samsung.da.remainingTime": hms,
-    }
+    body = {"x.com.samsung.da.operationTime": hms}
+    model = ((resources or {}).get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    # The NV51K7770S answers a running timer edit that also sends
+    # remainingTime with 4.00; operationTime alone is accepted (#662).
+    if not is_lcd_ov_wall_16k(model):
+        body["x.com.samsung.da.remainingTime"] = hms
+    return ["operational", "state", "vs", "0"], body
 
 
 def _oven_mode_options(resources):
@@ -330,12 +360,21 @@ def _cook_time_bounds(rep, resources):
     return float(-(-(spec.time_min or 0) // 60)), float(spec.time_max // 60), 1.0
 
 
+def has_paired_cook_time(resources):
+    """The measured 9:59 wall oven, excluding the same-board combo (#681)."""
+    info = resources.get("/information/vs/0") or {}
+    return (
+        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
+        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
+    )
+
+
 def _cook_time_part_exists(rep, resources):
-    return cook.is_lcd_wall_16k(resources) and "x.com.samsung.da.operationTime" in rep
+    return has_paired_cook_time(resources) and "x.com.samsung.da.operationTime" in rep
 
 
 def _cook_time_total_exists(rep, resources):
-    return not cook.is_lcd_wall_16k(resources) and (
+    return not has_paired_cook_time(resources) and (
         not rep or is_stub_rep(rep) or "x.com.samsung.da.operationTime" in rep
     )
 

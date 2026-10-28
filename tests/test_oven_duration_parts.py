@@ -27,6 +27,8 @@ from tests.test_legacy_http_lower_cavity import (
     _requests,
     _routes,
 )
+from tests.test_legacy_http_nw9300md import _routes as _combo_routes
+from tests.test_oven_running_cook_time import _running_routes, _writes
 
 
 async def _prepared(hass):
@@ -158,6 +160,73 @@ async def test_other_boards_do_not_gain_duration_parts(hass):
     assert _is_included(bound["cook_time"], coordinator)
     assert not _is_included(bound["cook_time_hours"], coordinator)
     assert not _is_included(bound["cook_time_minutes"], coordinator)
+
+
+@pytest.mark.parametrize("subtype", ["CombiOven", "Unknown", None])
+async def test_same_board_without_wall_oven_subtype_keeps_total_duration(hass, subtype):
+    coordinator = await _discovered(hass)
+    for index, cavity in enumerate((MAIN, _lower(coordinator))):
+        coordinator._observe.apply(
+            f"/information/vs/{index}", {PREFIX + "deviceSubType": subtype}, source="poll"
+        )
+        bound, numbers = _numbers(coordinator, cavity)
+        assert _is_included(bound["cook_time"], coordinator)
+        assert not any(_is_included(number._bound, coordinator) for number in numbers.values())
+
+
+@pytest.mark.parametrize("divided", [True, False])
+async def test_nw9300md_cavities_keep_their_total_timer_and_registry_entries(hass, divided):
+    coordinator = await _discovered(hass, _combo_routes(divided=divided))
+    registry = er.async_get(hass)
+    originals = []
+    for cavity in (sub for sub in coordinator.subdevices if sub.key in ("2", "3")):
+        bound, numbers = _numbers(coordinator, cavity)
+        total = LocalThingsNumber(coordinator, bound["cook_time"])
+        assert total.unique_id is not None
+        originals.append(
+            registry.async_get_or_create(
+                "number", DOMAIN, total.unique_id, config_entry=coordinator._entry
+            )
+        )
+        assert _is_included(bound["cook_time"], coordinator)
+        assert total.mode == "slider"
+        assert not any(_is_included(number._bound, coordinator) for number in numbers.values())
+    assert len(originals) == 2
+    _drop_cook_times_superseded_by_parts(hass, coordinator._entry, coordinator)
+    assert all(registry.async_get(original.entity_id) is not None for original in originals)
+
+
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+@pytest.mark.parametrize("hours_first", [True, False])
+async def test_running_part_edits_preserve_the_other_part_and_cavity(
+    hass, index, divided, mode, hours_first
+):
+    coordinator = await _discovered(hass, _running_routes(index, divided, mode))
+    cavity = _lower(coordinator) if index else MAIN
+    _, numbers = _numbers(coordinator, cavity)
+    other_href = f"/operational/state/vs/{1 - index}"
+    other_before = dict(coordinator.resource(other_href) or {})
+    _FakeConnection.log.clear()
+
+    edits = [("cook_time_hours", 1), ("cook_time_minutes", 30)]
+    for key, value in edits if hours_first else reversed(edits):
+        await numbers[key].async_set_native_value(value)
+    for key in ("cook_time_hours", "cook_time_minutes"):
+        await numbers[key].async_set_native_value(0)
+
+    expected = ["01:02:00" if hours_first else "00:30:00", "01:30:00", "00:30:00", "00:00:00"]
+    assert _writes() == [
+        (f"/devices/{index}", {"Device": {"Operation": {"operationTime": duration}}})
+        for duration in expected
+    ]
+    actual = coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))
+    assert actual[PREFIX + "remainingTime"] == "00:01:47"
+    assert actual[PREFIX + "state"] == "Run"
+    assert (coordinator.resource(other_href) or {}) == other_before
+    assert not coordinator._held_cooks
 
 
 async def test_total_duration_cleanup_removes_only_replaced_numbers(hass):

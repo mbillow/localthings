@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Paused"
+      },
+      "booster_heater": {
+        "name": "Booster heater"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Auto",
               "smart": "Smart",
               "max": "Max",
               "mid": "Mid",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lamp"
+      },
+      "paired_hood_light": {
+        "name": "Paired hood light"
       }
     },
     "number": {
@@ -285,6 +292,9 @@
       "oven_setpoint": {
         "name": "Setpoint"
       },
+      "paired_hood_shutoff_timer": {
+        "name": "Paired hood shutoff timer"
+      },
       "sensing_interval": {
         "name": "AI Purify interval"
       },
@@ -304,10 +314,10 @@
         "name": "Zone target temperature"
       },
       "cook_time_hours": {
-        "name": "Cook Time Hours"
+        "name": "Cook time hours"
       },
       "cook_time_minutes": {
-        "name": "Cook Time Minutes"
+        "name": "Cook time minutes"
       }
     },
     "select": {
@@ -858,6 +868,19 @@
           "75": "Delicates",
           "77": "Perm Press",
           "78": "Quick Wash",
+          "91": "Self Clean",
+          "94": "Towels",
+          "9c": "Heavy Duty",
+          "9d": "Rinse + Spin",
+          "9e": "Perm Press",
+          "9f": "Quick Wash",
+          "a2": "Delicates",
+          "a3": "Active Wear",
+          "a5": "Bedding",
+          "a9": "Sanitize",
+          "aa": "Whites",
+          "ab": "Eco Cold",
+          "b1": "Self Clean+",
           "ba": "Drain/Spin",
           "d0": "Cotton",
           "d1": "E Cotton",
@@ -1448,6 +1471,16 @@
       "power_level": {
         "name": "Power level"
       },
+      "paired_hood_fan_setting": {
+        "name": "Paired hood fan setting",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Paired hood fan speed"
       },
@@ -1456,6 +1489,12 @@
       },
       "paired_hood_model": {
         "name": "Paired hood model"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Paired hood shutoff timer set"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Paired hood shutoff timer status"
       },
       "power_energy_kwh": {
         "name": "Power energy"
@@ -1667,6 +1706,12 @@
           "dual": "Dual",
           "triple": "Triple"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Heat generated"
+      },
+      "three_way_valve": {
+        "name": "3-way valve"
       }
     },
     "switch": {
@@ -2121,6 +2166,7 @@
         "title": "LocalThings options",
         "menu_options": {
           "settings": "Device settings",
+          "subdevices": "Subdevices",
           "cloud_courses": "Download cycles",
           "forget_learned_modes": "Forget remembered modes",
           "debug_write": "Debug: write to a resource"
@@ -2134,6 +2180,13 @@
           "finish_time_hysteresis_minutes": "Estimated finish -- minimum change (minutes)",
           "learn_device_modes": "Remember modes the device reports but doesn't advertise",
           "cloud_courses_enabled": "Offer downloaded cycles"
+        }
+      },
+      "subdevices": {
+        "title": "Subdevices",
+        "description": "Some appliances expose more than one device: each indoor unit of a multi-split system, or each cavity of a dual oven. Others report an extra slot that isn't real hardware, which shows up as a duplicate or empty device. Untick any subdevice that doesn't match something on your appliance. Its device is removed and the integration reloads without it; tick it again to bring it back.",
+        "data": {
+          "enabled_subdevices": "Keep these subdevices"
         }
       },
       "forget_learned_modes": {
@@ -2331,6 +2384,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse isn't available on the selected cycle."
+    },
+    "paired_hood_fan_off": {
+      "message": "Turn the range hood's fan on before setting its shutoff timer."
     },
     "cook_duration_part_invalid": {
       "message": "Enter whole hours from 0 to 9 and whole minutes from 0 to 59."

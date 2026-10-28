@@ -8,6 +8,7 @@ for the burner half.
 
 from ..capabilities import common, dishwasher, ignored, oven
 from ..capabilities import range as range_caps
+from ..capability import Capability
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -28,6 +29,11 @@ REGISTRY = DeviceRegistry(
             oven.OVEN_DOOR,
             oven.OVEN_CONNECTED,
             oven.OVEN_SPEC,
+            oven.OVEN_RECIPE_COOK,
+            # A TP2X gas range (issue #670) lists a fan-speed range with no
+            # current speed and grill-area ids with no state; it has no hood.
+            Capability(href="/hood/fanspeed/vs/0"),
+            Capability(href="/multigrills/vs/0"),
             # The diagnosisStart shape the oven registry binds (#300), here on
             # an NX58K7850SS Flex Duo's two cavities (#624).
             dishwasher.DIAGNOSIS,

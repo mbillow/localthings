@@ -604,12 +604,6 @@ DURATION_PARTS = (PARAM_DURATION_HOURS, PARAM_DURATION_MINUTES)
 PARAM_START = "start"
 
 
-def is_lcd_wall_16k(resources: dict) -> bool:
-    info = resources.get("/information/vs/0") or {}
-    model = info.get("x.com.samsung.da.modelNum")
-    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
-
-
 def duration_parts_max(resources: dict) -> int:
     """The paired controls' maximum, narrowed by the current mode when known."""
     maximum = 599 * 60
