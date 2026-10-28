@@ -20,6 +20,8 @@ Verified against a real TP1X_DA_AC_EHS_01001_0000 diagnostics dump
 (firmware AEH-WW-TP1-22-AE6000_17260402, TizenRT 3.1 / DAWIT 2.0).
 """
 
+from dataclasses import replace
+
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -30,6 +32,7 @@ from ..entities import (
     WaterHeaterDesc,
     ZoneClimateDesc,
 )
+from . import common
 from .common import lifetime_wh_to_kwh, normalize_temp_unit
 
 
@@ -280,6 +283,13 @@ OUTDOOR_TEMPERATURE = Capability(
             value_fn=_num,
         ),
     ),
+)
+
+# The MIM-H04EN kit reports one counter under both cumulativePower and
+# cumulativeConsumption (#682), so the second would be a duplicate sensor.
+ENERGY_METER = replace(
+    common.ENERGY_METER,
+    entities=tuple(e for e in common.ENERGY_METER.entities if e.key != "power_energy_kwh"),
 )
 
 # The heat delivered, next to /energy/consumption/vs/0's electricity used.

@@ -83,3 +83,10 @@ def test_power_in_kw_is_labelled_kw():
     assert desc.unit_fn(rep) == "kW"
     assert desc.unit_fn({**rep, "x.com.samsung.da.instantaneousPowerUnit": "W"}) == "W"
     assert desc.unit_fn({}) == "W"
+
+
+def test_one_counter_is_one_energy_sensor():
+    """cumulativeConsumption repeats cumulativePower on this board."""
+    state = _heat_pump_state()
+    assert state["energy_kwh"] == 16.84
+    assert "power_energy_kwh" not in state
