@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Pausiert"
+      },
+      "booster_heater": {
+        "name": "Zusatzheizung"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automatisch",
               "mid": "Mittel",
               "sleep": "Schlaf",
               "smart": "Intelligent",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lampe"
+      },
+      "paired_hood_light": {
+        "name": "Licht der gekoppelten Dunstabzugshaube"
       }
     },
     "number": {
@@ -281,6 +288,9 @@
       },
       "oven_setpoint": {
         "name": "Sollwert"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Abschalttimer der gekoppelten Dunstabzugshaube"
       },
       "sensing_interval": {
         "name": "KI-Reinigungsintervall"
@@ -815,6 +825,19 @@
           "75": "Feinwäsche",
           "77": "Pflegeleicht",
           "78": "Schnellwäsche",
+          "91": "Selbstreinigung",
+          "94": "Handtücher",
+          "9c": "Intensiv",
+          "9d": "Spülen + Schleudern",
+          "9e": "Pflegeleicht",
+          "9f": "Schnellwäsche",
+          "a2": "Feinwäsche",
+          "a3": "Sportkleidung",
+          "a5": "Bettwäsche",
+          "a9": "Hygienespülung",
+          "aa": "Weißwäsche",
+          "ab": "Eco Kalt",
+          "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
           "d0": "Baumwolle",
           "d1": "Eco Baumwolle",
@@ -1436,6 +1459,16 @@
       "power_level": {
         "name": "Leistungsstufe"
       },
+      "paired_hood_fan_setting": {
+        "name": "Lüftereinstellung der gekoppelten Dunstabzugshaube",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Lüfterstufe der gekoppelten Dunstabzugshaube"
       },
@@ -1444,6 +1477,12 @@
       },
       "paired_hood_model": {
         "name": "Modell der gekoppelten Dunstabzugshaube"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Eingestellter Abschalttimer der gekoppelten Dunstabzugshaube"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Abschalttimer-Status der gekoppelten Dunstabzugshaube"
       },
       "power_energy_kwh": {
         "name": "Energieverbrauch"
@@ -1661,6 +1700,12 @@
           "dual": "Zweifach",
           "triple": "Dreifach"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Erzeugte Wärme"
+      },
+      "three_way_valve": {
+        "name": "3-Wege-Ventil"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "LocalThings-Optionen",
         "menu_options": {
           "settings": "Geräteeinstellungen",
+          "subdevices": "Untergeräte",
           "cloud_courses": "Download-Programme",
           "debug_write": "Debug: In eine Ressource schreiben",
           "forget_learned_modes": "Gemerkte Modi vergessen"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Voraussichtliches Ende -- Mindeständerung (Minuten)",
           "learn_device_modes": "Vom Gerät gemeldete, aber nicht angegebene Modi merken",
           "cloud_courses_enabled": "Heruntergeladene Programme anbieten"
+        }
+      },
+      "subdevices": {
+        "title": "Untergeräte",
+        "description": "Manche Geräte stellen mehr als ein Gerät bereit: jedes Innengerät einer Multi-Split-Anlage oder jeden Garraum eines Doppelbackofens. Andere melden einen zusätzlichen Platz ohne echte Hardware, der als doppeltes oder leeres Gerät erscheint. Entferne das Häkchen bei jedem Untergerät, das zu nichts an deinem Gerät passt. Sein Gerät wird entfernt und die Integration ohne es neu geladen; setze das Häkchen wieder, um es zurückzuholen.",
+        "data": {
+          "enabled_subdevices": "Diese Untergeräte behalten"
         }
       },
       "debug_write": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse ist bei dem ausgewählten Programm nicht verfügbar."
+    },
+    "paired_hood_fan_off": {
+      "message": "Schalten Sie den Lüfter der Dunstabzugshaube ein, bevor Sie den Abschalttimer einstellen."
     }
   },
   "selector": {

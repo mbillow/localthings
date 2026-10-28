@@ -20,12 +20,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.core import callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
     ObjectSelector,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -52,6 +54,7 @@ from .const import (
     CONF_DEVICE_KEY,
     CONF_DEVICE_TOKEN,
     CONF_DEVICE_TYPE,
+    CONF_DISABLED_SUBDEVICES,
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
@@ -1876,6 +1879,15 @@ def _followed_title(entry: config_entries.ConfigEntry, host: str) -> str | Undef
     return f"{entry.title[: -len(suffix)]} ({host})"
 
 
+# The subdevices form field; saved inverted, as CONF_DISABLED_SUBDEVICES.
+_ENABLED_SUBDEVICES = "enabled_subdevices"
+
+
+def _subdevice_order(key: str) -> tuple[bool, int, str]:
+    """Indexed slots in numeric order ('2' before '10'), then the rest."""
+    return (not key.isdigit(), int(key) if key.isdigit() else 0, key)
+
+
 class LocalThingsOptionsFlow(config_entries.OptionsFlow):
     """Per-device options: the remote-control-off write-block override
     (issue #54) plus a debug panel for writing an arbitrary body to an
@@ -1912,13 +1924,17 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             coord.cloud_course_rep(), cycle_options(coord.canonical_resources(MAIN))
         ):
             menu.insert(1, "cloud_courses")
+        if coord is not None and (
+            coord.subdevices or self.config_entry.options.get(CONF_DISABLED_SUBDEVICES)
+        ):
+            menu.insert(1, "subdevices")
         return self.async_show_menu(step_id="init", menu_options=menu)
 
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
 
         return self.async_show_form(
             step_id="settings",
@@ -1947,6 +1963,66 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
                             CONF_CLOUD_COURSES_ENABLED, DEFAULT_CLOUD_COURSES_ENABLED
                         ),
                     ): bool,
+                }
+            ),
+        )
+
+    async def async_step_subdevices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose which discovered subdevices to keep (#670, #681).
+
+        Some slots pass the liveness gate without being hardware, and only
+        the owner can tell. A subdevice switched off here loses its device
+        at once; the options listener then reloads without it.
+        """
+        coord = self._coordinator()
+        if coord is None:
+            return self.async_abort(reason="not_loaded")
+        saved: dict[str, str] = dict(self.config_entry.options.get(CONF_DISABLED_SUBDEVICES) or {})
+        labels: dict[str, str] = {}
+        for sub in [*coord.subdevices, *coord.disabled_subdevices]:
+            device = find_entry_device(
+                self.hass, self.config_entry.entry_id, {coord.subdevice_identifier(sub.key)}
+            )
+            labels[sub.key] = (device.name_by_user or device.name or "") if device else ""
+        # A disabled slot that didn't answer this time is still offered.
+        for key, name in saved.items():
+            labels[key] = labels.get(key) or name
+        keys = sorted(labels, key=_subdevice_order)
+
+        if user_input is not None:
+            kept = set(user_input.get(_ENABLED_SUBDEVICES) or ())
+            disabled = {key: labels[key] or saved.get(key, "") for key in keys if key not in kept}
+            for key in disabled.keys() - saved.keys():
+                device = find_entry_device(
+                    self.hass, self.config_entry.entry_id, {coord.subdevice_identifier(key)}
+                )
+                if device is not None:
+                    dr.async_get(self.hass).async_update_device(
+                        device.id, remove_config_entry_id=self.config_entry.entry_id
+                    )
+            return self.async_create_entry(
+                data={**self.config_entry.options, CONF_DISABLED_SUBDEVICES: disabled}
+            )
+
+        return self.async_show_form(
+            step_id="subdevices",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        _ENABLED_SUBDEVICES,
+                        default=[key for key in keys if key not in saved],
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value=key, label=labels[key] or key)
+                                for key in keys
+                            ],
+                            multiple=True,
+                            mode=SelectSelectorMode.LIST,
+                        )
+                    ),
                 }
             ),
         )

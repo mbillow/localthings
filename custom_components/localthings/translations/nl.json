@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Gepauzeerd"
+      },
+      "booster_heater": {
+        "name": "Bijverwarming"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automatisch",
               "smart": "Slim",
               "max": "Max",
               "mid": "Gemiddeld",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lamp"
+      },
+      "paired_hood_light": {
+        "name": "Verlichting gekoppelde afzuigkap"
       }
     },
     "number": {
@@ -284,6 +291,9 @@
       },
       "oven_setpoint": {
         "name": "Instelpunt"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Uitschakeltimer gekoppelde afzuigkap"
       },
       "sensing_interval": {
         "name": "AI Purify-interval"
@@ -852,6 +862,19 @@
           "75": "Fijne was",
           "77": "Strijkvrij",
           "78": "Snelle was",
+          "91": "Self Clean",
+          "94": "Handdoeken",
+          "9c": "Intensief",
+          "9d": "Spoelen + centrifugeren",
+          "9e": "Strijkvrij",
+          "9f": "Snelle was",
+          "a2": "Fijne was",
+          "a3": "Sportkleding",
+          "a5": "Beddengoed",
+          "a9": "Hygiëne",
+          "aa": "Witte was",
+          "ab": "Eco koud",
+          "b1": "Self Clean+",
           "ba": "Afpompen/centrifugeren",
           "d0": "Katoen",
           "d1": "Eco katoen",
@@ -1442,6 +1465,16 @@
       "power_level": {
         "name": "Vermogensniveau"
       },
+      "paired_hood_fan_setting": {
+        "name": "Ventilatorstand gekoppelde afzuigkap",
+        "state": {
+          "off": "Uit",
+          "low": "Laag",
+          "medium": "Gemiddeld",
+          "high": "Hoog",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Ventilatorsnelheid gekoppelde afzuigkap"
       },
@@ -1450,6 +1483,12 @@
       },
       "paired_hood_model": {
         "name": "Model gekoppelde afzuigkap"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Ingestelde uitschakeltimer gekoppelde afzuigkap"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Status uitschakeltimer gekoppelde afzuigkap"
       },
       "power_energy_kwh": {
         "name": "Energieverbruik"
@@ -1661,6 +1700,12 @@
           "dual": "Dubbel",
           "triple": "Drievoudig"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Opgewekte warmte"
+      },
+      "three_way_valve": {
+        "name": "Driewegklep"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "LocalThings-opties",
         "menu_options": {
           "settings": "Apparaatinstellingen",
+          "subdevices": "Subapparaten",
           "cloud_courses": "Gedownloade programma's",
           "forget_learned_modes": "Onthouden modi vergeten",
           "debug_write": "Foutopsporing: naar een resource schrijven"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Geschatte eindtijd -- minimale wijziging (minuten)",
           "learn_device_modes": "Modi onthouden die het apparaat meldt maar niet als ondersteund opgeeft",
           "cloud_courses_enabled": "Gedownloade programma's aanbieden"
+        }
+      },
+      "subdevices": {
+        "title": "Subapparaten",
+        "description": "Sommige apparaten tonen meer dan één apparaat: elke binnenunit van een multi-splitsysteem, of elke ovenruimte van een dubbele oven. Andere melden een extra plek zonder echte hardware, die verschijnt als een dubbel of leeg apparaat. Vink elk subapparaat uit dat niet overeenkomt met iets aan je apparaat. Het apparaat wordt verwijderd en de integratie herlaadt zonder; vink het weer aan om het terug te halen.",
+        "data": {
+          "enabled_subdevices": "Deze subapparaten behouden"
         }
       },
       "forget_learned_modes": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra Rinse is niet beschikbaar voor het geselecteerde programma."
+    },
+    "paired_hood_fan_off": {
+      "message": "Zet de ventilator van de afzuigkap aan voordat u de uitschakeltimer instelt."
     }
   },
   "selector": {

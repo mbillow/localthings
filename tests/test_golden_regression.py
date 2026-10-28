@@ -341,6 +341,19 @@ def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_8888():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_cooktop_tp6x_ct_16k_hood_8888():
+    """NZ30K7570RS with a paired NK9300KM hood (issue #676): the hood is an
+    indexed subdevice at /device/1 with hood entities and no burners."""
+    name = "cooktop_tp6x_ct_16k_hood_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_cooktop():
     from tests.conftest import _load_device
 
@@ -751,6 +764,15 @@ def test_registry_reproduces_golden_state_keys_for_induction_cooktop_nv9000d():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_range_nx60t8311ss_full():
+    """The NX60T8311SS's full 33-href dump (issue #670)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("range_nx60t8311ss_full")
+    golden = json.loads((GOLDEN / "range_nx60t8311ss_full.json").read_text())
+    assert set(_new_state_keys("range_nx60t8311ss_full", resources)) == set(golden["state_keys"])
 
 
 def test_registry_reproduces_golden_state_keys_for_range_no_info():
@@ -1220,6 +1242,15 @@ def test_registry_reproduces_golden_state_keys_for_air_monitor():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_air_monitor_temperature():
+    """An Air Monitor Plus unit that also reports /temperatures/vs/0 (#683)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("air_monitor_temperature")
+    golden = json.loads((GOLDEN / "air_monitor_temperature.json").read_text())
+    assert set(_new_state_keys("air_monitor_temperature", resources)) == set(golden["state_keys"])
+
+
 def test_registry_reproduces_golden_state_keys_for_air_purifier_vtww():
     """A-VTWW-TP2-21-COMMON BESPOKE Cube Air (issue #151) -- reports no
     oneUiVersion; resolved via the '-VTWW-' modelNum token fallback into
@@ -1336,6 +1367,19 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_fac_bora_2in1(
     name = "airconditioner_fac_bora_2in1"
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_subdevice_aware_state_keys(name)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_ehs_mim_h04en():
+    """Issue #682's MIM-H04EN Wi-Fi kit: the kit itself binds nothing, and
+    its SAC_EHS_MONO heat pump materializes as a UUID-prefixed subdevice."""
+    name = "ehs_mim_h04en"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.airconditioner"))
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
@@ -1967,6 +2011,20 @@ def test_registry_reproduces_golden_state_keys_for_microwave_nw9300md():
     name = "microwave_nw9300md"
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_subdevice_aware_state_keys(name, device_types=("oic.wk.d", "oic.d.oven"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_microwave_tp6x_ov_17k_8888():
+    """NQ70M6650DS combo over 8888 (issue #674): the microwave is the master,
+    the oven an indexed subdevice at /device/2, and the blank /device/1 is
+    skipped."""
+    name = "microwave_tp6x_ov_17k_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name)
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

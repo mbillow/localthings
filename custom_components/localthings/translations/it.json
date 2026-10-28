@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "In pausa"
+      },
+      "booster_heater": {
+        "name": "Resistenza integrativa"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automatico",
               "smart": "Smart",
               "max": "Max",
               "mid": "Media",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lampada"
+      },
+      "paired_hood_light": {
+        "name": "Luce cappa abbinata"
       }
     },
     "number": {
@@ -284,6 +291,9 @@
       },
       "oven_setpoint": {
         "name": "Valore impostato"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Timer di spegnimento cappa abbinata"
       },
       "sensing_interval": {
         "name": "Intervallo AI Purify"
@@ -852,6 +862,19 @@
           "75": "Delicati",
           "77": "Pronto da stirare",
           "78": "Lavaggio rapido",
+          "91": "Pulizia cestello",
+          "94": "Asciugamani",
+          "9c": "Intenso",
+          "9d": "Risciacquo+Centrifuga",
+          "9e": "Pronto da stirare",
+          "9f": "Lavaggio rapido",
+          "a2": "Delicati",
+          "a3": "Abbigliamento sportivo",
+          "a5": "Biancheria da letto",
+          "a9": "Igienizzante",
+          "aa": "Bianchi",
+          "ab": "Eco freddo",
+          "b1": "Self Clean+",
           "ba": "Scarico/Centrifuga",
           "d0": "Cotone",
           "d1": "Cotone E",
@@ -1442,6 +1465,16 @@
       "power_level": {
         "name": "Livello potenza"
       },
+      "paired_hood_fan_setting": {
+        "name": "Impostazione ventola cappa abbinata",
+        "state": {
+          "off": "Spenta",
+          "low": "Bassa",
+          "medium": "Media",
+          "high": "Alta",
+          "boost": "Turbo"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Velocità ventola cappa abbinata"
       },
@@ -1450,6 +1483,12 @@
       },
       "paired_hood_model": {
         "name": "Modello cappa abbinata"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Timer di spegnimento impostato cappa abbinata"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Stato timer di spegnimento cappa abbinata"
       },
       "power_energy_kwh": {
         "name": "Energia"
@@ -1661,6 +1700,12 @@
           "dual": "Doppia",
           "triple": "Tripla"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Calore prodotto"
+      },
+      "three_way_valve": {
+        "name": "Valvola a 3 vie"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "Opzioni LocalThings",
         "menu_options": {
           "settings": "Impostazioni dispositivo",
+          "subdevices": "Sottodispositivi",
           "cloud_courses": "Cicli scaricati",
           "forget_learned_modes": "Dimentica le modalità memorizzate",
           "debug_write": "Debug: scrivi su una risorsa"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Tempo finale stimato - variazione minima (minuti)",
           "learn_device_modes": "Memorizza le modalità che il dispositivo segnala ma non dichiara supportate",
           "cloud_courses_enabled": "Offri cicli scaricati"
+        }
+      },
+      "subdevices": {
+        "title": "Sottodispositivi",
+        "description": "Alcuni elettrodomestici espongono più di un dispositivo: ogni unità interna di un sistema multi-split o ogni cavità di un forno doppio. Altri segnalano uno slot aggiuntivo che non corrisponde a nessun hardware reale e compare come dispositivo duplicato o vuoto. Deseleziona ogni sottodispositivo che non corrisponde a nulla sul tuo elettrodomestico. Il suo dispositivo viene rimosso e l'integrazione si ricarica senza di esso; selezionalo di nuovo per ripristinarlo.",
+        "data": {
+          "enabled_subdevices": "Mantieni questi sottodispositivi"
         }
       },
       "forget_learned_modes": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Risciacquo extra non è disponibile per il ciclo selezionato."
+    },
+    "paired_hood_fan_off": {
+      "message": "Accendi la ventola della cappa prima di impostare il timer di spegnimento."
     }
   },
   "selector": {

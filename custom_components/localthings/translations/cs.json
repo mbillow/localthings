@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastaveno"
+      },
+      "booster_heater": {
+        "name": "Pomocné topné těleso"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automaticky",
               "smart": "Chytrý",
               "max": "Max",
               "mid": "Střední",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lampa"
+      },
+      "paired_hood_light": {
+        "name": "Světlo spárovaného odsavače"
       }
     },
     "number": {
@@ -284,6 +291,9 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Časovač vypnutí spárovaného odsavače"
       },
       "sensing_interval": {
         "name": "Interval AI Purify"
@@ -852,6 +862,19 @@
           "75": "Jemné prádlo",
           "77": "Nežehlivé prádlo",
           "78": "Rychlé praní",
+          "91": "Samočištění",
+          "94": "Ručníky",
+          "9c": "Intenzivní",
+          "9d": "Máchání + odstřeďování",
+          "9e": "Nežehlivé prádlo",
+          "9f": "Rychlé praní",
+          "a2": "Jemné prádlo",
+          "a3": "Sportovní oblečení",
+          "a5": "Ložní prádlo",
+          "a9": "Dezinfekce",
+          "aa": "Bílé prádlo",
+          "ab": "Eco studená",
+          "b1": "Samočištění+",
           "ba": "Vypuštění/odstřeďování",
           "d0": "Bavlna",
           "d1": "Eko bavlna",
@@ -1442,6 +1465,16 @@
       "power_level": {
         "name": "Úroveň výkonu"
       },
+      "paired_hood_fan_setting": {
+        "name": "Nastavení ventilátoru spárovaného odsavače",
+        "state": {
+          "off": "Vypnuto",
+          "low": "Nízké",
+          "medium": "Střední",
+          "high": "Vysoké",
+          "boost": "Turbo"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Otáčky ventilátoru spárovaného odsavače"
       },
@@ -1450,6 +1483,12 @@
       },
       "paired_hood_model": {
         "name": "Model spárovaného odsavače"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Nastavený časovač vypnutí spárovaného odsavače"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Stav časovače vypnutí spárovaného odsavače"
       },
       "power_energy_kwh": {
         "name": "Spotřeba energie"
@@ -1661,6 +1700,12 @@
           "dual": "Dvojitá",
           "triple": "Trojitá"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Vyrobené teplo"
+      },
+      "three_way_valve": {
+        "name": "Trojcestný ventil"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "Možnosti LocalThings",
         "menu_options": {
           "settings": "Nastavení zápisu pro dálkové ovládání",
+          "subdevices": "Podřízená zařízení",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
           "debug_write": "Ladění: zápis do prostředku"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Odhadovaný konec -- minimální změna (minuty)",
           "learn_device_modes": "Pamatovat si režimy, které zařízení hlásí, ale neuvádí jako podporované",
           "cloud_courses_enabled": "Nabízet stažené cykly"
+        }
+      },
+      "subdevices": {
+        "title": "Podřízená zařízení",
+        "description": "Některé spotřebiče zpřístupňují více než jedno zařízení: každou vnitřní jednotku multi-split systému nebo každý prostor dvojité trouby. Jiné hlásí další slot, kterému neodpovídá žádný skutečný hardware, a ten se zobrazí jako duplicitní nebo prázdné zařízení. Zrušte zaškrtnutí u každého podřízeného zařízení, které neodpovídá ničemu na vašem spotřebiči. Jeho zařízení se odebere a integrace se znovu načte bez něj; opětovným zaškrtnutím ho vrátíte.",
+        "data": {
+          "enabled_subdevices": "Ponechat tato podřízená zařízení"
         }
       },
       "forget_learned_modes": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra máchání není u vybraného cyklu k dispozici."
+    },
+    "paired_hood_fan_off": {
+      "message": "Před nastavením časovače vypnutí zapněte ventilátor digestoře."
     }
   },
   "selector": {

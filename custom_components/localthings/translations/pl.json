@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "Wstrzymano"
+      },
+      "booster_heater": {
+        "name": "Grzałka wspomagająca"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automatyczny",
               "smart": "Smart",
               "max": "Maks.",
               "mid": "Średni",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Oświetlenie"
+      },
+      "paired_hood_light": {
+        "name": "Oświetlenie sparowanego okapu"
       }
     },
     "number": {
@@ -284,6 +291,9 @@
       },
       "oven_setpoint": {
         "name": "Wartość zadana"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Timer wyłączenia sparowanego okapu"
       },
       "sensing_interval": {
         "name": "Interwał AI Purify"
@@ -852,6 +862,19 @@
           "75": "Delikatne",
           "77": "Tkaniny niemnące",
           "78": "Szybkie pranie",
+          "91": "Samoczyszczenie",
+          "94": "Ręczniki",
+          "9c": "Intensywne",
+          "9d": "Płukanie + wirowanie",
+          "9e": "Tkaniny niemnące",
+          "9f": "Szybkie pranie",
+          "a2": "Delikatne",
+          "a3": "Odzież sportowa",
+          "a5": "Pościel",
+          "a9": "Dezynfekcja",
+          "aa": "Tkaniny białe",
+          "ab": "Eko na zimno",
+          "b1": "Samoczyszczenie+",
           "ba": "Odpompowanie/wirowanie",
           "d0": "Bawełna",
           "d1": "Eko bawełna",
@@ -1442,6 +1465,16 @@
       "power_level": {
         "name": "Poziom mocy"
       },
+      "paired_hood_fan_setting": {
+        "name": "Ustawienie wentylatora sparowanego okapu",
+        "state": {
+          "off": "Wył.",
+          "low": "Niska",
+          "medium": "Średnia",
+          "high": "Wysoka",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Prędkość wentylatora sparowanego okapu"
       },
@@ -1450,6 +1483,12 @@
       },
       "paired_hood_model": {
         "name": "Model sparowanego okapu"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Ustawiony timer wyłączenia sparowanego okapu"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Stan timera wyłączenia sparowanego okapu"
       },
       "power_energy_kwh": {
         "name": "Pobór energii"
@@ -1661,6 +1700,12 @@
           "dual": "Podwójne",
           "triple": "Potrójne"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Wytworzone ciepło"
+      },
+      "three_way_valve": {
+        "name": "Zawór trójdrogowy"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "Opcje LocalThings",
         "menu_options": {
           "settings": "Ustawienia urządzenia",
+          "subdevices": "Urządzenia podrzędne",
           "cloud_courses": "Pobrane cykle",
           "forget_learned_modes": "Zapomnij zapamiętane tryby",
           "debug_write": "Debugowanie: zapis do zasobu"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",
           "learn_device_modes": "Zapamiętuj tryby, które urządzenie zgłasza, ale ich nie ogłasza",
           "cloud_courses_enabled": "Udostępniaj pobrane cykle"
+        }
+      },
+      "subdevices": {
+        "title": "Urządzenia podrzędne",
+        "description": "Niektóre urządzenia udostępniają więcej niż jedno urządzenie: każdą jednostkę wewnętrzną systemu multi-split lub każdą komorę podwójnego piekarnika. Inne zgłaszają dodatkowe gniazdo, któremu nie odpowiada żaden prawdziwy sprzęt — pojawia się ono jako zdublowane lub puste urządzenie. Odznacz każde urządzenie podrzędne, które nie odpowiada niczemu w Twoim urządzeniu. Zostanie ono usunięte, a integracja przeładowana bez niego; zaznacz je ponownie, aby je przywrócić.",
+        "data": {
+          "enabled_subdevices": "Zachowaj te urządzenia podrzędne"
         }
       },
       "forget_learned_modes": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Dodatkowe płukanie nie jest dostępne dla wybranego cyklu."
+    },
+    "paired_hood_fan_off": {
+      "message": "Włącz wentylator okapu przed ustawieniem wyłącznika czasowego."
     }
   },
   "selector": {

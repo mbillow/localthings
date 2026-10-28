@@ -156,6 +156,7 @@
         "title": "Opciones de LocalThings",
         "menu_options": {
           "settings": "Ajustes del dispositivo",
+          "subdevices": "Subdispositivos",
           "cloud_courses": "Ciclos descargados",
           "forget_learned_modes": "Olvidar los modos recordados",
           "debug_write": "Depuración: escribir en un recurso"
@@ -169,6 +170,13 @@
           "finish_time_hysteresis_minutes": "Finalización estimada -- cambio mínimo (minutos)",
           "learn_device_modes": "Recordar los modos que el dispositivo notifica pero no anuncia",
           "cloud_courses_enabled": "Ofrecer ciclos descargados"
+        }
+      },
+      "subdevices": {
+        "title": "Subdispositivos",
+        "description": "Algunos electrodomésticos exponen más de un dispositivo: cada unidad interior de un sistema multisplit o cada cavidad de un horno doble. Otros informan de una ranura adicional que no corresponde a ningún hardware real y aparece como un dispositivo duplicado o vacío. Desmarca cualquier subdispositivo que no se corresponda con nada de tu electrodoméstico. Su dispositivo se elimina y la integración se recarga sin él; vuelve a marcarlo para recuperarlo.",
+        "data": {
+          "enabled_subdevices": "Conservar estos subdispositivos"
         }
       },
       "forget_learned_modes": {
@@ -366,6 +374,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "El aclarado extra no está disponible en el ciclo seleccionado."
+    },
+    "paired_hood_fan_off": {
+      "message": "Encienda el ventilador de la campana extractora antes de programar su temporizador de apagado."
     }
   },
   "entity": {
@@ -528,6 +539,9 @@
       },
       "cooktop_paused": {
         "name": "En pausa"
+      },
+      "booster_heater": {
+        "name": "Resistencia de apoyo"
       }
     },
     "button": {
@@ -620,6 +634,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automático",
               "smart": "Inteligente",
               "max": "Máximo",
               "mid": "Medio",
@@ -633,6 +648,9 @@
     "light": {
       "lamp": {
         "name": "Lámpara"
+      },
+      "paired_hood_light": {
+        "name": "Luz de la campana emparejada"
       }
     },
     "number": {
@@ -653,6 +671,9 @@
       },
       "oven_setpoint": {
         "name": "Punto de ajuste"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Temporizador de apagado de la campana emparejada"
       },
       "sensing_interval": {
         "name": "Intervalo de AI Purify"
@@ -1221,6 +1242,19 @@
           "75": "Delicados",
           "77": "Planchado fácil",
           "78": "Lavado rápido",
+          "91": "Autolimpieza",
+          "94": "Toallas",
+          "9c": "Acción fuerte",
+          "9d": "Enjuague+Centrifugado",
+          "9e": "Plancha permanente",
+          "9f": "Lavado rápido",
+          "a2": "Delicada",
+          "a3": "Ropa deportiva",
+          "a5": "Ropa de cama",
+          "a9": "Desinfección",
+          "aa": "Ropa blanca",
+          "ab": "Eco frío",
+          "b1": "Autolimpieza+",
           "ba": "Solo centrifugar",
           "d0": "Algodón",
           "d1": "Algodón E",
@@ -1808,6 +1842,16 @@
       "power_level": {
         "name": "Nivel de potencia"
       },
+      "paired_hood_fan_setting": {
+        "name": "Ajuste del ventilador de la campana emparejada",
+        "state": {
+          "off": "Apagado",
+          "low": "Baja",
+          "medium": "Media",
+          "high": "Alta",
+          "boost": "Turbo"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Velocidad del ventilador de la campana emparejada"
       },
@@ -1816,6 +1860,12 @@
       },
       "paired_hood_model": {
         "name": "Modelo de la campana emparejada"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Temporizador de apagado configurado de la campana emparejada"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Estado del temporizador de apagado de la campana emparejada"
       },
       "power_energy_kwh": {
         "name": "Energía"
@@ -2030,6 +2080,12 @@
           "dual": "Doble",
           "triple": "Triple"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Calor generado"
+      },
+      "three_way_valve": {
+        "name": "Válvula de 3 vías"
       }
     },
     "switch": {

@@ -8,9 +8,10 @@ import functools
 import logging
 import threading
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 from urllib.parse import unquote, urlsplit
 
@@ -38,6 +39,7 @@ from .const import (
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
     CONF_DEVICE_TYPE,
+    CONF_DISABLED_SUBDEVICES,
     CONF_HOST,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
@@ -287,16 +289,45 @@ def _refusal(code: int, response: Any) -> str:
 
 
 def _field_present_in(key: str, value: Any, readback: dict) -> bool:
-    """Whether one written field shows in `readback`.
-
-    An options[] write carries only the changed `<Prefix>_<Value>` tokens
-    and the appliance merges them into its full array (issue #54), so the
-    read-back holds every sibling token too: each written token being in it
-    is what "took" means there. Every other field compares whole."""
+    """Compare written fields, allowing the device's merged options and items."""
+    if key not in readback:
+        return False
     current = readback.get(key)
     if key == "x.com.samsung.da.options" and isinstance(value, list) and isinstance(current, list):
         return all(token in current for token in value)
+    if key == "x.com.samsung.da.items" and isinstance(value, list) and isinstance(current, list):
+        return _items_present_in(value, current)
+    if key == "x.com.samsung.da.desired":
+        # Legacy HTTPS returns numeric setpoints even when the request used
+        # strings. IDs, units and other fields still compare without coercion.
+        if type(value) not in (str, int, float) or type(current) not in (str, int, float):
+            return False
+        try:
+            wanted, actual = Decimal(str(value)), Decimal(str(current))
+        except InvalidOperation:
+            return False
+        return wanted.is_finite() and actual.is_finite() and wanted == actual
     return current == value
+
+
+def _items_present_in(written: list, current: list) -> bool:
+    """Match partial writes by unique ID; reads also carry metadata and sibling items."""
+    if not written:
+        return current == written
+    id_key = "x.com.samsung.da.id"
+    if not all(
+        isinstance(item, dict) and isinstance(item.get(id_key), str) and item[id_key]
+        for item in [*written, *current]
+    ):
+        return False
+    indexed = {item[id_key]: item for item in current}
+    if len(indexed) != len(current) or len({item[id_key] for item in written}) != len(written):
+        return False
+    return all(
+        item[id_key] in indexed
+        and all(_field_present_in(k, v, indexed[item[id_key]]) for k, v in item.items())
+        for item in written
+    )
 
 
 def _payload_present_in(payload: dict | list, readback: dict) -> bool:
@@ -311,7 +342,7 @@ def _payload_present_in(payload: dict | list, readback: dict) -> bool:
     if isinstance(payload, dict):
         return all(_field_present_in(k, v, readback) for k, v in payload.items())
     return all(
-        all((readback.get(element_href) or {}).get(k) == v for k, v in rep.items())
+        _payload_present_in(rep, readback.get(element_href) or {})
         for element_href, rep in _batch_element_reps(payload).items()
     )
 
@@ -354,6 +385,11 @@ def _validate_debug_write_item(item: dict) -> tuple[list[str], str, dict | list,
     # readback-always behavior.
     readback = item.get("readback") is not False
     return path_segs, "/" + "/".join(path_segs), cast(dict | list, payload), settle, readback
+
+
+def disabled_subdevice_keys(options: Mapping[str, Any]) -> frozenset[str]:
+    """The subdevice keys CONF_DISABLED_SUBDEVICES switches off."""
+    return frozenset(options.get(CONF_DISABLED_SUBDEVICES) or ())
 
 
 class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -464,6 +500,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Candidates the liveness gate rejected (e.g. an unused SmartThings
         # slot that still answers its seed) -- surfaced in diagnostics.
         self._skipped_subdevices: list = []
+        # Candidates the user switched off (CONF_DISABLED_SUBDEVICES); kept
+        # so the options flow can offer them again. The keys are fixed for
+        # this setup: changing them reloads the entry.
+        self.disabled_subdevices: list[Subdevice] = []
+        self.disabled_keys = disabled_subdevice_keys(entry.options)
         # Rejected candidates' raw reps, kept for diagnostics only (see
         # _live_subdevice_resources) -- never applied to the state cache, or
         # they'd sit frozen at first-discovery value looking live.
@@ -958,6 +999,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
+    def subdevice_identifier(self, key: str) -> tuple[str, str]:
+        """The device-registry identifier of the subdevice keyed `key`."""
+        return (DOMAIN, f"{self.device_key}_{key}")
+
     def device_info_for(self, subdevice: Subdevice) -> DeviceInfo:
         """DeviceInfo for one logical subdevice on this connection (issue
         #177): the master's own device_info for MAIN, or a linked child
@@ -974,7 +1019,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
         model_num = info.get("x.com.samsung.da.modelNum", "")
-        model = model_num.split("|", 1)[0] if model_num else ""
+        # A subdevice can report the main unit's board as its model, such as
+        # the TP6X cooktop's paired hood (issue #676); its capability knows.
+        model = self._device_model(subdevice, resources) or (
+            model_num.split("|", 1)[0] if model_num else ""
+        )
         serial = info.get("x.com.samsung.da.serialNum") or None
         base_name = self.device_info.get("name") or "Samsung Appliance"
         if cavity := _cavity_label(resources):
@@ -983,6 +1032,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # and the two are indistinguishable in HA. The cavity says which
             # is which, and the device is the one saying it.
             label = cavity
+        elif reported := info.get("x.com.samsung.da.deviceName"):
+            # An 8888 sibling's own name, such as "Hood" (issue #676).
+            label = reported
         elif model:
             label = model.replace("_", " ").title()
         else:
@@ -996,7 +1048,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 else "Secondary Subdevice"
             )
         info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self.device_key}_{subdevice.key}")},
+            identifiers={self.subdevice_identifier(subdevice.key)},
             name=f"{base_name} {label}",
             manufacturer=self.device_info.get("manufacturer") or "Samsung",
             model=model or None,
@@ -1004,6 +1056,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         set_via_device(self.hass, self._entry.entry_id, info, (DOMAIN, self.device_key))
         return info
+
+    def _device_model(self, subdevice: Subdevice, resources: dict[str, dict]) -> str | None:
+        """A bound capability's model_fn's model for this subdevice, if any."""
+        for bound in self.bound:
+            model_fn = bound.capability.model_fn
+            if bound.subdevice == subdevice and model_fn and (model := model_fn(resources)):
+                return model
+        return None
 
     @property
     def observe_mode(self) -> str:
@@ -1565,6 +1625,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._multidevice = extra.pop("/multidevice/vs/0", {})
         return {**resources, **extra}
 
+    def _without_disabled(self, resources: dict[str, dict]) -> dict[str, dict]:
+        """`resources` minus every href of a subdevice the user switched off,
+        so it binds nothing and isn't left over as a coverage gap."""
+        if not self.disabled_subdevices:
+            return resources
+        return {
+            href: rep
+            for href, rep in resources.items()
+            if not any(sub.owns(href) for sub in self.disabled_subdevices)
+        }
+
     def _live_subdevice_resources(self, resources: dict[str, dict]) -> dict[str, dict]:
         """`resources` minus every href belonging to a rejected subdevice
         candidate (issue #177). Called once, between _run_discovery and the
@@ -1572,6 +1643,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         and then dropped rather than frozen into the cache forever. Kept in
         _skipped_subdevice_resources for diagnostics.
         """
+        resources = self._without_disabled(resources)
         if not self._skipped_subdevices:
             return resources
         kept: dict[str, dict] = {}
@@ -1898,9 +1970,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # unused SmartThings slot answers its seed but never does). A device
         # with no candidates behaves exactly like the old single discover()
         # call.
+        self.disabled_subdevices = [s for s in self.subdevices if s.key in self.disabled_keys]
         bound, device_type_name, materialized, skipped = discover_partitioned(
-            resources,
-            self.subdevices,
+            self._without_disabled(resources),
+            [s for s in self.subdevices if s.key not in self.disabled_keys],
             resolve_registry if translates_resources(self._entry.data) else _unrecognized,
             CAPABILITIES,
             log=unbound.append,
@@ -2378,9 +2451,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # rejected candidate's reps out of the eviction-free
                     # cache; the apply loop below re-adds the live ones from
                     # `resources` after _live_subdevice_resources filters it.
+                    enabled = [s for s in self.subdevices if s.key not in self.disabled_keys]
                     resources.update(
                         await self.hass.async_add_executor_job(
-                            self._probe_blocking, [MAIN, *self.subdevices], False
+                            self._probe_blocking, [MAIN, *enabled], False
                         )
                     )
                 except Exception as e:
@@ -2408,7 +2482,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # StateCache has no eviction, so the only way to keep them out
             # is to not put them in. Safe to reorder: _run_discovery reads
             # the passed dict, never the cache.
-            candidates = list(self.subdevices)
+            # A snapshot replay narrowed self.subdevices to the materialized
+            # ones; if enumeration then failed, keep the disabled ones anyway.
+            candidates = [
+                *self.subdevices,
+                *(s for s in self.disabled_subdevices if s not in self.subdevices),
+            ]
             self._run_discovery(resources)
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is
@@ -2570,8 +2649,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         previous_settle = self._observe.settle_deadline(write_href)
         armed_settle = 0.0
         if not write_only:
-            optimistic_body = body
-            new_options = body.get("x.com.samsung.da.options")
+            optimistic_fn = getattr(desc, "optimistic_fn", None)
+            optimistic_body = optimistic_fn(body) if optimistic_fn else body
+            # From optimistic_body, or the merge drops what optimistic_fn added.
+            new_options = optimistic_body.get("x.com.samsung.da.options")
             if isinstance(new_options, list):
                 cached_options = (self._cache.get(write_href) or {}).get("x.com.samsung.da.options")
                 optimistic_body = {
@@ -2580,7 +2661,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 }
             # Same fact, items[] shape (see airconditioner._climate_write's
             # vendor temperature write).
-            new_items = body.get("x.com.samsung.da.items")
+            new_items = optimistic_body.get("x.com.samsung.da.items")
             if isinstance(new_items, list):
                 cached_items = (self._cache.get(write_href) or {}).get("x.com.samsung.da.items")
                 optimistic_body = {

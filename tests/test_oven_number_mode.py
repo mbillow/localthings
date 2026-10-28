@@ -3,6 +3,7 @@
 import pytest
 from homeassistant.util.unit_system import METRIC_SYSTEM
 
+from custom_components.localthings.entity import _is_included
 from custom_components.localthings.number import LocalThingsNumber
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.entities import NumberDesc
@@ -16,11 +17,12 @@ from tests.test_legacy_http_lower_cavity import (
     _requests,
     _routes,
 )
+from tests.test_legacy_http_nw9300md import _routes as _combo_routes
 from tests.test_number_bounds import _number
 
 
 @pytest.mark.parametrize("divided", [False, True])
-async def test_only_the_measured_ovens_setpoints_use_boxes(hass, divided):
+async def test_wall_oven_setpoints_use_boxes_with_or_without_divider(hass, divided):
     coordinator = await _discovered(hass, _routes(divided=divided))
     targets = []
     for bound in coordinator.bound:
@@ -36,9 +38,9 @@ async def test_only_the_measured_ovens_setpoints_use_boxes(hass, divided):
                 5,
             )
             targets.append(bound)
-        else:
+        elif bound.desc.key == "cook_time":
             assert number.mode == "slider"
-    assert len(targets) == (2 if divided else 1)
+    assert {bound.subdevice for bound in targets} == {MAIN, _lower(coordinator)}
 
 
 @pytest.mark.parametrize(
@@ -46,9 +48,37 @@ async def test_only_the_measured_ovens_setpoints_use_boxes(hass, divided):
     [None, 16, "", "LCD_OV_WALL", "LCD_OV_WALL_16K_OTHER", "LCD_OV_WALL_17K", "TP2X_KS_WALLOVEN"],
 )
 def test_missing_or_similar_boards_keep_sliders(model):
-    resources = {"/information/vs/0": {PREFIX + "modelNum": model}}
+    resources = {
+        "/information/vs/0": {
+            PREFIX + "modelNum": model,
+            PREFIX + "deviceSubType": "WallOven",
+        }
+    }
     number = _number(oven.OVEN_SETPOINT.entities[0], resources)
     assert number.mode == "slider"
+
+
+@pytest.mark.parametrize("subtype", [None, "Unknown", "CombiOven"])
+def test_same_board_without_wall_oven_subtype_keeps_slider(subtype):
+    resources = {
+        "/information/vs/0": {
+            PREFIX + "modelNum": "LCD_OV_WALL_16K|1|2",
+            PREFIX + "deviceSubType": subtype,
+        }
+    }
+    assert _number(oven.OVEN_SETPOINT.entities[0], resources).mode == "slider"
+
+
+@pytest.mark.parametrize("divided", [False, True])
+async def test_nw9300md_cavities_keep_their_setpoint_sliders(hass, divided):
+    coordinator = await _discovered(hass, _combo_routes(divided=divided))
+    targets = [
+        bound
+        for bound in coordinator.bound
+        if bound.desc.key == "oven_setpoint" and _is_included(bound, coordinator)
+    ]
+    assert {bound.subdevice.key for bound in targets} == {"2", "3"}
+    assert all(LocalThingsNumber(coordinator, bound).mode == "slider" for bound in targets)
 
 
 @pytest.mark.parametrize(

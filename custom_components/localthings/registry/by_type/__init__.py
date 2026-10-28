@@ -93,6 +93,7 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
 # hardware, not a shortcut.
 _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "REF": "refrigerator",
+    "WASHER": "washer",  # the 8888 WW6500's 'TP6X_WASHER' description
     # Air conditioners: distinct board families sharing one resource
     # surface -- room, package, Korean (#136), window (#87), 2-in-1
     # floor+wall (#150/#153), system/commercial (#52), cassette (#191), and
@@ -186,13 +187,18 @@ def _consumer_model_key(description: str) -> str | None:
     dishwasher's 'ADW-WW-RTL-24-AILITE' would offer up a bare 'WW' and
     route to washer).
 
-    Only a 2-letter prefix match, so e.g. 'WAC' (Window AC, issue #87) also
-    matches 'WA' (top-load washer, issue #106) at this granularity --
-    for_device_by_model() consults the board-family table first and this
-    only as a fallback, so that ambiguity resolves correctly.
+    A segment counts only when it carries digits or is a bare two-letter
+    code, so a word such as 'WAC' (Window AC, issue #87) or 'WALL' (#681)
+    never reads as a 'WA' top-load washer (issue #106). This is still the
+    weakest evidence, so for_device_by_model() consults it last.
     """
     segments = (description or "").split("/", 1)[0].split("_")
     for segment in reversed(segments):
+        # A consumer model carries digits ('WA8000T'), or is the bare board
+        # code ('DA_DW_TP1_21_COMMON'). A word is neither: the NW9300MD's
+        # 'LCD_OV_WALL_16K_DIV' slot read as a 'WA' washer (#681).
+        if len(segment) != 2 and not any(c.isdigit() for c in segment):
+            continue
         key = _CONSUMER_PREFIX_TO_KEY.get(segment[:2].upper())
         if key is not None:
             return key
@@ -330,6 +336,10 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
         if any(isinstance(m, str) and m.endswith("Bake") for m in supported_modes):
             if "/cooktopmonitoring/vs/0" in resources or "/cooktop/status/vs/0" in resources:
                 return _REGISTRY_BY_KEY["range"]
+            return _REGISTRY_BY_KEY["oven"]
+        # An 8888 lower cavity with its divider out offers only NoOperation;
+        # its /connected/vs/0 is whether the divider is in (#681).
+        if list(supported_modes) == ["NoOperation"] and "/connected/vs/0" in resources:
             return _REGISTRY_BY_KEY["oven"]
     return None
 

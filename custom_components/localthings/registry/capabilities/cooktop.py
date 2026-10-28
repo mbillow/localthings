@@ -1,4 +1,4 @@
-"""Read-only capabilities for Samsung cooktops.
+"""Capabilities for Samsung cooktops.
 
 The first verified device is an NA9300K-class five-burner gas cooktop; the
 NV9300K and NV8000T induction cooktops share its surface, as does the
@@ -6,7 +6,8 @@ NZ36K7570R radiant cooktop over the 8888 interface.  All of them report
 burner state as strings embedded in the ``x.com.samsung.da.options`` array on
 ``/mode/vs/0``.  Heat-producing controls are intentionally not exposed: the
 local write contract is unverified and a cooktop must not be remotely ignited
-by an automation.
+by an automation. The one exception is the NZ30K7570RS's paired hood, whose
+fan and light writes were verified on hardware (issue #676).
 """
 
 import dataclasses
@@ -14,7 +15,7 @@ import re
 
 from ..batch import is_stub_rep
 from ..capability import Capability
-from ..entities import BinarySensorDesc, SensorDesc
+from ..entities import BinarySensorDesc, FanDesc, LightDesc, NumberDesc, SensorDesc
 from . import dishwasher
 
 # NotSupported marks a slot the board advertises but has no burner for:
@@ -233,14 +234,41 @@ def is_legacy_radiant_cooktop(rep, resources):
     return board == "TP6X_CT_16K" and model == "NV9300K-/AA2"
 
 
-def is_empty_legacy_hood_slot(resources):
-    """Recognize the NZ36K7570R's captured, unpaired hood placeholder."""
+def is_legacy_hood_slot(resources):
+    """The TP6X cooktop's /device/1, which holds its Bluetooth hood, paired or not.
+
+    The description names the board. The board's own modelNum comes from a
+    linked read that a slow cooktop can skip (PR #677), so it only has to
+    agree when present."""
     information = resources.get("/information/vs/0") or {}
     board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return information.get("x.com.samsung.da.description") == "TP6X_CT_16K_HOOD" and board in (
+        "",
+        "TP6X_CT_16K",
+    )
+
+
+def paired_hood_model(resources):
+    """The hood's own model, such as NK9300KM, when the TP6X slot holds one.
+    The unpaired NZ36K7570R slot reports DeviceType_NULL (#642)."""
+    if not is_legacy_hood_slot(resources):
+        return None
+    options = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.options")
+    model = _option_value(options, "DeviceType")
+    return model if model and model != "NULL" else None
+
+
+def paired_hood_running(resources):
+    """Whether the paired hood's fan runs; the slot's power is the hood's (#676)."""
+    power = resources.get("/power/vs/0") or {}
+    return str(power.get("x.com.samsung.da.power", "")).lower() == "on"
+
+
+def is_empty_legacy_hood_slot(resources):
+    """Recognize the NZ36K7570R's captured, unpaired hood placeholder."""
     options = (resources.get("/mode/vs/0") or {}).get("x.com.samsung.da.options")
     return (
-        board == "TP6X_CT_16K"
-        and information.get("x.com.samsung.da.description") == "TP6X_CT_16K_HOOD"
+        is_legacy_hood_slot(resources)
         and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
         and all(
             _option_value(options, key) == value
@@ -363,6 +391,167 @@ PAIRED_HOOD_STATUS = Capability(
             icon="mdi:chip",
             entity_category="diagnostic",
             enabled_default=False,
+        ),
+    ),
+)
+
+
+# The NZ30K7570RS's paired NK9300KM hood (issue #676) reports its state as
+# options on its own /mode/vs/0, unlike the burnerList boards'
+# /bluetooth/hood/status/vs/0 above, so it reuses those entity names where
+# the meaning matches. Read from captures taken idle, running and after
+# shutoff: Bluetooth_On is read as the link to the cooktop because the
+# unpaired slot reports Off, the lamp reported Lamp_On
+# when lit, and the shutoff timer counts in minutes (9 to 4 over five
+# minutes). FanSpeed and Lamp keep their values after the hood turns off; the
+# light runs on its own, but whether the fan is running comes from the slot's
+# /power/vs/0, so FanSpeed reads as the fan's setting.
+#
+# The hood offers Low, Med, High and Boost, captured as 1 to 4, with 2
+# confirmed as Med and 4 as Boost. 0 is the unpaired NZ36K7570R slot's value.
+_HOOD_FAN_SETTINGS = {"0": "off", "1": "low", "2": "medium", "3": "high", "4": "boost"}
+HOOD_FAN_SPEEDS = ("1", "2", "3", "4")
+# The hood keeps the minutes in one byte (256 wraps to 0, which cancels) and
+# its two-digit panel misreads 100 to 255, so 99 is the panel's own top step.
+HOOD_TIMER_MAX_MINUTES = 99
+
+
+# Both writes go to the hood's own slot as one-token aggregate PUTs, verified
+# on the reporter's hood: power On starts the fan on Low whatever FanSpeed
+# held, and a FanSpeed write lands only while the fan runs (fan.py sends it
+# after power On). The light switches with the fan on or off.
+def _hood_fan_write(payload, rep, href=None):
+    kind, value = payload
+    if kind == "power":
+        return ["power", "vs", "0"], {"x.com.samsung.da.power": "On" if value else "Off"}
+    if kind == "speed" and value in HOOD_FAN_SPEEDS:
+        return ["mode", "vs", "0"], {"x.com.samsung.da.options": [f"FanSpeed_{value}"]}
+    return None
+
+
+def _hood_light_write(on, rep, href=None):
+    return ["mode", "vs", "0"], {"x.com.samsung.da.options": ["Lamp_On" if on else "Lamp_Off"]}
+
+
+# ShutOffTimerSet_N sets N minutes and 0 cancels, leaving the fan running,
+# verified on a second NK9300KM (PR #677). It only lands while the fan runs,
+# so number.py refuses a timer while it's off. Writing ShutOffTimerState_Ready
+# reads back Ready but doesn't stop the countdown, so it isn't used to cancel.
+def _hood_timer_write(value, rep, href=None):
+    if value == int(value) and 0 <= value <= HOOD_TIMER_MAX_MINUTES:
+        return ["mode", "vs", "0"], {"x.com.samsung.da.options": [f"ShutOffTimerSet_{int(value)}"]}
+    return None
+
+
+def _hood_timer_optimistic(body):
+    """The hood reports a new timer as running right after the write (#677),
+    and the entity reads Current, so carry it rather than show the old value
+    for the whole settle window."""
+    options = body.get("x.com.samsung.da.options")
+    minutes = _option_value(options, "ShutOffTimerSet")
+    if minutes is None:
+        return body
+    state = "Ready" if minutes == "0" else "Run"
+    return {
+        **body,
+        "x.com.samsung.da.options": [
+            *options,
+            f"ShutOffTimerCurrent_{minutes}",
+            f"ShutOffTimerState_{state}",
+        ],
+    }
+
+
+def _hood_slot_in_use(rep, resources):
+    # The empty slot's own exclusion, so the cooktop registry needn't wrap
+    # these and the platforms can recognize them by identity.
+    return is_legacy_hood_slot(resources) and not is_empty_legacy_hood_slot(resources)
+
+
+LEGACY_HOOD_POWER = Capability(
+    href="/power/vs/0",
+    poll_tier="hot",
+    match_fn=_hood_slot_in_use,
+    entities=(
+        FanDesc(
+            key="paired_hood_fan",
+            field="x.com.samsung.da.power",
+            write_fn=_hood_fan_write,
+        ),
+    ),
+)
+
+LEGACY_HOOD_MODE = Capability(
+    href="/mode/vs/0",
+    poll_tier="hot",
+    match_fn=_hood_slot_in_use,
+    model_fn=paired_hood_model,
+    entities=(
+        BinarySensorDesc(
+            key="paired_hood_connected",
+            field="x.com.samsung.da.options",
+            device_class="connectivity",
+            value_fn=lambda options: _option_on(options, "Bluetooth"),
+            exists_fn=_option_present("Bluetooth"),
+        ),
+        SensorDesc(
+            key="paired_hood_fan_setting",
+            field="x.com.samsung.da.options",
+            icon="mdi:fan",
+            device_class="enum",
+            options=tuple(_HOOD_FAN_SETTINGS.values()),
+            value_fn=lambda options: _HOOD_FAN_SETTINGS.get(_option_value(options, "FanSpeed")),
+            exists_fn=_option_present("FanSpeed"),
+        ),
+        LightDesc(
+            key="paired_hood_light",
+            field="x.com.samsung.da.options",
+            icon="mdi:light-recessed",
+            value_fn=lambda options: _option_on(options, "Lamp"),
+            write_fn=_hood_light_write,
+            exists_fn=_option_present("Lamp"),
+        ),
+        SensorDesc(
+            key="paired_hood_model",
+            field="x.com.samsung.da.options",
+            icon="mdi:information-outline",
+            entity_category="diagnostic",
+            enabled_default=False,
+            value_fn=lambda options: _option_value(options, "DeviceType"),
+            exists_fn=_option_present("DeviceType"),
+        ),
+        SensorDesc(
+            key="paired_hood_shutoff_timer_state",
+            field="x.com.samsung.da.options",
+            icon="mdi:timer-outline",
+            value_fn=lambda options: _option_value(options, "ShutOffTimerState"),
+            exists_fn=_option_present("ShutOffTimerState"),
+        ),
+        SensorDesc(
+            key="paired_hood_shutoff_timer_set",
+            field="x.com.samsung.da.options",
+            icon="mdi:timer-cog-outline",
+            unit="min",
+            device_class="duration",
+            enabled_default=False,
+            value_fn=lambda options: _int_or_none(_option_value(options, "ShutOffTimerSet")),
+            exists_fn=_option_present("ShutOffTimerSet"),
+        ),
+        # Reads the minutes left, which is 0 with no timer running; Set
+        # keeps its last value after the timer ends.
+        NumberDesc(
+            key="paired_hood_shutoff_timer",
+            field="x.com.samsung.da.options",
+            icon="mdi:timer-sand",
+            unit="min",
+            device_class="duration",
+            native_min=0,
+            native_max=HOOD_TIMER_MAX_MINUTES,
+            step=1,
+            value_fn=lambda options: _int_or_none(_option_value(options, "ShutOffTimerCurrent")),
+            write_fn=_hood_timer_write,
+            optimistic_fn=_hood_timer_optimistic,
+            exists_fn=_option_present("ShutOffTimerCurrent"),
         ),
     ),
 )

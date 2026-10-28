@@ -1,0 +1,28 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "cavity_state",
+    "child_lock",
+    "current_temp_c",
+    "cycle_active",
+    "diagnosis_status",
+    "door_open",
+    "finish_time",
+    "machine_state",
+    "operation_time_minutes",
+    "power_level",
+    "progress_percentage",
+    "remote_control",
+    "subdevice2_alarm_code",
+    "subdevice2_cloud_connected",
+    "subdevice2_current_temp_c",
+    "subdevice2_cycle_active",
+    "subdevice2_door_open",
+    "subdevice2_finish_time",
+    "subdevice2_machine_state",
+    "subdevice2_operation_time_minutes",
+    "subdevice2_oven_state",
+    "subdevice2_progress_percentage",
+    "subdevice2_remote_control"
+  ]
+}

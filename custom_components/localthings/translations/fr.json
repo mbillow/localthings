@@ -159,6 +159,9 @@
       },
       "cooktop_paused": {
         "name": "En pause"
+      },
+      "booster_heater": {
+        "name": "Résistance d'appoint"
       }
     },
     "button": {
@@ -251,6 +254,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Auto",
               "smart": "Intelligent",
               "max": "Max",
               "mid": "Moyen",
@@ -264,6 +268,9 @@
     "light": {
       "lamp": {
         "name": "Lampe"
+      },
+      "paired_hood_light": {
+        "name": "Éclairage de la hotte associée"
       }
     },
     "number": {
@@ -284,6 +291,9 @@
       },
       "oven_setpoint": {
         "name": "Consigne"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Minuterie d'arrêt de la hotte associée"
       },
       "sensing_interval": {
         "name": "Intervalle AI Purify"
@@ -852,6 +862,19 @@
           "75": "Délicat",
           "77": "Repassage facile",
           "78": "Lavage rapide",
+          "91": "Auto-nettoyage",
+          "94": "Serviettes",
+          "9c": "Grand rendement",
+          "9d": "Rinçage+essorage",
+          "9e": "Infroissables",
+          "9f": "Lavage express",
+          "a2": "Délicat",
+          "a3": "Vêtements de sport",
+          "a5": "Draps",
+          "a9": "Stérilisation",
+          "aa": "Vêtements blancs",
+          "ab": "Éco - froid",
+          "b1": "Auto-nettoyage+",
           "ba": "Vidange/Essorage",
           "d0": "Coton",
           "d1": "Coton Éco",
@@ -1442,6 +1465,16 @@
       "power_level": {
         "name": "Niveau de puissance"
       },
+      "paired_hood_fan_setting": {
+        "name": "Réglage du ventilateur de la hotte associée",
+        "state": {
+          "off": "Arrêt",
+          "low": "Faible",
+          "medium": "Moyenne",
+          "high": "Élevée",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Vitesse du ventilateur de la hotte associée"
       },
@@ -1450,6 +1483,12 @@
       },
       "paired_hood_model": {
         "name": "Modèle de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Minuterie d'arrêt réglée de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "État de la minuterie d'arrêt de la hotte associée"
       },
       "power_energy_kwh": {
         "name": "Énergie consommée"
@@ -1661,6 +1700,12 @@
           "dual": "Double",
           "triple": "Triple"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Chaleur produite"
+      },
+      "three_way_valve": {
+        "name": "Vanne 3 voies"
       }
     },
     "switch": {
@@ -2115,6 +2160,7 @@
         "title": "Options de LocalThings",
         "menu_options": {
           "settings": "Paramètres de l'appareil",
+          "subdevices": "Sous-appareils",
           "cloud_courses": "Programmes téléchargés",
           "forget_learned_modes": "Oublier les modes mémorisés",
           "debug_write": "Débogage : écrire dans une ressource"
@@ -2128,6 +2174,13 @@
           "finish_time_hysteresis_minutes": "Fin estimée — variation minimale (minutes)",
           "learn_device_modes": "Mémoriser les modes signalés par l'appareil mais non annoncés",
           "cloud_courses_enabled": "Proposer les programmes téléchargés"
+        }
+      },
+      "subdevices": {
+        "title": "Sous-appareils",
+        "description": "Certains appareils exposent plusieurs appareils : chaque unité intérieure d'un système multi-split, ou chaque cavité d'un four double. D'autres signalent un emplacement supplémentaire qui ne correspond à aucun matériel réel et apparaît comme un appareil en double ou vide. Décochez tout sous-appareil qui ne correspond à rien sur votre appareil. Son appareil est supprimé et l'intégration est rechargée sans lui ; cochez-le de nouveau pour le rétablir.",
+        "data": {
+          "enabled_subdevices": "Conserver ces sous-appareils"
         }
       },
       "forget_learned_modes": {
@@ -2325,6 +2378,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Le rinçage supplémentaire n'est pas disponible avec le programme sélectionné."
+    },
+    "paired_hood_fan_off": {
+      "message": "Allumez le ventilateur de la hotte avant de régler sa minuterie d'arrêt."
     }
   },
   "selector": {
