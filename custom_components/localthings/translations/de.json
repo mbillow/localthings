@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "Eiskugeln"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Garen starten",
+      "description": "Startet einen Garvorgang in einem Backofen, Herd oder einer Mikrowelle. Nur Modi, die laut Gerät aus der Ferne gestartet werden dürfen, sind möglich, jeweils mit den Temperatur- und Zeitgrenzen des Geräts für diesen Modus. Die Fernsteuerung muss am Gerät eingeschaltet sein, und das Gerät muss im Leerlauf sein. Lass alle Felder leer, um zu starten, was die Modus-, Sollwert- und Garzeit-Entitäten gerade enthalten; ansonsten gilt für alles Weggelassene der Standardwert des Modus.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Backofen, Herd oder die Mikrowelle, die gestartet werden soll."
+        },
+        "mode": {
+          "name": "Modus",
+          "description": "Der Garmodus, so wie das Gerät ihn nennt (zum Beispiel Bake oder ConvectionBake). Standard ist der eigene Standardmodus des Geräts."
+        },
+        "temperature": {
+          "name": "Temperatur",
+          "description": "In der Temperatureinheit von Home Assistant. Wird auf die Schrittweite des Modus gerundet. Standard ist der eigene Standardwert des Modus. Für einen Modus ohne Temperatur weglassen."
+        },
+        "duration": {
+          "name": "Garzeit",
+          "description": "Wie lange gegart wird, einschließlich Vorheizen. Standard ist der eigene Standardwert des Modus."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Ressource schreiben",
+      "description": "Sendet einen oder mehrere rohe Teil-Rep-Schreibvorgänge direkt an die OCF-Ressourcen eines Geräts, der Reihe nach, mit optionaler Wartezeit zwischen den Schritten und einem verzögerten erneuten Lesen am Ende -- zum Ergründen des Schreibverhaltens eines Geräts (Issue #300), nicht für die tägliche Steuerung. Das umgeht die Sperre bei ausgeschalteter Fernsteuerung und jede write_fn/validate_fn, die ein normaler Entitäts-Schreibvorgang durchläuft, und sendet genau die angegebenen Felder unverändert: Es kann dein Gerät falsch konfigurieren. Nutze für alles, was diese Integration bereits abbildet, lieber eine echte Entität oder „Debug: In eine Ressource schreiben“ im Konfigurationsmenü der Integration.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das Gerät, in das geschrieben wird, oder eines seiner Untergeräte."
+        },
+        "writes": {
+          "name": "Schreibvorgänge",
+          "description": "1-10 Schreibvorgänge, der Reihe nach ausgeführt. Jeder Eintrag braucht href (die kanonische Ressource, z. B. /mode/vs/0) und payload (ein nicht leeres Objekt, das unverändert als Teil-Rep-POST gesendet wird, oder eine Liste von Elementen mit href und optional rep, die unverändert als OCF-Collection-Batch gesendet wird -- die Form, mit der /device/0 auf einen Lesevorgang antwortet, und die, mit der nachweislich ein Garvorgang im Backofen startet; ein Element darf rep weglassen, und die inneren hrefs eines Batches werden nie umgeschrieben, auch nicht für ein Untergerät); settle gibt an, wie viele Sekunden nach diesem Schreibvorgang gewartet wird, bevor der nächste beginnt (0-30, Standard 0); readback (Standard true) legt fest, ob die Ressource für die Felder \"after\"/\"changed\" sofort wieder gelesen wird. Setze es auf false bei einer Platine, die einen Schreibvorgang annimmt und dann zurücksetzt -- bei mancher Firmware löst gerade dieses sofortige GET das Zurücksetzen aus, sodass das Zurücklesen Teil des Experiments wird. Ohne es kommt \"changed\" als null zurück, und verify_after ist die einzige Prüfung."
+        },
+        "hold_session_lock": {
+          "name": "Sitzung für die ganze Abfolge halten",
+          "description": "Hält die Gerätesitzung für die gesamte Abfolge, Wartezeiten eingeschlossen, damit nichts anderes -- eine routinemäßige Abfrage, der Schreibvorgang einer anderen Entität -- zwischen zwei Schritten landen und verwischen kann, auf welchen Schreibvorgang das Gerät reagiert hat. Standardmäßig an. Ausgeschaltet wird die Sitzung pro Schreibvorgang genommen und während der Wartezeiten freigegeben, sodass Entitäten während einer langen Abfolge weiter aktualisiert werden, auf Kosten dieser Gewissheit."
+        },
+        "verify_after": {
+          "name": "Danach prüfen",
+          "description": "Sekunden, die nach Ende der gesamten Abfolge gewartet wird, bevor jede berührte href erneut gelesen wird, um zu sehen, ob die Werte gehalten oder von der Platine zurückgesetzt wurden. 0 (Standard) überspringt die Prüfung."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Ressource lesen",
+      "description": "Liest die OCF-Ressourcen eines Geräts direkt und umgeht dabei das Entitätsmodell dieser Integration. Gib eine href an für ein Live-GET direkt vom Gerät -- bewusst nicht aus dem Cache, der bis zu ein Abfrageintervall alt sein kann -- oder lass sie weg, um den zwischengespeicherten Stand aller Ressourcen zu erhalten, die diese Integration auf diesem Gerät gerade verfolgt.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das Gerät, von dem gelesen wird, oder eines seiner Untergeräte."
+        },
+        "href": {
+          "name": "Ressourcen-href",
+          "description": "Kanonische Ressourcen-href zum Lesen (z. B. /mode/vs/0). Hänge nach ? eine Abfrage an, um sie mit dem GET zu senden, z. B. /device/1?if=oic.if.b, mit & zwischen den Parametern. Weglassen, um statt eines Live-GET den zwischengespeicherten Stand aller verfolgten Ressourcen zu erhalten."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Ressource beobachten",
+      "description": "Abonniert eine OCF-Ressource eines Geräts eine Zeit lang mit CoAP OBSERVE und gibt jede gesendete Benachrichtigung zusammen mit einem einfachen GET derselben Ressource zurück. Um Felder zu finden, die ein Gerät nur in Benachrichtigungen sendet, nicht für den täglichen Gebrauch. Abfragen und Schreibvorgänge laufen weiter, während es lauscht. Nicht verfügbar für Geräte an TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das zu beobachtende Gerät oder eines seiner Untergeräte."
+        },
+        "href": {
+          "name": "Ressourcen-href",
+          "description": "Kanonische Ressourcen-href zum Beobachten (z. B. /energy/consumption/vs/0). Hänge nach ? eine Abfrage an, um sie mit dem Abonnement zu senden, wie bei „Ressource lesen“."
+        },
+        "duration": {
+          "name": "Dauer",
+          "description": "Wie viele Sekunden gelauscht wird, höchstens 120."
+        }
+      }
+    }
   }
 }

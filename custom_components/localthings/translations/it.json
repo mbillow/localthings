@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "Produttore di sfere di ghiaccio"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Avvia cottura",
+      "description": "Avvia una cottura su un forno, una cucina o un microonde. Si possono usare solo le modalità che l'elettrodomestico stesso consente di avviare da remoto, con i propri limiti di temperatura e tempo per quella modalità. Il controllo remoto deve essere attivo sull'elettrodomestico, che deve essere inattivo. Lascia vuoti tutti i campi per avviare ciò che contengono le entità di modalità, temperatura impostata e tempo di cottura; altrimenti tutto ciò che ometti usa il valore predefinito della modalità.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il forno, la cucina o il microonde da avviare."
+        },
+        "mode": {
+          "name": "Modalità",
+          "description": "La modalità di cottura, come la chiama l'elettrodomestico (ad esempio Bake o ConvectionBake). Predefinita: la modalità predefinita dell'elettrodomestico."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Nell'unità di temperatura di Home Assistant. Arrotondata al passo della modalità. Predefinita: il valore predefinito della modalità. Omettila per una modalità senza temperatura."
+        },
+        "duration": {
+          "name": "Tempo di cottura",
+          "description": "Per quanto tempo cuocere, preriscaldamento incluso. Predefinito: il valore predefinito della modalità."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Scrivi risorsa",
+      "description": "Invia una o più scritture grezze di rep parziale direttamente alle risorse OCF di un dispositivo, in ordine, con un'attesa facoltativa tra i passaggi e una rilettura ritardata alla fine -- per ricostruire il contratto di scrittura di un dispositivo (issue #300), non per il controllo quotidiano. Aggira il blocco con il controllo remoto disattivato e ogni write_fn/validate_fn attraverso cui passa una normale scrittura di entità, e invia esattamente i campi indicati, così come sono: può configurare male il tuo elettrodomestico. Per tutto ciò che questa integrazione già modella, preferisci un'entità reale o \"Debug: scrivi su una risorsa\" nel menu Configura dell'integrazione.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "L'elettrodomestico su cui scrivere, o uno dei suoi sottodispositivi."
+        },
+        "writes": {
+          "name": "Scritture",
+          "description": "Da 1 a 10 scritture da eseguire in ordine. Ogni voce richiede href (la risorsa canonica, ad es. /mode/vs/0) e payload (un oggetto non vuoto inviato così com'è come POST di rep parziale, oppure un elenco di elementi contenenti href ed eventualmente rep, inviato così com'è come batch di collezione OCF -- la forma con cui /device/0 risponde a una lettura, e quella che si è misurato avviare una cottura in forno; un elemento può omettere rep, e gli href interni di un batch non vengono mai riscritti, nemmeno per un sottodispositivo); settle indica quanti secondi attendere dopo quella scrittura prima di iniziare la successiva (0-30, predefinito 0); readback (predefinito true) indica se rileggere subito la risorsa per i campi \"after\"/\"changed\". Impostalo su false su una scheda che accetta una scrittura e poi la annulla -- su alcuni firmware è proprio quel GET immediato a provocare l'annullamento, quindi lasciarlo attivo rende la rilettura parte dell'esperimento. Senza di esso \"changed\" torna null e verify_after è l'unico controllo."
+        },
+        "hold_session_lock": {
+          "name": "Mantieni la sessione per l'intera sequenza",
+          "description": "Mantiene la sessione del dispositivo per l'intera sequenza, attese comprese, così che nient'altro -- un'interrogazione di routine, la scrittura di un'altra entità -- possa inserirsi tra due passaggi e confondere a quale scrittura ha reagito l'elettrodomestico. Attivo per impostazione predefinita. Disattivandolo, la sessione viene presa a ogni scrittura e liberata durante le attese, il che consente alle entità di continuare ad aggiornarsi durante una sequenza lunga, a scapito di questa certezza."
+        },
+        "verify_after": {
+          "name": "Verifica dopo",
+          "description": "Secondi di attesa dopo la fine dell'intera sequenza prima di rileggere ogni href toccato, per vedere se i valori sono rimasti o sono stati ripristinati dalla scheda. 0 (predefinito) salta la verifica."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Leggi risorsa",
+      "description": "Legge direttamente le risorse OCF di un dispositivo, aggirando il modello di entità di questa integrazione. Indica un href per un GET in tempo reale direttamente dal dispositivo -- volutamente non dalla cache, che può essere vecchia fino a un intervallo di interrogazione -- oppure omettilo per ottenere l'istantanea in cache di tutte le risorse che questa integrazione sta seguendo su quel dispositivo.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "L'elettrodomestico da cui leggere, o uno dei suoi sottodispositivi."
+        },
+        "href": {
+          "name": "href della risorsa",
+          "description": "href canonico della risorsa da leggere (ad es. /mode/vs/0). Aggiungi una query dopo ? per inviarla con il GET, ad es. /device/1?if=oic.if.b, con & tra i parametri. Omettilo per ottenere l'istantanea in cache di tutte le risorse seguite invece di un GET in tempo reale."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Osserva risorsa",
+      "description": "Si iscrive per un po' a una delle risorse OCF di un dispositivo con CoAP OBSERVE, e restituisce ogni notifica inviata insieme a un semplice GET della stessa risorsa. Serve a trovare campi che un dispositivo invia solo nelle notifiche, non per l'uso quotidiano. Interrogazioni e scritture continuano mentre è in ascolto. Non disponibile per gli elettrodomestici su TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "L'elettrodomestico da osservare, o uno dei suoi sottodispositivi."
+        },
+        "href": {
+          "name": "href della risorsa",
+          "description": "href canonico della risorsa da osservare (ad es. /energy/consumption/vs/0). Aggiungi una query dopo ? per inviarla con l'iscrizione, come per \"Leggi risorsa\"."
+        },
+        "duration": {
+          "name": "Durata",
+          "description": "Per quanti secondi restare in ascolto, fino a 120."
+        }
+      }
+    }
   }
 }

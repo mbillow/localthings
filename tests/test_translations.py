@@ -6,7 +6,7 @@ resolution, both of which belong to Core's build tooling. So
 ``translations/en.json`` is the source of truth here, and these tests hold
 the two invariants that follow from that: every translation key the Python
 side names has to exist in it, and every other language has to mirror its
-shape, apart from the action descriptions older locales haven't translated.
+shape.
 """
 
 from __future__ import annotations
@@ -87,9 +87,7 @@ def test_every_language_mirrors_the_english_catalog():
     """English is the complete catalog; the rest must match it key for key.
 
     A missing key silently falls back to English at runtime, so checking the
-    shape is the only way to notice a half-finished translation. Action
-    descriptions were added later; older locales may omit that section
-    and use the English fallback until it is translated.
+    shape is the only way to notice a half-finished translation.
     """
     english = _load("en")
     english_strings = dict(_walk_strings(english))
@@ -97,7 +95,6 @@ def test_every_language_mirrors_the_english_catalog():
         if language == "en":
             continue
         translated = _load(language)
-        translated.setdefault("services", english["services"])
         assert _topology(english) == _topology(translated), language
 
         translated_strings = dict(_walk_strings(translated))
@@ -121,7 +118,6 @@ def test_action_catalog_matches_service_descriptions():
             field: descriptions(value) for field, value in metadata.get("fields", {}).items()
         }
     assert _load("en")["services"] == expected
-    assert _topology(_load("pt-BR")) == _topology(_load("en"))
 
 
 async def test_brazilian_portuguese_loads_in_home_assistant(hass, enable_custom_integrations):
@@ -130,12 +126,6 @@ async def test_brazilian_portuguese_loads_in_home_assistant(hass, enable_custom_
         actual = await async_get_translations(hass, "pt-BR", category, {"localthings"})
         expected = recursive_flatten(f"component.localthings.{category}.", strings)
         assert actual == expected, category
-
-
-async def test_untranslated_actions_fall_back_to_english(hass, enable_custom_integrations):
-    actual = await async_get_translations(hass, "es", "services", {"localthings"})
-    expected = recursive_flatten("component.localthings.services.", _load("en")["services"])
-    assert actual == expected
 
 
 def test_no_catalog_carries_unresolved_core_references():

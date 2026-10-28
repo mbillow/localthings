@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "Kule lodu"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Rozpocznij gotowanie",
+      "description": "Rozpoczyna gotowanie w piekarniku, kuchence lub kuchence mikrofalowej. Można użyć tylko trybów, które według samego urządzenia wolno uruchomić zdalnie, z jego własnymi limitami temperatury i czasu dla danego trybu. Sterowanie zdalne musi być włączone na urządzeniu, a urządzenie musi być bezczynne. Pozostaw wszystkie pola puste, aby uruchomić to, co aktualnie przechowują encje trybu, temperatury zadanej i czasu gotowania; w przeciwnym razie wszystko, co pominiesz, przyjmie domyślną wartość trybu.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Piekarnik, kuchenka lub kuchenka mikrofalowa do uruchomienia."
+        },
+        "mode": {
+          "name": "Tryb",
+          "description": "Tryb gotowania w nazewnictwie urządzenia (na przykład Bake lub ConvectionBake). Domyślnie własny tryb domyślny urządzenia."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "W jednostce temperatury Home Assistant. Zaokrąglana do kroku trybu. Domyślnie wartość domyślna trybu. Pomiń dla trybu bez temperatury."
+        },
+        "duration": {
+          "name": "Czas gotowania",
+          "description": "Jak długo gotować, łącznie z nagrzewaniem. Domyślnie wartość domyślna trybu."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Zapisz zasób",
+      "description": "Wysyła jeden lub więcej surowych zapisów częściowej rep bezpośrednio do zasobów OCF urządzenia, po kolei, z opcjonalnym odstępem między krokami i opóźnionym ponownym odczytem na końcu -- do rozpracowania kontraktu zapisu urządzenia (issue #300), nie do codziennego sterowania. Pomija blokadę przy wyłączonym sterowaniu zdalnym i każdą funkcję write_fn/validate_fn, przez którą przechodzi zwykły zapis encji, i wysyła dokładnie podane pola bez zmian: może źle skonfigurować Twoje urządzenie. W przypadku wszystkiego, co ta integracja już modeluje, lepiej użyj prawdziwej encji lub opcji „Debugowanie: zapis do zasobu” w menu Konfiguruj integracji.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie, do którego ma nastąpić zapis, lub jedno z jego urządzeń podrzędnych."
+        },
+        "writes": {
+          "name": "Zapisy",
+          "description": "1-10 zapisów wykonywanych po kolei. Każdy element wymaga href (kanoniczny zasób, np. /mode/vs/0) i payload (niepusty obiekt wysyłany bez zmian jako POST częściowej rep albo lista elementów zawierających href i opcjonalnie rep, wysyłana bez zmian jako partia kolekcji OCF -- kształt, którym /device/0 odpowiada na odczyt, i ten, który według pomiarów uruchamia pieczenie w piekarniku; element może pominąć rep, a wewnętrzne href partii nigdy nie są przepisywane, nawet dla urządzenia podrzędnego); settle to liczba sekund oczekiwania po tym zapisie przed rozpoczęciem następnego (0-30, domyślnie 0); readback (domyślnie true) określa, czy od razu odczytać zasób ponownie dla pól \"after\"/\"changed\". Ustaw false na płycie, która przyjmuje zapis, a potem go cofa -- w niektórych firmware'ach to właśnie ten natychmiastowy GET wywołuje cofnięcie, więc pozostawienie go włączonego czyni odczyt częścią eksperymentu. Bez niego \"changed\" wraca jako null, a verify_after jest jedynym sprawdzeniem."
+        },
+        "hold_session_lock": {
+          "name": "Trzymaj sesję przez całą sekwencję",
+          "description": "Utrzymuje sesję urządzenia przez całą sekwencję, łącznie z odstępami, aby nic innego -- rutynowe odpytywanie, zapis innej encji -- nie mogło trafić między dwa kroki i zatrzeć, na który zapis zareagowało urządzenie. Domyślnie włączone. Po wyłączeniu sesja jest pobierana dla każdego zapisu i zwalniana na czas oczekiwania, dzięki czemu encje mogą się aktualizować podczas długiej sekwencji, kosztem tej pewności."
+        },
+        "verify_after": {
+          "name": "Sprawdź po",
+          "description": "Liczba sekund oczekiwania po zakończeniu całej sekwencji przed ponownym odczytem każdego użytego href, aby sprawdzić, czy wartości się utrzymały, czy płyta je przywróciła. 0 (domyślnie) pomija sprawdzenie."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Odczytaj zasób",
+      "description": "Odczytuje zasoby OCF urządzenia bezpośrednio, z pominięciem modelu encji tej integracji. Podaj href, aby wykonać GET na żywo bezpośrednio z urządzenia -- celowo nie z pamięci podręcznej, która może być nieaktualna o jeden interwał odpytywania -- lub pomiń go, aby otrzymać zapisaną migawkę wszystkich zasobów, które ta integracja śledzi na tym urządzeniu.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie, z którego ma nastąpić odczyt, lub jedno z jego urządzeń podrzędnych."
+        },
+        "href": {
+          "name": "href zasobu",
+          "description": "Kanoniczny href zasobu do odczytu (np. /mode/vs/0). Dodaj zapytanie po ?, aby wysłać je z GET, np. /device/1?if=oic.if.b, z & między parametrami. Pomiń, aby zamiast GET na żywo otrzymać zapisaną migawkę wszystkich śledzonych zasobów."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Obserwuj zasób",
+      "description": "Subskrybuje przez pewien czas jeden z zasobów OCF urządzenia za pomocą CoAP OBSERVE i zwraca każde wysłane powiadomienie wraz ze zwykłym GET tego samego zasobu. Służy do znajdowania pól, które urządzenie wysyła tylko w powiadomieniach, a nie do codziennego użytku. Odpytywanie i zapisy trwają dalej podczas nasłuchiwania. Niedostępne dla urządzeń na TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie do obserwowania lub jedno z jego urządzeń podrzędnych."
+        },
+        "href": {
+          "name": "href zasobu",
+          "description": "Kanoniczny href zasobu do obserwowania (np. /energy/consumption/vs/0). Dodaj zapytanie po ?, aby wysłać je z subskrypcją, tak jak w „Odczytaj zasób”."
+        },
+        "duration": {
+          "name": "Czas trwania",
+          "description": "Ile sekund nasłuchiwać, maksymalnie 120."
+        }
+      }
+    }
   }
 }

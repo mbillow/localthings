@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "Ledové koule"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Spustit vaření",
+      "description": "Spustí vaření v troubě, sporáku nebo mikrovlnné troubě. Lze použít jen režimy, které spotřebič sám povoluje spustit na dálku, s jeho vlastními limity teploty a času pro daný režim. Na spotřebiči musí být zapnuté dálkové ovládání a spotřebič musí být nečinný. Ponechte všechna pole prázdná, chcete-li spustit to, co právě drží entity režimu, nastavené teploty a doby vaření; jinak se pro vše vynechané použije výchozí hodnota režimu.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Trouba, sporák nebo mikrovlnná trouba, která se má spustit."
+        },
+        "mode": {
+          "name": "Režim",
+          "description": "Režim vaření tak, jak ho pojmenovává spotřebič (například Bake nebo ConvectionBake). Výchozí je vlastní výchozí režim spotřebiče."
+        },
+        "temperature": {
+          "name": "Teplota",
+          "description": "V jednotce teploty Home Assistantu. Zaokrouhlí se na krok režimu. Výchozí je výchozí hodnota režimu. U režimu bez teploty ji vynechte."
+        },
+        "duration": {
+          "name": "Doba vaření",
+          "description": "Jak dlouho vařit, včetně předehřevu. Výchozí je výchozí hodnota režimu."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Zapsat prostředek",
+      "description": "Odešle jeden nebo více nezpracovaných zápisů částečné rep přímo do OCF prostředků zařízení, postupně, s volitelnou prodlevou mezi kroky a opožděným opětovným čtením na konci -- pro zjištění, jak zařízení zpracovává zápisy (issue #300), ne pro každodenní ovládání. Obchází blokaci při vypnutém dálkovém ovládání i každou funkci write_fn/validate_fn, kterou prochází běžný zápis entity, a odesílá přesně zadaná pole beze změny: může spotřebič špatně nastavit. Pro vše, co tato integrace už modeluje, raději použijte skutečnou entitu nebo „Ladění: zápis do prostředku“ v nabídce Konfigurovat integrace.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Spotřebič, do kterého se zapisuje, nebo jedno z jeho podřízených zařízení."
+        },
+        "writes": {
+          "name": "Zápisy",
+          "description": "1-10 zápisů provedených postupně. Každá položka potřebuje href (kanonický prostředek, např. /mode/vs/0) a payload (neprázdný objekt odeslaný beze změny jako POST částečné rep, nebo seznam prvků obsahujících href a volitelně rep, odeslaný beze změny jako dávka kolekce OCF -- tvar, kterým /device/0 odpovídá na čtení, a ten, který podle měření spouští pečení v troubě; prvek může rep vynechat a vnitřní href dávky se nikdy nepřepisují, ani pro podřízené zařízení); settle je počet sekund čekání po tomto zápisu před zahájením dalšího (0-30, výchozí 0); readback (výchozí true) určuje, zda se prostředek ihned znovu přečte pro pole \"after\"/\"changed\". Nastavte false u desky, která zápis přijme a pak ho vrátí -- u některého firmwaru právě tento okamžitý GET návrat vyvolá, takže ponechání zapnutého udělá ze zpětného čtení součást experimentu. Bez něj se \"changed\" vrátí jako null a jedinou kontrolou je verify_after."
+        },
+        "hold_session_lock": {
+          "name": "Držet relaci po celou sekvenci",
+          "description": "Drží relaci zařízení po celou sekvenci včetně prodlev, aby se mezi dva kroky nemohlo dostat nic jiného -- běžné dotazování, zápis jiné entity -- a nezamlžilo, na který zápis spotřebič reagoval. Ve výchozím stavu zapnuto. Po vypnutí se relace bere pro každý zápis a během čekání uvolňuje, takže se entity mohou během dlouhé sekvence dál aktualizovat, za cenu této jistoty."
+        },
+        "verify_after": {
+          "name": "Ověřit poté",
+          "description": "Počet sekund čekání po skončení celé sekvence před opětovným přečtením každého dotčeného href, aby bylo vidět, zda hodnoty vydržely, nebo je deska vrátila. 0 (výchozí) ověření přeskočí."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Přečíst prostředek",
+      "description": "Přečte OCF prostředky zařízení přímo, mimo model entit této integrace. Zadejte href pro živý GET přímo ze zařízení -- záměrně ne z mezipaměti, která může být stará až jeden interval dotazování -- nebo ho vynechte a získáte uložený snímek všech prostředků, které tato integrace na zařízení sleduje.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Spotřebič, ze kterého se čte, nebo jedno z jeho podřízených zařízení."
+        },
+        "href": {
+          "name": "href prostředku",
+          "description": "Kanonický href prostředku ke čtení (např. /mode/vs/0). Za ? přidejte dotaz, který se odešle s GET, např. /device/1?if=oic.if.b, s & mezi parametry. Vynechte ho a místo živého GET získáte uložený snímek všech sledovaných prostředků."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Sledovat prostředek",
+      "description": "Na chvíli se přihlásí k odběru jednoho z OCF prostředků zařízení pomocí CoAP OBSERVE a vrátí každé odeslané oznámení spolu s obyčejným GET téhož prostředku. Slouží k nalezení polí, která zařízení posílá jen v oznámeních, ne k běžnému použití. Dotazování a zápisy během naslouchání pokračují. Není k dispozici u spotřebičů na TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Spotřebič ke sledování nebo jedno z jeho podřízených zařízení."
+        },
+        "href": {
+          "name": "href prostředku",
+          "description": "Kanonický href prostředku ke sledování (např. /energy/consumption/vs/0). Za ? přidejte dotaz, který se odešle s odběrem, stejně jako u „Přečíst prostředek“."
+        },
+        "duration": {
+          "name": "Doba trvání",
+          "description": "Kolik sekund naslouchat, nejvýše 120."
+        }
+      }
+    }
   }
 }

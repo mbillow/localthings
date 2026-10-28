@@ -2409,5 +2409,83 @@
         "whiskey_ice_ball": "IJsballen"
       }
     }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Koken starten",
+      "description": "Start het koken op een oven, fornuis of magnetron. Alleen standen waarvan het apparaat zelf zegt dat ze op afstand gestart mogen worden, kunnen worden gebruikt, met de eigen temperatuur- en tijdslimieten van het apparaat voor die stand. Bediening op afstand moet aan staan op het apparaat, en het moet inactief zijn. Laat alle velden leeg om te starten wat de entiteiten voor stand, instelwaarde en kooktijd vasthouden; anders gebruikt alles wat je weglaat de standaardwaarde van de stand.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De oven, het fornuis of de magnetron die moet starten."
+        },
+        "mode": {
+          "name": "Stand",
+          "description": "De kookstand, zoals het apparaat die noemt (bijvoorbeeld Bake of ConvectionBake). Standaard de eigen standaardstand van het apparaat."
+        },
+        "temperature": {
+          "name": "Temperatuur",
+          "description": "In de temperatuureenheid van Home Assistant. Afgerond op de stapgrootte van de stand. Standaard de eigen standaardwaarde van de stand. Laat weg bij een stand zonder temperatuur."
+        },
+        "duration": {
+          "name": "Kooktijd",
+          "description": "Hoe lang er gekookt wordt, inclusief voorverwarmen. Standaard de eigen standaardwaarde van de stand."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Resource schrijven",
+      "description": "Stuurt een of meer ruwe gedeeltelijke rep-schrijfacties rechtstreeks naar de OCF-resources van een apparaat, op volgorde, met een optionele wachttijd tussen de stappen en een vertraagde herlezing aan het eind -- om het schrijfgedrag van een apparaat te achterhalen (issue #300), niet voor dagelijkse bediening. Dit omzeilt de blokkade bij uitgeschakelde bediening op afstand en elke write_fn/validate_fn waar een normale schrijfactie van een entiteit doorheen gaat, en stuurt precies de velden die je opgeeft, ongewijzigd: het kan je apparaat verkeerd instellen. Gebruik voor alles wat deze integratie al modelleert liever een echte entiteit, of \"Foutopsporing: naar een resource schrijven\" in het menu Configureren van de integratie.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "Het apparaat om naar te schrijven, of een van zijn subapparaten."
+        },
+        "writes": {
+          "name": "Schrijfacties",
+          "description": "1-10 schrijfacties, op volgorde uitgevoerd. Elk item heeft href nodig (de canonieke resource, bijv. /mode/vs/0) en payload (een niet-leeg object dat ongewijzigd als gedeeltelijke rep-POST wordt verstuurd, of een lijst met elementen die href en optioneel rep bevatten, ongewijzigd verstuurd als OCF-collectiebatch -- de vorm waarmee /device/0 op een leesactie antwoordt, en de vorm waarvan gemeten is dat die een ovenprogramma start; een element mag rep weglaten, en de interne hrefs van een batch worden nooit herschreven, ook niet voor een subapparaat); settle is hoeveel seconden er na die schrijfactie gewacht wordt voordat de volgende begint (0-30, standaard 0); readback (standaard true) bepaalt of de resource direct opnieuw wordt gelezen voor de velden \"after\"/\"changed\". Zet het op false bij een printplaat die een schrijfactie accepteert en daarna terugdraait -- op sommige firmware is juist die directe GET wat het terugdraaien veroorzaakt, zodat het aan laten staan het teruglezen deel van het experiment maakt. Zonder komt \"changed\" terug als null en is verify_after de enige controle."
+        },
+        "hold_session_lock": {
+          "name": "Sessie vasthouden voor de hele reeks",
+          "description": "Houdt de apparaatsessie vast voor de hele reeks, wachttijden inbegrepen, zodat niets anders -- een routinematige poll, de schrijfactie van een andere entiteit -- tussen twee stappen terecht kan komen en kan vertroebelen op welke schrijfactie het apparaat reageerde. Standaard aan. Uitgeschakeld wordt de sessie per schrijfactie genomen en tijdens het wachten vrijgegeven, zodat entiteiten tijdens een lange reeks blijven bijwerken, ten koste van die zekerheid."
+        },
+        "verify_after": {
+          "name": "Daarna controleren",
+          "description": "Seconden wachten nadat de hele reeks klaar is, voordat elke aangeraakte href opnieuw wordt gelezen, om te zien of de waarden bleven staan of door de printplaat werden teruggezet. 0 (standaard) slaat de controle over."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Resource lezen",
+      "description": "Leest de OCF-resources van een apparaat rechtstreeks, buiten het entiteitenmodel van deze integratie om. Geef een href op voor een live GET rechtstreeks van het apparaat -- bewust niet uit de cache, die tot een pollinterval oud kan zijn -- of laat het weg voor de gecachte momentopname van elke resource die deze integratie op dat apparaat volgt.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "Het apparaat om van te lezen, of een van zijn subapparaten."
+        },
+        "href": {
+          "name": "Resource-href",
+          "description": "Canonieke resource-href om te lezen (bijv. /mode/vs/0). Voeg na ? een query toe om die met de GET mee te sturen, bijv. /device/1?if=oic.if.b, met & tussen de parameters. Laat weg voor de gecachte momentopname van elke gevolgde resource in plaats van een live GET."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Resource observeren",
+      "description": "Abonneert zich een tijdje op een van de OCF-resources van een apparaat met CoAP OBSERVE, en geeft elke verstuurde melding terug samen met een gewone GET van dezelfde resource. Om velden te vinden die een apparaat alleen in meldingen verstuurt, niet voor dagelijks gebruik. Pollen en schrijven gaan door terwijl het luistert. Niet beschikbaar voor apparaten op TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "Het apparaat om te observeren, of een van zijn subapparaten."
+        },
+        "href": {
+          "name": "Resource-href",
+          "description": "Canonieke resource-href om te observeren (bijv. /energy/consumption/vs/0). Voeg na ? een query toe om die met het abonnement mee te sturen, zoals bij \"Resource lezen\"."
+        },
+        "duration": {
+          "name": "Duur",
+          "description": "Hoeveel seconden er geluisterd wordt, tot 120."
+        }
+      }
+    }
   }
 }
