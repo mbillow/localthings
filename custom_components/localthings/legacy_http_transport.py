@@ -306,7 +306,7 @@ class LegacyHttpTransport:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
-            bodies = _with_record_name(bodies, record.get("name"))
+            bodies = _with_record_name(bodies, record.get("name") or _record_type(record))
         state = self._state_at(index)
         state.last_bodies = bodies
         state.device_type = _record_type(record)
@@ -747,9 +747,10 @@ def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[s
 
 
 def _with_record_name(bodies: dict[str, Any], name: Any) -> dict[str, Any]:
-    """`bodies` with a sibling record's name (`Hood`, #676) on its
-    Information, which otherwise names only the board it shares with the
-    main unit. It names the sibling's type, not anything the owner sets."""
+    """`bodies` with a sibling record's name (`Hood`, #676), or its type
+    (`Oven`, #674) when it has none, on its Information, which otherwise
+    names only the board it shares with the main unit. It names the
+    sibling's type, not anything the owner sets."""
     if not (isinstance(name, str) and name):
         return bodies
     information = bodies.get("Information")
