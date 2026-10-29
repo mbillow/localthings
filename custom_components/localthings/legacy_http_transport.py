@@ -25,7 +25,7 @@ import logging
 import re
 import ssl
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -60,8 +60,9 @@ from .registry.capabilities.laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     course_option_mask,
 )
+from .registry.capabilities.oven import is_lcd_ov_wall_16k
 from .registry.subdevices import Subdevice
-from .transport import AuthRejected
+from .transport import AuthRejected, OvenStartUnconfirmed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ _AUTH_HEADER = "Authorization"
 # How long a start is given to take before its state is read back. The
 # composed start has been measured loading the programme without running it.
 _START_SETTLE_S = 3.0
+_OVEN_START_SETTLE_S = 0.5
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 # What the stop button sends; see _already_ready.
@@ -160,6 +162,7 @@ class LegacyHttpTransport:
         key_pem: str,
         token: str,
         family: str | None = None,
+        bypass_remote_control: Callable[[], bool] | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -167,6 +170,7 @@ class LegacyHttpTransport:
         self._key_pem = key_pem
         self._token = token
         self._family = family or ""
+        self._bypass_remote_control = bypass_remote_control
         self._ctx: ssl.SSLContext | None = None
 
     @property
@@ -422,8 +426,14 @@ class LegacyHttpTransport:
         for key, value in staged.items():
             state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and state.staged and self._idle(index):
-            return self._start(index, sendable, timeout)
+        info = state.last_bodies.get("Information") or {}
+        settings_first = (
+            is_lcd_ov_wall_16k(info.get("modelID"))
+            and info.get("deviceSubType") == "WallOven"
+            and "Mode" in sendable["Device"]
+        )
+        if is_start(sendable) and (settings_first or (state.staged and self._idle(index))):
+            return self._start(index, sendable, timeout, settings_first=settings_first)
         if not sendable["Device"]:
             return 0x44, None
         if sendable == _READY and self._already_ready(index, timeout):
@@ -504,6 +514,26 @@ class LegacyHttpTransport:
         operation = self._state_at(index).last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
 
+    def _oven_start_permission(
+        self, index: int, phase: str, timeout: float
+    ) -> tuple[int, str] | None:
+        """Require current permission from the cavity receiving the next start write."""
+        if self._bypass_remote_control is not None and self._bypass_remote_control():
+            return None
+        status, body = self._request("GET", f"{_device_path(index)}/configuration", timeout=timeout)
+        if status != 200:
+            code = http_status_to_coap(status) if status >= 400 else 0xA2
+            return code, f"Smart Control could not be verified {phase} (HTTP {status})"
+        configuration = body.get("Configuration") if isinstance(body, dict) else None
+        enabled = (
+            configuration.get("remoteControlEnabled") if isinstance(configuration, dict) else None
+        )
+        if enabled is True or (isinstance(enabled, str) and enabled.lower() == "true"):
+            return None
+        if enabled is False or (isinstance(enabled, str) and enabled.lower() == "false"):
+            return 0x83, f"Smart Control is off {phase}"
+        return 0xA2, f"Smart Control status is missing or invalid {phase}"
+
     def _already_ready(self, index: int, timeout: float) -> bool:
         """Whether a fresh read says the appliance is idle.
 
@@ -515,29 +545,52 @@ class LegacyHttpTransport:
         """
         return self._operation_state(index, timeout) == "Ready"
 
-    def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
-        """Start with every held value in the same body -- the only way this
-        firmware takes them -- then make sure it actually runs.
-
-        Measured on a TP6X_WW6500: the composed body loads the programme and
-        leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
-        That second `Run` is sent only when a fresh read says it isn't
-        running.
-        """
+    def _start(
+        self, index: int, aggregate: dict[str, Any], timeout: float, *, settings_first: bool = False
+    ) -> tuple[int, Any]:
+        """Load settings, then Run if needed. WW6500 takes Run in both writes;
+        NV51K7770S requires it omitted from the first, with a 0.5s pause (#667)."""
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
-        status, response = self._request("PUT", base, body=body, timeout=timeout)
+        deadline = time.monotonic() + timeout
+        if settings_first:
+            blocked = self._oven_start_permission(index, "before settings", _remaining(deadline))
+            if blocked is not None:
+                return blocked
+            operation = body["Device"]["Operation"]
+            operation.pop("state", None)
+            if not operation:
+                del body["Device"]["Operation"]
+        status, response = self._request(
+            "PUT", base, body=body, timeout=_remaining(deadline) if settings_first else timeout
+        )
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
         held.clear()
-        time.sleep(_START_SETTLE_S)
-        if self._running(index, timeout):
+        time.sleep(
+            min(_OVEN_START_SETTLE_S, _remaining(deadline)) if settings_first else _START_SETTLE_S
+        )
+        if settings_first:
+            blocked = self._oven_start_permission(index, "before Run", _remaining(deadline))
+            if blocked is not None:
+                return blocked
+        elif self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
-        if not 200 <= run_status < 300 and self._running(index, timeout):
-            # It got there by itself between the read and the Run.
+        run_timeout = _remaining(deadline) if settings_first else timeout
+        try:
+            run_status, run_response = self._request("PUT", base, body=_RUN, timeout=run_timeout)
+        except AuthRejected as err:
+            if settings_first:
+                return 0x81, str(err)
+            raise
+        except Exception as err:
+            if settings_first:
+                # Only this request can have started the oven; never replay it.
+                raise OvenStartUnconfirmed(str(err)) from err
+            raise
+        if not settings_first and not 200 <= run_status < 300 and self._running(index, timeout):
             return http_status_to_coap(status), response
         return http_status_to_coap(run_status), run_response
 

@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "Příkaz pro {href} selhal i po opětovném připojení: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Spuštění vaření se nepodařilo potvrdit a nebylo zopakováno. Před dalším pokusem zkontrolujte spotřebič. Podrobnosti: {error}"
+    },
     "command_refused": {
       "message": "Spotřebič odmítl příkaz pro {href}: {error}"
     },

@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Nie udało się potwierdzić rozpoczęcia gotowania i nie ponowiono próby. Sprawdź urządzenie przed ponowną próbą. Szczegóły: {error}"
+    },
     "command_refused": {
       "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
     },

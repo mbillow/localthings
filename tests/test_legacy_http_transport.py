@@ -731,15 +731,22 @@ class TestHeldCourseDefaults:
 
 
 class TestWallOvenStart:
-    """The cook start's Collection batch over 8888 (#572): this firmware has no
-    Collections, so the batch goes as one aggregate PUT."""
+    """NV51K7770S requires settings and Run in separate aggregate writes (#572)."""
 
     FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
 
     @pytest.fixture
-    def oven(self, transport):
+    def oven(self, transport, monkeypatch):
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", lambda _: None
+        )
         bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
         _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        for wrapper in ("Information", "Configuration"):
+            _FakeConnection.routes[f"/devices/0/{wrapper.lower()}"] = (
+                200,
+                {wrapper: bodies[wrapper]},
+            )
         _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
         device = LegacyHttpTransport(
             "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
@@ -748,7 +755,7 @@ class TestWallOvenStart:
         _swept_as(device, "Oven")
         return device
 
-    def test_a_start_goes_as_one_aggregate_body(self, oven):
+    def test_a_start_loads_settings_before_run(self, oven):
         _, seed = oven.read(["device", "0"], timeout=10.0)
         resources = {e["href"]: e["rep"] for e in seed}
         batch = cook.plan_start(resources, "UpperConvectionBake", 350, 5400).batch()
@@ -758,6 +765,7 @@ class TestWallOvenStart:
 
         assert code == 0x44
         assert [entry[:3] for entry in _FakeConnection.log] == [
+            ("GET", "/devices/0/configuration", None),
             (
                 "PUT",
                 "/devices/0",
@@ -765,10 +773,12 @@ class TestWallOvenStart:
                     "Device": {
                         "Mode": {"modes": ["UpperConvectionBake"]},
                         "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
-                        "Operation": {"operationTime": "01:30:00", "state": "Run"},
+                        "Operation": {"operationTime": "01:30:00"},
                     }
                 },
-            )
+            ),
+            ("GET", "/devices/0/configuration", None),
+            ("PUT", "/devices/0", {"Device": {"Operation": {"state": "Run"}}}),
         ]
 
     def test_a_batch_anywhere_else_is_refused(self, oven):

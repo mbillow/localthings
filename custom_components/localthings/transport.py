@@ -88,6 +88,10 @@ class AuthRejected(Exception):
     rather than retrying."""
 
 
+class OvenStartUnconfirmed(Exception):
+    """A staged legacy oven start lost its response and must not be replayed."""
+
+
 def _is_success(code: int) -> bool:
     """A 2.xx response class -- the only one whose body is CBOR by contract.
     An error response often carries a plain diagnostic string instead."""
@@ -292,6 +296,7 @@ def create_transport(
     *,
     on_notification: Callable[[str, bytes], None] | None = None,
     local_port: int | None = None,
+    bypass_remote_control: Callable[[], bool] | None = None,
 ) -> Transport:
     """The transport an entry's appliance speaks.
 
@@ -310,6 +315,7 @@ def create_transport(
             key_pem=data[CONF_LEAF_KEY_PEM],
             token=data[CONF_DEVICE_TOKEN],
             family=data.get(CONF_LEGACY_FAMILY),
+            bypass_remote_control=bypass_remote_control,
         )
     host, port = entry_endpoint(data)
     return DtlsTransport(

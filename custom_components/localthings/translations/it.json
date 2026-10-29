@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "Il comando per {href} è fallito anche dopo la riconnessione: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Non è stato possibile confermare l’avvio della cottura e il tentativo non è stato ripetuto. Controllare l’apparecchio prima di riprovare. Dettagli: {error}"
+    },
     "command_refused": {
       "message": "L'elettrodomestico ha rifiutato il comando per {href}: {error}"
     },

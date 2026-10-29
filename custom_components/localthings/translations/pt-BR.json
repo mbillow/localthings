@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "O comando para {href} falhou mesmo após reconectar: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Não foi possível confirmar o início do cozimento, e a tentativa não foi repetida. Verifique o aparelho antes de tentar novamente. Detalhes: {error}"
+    },
     "command_refused": {
       "message": "O aparelho recusou o comando para {href}: {error}"
     },

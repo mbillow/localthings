@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Het starten van de bereiding kon niet worden bevestigd en is niet opnieuw geprobeerd. Controleer het apparaat voordat u het opnieuw probeert. Details: {error}"
+    },
     "command_refused": {
       "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
     },

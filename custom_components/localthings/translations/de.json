@@ -2301,6 +2301,9 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Der Garstart konnte nicht bestätigt werden und wurde nicht wiederholt. Prüfen Sie das Gerät, bevor Sie es erneut versuchen. Details: {error}"
+    },
     "command_refused": {
       "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
     },

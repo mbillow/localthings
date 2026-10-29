@@ -105,6 +105,7 @@ from .rekey import rekey_entry
 from .transport import (
     AuthRejected,
     DecodeError,
+    OvenStartUnconfirmed,
     Transport,
     create_transport,
 )
@@ -1151,6 +1152,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host),
+            # Saving options does not reopen the session.
+            bypass_remote_control=lambda: self._entry.options.get(
+                CONF_BYPASS_REMOTE_CONTROL, False
+            ),
         )
         sess.connect()
         identity = None
@@ -2753,7 +2758,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
-                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
                 # subscriptions on it are too -- downgrade here, before the
@@ -2764,10 +2768,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._observe.mode == MODE_OBSERVE:
                     self._observe.downgrade_to_poll()
                     self._resubscribe_due = True
+                if isinstance(e, OvenStartUnconfirmed):
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="cook_start_unconfirmed",
+                        translation_placeholders={"error": str(e)},
+                    ) from e
+                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
+                    if isinstance(e2, OvenStartUnconfirmed):
+                        raise HomeAssistantError(
+                            translation_domain=DOMAIN,
+                            translation_key="cook_start_unconfirmed",
+                            translation_placeholders={"error": str(e2)},
+                        ) from e2
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
                         translation_domain=DOMAIN,
