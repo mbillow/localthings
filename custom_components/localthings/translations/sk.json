@@ -151,6 +151,9 @@
       "divider": {
         "name": "Priečka"
       },
+      "reservoir_open": {
+        "name": "Nádržka"
+      },
       "wrinkle_prevent_active": {
         "name": "Ochrana proti pokrčeniu aktívna"
       },
@@ -159,6 +162,9 @@
       },
       "cooktop_paused": {
         "name": "Pozastavené"
+      },
+      "booster_heater": {
+        "name": "Pomocné vykurovacie teleso"
       }
     },
     "button": {
@@ -251,6 +257,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Automatický",
               "smart": "Inteligentný",
               "max": "Max",
               "mid": "Stredný",
@@ -264,6 +271,9 @@
     "light": {
       "lamp": {
         "name": "Svetlo"
+      },
+      "paired_hood_light": {
+        "name": "Svetlo spárovaného digestora"
       }
     },
     "number": {
@@ -284,6 +294,9 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Časovač vypnutia spárovaného digestora"
       },
       "sensing_interval": {
         "name": "Interval AI Purify"
@@ -682,20 +695,20 @@
           "upper_steam_bake": "Pečenie s parou (horná)",
           "descale": "Odvápnenie",
           "drain": "Vypustenie vody",
-          "healthycook1": "Zdravé varenie Pečený zemiak",
-          "healthycook2": "Zdravé varenie Grilované kura",
-          "healthycook3": "Zdravé varenie Steak z lososa",
-          "healthycook4": "Zdravé varenie Fileta z bielej ryby",
-          "healthycook5": "Zdravé varenie Sušenie",
-          "healthycook6": "Zdravé varenie Kysnutie cesta",
-          "upper_healthycook1": "Zdravé varenie Pečený zemiak",
-          "upper_healthycook2": "Zdravé varenie Grilované kura",
-          "upper_healthycook3": "Zdravé varenie Steak z lososa",
-          "upper_healthycook4": "Zdravé varenie Fileta z bielej ryby",
-          "lower_healthycook1": "Zdravé varenie Pečený zemiak",
-          "lower_healthycook2": "Zdravé varenie Grilované kura",
-          "lower_healthycook3": "Zdravé varenie Steak z lososa",
-          "lower_healthycook4": "Zdravé varenie Fileta z bielej ryby"
+          "healthycook1": "Zdravé varenie: pečený zemiak",
+          "upper_healthycook1": "Zdravé varenie: pečený zemiak",
+          "lower_healthycook1": "Zdravé varenie: pečený zemiak",
+          "healthycook2": "Zdravé varenie: grilované kura",
+          "upper_healthycook2": "Zdravé varenie: grilované kura",
+          "lower_healthycook2": "Zdravé varenie: grilované kura",
+          "healthycook3": "Zdravé varenie: steak z lososa",
+          "upper_healthycook3": "Zdravé varenie: steak z lososa",
+          "lower_healthycook3": "Zdravé varenie: steak z lososa",
+          "healthycook4": "Zdravé varenie: fileta z bielej ryby",
+          "upper_healthycook4": "Zdravé varenie: fileta z bielej ryby",
+          "lower_healthycook4": "Zdravé varenie: fileta z bielej ryby",
+          "healthycook5": "Zdravé varenie: sušenie",
+          "healthycook6": "Zdravé varenie: kysnutie cesta"
         }
       },
       "operating_mode": {
@@ -897,6 +910,19 @@
           "75": "Jemná bielizeň",
           "77": "Nekrčivá bielizeň",
           "78": "Rýchle pranie",
+          "91": "Samočistenie",
+          "94": "Uteráky",
+          "9c": "Intenzívny",
+          "9d": "Plákanie + odstreďovanie",
+          "9e": "Nekrčivá bielizeň",
+          "9f": "Rýchle pranie",
+          "a2": "Jemná bielizeň",
+          "a3": "Športové oblečenie",
+          "a5": "Posteľná bielizeň",
+          "a9": "Dezinfekcia",
+          "aa": "Biela bielizeň",
+          "ab": "Eko pranie v studenej vode",
+          "b1": "Samočistenie+",
           "ba": "Vypustenie/odstreďovanie",
           "d0": "Bavlna",
           "d1": "Eko bavlna",
@@ -1487,6 +1513,16 @@
       "power_level": {
         "name": "Úroveň výkonu"
       },
+      "paired_hood_fan_setting": {
+        "name": "Nastavenie ventilátora spárovaného digestora",
+        "state": {
+          "off": "Vypnuté",
+          "low": "Nízka",
+          "medium": "Stredná",
+          "high": "Vysoká",
+          "boost": "Zvýšený výkon"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Rýchlosť ventilátora spárovaného digestora"
       },
@@ -1495,6 +1531,12 @@
       },
       "paired_hood_model": {
         "name": "Model spárovaného digestora"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Nastavený časovač vypnutia spárovaného digestora"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Stav časovača vypnutia spárovaného digestora"
       },
       "power_energy_kwh": {
         "name": "Elektrická energia"
@@ -1706,6 +1748,12 @@
           "dual": "Dvojitá",
           "triple": "Trojitá"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Vyrobené teplo"
+      },
+      "three_way_valve": {
+        "name": "Trojcestný ventil"
       }
     },
     "switch": {
@@ -2160,6 +2208,7 @@
         "title": "Možnosti LocalThings",
         "menu_options": {
           "settings": "Nastavenia zariadenia",
+          "subdevices": "Podriadené zariadenia",
           "cloud_courses": "Stiahnuté cykly",
           "forget_learned_modes": "Zabudnúť zapamätané režimy",
           "debug_write": "Ladenie: zápis do prostriedku"
@@ -2173,6 +2222,13 @@
           "finish_time_hysteresis_minutes": "Odhadovaný koniec – minimálna zmena (minúty)",
           "learn_device_modes": "Pamätať si režimy, ktoré zariadenie hlási, ale neuvádza ako podporované",
           "cloud_courses_enabled": "Ponúkať stiahnuté cykly"
+        }
+      },
+      "subdevices": {
+        "title": "Podriadené zariadenia",
+        "description": "Niektoré spotrebiče sprístupňujú viac ako jedno zariadenie: každú vnútornú jednotku multi-split systému alebo každý priestor dvojitej rúry. Iné hlásia ďalší slot, ktorému nezodpovedá žiadny skutočný hardvér, a ten sa zobrazí ako duplicitné alebo prázdne zariadenie. Zrušte začiarknutie pri každom podriadenom zariadení, ktoré nezodpovedá ničomu na vašom spotrebiči. Jeho zariadenie sa odstráni a integrácia sa znova načíta bez neho; opätovným začiarknutím ho vrátite.",
+        "data": {
+          "enabled_subdevices": "Ponechať tieto podriadené zariadenia"
         }
       },
       "forget_learned_modes": {
@@ -2370,6 +2426,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Extra plákanie nie je pri vybranom cykle dostupné."
+    },
+    "paired_hood_fan_off": {
+      "message": "Pred nastavením časovača vypnutia zapnite ventilátor digestora."
     }
   },
   "selector": {
@@ -2393,6 +2452,84 @@
         "cubed_ice": "Kocky ľadu",
         "ice_bites": "Ice Bites",
         "whiskey_ice_ball": "Ľadové gule"
+      }
+    }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Spustiť varenie",
+      "description": "Spustí varenie v rúre, sporáku alebo mikrovlnnej rúre. Možno použiť len režimy, ktoré spotrebič sám povoľuje spustiť na diaľku, s jeho vlastnými limitmi teploty a času pre daný režim. Na spotrebiči musí byť zapnuté diaľkové ovládanie a spotrebič musí byť nečinný. Nechajte všetky polia prázdne, ak chcete spustiť to, čo práve držia entity režimu, nastavenej teploty a času varenia; inak sa pre všetko vynechané použije predvolená hodnota režimu.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Rúra, sporák alebo mikrovlnná rúra, ktorá sa má spustiť."
+        },
+        "mode": {
+          "name": "Režim",
+          "description": "Režim varenia tak, ako ho pomenúva spotrebič (napríklad Bake alebo ConvectionBake). Predvolený je vlastný predvolený režim spotrebiča."
+        },
+        "temperature": {
+          "name": "Teplota",
+          "description": "V jednotke teploty Home Assistantu. Zaokrúhli sa na krok režimu. Predvolená je predvolená hodnota režimu. Pri režime bez teploty ju vynechajte."
+        },
+        "duration": {
+          "name": "Čas varenia",
+          "description": "Ako dlho variť, vrátane predhrievania. Predvolený je predvolená hodnota režimu."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Zapísať prostriedok",
+      "description": "Odošle jeden alebo viac nespracovaných zápisov čiastočnej rep priamo do OCF prostriedkov zariadenia, postupne, s voliteľnou pauzou medzi krokmi a oneskoreným opätovným čítaním na konci -- na zistenie, ako zariadenie spracúva zápisy (issue #300), nie na každodenné ovládanie. Obchádza blokovanie pri vypnutom diaľkovom ovládaní aj každú funkciu write_fn/validate_fn, ktorou prechádza bežný zápis entity, a odosiela presne zadané polia bez zmeny: môže spotrebič zle nastaviť. Pre všetko, čo táto integrácia už modeluje, radšej použite skutočnú entitu alebo „Ladenie: zápis do prostriedku“ v ponuke Konfigurovať integrácie.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Spotrebič, do ktorého sa zapisuje, alebo jedno z jeho podriadených zariadení."
+        },
+        "writes": {
+          "name": "Zápisy",
+          "description": "1-10 zápisov vykonaných postupne. Každá položka potrebuje href (kanonický prostriedok, napr. /mode/vs/0) a payload (neprázdny objekt odoslaný bez zmeny ako POST čiastočnej rep, alebo zoznam prvkov obsahujúcich href a voliteľne rep, odoslaný bez zmeny ako dávka kolekcie OCF -- tvar, ktorým /device/0 odpovedá na čítanie, a ten, ktorý podľa meraní spúšťa pečenie v rúre; prvok môže rep vynechať a vnútorné href dávky sa nikdy neprepisujú, ani pre podriadené zariadenie); settle je počet sekúnd čakania po tomto zápise pred začatím ďalšieho (0-30, predvolene 0); readback (predvolene true) určuje, či sa prostriedok hneď znova prečíta pre polia \"after\"/\"changed\". Nastavte false pri doske, ktorá zápis prijme a potom ho vráti -- pri niektorom firmvéri práve tento okamžitý GET návrat vyvolá, takže ponechanie zapnutého urobí zo spätného čítania súčasť experimentu. Bez neho sa \"changed\" vráti ako null a jedinou kontrolou je verify_after."
+        },
+        "hold_session_lock": {
+          "name": "Držať reláciu počas celej sekvencie",
+          "description": "Drží reláciu zariadenia počas celej sekvencie vrátane páuz, aby sa medzi dva kroky nemohlo dostať nič iné -- bežné dopytovanie, zápis inej entity -- a nezahmlilo, na ktorý zápis spotrebič reagoval. Predvolene zapnuté. Po vypnutí sa relácia berie pre každý zápis a počas čakania uvoľňuje, takže sa entity môžu počas dlhej sekvencie ďalej aktualizovať, za cenu tejto istoty."
+        },
+        "verify_after": {
+          "name": "Overiť potom",
+          "description": "Počet sekúnd čakania po skončení celej sekvencie pred opätovným prečítaním každého dotknutého href, aby bolo vidno, či hodnoty vydržali, alebo ich doska vrátila. 0 (predvolené) overenie preskočí."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Prečítať prostriedok",
+      "description": "Prečíta OCF prostriedky zariadenia priamo, mimo modelu entít tejto integrácie. Zadajte href pre živý GET priamo zo zariadenia -- zámerne nie z vyrovnávacej pamäte, ktorá môže byť stará až jeden interval dopytovania -- alebo ho vynechajte a získate uloženú snímku všetkých prostriedkov, ktoré táto integrácia na zariadení sleduje.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Spotrebič, z ktorého sa číta, alebo jedno z jeho podriadených zariadení."
+        },
+        "href": {
+          "name": "href prostriedku",
+          "description": "Kanonický href prostriedku na čítanie (napr. /mode/vs/0). Za ? pridajte dopyt, ktorý sa odošle s GET, napr. /device/1?if=oic.if.b, s & medzi parametrami. Vynechajte ho a namiesto živého GET získate uloženú snímku všetkých sledovaných prostriedkov."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Sledovať prostriedok",
+      "description": "Na chvíľu sa prihlási na odber jedného z OCF prostriedkov zariadenia pomocou CoAP OBSERVE a vráti každé odoslané oznámenie spolu s obyčajným GET toho istého prostriedku. Slúži na nájdenie polí, ktoré zariadenie posiela len v oznámeniach, nie na bežné použitie. Dopytovanie a zápisy počas počúvania pokračujú. Nie je k dispozícii pri spotrebičoch na TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Spotrebič na sledovanie alebo jedno z jeho podriadených zariadení."
+        },
+        "href": {
+          "name": "href prostriedku",
+          "description": "Kanonický href prostriedku na sledovanie (napr. /energy/consumption/vs/0). Za ? pridajte dopyt, ktorý sa odošle s odberom, rovnako ako pri „Prečítať prostriedok“."
+        },
+        "duration": {
+          "name": "Trvanie",
+          "description": "Koľko sekúnd počúvať, najviac 120."
+        }
       }
     }
   }

@@ -27,18 +27,20 @@ import ssl
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import cache
 from typing import Any
 
 from .legacy_http import (
-    TP6X_RAC,
+    CAVITY_LOWER,
+    CAVITY_UPPER,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_role,
     course_table,
-    has_cavities,
+    divider_in,
     http_status_to_coap,
-    is_mapped,
     is_start,
     model_settings,
     split_start_only,
@@ -83,6 +85,7 @@ _LISTED_FIELD = "x.com.samsung.da.connected"
 # a suffix (`LCD_OV_WALL_16K_DIV`, #572); only such a suffix is carried over,
 # since the record's description can otherwise carry the serial.
 _RECORD_SUFFIX = re.compile(r"_[A-Z]+")
+_RECORD_TOKEN = re.compile(r"[A-Z0-9]+(?:_[A-Z0-9]+)*")
 
 # Every request carries it; the appliance answers 401 without one.
 _AUTH_HEADER = "Authorization"
@@ -94,6 +97,10 @@ _START_SETTLE_S = 3.0
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 # What the stop button sends; see _already_ready.
 _READY = {"Device": {"Operation": {"state": "Ready"}}}
+
+# Device types that take each resource on its own endpoint rather than the
+# aggregate `{"Device": ...}` at /devices/<n>; see _write_target.
+_PER_ENDPOINT_TYPES = frozenset({"Air_Conditioner"})
 
 # The option-token prefix a course is held under (see legacy_http.StagedKey).
 _COURSE_PREFIX = "Course"
@@ -119,6 +126,16 @@ class _ApplianceState:
     staged: dict[StagedKey, tuple[Any, Any]] = field(default_factory=dict)
     # For a sibling: whether `/devices` listed it at the last read.
     listed: bool | None = None
+    # The `type` its record reports ('Washer', 'Oven'), which picks where
+    # its resources land (legacy_http.table_for), and whether its record has
+    # been read for it at all: a record need not report one.
+    device_type: str | None = None
+    typed: bool = False
+    # Which cavity of a divided oven its record says it is, if any.
+    cavity: str | None = None
+    # On device 0's state, for the whole appliance: whether the last
+    # `/devices` listing showed a lower cavity, None while unknown.
+    divided: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -150,8 +167,6 @@ class LegacyHttpTransport:
         self._key_pem = key_pem
         self._token = token
         self._family = family or ""
-        self._table = table_for(family)
-        self._by_href = _index_by_href(self._table)
         self._ctx: ssl.SSLContext | None = None
 
     @property
@@ -176,6 +191,28 @@ class LegacyHttpTransport:
 
     def _state_at(self, index: int) -> _ApplianceState:
         return _STATE.setdefault((self._host, self._port, index), _ApplianceState())
+
+    def _type_at(self, index: int) -> str | None:
+        """The device type this index's last record reported for itself."""
+        return self._state_at(index).device_type
+
+    def _learn_type(self, index: int, timeout: float) -> int | None:
+        """Read the record for its type when no sweep has: a write routed by
+        the wrong type would reach the wrong endpoint. The code a failed
+        read reads as, or None once the type is known."""
+        state = self._state_at(index)
+        if state.typed:
+            return None
+        status, body = self._request("GET", _device_path(index), timeout=timeout)
+        if status != 200 or not isinstance(body, dict):
+            return http_status_to_coap(status) if status != 200 else 0xA2
+        record = unwrap(body)
+        if index and record.get("id") != str(index):
+            # A bridge echoing device 0 at any index (see _sibling_record).
+            return 0x84
+        state.device_type = _record_type(record)
+        state.typed = True
+        return None
 
     def _locate(self, href: str) -> tuple[int, str]:
         """The device index an href names and its canonical form. A sibling
@@ -203,7 +240,9 @@ class LegacyHttpTransport:
                 self._state_at(index).listed = None
                 return code, None
             return 0x45, self._listed_rep(index, devices)
-        resource = self._by_href.get(href)
+        device_type = self._type_at(index)
+        table = table_for(device_type)
+        resource = _index_by_href(device_type).get(href)
         if resource is None:
             # Including /oic/p and /oic/d, which nginx answers with HTML.
             return 0x84, None
@@ -212,7 +251,7 @@ class LegacyHttpTransport:
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
         bodies = self._with_modes(index, self._with_staged(index, unwrap(body)))
-        return 0x45, to_resources(bodies, self._table).get(href, {})
+        return 0x45, to_resources(bodies, table).get(href, {})
 
     def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
         """The whole device in the shape a /device/<n> batch arrives in: the
@@ -235,19 +274,17 @@ class LegacyHttpTransport:
             if status != 200 or not isinstance(body, dict):
                 return http_status_to_coap(status), body if isinstance(body, str) else None
             record, devices = unwrap(body), None
-            if has_cavities(self._family):
+            if cavity_role(record) == CAVITY_UPPER:
                 # Whether the divider is in decides which modes the upper
                 # cavity offers (with_cavity_modes). An unanswered listing
-                # leaves the divider unknown rather than failing the sweep.
+                # leaves it unknown rather than failing the sweep.
                 try:
                     _, listing = self._list_devices(timeout)
                 except (OSError, http.client.HTTPException) as err:
                     _LOGGER.debug("%s: /devices for the divider failed: %s", self._host, err)
                     listing = None
                 if listing is None:
-                    self._state_at(1).listed = None
-                else:
-                    self._listed_rep(1, listing)
+                    self._state_at(0).divided = None
         base = _device_path(index)
         bodies = dict(record)
         for endpoint in _LINKED_ENDPOINTS:
@@ -269,12 +306,20 @@ class LegacyHttpTransport:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
-        self._state_at(index).last_bodies = bodies
+            bodies = _with_record_name(bodies, record.get("name"))
+        state = self._state_at(index)
+        state.last_bodies = bodies
+        state.device_type = _record_type(record)
+        state.typed = True
+        state.cavity = cavity_role(record)
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
         resources = to_resources(
-            self._with_modes(index, self._with_staged(index, bodies)), self._table
+            self._with_modes(index, self._with_staged(index, bodies)),
+            table_for(self._type_at(index)),
         )
+        # Each cavity needs its own canonical power capability before remapping.
+        resources.update(model_settings(self._family, bodies))
         if index:
             if listed is not None:
                 resources[_LISTED_HREF] = listed
@@ -283,8 +328,6 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
-            # Nor is /wm/setinfo/vs/0; the power flag rides in modelID instead.
-            resources.update(model_settings(self._family, bodies))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     def _sibling_record(
@@ -313,13 +356,16 @@ class LegacyHttpTransport:
         return 0x45, record, devices
 
     def _list_devices(self, timeout: float) -> tuple[int, list | None]:
-        """`/devices`'s list, or None with the code its failure reads as."""
+        """`/devices`'s list, or None with the code its failure reads as.
+        Every listing read also says whether a divider is in; a failed one
+        leaves that to the main sweep's own listing."""
         status, body = self._request("GET", "/devices", timeout=timeout)
         if status != 200:
             return http_status_to_coap(status), None
         devices = body.get("Devices") if isinstance(body, dict) else None
         if not isinstance(devices, list):
             return 0xA2, None  # 5.02: the bridge answered, with no device list
+        self._state_at(0).divided = divider_in(devices)
         return 0x45, devices
 
     def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
@@ -334,16 +380,24 @@ class LegacyHttpTransport:
             # Untested what the appliance does with it; the Flex Duo still
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
+        deadline = time.monotonic() + timeout
+        refused = self._learn_type(index, timeout)
+        if refused is not None:
+            _LOGGER.warning("%s: device %d's type is unknown; write refused", self._host, index)
+            return refused, None
+        timeout = _remaining(deadline)
+        device_type = state.device_type
+        table = table_for(device_type)
         steps: list[tuple[str, Mapping[str, Any]]] | None
         if isinstance(body, list):
             # A cook start's Collection batch (#473) is the same coalesced
             # write the aggregate PUT already takes, so it goes as one body
-            # (#572). The RAC's writes are per endpoint, with no aggregate.
-            if href != _SEED_HREF or self._table is TP6X_RAC:
+            # (#572). A per-endpoint type has no aggregate to take it.
+            if href != _SEED_HREF or device_type in _PER_ENDPOINT_TYPES:
                 _LOGGER.warning("%s: no batch writes to %s over 8888", self._host, href)
                 return 0x85, None
             batch = self._canonical_batch(index, body)
-            steps = None if batch is None else batch_steps(batch, self._table)
+            steps = None if batch is None else batch_steps(batch, table)
             if steps is None:
                 hrefs = [e.get("href") for e in body if isinstance(e, dict)]
                 _LOGGER.warning(
@@ -352,13 +406,13 @@ class LegacyHttpTransport:
                 return 0x84, None
         else:
             steps = [(href, body)]
-        aggregate = to_write(steps, self._table)
+        aggregate = to_write(steps, table)
         if not aggregate.get("Device"):
             # A guessed wrapper would reach the appliance as a command nobody
-            # chose, so a patch this family has no resource for is refused.
+            # chose, so a patch no resource carries is refused.
             _LOGGER.warning("%s: no 8888 resource for %s; write dropped", self._host, href)
             return 0x84, None
-        sendable, staged = split_start_only(aggregate, self._table)
+        sendable, staged = split_start_only(aggregate, table)
         if any(prefix == _COURSE_PREFIX for _, _, prefix in staged):
             # A new course brings its own settings, on the panel as well, so
             # one held for the previous course would be sent to a course that
@@ -375,7 +429,7 @@ class LegacyHttpTransport:
         if sendable == _READY and self._already_ready(index, timeout):
             _LOGGER.debug("%s: already idle; stop not sent", self._host)
             return 0x44, None
-        target = self._write_target(index, href, sendable)
+        target = self._write_target(index, href, sendable, device_type)
         if target is None:
             _LOGGER.warning("%s: invalid 8888 write shape for %s", self._host, href)
             return 0x80, None
@@ -401,19 +455,19 @@ class LegacyHttpTransport:
         return out
 
     def _write_target(
-        self, index: int, href: str, aggregate: dict[str, Any]
+        self, index: int, href: str, aggregate: dict[str, Any], device_type: str | None
     ) -> tuple[str, dict[str, Any]] | None:
         """The HTTP path and body for one translated write.
 
-        Washers take the aggregate ``{"Device": ...}`` envelope at
-        ``/devices/0``; TP6X_RAC takes Operation there unwrapped, and Mode,
-        Wind and one Temperatures item on their own endpoints (confirmed on
-        TP6X_RAC_16K hardware, #576).
+        Most types take the aggregate ``{"Device": ...}`` envelope at
+        ``/devices/0``; an air conditioner takes Operation there unwrapped,
+        and Mode, Wind and one Temperatures item on their own endpoints
+        (confirmed on TP6X_RAC_16K hardware, #576).
         """
-        if self._table is not TP6X_RAC:
+        if device_type not in _PER_ENDPOINT_TYPES:
             return _device_path(index), aggregate
 
-        resource = self._by_href.get(href)
+        resource = _index_by_href(device_type).get(href)
         if resource is None:
             return None
 
@@ -442,9 +496,8 @@ class LegacyHttpTransport:
                 return None
             return f"{_device_path(index)}/{resource.endpoint}", wire
 
-        # No direct-write behavior has been confirmed for the remaining
-        # TP6X_RAC resources. Preserve the existing aggregate path rather
-        # than guessing.
+        # No direct write has been confirmed for an air conditioner's other
+        # resources; the aggregate path is kept rather than guessed at.
         return _device_path(index), aggregate
 
     def _idle(self, index: int) -> bool:
@@ -523,8 +576,14 @@ class LegacyHttpTransport:
         return self._with_course_defaults(state, held)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
-        # Device 1's listing is the divider, for either cavity.
-        return with_cavity_modes(self._family, bodies, index, self._state_at(index or 1).listed)
+        state = self._state_at(index)
+        if state.cavity == CAVITY_UPPER:
+            return with_cavity_modes(bodies, False, self._state_at(0).divided)
+        if state.cavity == CAVITY_LOWER:
+            return with_cavity_modes(
+                bodies, True, state.listed, state.last_bodies.get("Information")
+            )
+        return bodies
 
     def _with_course_defaults(
         self, state: _ApplianceState, bodies: dict[str, Any]
@@ -548,7 +607,7 @@ class LegacyHttpTransport:
             {**state.last_bodies, **bodies},
             {key: value for key, (value, _) in staged.items()},
         )
-        resources = to_resources(context, self._table)
+        resources = to_resources(context, table_for(state.device_type))
         washer = dict(washer)
         for name, kind in _COURSE_DEFAULTS:
             if (_WASHER_WRAPPER, name, None) in staged:
@@ -580,12 +639,13 @@ class LegacyHttpTransport:
         out: dict[str, Any] = {
             "transport": "legacy_http",
             "family": self._family,
-            "family_mapped": is_mapped(self._family),
             "unmapped_resources": sorted(
                 {
                     wrapper
                     for state in states.values()
-                    for wrapper in unmapped_wrappers(state.last_bodies, self._table)
+                    for wrapper in unmapped_wrappers(
+                        state.last_bodies, table_for(state.device_type)
+                    )
                 }
             ),
             "bodies": _resource_bodies(main),
@@ -650,6 +710,11 @@ class LegacyHttpTransport:
         return response.status, body
 
 
+def _record_type(record: Mapping[str, Any]) -> str | None:
+    device_type = record.get("type")
+    return device_type if isinstance(device_type, str) else None
+
+
 def _remaining(deadline: float) -> float:
     """What is left of a shared deadline; spent reads as a timeout."""
     left = deadline - time.monotonic()
@@ -660,16 +725,41 @@ def _remaining(deadline: float) -> float:
 
 def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[str, Any]:
     """`bodies` with a sibling record's description on its Information, when
-    it is that Information's own description plus a suffix (_RECORD_SUFFIX)."""
+    it is that Information's own description plus a suffix (_RECORD_SUFFIX).
+
+    With no Information at all, because its linked read ran out of the
+    sibling's budget on a slow appliance (PR #677), a description that is a
+    plain board token (_RECORD_TOKEN) stands in for it: it says what the
+    sibling is, which the hood slot's bindings depend on."""
+    if not isinstance(description, str):
+        return bodies
     information = bodies.get("Information")
+    if information is None:
+        if not _RECORD_TOKEN.fullmatch(description):
+            return bodies
+        return {**bodies, "Information": {"description": description}}
     if not isinstance(information, dict):
         return bodies
     own = information.get("description")
-    if not (isinstance(own, str) and isinstance(description, str)):
+    if not isinstance(own, str):
         return bodies
     if not (description.startswith(own) and _RECORD_SUFFIX.fullmatch(description[len(own) :])):
         return bodies
     return {**bodies, "Information": {**information, "description": description}}
+
+
+def _with_record_name(bodies: dict[str, Any], name: Any) -> dict[str, Any]:
+    """`bodies` with a sibling record's name (`Hood`, #676) on its
+    Information, which otherwise names only the board it shares with the
+    main unit. It names the sibling's type, not anything the owner sets."""
+    if not (isinstance(name, str) and name):
+        return bodies
+    information = bodies.get("Information")
+    if information is None:
+        information = {}
+    if not isinstance(information, dict):
+        return bodies
+    return {**bodies, "Information": {**information, "deviceName": name}}
 
 
 def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:
@@ -682,9 +772,12 @@ def _resource_bodies(bodies: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _index_by_href(table: tuple[Resource, ...]) -> dict[str, Resource]:
-    """Canonical href -> the resource serving it, fanned-out hrefs included,
-    so the two directions can never name different endpoints."""
+@cache
+def _index_by_href(device_type: str | None) -> dict[str, Resource]:
+    """Canonical href -> the resource serving it on `device_type`, fanned-out
+    hrefs included, so the two directions can never name different
+    endpoints."""
+    table = table_for(device_type)
     index = {resource.href: resource for resource in table}
     for resource in table:
         for href in resource.fan_out.values():

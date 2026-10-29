@@ -151,6 +151,9 @@
       "divider": {
         "name": "Séparateur"
       },
+      "reservoir_open": {
+        "name": "Réservoir"
+      },
       "wrinkle_prevent_active": {
         "name": "Anti-froissage actif"
       },
@@ -159,6 +162,9 @@
       },
       "cooktop_paused": {
         "name": "En pause"
+      },
+      "booster_heater": {
+        "name": "Résistance d'appoint"
       }
     },
     "button": {
@@ -251,6 +257,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "auto": "Auto",
               "smart": "Intelligent",
               "max": "Max",
               "mid": "Moyen",
@@ -264,6 +271,9 @@
     "light": {
       "lamp": {
         "name": "Lampe"
+      },
+      "paired_hood_light": {
+        "name": "Éclairage de la hotte associée"
       }
     },
     "number": {
@@ -284,6 +294,9 @@
       },
       "oven_setpoint": {
         "name": "Consigne"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Minuterie d'arrêt de la hotte associée"
       },
       "sensing_interval": {
         "name": "Intervalle AI Purify"
@@ -682,20 +695,20 @@
           "upper_steam_bake": "Cuisson vapeur (cavité supérieure)",
           "descale": "Détartrage",
           "drain": "Vidange",
-          "healthycook1": "Cuisson saine Pomme de terre au four",
-          "healthycook2": "Cuisson saine Poulet grillé",
-          "healthycook3": "Cuisson saine Pavé de saumon",
-          "healthycook4": "Cuisson saine Filet de poisson blanc",
-          "healthycook5": "Cuisson saine Déshydratation",
-          "healthycook6": "Cuisson saine Levée de pâte",
-          "upper_healthycook1": "Cuisson saine Pomme de terre au four",
-          "upper_healthycook2": "Cuisson saine Poulet grillé",
-          "upper_healthycook3": "Cuisson saine Pavé de saumon",
-          "upper_healthycook4": "Cuisson saine Filet de poisson blanc",
-          "lower_healthycook1": "Cuisson saine Pomme de terre au four",
-          "lower_healthycook2": "Cuisson saine Poulet grillé",
-          "lower_healthycook3": "Cuisson saine Pavé de saumon",
-          "lower_healthycook4": "Cuisson saine Filet de poisson blanc"
+          "healthycook1": "Cuisson saine: pomme de terre au four",
+          "upper_healthycook1": "Cuisson saine: pomme de terre au four",
+          "lower_healthycook1": "Cuisson saine: pomme de terre au four",
+          "healthycook2": "Cuisson saine: poulet grillé",
+          "upper_healthycook2": "Cuisson saine: poulet grillé",
+          "lower_healthycook2": "Cuisson saine: poulet grillé",
+          "healthycook3": "Cuisson saine: pavé de saumon",
+          "upper_healthycook3": "Cuisson saine: pavé de saumon",
+          "lower_healthycook3": "Cuisson saine: pavé de saumon",
+          "healthycook4": "Cuisson saine: filet de poisson blanc",
+          "upper_healthycook4": "Cuisson saine: filet de poisson blanc",
+          "lower_healthycook4": "Cuisson saine: filet de poisson blanc",
+          "healthycook5": "Cuisson saine: déshydratation",
+          "healthycook6": "Cuisson saine: levée de pâte"
         }
       },
       "operating_mode": {
@@ -897,6 +910,19 @@
           "75": "Délicat",
           "77": "Repassage facile",
           "78": "Lavage rapide",
+          "91": "Auto-nettoyage",
+          "94": "Serviettes",
+          "9c": "Grand rendement",
+          "9d": "Rinçage+essorage",
+          "9e": "Infroissables",
+          "9f": "Lavage express",
+          "a2": "Délicat",
+          "a3": "Vêtements de sport",
+          "a5": "Draps",
+          "a9": "Stérilisation",
+          "aa": "Vêtements blancs",
+          "ab": "Éco - froid",
+          "b1": "Auto-nettoyage+",
           "ba": "Vidange/Essorage",
           "d0": "Coton",
           "d1": "Coton Éco",
@@ -1487,6 +1513,16 @@
       "power_level": {
         "name": "Niveau de puissance"
       },
+      "paired_hood_fan_setting": {
+        "name": "Réglage du ventilateur de la hotte associée",
+        "state": {
+          "off": "Arrêt",
+          "low": "Faible",
+          "medium": "Moyenne",
+          "high": "Élevée",
+          "boost": "Boost"
+        }
+      },
       "paired_hood_fan_speed": {
         "name": "Vitesse du ventilateur de la hotte associée"
       },
@@ -1495,6 +1531,12 @@
       },
       "paired_hood_model": {
         "name": "Modèle de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Minuterie d'arrêt réglée de la hotte associée"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "État de la minuterie d'arrêt de la hotte associée"
       },
       "power_energy_kwh": {
         "name": "Énergie consommée"
@@ -1706,6 +1748,12 @@
           "dual": "Double",
           "triple": "Triple"
         }
+      },
+      "heat_generated_kwh": {
+        "name": "Chaleur produite"
+      },
+      "three_way_valve": {
+        "name": "Vanne 3 voies"
       }
     },
     "switch": {
@@ -2160,6 +2208,7 @@
         "title": "Options de LocalThings",
         "menu_options": {
           "settings": "Paramètres de l'appareil",
+          "subdevices": "Sous-appareils",
           "cloud_courses": "Programmes téléchargés",
           "forget_learned_modes": "Oublier les modes mémorisés",
           "debug_write": "Débogage : écrire dans une ressource"
@@ -2173,6 +2222,13 @@
           "finish_time_hysteresis_minutes": "Fin estimée — variation minimale (minutes)",
           "learn_device_modes": "Mémoriser les modes signalés par l'appareil mais non annoncés",
           "cloud_courses_enabled": "Proposer les programmes téléchargés"
+        }
+      },
+      "subdevices": {
+        "title": "Sous-appareils",
+        "description": "Certains appareils exposent plusieurs appareils : chaque unité intérieure d'un système multi-split, ou chaque cavité d'un four double. D'autres signalent un emplacement supplémentaire qui ne correspond à aucun matériel réel et apparaît comme un appareil en double ou vide. Décochez tout sous-appareil qui ne correspond à rien sur votre appareil. Son appareil est supprimé et l'intégration est rechargée sans lui ; cochez-le de nouveau pour le rétablir.",
+        "data": {
+          "enabled_subdevices": "Conserver ces sous-appareils"
         }
       },
       "forget_learned_modes": {
@@ -2370,6 +2426,9 @@
     },
     "extra_rinse_unavailable_for_cycle": {
       "message": "Le rinçage supplémentaire n'est pas disponible avec le programme sélectionné."
+    },
+    "paired_hood_fan_off": {
+      "message": "Allumez le ventilateur de la hotte avant de régler sa minuterie d'arrêt."
     }
   },
   "selector": {
@@ -2393,6 +2452,84 @@
         "cubed_ice": "Glaçons en cubes",
         "ice_bites": "Ice Bites",
         "whiskey_ice_ball": "Boules de glace"
+      }
+    }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Lancer la cuisson",
+      "description": "Lance une cuisson sur un four, une cuisinière ou un micro-ondes. Seuls les modes que l'appareil autorise à démarrer à distance peuvent être utilisés, avec ses propres limites de température et de durée pour ce mode. La commande à distance doit être activée sur l'appareil, et celui-ci doit être à l'arrêt. Laissez tous les champs vides pour lancer ce que contiennent les entités de mode, de consigne et de durée de cuisson ; sinon, tout ce qui est omis prend la valeur par défaut du mode.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "Le four, la cuisinière ou le micro-ondes à lancer."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Le mode de cuisson, tel que l'appareil le nomme (par exemple Bake ou ConvectionBake). Par défaut, le mode par défaut de l'appareil."
+        },
+        "temperature": {
+          "name": "Température",
+          "description": "Dans l'unité de température de Home Assistant. Arrondie au pas du mode. Par défaut, la valeur par défaut du mode. À omettre pour un mode sans température."
+        },
+        "duration": {
+          "name": "Durée de cuisson",
+          "description": "Durée de la cuisson, préchauffage compris. Par défaut, la valeur par défaut du mode."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Écrire une ressource",
+      "description": "Envoie une ou plusieurs écritures brutes de rep partielle directement aux ressources OCF d'un appareil, dans l'ordre, avec un délai d'attente facultatif entre les étapes et une relecture différée à la fin -- pour comprendre le contrat d'écriture d'un appareil (issue #300), pas pour l'usage quotidien. Cela contourne le blocage lorsque la commande à distance est désactivée ainsi que chaque write_fn/validate_fn par lesquels passe une écriture normale d'entité, et envoie exactement les champs fournis tels quels : cela peut mal configurer votre appareil. Préférez une vraie entité, ou « Débogage : écrire dans une ressource » dans le menu Configurer de l'intégration, pour tout ce que cette intégration modélise déjà.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "L'appareil dans lequel écrire, ou l'un de ses sous-appareils."
+        },
+        "writes": {
+          "name": "Écritures",
+          "description": "1 à 10 écritures à effectuer dans l'ordre. Chaque élément nécessite href (la ressource canonique, par ex. /mode/vs/0) et payload (un objet non vide envoyé tel quel en POST de rep partielle, ou une liste d'éléments contenant href et éventuellement rep, envoyée telle quelle en lot de collection OCF -- la forme que /device/0 renvoie à une lecture, et celle dont on a mesuré qu'elle lance une cuisson au four ; un élément peut omettre rep, et les hrefs internes d'un lot ne sont jamais réécrits, pas même pour un sous-appareil) ; settle est le nombre de secondes d'attente après cette écriture avant de commencer la suivante (0-30, 0 par défaut) ; readback (true par défaut) indique s'il faut relire immédiatement la ressource pour les champs \"after\"/\"changed\". Mettez-le à false sur une carte qui accepte une écriture puis revient en arrière -- sur certains firmwares, c'est ce GET immédiat qui déclenche le retour en arrière, si bien que le laisser actif fait de la relecture une partie de l'expérience. Sans lui, \"changed\" revient à null et verify_after est la seule vérification."
+        },
+        "hold_session_lock": {
+          "name": "Garder la session pendant toute la séquence",
+          "description": "Garde la session de l'appareil pendant toute la séquence, délais d'attente compris, afin que rien d'autre -- une interrogation de routine, l'écriture d'une autre entité -- ne puisse s'intercaler entre deux étapes et brouiller l'écriture à laquelle l'appareil a réagi. Activé par défaut. Désactivé, la session est prise à chaque écriture et libérée pendant les attentes, ce qui permet aux entités de continuer à se mettre à jour pendant une longue séquence, au prix de cette certitude."
+        },
+        "verify_after": {
+          "name": "Vérifier après",
+          "description": "Secondes d'attente après la fin de toute la séquence avant de relire chaque href touché, pour voir si les valeurs ont tenu ou ont été rétablies par la carte. 0 (par défaut) ignore la vérification."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Lire une ressource",
+      "description": "Lit directement les ressources OCF d'un appareil, sans passer par le modèle d'entités de cette intégration. Indiquez un href pour un GET en direct depuis l'appareil -- volontairement pas le cache, qui peut dater d'un intervalle d'interrogation -- ou omettez-le pour obtenir l'instantané en cache de toutes les ressources que cette intégration suit actuellement sur cet appareil.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "L'appareil à lire, ou l'un de ses sous-appareils."
+        },
+        "href": {
+          "name": "href de la ressource",
+          "description": "href canonique de la ressource à lire (par ex. /mode/vs/0). Ajoutez une requête après ? pour l'envoyer avec le GET, par ex. /device/1?if=oic.if.b, avec & entre les paramètres. Omettez-le pour obtenir l'instantané en cache de toutes les ressources suivies au lieu d'un GET en direct."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Observer une ressource",
+      "description": "S'abonne pendant un moment à l'une des ressources OCF d'un appareil avec CoAP OBSERVE, et renvoie chaque notification envoyée accompagnée d'un simple GET de la même ressource. Pour trouver des champs qu'un appareil n'envoie que dans ses notifications, pas pour l'usage quotidien. L'interrogation et les écritures continuent pendant l'écoute. Non disponible pour les appareils sur TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "L'appareil à observer, ou l'un de ses sous-appareils."
+        },
+        "href": {
+          "name": "href de la ressource",
+          "description": "href canonique de la ressource à observer (par ex. /energy/consumption/vs/0). Ajoutez une requête après ? pour l'envoyer avec l'abonnement, comme pour « Lire une ressource »."
+        },
+        "duration": {
+          "name": "Durée",
+          "description": "Nombre de secondes d'écoute, 120 au maximum."
+        }
       }
     }
   }

@@ -29,10 +29,9 @@ TRANSPORT_LEGACY_HTTP = "legacy_http"
 # legacy_http_token.py). Stored on the entry beside the leaf.
 CONF_DEVICE_TOKEN = "device_token"
 
-# Which envelope table that appliance's responses are read with -- the
-# `description` it reports for itself, e.g. 'TP6X_WASHER'. Recorded even
-# when it names no table this integration knows, so a diagnostics dump
-# from an unmapped family says which one it was.
+# The `description` that appliance reports for itself, e.g. 'TP6X_WASHER',
+# which its course table and model settings are still keyed by; diagnostics
+# show it so a dump says which family it came from.
 CONF_LEGACY_FAMILY = "legacy_family"
 
 CONF_CA_CERT_PEM = "ca_cert_pem"
@@ -135,6 +134,12 @@ CONF_CLOUD_COURSES = "cloud_courses"
 # coordinator.cloud_courses_enabled for exactly what it gates.
 CONF_CLOUD_COURSES_ENABLED = "cloud_courses_enabled"
 DEFAULT_CLOUD_COURSES_ENABLED = True
+
+# The subdevices the user switched off in the options flow, as {key: name};
+# the name labels one whose device is gone. A slot can pass the liveness
+# gate without being hardware (#670, #681), and only the owner can tell;
+# absent means every discovered subdevice is kept.
+CONF_DISABLED_SUBDEVICES = "disabled_subdevices"
 
 # Options-flow key (entry.options, not entry.data): lets a user override
 # the device-wide remote-control-off write block for a specific device

@@ -15,6 +15,7 @@ from custom_components.localthings.registry.capabilities.oven import _oven_setpo
 from custom_components.localthings.registry.subdevices import MAIN
 from custom_components.localthings.select import LocalThingsSelect
 from tests.test_legacy_http_lower_cavity import (
+    FIXTURE,
     LOWER,
     PREFIX,
     UPPER,
@@ -262,6 +263,65 @@ async def test_live_mode_spec_overrides_fallback_including_native_celsius_proof(
     assert _oven_setpoint_write(38, resources[cook.TEMPERATURES_HREF], resources=resources)
 
 
+async def test_live_proof_without_a_temperature_disables_the_setpoint(hass):
+    upper = deepcopy(UPPER)
+    upper["Mode"].update(
+        modes=["Healthycook6"],
+        modeSpec=[{"mode": "Healthycook6", "control": "Start&Setting"}],
+    )
+    coordinator = await _discovered(hass, _routes(divided=False, upper=upper))
+    bound = next(b for b in coordinator.bound if b.desc.key == "oven_setpoint")
+    target = LocalThingsNumber(coordinator, bound)
+    resources = coordinator._cavity_resources(MAIN)
+
+    assert not target.available
+    assert _oven_setpoint_write(100, resources[cook.TEMPERATURES_HREF], resources=resources) is None
+
+
+@pytest.mark.parametrize("subtype", ["CombiOven", None])
+async def test_same_board_without_wall_oven_identity_keeps_generic_behavior(hass, subtype):
+    routes = _routes()
+    for index in (0, 1):
+        info = deepcopy(FIXTURE[f"device{index}_information"])
+        info["Information"]["deviceSubType"] = subtype
+        routes[f"/devices/{index}/information"] = (200, info)
+    coordinator = await _discovered(hass, routes)
+    for cavity in (MAIN, _lower(coordinator)):
+        resources = coordinator._cavity_resources(cavity)
+        bound = next(
+            b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "oven_mode"
+        )
+        assert LocalThingsSelect(coordinator, bound).translation_key == "oven_mode"
+        assert cook.healthy_cook_temps(resources, "UpperHealthycook1") is None
+    lower_modes = coordinator._cavity_resources(_lower(coordinator))[cook.MODE_HREF][
+        PREFIX + "supportedModes"
+    ]
+    assert lower_modes == [
+        "NoOperation",
+        "LowerBake",
+        "LowerConvectionBake",
+        "LowerConvectionRoast",
+    ]
+
+
+def test_lower_mode_poll_uses_cached_identity_and_preserves_own_reported_modes():
+    transport = _transport()
+    _seed(transport, 1)
+    _FakeConnection.routes["/devices/1/mode"] = (200, {"Mode": LOWER["Mode"]})
+
+    code, rep = transport.read(["mode", "vs", "1"], timeout=10.0)
+
+    assert code == 0x45
+    assert "LowerHealthycook1" in rep[PREFIX + "supportedModes"]
+    _FakeConnection.routes["/devices/1/mode"] = (
+        200,
+        {"Mode": {"supportedModes": ["NoOperation,LowerBake"], "modes": ["NoOperation"]}},
+    )
+    code, rep = transport.read(["mode", "vs", "1"], timeout=10.0)
+    assert code == 0x45
+    assert rep[PREFIX + "supportedModes"] == ["NoOperation", "LowerBake"]
+
+
 @pytest.mark.parametrize("model", ["LCD_OV_WALL_20K", "LCD_OV_WALL", "LCD_OV_WALL_16K_OTHER", None])
 async def test_other_boards_keep_generic_labels_limits_and_lower_modes(hass, model):
     coordinator = await _discovered(hass, _routes(divided=False))
@@ -273,6 +333,9 @@ async def test_other_boards_keep_generic_labels_limits_and_lower_modes(hass, mod
     assert LocalThingsSelect(coordinator, bound).translation_key == "oven_mode"
     if model == "LCD_OV_WALL_20K":
         _FakeConnection.routes = _routes()
+        info = deepcopy(FIXTURE["device1_information"])
+        info["Information"]["modelID"] = model
+        _FakeConnection.routes["/devices/1/information"] = (200, info)
         assert _supported(_seed(_transport(model), 1), 1) == [
             "NoOperation",
             "LowerBake",
@@ -281,7 +344,9 @@ async def test_other_boards_keep_generic_labels_limits_and_lower_modes(hass, mod
         ]
 
 
-@pytest.mark.parametrize("language", ["cs", "de", "en", "es", "fr", "it", "ko", "nl", "pl", "sk"])
+@pytest.mark.parametrize(
+    "language", ["cs", "de", "en", "es", "fr", "it", "ko", "nl", "pl", "pt-BR", "sk"]
+)
 def test_recipe_translations_cover_all_cavities_and_preserve_other_labels(language):
     path = (
         Path(__file__).parent.parent

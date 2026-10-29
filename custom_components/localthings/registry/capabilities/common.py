@@ -530,6 +530,14 @@ ALARMS = Capability(
 # reporting a real value (e.g. a fridge's 93 W) still shows it (issue #6).
 _DEAD_INSTANTANEOUS_POWER = "-500"
 
+
+def _instantaneous_power_unit(rep):
+    # Every board reports W except the MIM-H04EN heat pump's, which reports
+    # "1.034000" with "KW" (#682).
+    unit = rep.get("x.com.samsung.da.instantaneousPowerUnit")
+    return "kW" if isinstance(unit, str) and unit.upper() == "KW" else "W"
+
+
 HREF_ENERGY_CONSUMPTION = "/energy/consumption/vs/0"
 
 ENERGY_METER = Capability(
@@ -546,6 +554,7 @@ ENERGY_METER = Capability(
             device_class="power",
             state_class="measurement",
             unit="W",
+            unit_fn=_instantaneous_power_unit,
             value_fn=clamp_power,
             exists_fn=lambda rep, resources: (
                 is_stub_rep(rep)

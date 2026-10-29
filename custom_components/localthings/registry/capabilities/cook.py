@@ -190,15 +190,11 @@ def _specless_temps(live: list) -> dict[str, TempSpec]:
 _OPEN_TIME_MAX = parse_hms("23:59:00")
 
 
-def is_lcd_wall_16k(resources: dict) -> bool:
-    info = resources.get("/information/vs/0") or {}
-    model = info.get("x.com.samsung.da.modelNum")
-    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
-
-
 def healthy_cook_temps(resources: dict, mode: str | None = None) -> dict[str, TempSpec] | None:
-    """NV51K7770S recipe limits and presets; see docs/investigations/oven-healthy-cook.md."""
-    if not is_lcd_wall_16k(resources):
+    """NV51K7770S manual limits and owner-confirmed recipe presets."""
+    from .oven import has_healthy_cook_recipes
+
+    if not has_healthy_cook_recipes(resources):
         return None
     mode = mode or current_mode(resources) or ""
     if mode == "Healthycook5":
