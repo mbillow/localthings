@@ -80,7 +80,7 @@ def _fake_https(monkeypatch):
     _FakeConnection.routes = _routes()
 
 
-def _transport(family: str = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
+def _transport(family: str | None = "LCD_OV_WALL_16K") -> LegacyHttpTransport:
     device = LegacyHttpTransport(
         "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family=family
     )
@@ -126,6 +126,15 @@ class TestReads:
 
         assert resources["/connected/vs/1"] == {PREFIX + "connected": "Off"}
         assert ("GET", "/devices/1") in _requests()
+
+    @pytest.mark.parametrize("family", ["LCD_OV_WALL_16K", None])
+    def test_the_cavities_come_from_the_records_not_the_family(self, family):
+        transport = _transport(family)
+        _seed(transport, 0)
+
+        lower = _seed(transport, 1)["/mode/vs/1"][PREFIX + "supportedModes"]
+
+        assert lower == ["NoOperation", "LowerBake", "LowerConvectionBake", "LowerConvectionRoast"]
 
     def test_a_listed_sibling_reads_as_listed(self):
         assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "On"}
@@ -302,6 +311,19 @@ class TestCavityModes:
 
         assert "ConvectionBake" in modes
 
+    def test_a_siblings_failed_listing_keeps_the_divider(self):
+        transport = _transport()
+        _seed(transport, 0)
+        _FakeConnection.routes["/devices"] = (503, None)
+
+        _seed(transport, 1)
+        _FakeConnection.routes = _routes()
+        code, rep = transport.read(["mode", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        modes = rep[PREFIX + "supportedModes"]
+        assert "UpperConvectionBake" in modes and "ConvectionBake" not in modes
+
     def test_a_listing_that_times_out_still_reads_the_upper_cavity(self, monkeypatch):
         transport = _transport()
         _seed(transport, 0)
@@ -401,7 +423,7 @@ class TestWrites:
         code, _ = _transport().write(["device", "1"], batch, timeout=8.0)
 
         assert code == 0x84
-        assert _FakeConnection.log == []
+        assert ("PUT", "/devices/1") not in _requests()
 
     def test_an_unlisted_sibling_takes_no_command(self):
         _FakeConnection.routes = _routes(divided=False, lower=_running(LOWER))
@@ -577,15 +599,17 @@ async def test_a_stop_not_shown_with_remote_control_off_says_so(hass: HomeAssist
 
 async def test_other_writes_still_need_remote_control(hass: HomeAssistant):
     off = {"Configuration": {"remoteControlEnabled": False}}
-    routes = _routes()
+    routes = _routes(upper=_running(UPPER))
     routes["/devices/0/configuration"] = (200, off)
     coordinator = await _discovered(hass, routes)
-    power = next(
-        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "power_switch"
+    setpoint = next(
+        b for b in coordinator.bound if b.subdevice.key == "" and b.desc.key == "oven_setpoint"
     )
 
-    with pytest.raises(ServiceValidationError):
-        await coordinator.async_send_command(power, False)
+    with pytest.raises(ServiceValidationError) as error:
+        await coordinator.async_send_command(setpoint, 350)
+    assert error.value.translation_key == "remote_control_disabled"
+    assert not any(method == "PUT" for method, _ in _requests())
 
 
 async def test_a_refused_stop_reaches_the_user(hass: HomeAssistant):

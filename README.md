@@ -89,6 +89,8 @@ Each appliance has a **Configure** option in **Settings > Devices & Services**, 
 - **"Estimated finish -- minimum change (minutes)".** LocalThings holds a washer's, dryer's or dishwasher's finish time until the appliance's estimate changes by at least this many minutes. This keeps one-minute jitter out of your history. The default is 3. Set 0 to report every change.
 - **"Remember modes the device reports but doesn't advertise".** Some appliances run in a mode they never list as available. With this setting on, which is the default, LocalThings remembers such a mode and keeps offering it. **Forget remembered modes** in the same menu clears the list.
 
+An appliance that exposes more than one device, such as each indoor unit of a multi-split system or each cavity of a dual oven, also gets **Subdevices** in the same menu. Some appliances report an extra slot that isn't real hardware, which shows up as a duplicate or empty device. Untick it there: LocalThings removes that device and stops reading it. Tick it again to bring it back.
+
 ---
 
 ## Known device behavior
@@ -96,6 +98,8 @@ Each appliance has a **Configure** option in **Settings > Devices & Services**, 
 **Brief disconnects are normal.** Samsung appliances drop their connection for a moment now and then. LocalThings reconnects, and entities keep their last value meanwhile. If reconnects happen several times a minute, check the appliance's Wi-Fi signal. Also check that nothing else on your network holds a connection to it, because an appliance accepts one connection at a time.
 
 **Keep appliances registered in SmartThings.** If you remove an appliance from SmartThings, it resets its network settings the next time it reaches Samsung's servers. It then drops off Wi-Fi until you set it up in the app again. This happens even if you block its internet access most of the time.
+
+**Some washers and dryers stop counting energy without SmartThings.** On the DA_WM_TP2_20_COMMON board (for example the WW80T654ALX and DV80T6220LX), the energy total stops increasing while the appliance can't reach SmartThings, and resumes once it reconnects. LocalThings can only show what the appliance records, so if your energy sensor stays at one value while cycles run, check that the appliance can reach Samsung's servers.
 
 ### Restarting while an appliance is powered off
 
@@ -107,9 +111,9 @@ About half of Samsung's appliances report their Wi-Fi MAC address. For those, Ho
 
 ### Older appliances on TCP 8888
 
-Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven and an NZ36K7570R cooktop. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven, an NQ70M6650DS microwave/oven combo, and NZ36K7570R and NZ30K7570RS cooktops. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
 
-For the tested NZ36K7570R cooktop and NV51K777OS oven, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
+For the tested NZ36K7570R and NZ30K7570RS cooktops, NV51K777OS oven and NQ70M6650DS combo, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
 
 On these appliances, a chosen cycle, temperature, rinse count or spin speed takes effect only when the cycle starts. The selects hold your choice, and the **Start** button sends it. If you turn the dial on the appliance, the dial's setting replaces the held choice.
 

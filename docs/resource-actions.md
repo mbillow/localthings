@@ -4,6 +4,8 @@ Two HA actions, `localthings.write_resource` and `localthings.read_resource`, ta
 
 Both take a `device_id` (a device picker filtered to this integration) and resolve to exactly one appliance — a target that expands to more than one LocalThings device is rejected rather than silently fanned out across all of them. `href` is always canonical (e.g. `/mode/vs/0`); if the device you targeted is a subdevice — an oven's second cavity, an AC's second indoor unit — it's translated to the real on-the-wire href for you (`/mode/vs/1`, say), and the response reports both forms so there's no ambiguity about what was actually sent.
 
+All three raw actions (these two and `observe_resource`) are admin-only: a call from a non-admin Home Assistant user is refused.
+
 `write_resource` exists because a single write, one at a time, isn't enough to probe some boards. Issue #300's Samsung wall oven answers `2.04 Changed` to a settings write while idle and then silently reverts it — the write only sticks once a cycle is already running. Finding what actually triggers a cycle needs an *ordered sequence* of writes to different resources, with real delays between them, and a way to check afterward whether anything actually held:
 
 ```yaml

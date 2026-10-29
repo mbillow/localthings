@@ -8,6 +8,7 @@ from datetime import time as dt_time
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import for_device_by_oic_type, resolve
 from custom_components.localthings.registry.discovery import discover
+from custom_components.localthings.registry.entities import SensorDesc
 from tests.conftest import _load_device
 
 
@@ -113,3 +114,18 @@ def test_dnd_write_contracts_are_flagged_educated_guesses():
     path, body = start.write_fn(dt_time(9, 30), {})
     assert path == ["dnd", "vs", "0"]
     assert body == {"x.com.samsung.da.startTime": "09:30:00"}
+
+
+def test_a_unit_reporting_temperature_binds_it_in_celsius():
+    """Issue #683: some units add the Tizen Lite AC's /temperatures/vs/0."""
+    resources = _load_device("air_monitor_temperature")
+    reg = resolve(resources)
+    assert reg is not None
+    unbound = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    temperature = next(b.desc for b in bound if b.desc.key == "current_temperature_c")
+
+    assert unbound == []
+    assert flatten(bound, resources)["current_temperature_c"] == 27.0
+    assert isinstance(temperature, SensorDesc) and temperature.unit_fn is not None
+    assert temperature.unit_fn(resources["/temperatures/vs/0"]) == "°C"

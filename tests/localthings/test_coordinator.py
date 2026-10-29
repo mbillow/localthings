@@ -160,11 +160,11 @@ def test_run_discovery_detects_washer_via_model_fallback(hass: HomeAssistant, mo
     assert coordinator.device_type_name == "washer"
 
 
-def test_run_discovery_treats_an_unmapped_legacy_family_as_unrecognized(
+def test_run_discovery_routes_an_unmapped_legacy_family_like_any_device(
     hass: HomeAssistant,
 ) -> None:
-    """Its identity alone must not route it: the description below would
-    type as a washer, but nothing of the device beyond identity was read."""
+    """The bridge reads every 8888 appliance through one shared table, so a
+    family nobody has mapped routes on what it reports, as a DTLS board does."""
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 
     entry = MockConfigEntry(
@@ -183,12 +183,13 @@ def test_run_discovery_treats_an_unmapped_legacy_family_as_unrecognized(
         "/information/vs/0": {
             "x.com.samsung.da.modelNum": "TP6X_WW9000|FF18E000|2001",
             "x.com.samsung.da.description": "TP6X_WASHER_NEXT",
+            "x.com.samsung.da.deviceSubType": "Washer",
             "x.com.samsung.da.serialNum": "TEST-SERIAL",
         },
     }
     coordinator = LocalThingsCoordinator(hass, entry)
     coordinator._run_discovery(resources)
-    assert coordinator.device_type_name is None
+    assert coordinator.device_type_name == "washer"
 
 
 def test_run_discovery_falls_back_to_host_for_placeholder_serial(
@@ -1453,6 +1454,50 @@ async def test_send_command_applies_write_optimistically_before_settling(
     applied = coordinator._observe.apply("/some/path", {"value": 0}, source="observe")
     assert applied is False
     assert coordinator._cache.get("/some/path") == {"value": 5}
+
+
+async def test_optimistic_fn_shapes_the_cache_but_not_the_wire_body(
+    hass: HomeAssistant,
+    mock_entry,
+    mock_coordinator_observe_session,
+) -> None:
+    """A write the device reports in fields it doesn't accept (the paired
+    hood's timer, #677) shows those fields at once, without sending them."""
+    from custom_components.localthings.registry.discovery import BoundEntity
+    from custom_components.localthings.registry.entities import NumberDesc
+
+    fake = mock_coordinator_observe_session
+    await hass.config_entries.async_setup(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+
+    options = "x.com.samsung.da.options"
+    coordinator._cache.apply_rep(
+        "/some/path", {options: ["Set_0", "Current_0", "Other_1"]}, source="test"
+    )
+
+    def _write_fn(payload, rep, href=None):
+        return (["some", "path"], {options: [f"Set_{payload}"]})
+
+    def _optimistic_fn(body):
+        return {**body, options: [*body[options], f"Current_{body[options][0][4:]}"]}
+
+    desc = NumberDesc(
+        key="test",
+        field=options,
+        write_fn=_write_fn,
+        optimistic_fn=_optimistic_fn,
+    )
+    bound = BoundEntity(href="/test/vs/0", capability=coordinator.bound[0].capability, desc=desc)
+    sent = []
+
+    with patch.object(fake, "subscribe"):
+        fake.write = lambda path, body, **k: sent.append(body) or (0x44, None)
+        await coordinator.async_send_command(bound, 5)
+
+    assert sent == [{options: ["Set_5"]}]
+    # The extra token survives the merge with the cached options.
+    assert coordinator._cache.get("/some/path") == {options: ["Set_5", "Current_5", "Other_1"]}
 
 
 async def test_write_only_button_does_not_manufacture_cache_state(

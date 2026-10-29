@@ -1,0 +1,19 @@
+{
+  "state_keys": [
+    "subdevice_0a1b2c3d000040008000000001200000_alarm_code",
+    "subdevice_0a1b2c3d000040008000000001200000_away_mode",
+    "subdevice_0a1b2c3d000040008000000001200000_booster_heater",
+    "subdevice_0a1b2c3d000040008000000001200000_energy_kwh",
+    "subdevice_0a1b2c3d000040008000000001200000_heat_generated_kwh",
+    "subdevice_0a1b2c3d000040008000000001200000_outdoor_temperature",
+    "subdevice_0a1b2c3d000040008000000001200000_power_watts",
+    "subdevice_0a1b2c3d000040008000000001200000_remote_control",
+    "subdevice_0a1b2c3d000040008000000001200000_three_way_valve",
+    "subdevice_0a1b2c3d000040008000000001200000_water_heater",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_climate",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_mode",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_power",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_target_temperature",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_temperature"
+  ]
+}

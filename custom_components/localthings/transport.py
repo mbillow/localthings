@@ -319,18 +319,3 @@ def create_transport(
         on_notification=on_notification,
         local_port=local_port,
     )
-
-
-def translates_resources(data: Mapping[str, Any]) -> bool:
-    """Whether this entry's transport can present the device's own resources.
-
-    False only for an 8888 family with no envelope table, which is read for
-    its identity alone; discovery treats that like any unrecognized device
-    type rather than routing on the identity. Decided from the entry, not a
-    live session, so a discovery replayed from the snapshot agrees.
-    """
-    if data.get(CONF_TRANSPORT) != TRANSPORT_LEGACY_HTTP:
-        return True
-    from .legacy_http import is_mapped
-
-    return is_mapped(data.get(CONF_LEGACY_FAMILY))
