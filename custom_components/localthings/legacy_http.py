@@ -8,8 +8,9 @@ paths, so this module translates it to the `{href: rep}` shape
 
 Pure: no I/O, no Home Assistant. Two mechanical rules carry the translation
 -- a field takes the `x.com.samsung.da.` prefix, a resource maps onto the
-canonical href its fields belong in -- and everything else is a table row,
-so a family that disagrees costs a row rather than a branch.
+canonical href its fields belong in -- and everything else is a table row.
+The table is shared by every appliance; a device type that keeps a resource
+elsewhere costs an override row rather than a table of its own.
 """
 
 from __future__ import annotations
@@ -17,7 +18,10 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import cache
 from typing import Any
+
+from .registry.capabilities.oven import is_lcd_ov_wall_16k
 
 # The prefix every OCF-side field carries and no 8888-side field does.
 PREFIX = "x.com.samsung.da."
@@ -59,9 +63,6 @@ class Resource:
     joined: frozenset[str] = frozenset()
 
 
-# Every family serves its own identity here -- it is how the family is told
-# apart in the first place -- so this row is the one thing an unmapped
-# family can still be read with.
 INFORMATION = Resource(
     endpoint="information",
     wrapper="Information",
@@ -69,80 +70,13 @@ INFORMATION = Resource(
     rename={"modelID": "modelNum", "serialNumber": "serialNum"},
 )
 
-# What an unmapped family is read with: identity only, so it sets up the way
-# an unrecognized DTLS device does rather than borrowing another family's
-# field map.
-IDENTITY: tuple[Resource, ...] = (INFORMATION,)
-
-# TP6X_WW6500 (EU), the one 8888 appliance measured end to end. `Mode` is
-# /course/vs/0, not /mode/vs/0 (which this firmware 404s).
-TP6X_WASHER: tuple[Resource, ...] = (
-    Resource(
-        endpoint="operation",
-        wrapper="Operation",
-        href="/operational/state/vs/0",
-        # The OCF side keeps power and the child lock on their own hrefs.
-        fan_out={"power": "/power/vs/0", "kidsLock": "/kidslock/vs/0"},
-    ),
-    Resource(
-        endpoint="mode",
-        wrapper="Mode",
-        href="/course/vs/0",
-        start_only=frozenset({"Course"}),
-    ),
-    Resource(
-        endpoint="washer",
-        wrapper="Washer",
-        href="/washer/vs/0",
-        start_only=frozenset({"waterTemperature", "rinseCycles", "spinLevel"}),
-    ),
-    Resource(
-        endpoint="configuration",
-        wrapper="Configuration",
-        href="/remotectrl/vs/0",
-    ),
-    INFORMATION,
-    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
-    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
-)
-
-
-# TP6X_RAC_16K (issue #563), read from a diagnostics dump. The fields are the
-# ones the ARTIK051 boards serve over CoAP, so each resource lands on that
-# generation's href: Wind is /airflow/vs/0, not /wind/strength/vs/0. The
-# transport routes writes to this family's measured legacy RAC endpoints.
-TP6X_RAC: tuple[Resource, ...] = (
-    Resource(endpoint="operation", wrapper="Operation", href="/power/vs/0"),
-    Resource(endpoint="mode", wrapper="Mode", href="/mode/vs/0"),
-    Resource(
-        endpoint="temperatures",
-        wrapper="Temperatures",
-        href="/temperatures/vs/0",
-        as_items=True,
-        numeric=frozenset({"desired"}),
-    ),
-    Resource(
-        endpoint="wind",
-        wrapper="Wind",
-        href="/airflow/vs/0",
-        numeric=frozenset({"speedLevel"}),
-    ),
-    Resource(
-        endpoint="configuration",
-        wrapper="Configuration",
-        href="/configuration/vs/0",
-    ),
-    INFORMATION,
-    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
-    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
-)
-
-
-# LCD_OV_WALL_16K (issue #572, NV51K777OS Flex Duo), read from a diagnostics
-# dump. The fields are the TP2X_DA-KS-WALLOVEN's CoAP vocabulary, so each
-# resource lands on that board's href. Writes follow the washer's aggregate
-# PUT and are not yet confirmed on this family.
-LCD_OV_WALL: tuple[Resource, ...] = (
+# Where each resource lands on the OCF side. The wrapper names are one
+# vocabulary on every 8888 appliance on record, and each field goes where the
+# CoAP boards keep it: power and the child lock on their own hrefs, the rest
+# of Operation on the operational state. A field this table doesn't name
+# translates mechanically, so a device type nobody has mapped still reads
+# whole rather than as identity alone.
+RESOURCES: tuple[Resource, ...] = (
     Resource(
         endpoint="operation",
         wrapper="Operation",
@@ -156,6 +90,12 @@ LCD_OV_WALL: tuple[Resource, ...] = (
         href="/mode/vs/0",
         joined=frozenset({"supportedModes"}),
     ),
+    Resource(
+        endpoint="washer",
+        wrapper="Washer",
+        href="/washer/vs/0",
+        start_only=frozenset({"waterTemperature", "rinseCycles", "spinLevel"}),
+    ),
     Resource(endpoint="oven", wrapper="Oven", href="/oven/vs/0"),
     Resource(
         endpoint="temperatures",
@@ -165,42 +105,49 @@ LCD_OV_WALL: tuple[Resource, ...] = (
         numeric=frozenset({"desired"}),
     ),
     Resource(endpoint="doors", wrapper="Doors", href="/doors/vs/0", as_items=True),
+    # The ARTIK051 ACs' href: Wind is /airflow/vs/0, not /wind/strength/vs/0.
     Resource(
-        endpoint="configuration",
-        wrapper="Configuration",
-        href="/remotectrl/vs/0",
+        endpoint="wind",
+        wrapper="Wind",
+        href="/airflow/vs/0",
+        numeric=frozenset({"speedLevel"}),
     ),
-    INFORMATION,
-    Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
-    Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
-)
-
-
-# NZ36K7570R (TP6X_CT_16K) uses the existing cooktop options vocabulary.
-TP6X_CT: tuple[Resource, ...] = (
-    Resource(
-        endpoint="operation",
-        wrapper="Operation",
-        href="/power/vs/0",
-        fan_out={"kidsLock": "/kidslock/vs/0"},
-    ),
-    Resource(endpoint="mode", wrapper="Mode", href="/mode/vs/0"),
     Resource(endpoint="configuration", wrapper="Configuration", href="/remotectrl/vs/0"),
     INFORMATION,
     Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
     Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
 )
 
+# A washer's or dryer's Mode is its cycle (`Course_XX`), which CoAP laundry
+# serves as /course/vs/0 and the TP6X_WW6500 takes only with a start. The
+# DV80M8214AW's start behavior is unmeasured (#646), so it is held the same way.
+_LAUNDRY = (
+    Resource(
+        endpoint="mode",
+        wrapper="Mode",
+        href="/course/vs/0",
+        start_only=frozenset({"Course"}),
+    ),
+)
 
-# Keyed by the appliance's own `description` (/devices/0/information's,
-# e.g. 'TP6X_WASHER'), less any trailing capacity (`_16K`), so one row covers
-# every size of a model line. A family not listed here is read with IDENTITY.
-FAMILIES: dict[str, tuple[Resource, ...]] = {
-    "TP6X_WASHER": TP6X_WASHER,
-    "TP6X_CT": TP6X_CT,
-    "TP6X_RAC": TP6X_RAC,
-    "LCD_OV_WALL": LCD_OV_WALL,
+# Resources a device type keeps somewhere else, keyed by the `type` its own
+# record reports. An air conditioner's Configuration is its region, the
+# ARTIK051 ACs' /configuration/vs/0 (#563).
+_BY_TYPE: dict[str, tuple[Resource, ...]] = {
+    "Washer": _LAUNDRY,
+    "Dryer": _LAUNDRY,
+    "Air_Conditioner": (
+        Resource(endpoint="configuration", wrapper="Configuration", href="/configuration/vs/0"),
+    ),
 }
+
+
+@cache
+def table_for(device_type: str | None) -> tuple[Resource, ...]:
+    """The resource table for an appliance reporting `device_type`."""
+    overrides = {resource.wrapper: resource for resource in _BY_TYPE.get(device_type or "", ())}
+    return tuple(overrides.get(resource.wrapper, resource) for resource in RESOURCES)
+
 
 _CAPACITY = re.compile(r"_\d+K$")
 
@@ -209,61 +156,77 @@ def _family_key(family: str | None) -> str:
     return _CAPACITY.sub("", family or "")
 
 
-# Families whose `supportedModes` is one static list on every cavity, divider
-# in or out, mapped to the lower cavity's modes, which that list never names.
-# On the NV51K777OS (#572), cooks started at the panel ran as
-# UpperConvectionBake and LowerConvectionBake with the divider in; the other
-# two Lower modes are the reporter's reading of the panel.
-_LOWER_CAVITY_MODES: dict[str, tuple[str, ...]] = {
-    "LCD_OV_WALL": ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast"),
-}
+# A divided oven's cavities, told apart by what each slot reports for itself:
+# the lower one's record extends the board's description with `_DIV`
+# (`LCD_OV_WALL_16K_DIV`, #572), and the upper one's modes name `Upper` ones.
+# A `_DIV` slot reporting no modes is not a cavity; the NW9300MD has one
+# beside its microwave (#681).
+_LOWER_SUFFIX = "_DIV"
+_UPPER_PREFIX = "Upper"
+_LOWER_PREFIX = "Lower"
+CAVITY_UPPER = "upper"
+CAVITY_LOWER = "lower"
+
+# A lower cavity naming no Lower modes of its own runs these. The
+# NV51K777OS's (#572) reports the upper cavity's list: cooks started at the
+# panel ran as LowerConvectionBake with the divider in, and the other two are
+# the reporter's reading of the panel.
+_ASSUMED_LOWER_MODES = ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast")
 
 _IDLE_MODE = "NoOperation"
 
 
-def has_cavities(family: str | None) -> bool:
-    return _family_key(family) in _LOWER_CAVITY_MODES
-
-
-def with_cavity_modes(
-    family: str | None, bodies: dict[str, Any], index: int, divided: bool | None
-) -> dict[str, Any]:
-    """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
-    run: Upper modes on device 0 with the divider in, unprefixed ones with
-    it out, the family's Lower modes on device 1 and none with the divider
-    out. Device 0's is left as reported while the divider state is unknown.
-    The mode the cavity reports is always kept, so a running cook still
-    reads as one of its options."""
-    lower = _LOWER_CAVITY_MODES.get(_family_key(family))
+def _supported_modes(bodies: Mapping[str, Any]) -> list[str]:
     mode = bodies.get("Mode")
-    if lower is None or not isinstance(mode, Mapping):
+    supported = _split_joined(mode.get("supportedModes")) if isinstance(mode, Mapping) else None
+    return [m for m in supported if isinstance(m, str)] if isinstance(supported, list) else []
+
+
+def cavity_role(record: Mapping[str, Any]) -> str | None:
+    """CAVITY_UPPER or CAVITY_LOWER for a slot of a divided oven, from its
+    own record, or None for anything else."""
+    supported = _supported_modes(record)
+    if not supported:
+        return None
+    description = record.get("description")
+    if isinstance(description, str) and description.endswith(_LOWER_SUFFIX):
+        return CAVITY_LOWER
+    if any(m.startswith(_UPPER_PREFIX) for m in supported):
+        return CAVITY_UPPER
+    return None
+
+
+def divider_in(devices: list) -> bool:
+    """Whether `/devices` lists a lower cavity, which it does only while the
+    divider is in."""
+    return any(isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER for d in devices)
+
+
+def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None) -> dict[str, Any]:
+    """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
+    run: Upper modes on the upper cavity with the divider in, unprefixed ones
+    with it out, Lower modes on the lower cavity and none with the divider
+    out. The upper cavity's is left as reported while the divider state is
+    unknown. The mode the cavity reports is always kept, so a running cook
+    still reads as one of its options."""
+    mode = bodies.get("Mode")
+    if not isinstance(mode, Mapping) or not isinstance(mode.get("supportedModes"), list):
         return bodies
-    supported = _split_joined(mode.get("supportedModes"))
-    if not isinstance(supported, list):
-        return bodies
-    supported = [m for m in supported if isinstance(m, str)]
-    if index:
-        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *lower]
+    supported = _supported_modes(bodies)
+    if lower:
+        own = [m for m in supported if m.startswith(_LOWER_PREFIX)]
+        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or _ASSUMED_LOWER_MODES)]
     elif divided is None:
         return bodies
     elif divided:
-        modes = [m for m in supported if m == _IDLE_MODE or m.startswith("Upper")]
+        modes = [m for m in supported if m == _IDLE_MODE or m.startswith(_UPPER_PREFIX)]
     else:
-        modes = [m for m in supported if not m.startswith(("Upper", "Lower"))]
+        modes = [m for m in supported if not m.startswith((_UPPER_PREFIX, _LOWER_PREFIX))]
     current = mode.get("modes")
     for name in current if isinstance(current, list) else ():
         if isinstance(name, str) and name not in modes:
             modes.append(name)
     return {**bodies, "Mode": {**mode, "supportedModes": [",".join(modes)]}}
-
-
-def table_for(family: str | None) -> tuple[Resource, ...]:
-    """The envelope table for `family`, or IDENTITY when it is unmapped."""
-    return FAMILIES.get(_family_key(family), IDENTITY)
-
-
-def is_mapped(family: str | None) -> bool:
-    return _family_key(family) in FAMILIES
 
 
 def unmapped_wrappers(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
@@ -387,9 +350,8 @@ _SETINFO_FAMILIES = frozenset({"TP6X_WASHER"})
 
 def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, dict]:
     """A `/wm/setinfo/vs/0` rep carrying the power on/off flag this family
-    states in Information.modelID, which CoAP boards serve as a resource of
-    its own; empty when the model id doesn't carry it, or for a family
-    outside the laundry ones.
+    states in Information.modelID, or a confirmed model-specific override.
+    CoAP boards serve this flag as a resource of its own.
 
     The third `|` field of modelID is a hex feature string. Samsung's own
     washer plugin reads remote power control from bit 0 of the byte at
@@ -397,10 +359,16 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     whose byte is 00: `Operation.power = Off` answers
     `400 Control fail, <Operation.power=Off>` and the washer stays on.
     """
+    info = bodies.get("Information")
+    if not isinstance(info, Mapping):
+        return {}
+    model_id = info.get("modelID")
+    # NV51K7770S power writes do not operate either cavity (#664, #572).
+    # The same board also serves CombiOven models whose behavior is unverified.
+    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") == "WallOven":
+        return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
     if _family_key(family) not in _SETINFO_FAMILIES:
         return {}
-    info = bodies.get("Information")
-    model_id = info.get("modelID") if isinstance(info, Mapping) else None
     if not isinstance(model_id, str):
         return {}
     parts = model_id.split("|")

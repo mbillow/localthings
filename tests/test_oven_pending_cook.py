@@ -3,6 +3,7 @@
 import json
 from copy import deepcopy
 from itertools import permutations
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -27,7 +28,7 @@ from tests.test_legacy_http_lower_cavity import (
 )
 @pytest.mark.parametrize("order", list(permutations(("oven_mode", "oven_setpoint", "cook_time"))))
 async def test_entry_order_and_reselection_preserve_each_cavity_recipe(
-    hass, index, divided, mode, order
+    hass, monkeypatch, index, divided, mode, order
 ):
     coordinator = await _discovered(hass, _routes(divided=divided))
     cavity = _lower(coordinator) if index else MAIN
@@ -51,15 +52,26 @@ async def test_entry_order_and_reselection_preserve_each_cavity_recipe(
         held.values for other, held in coordinator._held_cooks.items() if other != cavity
     )
 
+    send = AsyncMock()
+    monkeypatch.setattr(coordinator, "_async_put", send)
+    monkeypatch.setattr(coordinator, "async_request_refresh", AsyncMock())
     await coordinator.async_start_cooking(cavity)
 
-    assert len(_FakeConnection.log) == 1
-    method, path, body, _ = _FakeConnection.log[0]
-    assert (method, path) == ("PUT", f"/devices/{index}")
-    assert body is not None
-    assert body["Device"]["Mode"] == {"modes": [mode]}
-    assert body["Device"]["Temperatures"][0]["desired"] == 400
-    assert body["Device"]["Operation"] == {"operationTime": "00:20:00", "state": "Run"}
+    send.assert_awaited_once()
+    path, body, href = send.call_args.args
+    assert path == ["device", str(index)]
+    assert href == f"/device/{index}"
+    reps = {element["href"]: element["rep"] for element in body if "rep" in element}
+    assert reps[cavity.to_actual(cook.MODE_HREF)] == {PREFIX + "modes": [mode]}
+    assert (
+        reps[cavity.to_actual(cook.TEMPERATURES_HREF)][PREFIX + "items"][0][PREFIX + "desired"]
+        == "400"
+    )
+    assert reps[cavity.to_actual(cook.OPERATION_HREF)] == {
+        PREFIX + "operationTime": "00:20:00",
+        PREFIX + "state": "Run",
+    }
+    assert not _requests()
     assert not coordinator._held_cooks[cavity].values
 
 
@@ -186,12 +198,12 @@ def test_reselecting_the_first_explicit_mode_keeps_values_with_or_without_defaul
 @pytest.mark.parametrize(
     "parameter,value,target,seconds",
     [
-        (cook.PARAM_MODE, "Bake", None, None),
-        (cook.PARAM_TEMPERATURE, 400, "400", None),
-        (cook.PARAM_DURATION, 0, None, "00:00:00"),
+        (cook.PARAM_MODE, "Bake", "425", "00:50:00"),
+        (cook.PARAM_TEMPERATURE, 400, "400", "00:50:00"),
+        (cook.PARAM_DURATION, 0, "425", "00:00:00"),
     ],
 )
-async def test_pending_view_hides_previous_cook_values_without_changing_diagnostics(
+async def test_pending_view_preserves_unset_readings_and_diagnostics(
     hass, parameter, value, target, seconds
 ):
     coordinator = await _discovered(hass, _routes(divided=False))
@@ -217,7 +229,9 @@ async def test_pending_view_hides_previous_cook_values_without_changing_diagnost
     assert view[cook.TEMPERATURES_HREF][PREFIX + "items"][1] == probe
     assert view[cook.OPERATION_HREF][PREFIX + "operationTime"] == seconds
     assert coordinator.data["oven_setpoint"] == (int(target) if target else None)
-    assert coordinator.data["cook_time"] == (0 if seconds else None)
+    expected_seconds = cook.parse_hms(seconds)
+    assert expected_seconds is not None
+    assert coordinator.data["cook_time"] == expected_seconds / 60
     assert coordinator.last_resources == before
     assert not _requests()
     if parameter == cook.PARAM_DURATION:
@@ -236,3 +250,46 @@ def test_a_native_unit_change_discards_pending_values():
 
     assert held.overlay(changed) is changed
     assert held.values == {}
+
+
+@pytest.mark.parametrize("has_default", [True, False])
+@pytest.mark.parametrize(
+    "order", list(permutations((cook.PARAM_MODE, cook.PARAM_TEMPERATURE, cook.PARAM_DURATION)))
+)
+def test_microwave_convection_preserves_entry_order_and_defaults(has_default, order):
+    resources = _idle("microwave_mw7300b")
+    if not has_default:
+        resources[cook.MODE_HREF].pop(PREFIX + "defaultMode")
+    held = cook.HeldCook()
+    values = {
+        cook.PARAM_MODE: "Convection",
+        cook.PARAM_TEMPERATURE: 160,
+        cook.PARAM_DURATION: 600,
+    }
+    for parameter in order:
+        held.hold(parameter, values[parameter], resources)
+    held.hold(cook.PARAM_MODE, "Convection", resources)
+
+    assert held.plan(resources) == cook.CookPlan("Convection", 160, "Celsius", 600)
+
+
+def test_a_usable_default_is_not_bypassed_by_another_modes_limits():
+    resources = _without_default()
+    resources[cook.MODE_HREF][PREFIX + "defaultMode"] = "AirFryer"
+    held = cook.HeldCook()
+
+    with pytest.raises(cook.CookStartError, match="cook_temperature_out_of_range"):
+        held.hold(cook.PARAM_TEMPERATURE, 200, resources)
+
+    assert held.values == {}
+
+
+def test_time_first_can_choose_a_mode_without_temperature_control():
+    resources = _idle("microwave_mw7300b")
+    resources[cook.MODE_HREF].pop(PREFIX + "defaultMode")
+    held = cook.HeldCook()
+    held.hold(cook.PARAM_DURATION, 600, resources)
+    held.hold(cook.PARAM_MODE, "Grill", resources)
+    held.hold(cook.PARAM_MODE, "Grill", resources)
+
+    assert held.plan(resources) == cook.CookPlan("Grill", None, "Celsius", 600)

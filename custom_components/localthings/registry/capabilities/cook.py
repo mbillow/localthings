@@ -632,59 +632,44 @@ class HeldCook:
         """Validate `value` against the declaration and hold it. Raises
         CookStartError when the board rules it out."""
         self._expire(resources)
-        # Checked as the start would be: against the held mode (else the
-        # board's default) and whatever else is already held.
-        if param == PARAM_MODE:
-            keep_values = PARAM_MODE not in self.values or self.values[PARAM_MODE] == value
-            temperature = self.values.get(PARAM_TEMPERATURE) if keep_values else None
-            duration = self.values.get(PARAM_DURATION) if keep_values else None
-            plan = plan_start(
-                resources, mode=value, temperature=temperature, duration=duration, complete=False
-            )
+        held = {**self.values, param: value}
+        if param == PARAM_MODE and self.values.get(PARAM_MODE) not in (None, value):
             held = {PARAM_MODE: value}
-            if temperature is not None:
-                held[PARAM_TEMPERATURE] = plan.temperature
-            if duration is not None:
-                held[PARAM_DURATION] = plan.duration
-        else:
-            held = {**self.values, param: value}
-            try:
-                plan = plan_start(
-                    resources,
-                    mode=held.get(PARAM_MODE),
-                    temperature=held.get(PARAM_TEMPERATURE),
-                    duration=held.get(PARAM_DURATION),
-                    complete=False,
-                )
-            except CookStartError as err:
-                if err.key != "cook_mode_required" or param not in (
-                    PARAM_TEMPERATURE,
-                    PARAM_DURATION,
-                ):
-                    raise
-                # No default mode on the NV51K7770S: accept preparation only
-                # if one available mode accepts the whole pending recipe.
-                for candidate in startable_modes(resources):
-                    try:
-                        plan_start(
-                            resources,
-                            mode=candidate,
-                            temperature=held.get(PARAM_TEMPERATURE),
-                            duration=held.get(PARAM_DURATION),
-                            complete=False,
-                        )
-                    except CookStartError:
-                        continue
-                    break
-                else:
-                    raise
-                # The candidate must not select a mode or round its input;
-                # the first explicit mode selection does that.
+        try:
+            plan = plan_start(
+                resources,
+                mode=held.get(PARAM_MODE),
+                temperature=held.get(PARAM_TEMPERATURE),
+                duration=held.get(PARAM_DURATION),
+                complete=False,
+            )
+        except CookStartError as err:
+            if err.key != "cook_mode_required" or param not in (PARAM_TEMPERATURE, PARAM_DURATION):
+                raise
+            # Without a default mode (NV51K7770S), one available mode must
+            # accept the whole combination before it can be held.
+            for candidate in startable_modes(resources):
+                try:
+                    plan_start(
+                        resources,
+                        mode=candidate,
+                        temperature=held.get(PARAM_TEMPERATURE),
+                        duration=held.get(PARAM_DURATION),
+                        complete=False,
+                    )
+                except CookStartError:
+                    continue
+                break
             else:
-                held = {
-                    **held,
-                    param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
-                }
+                raise
+            # A candidate check must not choose a mode or round its inputs.
+        else:
+            for key, normalized in (
+                (PARAM_TEMPERATURE, plan.temperature),
+                (PARAM_DURATION, plan.duration),
+            ):
+                if key in held:
+                    held[key] = normalized
         if not self.values:
             self._base = _device_values(resources)
         self.values = held
@@ -714,17 +699,13 @@ class HeldCook:
         temp = spec.temps.get(unit) if spec and unit else None
         target = self.values.get(PARAM_TEMPERATURE, temp.default if temp else None)
         items = (view.get(TEMPERATURES_HREF) or {}).get(_ITEMS)
-        # Raw values from a previous cook are not inputs to the pending start.
-        if items:
+        if target is not None and items:
             items = [dict(i) for i in items]
-            items[0][_DESIRED] = str(target) if target is not None else None
+            items[0][_DESIRED] = str(target)
             view[TEMPERATURES_HREF] = {**view[TEMPERATURES_HREF], _ITEMS: items}
         seconds = self.values.get(PARAM_DURATION, spec.time_default if spec else None)
-        if OPERATION_HREF in view:
-            view[OPERATION_HREF] = {
-                **view[OPERATION_HREF],
-                _OPERATION_TIME: format_hms(seconds) if seconds is not None else None,
-            }
+        if seconds is not None and OPERATION_HREF in view:
+            view[OPERATION_HREF] = {**view[OPERATION_HREF], _OPERATION_TIME: format_hms(seconds)}
         return view
 
     def plan(self, resources: dict) -> CookPlan:

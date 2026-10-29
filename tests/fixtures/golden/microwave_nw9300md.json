@@ -33,6 +33,7 @@
     "subdevice2_power_switch",
     "subdevice2_progress_percentage",
     "subdevice2_remote_control",
+    "subdevice2_reservoir_open",
     "subdevice2_sound"
   ]
 }

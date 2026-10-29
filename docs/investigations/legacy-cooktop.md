@@ -87,9 +87,79 @@ existing placeholder device after reload using the normal Delete device action.
 The fixture legacy_cooktop_empty_hood.json retains the captured canonical
 resources without connection or account identifiers. No paired hood was tested.
 
-No new hood mapping or control is included: no compatible hood is available
-for hardware verification. The existing upstream hood resources for other
-appliances are unchanged.
+No new hood mapping or control was included at the time: no compatible hood
+was available for hardware verification. The existing upstream hood
+resources for other appliances are unchanged.
+
+An NZ30K7570RS with a paired NK9300KM hood (issue #676) later showed the
+populated slot: DeviceType_NK9300KM, Bluetooth_On, FanSpeed_1 and Lamp_Off,
+with no BTState option. Its fan speed, light, Bluetooth link and model now
+read as paired-hood sensors, and the burner and timer entities no longer bind
+on that slot. A second capture with the hood running showed power On,
+FanSpeed_2, Lamp_On, ShutOffTimerSet_10, ShutOffTimerCurrent_9 and
+ShutOffTimerState_Run. Three more captures over the next seven minutes
+showed the timer counting down in minutes (9 to 4 over five minutes) and the
+fan at speeds 1 to 3. Once the hood turned off, power read Off while
+FanSpeed_3 and Lamp_On held, so the slot's power reads as the paired hood's
+power. The reporter confirmed the light runs on its own and the fan offers
+Low, Med, High and Boost, with FanSpeed_2 as Med. A later capture with the
+fan on Boost showed power On and FanSpeed_4, with the shutoff timer at Ready
+and the last set value of 10 retained. The fan reads as a named setting.
+
+With the reporter watching the hood on 2026-10-23, every write below was a
+one-token aggregate `PUT /devices/1`, accepted with 204:
+
+| Write | What the hood did |
+| --- | --- |
+| Lamp_On, Lamp_Off | Light on and off, with the fan off |
+| power On | Fan started on Low, even with FanSpeed_4 stored |
+| power Off | Fan stopped; FanSpeed kept its value |
+| FanSpeed_2, 3, 4 while running | Med, High, Boost |
+| FanSpeed_2 while off | Accepted, ignored |
+| power On and FanSpeed_2 in one body | Started on Low; the speed was ignored |
+| power On, then FanSpeed_3 0.4 s later | Started, then High |
+| power On while running on Med | Dropped to Low |
+
+The hood is therefore exposed as a fan whose speed is written after power
+On, and a light.
+
+A second NZ30K7570RS (TP6X_CT_16K, NA9300K-/AA1) paired to an NK9300KM
+confirmed those fan and light writes, and tested the shutoff timer (PR #677).
+`ShutOffTimerSet_N`, as an aggregate or `PUT /devices/1/mode`, sets N minutes
+while the fan runs:
+
+| Write | What the hood did |
+| --- | --- |
+| ShutOffTimerSet_1, 5, 10, 20, 35, 99 | Panel showed the minutes; read back Set_N, Current_N, Run |
+| ShutOffTimerSet_0 | Timer cancelled, fan kept running; read back Set_0, Current_0, Ready |
+| ShutOffTimerSet_100 to 255 | Counted down, but the two-digit panel showed only the last two digits |
+| ShutOffTimerSet_256, 999 | Wrapped to one byte: 0 (cancelled) and 231 |
+| ShutOffTimerState_Ready | Read back Ready, but the countdown continued |
+| ShutOffTimerCurrent_7 idle, _3 running (#676's hood) | Rejected with 400; panel unchanged |
+| power Off | Cleared a running timer |
+
+On issue #676's own hood on 2026-10-26, power On then ShutOffTimerSet_5
+from off started the fan on Low with 5 on the panel, and the 20 and 0 writes
+behaved as above. ShutOffTimerSet_0 with the fan off left it off. A timer of
+1 turned the hood off about 30 seconds later, reading back Set_1, Current_0
+and Ready, so Current counts whole minutes rounded up.
+
+The timer is therefore exposed as a number from 0 to 99 minutes, 0
+cancelling. Setting it while the fan is off is refused with an error
+rather than turning the fan on, which a number entity shouldn't do as a
+side effect; cancelling always goes through. It reads
+ShutOffTimerCurrent, because ShutOffTimerSet keeps its last value after the
+timer ends. The second reporter found the hood reads back Set_N, Current_N
+and Run within 5 seconds of a write, while Home Assistant kept showing the
+old value for about 45 seconds, until the write's settle window ended. A
+timer write therefore also shows Current_N and Run (or Current_0 and Ready
+when cancelled) in Home Assistant right away. Only Set is sent to the hood,
+which rejects a written Current.
+
+A 204 and a changed read-back don't prove the hood acted. A few minutes after
+the cooktop was power-cycled, a Lamp_Off/Lamp_On pair did both without the
+light moving, and the same writes worked later. The Bluetooth link to the hood
+may not have been back yet.
 
 The fixture legacy_cooktop_observations.json contains only the relevant
 options arrays extracted from the user's diagnostics. Its state reflects

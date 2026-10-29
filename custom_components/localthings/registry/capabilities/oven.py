@@ -197,6 +197,56 @@ def _has_option(prefix):
     )
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, name) is not None
+            for name in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """NV51K7770S observations confirmed these positions with the door open (#666)."""
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
+def is_tp6x_ov_board(resources):
+    """The NQ70M6650DS combo's 8888 board (#674). It answers every write
+    `204`, but runs a remote cook only once Start is pressed at the panel,
+    and a setpoint written while idle clears the chosen mode."""
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return board.startswith("TP6X_OV_")
+
+
+def is_empty_legacy_oven_slot(resources):
+    """The blank `/devices/1` the NQ70M6650DS combo's 8888 bridge answers
+    between its microwave (0) and oven (2), and leaves out of `/devices`
+    (#674): no cavity type, no modes, powered off."""
+    mode = resources.get("/mode/vs/0") or {}
+    return (
+        is_tp6x_ov_board(resources)
+        and _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
+        and not mode.get("x.com.samsung.da.supportedModes")
+        and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+    )
+
+
 def _option_write(prefix, new_value):
     """A one-token x.com.samsung.da.options write, mirroring
     laundry.option_write. NOT independently confirmed on an oven -- issue
@@ -230,8 +280,13 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
-def _cook_time_write(p, rep, href=None):
-    """Write operationTime + remainingTime (H:MM:SS) from minutes."""
+def is_lcd_ov_wall_16k(model):
+    """Exact board token used by the NV51K7770S (#572, #662)."""
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+def _cook_time_write(p, rep, href=None, resources=None):
+    """Write the requested cook duration from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
@@ -240,10 +295,13 @@ def _cook_time_write(p, rep, href=None):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
-    return ["operational", "state", "vs", "0"], {
-        "x.com.samsung.da.operationTime": hms,
-        "x.com.samsung.da.remainingTime": hms,
-    }
+    body = {"x.com.samsung.da.operationTime": hms}
+    model = ((resources or {}).get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    # The NV51K7770S answers a running timer edit that also sends
+    # remainingTime with 4.00; operationTime alone is accepted (#662).
+    if not is_lcd_ov_wall_16k(model):
+        body["x.com.samsung.da.remainingTime"] = hms
+    return ["operational", "state", "vs", "0"], body
 
 
 def _oven_mode_options(resources):
@@ -390,6 +448,7 @@ OVEN_OPERATIONAL_STATE = Capability(
         ),
         NumberDesc(
             key="cook_time",
+            mode="box",
             field="x.com.samsung.da.operationTime",
             unit="min",
             native_min=0,
@@ -501,6 +560,7 @@ OVEN_SETPOINT = Capability(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(
             key="oven_setpoint",
+            mode="box",
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_oven_temp_unit,
@@ -737,6 +797,14 @@ OVEN_MODE = Capability(
             write_fn=_oven_mode_write,
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
+        ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
         ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's

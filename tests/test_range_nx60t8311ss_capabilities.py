@@ -159,3 +159,14 @@ def test_mask_unparseable_reads_unknown():
     rep = {"x.com.samsung.da.cooktopMonitoring": "n/a"}
     assert _mask_desc("active_burners").rep_fn(rep) is None
     assert _mask_desc("cooktop_burner_1").rep_fn(rep) is None
+
+
+def test_the_full_dump_leaves_nothing_unbound():
+    """Issue #670's dump of the same range carries 33 hrefs, including an
+    empty /recipe/cook/vs/0 and a hood fan and grill areas it has no state for."""
+    resources = _load_device("range_nx60t8311ss_full")
+    reg = resolve(resources, device_types=DEVICE_TYPES)
+    assert reg is not None and reg.name == "range"
+    unbound = []
+    discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
