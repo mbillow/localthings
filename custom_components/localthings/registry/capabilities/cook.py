@@ -190,6 +190,29 @@ def _specless_temps(live: list) -> dict[str, TempSpec]:
 _OPEN_TIME_MAX = parse_hms("23:59:00")
 
 
+def healthy_cook_temps(resources: dict, mode: str | None = None) -> dict[str, TempSpec] | None:
+    """NV51K7770S manual limits and owner-confirmed recipe presets."""
+    from .oven import has_healthy_cook_recipes
+
+    if not has_healthy_cook_recipes(resources):
+        return None
+    mode = mode or current_mode(resources) or ""
+    if mode == "Healthycook5":
+        return {"C": TempSpec(40, 105, 65, 5), "F": TempSpec(100, 225, 150, 5)}
+    if mode == "Healthycook6":
+        # The fixed 40 C fallback is inferred from the captured 100 F target
+        # using the five-degree rounding seen in the other recipe presets.
+        return {"C": TempSpec(40, 40, 40, 1), "F": TempSpec(100, 100, 100, 1)}
+    recipe = mode.removeprefix("Upper").removeprefix("Lower")
+    if recipe not in {f"Healthycook{i}" for i in range(1, 5)}:
+        return None
+    divided = mode.startswith(("Upper", "Lower"))
+    return {
+        "C": TempSpec(80, 250 if divided else 285, 205 if recipe == "Healthycook4" else 190, 5),
+        "F": TempSpec(175, 480 if divided else 550, 400 if recipe == "Healthycook4" else 375, 5),
+    }
+
+
 def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
     """A board with no modeSpec starts the same way (the NW9000KD started
     Bake from Ready, #300), so its own live modes are offered, bounded by its
@@ -201,7 +224,7 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
         mode: ModeSpec(
             mode=mode,
             control=START_CONTROL,
-            temps=temps,
+            temps=(healthy_cook_temps(resources, mode) or temps) if temps else {},
             time_max=_OPEN_TIME_MAX,
             time_optional=True,
         )

@@ -202,7 +202,12 @@ def divider_in(devices: list) -> bool:
     return any(isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER for d in devices)
 
 
-def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None) -> dict[str, Any]:
+def with_cavity_modes(
+    bodies: dict[str, Any],
+    lower: bool,
+    divided: bool | None,
+    information: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
     run: Upper modes on the upper cavity with the divider in, unprefixed ones
     with it out, Lower modes on the lower cavity and none with the divider
@@ -215,7 +220,13 @@ def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None)
     supported = _supported_modes(bodies)
     if lower:
         own = [m for m in supported if m.startswith(_LOWER_PREFIX)]
-        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or _ASSUMED_LOWER_MODES)]
+        fallback = _ASSUMED_LOWER_MODES
+        info = information or {}
+        # Panel-started NV51K7770S recipes use these Lower codes, which its
+        # static list omits. CombiOven models share the board, not this menu.
+        if is_lcd_ov_wall_16k(info.get("modelID")) and info.get("deviceSubType") == "WallOven":
+            fallback = (*fallback, *(f"LowerHealthycook{i}" for i in range(1, 5)))
+        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or fallback)]
     elif divided is None:
         return bodies
     elif divided:

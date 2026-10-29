@@ -159,6 +159,8 @@ class NumberDesc(SamsungEntityDescription):
     # (rep, resources) -> (min, max, step), or None to fall through to the
     # per-rep overrides above -- for bounds that live on a sibling href.
     bounds_fn: Callable[[dict, dict], tuple[float, float, float] | None] | None = None
+    # Keep the entity registered when the active mode has no usable setpoint.
+    available_fn: Callable[[dict, dict], bool] | None = None
     range_field: str | None = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
     # Wire body -> the body to merge into the cache, for a write whose effect

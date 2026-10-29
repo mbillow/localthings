@@ -580,7 +580,9 @@ class LegacyHttpTransport:
         if state.cavity == CAVITY_UPPER:
             return with_cavity_modes(bodies, False, self._state_at(0).divided)
         if state.cavity == CAVITY_LOWER:
-            return with_cavity_modes(bodies, True, state.listed)
+            return with_cavity_modes(
+                bodies, True, state.listed, state.last_bodies.get("Information")
+            )
         return bodies
 
     def _with_course_defaults(
