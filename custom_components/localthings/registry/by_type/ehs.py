@@ -18,7 +18,8 @@ REGISTRY = DeviceRegistry(
     capabilities=_build(
         [
             *ignored.IGNORED,
-            *common.UNIVERSAL,
+            *[c for c in common.UNIVERSAL if c is not common.ENERGY_METER],
+            ehs.ENERGY_METER,
             airconditioner.MUTE_ONCE,
             ehs.ZONE_POWER,
             ehs.ZONE_MODE,

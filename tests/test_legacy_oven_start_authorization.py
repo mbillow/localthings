@@ -26,11 +26,10 @@ from tests.test_legacy_http_lower_cavity import (
 from tests.test_legacy_http_transport import _FakeConnection
 
 
-def _transport(family="LCD_OV_WALL_16K"):
-    transport = _unseeded_transport(family)
-    if family == "LCD_OV_WALL_16K":
-        _seed(transport, 0)
-        _seed(transport, 1)
+def _transport():
+    transport = _unseeded_transport()
+    _seed(transport, 0)
+    _seed(transport, 1)
     _FakeConnection.log.clear()
     return transport
 
@@ -94,7 +93,9 @@ def test_a_refusal_stops_the_sequence_and_keeps_the_reason(index, failed_step, m
 
 
 def test_other_lcd_wall_boards_keep_one_combined_write():
-    code, _ = _transport("LCD_OV_WALL_30K").write(["device", "0"], _batch(0), timeout=8.0)
+    transport = _transport()
+    transport._state_at(0).last_bodies["Information"]["modelID"] = "LCD_OV_WALL_30K"
+    code, _ = transport.write(["device", "0"], _batch(0), timeout=8.0)
 
     assert code == 0x44
     assert _requests() == [("PUT", "/devices/0")]

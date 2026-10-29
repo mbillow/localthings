@@ -71,7 +71,7 @@
         "name": "Dostępna aktualizacja oprogramowania"
       },
       "instance_open": {
-        "name": "{instance_name} — otwarte"
+        "name": "{instance_name} — otwarcie"
       },
       "paired_hood_connected": {
         "name": "Sparowany okap połączony"
@@ -101,7 +101,7 @@
         "name": "Zasilanie"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -110,7 +110,7 @@
         "name": "Smart Control"
       },
       "softener_low": {
-        "name": "Niski poziom płynu zmiękczającego"
+        "name": "Niski poziom środka zmiękczającego"
       },
       "add_wash_available": {
         "name": "AddWash dozwolone"
@@ -290,10 +290,10 @@
         "name": "Good Sleep"
       },
       "instance_setpoint": {
-        "name": "{instance_name} — wartość zadana"
+        "name": "{instance_name} — temperatura zadana"
       },
       "oven_setpoint": {
-        "name": "Wartość zadana"
+        "name": "Temperatura zadana"
       },
       "paired_hood_shutoff_timer": {
         "name": "Timer wyłączenia sparowanego okapu"
@@ -351,7 +351,7 @@
         }
       },
       "brightness_level": {
-        "name": "Jasność nocna",
+        "name": "Jasność oświetlenia w nocy",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -359,10 +359,10 @@
         }
       },
       "cooler_temperature_setpoint": {
-        "name": "Temperatura chłodziarki"
+        "name": "Temperatura lodówki"
       },
       "day_brightness": {
-        "name": "Jasność wnętrza",
+        "name": "Jasność oświetlenia",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -568,9 +568,9 @@
       "flex_zone_mode": {
         "name": "Tryb strefy Flex",
         "state": {
-          "cv_ttype_rf9000a_fridge": "Chłodziarka",
+          "cv_ttype_rf9000a_fridge": "Chłodzenie",
           "cv_ttype_rf9000a_freeze": "Zamrażanie",
-          "cv_ttype_rf9000a_softfreeze": "Lekkie zamrażanie",
+          "cv_ttype_rf9000a_softfreeze": "Lekkie mrożenie",
           "cv_ttype_rf9000a_meat_fish": "Mięso/ryby",
           "cv_ttype_rf9000a_fruit_veggies": "Owoce i warzywa",
           "cv_ttype_rf9000a_beverage": "Napoje",
@@ -578,9 +578,9 @@
           "cv_fdr_deli": "Wędliny",
           "cv_fdr_beverage": "Napoje",
           "cv_fdr_meat": "Mięso",
-          "cv_fdr_soft_freezer": "Lekkie zamrażanie",
+          "cv_fdr_soft_freezer": "Lekkie mrożenie",
           "fconvert_freezer": "Zamrażanie",
-          "fconvert_fridge": "Chłodziarka",
+          "fconvert_fridge": "Chłodzenie",
           "fconvert_off": "Wył."
         }
       },
@@ -600,9 +600,9 @@
         "name": "{instance_name} — rodzaj",
         "state": {
           "off": "Wył.",
-          "whiskey_iceball_3": "3 kulki/dzień",
-          "whiskey_iceball_6": "6 kulek/dzień",
-          "whiskey_iceball_9": "9 kulek/dzień"
+          "whiskey_iceball_3": "3 kostki/dzień",
+          "whiskey_iceball_6": "6 kostek/dzień",
+          "whiskey_iceball_9": "9 kostek/dzień"
         }
       },
       "led_brightness": {
@@ -622,7 +622,7 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "micro_wave_grill": "Mikrofale + grill",
           "micro_wave_convection": "Mikrofale + termoobieg",
@@ -638,7 +638,7 @@
       "oven_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "bake": "Pieczenie",
           "broil": "Opiekanie",
           "convection": "Termoobieg",
@@ -681,10 +681,10 @@
           "kimchi_storage_low_salt_warm": "Kimchi niskosolne, łagodne",
           "kimchi_storage_crunfch": "Kimchi chrupiące",
           "kimchi_storage_buy": "Kimchi kupne",
-          "storage_fridge_normal": "Chłodziarka",
-          "storage_fridge_cold": "Chłodziarka, mocno",
-          "storage_fridge_warm": "Chłodziarka, słabo",
-          "storage_fridge": "Chłodziarka",
+          "storage_fridge_normal": "Lodówka",
+          "storage_fridge_cold": "Lodówka, mocno",
+          "storage_fridge_warm": "Lodówka, słabo",
+          "storage_fridge": "Lodówka",
           "storage_freezer_normal": "Zamrażarka",
           "storage_freezer_cold": "Zamrażarka, mocno",
           "storage_freezer_warm": "Zamrażarka, słabo",
@@ -710,7 +710,7 @@
           "fdr_deli": "Wędliny",
           "fdr_drinks": "Napoje",
           "ttype_meat_fish": "Mięso/ryby",
-          "ttype_rf9000a_fridge": "Chłodziarka"
+          "ttype_rf9000a_fridge": "Chłodzenie"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +759,7 @@
         }
       },
       "softener_concentration": {
-        "name": "Stężenie płynu zmiękczającego",
+        "name": "Stężenie środka zmiękczającego",
         "state": {
           "01": "1x",
           "02": "2x",
@@ -767,7 +767,7 @@
         }
       },
       "softener_quantity": {
-        "name": "Ilość płynu zmiękczającego",
+        "name": "Ilość środka zmiękczającego",
         "state": {
           "00": "Brak",
           "01": "Niska",
@@ -1623,10 +1623,10 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "autocook": "Automatyczne pieczenie",
-          "keep_warm": "Utrzymywanie ciepła"
+          "keep_warm": "Utrzymuj ciepło"
         }
       },
       "cook_time": {
@@ -1785,10 +1785,10 @@
         "name": "Blokada brzęczyka"
       },
       "cabinet_light_dim": {
-        "name": "Rozjaśniaj stopniowo"
+        "name": "Powolne rozjaśnianie"
       },
       "cabinet_light_switch": {
-        "name": "Oświetlenie wnętrza"
+        "name": "Oświetlenie"
       },
       "child_lock": {
         "name": "Blokada rodzicielska"
@@ -1878,7 +1878,7 @@
         "name": "Pranie wstępne"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -1938,7 +1938,7 @@
         "name": "Automatyczne dozowanie detergentu"
       },
       "auto_softener": {
-        "name": "Automatyczne dozowanie płynu zmiękczającego"
+        "name": "Automatyczne dozowanie środka zmiękczającego"
       },
       "booster_light": {
         "name": "Oświetlenie boostera"
@@ -2171,7 +2171,7 @@
       },
       "settings": {
         "title": "Ustawienia urządzenia",
-        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/płynu zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
+        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/środka zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
         "data": {
           "bypass_remote_control_lock": "Zezwalaj na zapisy nawet wtedy, gdy zdalne sterowanie jest zgłaszane jako wyłączone",
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",
@@ -2410,6 +2410,84 @@
         "cubed_ice": "Kostki lodu",
         "ice_bites": "Ice Bites",
         "whiskey_ice_ball": "Kule lodu"
+      }
+    }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Rozpocznij gotowanie",
+      "description": "Rozpoczyna gotowanie w piekarniku, kuchence lub kuchence mikrofalowej. Można użyć tylko trybów, które według samego urządzenia wolno uruchomić zdalnie, z jego własnymi limitami temperatury i czasu dla danego trybu. Sterowanie zdalne musi być włączone na urządzeniu, a urządzenie musi być bezczynne. Pozostaw wszystkie pola puste, aby uruchomić to, co aktualnie przechowują encje trybu, temperatury zadanej i czasu gotowania; w przeciwnym razie wszystko, co pominiesz, przyjmie domyślną wartość trybu.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Piekarnik, kuchenka lub kuchenka mikrofalowa do uruchomienia."
+        },
+        "mode": {
+          "name": "Tryb",
+          "description": "Tryb gotowania w nazewnictwie urządzenia (na przykład Bake lub ConvectionBake). Domyślnie własny tryb domyślny urządzenia."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "W jednostce temperatury Home Assistant. Zaokrąglana do kroku trybu. Domyślnie wartość domyślna trybu. Pomiń dla trybu bez temperatury."
+        },
+        "duration": {
+          "name": "Czas gotowania",
+          "description": "Jak długo gotować, łącznie z nagrzewaniem. Domyślnie wartość domyślna trybu."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Zapisz zasób",
+      "description": "Wysyła jeden lub więcej surowych zapisów częściowej rep bezpośrednio do zasobów OCF urządzenia, po kolei, z opcjonalnym odstępem między krokami i opóźnionym ponownym odczytem na końcu -- do rozpracowania kontraktu zapisu urządzenia (issue #300), nie do codziennego sterowania. Pomija blokadę przy wyłączonym sterowaniu zdalnym i każdą funkcję write_fn/validate_fn, przez którą przechodzi zwykły zapis encji, i wysyła dokładnie podane pola bez zmian: może źle skonfigurować Twoje urządzenie. W przypadku wszystkiego, co ta integracja już modeluje, lepiej użyj prawdziwej encji lub opcji „Debugowanie: zapis do zasobu” w menu Konfiguruj integracji.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie, do którego ma nastąpić zapis, lub jedno z jego urządzeń podrzędnych."
+        },
+        "writes": {
+          "name": "Zapisy",
+          "description": "1-10 zapisów wykonywanych po kolei. Każdy element wymaga href (kanoniczny zasób, np. /mode/vs/0) i payload (niepusty obiekt wysyłany bez zmian jako POST częściowej rep albo lista elementów zawierających href i opcjonalnie rep, wysyłana bez zmian jako partia kolekcji OCF -- kształt, którym /device/0 odpowiada na odczyt, i ten, który według pomiarów uruchamia pieczenie w piekarniku; element może pominąć rep, a wewnętrzne href partii nigdy nie są przepisywane, nawet dla urządzenia podrzędnego); settle to liczba sekund oczekiwania po tym zapisie przed rozpoczęciem następnego (0-30, domyślnie 0); readback (domyślnie true) określa, czy od razu odczytać zasób ponownie dla pól \"after\"/\"changed\". Ustaw false na płycie, która przyjmuje zapis, a potem go cofa -- w niektórych firmware'ach to właśnie ten natychmiastowy GET wywołuje cofnięcie, więc pozostawienie go włączonego czyni odczyt częścią eksperymentu. Bez niego \"changed\" wraca jako null, a verify_after jest jedynym sprawdzeniem."
+        },
+        "hold_session_lock": {
+          "name": "Trzymaj sesję przez całą sekwencję",
+          "description": "Utrzymuje sesję urządzenia przez całą sekwencję, łącznie z odstępami, aby nic innego -- rutynowe odpytywanie, zapis innej encji -- nie mogło trafić między dwa kroki i zatrzeć, na który zapis zareagowało urządzenie. Domyślnie włączone. Po wyłączeniu sesja jest pobierana dla każdego zapisu i zwalniana na czas oczekiwania, dzięki czemu encje mogą się aktualizować podczas długiej sekwencji, kosztem tej pewności."
+        },
+        "verify_after": {
+          "name": "Sprawdź po",
+          "description": "Liczba sekund oczekiwania po zakończeniu całej sekwencji przed ponownym odczytem każdego użytego href, aby sprawdzić, czy wartości się utrzymały, czy płyta je przywróciła. 0 (domyślnie) pomija sprawdzenie."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Odczytaj zasób",
+      "description": "Odczytuje zasoby OCF urządzenia bezpośrednio, z pominięciem modelu encji tej integracji. Podaj href, aby wykonać GET na żywo bezpośrednio z urządzenia -- celowo nie z pamięci podręcznej, która może być nieaktualna o jeden interwał odpytywania -- lub pomiń go, aby otrzymać zapisaną migawkę wszystkich zasobów, które ta integracja śledzi na tym urządzeniu.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie, z którego ma nastąpić odczyt, lub jedno z jego urządzeń podrzędnych."
+        },
+        "href": {
+          "name": "href zasobu",
+          "description": "Kanoniczny href zasobu do odczytu (np. /mode/vs/0). Dodaj zapytanie po ?, aby wysłać je z GET, np. /device/1?if=oic.if.b, z & między parametrami. Pomiń, aby zamiast GET na żywo otrzymać zapisaną migawkę wszystkich śledzonych zasobów."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Obserwuj zasób",
+      "description": "Subskrybuje przez pewien czas jeden z zasobów OCF urządzenia za pomocą CoAP OBSERVE i zwraca każde wysłane powiadomienie wraz ze zwykłym GET tego samego zasobu. Służy do znajdowania pól, które urządzenie wysyła tylko w powiadomieniach, a nie do codziennego użytku. Odpytywanie i zapisy trwają dalej podczas nasłuchiwania. Niedostępne dla urządzeń na TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Urządzenie do obserwowania lub jedno z jego urządzeń podrzędnych."
+        },
+        "href": {
+          "name": "href zasobu",
+          "description": "Kanoniczny href zasobu do obserwowania (np. /energy/consumption/vs/0). Dodaj zapytanie po ?, aby wysłać je z subskrypcją, tak jak w „Odczytaj zasób”."
+        },
+        "duration": {
+          "name": "Czas trwania",
+          "description": "Ile sekund nasłuchiwać, maksymalnie 120."
+        }
       }
     }
   }

@@ -160,11 +160,11 @@ def test_run_discovery_detects_washer_via_model_fallback(hass: HomeAssistant, mo
     assert coordinator.device_type_name == "washer"
 
 
-def test_run_discovery_treats_an_unmapped_legacy_family_as_unrecognized(
+def test_run_discovery_routes_an_unmapped_legacy_family_like_any_device(
     hass: HomeAssistant,
 ) -> None:
-    """Its identity alone must not route it: the description below would
-    type as a washer, but nothing of the device beyond identity was read."""
+    """The bridge reads every 8888 appliance through one shared table, so a
+    family nobody has mapped routes on what it reports, as a DTLS board does."""
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 
     entry = MockConfigEntry(
@@ -183,12 +183,13 @@ def test_run_discovery_treats_an_unmapped_legacy_family_as_unrecognized(
         "/information/vs/0": {
             "x.com.samsung.da.modelNum": "TP6X_WW9000|FF18E000|2001",
             "x.com.samsung.da.description": "TP6X_WASHER_NEXT",
+            "x.com.samsung.da.deviceSubType": "Washer",
             "x.com.samsung.da.serialNum": "TEST-SERIAL",
         },
     }
     coordinator = LocalThingsCoordinator(hass, entry)
     coordinator._run_discovery(resources)
-    assert coordinator.device_type_name is None
+    assert coordinator.device_type_name == "washer"
 
 
 def test_run_discovery_falls_back_to_host_for_placeholder_serial(

@@ -99,18 +99,24 @@ loses roughly **half** its entities (measured across the fixture corpus: 843 of
 `resolve(resources, device_types=())` is the only entry point — the
 coordinator, the config flow's probe and the golden-regression harness all
 call it, so the order can't drift between what ships and what the tests
-assert. Three stages, most-specific evidence first:
+assert. Four stages, most-specific evidence first:
 
 1. **`for_device_by_oic_type(device_types)`** — the primary path whenever a
    dump has it. `device_types` is `/oic/d`'s `rt`, looked up against
    `_OIC_TYPE_TO_KEY`. The device naming its own type beats parsing board
    part numbers, so this always wins when it hits. **Always check this first
    when triaging a new dump** — see "Adding an /oic/d device type" below.
-2. **`for_device_by_model(model_num, description)`** — the fallback for
+2. **`for_device_by_subtype(deviceSubType)`** — the 8888 bridge's
+   equivalent, since it serves no `/oic/d`. Each record names its own type in
+   `Information.deviceSubType` (`Washer`, `Dryer`, `WallOven`, ...), which
+   lands in `/information/vs/0` and is looked up against
+   `_DEVICE_SUBTYPE_TO_KEY`. A new 8888 appliance needs a row here, not a
+   board token.
+3. **`for_device_by_model(model_num, description)`** — the fallback for
    everything `/oic/d` doesn't resolve. Both fields come from
    `/information/vs/0`. Board-family tokens are matched against `modelNum`
    first, then `description`, then the fuzzy two-letter consumer-model prefix.
-3. **`for_device_by_resources(resources)`** — for boards that report no
+4. **`for_device_by_resources(resources)`** — for boards that report no
    `/information/vs/0` at all. Needs a *distinctive* signature.
 
 **`oneUiVersion` is not consulted.** It looks like the obvious signal — the

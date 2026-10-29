@@ -16,6 +16,9 @@ import json
 from pathlib import Path
 from string import Formatter
 
+import yaml
+from homeassistant.helpers.translation import async_get_translations, recursive_flatten
+
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.entities import PLATFORM_OF
 
@@ -99,6 +102,30 @@ def test_every_language_mirrors_the_english_catalog():
             # Placeholders are substituted by name, so a translation that
             # drops or invents one renders a literal '{...}' in the UI.
             assert _placeholders(value) == _placeholders(translated_strings[path]), (language, path)
+
+
+def test_action_catalog_matches_service_descriptions():
+    """Every action and field description in services.yaml is translatable."""
+    services = yaml.safe_load((INTEGRATION / "services.yaml").read_text(encoding="utf-8"))
+
+    def descriptions(metadata):
+        return {key: metadata[key] for key in ("name", "description") if key in metadata}
+
+    expected = {}
+    for service, metadata in services.items():
+        expected[service] = descriptions(metadata)
+        expected[service]["fields"] = {
+            field: descriptions(value) for field, value in metadata.get("fields", {}).items()
+        }
+    assert _load("en")["services"] == expected
+
+
+async def test_brazilian_portuguese_loads_in_home_assistant(hass, enable_custom_integrations):
+    """HA must load the regional locale, including action and field descriptions."""
+    for category, strings in _load("pt-BR").items():
+        actual = await async_get_translations(hass, "pt-BR", category, {"localthings"})
+        expected = recursive_flatten(f"component.localthings.{category}.", strings)
+        assert actual == expected, category
 
 
 def test_no_catalog_carries_unresolved_core_references():

@@ -35,11 +35,10 @@ async def async_setup_entry(
 
 
 class LocalThingsNumber(LocalThingsEntity, NumberEntity):
-    _attr_mode = NumberMode.SLIDER
-
     def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
         super().__init__(coordinator, bound)
         desc = cast(NumberDesc, bound.desc)
+        self._attr_mode = NumberMode(desc.mode)
         self._attr_native_unit_of_measurement = desc.unit
         self._attr_device_class = (
             NumberDeviceClass(desc.device_class) if desc.device_class else None
