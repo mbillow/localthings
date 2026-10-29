@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.localthings.legacy_http import PREFIX, table_for, to_resources
+from custom_components.localthings.legacy_http import PREFIX, clock, table_for, to_resources
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
@@ -30,7 +30,8 @@ FIXTURE = json.loads(
 
 def test_the_fixture_is_the_translation_of_its_bodies():
     device0 = {e["href"]: e["rep"] for e in FIXTURE["device0"]}
-    assert device0 == to_resources(FIXTURE["bodies"], OVEN)
+    family = FIXTURE["bodies"]["Information"]["description"]
+    assert device0 == to_resources(FIXTURE["bodies"], OVEN) | clock(family)
     for index, bodies in FIXTURE["device_bodies"].items():
         sibling = Subdevice(kind="indexed", key=index, seed_path=("device", index))
         seed = {
@@ -83,15 +84,15 @@ def _controls(bound):
     }
 
 
-def test_no_control_binds_on_either_cavity():
+def test_no_control_but_the_clock_binds_on_either_cavity():
     """Live on an NQ70M6650DS, every write was answered 204, but a remote start
     only loaded the cook for Start at the panel, and a setpoint written while
-    idle cleared the mode (#675)."""
+    idle cleared the mode (#675). The panel did take the clock (#674)."""
     resources, oic_res, seeds = _load_device_full(NAME)
 
     bound, _materialized, _skipped, _full, _name = _discover_full(resources, oic_res, seeds)
 
-    assert _controls(bound) == set()
+    assert _controls(bound) == {("", "sync_clock")}
 
 
 def test_the_same_cavities_on_another_board_keep_their_controls():

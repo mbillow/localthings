@@ -730,6 +730,53 @@ class TestHeldCourseDefaults:
         assert self._washer(body)[PREFIX + "waterTemperature"] == "40"
 
 
+class TestClockSync:
+    """The TP6X_OV combo's clock (#674): served unlisted at its own endpoint,
+    and taken by the panel from a plain PUT."""
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "microwave_tp6x_ov_17k_8888_device.json"
+    SYNC: ClassVar[dict] = {PREFIX + "currentTime": "2026-10-29T12:49:24"}
+
+    @pytest.fixture
+    def combo(self, transport):
+        bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes[("PUT", "/devices/0/configuration/time")] = (204, None)
+        device = LegacyHttpTransport(
+            "10.0.0.10", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_OV_17K"
+        )
+        device.connect()
+        _swept_as(device, "Oven")
+        return device
+
+    def test_the_seed_offers_the_clock(self, combo):
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+
+        assert {"href": "/configuration/vs/0", "rep": {}} in seed
+
+    def test_a_sync_goes_to_the_clock_endpoint(self, combo):
+        code, _ = combo.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            (
+                "PUT",
+                "/devices/0/configuration/time",
+                {"Time": {"currentTime": "2026-10-29T12:49:24"}},
+            )
+        ]
+
+    def test_another_family_has_no_clock(self, transport):
+        _, seed = transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+
+        code, _ = transport.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert "/configuration/vs/0" not in {e["href"] for e in seed}
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
+
 class TestWallOvenStart:
     """The cook start's Collection batch over 8888 (#572): this firmware has no
     Collections, so the batch goes as one aggregate PUT."""

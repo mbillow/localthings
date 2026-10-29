@@ -26,7 +26,7 @@ binds whichever generation's hrefs a given device actually reports.
 
 `/configuration/vs/0` gets the range's clock-sync button (issue #496,
 NQ7000B): the write contract is the one verified on a TP1X_DA-KS range
-(issue #404), not yet confirmed on a microwave-class board.
+(issue #404), and the TP6X_OV combo's 8888 bridge takes it too (#674).
 """
 
 from ..capabilities import common, dishwasher, ignored, microwave, oven, range_hood
@@ -57,12 +57,13 @@ REGISTRY = DeviceRegistry(
                 microwave.MICROWAVE_SETTINGS,
                 range_hood.HOOD_STATUS,
                 range_hood.HOOD_SPEC,
-                range_caps.RANGE_CLOCK_SYNC,
                 # The same diagnosisStart shape the oven registry binds (#300),
                 # reported by the NW9300MD wall combo's microwave cavity (#525).
                 dishwasher.DIAGNOSIS,
             ]
             for part in read_only_when(cap, oven.is_tp6x_ov_board)
         ]
+        # Not gated: the NQ70M6650DS's panel took the clock (#674).
+        + [range_caps.RANGE_CLOCK_SYNC]
     ),
 )
