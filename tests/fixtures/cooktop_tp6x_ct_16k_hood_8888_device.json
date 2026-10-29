@@ -1,0 +1,288 @@
+{
+ "note": "TP6X_CT_16K, NZ30K7570RS cooktop with a paired NK9300KM Bluetooth hood (issue #676): `bodies` and `device_bodies` are the `transport` block of a LocalThings 0.33.0 diagnostics download, verbatim -- /devices/0 (the cooktop) and /devices/1 (the hood), each merged with its linked configuration and information resources. Captured idle. Carries no serial or uuid.",
+ "seeds_note": "device0 and seeds are constructed, not captured: each is its `bodies` entry run through legacy_http.to_resources with this family's table, the sibling hrefs reindexed per Subdevice.to_actual, and /connected/vs/<n> set from whether /devices listed that sibling (the dump's subdevices_skipped recorded On for 1) -- what LegacyHttpTransport._read_seed returns for the same bodies.",
+ "bodies": {
+  "Alarms": [],
+  "ConfigurationLink": {
+   "href": "/devices/0/configuration"
+  },
+  "Diagnosis": {
+   "diagnosisStart": "Ready"
+  },
+  "InformationLink": {
+   "href": "/devices/0/information"
+  },
+  "Mode": {
+   "options": [
+    "DeviceType_NV9300K-/AA1",
+    "SyncFlex_Off",
+    "FlexCoil_0",
+    "Pause_Off",
+    "OperationState0_Ready",
+    "OperationState1_Ready",
+    "OperationState3_Ready",
+    "OperationState4_Ready",
+    "OperationState5_Ready",
+    "HotSurface0_Normal",
+    "HotSurface1_Normal",
+    "HotSurface3_Normal",
+    "HotSurface4_Normal",
+    "HotSurface5_Normal",
+    "PowerLevel0_Off",
+    "PowerLevel1_Off",
+    "PowerLevel3_Off",
+    "PowerLevel4_Off",
+    "PowerLevel5_Off",
+    "MainTimerCurrent_0",
+    "MainTimerSet_0",
+    "MainTimerState_Ready",
+    "PanSize3_Single",
+    "PanSize5_Single"
+   ]
+  },
+  "Operation": {
+   "kidsLock": "Ready",
+   "power": "Off"
+  },
+  "resources": [
+   "Alarms",
+   "Configuration",
+   "Diagnosis",
+   "Information",
+   "Mode",
+   "Operation"
+  ],
+  "type": "Cooktop",
+  "Configuration": {
+   "remoteControlEnabled": true
+  },
+  "Information": {
+   "Versions": [
+    {
+     "id": "0",
+     "newVersionAvailable": false,
+     "number": "01031A200320",
+     "type": "Software"
+    },
+    {
+     "id": "1",
+     "newVersionAvailable": false,
+     "number": "16081900,16071400",
+     "type": "Firmware"
+    }
+   ],
+   "description": "TP6X_CT_16K",
+   "deviceSubType": "Cooktop",
+   "manufacturer": "Samsung Electronics",
+   "modelID": "TP6X_CT_16K|40403241|"
+  }
+ },
+ "device_bodies": {
+  "1": {
+   "Alarms": [],
+   "ConfigurationLink": {
+    "href": "/devices/1/configuration"
+   },
+   "InformationLink": {
+    "href": "/devices/1/information"
+   },
+   "Mode": {
+    "options": [
+     "DeviceType_NK9300KM",
+     "Bluetooth_On",
+     "FanSpeed_1",
+     "Lamp_Off",
+     "ShutOffTimerSet_0",
+     "ShutOffTimerCurrent_0",
+     "ShutOffTimerState_Ready"
+    ]
+   },
+   "Operation": {
+    "power": "Off"
+   },
+   "resources": [
+    "Alarms",
+    "Configuration",
+    "Diagnosis",
+    "Information",
+    "Mode",
+    "Operation"
+   ],
+   "type": "Cooktop",
+   "Configuration": {
+    "remoteControlEnabled": true
+   },
+   "Information": {
+    "Versions": [
+     {
+      "id": "0",
+      "newVersionAvailable": false,
+      "number": "01031A200320",
+      "type": "Software"
+     },
+     {
+      "id": "1",
+      "newVersionAvailable": false,
+      "number": "16081900,16071400",
+      "type": "Firmware"
+     }
+    ],
+    "description": "TP6X_CT_16K_HOOD",
+    "deviceSubType": "Cooktop",
+    "manufacturer": "Samsung Electronics",
+    "modelID": "TP6X_CT_16K|40403241|"
+   }
+  }
+ },
+ "device0": [
+  {
+   "href": "/kidslock/vs/0",
+   "rep": {
+    "x.com.samsung.da.kidsLock": "Ready"
+   }
+  },
+  {
+   "href": "/power/vs/0",
+   "rep": {
+    "x.com.samsung.da.power": "Off"
+   }
+  },
+  {
+   "href": "/mode/vs/0",
+   "rep": {
+    "x.com.samsung.da.options": [
+     "DeviceType_NV9300K-/AA1",
+     "SyncFlex_Off",
+     "FlexCoil_0",
+     "Pause_Off",
+     "OperationState0_Ready",
+     "OperationState1_Ready",
+     "OperationState3_Ready",
+     "OperationState4_Ready",
+     "OperationState5_Ready",
+     "HotSurface0_Normal",
+     "HotSurface1_Normal",
+     "HotSurface3_Normal",
+     "HotSurface4_Normal",
+     "HotSurface5_Normal",
+     "PowerLevel0_Off",
+     "PowerLevel1_Off",
+     "PowerLevel3_Off",
+     "PowerLevel4_Off",
+     "PowerLevel5_Off",
+     "MainTimerCurrent_0",
+     "MainTimerSet_0",
+     "MainTimerState_Ready",
+     "PanSize3_Single",
+     "PanSize5_Single"
+    ]
+   }
+  },
+  {
+   "href": "/remotectrl/vs/0",
+   "rep": {
+    "x.com.samsung.da.remoteControlEnabled": true
+   }
+  },
+  {
+   "href": "/information/vs/0",
+   "rep": {
+    "x.com.samsung.da.Versions": [
+     {
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "01031A200320",
+      "x.com.samsung.da.type": "Software"
+     },
+     {
+      "x.com.samsung.da.id": "1",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "16081900,16071400",
+      "x.com.samsung.da.type": "Firmware"
+     }
+    ],
+    "x.com.samsung.da.description": "TP6X_CT_16K",
+    "x.com.samsung.da.deviceSubType": "Cooktop",
+    "x.com.samsung.da.manufacturer": "Samsung Electronics",
+    "x.com.samsung.da.modelNum": "TP6X_CT_16K|40403241|"
+   }
+  },
+  {
+   "href": "/diagnosis/vs/0",
+   "rep": {
+    "x.com.samsung.da.diagnosisStart": "Ready"
+   }
+  },
+  {
+   "href": "/alarms/vs/0",
+   "rep": {
+    "x.com.samsung.da.items": []
+   }
+  }
+ ],
+ "seeds": {
+  "/device/1": [
+   {
+    "href": "/power/vs/1",
+    "rep": {
+     "x.com.samsung.da.power": "Off"
+    }
+   },
+   {
+    "href": "/mode/vs/1",
+    "rep": {
+     "x.com.samsung.da.options": [
+      "DeviceType_NK9300KM",
+      "Bluetooth_On",
+      "FanSpeed_1",
+      "Lamp_Off",
+      "ShutOffTimerSet_0",
+      "ShutOffTimerCurrent_0",
+      "ShutOffTimerState_Ready"
+     ]
+    }
+   },
+   {
+    "href": "/remotectrl/vs/1",
+    "rep": {
+     "x.com.samsung.da.remoteControlEnabled": true
+    }
+   },
+   {
+    "href": "/information/vs/1",
+    "rep": {
+     "x.com.samsung.da.Versions": [
+      {
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "01031A200320",
+       "x.com.samsung.da.type": "Software"
+      },
+      {
+       "x.com.samsung.da.id": "1",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "16081900,16071400",
+       "x.com.samsung.da.type": "Firmware"
+      }
+     ],
+     "x.com.samsung.da.description": "TP6X_CT_16K_HOOD",
+     "x.com.samsung.da.deviceSubType": "Cooktop",
+     "x.com.samsung.da.manufacturer": "Samsung Electronics",
+     "x.com.samsung.da.modelNum": "TP6X_CT_16K|40403241|"
+    }
+   },
+   {
+    "href": "/alarms/vs/1",
+    "rep": {
+     "x.com.samsung.da.items": []
+    }
+   },
+   {
+    "href": "/connected/vs/1",
+    "rep": {
+     "x.com.samsung.da.connected": "On"
+    }
+   }
+  ]
+ }
+}

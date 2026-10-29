@@ -17,7 +17,6 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -198,6 +197,56 @@ def _has_option(prefix):
     )
 
 
+def _has_reservoir(rep, resources):
+    options = rep.get("x.com.samsung.da.options")
+    return is_stub_rep(rep) or (
+        isinstance(options, list)
+        and all(
+            _option_value(options, name) is not None
+            for name in ("waterTankInSwitch", "waterTankOutSwitch")
+        )
+    )
+
+
+def _reservoir_open(options):
+    """NV51K7770S observations confirmed these positions with the door open (#666)."""
+    if not isinstance(options, list):
+        return None
+    switches = {
+        option
+        for option in options
+        if isinstance(option, str)
+        and option.startswith(("waterTankInSwitch_", "waterTankOutSwitch_"))
+    }
+    if switches == {"waterTankInSwitch_On", "waterTankOutSwitch_Off"}:
+        return False
+    if switches == {"waterTankInSwitch_Off", "waterTankOutSwitch_On"}:
+        return True
+    return None
+
+
+def is_tp6x_ov_board(resources):
+    """The NQ70M6650DS combo's 8888 board (#674). It answers every write
+    `204`, but runs a remote cook only once Start is pressed at the panel,
+    and a setpoint written while idle clears the chosen mode."""
+    information = resources.get("/information/vs/0") or {}
+    board = str(information.get("x.com.samsung.da.modelNum", "")).split("|", 1)[0]
+    return board.startswith("TP6X_OV_")
+
+
+def is_empty_legacy_oven_slot(resources):
+    """The blank `/devices/1` the NQ70M6650DS combo's 8888 bridge answers
+    between its microwave (0) and oven (2), and leaves out of `/devices`
+    (#674): no cavity type, no modes, powered off."""
+    mode = resources.get("/mode/vs/0") or {}
+    return (
+        is_tp6x_ov_board(resources)
+        and _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
+        and not mode.get("x.com.samsung.da.supportedModes")
+        and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+    )
+
+
 def _option_write(prefix, new_value):
     """A one-token x.com.samsung.da.options write, mirroring
     laundry.option_write. NOT independently confirmed on an oven -- issue
@@ -231,8 +280,13 @@ def _oven_setpoint_write(p, rep, href=None):
     return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": items}
 
 
-def _cook_time_write(p, rep, href=None):
-    """Write operationTime + remainingTime (H:MM:SS) from minutes."""
+def is_lcd_ov_wall_16k(model):
+    """Exact board token used by the NV51K7770S (#572, #662)."""
+    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
+
+
+def _cook_time_write(p, rep, href=None, resources=None):
+    """Write the requested cook duration from minutes."""
     try:
         minutes = round(float(p))
     except (TypeError, ValueError):
@@ -241,10 +295,31 @@ def _cook_time_write(p, rep, href=None):
         return None
     h, m = divmod(minutes, 60)
     hms = f"{h:02d}:{m:02d}:00"
-    return ["operational", "state", "vs", "0"], {
-        "x.com.samsung.da.operationTime": hms,
-        "x.com.samsung.da.remainingTime": hms,
-    }
+    body = {"x.com.samsung.da.operationTime": hms}
+    model = ((resources or {}).get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
+    # The NV51K7770S answers a running timer edit that also sends
+    # remainingTime with 4.00; operationTime alone is accepted (#662).
+    if not is_lcd_ov_wall_16k(model):
+        body["x.com.samsung.da.remainingTime"] = hms
+    return ["operational", "state", "vs", "0"], body
+
+
+def _remote_mode_choices(modes, resources, current=None):
+    info = resources.get("/information/vs/0") or {}
+    if not (
+        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
+        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
+    ):
+        return modes
+    # NV51K7770S: Broil hits the existing start restriction; cleaning and
+    # Gourmet Cook are owner-requested exclusions, not proven firmware limits.
+    excluded = {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
+    choices = [mode for mode in modes if mode not in excluded or mode == current]
+    # HA requires the current program in the list to display it. The writer
+    # never passes current, so this does not enable a write of that program.
+    if current in excluded and current not in choices:
+        choices.append(current)
+    return choices
 
 
 def _oven_mode_options(resources):
@@ -255,10 +330,11 @@ def _oven_mode_options(resources):
     fallback has to kick in when the device's own field is absent."""
     rep = resources.get("/mode/vs/0") or {}
     live = rep.get("x.com.samsung.da.supportedModes")
+    current = (rep.get("x.com.samsung.da.modes") or [None])[0]
     # An empty list is a lower zone with its divider out (cook.share_mode_spec).
     if not live and not cook.zoned(resources):
-        return list(_OVEN_MODES)
-    live = cook.selectable_modes(live or [])
+        return _remote_mode_choices(list(_OVEN_MODES), resources, current)
+    live = _remote_mode_choices(cook.selectable_modes(live or []), resources, current)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
@@ -274,8 +350,8 @@ def _oven_mode_validate(p, rep, resources):
     so the idle state displays, not because the oven accepts it as a mode
     (#445 review). Picking it used to fall through to _oven_mode_write's
     None and the coordinator's warning-and-return, so the user saw nothing
-    happen. Every other option in the list came from supportedModes and
-    passes."""
+    happen. Other values pass through to the writer or cooking preparation
+    checks."""
     if p == "NoOperation":
         return "oven_mode_idle_not_selectable"
     return None
@@ -290,7 +366,7 @@ def _oven_mode_write(p, rep, href=None, resources=None):
         valid = _OVEN_MODES
     else:
         valid = cook.selectable_modes(live or [])
-    if p not in valid:
+    if p not in _remote_mode_choices(valid, resources or {}):
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
 
@@ -391,6 +467,7 @@ OVEN_OPERATIONAL_STATE = Capability(
         ),
         NumberDesc(
             key="cook_time",
+            mode="box",
             field="x.com.samsung.da.operationTime",
             unit="min",
             native_min=0,
@@ -502,6 +579,7 @@ OVEN_SETPOINT = Capability(
         # NumberDesc first — test_oven_setpoint_write_is_read_modify_write uses entities[0]
         NumberDesc(
             key="oven_setpoint",
+            mode="box",
             field="x.com.samsung.da.items",
             device_class="temperature",
             unit_fn=_oven_temp_unit,
@@ -739,6 +817,14 @@ OVEN_MODE = Capability(
             validate_fn=_oven_mode_validate,
             cook_param=cook.PARAM_MODE,
         ),
+        BinarySensorDesc(
+            key="reservoir_open",
+            field="x.com.samsung.da.options",
+            device_class="opening",
+            icon="mdi:cup-water",
+            exists_fn=_has_reservoir,
+            value_fn=_reservoir_open,
+        ),
         # No exists_fn on the NV7000BS-class board this was proven against
         # (UpperLamp_ is always in its options[]) -- but issue #300's
         # steam-oven-class WALLOVEN board's options[] has no UpperLamp_
@@ -810,43 +896,5 @@ OVEN_MODE = Capability(
             value_fn=lambda opts: _option_value(opts, "BurnerOnAlert") == "On",
             write_fn=_option_switch_write("BurnerOnAlert"),
         ),
-    ),
-)
-
-
-# The NV51K7770S menu offered Broil despite the existing start refusal.
-# Cleaning and Gourmet Cook are owner-excluded; see oven-remote-mode-choices.md.
-_LCD_WALL_EXCLUDED_MODES = frozenset(
-    {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
-)
-
-
-def _is_lcd_wall_16k(resources):
-    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
-    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
-
-
-def _lcd_wall_mode_options(resources):
-    return [m for m in _oven_mode_options(resources) if m not in _LCD_WALL_EXCLUDED_MODES]
-
-
-def _lcd_wall_mode_write(p, rep, href=None, resources=None):
-    if p in _LCD_WALL_EXCLUDED_MODES:
-        return None
-    return _oven_mode_write(p, rep, href, resources)
-
-
-OVEN_MODE_FALLBACK = replace(
-    OVEN_MODE,
-    match_fn=lambda rep, resources: not _is_lcd_wall_16k(resources),
-)
-LCD_WALL_MODE = replace(
-    OVEN_MODE,
-    match_fn=lambda rep, resources: _is_lcd_wall_16k(resources),
-    entities=tuple(
-        replace(desc, options=_lcd_wall_mode_options, write_fn=_lcd_wall_mode_write)
-        if isinstance(desc, SelectDesc) and desc.key == "oven_mode"
-        else desc
-        for desc in OVEN_MODE.entities
     ),
 )

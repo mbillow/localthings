@@ -16,8 +16,8 @@ are unmodeled: confirmed opaque / not app-facing.
 
 /airflow/0's `speed` is a real fan-speed control: two independent units,
 sampled 60-90s apart per setting, confirmed a clean monotonic 0-4 mapping
-across Auto/Sleep/Low/Medium/High. AIRFLOW_GENERIC below builds an
-ordered-speed fan off that range. /airflow/vs/0's vendor `speedLevel` is
+across Auto/Sleep/Low/Medium/High. AIRFLOW_GENERIC below builds a fan off
+that range, with Auto and Sleep as presets. /airflow/vs/0's vendor `speedLevel` is
 NOT used for the same purpose -- unreliable on both units in the same
 round (collided Low/Medium on one, stuck at 0 on the other).
 """
@@ -214,9 +214,10 @@ def _airflow_fan_write(payload, rep, href=None):
     return None
 
 
-# Confirmed monotonic 0-4 speed code (see module docstring) backs a real
-# ordered-speed fan, same SET_SPEED shape as the range hood's. `direction`
-# stays a diagnostic: every dump reads 'Off' regardless of fan setting.
+# The 0-4 code (see module docstring) backs a fan with Low/Medium/High as
+# speeds and Auto/Sleep as presets (fan.LocalThingsAirflowFan, #658).
+# `direction` stays a diagnostic: every dump reads 'Off' regardless of fan
+# setting.
 #
 # Keyed 'airflow_fan', not 'fan' -- FAN below shares this registry and also
 # uses key 'fan'; unique_id is built from key alone, so a shared key would
@@ -226,7 +227,12 @@ AIRFLOW_GENERIC = Capability(
     href=HREF_AIRFLOW,
     poll_tier="warm",
     entities=(
-        FanDesc(key="airflow_fan", field="speed", write_fn=_airflow_fan_write),
+        FanDesc(
+            key="airflow_fan",
+            translation_key="air_purifier_fan",
+            field="speed",
+            write_fn=_airflow_fan_write,
+        ),
         SensorDesc(
             key="fan_direction",
             field="direction",

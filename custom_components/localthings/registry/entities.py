@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import time as dt_time
-from typing import Any
+from typing import Any, Literal
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
@@ -143,6 +143,7 @@ class ButtonDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class NumberDesc(SamsungEntityDescription):
+    mode: Literal["auto", "box", "slider"] = "slider"
     device_class: str | None = None
     unit: str | None = None
     unit_fn: Callable[[dict], str] | None = None  # overrides `unit` from the live rep, when set
@@ -160,6 +161,9 @@ class NumberDesc(SamsungEntityDescription):
     bounds_fn: Callable[[dict, dict], tuple[float, float, float] | None] | None = None
     range_field: str | None = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
+    # Wire body -> the body to merge into the cache, for a write whose effect
+    # the device reports in fields it never accepts. The wire body is unchanged.
+    optimistic_fn: Callable[[dict], dict] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

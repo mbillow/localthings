@@ -186,13 +186,18 @@ def _consumer_model_key(description: str) -> str | None:
     dishwasher's 'ADW-WW-RTL-24-AILITE' would offer up a bare 'WW' and
     route to washer).
 
-    Only a 2-letter prefix match, so e.g. 'WAC' (Window AC, issue #87) also
-    matches 'WA' (top-load washer, issue #106) at this granularity --
-    for_device_by_model() consults the board-family table first and this
-    only as a fallback, so that ambiguity resolves correctly.
+    A segment counts only when it carries digits or is a bare two-letter
+    code, so a word such as 'WAC' (Window AC, issue #87) or 'WALL' (#681)
+    never reads as a 'WA' top-load washer (issue #106). This is still the
+    weakest evidence, so for_device_by_model() consults it last.
     """
     segments = (description or "").split("/", 1)[0].split("_")
     for segment in reversed(segments):
+        # A consumer model carries digits ('WA8000T'), or is the bare board
+        # code ('DA_DW_TP1_21_COMMON'). A word is neither: the NW9300MD's
+        # 'LCD_OV_WALL_16K_DIV' slot read as a 'WA' washer (#681).
+        if len(segment) != 2 and not any(c.isdigit() for c in segment):
+            continue
         key = _CONSUMER_PREFIX_TO_KEY.get(segment[:2].upper())
         if key is not None:
             return key
@@ -249,6 +254,27 @@ def for_device_by_oic_type(device_types: Sequence[str]) -> DeviceRegistry | None
         if key is not None:
             return _REGISTRY_BY_KEY[key]
     return None
+
+
+# The type an 8888 bridge record reports for itself (`deviceSubType`, which
+# legacy_http carries into /information/vs/0) -> registry key. Only the 8888
+# family reports it, so it names the type where `/oic/d` can't: the bridge
+# serves none. `CombiOven` is left out because it covers both the NQ70M6650DS's
+# microwave and the NW9300MD's oven (#674, #681), which the resource
+# signatures tell apart.
+_DEVICE_SUBTYPE_TO_KEY: dict[str, str] = {
+    "Cooktop": "cooktop",
+    "Dryer": "dryer",  # TP6X_DRYER, DV80M8214AW (#636, #646)
+    "Room_Air_Conditioner": "airconditioner",
+    "WallOven": "oven",
+    "Washer": "washer",  # TP6X_WASHER, WW6500
+}
+
+
+def for_device_by_subtype(subtype: object) -> DeviceRegistry | None:
+    """Device-type detection from an 8888 record's own `deviceSubType`."""
+    key = _DEVICE_SUBTYPE_TO_KEY.get(subtype) if isinstance(subtype, str) else None
+    return _REGISTRY_BY_KEY[key] if key is not None else None
 
 
 def for_device_by_model(model_num: str, description: str) -> DeviceRegistry | None:
@@ -331,6 +357,10 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
             if "/cooktopmonitoring/vs/0" in resources or "/cooktop/status/vs/0" in resources:
                 return _REGISTRY_BY_KEY["range"]
             return _REGISTRY_BY_KEY["oven"]
+        # An 8888 lower cavity with its divider out offers only NoOperation;
+        # its /connected/vs/0 is whether the divider is in (#681).
+        if list(supported_modes) == ["NoOperation"] and "/connected/vs/0" in resources:
+            return _REGISTRY_BY_KEY["oven"]
     return None
 
 
@@ -348,8 +378,9 @@ def resolve(
     live capability surface a registry must bind; `for_device_by_resources`
     is deliberately strict (multiple independent details required) so this
     can correct misleading metadata without a common href overriding an
-    unrelated family. When no signature matches, `/oic/d`'s `rt` wins over
-    model-string parsing.
+    unrelated family. When no signature matches, the type the device names
+    itself -- `/oic/d`'s `rt`, or an 8888 record's `deviceSubType` -- wins
+    over model-string parsing.
 
     `/otninformation/vs/0`'s oneUiVersion is deliberately not consulted:
     only a minority of hardware populates it, every device that does is
@@ -361,6 +392,7 @@ def resolve(
     return (
         for_device_by_resources(resources)
         or for_device_by_oic_type(device_types)
+        or for_device_by_subtype(info.get("x.com.samsung.da.deviceSubType", ""))
         or for_device_by_model(
             info.get("x.com.samsung.da.modelNum", ""),
             info.get("x.com.samsung.da.description", ""),
