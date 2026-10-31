@@ -171,3 +171,58 @@ def test_an_unnamed_sibling_is_named_by_its_record_type(monkeypatch):
     assert code == 0x45
     view = {OVEN_SLOT.to_canonical(e["href"]): e["rep"] for e in seed}
     assert view["/information/vs/0"][PREFIX + "deviceName"] == "Oven"
+
+
+def _hot_oven_transport(monkeypatch, microwave_unit):
+    monkeypatch.setattr("custom_components.localthings.legacy_http_transport._STATE", {})
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.http.client.HTTPSConnection",
+        _FakeConnection,
+    )
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.client_context",
+        lambda cert_pem, key_pem: object(),
+    )
+    microwave = copy.deepcopy(FIXTURE["bodies"])
+    microwave["Temperatures"][0]["unit"] = microwave_unit
+    oven = copy.deepcopy(FIXTURE["device_bodies"]["2"])
+    oven["Temperatures"][0].update(current=350.0, desired=350.0)
+    _FakeConnection.log = []
+    _FakeConnection.routes = {
+        "/devices/0": (200, {"Device": {**microwave, "id": "0"}}),
+        "/devices": (200, {"Devices": [{**oven, "id": "2"}]}),
+        "/devices/2/temperatures": (200, {"Temperatures": oven["Temperatures"]}),
+    }
+    transport = LegacyHttpTransport(
+        "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_OV"
+    )
+    transport.connect()
+    return transport
+
+
+def _oven_unit(seed):
+    view = {OVEN_SLOT.to_canonical(e["href"]): e["rep"] for e in seed}
+    return view["/temperatures/vs/0"][PREFIX + "items"][0][PREFIX + "unit"]
+
+
+# The oven labels its Temperatures "Celsius" whatever the panel shows. Preheating
+# to 350 F, the reporter's HA read 662 F, 350 taken as C (2026-10-30). The
+# microwave on the same panel labels its own right, so its unit stands in.
+@pytest.mark.parametrize("microwave_unit", ["Fahrenheit", "Celsius"])
+def test_the_oven_reads_in_the_microwaves_unit(monkeypatch, microwave_unit):
+    transport = _hot_oven_transport(monkeypatch, microwave_unit)
+    transport.read(["device", "0"], timeout=10.0)
+
+    _code, seed = transport.read(["device", "2"], timeout=10.0)
+    _code, rep = transport.read(["temperatures", "vs", "2"], timeout=10.0)
+
+    assert _oven_unit(seed) == microwave_unit
+    assert rep[PREFIX + "items"][0][PREFIX + "unit"] == microwave_unit
+
+
+def test_the_oven_keeps_its_own_label_before_the_microwave_is_read(monkeypatch):
+    transport = _hot_oven_transport(monkeypatch, "Fahrenheit")
+
+    _code, seed = transport.read(["device", "2"], timeout=10.0)
+
+    assert _oven_unit(seed) == "Celsius"
