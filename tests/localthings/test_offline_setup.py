@@ -343,7 +343,8 @@ async def test_offline_load_keeps_polling_and_recovers(hass: HomeAssistant, mock
 
     with _unreachable():
         await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        # The first poll of a load from the snapshot runs in the background.
+        await hass.async_block_till_done(wait_background_tasks=True)
 
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     assert coordinator._unsub_refresh is not None  # a poll is actually queued
@@ -544,7 +545,7 @@ async def test_dark_appliance_costs_one_handshake_per_cycle(
     handshakes: list[float] = []
     with _dark(handshakes):
         await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
         assert len(handshakes) == 1
 
         for expected in (2, 3, 4):
@@ -558,8 +559,8 @@ async def test_dark_appliance_reports_its_outage_once(
     """Sitting through an outage is what this integration is built to do
     (issue #295), so it must not log an error every 30s for as long as the
     appliance is off -- the reporter on issue #269 read exactly that repeated
-    line as the integration having failed. One line per outage, and one when
-    the device comes back."""
+    line as the integration having failed. One INFO line per outage, and one
+    when the device comes back."""
     resources = _load_fridge()
     await _setup_online_then_unload(hass, mock_entry, resources)
 
@@ -571,10 +572,13 @@ async def test_dark_appliance_reports_its_outage_once(
         for _ in range(3):
             await _tick(hass)
 
+    # A switched-off appliance is expected, so the outage is reported at INFO
+    # and nothing at all reaches ERROR.
     ours = [r for r in caplog.records if r.name.startswith(f"{_COORD_LOGGER}.")]
-    errors = [r for r in ours if r.levelno >= logging.ERROR]
-    assert len(errors) == 1
-    assert "device unreachable" in errors[0].getMessage()
+    assert [r for r in ours if r.levelno >= logging.WARNING] == []
+    outages = [r for r in ours if "device unreachable" in r.getMessage()]
+    assert len(outages) == 1
+    assert outages[0].levelno == logging.INFO
 
     with _reachable(resources):
         await _tick(hass)
@@ -617,8 +621,8 @@ async def test_dark_appliance_without_a_handshake_polls_once_per_cycle(
             assert len(polls) == after_setup + expected
 
     ours = [r for r in caplog.records if r.name.startswith(f"{_COORD_LOGGER}.")]
-    assert [r for r in ours if r.levelno == logging.WARNING] == []
-    assert len([r for r in ours if r.levelno >= logging.ERROR]) == 1
+    assert [r for r in ours if r.levelno >= logging.WARNING] == []
+    assert len([r for r in ours if "poll failed after reconnect" in r.getMessage()]) == 1
 
 
 async def test_broken_session_still_reconnects_within_the_cycle(

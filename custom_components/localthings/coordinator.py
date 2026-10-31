@@ -1902,8 +1902,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self.bound:
             return False
         self._log.info(
-            "device unreachable; restored %d entities from the last discovery "
-            "snapshot and will keep retrying every %ds",
+            "restored %d entities from the last discovery snapshot; "
+            "connecting to the device every %ds until it answers",
             len(self.bound),
             SUMMARY_INTERVAL_S,
         )
@@ -2301,7 +2301,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         self._failed_cycles += 1
         if self._failed_cycles == 1:
-            self._log.error("%s: %s", what, e)
+            self._log.info("%s: %s", what, e)
         else:
             self._log.debug("%s (%d cycles): %s", what, self._failed_cycles, e)
         # Without this, a fully unreachable device left the connection-mode
