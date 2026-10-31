@@ -427,19 +427,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(coordinator.async_add_listener(lambda: None))
     await coordinator.async_load_mode_specs()
 
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryNotReady:
-        # An entry that has polled successfully before comes up on its last
-        # known entity set and keeps retrying on the normal poll interval,
-        # rather than sitting in setup-retry with a device that reads as
-        # broken and entities that exist only as registry rows (issue #295).
-        #
-        # An entry that has never reached the device has no snapshot, so
-        # there is nothing to show and no device metadata to name it with --
-        # that case still fails, which is also what keeps the door open for
-        # setup flows that need to interact with the device (issue #168).
-        if not await coordinator.async_rehydrate():
+    # An entry that has polled before comes up straight from its discovery
+    # snapshot and makes its first connection in the background. Waiting
+    # for that connection here held up Home Assistant's startup by the full
+    # handshake and poll timeouts whenever the appliance was switched off,
+    # only to end up on the same snapshot anyway.
+    if await coordinator.async_rehydrate():
+        # Start out as an offline load always has: entities unavailable until
+        # the device answers, and no "Error fetching" from the base class
+        # when an appliance that is simply switched off fails that first poll.
+        coordinator.last_update_success = False
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh(), f"{DOMAIN} first refresh {entry.entry_id}"
+        )
+    else:
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except ConfigEntryNotReady:
+            # An entry that has never reached the device has no snapshot, so
+            # there is nothing to show and no device metadata to name it with
+            # -- that case still fails, which is also what keeps the door open
+            # for setup flows that need to interact with the device (issue
+            # #168).
             await coordinator.async_close()
             raise
 
