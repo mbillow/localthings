@@ -966,6 +966,14 @@ def _probe_and_validate(
     if scan.legacy_http and not scan.candidates:
         raise LegacyHttpFamily(f"{host} serves the legacy bridge on TCP 8888")
 
+    # An identity used directly by the 8888 bridge is not a DTLS client leaf.
+    if (
+        existing_leaf is not None
+        and ca_cert_pem
+        and existing_leaf[0].strip() == ca_cert_pem.strip()
+    ):
+        existing_leaf = None
+
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
         _LOGGER.debug("Reusing the leaf certificate from an existing entry")
@@ -1523,9 +1531,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_progress_done(next_step_id="legacy_token_received")
 
     async def _request_token(self, cert_pem: str, key_pem: str) -> str | None:
-        return await self.hass.async_add_executor_job(
-            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
-        )
+        try:
+            return await self.hass.async_add_executor_job(
+                obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
+            )
+        except CallbackCertRejected:
+            # TP6X_RAC_16K accepts the original AC14K_M identity, not a minted leaf.
+            identity = (self._ca_cert_pem, self._ca_key_pem)
+            if not all(identity) or self._legacy_leaf == identity:
+                raise
+            self._legacy_leaf = identity
+            return await self.hass.async_add_executor_job(
+                obtain_device_token, self._host, LEGACY_HTTP_PORT, *identity
+            )
 
     async def async_step_legacy_token_received(
         self, user_input: dict[str, Any] | None = None

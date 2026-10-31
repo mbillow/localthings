@@ -144,3 +144,30 @@ def test_a_refused_handshake_ends_the_exchange_early(monkeypatch):
         legacy_http_token.obtain_device_token("10.0.0.7", 8888, "C", "K", listen_address="10.0.0.2")
 
     assert requests == ["10.0.0.7"]
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "rejected"),
+    [
+        (400, b"<html>The SSL certificate error</html>", True),
+        (400, b"Bad request", False),
+        (200, b"The SSL certificate error", False),
+        (403, b"Forbidden", False),
+    ],
+)
+def test_token_request_classifies_nginx_certificate_rejection(monkeypatch, status, body, rejected):
+    from unittest.mock import MagicMock
+
+    session = MagicMock()
+    session.getresponse.return_value.status = status
+    session.getresponse.return_value.read.return_value = body
+    monkeypatch.setattr(legacy_http_token, "HTTPSConnection", lambda *args, **kwargs: session)
+    if rejected:
+        with pytest.raises(legacy_http_token.CallbackCertRejected):
+            legacy_http_token.request_token("192.0.2.1", 8888, "192.0.2.2", cast(Any, None))
+    else:
+        assert (
+            legacy_http_token.request_token("192.0.2.1", 8888, "192.0.2.2", cast(Any, None))
+            == status
+        )
+    session.close.assert_called_once()
