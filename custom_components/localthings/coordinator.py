@@ -2776,6 +2776,38 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        # ARTIK051 boards can apply power writes but answer 4.00; only a fresh
+        # successful GET matching the entire power payload can confirm success.
+        if (
+            code == 0x80
+            and write_href == "/power/vs/0"
+            and str(self._entry.data.get(CONF_MODEL, "")).startswith("ARTIK051")
+            and isinstance(body, dict)
+            and set(body) == {"x.com.samsung.da.power"}
+        ):
+            await asyncio.sleep(1.0)
+
+            def _confirm_power():
+                if self._session is None:
+                    return False
+                confirm_code, confirm_rep = self._session.read(path_segs, timeout=5.0)
+                return (
+                    _coap_accepted(confirm_code)
+                    and isinstance(confirm_rep, dict)
+                    and _payload_present_in(body, confirm_rep)
+                )
+
+            async with self._session_lock:
+                try:
+                    confirmed = await self.hass.async_add_executor_job(_confirm_power)
+                except Exception:
+                    confirmed = False
+            if confirmed:
+                self._log.debug(
+                    "Samsung power response 4.00, requested state confirmed by live GET"
+                )
+                return
+
         if not _coap_accepted(code):
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.
