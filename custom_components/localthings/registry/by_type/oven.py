@@ -19,7 +19,7 @@ REGISTRY = DeviceRegistry(
                 oven.OVEN_TEMP_DESIRED_OCF,
                 oven.OVEN_PROBE_CURRENT_OCF,
                 oven.OVEN_PROBE_DESIRED_OCF,
-                oven.OVEN_MODE,
+                *oven.OVEN_MODES,
                 oven.OVEN_OPERATIONAL_STATE,
                 oven.OVEN_DOOR,
                 oven.OVEN_CONNECTED,

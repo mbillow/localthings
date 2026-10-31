@@ -17,6 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from ..batch import is_stub_rep
@@ -195,6 +196,31 @@ def _has_option(prefix):
     return lambda rep, resources: (
         is_stub_rep(rep) or _option_value(rep.get("x.com.samsung.da.options"), prefix) is not None
     )
+
+
+def _sound_gate_applies(resources):
+    info = resources.get("/information/vs/0") or {}
+    return (
+        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
+        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
+    )
+
+
+def sound_is_unsupported(rep, resources):
+    """The NV51K7770S reports no Sound token at either panel volume extreme."""
+    options = rep.get("x.com.samsung.da.options")
+    return (
+        _sound_gate_applies(resources)
+        and isinstance(options, list)
+        and _option_value(options, "Sound") is None
+    )
+
+
+def _has_sound(rep, resources):
+    # Keep the default field-presence gate when absence is not yet known.
+    return (
+        not rep or is_stub_rep(rep) or "x.com.samsung.da.options" in rep
+    ) and not sound_is_unsupported(rep, resources)
 
 
 def _has_reservoir(rep, resources):
@@ -876,6 +902,19 @@ OVEN_MODE = Capability(
             exists_fn=_has_option("BurnerOnAlert"),
             value_fn=lambda opts: _option_value(opts, "BurnerOnAlert") == "On",
             write_fn=_option_switch_write("BurnerOnAlert"),
+        ),
+    ),
+)
+
+# Keep the shared descriptor unchanged: other appliances also use OVEN_MODE.
+OVEN_MODES = (
+    replace(OVEN_MODE, match_fn=lambda rep, resources: not _sound_gate_applies(resources)),
+    replace(
+        OVEN_MODE,
+        match_fn=lambda rep, resources: _sound_gate_applies(resources),
+        entities=tuple(
+            replace(desc, exists_fn=_has_sound) if desc.key == "sound" else desc
+            for desc in OVEN_MODE.entities
         ),
     ),
 )
