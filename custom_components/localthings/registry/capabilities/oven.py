@@ -304,6 +304,24 @@ def _cook_time_write(p, rep, href=None, resources=None):
     return ["operational", "state", "vs", "0"], body
 
 
+def _remote_mode_choices(modes, resources, current=None):
+    info = resources.get("/information/vs/0") or {}
+    if not (
+        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
+        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
+    ):
+        return modes
+    # NV51K7770S: Broil hits the existing start restriction; cleaning and
+    # Gourmet Cook are owner-requested exclusions, not proven firmware limits.
+    excluded = {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
+    choices = [mode for mode in modes if mode not in excluded or mode == current]
+    # HA requires the current program in the list to display it. The writer
+    # never passes current, so this does not enable a write of that program.
+    if current in excluded and current not in choices:
+        choices.append(current)
+    return choices
+
+
 def _oven_mode_options(resources):
     """Live mode list from the device's own /mode/vs/0 supportedModes when
     it reports one; the NV7000BS-era _OVEN_MODES guess otherwise. Mirrors
@@ -312,10 +330,11 @@ def _oven_mode_options(resources):
     fallback has to kick in when the device's own field is absent."""
     rep = resources.get("/mode/vs/0") or {}
     live = rep.get("x.com.samsung.da.supportedModes")
+    current = (rep.get("x.com.samsung.da.modes") or [None])[0]
     # An empty list is a lower zone with its divider out (cook.share_mode_spec).
     if not live and not cook.zoned(resources):
-        return list(_OVEN_MODES)
-    live = cook.selectable_modes(live or [])
+        return _remote_mode_choices(list(_OVEN_MODES), resources, current)
+    live = _remote_mode_choices(cook.selectable_modes(live or []), resources, current)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
@@ -331,8 +350,8 @@ def _oven_mode_validate(p, rep, resources):
     so the idle state displays, not because the oven accepts it as a mode
     (#445 review). Picking it used to fall through to _oven_mode_write's
     None and the coordinator's warning-and-return, so the user saw nothing
-    happen. Every other option in the list came from supportedModes and
-    passes."""
+    happen. Other values pass through to the writer or cooking preparation
+    checks."""
     if p == "NoOperation":
         return "oven_mode_idle_not_selectable"
     return None
@@ -347,7 +366,7 @@ def _oven_mode_write(p, rep, href=None, resources=None):
         valid = _OVEN_MODES
     else:
         valid = cook.selectable_modes(live or [])
-    if p not in valid:
+    if p not in _remote_mode_choices(valid, resources or {}):
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
 
