@@ -2129,3 +2129,22 @@ async def test_host_with_an_entry_handshakes_from_an_ephemeral_port(
     await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: MOCK_HOST})
 
     assert FakeSession.instances[0].local_port is None
+
+
+def test_dtls_does_not_reuse_an_original_legacy_ca_identity(monkeypatch):
+    from unittest.mock import MagicMock
+
+    from custom_components.localthings import config_flow
+
+    scan = MagicMock(legacy_http=False)
+    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    mint = MagicMock(return_value=("NEW-LEAF", "NEW-KEY"))
+    handshake = MagicMock(return_value={"model": "TEST"})
+    monkeypatch.setattr(config_flow, "_mint_preferred", mint)
+    monkeypatch.setattr(config_flow, "_handshake_and_read", handshake)
+    result = config_flow._probe_and_validate(
+        "192.0.2.1", "CA-CERT", "CA-KEY", ("CA-CERT", "CA-KEY")
+    )
+    mint.assert_called_once_with("CA-CERT", "CA-KEY")
+    assert handshake.call_args.args[2:4] == ("NEW-LEAF", "NEW-KEY")
+    assert result["leaf_cert_pem"] == "NEW-LEAF"
