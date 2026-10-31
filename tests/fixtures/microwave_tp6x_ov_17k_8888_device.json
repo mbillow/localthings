@@ -1,6 +1,6 @@
 {
  "note": "TP6X_OV_17K, NQ70M6650DS microwave/oven combo (issue #674): `bodies` and `device_bodies` are the `transport` block of a LocalThings 0.33.0 diagnostics download, verbatim -- /devices/0 (the microwave), /devices/1 (a blank slot /devices does not list) and /devices/2 (the oven), each merged with its linked configuration and information resources. Captured idle. Carries no serial or uuid.",
- "seeds_note": "device0 and seeds are constructed, not captured: each is its `bodies` entry run through legacy_http.to_resources with this family's table, the sibling hrefs reindexed per Subdevice.to_actual, and /connected/vs/<n> set from whether /devices listed that sibling (the dump's subdevices_skipped recorded Off for 1, On for 2) -- what LegacyHttpTransport._read_seed returns for the same bodies.",
+ "seeds_note": "device0 and seeds are constructed, not captured: each is its `bodies` entry run through legacy_http.to_resources with this family's table, the sibling hrefs reindexed per Subdevice.to_actual, and /connected/vs/<n> set from whether /devices listed that sibling (the dump's subdevices_skipped recorded Off for 1, On for 2) -- what LegacyHttpTransport._read_seed returns for the same bodies, with device0's empty /configuration/vs/0 from legacy_http.clock.",
  "bodies": {
   "Alarms": [
    {
@@ -430,6 +430,10 @@
      }
     ]
    }
+  },
+  {
+   "href": "/configuration/vs/0",
+   "rep": {}
   }
  ],
  "seeds": {

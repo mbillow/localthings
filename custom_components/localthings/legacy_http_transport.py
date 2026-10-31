@@ -33,11 +33,14 @@ from typing import Any
 from .legacy_http import (
     CAVITY_LOWER,
     CAVITY_UPPER,
+    CLOCK_ENDPOINT,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
     cavity_role,
+    clock,
+    clock_write,
     course_table,
     divider_in,
     http_status_to_coap,
@@ -328,6 +331,7 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
+            resources.update(clock(self._family))
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
     def _sibling_record(
@@ -380,6 +384,12 @@ class LegacyHttpTransport:
             # Untested what the appliance does with it; the Flex Duo still
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
+        clock_body = clock_write(href, body) if isinstance(body, dict) else None
+        if clock_body is not None and not index and clock(self._family):
+            # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
+            path = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
+            status, response = self._request("PUT", path, body=clock_body, timeout=timeout)
+            return http_status_to_coap(status), response
         deadline = time.monotonic() + timeout
         refused = self._learn_type(index, timeout)
         if refused is not None:
