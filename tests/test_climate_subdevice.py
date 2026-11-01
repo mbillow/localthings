@@ -55,10 +55,10 @@ async def test_subdevice_climate_reads_its_own_temperature(climates):
     28.0 -- distinct values in the real fixture, so a href mix-up here
     would show up as a wrong number, not just a wrong mode string."""
     main, sub1 = climates[None], climates["1"]
-    assert main.current_temperature == 25.0
-    assert main.target_temperature == 26.0
-    assert sub1.current_temperature == 27.0
-    assert sub1.target_temperature == 28.0
+    assert main.native_current_temperature == 25.0
+    assert main.native_target_temperature == 26.0
+    assert sub1.native_current_temperature == 27.0
+    assert sub1.native_target_temperature == 28.0
 
 
 async def test_subdevice_climate_reads_its_own_power_state(climates):

@@ -1,4 +1,4 @@
-"""Hide only the verified oven's absent Sound option."""
+"""Gate shared oven Sound controls and clean up their obsolete registry entries."""
 
 from copy import deepcopy
 
@@ -6,14 +6,12 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_unsupported_oven_sound_switches
+from custom_components.localthings import _drop_unsupported_sound_switches
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import LocalThingsEntity, _is_included
 from custom_components.localthings.registry.adapter import flatten
-from custom_components.localthings.registry.by_type import oven as oven_registry
 from custom_components.localthings.registry.capabilities import oven
-from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import SwitchDesc
 from custom_components.localthings.registry.subdevices import MAIN
 from tests.test_legacy_http_lower_cavity import (
@@ -66,21 +64,8 @@ async def test_an_explicit_sound_token_keeps_the_existing_control(hass, token, e
         f"{DOMAIN}_{coordinator.device_key}_sound",
         config_entry=coordinator._entry,
     )
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is not None
-
-
-@pytest.mark.parametrize(
-    "model", [None, 16, "LCD_OV_WALL", "LCD_OV_WALL_16K_OTHER", "LCD_OV_WALL_20K"]
-)
-async def test_other_boards_keep_the_unchanged_sound_description(hass, model):
-    coordinator = await _discovered(hass)
-    resources = deepcopy(coordinator.canonical_resources(MAIN))
-    resources["/information/vs/0"][PREFIX + "modelNum"] = model
-    bound = discover(resources, oven_registry.REGISTRY.capabilities)
-    sound = next(b for b in bound if b.desc.key == "sound")
-    assert sound.desc is next(d for d in oven.OVEN_MODE.entities if d.key == "sound")
-    assert "sound" in flatten(bound, resources)
 
 
 @pytest.mark.parametrize("disabled", [False, True])
@@ -116,40 +101,13 @@ async def test_cleanup_removes_only_the_exact_sound_switch(hass, disabled, caplo
         )
     ]
     with caplog.at_level("INFO", logger="custom_components.localthings"):
-        _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
-        _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
+        _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+        _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
     assert len(removed) == 2
     assert all(registry.async_get(entity_id) is None for entity_id in removed)
     assert all(registry.async_get(e.entity_id) for e in keep)
     for entity_id in removed:
         assert caplog.text.count(f"Removing {entity_id}:") == 1
-
-
-@pytest.mark.parametrize(
-    "rep",
-    [
-        {},
-        {"rt": ["x.com.samsung.da.mode"]},
-        {PREFIX + "options": None},
-        {PREFIX + "options": ""},
-        {PREFIX + "options": 1},
-        {PREFIX + "options": {}},
-    ],
-)
-async def test_cleanup_preserves_switch_without_a_complete_options_list(hass, rep):
-    coordinator = await _discovered(hass)
-    resources = deepcopy(coordinator.last_resources)
-    resources["/mode/vs/0"] = rep
-    coordinator._rehydrate_resources = resources
-    registry = er.async_get(hass)
-    old = registry.async_get_or_create(
-        "switch",
-        DOMAIN,
-        f"{DOMAIN}_{coordinator.device_key}_sound",
-        config_entry=coordinator._entry,
-    )
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
-    assert registry.async_get(old.entity_id) is not None
 
 
 async def test_cleanup_leaves_another_config_entry_untouched(hass):
@@ -160,7 +118,7 @@ async def test_cleanup_leaves_another_config_entry_untouched(hass):
     old = registry.async_get_or_create(
         "switch", DOMAIN, f"{DOMAIN}_{coordinator.device_key}_sound", config_entry=other
     )
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is not None
 
 
@@ -179,93 +137,118 @@ async def test_offline_snapshot_applies_the_same_sound_gate(hass, token):
     old = registry.async_get_or_create(
         "switch", DOMAIN, f"{DOMAIN}_{restored.device_key}_sound", config_entry=online._entry
     )
-    _drop_unsupported_oven_sound_switches(hass, online._entry, restored)
+    _drop_unsupported_sound_switches(hass, online._entry, restored)
     assert (registry.async_get(old.entity_id) is not None) is bool(token)
 
 
 @pytest.mark.parametrize(
-    "name", ["microwave_nw9300md", "range_tp1x_da_ks_range_0101x", "oven_tp2x_ks_walloven"]
+    "name,kept_hrefs",
+    [
+        ("microwave_nw9300md", {"/mode/vs/0"}),
+        ("range_tp1x_da_ks_range_0101x", {"/mode/vs/0"}),
+        ("oven_tp2x_ks_walloven", {"/mode/vs/0"}),
+        ("oven", {"/mode/vs/0"}),
+    ],
 )
-async def test_previously_affected_appliances_keep_their_sound_controls(hass, name):
+async def test_fixture_sound_controls_and_registry_cleanup(hass, name, kept_hrefs):
     from tests.test_subdevice_discovery import _coordinator, _discover
 
     coordinator = _coordinator(hass)
     await _discover(coordinator, name)
-    sound = [b for b in coordinator.bound if b.desc.key == "sound" and _is_included(b, coordinator)]
+    sound = [b for b in coordinator.bound if b.desc.key == "sound"]
     assert sound
-    assert all(b.desc.exists_fn is None for b in sound)
+    assert {b.href for b in sound if _is_included(b, coordinator)} == kept_hrefs
     registry = er.async_get(hass)
-    controls = [
-        registry.async_get_or_create(
+    controls = {
+        b.href: registry.async_get_or_create(
             "switch",
             DOMAIN,
             str(LocalThingsEntity(coordinator, b).unique_id),
             config_entry=coordinator._entry,
         )
         for b in sound
-    ]
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
-    assert all(registry.async_get(e.entity_id) for e in controls)
-
-
-@pytest.mark.parametrize("subtype", [None, "", "CombiOven", "Microwave", "Oven"])
-async def test_same_board_without_wall_oven_identity_keeps_existing_sound(hass, subtype):
-    coordinator = await _discovered(hass)
-    resources = deepcopy(coordinator.last_resources)
-    resources["/information/vs/0"][PREFIX + "deviceSubType"] = subtype
-    coordinator._run_discovery(resources, from_snapshot=True)
-    coordinator._rehydrate_resources = resources
-    sound = _sound(coordinator)
-    assert _is_included(sound, coordinator)
-    registry = er.async_get(hass)
-    uid = LocalThingsEntity(coordinator, sound).unique_id
-    assert uid is not None
-    old = registry.async_get_or_create("switch", DOMAIN, uid, config_entry=coordinator._entry)
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
-    assert registry.async_get(old.entity_id) is not None
+    }
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    assert {
+        href for href, row in controls.items() if registry.async_get(row.entity_id)
+    } == kept_hrefs
 
 
 @pytest.mark.parametrize("divided", [False, True])
-async def test_same_board_combo_keeps_its_sound_registry_entries(hass, divided):
+async def test_legacy_combo_keeps_microwave_sound_and_removes_oven_controls(hass, divided):
     from tests.test_legacy_http_nw9300md import _routes as combo_routes
 
     coordinator = await _discovered(hass, combo_routes(divided=divided))
     registry = er.async_get(hass)
-    kept = []
+    controls = {}
     for bound in coordinator.bound:
         if bound.desc.key != "sound":
             continue
-        rep = coordinator.discovery_resources[bound.href]
-        assert _is_included(bound, coordinator) is (PREFIX + "options" in rep)
+        if bound.href == "/mode/vs/1":
+            # The empty microwave slot never had an included Sound entity.
+            assert not _is_included(bound, coordinator)
+            continue
         uid = LocalThingsEntity(coordinator, bound).unique_id
         assert uid is not None
-        kept.append(
-            registry.async_get_or_create("switch", DOMAIN, uid, config_entry=coordinator._entry)
+        controls[bound.href] = registry.async_get_or_create(
+            "switch", DOMAIN, uid, config_entry=coordinator._entry
         )
-    assert kept
-    _drop_unsupported_oven_sound_switches(hass, coordinator._entry, coordinator)
-    assert all(registry.async_get(old.entity_id) is not None for old in kept)
+    assert set(controls) == {"/mode/vs/0", "/mode/vs/2", "/mode/vs/3"}
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    assert {href for href, row in controls.items() if registry.async_get(row.entity_id)} == {
+        "/mode/vs/0"
+    }
 
 
 @pytest.mark.parametrize(
     "rep,expected",
     [
-        ({}, True),
+        ({}, False),
         ({"rt": ["x.com.samsung.da.mode"]}, False),
         ({"href": "/mode/vs/0"}, True),
-        ({PREFIX + "modes": ["NoOperation"]}, False),
-        ({PREFIX + "options": None}, True),
-        ({PREFIX + "options": []}, True),
-        ({PREFIX + "options": ["Sound_On"]}, True),
+        ({PREFIX + "options": None}, False),
+        ({PREFIX + "options": []}, False),
+        ({PREFIX + "options": ["Sound_Off"]}, True),
     ],
 )
-async def test_other_appliances_keep_default_field_presence_behavior(hass, rep, expected):
+async def test_cleanup_uses_the_descriptor_gate_including_stubs(hass, rep, expected):
     coordinator = await _discovered(hass)
     resources = deepcopy(coordinator.last_resources)
-    resources["/information/vs/0"][PREFIX + "modelNum"] = "LCD_OV_WALL_20K"
-    coordinator._run_discovery(resources, from_snapshot=True)
     resources["/mode/vs/0"] = rep
     coordinator._rehydrate_resources = resources
     sound = _sound(coordinator)
-    assert sound.desc.exists_fn is None
     assert _is_included(sound, coordinator) is expected
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        str(LocalThingsEntity(coordinator, sound).unique_id),
+        config_entry=coordinator._entry,
+    )
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    assert (registry.async_get(old.entity_id) is not None) is expected
+
+
+@pytest.mark.parametrize("supported_cavity", [0, 1])
+async def test_each_cavity_uses_its_own_sound_option(hass, supported_cavity):
+    upper, lower = deepcopy(UPPER), deepcopy(LOWER)
+    upper["Mode"]["options"] = []
+    lower["Mode"]["options"] = []
+    (upper, lower)[supported_cavity]["Mode"]["options"].append("Sound_On")
+    coordinator = await _discovered(hass, _routes(upper=upper, lower=lower))
+    registry = er.async_get(hass)
+    controls = {}
+    for bound in coordinator.bound:
+        if bound.desc.key != "sound":
+            continue
+        controls[bound.href] = registry.async_get_or_create(
+            "switch",
+            DOMAIN,
+            str(LocalThingsEntity(coordinator, bound).unique_id),
+            config_entry=coordinator._entry,
+        )
+    assert len(controls) == 2
+    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    assert {href for href, row in controls.items() if registry.async_get(row.entity_id)} == {
+        f"/mode/vs/{supported_cavity}"
+    }

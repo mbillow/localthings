@@ -27,7 +27,6 @@ from .coordinator import (
 from .entity import LocalThingsEntity, _is_included, async_load_instance_names
 from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
-from .registry.capabilities.oven import sound_is_unsupported
 from .registry.entities import BinarySensorDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
@@ -316,20 +315,18 @@ def _drop_read_only_power_switches(
 
 
 @callback
-def _drop_unsupported_oven_sound_switches(
+def _drop_unsupported_sound_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Remove old Sound switches only where a reported options list excludes Sound."""
+    """Remove old Sound switches that no longer pass their descriptor's existence check."""
     ent_reg = er.async_get(hass)
     for bound in coordinator.bound:
         if (
             not isinstance(bound.desc, SwitchDesc)
             or bound.desc.key != "sound"
-            or bound.desc.field != "x.com.samsung.da.options"
+            or bound.desc.exists_fn is None
+            or _is_included(bound, coordinator)
         ):
-            continue
-        rep = coordinator.discovery_resources.get(bound.href) or {}
-        if not sound_is_unsupported(rep, coordinator.discovery_canonical(bound.subdevice)):
             continue
         unique_id = LocalThingsEntity(coordinator, bound).unique_id
         assert unique_id is not None
@@ -338,7 +335,7 @@ def _drop_unsupported_oven_sound_switches(
         if old is None or old.config_entry_id != entry.entry_id:
             continue
         _LOGGER.info(
-            "Removing %s: the oven reports no Sound option; "
+            "Removing %s: the device reports no Sound option; "
             "update any automation or dashboard that referenced it",
             old.entity_id,
         )
@@ -511,7 +508,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
     _drop_read_only_power_switches(hass, entry, coordinator)
-    _drop_unsupported_oven_sound_switches(hass, entry, coordinator)
+    _drop_unsupported_sound_switches(hass, entry, coordinator)
     _drop_washer_entities_from_filters(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
