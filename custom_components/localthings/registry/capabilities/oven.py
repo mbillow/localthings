@@ -51,8 +51,8 @@ SETPOINT_STEP_F = 5
 # Mode options seen on NV7000BS-class. No dump exists so this list is
 # inferred from Samsung documentation and firmware observations; the
 # firmware rejects unknown modes, so a missing entry is a coverage gap, not
-# a bug. Fallback only, used when a device's own /mode/vs/0 doesn't report
-# supportedModes at all -- see _oven_mode_options/_oven_mode_write below.
+# a bug. Fallback for boards with modeSpec but no supportedModes; specless
+# boards use cook.startable_modes -- see _oven_mode_choices below.
 _OVEN_MODES = (
     "NoOperation",
     "Bake",
@@ -262,19 +262,14 @@ def _option_write(prefix, new_value):
 # ---------------------------------------------------------------------------
 
 
-def _oven_setpoint_write(p, rep, href=None, resources=None):
+def _oven_setpoint_write(p, rep, href=None):
     """RMW write to /temperatures/vs/0 items array."""
     try:
         temp = float(p)
     except (TypeError, ValueError):
         return None
-    resources = resources or {}
-    if not _oven_setpoint_available(rep, resources):
-        return None
-    bounds = cook.temp_bounds(resources) if cook.healthy_cook_temps(resources) else None
-    min_v, max_v, step_v = bounds or _setpoint_bounds(rep)
-    origin = min_v if bounds else 0
-    temp_i = origin + round((temp - origin) / step_v) * step_v
+    min_v, max_v, step_v = _setpoint_bounds(rep)
+    temp_i = int(round(temp / step_v) * step_v)
     if not (min_v <= temp_i <= max_v):
         return None
     items = rep.get("x.com.samsung.da.items")
@@ -288,14 +283,6 @@ def _oven_setpoint_write(p, rep, href=None, resources=None):
 def is_lcd_ov_wall_16k(model):
     """Exact board token used by the NV51K7770S (#572, #662)."""
     return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
-
-
-def has_healthy_cook_recipes(resources):
-    """Recipe meanings verified on the NV51K7770S, not its CombiOven relatives."""
-    info = resources.get("/information/vs/0") or {}
-    return is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum")) and (
-        info.get("x.com.samsung.da.deviceSubType") == "WallOven"
-    )
 
 
 def _cook_time_write(p, rep, href=None, resources=None):
@@ -317,26 +304,34 @@ def _cook_time_write(p, rep, href=None, resources=None):
     return ["operational", "state", "vs", "0"], body
 
 
-def _oven_mode_options(resources):
-    """Live mode list from the device's own /mode/vs/0 supportedModes when
-    it reports one; the NV7000BS-era _OVEN_MODES guess otherwise. Mirrors
-    laundry.py's options_field pattern (buzzer_sound/finish_sound), but
-    needs the callable form rather than options_field because a static
-    fallback has to kick in when the device's own field is absent."""
+def _oven_mode_choices(resources):
+    """Writable modes: specless ovens use the same policy as cooking preparation."""
     rep = resources.get("/mode/vs/0") or {}
+    if rep.get(cook.MODE_SPEC) is None:
+        return cook.startable_modes(resources)
     live = rep.get("x.com.samsung.da.supportedModes")
     # An empty list is a lower zone with its divider out (cook.share_mode_spec).
     if not live and not cook.zoned(resources):
         return list(_OVEN_MODES)
-    live = cook.selectable_modes(live or [])
+    return cook.selectable_modes(live or [])
+
+
+def _oven_mode_options(resources):
+    choices = _oven_mode_choices(resources)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
     # Unknown. Listing it makes it selectable too, which _oven_mode_validate
     # turns into a user-facing error rather than a silent no-op.
-    if "NoOperation" in live:
-        return live
-    return ["NoOperation", *live]
+    if "NoOperation" not in choices:
+        choices.insert(0, "NoOperation")
+    rep = resources.get("/mode/vs/0") or {}
+    current = cook.current_mode(resources)
+    # HA needs a panel-started program in the list to display it. The writer
+    # uses only _oven_mode_choices, so this does not enable a write of it.
+    if rep.get(cook.MODE_SPEC) is None and current and current not in choices:
+        choices.append(current)
+    return choices
 
 
 def _oven_mode_validate(p, rep, resources):
@@ -344,8 +339,8 @@ def _oven_mode_validate(p, rep, resources):
     so the idle state displays, not because the oven accepts it as a mode
     (#445 review). Picking it used to fall through to _oven_mode_write's
     None and the coordinator's warning-and-return, so the user saw nothing
-    happen. Every other option in the list came from supportedModes and
-    passes."""
+    happen. Other values pass through to the writer or cooking preparation
+    checks."""
     if p == "NoOperation":
         return "oven_mode_idle_not_selectable"
     return None
@@ -354,13 +349,9 @@ def _oven_mode_validate(p, rep, resources):
 def _oven_mode_write(p, rep, href=None, resources=None):
     # The cavity's view, not its raw rep: a zoned lower cavity's modes come
     # from the board's modeSpec (cook.share_mode_spec).
-    view = (resources or {}).get("/mode/vs/0") or rep
-    live = view.get("x.com.samsung.da.supportedModes")
-    if not live and not cook.zoned(resources or {}):
-        valid = _OVEN_MODES
-    else:
-        valid = cook.selectable_modes(live or [])
-    if p not in valid:
+    resources = resources or {}
+    view = {**resources, "/mode/vs/0": resources.get("/mode/vs/0") or rep}
+    if p == "NoOperation" or p not in _oven_mode_choices(view):
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
 
@@ -387,16 +378,6 @@ def _mode_setpoint_bounds(rep, resources):
     back to the static per-unit bounds below."""
     bounds = cook.temp_bounds(resources)
     return tuple(float(b) for b in bounds) if bounds else None
-
-
-def _oven_setpoint_available(rep, resources):
-    # A live modeSpec without a usable Bread Proof target must not fall
-    # back to the generic adjustable range.
-    return not (
-        has_healthy_cook_recipes(resources)
-        and cook.current_mode(resources) == "Healthycook6"
-        and cook.temp_bounds(resources) is None
-    )
 
 
 def _cook_time_bounds(rep, resources):
@@ -523,11 +504,9 @@ _PROBE_ITEM_ID = "1"
 def _probe_item(rep):
     """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
 
-    Keyed by reported id, not position, so a board listing them the other
-    way round can't swap the two readings. That id 1 is the probe is
-    inferred from issue #490's dump, not confirmed: only the cavity with a
-    probe socket reports a second item, and it carries `increment` 1
-    against the cavity's 5.
+    Keyed by id rather than array position: #490's probe cavity alone has
+    item 1 with increment 1 against the cavity's 5. Confirmed on the
+    NV51K7770S with a 150°F target and 107°F current reading (#665).
     """
     for item in rep.get("x.com.samsung.da.items") or []:
         if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
@@ -549,12 +528,10 @@ def _probe_temp_unit(rep):
 def _probe_connected(rep, resources):
     """True only while a probe is actually plugged in.
 
-    The socket's state lives on a different resource -- `/mode/vs/0`'s
-    options[] carries a `meatprobe_<state>` token -- so an oven with a
-    socket and nothing in it reports a full items[1] reading 0, which as a
-    permanent entity is worse than no entity. Gated on "reports a state and
-    it isn't disconnected" rather than on the connected spelling, which no
-    dump has shown yet.
+    An empty socket can still report zero readings, so use the
+    `meatprobe_<state>` token in `/mode/vs/0`'s options[]. The NV51K7770S
+    confirms connected/disconnected; retain the non-disconnected gate for
+    other boards.
     """
     if _probe_item(rep) is None:
         return False
@@ -595,7 +572,6 @@ OVEN_SETPOINT = Capability(
             native_max_fn=lambda rep: float(_setpoint_bounds(rep)[1]),
             step_fn=lambda rep: float(_setpoint_bounds(rep)[2]),
             bounds_fn=_mode_setpoint_bounds,
-            available_fn=_oven_setpoint_available,
             value_fn=lambda items: _setpoint(
                 items[0].get("x.com.samsung.da.desired") if items else None
             ),
@@ -616,6 +592,7 @@ OVEN_SETPOINT = Capability(
         # setpoint writes from idle (docs/investigations/oven-cycle-start.md).
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             device_class="temperature",
             state_class="measurement",
             unit_fn=_probe_temp_unit,
@@ -624,6 +601,7 @@ OVEN_SETPOINT = Capability(
         ),
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             device_class="temperature",
             unit_fn=_probe_temp_unit,
             entity_category="diagnostic",
@@ -726,6 +704,7 @@ OVEN_PROBE_CURRENT_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             state_class="measurement",
@@ -742,6 +721,7 @@ OVEN_PROBE_DESIRED_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             entity_category="diagnostic",
@@ -814,9 +794,6 @@ OVEN_MODE = Capability(
         # SelectDesc first — test_oven_mode_options_nonempty uses entities[0]
         SelectDesc(
             key="oven_mode",
-            translation_key=lambda resources: (
-                "oven_mode_lcd_wall_16k" if has_healthy_cook_recipes(resources) else "oven_mode"
-            ),
             field="x.com.samsung.da.modes",
             icon="mdi:tune",
             options=_oven_mode_options,
@@ -859,6 +836,7 @@ OVEN_MODE = Capability(
             field="x.com.samsung.da.options",
             icon="mdi:volume-high",
             entity_category="config",
+            exists_fn=_has_option("Sound"),
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,

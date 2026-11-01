@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Booster heater"
+      },
+      "bluetooth_pairing": {
+        "name": "Bluetooth pairing"
+      },
+      "rear_speakers": {
+        "name": "Rear speakers"
+      },
+      "woofer_connection": {
+        "name": "Woofer connection"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Start cooking"
+      },
+      "pair_bluetooth": {
+        "name": "Pair Bluetooth"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "zone_target_temperature": {
         "name": "Zone target temperature"
+      },
+      "audio_sync": {
+        "name": "Audio sync"
+      },
+      "bass": {
+        "name": "Bass"
+      },
+      "channel_level_center": {
+        "name": "Center level"
+      },
+      "channel_level_front_top": {
+        "name": "Front top level"
+      },
+      "channel_level_rear": {
+        "name": "Rear level"
+      },
+      "channel_level_rear_side": {
+        "name": "Rear side level"
+      },
+      "channel_level_rear_top": {
+        "name": "Rear top level"
+      },
+      "channel_level_side": {
+        "name": "Side level"
+      },
+      "channel_level_wide": {
+        "name": "Wide level"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Treble"
+      },
+      "woofer_level": {
+        "name": "Woofer level"
       }
     },
     "select": {
@@ -663,52 +729,21 @@
           "steam_roast": "Steam roast",
           "upper_steam_bake": "Upper steam bake",
           "descale": "Descale",
-          "drain": "Drain"
-        }
-      },
-      "oven_mode_lcd_wall_16k": {
-        "name": "Cooking mode",
-        "state": {
-          "no_operation": "No operation",
-          "bake": "Bake",
-          "broil": "Broil",
-          "convection": "Convection",
-          "convection_bake": "Convection bake",
-          "convection_broil": "Convection broil",
-          "frozen_pizza_plus": "Frozen Pizza+",
-          "slow_cook": "Slow cook",
-          "plate_warm": "Plate warm",
-          "air_fry": "Air fry",
-          "convection_roast": "Convection roast",
-          "keep_warm": "Keep warm",
-          "bread_proof": "Bread proof",
-          "dehydrate": "Dehydrate",
-          "self_clean": "Self clean",
-          "air_fryer": "Air fry",
-          "upper_broil": "Upper broil",
-          "upper_convection_bake": "Upper convection bake",
-          "upper_convection_roast": "Upper convection roast",
-          "lower_bake": "Lower bake",
-          "lower_convection_bake": "Lower convection bake",
-          "steam_bake": "Steam bake",
-          "steam_roast": "Steam roast",
-          "upper_steam_bake": "Upper steam bake",
-          "descale": "Descale",
           "drain": "Drain",
-          "healthycook1": "Healthy cook: baked potato",
-          "upper_healthycook1": "Healthy cook: baked potato",
-          "lower_healthycook1": "Healthy cook: baked potato",
-          "healthycook2": "Healthy cook: grilled chicken",
-          "upper_healthycook2": "Healthy cook: grilled chicken",
-          "lower_healthycook2": "Healthy cook: grilled chicken",
-          "healthycook3": "Healthy cook: salmon steak",
-          "upper_healthycook3": "Healthy cook: salmon steak",
-          "lower_healthycook3": "Healthy cook: salmon steak",
-          "healthycook4": "Healthy cook: white fish fillet",
-          "upper_healthycook4": "Healthy cook: white fish fillet",
-          "lower_healthycook4": "Healthy cook: white fish fillet",
-          "healthycook5": "Healthy cook: dehydrate",
-          "healthycook6": "Healthy cook: bread proof"
+          "healthycook1": "Healthy cook 1",
+          "healthycook2": "Healthy cook 2",
+          "healthycook3": "Healthy cook 3",
+          "healthycook4": "Healthy cook 4",
+          "healthycook5": "Healthy cook 5",
+          "healthycook6": "Healthy cook 6",
+          "upper_healthycook1": "Upper healthy cook 1",
+          "upper_healthycook2": "Upper healthy cook 2",
+          "upper_healthycook3": "Upper healthy cook 3",
+          "upper_healthycook4": "Upper healthy cook 4",
+          "lower_healthycook1": "Lower healthy cook 1",
+          "lower_healthycook2": "Lower healthy cook 2",
+          "lower_healthycook3": "Lower healthy cook 3",
+          "lower_healthycook4": "Lower healthy cook 4"
         }
       },
       "operating_mode": {
@@ -1193,6 +1228,28 @@
           "off": "Off",
           "low": "Low",
           "high": "High"
+        }
+      },
+      "audio_prompt_language": {
+        "name": "Audio prompt language",
+        "state": {
+          "eng": "English",
+          "deu": "German",
+          "fra": "French",
+          "kor": "Korean",
+          "spa": "Spanish",
+          "eng_uk": "English (UK)",
+          "ita": "Italian"
+        }
+      },
+      "equalizer": {
+        "name": "Equalizer",
+        "state": {
+          "none": "None",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Classic",
+          "custom": "Custom"
         }
       }
     },
@@ -1754,6 +1811,31 @@
       },
       "three_way_valve": {
         "name": "3-way valve"
+      },
+      "current_eq_mode": {
+        "name": "Current EQ mode"
+      },
+      "installation_type": {
+        "name": "Installation type"
+      },
+      "micom_version": {
+        "name": "Micom version"
+      },
+      "network_connection": {
+        "name": "Connection",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Sound from"
+      },
+      "speaker_status": {
+        "name": "Speaker status"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signal"
       }
     },
     "switch": {
@@ -2008,6 +2090,36 @@
       },
       "extra_rinse": {
         "name": "Extra rinse"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Audio prompt"
+      },
+      "auto_power_down": {
+        "name": "Auto power down"
+      },
+      "auto_update": {
+        "name": "Auto update"
+      },
+      "bass_boost": {
+        "name": "Bass boost"
+      },
+      "night_mode": {
+        "name": "Night mode"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Voice amplifier"
       }
     },
     "time": {

@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Zusatzheizung"
+      },
+      "bluetooth_pairing": {
+        "name": "Bluetooth-Kopplung"
+      },
+      "rear_speakers": {
+        "name": "Rear-Lautsprecher"
+      },
+      "woofer_connection": {
+        "name": "Woofer-Verbindung"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Garen starten"
+      },
+      "pair_bluetooth": {
+        "name": "Bluetooth koppeln"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "good_sleep": {
         "name": "Guter Schlaf"
+      },
+      "audio_sync": {
+        "name": "Audio-Synchronisation"
+      },
+      "bass": {
+        "name": "Bässe"
+      },
+      "channel_level_center": {
+        "name": "Centerpegel"
+      },
+      "channel_level_front_top": {
+        "name": "Front-Top-Pegel"
+      },
+      "channel_level_rear": {
+        "name": "Rear-Pegel"
+      },
+      "channel_level_rear_side": {
+        "name": "Rear-Side-Pegel"
+      },
+      "channel_level_rear_top": {
+        "name": "Rear-Top-Pegel"
+      },
+      "channel_level_side": {
+        "name": "Seitenpegel"
+      },
+      "channel_level_wide": {
+        "name": "Wide-Pegel"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Höhen"
+      },
+      "woofer_level": {
+        "name": "Woofer-Pegel"
       }
     },
     "select": {
@@ -663,52 +729,21 @@
           "steam_roast": "Dampfbraten",
           "upper_steam_bake": "Dampfbacken (oben)",
           "descale": "Entkalken",
-          "drain": "Wasser ablassen"
-        }
-      },
-      "oven_mode_lcd_wall_16k": {
-        "name": "Kochmodus",
-        "state": {
-          "no_operation": "Kein Betrieb",
-          "bake": "Backen",
-          "broil": "Grillen",
-          "convection": "Umluft",
-          "convection_bake": "Umluftbacken",
-          "convection_broil": "Umluftgrillen",
-          "frozen_pizza_plus": "Tiefkühlpizza+",
-          "slow_cook": "Langsam garen",
-          "plate_warm": "Tellerwärmen",
-          "air_fry": "Heißluftfritteuse",
-          "convection_roast": "Umluftbraten",
-          "keep_warm": "Warmhalten",
-          "bread_proof": "Teig gehen lassen",
-          "dehydrate": "Dörren",
-          "self_clean": "Selbstreinigung",
-          "air_fryer": "Heißluftfritteuse",
-          "upper_broil": "Grillen (oben)",
-          "upper_convection_bake": "Umluftbacken (oben)",
-          "upper_convection_roast": "Umluftbraten (oben)",
-          "lower_bake": "Backen (unten)",
-          "lower_convection_bake": "Umluftbacken (unten)",
-          "steam_bake": "Dampfbacken",
-          "steam_roast": "Dampfbraten",
-          "upper_steam_bake": "Dampfbacken (oben)",
-          "descale": "Entkalken",
           "drain": "Wasser ablassen",
-          "healthycook1": "Gesundes Garen: Ofenkartoffel",
-          "upper_healthycook1": "Gesundes Garen: Ofenkartoffel",
-          "lower_healthycook1": "Gesundes Garen: Ofenkartoffel",
-          "healthycook2": "Gesundes Garen: gegrilltes Hähnchen",
-          "upper_healthycook2": "Gesundes Garen: gegrilltes Hähnchen",
-          "lower_healthycook2": "Gesundes Garen: gegrilltes Hähnchen",
-          "healthycook3": "Gesundes Garen: Lachssteak",
-          "upper_healthycook3": "Gesundes Garen: Lachssteak",
-          "lower_healthycook3": "Gesundes Garen: Lachssteak",
-          "healthycook4": "Gesundes Garen: Weißfischfilet",
-          "upper_healthycook4": "Gesundes Garen: Weißfischfilet",
-          "lower_healthycook4": "Gesundes Garen: Weißfischfilet",
-          "healthycook5": "Gesundes Garen: Dörren",
-          "healthycook6": "Gesundes Garen: Teig gehen lassen"
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen 1 (oben)",
+          "upper_healthycook2": "Gesundes Garen 2 (oben)",
+          "upper_healthycook3": "Gesundes Garen 3 (oben)",
+          "upper_healthycook4": "Gesundes Garen 4 (oben)",
+          "lower_healthycook1": "Gesundes Garen 1 (unten)",
+          "lower_healthycook2": "Gesundes Garen 2 (unten)",
+          "lower_healthycook3": "Gesundes Garen 3 (unten)",
+          "lower_healthycook4": "Gesundes Garen 4 (unten)"
         }
       },
       "operating_mode": {
@@ -1193,6 +1228,28 @@
           "off": "Aus",
           "low": "Niedrig",
           "high": "Hoch"
+        }
+      },
+      "audio_prompt_language": {
+        "name": "Sprache der Sprachansagen",
+        "state": {
+          "eng": "Englisch",
+          "deu": "Deutsch",
+          "fra": "Französisch",
+          "kor": "Koreanisch",
+          "spa": "Spanisch",
+          "eng_uk": "Englisch (UK)",
+          "ita": "Italienisch"
+        }
+      },
+      "equalizer": {
+        "name": "Equalizer",
+        "state": {
+          "none": "Keiner",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klassik",
+          "custom": "Benutzerdefiniert"
         }
       }
     },
@@ -1754,6 +1811,31 @@
       },
       "three_way_valve": {
         "name": "3-Wege-Ventil"
+      },
+      "current_eq_mode": {
+        "name": "Aktueller EQ-Modus"
+      },
+      "installation_type": {
+        "name": "Installationstyp"
+      },
+      "micom_version": {
+        "name": "Micom-Version"
+      },
+      "network_connection": {
+        "name": "Verbindung",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Ton aus"
+      },
+      "speaker_status": {
+        "name": "Lautsprecherstatus"
+      },
+      "wifi_signal": {
+        "name": "WLAN-Signal"
       }
     },
     "switch": {
@@ -2008,6 +2090,36 @@
       },
       "extra_rinse": {
         "name": "Extra-Spülen"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Sprachansagen"
+      },
+      "auto_power_down": {
+        "name": "Automatisches Ausschalten"
+      },
+      "auto_update": {
+        "name": "Automatische Aktualisierung"
+      },
+      "bass_boost": {
+        "name": "Bassverstärkung"
+      },
+      "night_mode": {
+        "name": "Nachtmodus"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Stimmverstärker"
       }
     },
     "time": {

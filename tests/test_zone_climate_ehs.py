@@ -60,8 +60,8 @@ def test_zone1_reads_power_mode_and_temperatures():
     entity, _, _ = _entity(resources, "zone_climate")
     assert entity.hvac_mode == HVACMode.OFF  # the dump's zone power is Off
     assert entity.hvac_modes == [HVACMode.OFF, HVACMode.COOL, HVACMode.HEAT, HVACMode.AUTO]
-    assert entity.current_temperature == 30.0
-    assert entity.target_temperature == 5.0
+    assert entity.native_current_temperature == 30.0
+    assert entity.native_target_temperature == 5.0
     assert (entity.min_temp, entity.max_temp, entity.target_temperature_step) == (5.0, 25.0, 0.5)
 
     resources["/power/vs/0"] = {"x.com.samsung.da.power": "On"}
@@ -104,9 +104,9 @@ def test_zone2_writes_its_own_power_and_setpoint_but_the_shared_mode():
     resources = _two_zone_resources()
     entity, _, bound = _entity(resources, "zone2_climate")
     assert entity.hvac_mode == HVACMode.OFF  # zone2 is off on the dump
-    assert (entity.current_temperature, entity.target_temperature) == (23.0, 18.0)
+    assert (entity.native_current_temperature, entity.native_target_temperature) == (23.0, 18.0)
     # zone2's temperature resource carries no unit field; Celsius is the fallback.
-    assert entity.temperature_unit == "°C"
+    assert entity.native_temperature_unit == "°C"
     resources["/power/zone2/vs/0"] = {"x.com.samsung.da.power": "On"}
     assert entity.hvac_mode == HVACMode.COOL
     assert _write(bound, ("power", False)) == (

@@ -190,29 +190,6 @@ def _specless_temps(live: list) -> dict[str, TempSpec]:
 _OPEN_TIME_MAX = parse_hms("23:59:00")
 
 
-def healthy_cook_temps(resources: dict, mode: str | None = None) -> dict[str, TempSpec] | None:
-    """NV51K7770S manual limits and owner-confirmed recipe presets."""
-    from .oven import has_healthy_cook_recipes
-
-    if not has_healthy_cook_recipes(resources):
-        return None
-    mode = mode or current_mode(resources) or ""
-    if mode == "Healthycook5":
-        return {"C": TempSpec(40, 105, 65, 5), "F": TempSpec(100, 225, 150, 5)}
-    if mode == "Healthycook6":
-        # The fixed 40 C fallback is inferred from the captured 100 F target
-        # using the five-degree rounding seen in the other recipe presets.
-        return {"C": TempSpec(40, 40, 40, 1), "F": TempSpec(100, 100, 100, 1)}
-    recipe = mode.removeprefix("Upper").removeprefix("Lower")
-    if recipe not in {f"Healthycook{i}" for i in range(1, 5)}:
-        return None
-    divided = mode.startswith(("Upper", "Lower"))
-    return {
-        "C": TempSpec(80, 250 if divided else 285, 205 if recipe == "Healthycook4" else 190, 5),
-        "F": TempSpec(175, 480 if divided else 550, 400 if recipe == "Healthycook4" else 375, 5),
-    }
-
-
 def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
     """A board with no modeSpec starts the same way (the NW9000KD started
     Bake from Ready, #300), so its own live modes are offered, bounded by its
@@ -224,7 +201,7 @@ def _specless_specs(resources: dict) -> dict[str, ModeSpec]:
         mode: ModeSpec(
             mode=mode,
             control=START_CONTROL,
-            temps=(healthy_cook_temps(resources, mode) or temps) if temps else {},
+            temps=temps,
             time_max=_OPEN_TIME_MAX,
             time_optional=True,
         )
@@ -627,6 +604,7 @@ PARAM_START = "start"
 def _device_values(resources: dict) -> tuple:
     return (
         current_mode(resources),
+        device_unit(resources),
         _temp_item(resources).get(_DESIRED),
         (resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME),
     )
@@ -637,10 +615,9 @@ class HeldCook:
     kept here rather than written (the board discards them from `Ready`)
     until a start sends them.
 
-    Same rules as the 8888 washer's held course (#519): a new mode brings
-    its own defaults, so it drops a held setpoint and time; and everything
-    is dropped once the oven leaves `Ready` or its own mode, setpoint or
-    time changes, since the panel has been used.
+    The first mode selection validates earlier entries; reselecting it
+    preserves them. A different mode brings its own defaults. Panel
+    changes or leaving `Ready` discard held choices.
     """
 
     def __init__(self) -> None:
@@ -655,13 +632,10 @@ class HeldCook:
         """Validate `value` against the declaration and hold it. Raises
         CookStartError when the board rules it out."""
         self._expire(resources)
-        # Checked as the start would be: against the held mode (else the
-        # board's default) and whatever else is already held.
-        if param == PARAM_MODE:
-            plan_start(resources, mode=value, complete=False)
+        held = {**self.values, param: value}
+        if param == PARAM_MODE and self.values.get(PARAM_MODE) not in (None, value):
             held = {PARAM_MODE: value}
-        else:
-            held = {**self.values, param: value}
+        try:
             plan = plan_start(
                 resources,
                 mode=held.get(PARAM_MODE),
@@ -669,10 +643,33 @@ class HeldCook:
                 duration=held.get(PARAM_DURATION),
                 complete=False,
             )
-            held = {
-                **held,
-                param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
-            }
+        except CookStartError as err:
+            if err.key != "cook_mode_required" or param not in (PARAM_TEMPERATURE, PARAM_DURATION):
+                raise
+            # Without a default mode (NV51K7770S), one available mode must
+            # accept the whole combination before it can be held.
+            for candidate in startable_modes(resources):
+                try:
+                    plan_start(
+                        resources,
+                        mode=candidate,
+                        temperature=held.get(PARAM_TEMPERATURE),
+                        duration=held.get(PARAM_DURATION),
+                        complete=False,
+                    )
+                except CookStartError:
+                    continue
+                break
+            else:
+                raise
+            # A candidate check must not choose a mode or round its inputs.
+        else:
+            for key, normalized in (
+                (PARAM_TEMPERATURE, plan.temperature),
+                (PARAM_DURATION, plan.duration),
+            ):
+                if key in held:
+                    held[key] = normalized
         if not self.values:
             self._base = _device_values(resources)
         self.values = held

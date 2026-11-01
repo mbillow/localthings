@@ -167,11 +167,17 @@ _LOWER_PREFIX = "Lower"
 CAVITY_UPPER = "upper"
 CAVITY_LOWER = "lower"
 
-# A lower cavity naming no Lower modes of its own runs these. The
-# NV51K777OS's (#572) reports the upper cavity's list: cooks started at the
-# panel ran as LowerConvectionBake with the divider in, and the other two are
-# the reporter's reading of the panel.
-_ASSUMED_LOWER_MODES = ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast")
+# The NV51K7770S repeats its upper list, so use its panel-confirmed lower
+# modes (#572); the NW9300MD also reports LowerHealthycook1-4 itself (#681).
+_ASSUMED_LOWER_MODES = (
+    "LowerBake",
+    "LowerConvectionBake",
+    "LowerConvectionRoast",
+    "LowerHealthycook1",
+    "LowerHealthycook2",
+    "LowerHealthycook3",
+    "LowerHealthycook4",
+)
 
 _IDLE_MODE = "NoOperation"
 
@@ -202,12 +208,7 @@ def divider_in(devices: list) -> bool:
     return any(isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER for d in devices)
 
 
-def with_cavity_modes(
-    bodies: dict[str, Any],
-    lower: bool,
-    divided: bool | None,
-    information: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
+def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None) -> dict[str, Any]:
     """`bodies` with `Mode.supportedModes` narrowed to what this cavity can
     run: Upper modes on the upper cavity with the divider in, unprefixed ones
     with it out, Lower modes on the lower cavity and none with the divider
@@ -220,13 +221,7 @@ def with_cavity_modes(
     supported = _supported_modes(bodies)
     if lower:
         own = [m for m in supported if m.startswith(_LOWER_PREFIX)]
-        fallback = _ASSUMED_LOWER_MODES
-        info = information or {}
-        # Panel-started NV51K7770S recipes use these Lower codes, which its
-        # static list omits. CombiOven models share the board, not this menu.
-        if is_lcd_ov_wall_16k(info.get("modelID")) and info.get("deviceSubType") == "WallOven":
-            fallback = (*fallback, *(f"LowerHealthycook{i}" for i in range(1, 5)))
-        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or fallback)]
+        modes = [_IDLE_MODE] if divided is False else [_IDLE_MODE, *(own or _ASSUMED_LOWER_MODES)]
     elif divided is None:
         return bodies
     elif divided:
@@ -399,6 +394,27 @@ def course_table(family: str) -> dict[str, dict]:
     if not table:
         return {}
     return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
+
+
+# Every slot on a bridge shares one panel, so one unit. The TP6X_OV combo's
+# oven labels its Temperatures "Celsius" whatever the panel shows: preheating
+# to 350 F it read 350 "Celsius" (#674). Device 0 labels its own right.
+def with_panel_unit(bodies: dict[str, Any], main_bodies: Mapping[str, Any]) -> dict[str, Any]:
+    """A sibling's `bodies` with its Temperatures in the main unit's unit;
+    unchanged until the main unit has been read."""
+    unit = _first_unit(main_bodies)
+    temperatures = bodies.get("Temperatures")
+    if unit is None or not isinstance(temperatures, list):
+        return bodies
+    relabeled = [{**t, "unit": unit} if isinstance(t, dict) else t for t in temperatures]
+    return {**bodies, "Temperatures": relabeled}
+
+
+def _first_unit(bodies: Mapping[str, Any]) -> str | None:
+    temperatures = bodies.get("Temperatures")
+    first = temperatures[0] if isinstance(temperatures, list) and temperatures else None
+    unit = first.get("unit") if isinstance(first, dict) else None
+    return unit if isinstance(unit, str) else None
 
 
 def _bare(name: str) -> str:

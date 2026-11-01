@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Aquecedor auxiliar"
+      },
+      "bluetooth_pairing": {
+        "name": "Pareamento Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Alto-falantes traseiros"
+      },
+      "woofer_connection": {
+        "name": "Conexão do subwoofer"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Iniciar cozimento"
+      },
+      "pair_bluetooth": {
+        "name": "Parear Bluetooth"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura desejada da zona"
+      },
+      "audio_sync": {
+        "name": "Sincronização de áudio"
+      },
+      "bass": {
+        "name": "Graves"
+      },
+      "channel_level_center": {
+        "name": "Nível central"
+      },
+      "channel_level_front_top": {
+        "name": "Nível frontal superior"
+      },
+      "channel_level_rear": {
+        "name": "Nível traseiro"
+      },
+      "channel_level_rear_side": {
+        "name": "Nível traseiro lateral"
+      },
+      "channel_level_rear_top": {
+        "name": "Nível traseiro superior"
+      },
+      "channel_level_side": {
+        "name": "Nível lateral"
+      },
+      "channel_level_wide": {
+        "name": "Nível amplo"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Agudos"
+      },
+      "woofer_level": {
+        "name": "Nível do subwoofer"
       }
     },
     "select": {
@@ -663,52 +729,21 @@
           "steam_roast": "Dourar com vapor",
           "upper_steam_bake": "Assar com vapor na cavidade superior",
           "descale": "Descalcificar",
-          "drain": "Drenar"
-        }
-      },
-      "oven_mode_lcd_wall_16k": {
-        "name": "Modo de cozimento",
-        "state": {
-          "no_operation": "Sem operação",
-          "bake": "Assar",
-          "broil": "Grelhar",
-          "convection": "Convecção",
-          "convection_bake": "Assar com convecção",
-          "convection_broil": "Grelhar com convecção",
-          "frozen_pizza_plus": "Pizza congelada+",
-          "slow_cook": "Cozimento lento",
-          "plate_warm": "Aquecer pratos",
-          "air_fry": "Fritar com ar",
-          "convection_roast": "Dourar com convecção",
-          "keep_warm": "Manter aquecido",
-          "bread_proof": "Fermentar pão",
-          "dehydrate": "Desidratar",
-          "self_clean": "Autolimpeza",
-          "air_fryer": "Fritar com ar",
-          "upper_broil": "Grelhar na cavidade superior",
-          "upper_convection_bake": "Assar com convecção na cavidade superior",
-          "upper_convection_roast": "Dourar com convecção na cavidade superior",
-          "lower_bake": "Assar na cavidade inferior",
-          "lower_convection_bake": "Assar com convecção na cavidade inferior",
-          "steam_bake": "Assar com vapor",
-          "steam_roast": "Dourar com vapor",
-          "upper_steam_bake": "Assar com vapor na cavidade superior",
-          "descale": "Descalcificar",
           "drain": "Drenar",
-          "healthycook1": "Cozimento saudável: batata assada",
-          "upper_healthycook1": "Cozimento saudável: batata assada",
-          "lower_healthycook1": "Cozimento saudável: batata assada",
-          "healthycook2": "Cozimento saudável: frango grelhado",
-          "upper_healthycook2": "Cozimento saudável: frango grelhado",
-          "lower_healthycook2": "Cozimento saudável: frango grelhado",
-          "healthycook3": "Cozimento saudável: posta de salmão",
-          "upper_healthycook3": "Cozimento saudável: posta de salmão",
-          "lower_healthycook3": "Cozimento saudável: posta de salmão",
-          "healthycook4": "Cozimento saudável: filé de peixe branco",
-          "upper_healthycook4": "Cozimento saudável: filé de peixe branco",
-          "lower_healthycook4": "Cozimento saudável: filé de peixe branco",
-          "healthycook5": "Cozimento saudável: desidratar",
-          "healthycook6": "Cozimento saudável: fermentar pão"
+          "healthycook1": "Cozimento saudável 1",
+          "healthycook2": "Cozimento saudável 2",
+          "healthycook3": "Cozimento saudável 3",
+          "healthycook4": "Cozimento saudável 4",
+          "healthycook5": "Cozimento saudável 5",
+          "healthycook6": "Cozimento saudável 6",
+          "upper_healthycook1": "Cozimento saudável 1 na cavidade superior",
+          "upper_healthycook2": "Cozimento saudável 2 na cavidade superior",
+          "upper_healthycook3": "Cozimento saudável 3 na cavidade superior",
+          "upper_healthycook4": "Cozimento saudável 4 na cavidade superior",
+          "lower_healthycook1": "Cozimento saudável 1 na cavidade inferior",
+          "lower_healthycook2": "Cozimento saudável 2 na cavidade inferior",
+          "lower_healthycook3": "Cozimento saudável 3 na cavidade inferior",
+          "lower_healthycook4": "Cozimento saudável 4 na cavidade inferior"
         }
       },
       "operating_mode": {
@@ -1193,6 +1228,28 @@
           "off": "Desligado",
           "low": "Baixo",
           "high": "Alto"
+        }
+      },
+      "audio_prompt_language": {
+        "name": "Idioma dos avisos de áudio",
+        "state": {
+          "eng": "Inglês",
+          "deu": "Alemão",
+          "fra": "Francês",
+          "kor": "Coreano",
+          "spa": "Espanhol",
+          "eng_uk": "Inglês (Reino Unido)",
+          "ita": "Italiano"
+        }
+      },
+      "equalizer": {
+        "name": "Equalizador",
+        "state": {
+          "none": "Nenhum",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Clássico",
+          "custom": "Personalizado"
         }
       }
     },
@@ -1754,6 +1811,31 @@
       },
       "three_way_valve": {
         "name": "Válvula de 3 vias"
+      },
+      "current_eq_mode": {
+        "name": "Modo de EQ atual"
+      },
+      "installation_type": {
+        "name": "Tipo de instalação"
+      },
+      "micom_version": {
+        "name": "Versão do micom"
+      },
+      "network_connection": {
+        "name": "Conexão",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Origem do som"
+      },
+      "speaker_status": {
+        "name": "Status dos alto-falantes"
+      },
+      "wifi_signal": {
+        "name": "Sinal Wi-Fi"
       }
     },
     "switch": {
@@ -2008,6 +2090,36 @@
       },
       "extra_rinse": {
         "name": "Enxágue extra"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Avisos de áudio"
+      },
+      "auto_power_down": {
+        "name": "Desligamento automático"
+      },
+      "auto_update": {
+        "name": "Atualização automática"
+      },
+      "bass_boost": {
+        "name": "Reforço de graves"
+      },
+      "night_mode": {
+        "name": "Modo noturno"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Amplificador de voz"
       }
     },
     "time": {

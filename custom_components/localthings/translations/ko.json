@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "보조 히터"
+      },
+      "bluetooth_pairing": {
+        "name": "블루투스 페어링"
+      },
+      "rear_speakers": {
+        "name": "리어 스피커"
+      },
+      "woofer_connection": {
+        "name": "우퍼 연결"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "조리 시작"
+      },
+      "pair_bluetooth": {
+        "name": "블루투스 페어링"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "zone_target_temperature": {
         "name": "구역 목표 온도"
+      },
+      "audio_sync": {
+        "name": "오디오 동기화"
+      },
+      "bass": {
+        "name": "저음"
+      },
+      "channel_level_center": {
+        "name": "센터 레벨"
+      },
+      "channel_level_front_top": {
+        "name": "프런트 탑 레벨"
+      },
+      "channel_level_rear": {
+        "name": "리어 레벨"
+      },
+      "channel_level_rear_side": {
+        "name": "리어 사이드 레벨"
+      },
+      "channel_level_rear_top": {
+        "name": "리어 탑 레벨"
+      },
+      "channel_level_side": {
+        "name": "사이드 레벨"
+      },
+      "channel_level_wide": {
+        "name": "와이드 레벨"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "고음"
+      },
+      "woofer_level": {
+        "name": "우퍼 레벨"
       }
     },
     "select": {
@@ -663,52 +729,21 @@
           "steam_roast": "스팀 로스트",
           "upper_steam_bake": "스팀 베이크 (상단)",
           "descale": "석회 제거",
-          "drain": "배수"
-        }
-      },
-      "oven_mode_lcd_wall_16k": {
-        "name": "조리 모드",
-        "state": {
-          "no_operation": "작동 안 함",
-          "bake": "베이크",
-          "broil": "브로일",
-          "convection": "컨벡션",
-          "convection_bake": "컨벡션 베이크",
-          "convection_broil": "컨벡션 브로일",
-          "frozen_pizza_plus": "냉동 피자+",
-          "slow_cook": "저온 조리",
-          "plate_warm": "접시 데우기",
-          "air_fry": "에어프라이",
-          "convection_roast": "컨벡션 로스트",
-          "keep_warm": "보온",
-          "bread_proof": "발효",
-          "dehydrate": "건조",
-          "self_clean": "자동 세척",
-          "air_fryer": "에어프라이",
-          "upper_broil": "브로일 (상단)",
-          "upper_convection_bake": "컨벡션 베이크 (상단)",
-          "upper_convection_roast": "컨벡션 로스트 (상단)",
-          "lower_bake": "베이크 (하단)",
-          "lower_convection_bake": "컨벡션 베이크 (하단)",
-          "steam_bake": "스팀 베이크",
-          "steam_roast": "스팀 로스트",
-          "upper_steam_bake": "스팀 베이크 (상단)",
-          "descale": "석회 제거",
           "drain": "배수",
-          "healthycook1": "건강 요리 구운 감자",
-          "upper_healthycook1": "건강 요리 구운 감자",
-          "lower_healthycook1": "건강 요리 구운 감자",
-          "healthycook2": "건강 요리 그릴 치킨",
-          "upper_healthycook2": "건강 요리 그릴 치킨",
-          "lower_healthycook2": "건강 요리 그릴 치킨",
-          "healthycook3": "건강 요리 연어 스테이크",
-          "upper_healthycook3": "건강 요리 연어 스테이크",
-          "lower_healthycook3": "건강 요리 연어 스테이크",
-          "healthycook4": "건강 요리 흰살 생선 필레",
-          "upper_healthycook4": "건강 요리 흰살 생선 필레",
-          "lower_healthycook4": "건강 요리 흰살 생선 필레",
-          "healthycook5": "건강 요리 건조",
-          "healthycook6": "건강 요리 발효"
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
         }
       },
       "operating_mode": {
@@ -1193,6 +1228,28 @@
           "off": "꺼짐",
           "low": "약",
           "high": "강"
+        }
+      },
+      "audio_prompt_language": {
+        "name": "음성 안내 언어",
+        "state": {
+          "eng": "영어",
+          "deu": "독일어",
+          "fra": "프랑스어",
+          "kor": "한국어",
+          "spa": "스페인어",
+          "eng_uk": "영어 (UK)",
+          "ita": "이탈리아어"
+        }
+      },
+      "equalizer": {
+        "name": "이퀄라이저",
+        "state": {
+          "none": "없음",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "클래식",
+          "custom": "사용자 정의"
         }
       }
     },
@@ -1754,6 +1811,31 @@
       },
       "three_way_valve": {
         "name": "3방 밸브"
+      },
+      "current_eq_mode": {
+        "name": "현재 EQ 모드"
+      },
+      "installation_type": {
+        "name": "설치 유형"
+      },
+      "micom_version": {
+        "name": "마이컴 버전"
+      },
+      "network_connection": {
+        "name": "연결",
+        "state": {
+          "ethernet": "이더넷",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "사운드 출처"
+      },
+      "speaker_status": {
+        "name": "스피커 상태"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi 신호"
       }
     },
     "switch": {
@@ -2008,6 +2090,36 @@
       },
       "extra_rinse": {
         "name": "헹굼 추가"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "음성 안내"
+      },
+      "auto_power_down": {
+        "name": "자동 꺼짐"
+      },
+      "auto_update": {
+        "name": "자동 업데이트"
+      },
+      "bass_boost": {
+        "name": "베이스 부스트"
+      },
+      "night_mode": {
+        "name": "야간 모드"
+      },
+      "pass_through": {
+        "name": "패스스루"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "음성 증폭"
       }
     },
     "time": {
