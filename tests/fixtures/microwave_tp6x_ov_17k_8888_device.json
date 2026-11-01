@@ -1,0 +1,688 @@
+{
+ "note": "TP6X_OV_17K, NQ70M6650DS microwave/oven combo (issue #674): `bodies` and `device_bodies` are the `transport` block of a LocalThings 0.33.0 diagnostics download, verbatim -- /devices/0 (the microwave), /devices/1 (a blank slot /devices does not list) and /devices/2 (the oven), each merged with its linked configuration and information resources. Captured idle. Carries no serial or uuid.",
+ "seeds_note": "device0 and seeds are constructed, not captured: each is its `bodies` entry run through legacy_http.to_resources with this family's table, the sibling hrefs reindexed per Subdevice.to_actual, and /connected/vs/<n> set from whether /devices listed that sibling (the dump's subdevices_skipped recorded Off for 1, On for 2) -- what LegacyHttpTransport._read_seed returns for the same bodies.",
+ "bodies": {
+  "Alarms": [
+   {
+    "alarmType": "Device",
+    "code": "WO_E",
+    "id": "0",
+    "triggeredTime": "2026-10-23T15:37:06"
+   }
+  ],
+  "ConfigurationLink": {
+   "href": "/devices/0/configuration"
+  },
+  "Diagnosis": {
+   "diagnosisStart": "Ready"
+  },
+  "Doors": [
+   {
+    "id": "0",
+    "openState": "Close"
+   }
+  ],
+  "InformationLink": {
+   "href": "/devices/0/information"
+  },
+  "Mode": {
+   "modes": [
+    "NoOperation"
+   ],
+   "options": [
+    "DeviceType_NW9300MD/AA1",
+    "Sound_On",
+    "AdjustingTemp_30",
+    "Sabbath_Off",
+    "EnergySaving_Off"
+   ],
+   "supportedModes": [
+    "MicroWave,SpeedBroil,BroilS,Autocook,NoOperation,Convection,SpeedConvection"
+   ]
+  },
+  "Operation": {
+   "kidsLock": "Ready",
+   "operationTime": "00:00:00",
+   "power": "On",
+   "progressPercentage": 1,
+   "remainingTime": "00:00:00",
+   "state": "Ready"
+  },
+  "Oven": {
+   "CustomRecipesLink": {
+    "href": "/devices/0/oven/customrecipes"
+   },
+   "powerLevel": "0",
+   "recipe": "00000000000000",
+   "state": "Ready"
+  },
+  "Temperatures": [
+   {
+    "current": 0.0,
+    "desired": 0.0,
+    "id": "0",
+    "unit": "Fahrenheit"
+   }
+  ],
+  "resources": [
+   "Alarms",
+   "Configuration",
+   "Diagnosis",
+   "Doors",
+   "Information",
+   "Mode",
+   "Operation",
+   "Oven",
+   "Temperatures"
+  ],
+  "type": "Oven",
+  "Configuration": {
+   "region": "000",
+   "remoteControlEnabled": false
+  },
+  "Information": {
+   "Versions": [
+    {
+     "id": "0",
+     "newVersionAvailable": false,
+     "number": "04080A200322",
+     "type": "Software"
+    },
+    {
+     "id": "1",
+     "newVersionAvailable": false,
+     "number": "17101300,17010400",
+     "type": "Firmware"
+    }
+   ],
+   "description": "TP6X_OV_17K",
+   "deviceSubType": "CombiOven",
+   "manufacturer": "Samsung Electronics",
+   "modelID": "TP6X_OV_17K|40407641|"
+  }
+ },
+ "device_bodies": {
+  "1": {
+   "Alarms": [
+    {
+     "alarmType": "Device",
+     "code": "WO_E",
+     "id": "0",
+     "triggeredTime": "2026-10-23T15:26:57"
+    }
+   ],
+   "ConfigurationLink": {
+    "href": "/devices/1/configuration"
+   },
+   "Diagnosis": {
+    "diagnosisStart": "Ready"
+   },
+   "Doors": [
+    {
+     "id": "0"
+    }
+   ],
+   "InformationLink": {
+    "href": "/devices/1/information"
+   },
+   "Mode": {
+    "modes": [
+     "0"
+    ],
+    "options": [
+     "DeviceType_NULL",
+     "Sound_0",
+     "AdjustingTemp_0",
+     "Sabbath_0",
+     "EnergySaving_0"
+    ],
+    "supportedModes": [
+     ""
+    ]
+   },
+   "Operation": {
+    "power": "Off"
+   },
+   "Oven": {
+    "CustomRecipesLink": {
+     "href": "/devices/1/oven/customrecipes"
+    },
+    "powerLevel": "0",
+    "recipe": "00000000000000",
+    "state": "Ready"
+   },
+   "Temperatures": [
+    {
+     "current": 0.0,
+     "desired": 0.0,
+     "id": "0",
+     "unit": "Celsius"
+    }
+   ],
+   "resources": [
+    "Alarms",
+    "Configuration",
+    "Diagnosis",
+    "Doors",
+    "Information",
+    "Mode",
+    "Operation",
+    "Oven",
+    "Temperatures"
+   ],
+   "type": "Oven",
+   "Configuration": {
+    "region": "000",
+    "remoteControlEnabled": false
+   },
+   "Information": {
+    "Versions": [
+     {
+      "id": "0",
+      "newVersionAvailable": false,
+      "number": "04080A200322",
+      "type": "Software"
+     },
+     {
+      "id": "1",
+      "newVersionAvailable": false,
+      "number": "17101300,17010400",
+      "type": "Firmware"
+     }
+    ],
+    "description": "TP6X_OV_17K",
+    "deviceSubType": "CombiOven",
+    "manufacturer": "Samsung Electronics",
+    "modelID": "TP6X_OV_17K|40407641|"
+   }
+  },
+  "2": {
+   "Alarms": [],
+   "ConfigurationLink": {
+    "href": "/devices/2/configuration"
+   },
+   "Doors": [
+    {
+     "id": "0",
+     "openState": "Close"
+    }
+   ],
+   "InformationLink": {
+    "href": "/devices/2/information"
+   },
+   "Mode": {
+    "modes": [
+     "NoOperation"
+    ],
+    "options": [
+     "keepWarmReservation_Off",
+     "meatprobe_disconnected",
+     "NoPreheat_Off",
+     "waterInlet_Open",
+     "steamAddLevel_0",
+     "descaleAlarm_Normal",
+     "descaleNewWaterAlarm_Off",
+     "descaleEmptyWaterAlarm_Off",
+     "steamGeneratorLevel_Empty",
+     "steamUsingTime_0000",
+     "drainRequired_00",
+     "steamState_Standby",
+     "descaleState_Standby",
+     "waterTankInSwitch_On",
+     "pyroFreeState_Standby",
+     "waterTankOutSwitch_Off"
+    ],
+    "supportedModes": [
+     "ConvectionBake,ConvectionRoast,Bake,Broil,SteamBake,SteamRoast,Easycook3,Descale,PyroFree,Drain,SelfClean,NoOperation"
+    ]
+   },
+   "Operation": {
+    "operationTime": "00:00:00",
+    "power": "On",
+    "progressPercentage": 1,
+    "remainingTime": "00:00:00",
+    "state": "Ready"
+   },
+   "Oven": {
+    "CustomRecipesLink": {
+     "href": "/devices/2/oven/customrecipes"
+    },
+    "state": "Ready"
+   },
+   "Temperatures": [
+    {
+     "current": 0.0,
+     "desired": 0.0,
+     "id": "0",
+     "unit": "Celsius"
+    },
+    {
+     "current": 0.0,
+     "desired": 0.0,
+     "id": "1",
+     "unit": "Celsius"
+    }
+   ],
+   "resources": [
+    "Alarms",
+    "Configuration",
+    "Diagnosis",
+    "Doors",
+    "Information",
+    "Mode",
+    "Operation",
+    "Oven",
+    "Temperatures"
+   ],
+   "type": "Oven",
+   "Configuration": {
+    "region": "000",
+    "remoteControlEnabled": true
+   },
+   "Information": {
+    "Versions": [
+     {
+      "id": "0",
+      "newVersionAvailable": false,
+      "number": "04080A200322",
+      "type": "Software"
+     },
+     {
+      "id": "1",
+      "newVersionAvailable": false,
+      "number": "17101300,17010400",
+      "type": "Firmware"
+     }
+    ],
+    "description": "TP6X_OV_17K",
+    "deviceSubType": "CombiOven",
+    "manufacturer": "Samsung Electronics",
+    "modelID": "TP6X_OV_17K|40407641|"
+   }
+  }
+ },
+ "device0": [
+  {
+   "href": "/kidslock/vs/0",
+   "rep": {
+    "x.com.samsung.da.kidsLock": "Ready"
+   }
+  },
+  {
+   "href": "/operational/state/vs/0",
+   "rep": {
+    "x.com.samsung.da.operationTime": "00:00:00",
+    "x.com.samsung.da.progressPercentage": 1,
+    "x.com.samsung.da.remainingTime": "00:00:00",
+    "x.com.samsung.da.state": "Ready"
+   }
+  },
+  {
+   "href": "/power/vs/0",
+   "rep": {
+    "x.com.samsung.da.power": "On"
+   }
+  },
+  {
+   "href": "/mode/vs/0",
+   "rep": {
+    "x.com.samsung.da.modes": [
+     "NoOperation"
+    ],
+    "x.com.samsung.da.options": [
+     "DeviceType_NW9300MD/AA1",
+     "Sound_On",
+     "AdjustingTemp_30",
+     "Sabbath_Off",
+     "EnergySaving_Off"
+    ],
+    "x.com.samsung.da.supportedModes": [
+     "MicroWave",
+     "SpeedBroil",
+     "BroilS",
+     "Autocook",
+     "NoOperation",
+     "Convection",
+     "SpeedConvection"
+    ]
+   }
+  },
+  {
+   "href": "/oven/vs/0",
+   "rep": {
+    "x.com.samsung.da.CustomRecipesLink": {
+     "x.com.samsung.da.href": "/devices/0/oven/customrecipes"
+    },
+    "x.com.samsung.da.powerLevel": "0",
+    "x.com.samsung.da.recipe": "00000000000000",
+    "x.com.samsung.da.state": "Ready"
+   }
+  },
+  {
+   "href": "/temperatures/vs/0",
+   "rep": {
+    "x.com.samsung.da.items": [
+     {
+      "x.com.samsung.da.current": 0.0,
+      "x.com.samsung.da.desired": 0.0,
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.unit": "Fahrenheit"
+     }
+    ]
+   }
+  },
+  {
+   "href": "/doors/vs/0",
+   "rep": {
+    "x.com.samsung.da.items": [
+     {
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.openState": "Close"
+     }
+    ]
+   }
+  },
+  {
+   "href": "/remotectrl/vs/0",
+   "rep": {
+    "x.com.samsung.da.region": "000",
+    "x.com.samsung.da.remoteControlEnabled": false
+   }
+  },
+  {
+   "href": "/information/vs/0",
+   "rep": {
+    "x.com.samsung.da.Versions": [
+     {
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "04080A200322",
+      "x.com.samsung.da.type": "Software"
+     },
+     {
+      "x.com.samsung.da.id": "1",
+      "x.com.samsung.da.newVersionAvailable": false,
+      "x.com.samsung.da.number": "17101300,17010400",
+      "x.com.samsung.da.type": "Firmware"
+     }
+    ],
+    "x.com.samsung.da.description": "TP6X_OV_17K",
+    "x.com.samsung.da.deviceSubType": "CombiOven",
+    "x.com.samsung.da.manufacturer": "Samsung Electronics",
+    "x.com.samsung.da.modelNum": "TP6X_OV_17K|40407641|"
+   }
+  },
+  {
+   "href": "/diagnosis/vs/0",
+   "rep": {
+    "x.com.samsung.da.diagnosisStart": "Ready"
+   }
+  },
+  {
+   "href": "/alarms/vs/0",
+   "rep": {
+    "x.com.samsung.da.items": [
+     {
+      "x.com.samsung.da.alarmType": "Device",
+      "x.com.samsung.da.code": "WO_E",
+      "x.com.samsung.da.id": "0",
+      "x.com.samsung.da.triggeredTime": "2026-10-23T15:37:06"
+     }
+    ]
+   }
+  }
+ ],
+ "seeds": {
+  "/device/1": [
+   {
+    "href": "/power/vs/1",
+    "rep": {
+     "x.com.samsung.da.power": "Off"
+    }
+   },
+   {
+    "href": "/mode/vs/1",
+    "rep": {
+     "x.com.samsung.da.modes": [
+      "0"
+     ],
+     "x.com.samsung.da.options": [
+      "DeviceType_NULL",
+      "Sound_0",
+      "AdjustingTemp_0",
+      "Sabbath_0",
+      "EnergySaving_0"
+     ],
+     "x.com.samsung.da.supportedModes": []
+    }
+   },
+   {
+    "href": "/oven/vs/1",
+    "rep": {
+     "x.com.samsung.da.CustomRecipesLink": {
+      "x.com.samsung.da.href": "/devices/1/oven/customrecipes"
+     },
+     "x.com.samsung.da.powerLevel": "0",
+     "x.com.samsung.da.recipe": "00000000000000",
+     "x.com.samsung.da.state": "Ready"
+    }
+   },
+   {
+    "href": "/temperatures/vs/1",
+    "rep": {
+     "x.com.samsung.da.items": [
+      {
+       "x.com.samsung.da.current": 0.0,
+       "x.com.samsung.da.desired": 0.0,
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.unit": "Celsius"
+      }
+     ]
+    }
+   },
+   {
+    "href": "/doors/vs/1",
+    "rep": {
+     "x.com.samsung.da.items": [
+      {
+       "x.com.samsung.da.id": "0"
+      }
+     ]
+    }
+   },
+   {
+    "href": "/remotectrl/vs/1",
+    "rep": {
+     "x.com.samsung.da.region": "000",
+     "x.com.samsung.da.remoteControlEnabled": false
+    }
+   },
+   {
+    "href": "/information/vs/1",
+    "rep": {
+     "x.com.samsung.da.Versions": [
+      {
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "04080A200322",
+       "x.com.samsung.da.type": "Software"
+      },
+      {
+       "x.com.samsung.da.id": "1",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "17101300,17010400",
+       "x.com.samsung.da.type": "Firmware"
+      }
+     ],
+     "x.com.samsung.da.description": "TP6X_OV_17K",
+     "x.com.samsung.da.deviceSubType": "CombiOven",
+     "x.com.samsung.da.manufacturer": "Samsung Electronics",
+     "x.com.samsung.da.modelNum": "TP6X_OV_17K|40407641|"
+    }
+   },
+   {
+    "href": "/diagnosis/vs/1",
+    "rep": {
+     "x.com.samsung.da.diagnosisStart": "Ready"
+    }
+   },
+   {
+    "href": "/alarms/vs/1",
+    "rep": {
+     "x.com.samsung.da.items": [
+      {
+       "x.com.samsung.da.alarmType": "Device",
+       "x.com.samsung.da.code": "WO_E",
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.triggeredTime": "2026-10-23T15:26:57"
+      }
+     ]
+    }
+   },
+   {
+    "href": "/connected/vs/1",
+    "rep": {
+     "x.com.samsung.da.connected": "Off"
+    }
+   }
+  ],
+  "/device/2": [
+   {
+    "href": "/operational/state/vs/2",
+    "rep": {
+     "x.com.samsung.da.operationTime": "00:00:00",
+     "x.com.samsung.da.progressPercentage": 1,
+     "x.com.samsung.da.remainingTime": "00:00:00",
+     "x.com.samsung.da.state": "Ready"
+    }
+   },
+   {
+    "href": "/power/vs/2",
+    "rep": {
+     "x.com.samsung.da.power": "On"
+    }
+   },
+   {
+    "href": "/mode/vs/2",
+    "rep": {
+     "x.com.samsung.da.modes": [
+      "NoOperation"
+     ],
+     "x.com.samsung.da.options": [
+      "keepWarmReservation_Off",
+      "meatprobe_disconnected",
+      "NoPreheat_Off",
+      "waterInlet_Open",
+      "steamAddLevel_0",
+      "descaleAlarm_Normal",
+      "descaleNewWaterAlarm_Off",
+      "descaleEmptyWaterAlarm_Off",
+      "steamGeneratorLevel_Empty",
+      "steamUsingTime_0000",
+      "drainRequired_00",
+      "steamState_Standby",
+      "descaleState_Standby",
+      "waterTankInSwitch_On",
+      "pyroFreeState_Standby",
+      "waterTankOutSwitch_Off"
+     ],
+     "x.com.samsung.da.supportedModes": [
+      "ConvectionBake",
+      "ConvectionRoast",
+      "Bake",
+      "Broil",
+      "SteamBake",
+      "SteamRoast",
+      "Easycook3",
+      "Descale",
+      "PyroFree",
+      "Drain",
+      "SelfClean",
+      "NoOperation"
+     ]
+    }
+   },
+   {
+    "href": "/oven/vs/2",
+    "rep": {
+     "x.com.samsung.da.CustomRecipesLink": {
+      "x.com.samsung.da.href": "/devices/2/oven/customrecipes"
+     },
+     "x.com.samsung.da.state": "Ready"
+    }
+   },
+   {
+    "href": "/temperatures/vs/2",
+    "rep": {
+     "x.com.samsung.da.items": [
+      {
+       "x.com.samsung.da.current": 0.0,
+       "x.com.samsung.da.desired": 0.0,
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.unit": "Celsius"
+      },
+      {
+       "x.com.samsung.da.current": 0.0,
+       "x.com.samsung.da.desired": 0.0,
+       "x.com.samsung.da.id": "1",
+       "x.com.samsung.da.unit": "Celsius"
+      }
+     ]
+    }
+   },
+   {
+    "href": "/doors/vs/2",
+    "rep": {
+     "x.com.samsung.da.items": [
+      {
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.openState": "Close"
+      }
+     ]
+    }
+   },
+   {
+    "href": "/remotectrl/vs/2",
+    "rep": {
+     "x.com.samsung.da.region": "000",
+     "x.com.samsung.da.remoteControlEnabled": true
+    }
+   },
+   {
+    "href": "/information/vs/2",
+    "rep": {
+     "x.com.samsung.da.Versions": [
+      {
+       "x.com.samsung.da.id": "0",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "04080A200322",
+       "x.com.samsung.da.type": "Software"
+      },
+      {
+       "x.com.samsung.da.id": "1",
+       "x.com.samsung.da.newVersionAvailable": false,
+       "x.com.samsung.da.number": "17101300,17010400",
+       "x.com.samsung.da.type": "Firmware"
+      }
+     ],
+     "x.com.samsung.da.description": "TP6X_OV_17K",
+     "x.com.samsung.da.deviceSubType": "CombiOven",
+     "x.com.samsung.da.manufacturer": "Samsung Electronics",
+     "x.com.samsung.da.modelNum": "TP6X_OV_17K|40407641|"
+    }
+   },
+   {
+    "href": "/alarms/vs/2",
+    "rep": {
+     "x.com.samsung.da.items": []
+    }
+   },
+   {
+    "href": "/connected/vs/2",
+    "rep": {
+     "x.com.samsung.da.connected": "On"
+    }
+   }
+  ]
+ }
+}

@@ -11,7 +11,7 @@ docker compose logs -f
 
 The `Dockerfile` starts from the official `home-assistant/home-assistant:stable` image and installs `smartthings-local` at build time, so the container doesn't wait on Home Assistant's own pip install at startup. Rebuild with `--build` whenever the pinned `smartthings-local` version changes.
 
-`docker-compose.yml` uses `network_mode: host`, because DTLS runs over UDP and can't reach LAN appliances through Docker's bridge network. It mounts `custom_components/localthings/` read-only into `ha_config/custom_components/`. For verbose protocol logs, set `custom_components.localthings` to `debug` in `ha_config/configuration.yaml`.
+`docker-compose.yml` uses `network_mode: host`, because DTLS runs over UDP and can't reach LAN appliances through Docker's bridge network. It mounts `custom_components/localthings/` read-only into `ha_config/custom_components/`. For verbose protocol logs, set `custom_components.localthings` and `smartthings_local` to `debug` in `ha_config/configuration.yaml`. The integration's "Enable debug logging" toggle raises both.
 
 ## Tests and checks
 
@@ -75,9 +75,10 @@ docker-compose.yml, ha_config/
 1. Get the appliance's resources. Add it to Home Assistant, even if LocalThings doesn't recognize its type, then use **Download diagnostics** on the device. The download holds a redacted copy of every resource the appliance reported.
 2. Reuse the `Capability` objects in `registry/capabilities/` wherever a resource matches one. Most of `common.py` is shared across families, including power, child lock, remote control, alarms, and energy and water meters. Add a capability only for a resource unique to the new type.
 3. Create `registry/by_type/<name>.py` with a `DeviceRegistry(name=..., capabilities=_build([...]))`. Use `pattern_capabilities` for a resource whose href varies, such as a fridge's per-compartment resources. `refrigerator.py` shows how.
-4. Register the new registry in `_REGISTRY_BY_KEY` in `registry/by_type/__init__.py`, then route appliances to it. `resolve()` tries three things in order, and each is a table row rather than new code:
+4. Register the new registry in `_REGISTRY_BY_KEY` in `registry/by_type/__init__.py`, then route appliances to it. `resolve()` tries these in order, and each is a table row rather than new code:
    - a distinctive resource signature in `for_device_by_resources()`, for appliances that report no `/information/vs/0`. Require two independent resources so an unrelated family can't match.
    - the OCF device type from `/oic/d`, in `_OIC_TYPE_TO_KEY`. The diagnostics download shows it under `identity.device_types`. Check this first, because an appliance that names its own type needs no other routing.
+   - for an 8888 appliance, which serves no `/oic/d`, the `deviceSubType` its record reports, in `_DEVICE_SUBTYPE_TO_KEY`.
    - the board token from `modelNum`, in `_BOARD_TOKEN_TO_KEY`, for example `'VSKR': 'vacuum_station'`. LocalThings upper-cases the model string and splits it on non-alphanumerics, so one row matches every spelling. `TP1X_DA-AC-RAC-01001` and `TP2X_RAC_20K` both match `RAC`. Name the specific type, never the board family. `DA-AC-` covers air conditioners, dehumidifiers and air purifiers alike, so an `AC` row would catch all three. Washers and dryers share the `DA_WM_` board, so they route on the consumer-model prefix in `description`, in `_CONSUMER_PREFIX_TO_KEY`.
 5. Add the dump as a fixture and a golden file in `tests/`.
 

@@ -20,7 +20,7 @@ import dataclasses
 from ..capabilities import common, cooktop, ignored
 from ..capabilities import range as range_caps
 from ..capability import Capability
-from ._base import DeviceRegistry, _build
+from ._base import DeviceRegistry, _build, exclude_when
 
 
 def _burner_list_board(rep, resources):
@@ -29,11 +29,16 @@ def _burner_list_board(rep, resources):
 
 _OPTIONS_POWER = dataclasses.replace(
     cooktop.COOKTOP_POWER,
-    match_fn=lambda rep, resources: not _burner_list_board(rep, resources),
+    match_fn=lambda rep, resources: (
+        not _burner_list_board(rep, resources) and not cooktop.is_legacy_hood_slot(resources)
+    ),
 )
 _OPTIONS_MODE = dataclasses.replace(
     cooktop.COOKTOP_MODE,
-    match_fn=lambda rep, resources: not cooktop.is_legacy_radiant_cooktop(rep, resources),
+    match_fn=lambda rep, resources: (
+        not cooktop.is_legacy_radiant_cooktop(rep, resources)
+        and not cooktop.is_legacy_hood_slot(resources)
+    ),
 )
 # POWER_VS_FALLBACK's own rule (the OCF-standard /power/0 wins) plus the
 # surface split.
@@ -51,23 +56,18 @@ def _unique(caps):
     return [c for c in caps if not (id(c) in seen or seen.add(id(c)))]
 
 
-def _exclude_empty_hood(cap):
-    # The unpaired NZ36K7570R hood reports constant power and remote status.
-    # Excluding its entities lets the generic subdevice liveness check reject it.
-    return dataclasses.replace(
-        cap,
-        match_fn=lambda rep, resources: (
-            not cooktop.is_empty_legacy_hood_slot(resources)
-            and (cap.match_fn is None or cap.match_fn(rep, resources))
-        ),
-    )
+# They exclude the empty slot themselves, and fan.py and number.py pick their
+# entity classes by these capabilities.
+_HOOD_CAPS = (cooktop.LEGACY_HOOD_POWER, cooktop.LEGACY_HOOD_MODE)
 
 
 REGISTRY = DeviceRegistry(
     name="cooktop",
     capabilities=_build(
         [
-            _exclude_empty_hood(cap)
+            # The unpaired NZ36K7570R hood reports constant power and remote
+            # status.
+            cap if cap in _HOOD_CAPS else exclude_when(cap, cooktop.is_empty_legacy_hood_slot)
             for cap in _unique(
                 [
                     *ignored.IGNORED,
@@ -78,6 +78,8 @@ REGISTRY = DeviceRegistry(
                     # /mode/vs/0 options-array boards.
                     _OPTIONS_MODE,
                     cooktop.LEGACY_RADIANT_MODE,
+                    cooktop.LEGACY_HOOD_POWER,
+                    cooktop.LEGACY_HOOD_MODE,
                     cooktop.DIAGNOSIS,
                     cooktop.COOKTOP_CONNECTED,
                     # /cooktop/status/vs/0 burnerList boards.

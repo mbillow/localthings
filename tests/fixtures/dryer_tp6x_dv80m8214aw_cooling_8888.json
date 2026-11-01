@@ -1,0 +1,82 @@
+{
+  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #646 (cooling, 82%, six minutes remaining). Information.modelID suffix removed; Versions and link/collection metadata omitted, except the record's own `type`; EnergyConsumption.saveLocation replaced with a generic path; alarm id and triggeredTime replaced with placeholders. All retained operational, setting and Mode fields are unchanged. No write capture.",
+  "bodies": {
+    "type": "Dryer",
+    "Information": {
+      "description": "TP6X_DRYER",
+      "deviceSubType": "Dryer",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "TP6X_DV80M8214AW"
+    },
+    "Operation": {
+      "kidsLock": "Ready",
+      "power": "On",
+      "progress": "Cooling",
+      "progressPercentage": 82,
+      "remainingTime": "00:06:00",
+      "state": "Run",
+      "supportedProgress": [
+        "None",
+        "Finish"
+      ]
+    },
+    "Washer": {
+      "dryLevel": "None",
+      "dryTime": "00:30:00",
+      "dryerType": "Electricity",
+      "supportedDryLevel": [
+        "None",
+        "1",
+        "2",
+        "3"
+      ],
+      "supportedDryTime": [
+        "00:00:00",
+        "00:30:00",
+        "01:00:00",
+        "01:30:00",
+        "02:00:00",
+        "02:30:00"
+      ],
+      "wrinklePrevent": "Off"
+    },
+    "Configuration": {
+      "remoteControlEnabled": true
+    },
+    "Mode": {
+      "options": [
+        "EnergyKW_396",
+        "TimeSync_NotSupported",
+        "NoCheck_SC",
+        "QRatorInfo_DV80M8214AW|30010102001111000100000000000000",
+        "Course_96",
+        "DeviceType_0165",
+        "DrytimeValue_0",
+        "UsagesDB_ok",
+        "LaundryOutTime_0",
+        "MixedLoadBell_Disable",
+        "EnergyLevelSet_050203020205040301020403030505",
+        "MixedLoadBellSet_FFFFFFFFFFFFFFFFFFFFFF020202",
+        "SeamlessControl_Disable",
+        "KidsLockBypass_On"
+      ],
+      "supportedOptions": [
+        "292D10EE00093D102E000A2D204E000B5D102E00094D20EE000A5D204E000B4D204E00096D000E10E97D000E10E95D000E33E98D000E000B6D20EE00099D20EE0009AD20EE000"
+      ]
+    },
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "Alarms": [
+      {
+        "alarmType": "Device",
+        "code": "HeatExchangeClean",
+        "id": "REDACTED",
+        "triggeredTime": "REDACTED"
+      }
+    ],
+    "EnergyConsumption": {
+      "saveLocation": "/files/usage.db"
+    }
+  }
+}

@@ -1,0 +1,2027 @@
+{
+  "device0": [
+    {
+      "href": "/device/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.devcol",
+          "oic.wk.col"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.ll",
+          "oic.if.lb",
+          "oic.if.b"
+        ],
+        "links": [
+          {
+            "href": "/power/0",
+            "rt": [
+              "oic.r.switch.binary"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/power/vs/0",
+            "rt": [
+              "x.com.samsung.da.operation"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/temperature/desired/0",
+            "rt": [
+              "oic.r.temperature"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/temperature/current/0",
+            "rt": [
+              "oic.r.temperature"
+            ],
+            "if": [
+              "oic.if.s"
+            ]
+          },
+          {
+            "href": "/temperatures/indoor/vs/0",
+            "rt": [
+              "x.com.samsung.da.temperatures"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/configuration/vs/0",
+            "rt": [
+              "x.com.samsung.da.configuration"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/alarms/vs/0",
+            "rt": [
+              "x.com.samsung.da.alarms"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/information/vs/0",
+            "rt": [
+              "x.com.samsung.da.information"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/subdevices/vs/0",
+            "rt": [
+              "x.com.samsung.subdevices"
+            ],
+            "if": [
+              "oic.if.ll"
+            ]
+          },
+          {
+            "href": "/remotectrl/vs/0",
+            "rt": [
+              "x.com.samsung.da.configuration"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/da/softreset/vs/0",
+            "rt": [
+              "x.com.samsung.da.softreset"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          },
+          {
+            "href": "/timezone/vs/0",
+            "rt": [
+              "timezone"
+            ],
+            "if": [
+              "oic.if.a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.power": "On",
+        "x.com.samsung.da.displaycondition": "Enable"
+      }
+    },
+    {
+      "href": "/temperatures/indoor/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.temperatures"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.current": 24.0,
+        "x.com.samsung.da.desired": 24.0,
+        "x.com.samsung.da.minimum": 18.0,
+        "x.com.samsung.da.maximum": 30.0,
+        "x.com.samsung.da.increment": 1.0,
+        "x.com.samsung.da.unit": "Celsius",
+        "x.com.samsung.da.type": "Air",
+        "x.com.samsung.da.displaycondition.text": "Hide",
+        "x.com.samsung.da.displaycondition.button": "Hide"
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.configuration"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.region": "",
+        "x.com.samsung.da.countryCode": "GB",
+        "x.com.samsung.da.airconOptionList": [
+          "ENERGY_2.0"
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.information"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.modelNum": "MIM-H04EN|260320|61FFFF00001411000000000000000000",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.description": "OCF Wi-Fi Kit",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.versionId": "Samsung Electronics",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.number": "DB91-02102A 2026-03-20",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.newVersionAvailable": "0",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version"
+          },
+          {
+            "x.com.samsung.da.number": "DB91-02100A 2020-07-10",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.newVersionAvailable": "0",
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/subdevices/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.subdevices"
+        ],
+        "if": [
+          "oic.if.ll"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.trackingState": "Finish",
+            "x.com.samsung.da.registerState": "Registered",
+            "x.com.samsung.da.deviceId": "**REDACTED**",
+            "x.com.samsung.da.masterUuid": "**REDACTED**",
+            "x.com.samsung.da.name": "Wi-Fi Kit",
+            "x.com.samsung.da.description": "OCF Wi-Fi Kit",
+            "x.com.samsung.da.aiVersion": "SAC_19K"
+          },
+          {
+            "x.com.samsung.da.connectState": "Connected",
+            "x.com.samsung.da.registerState": "Registered",
+            "x.com.samsung.da.name": "Heat Pump",
+            "x.com.samsung.da.deviceId": "**REDACTED**",
+            "x.com.samsung.da.masterUuid": "**REDACTED**",
+            "x.com.samsung.da.description": "EHS"
+          }
+        ],
+        "x.com.samsung.da.subdeviceIdList": [
+          "0a1b2c3d-0000-4000-8000-000001200000"
+        ]
+      }
+    },
+    {
+      "href": "/da/softreset/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.softreset"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.softreset": "false"
+      }
+    }
+  ],
+  "oic_res": [
+    {
+      "di": "0a1b2c3d-0000-4000-8000-000000000001",
+      "links": [
+        {
+          "href": "/oic/sec/doxm",
+          "rt": [
+            "oic.r.doxm"
+          ],
+          "if": [
+            "oic.if.baseline"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/oic/sec/pstat",
+          "rt": [
+            "oic.r.pstat"
+          ],
+          "if": [
+            "oic.if.baseline"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/oic/d",
+          "rt": [
+            "oic.wk.d",
+            "oic.d.airconditioner"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.r"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": false,
+            "x.org.iotivity.tcp": 0
+          }
+        },
+        {
+          "href": "/oic/p",
+          "rt": [
+            "oic.wk.p"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.r"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": false,
+            "x.org.iotivity.tcp": 0
+          }
+        },
+        {
+          "href": "/EasySetupResURI",
+          "rt": [
+            "oic.r.easysetup",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.b"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/WiFiConfResURI",
+          "rt": [
+            "oic.r.wificonf"
+          ],
+          "if": [
+            "oic.if.baseline"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/CoapCloudConfResURI",
+          "rt": [
+            "oic.r.coapcloudconf"
+          ],
+          "if": [
+            "oic.if.baseline"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/DevConfResURI",
+          "rt": [
+            "oic.r.devconf"
+          ],
+          "if": [
+            "oic.if.baseline"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/sec/accesspointlist",
+          "rt": [
+            "x.com.samsung.accesspointlist"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/sec/provisioninginfo",
+          "rt": [
+            "x.com.samsung.provisioninginfo"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": false,
+            "x.org.iotivity.tcp": 0
+          }
+        },
+        {
+          "href": "/sec/languagelist",
+          "rt": [
+            "x.com.samsung.languagelist"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": false,
+            "x.org.iotivity.tcp": 0
+          }
+        },
+        {
+          "href": "/autoreconnect/ap",
+          "rt": [
+            "x.com.samsung.autoreconnect.ap"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/ownership/vs/0",
+          "rt": [
+            "x.com.samsung.ownershiptransfer"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/selfhealing/session",
+          "rt": [
+            "x.com.samsung.selfhealing.session"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": false,
+            "x.org.iotivity.tcp": 0
+          }
+        },
+        {
+          "href": "/multidevice/vs/0",
+          "rt": [
+            "x.com.samsung.da.multidevice"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/oic/mnt",
+          "rt": [
+            "oic.wk.mnt"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.rw"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/device/ocfhub/vs/0",
+          "rt": [
+            "x.com.samsung.da.ocfhub"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/subdevice/vs/0",
+          "rt": [
+            "x.com.samsung.da.subdevice"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/file/information/vs/0",
+          "rt": [
+            "x.com.samsung.file.information"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/otninformation/vs/0",
+          "rt": [
+            "x.com.samsung.da.otninformation"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/sec/devices",
+          "rt": [
+            "x.com.samsung.devcol",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.lb",
+            "oic.if.b"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/power/0",
+          "rt": [
+            "oic.r.switch.binary"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/power/vs/0",
+          "rt": [
+            "x.com.samsung.da.operation"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/temperature/desired/0",
+          "rt": [
+            "oic.r.temperature"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/temperature/current/0",
+          "rt": [
+            "oic.r.temperature"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/temperatures/indoor/vs/0",
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/configuration/vs/0",
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/alarms/vs/0",
+          "rt": [
+            "x.com.samsung.da.alarms"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/information/vs/0",
+          "rt": [
+            "x.com.samsung.da.information"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/subdevices/vs/0",
+          "rt": [
+            "x.com.samsung.subdevices"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/remotectrl/vs/0",
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/da/softreset/vs/0",
+          "rt": [
+            "x.com.samsung.da.softreset"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/timezone/vs/0",
+          "rt": [
+            "timezone"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/device/0",
+          "rt": [
+            "x.com.samsung.devcol",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.lb",
+            "oic.if.b"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/rm/micomdata/vs/0",
+          "rt": [
+            "x.com.samsung.da.rm.micomdata"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/realtimenotiforclient/vs/0",
+          "rt": [
+            "x.com.samsung.da.realtimenotiforclient"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.rw"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/file/information/vs/0",
+          "rt": [
+            "x.com.samsung.file.information"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/file/transfer/vs/0",
+          "rt": [
+            "x.com.samsung.file.transfer"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/sec/devices",
+          "rt": [
+            "x.com.samsung.devcol",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.lb",
+            "oic.if.b"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/configuration/vs/0",
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/information/vs/0",
+          "rt": [
+            "x.com.samsung.da.information"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/subdevice/vs/0",
+          "rt": [
+            "x.com.samsung.da.subdevice"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/power/0",
+          "rt": [
+            "oic.r.switch.binary"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/power/vs/0",
+          "rt": [
+            "x.com.samsung.da.operation"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/power/dhw/vs/0",
+          "rt": [
+            "x.com.samsung.da.operation"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/temperature/desired/0",
+          "rt": [
+            "oic.r.temperature"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/temperature/current/0",
+          "rt": [
+            "oic.r.temperature"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/temperatures/indoor/vs/0",
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/temperatures/dhw/vs/0",
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/mode/0",
+          "rt": [
+            "oic.r.mode"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/mode/vs/0",
+          "rt": [
+            "x.com.samsung.da.mode"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/mode/dhw/vs/0",
+          "rt": [
+            "x.com.samsung.da.mode"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/alarms/vs/0",
+          "rt": [
+            "x.com.samsung.da.alarms"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/option/outgoing/vs/0",
+          "rt": [
+            "x.com.samsung.da.option.outgoing"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/ehsfsv/vs/0",
+          "rt": [
+            "ehsfsv"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/ehscycle/vs/0",
+          "rt": [
+            "ehscycle"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/temperatures/outside/vs/0",
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/da/softreset/vs/0",
+          "rt": [
+            "x.com.samsung.da.softreset"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/energy/consumption/0",
+          "rt": [
+            "oic.r.energy.consumption"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/energy/consumption/vs/0",
+          "rt": [
+            "x.com.samsung.da.energyconsumption"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/frequencyratio/vs/0",
+          "rt": [
+            "x.com.samsung.da.frequencyratio"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/controllerstatus/ehs/vs/0",
+          "rt": [
+            "x.com.samsung.da.controllerstatus.ehs"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/energy/generation/vs/0",
+          "rt": [
+            "x.com.samsung.da.energygeneration"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.s"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/remotectrl/vs/0",
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.a"
+          ],
+          "p": {
+            "bm": 3,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        },
+        {
+          "href": "/0a1b2c3d-0000-4000-8000-000001200000/device/0",
+          "rt": [
+            "x.com.samsung.devcol",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.lb",
+            "oic.if.b"
+          ],
+          "p": {
+            "bm": 1,
+            "sec": true,
+            "port": 44951,
+            "x.org.iotivity.tls": 0
+          }
+        }
+      ]
+    }
+  ],
+  "seeds": {
+    "/0a1b2c3d-0000-4000-8000-000001200000/device/0": [
+      {
+        "href": "/device/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.devcol",
+            "oic.wk.col"
+          ],
+          "if": [
+            "oic.if.baseline",
+            "oic.if.ll",
+            "oic.if.lb",
+            "oic.if.b"
+          ],
+          "links": [
+            {
+              "href": "/configuration/vs/0",
+              "rt": [
+                "x.com.samsung.da.configuration"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/information/vs/0",
+              "rt": [
+                "x.com.samsung.da.information"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/subdevice/vs/0",
+              "rt": [
+                "x.com.samsung.da.subdevice"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/power/0",
+              "rt": [
+                "oic.r.switch.binary"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/power/vs/0",
+              "rt": [
+                "x.com.samsung.da.operation"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/power/dhw/vs/0",
+              "rt": [
+                "x.com.samsung.da.operation"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/temperature/desired/0",
+              "rt": [
+                "oic.r.temperature"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/temperature/current/0",
+              "rt": [
+                "oic.r.temperature"
+              ],
+              "if": [
+                "oic.if.s"
+              ]
+            },
+            {
+              "href": "/temperatures/indoor/vs/0",
+              "rt": [
+                "x.com.samsung.da.temperatures"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/temperatures/dhw/vs/0",
+              "rt": [
+                "x.com.samsung.da.temperatures"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/mode/0",
+              "rt": [
+                "oic.r.mode"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/mode/vs/0",
+              "rt": [
+                "x.com.samsung.da.mode"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/mode/dhw/vs/0",
+              "rt": [
+                "x.com.samsung.da.mode"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/alarms/vs/0",
+              "rt": [
+                "x.com.samsung.da.alarms"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/option/outgoing/vs/0",
+              "rt": [
+                "x.com.samsung.da.option.outgoing"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/ehsfsv/vs/0",
+              "rt": [
+                "ehsfsv"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/ehscycle/vs/0",
+              "rt": [
+                "ehscycle"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/temperatures/outside/vs/0",
+              "rt": [
+                "x.com.samsung.da.temperatures"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/da/softreset/vs/0",
+              "rt": [
+                "x.com.samsung.da.softreset"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/energy/consumption/0",
+              "rt": [
+                "oic.r.energy.consumption"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/energy/consumption/vs/0",
+              "rt": [
+                "x.com.samsung.da.energyconsumption"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/frequencyratio/vs/0",
+              "rt": [
+                "x.com.samsung.da.frequencyratio"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            },
+            {
+              "href": "/controllerstatus/ehs/vs/0",
+              "rt": [
+                "x.com.samsung.da.controllerstatus.ehs"
+              ],
+              "if": [
+                "oic.if.s"
+              ]
+            },
+            {
+              "href": "/energy/generation/vs/0",
+              "rt": [
+                "x.com.samsung.da.energygeneration"
+              ],
+              "if": [
+                "oic.if.s"
+              ]
+            },
+            {
+              "href": "/remotectrl/vs/0",
+              "rt": [
+                "x.com.samsung.da.configuration"
+              ],
+              "if": [
+                "oic.if.a"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "href": "/configuration/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.region": "",
+          "x.com.samsung.da.countryCode": "GB",
+          "x.com.samsung.da.airconOptionList": [
+            "ENERGY_2.0"
+          ]
+        }
+      },
+      {
+        "href": "/information/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.information"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.modelNum": "SAC_EHS_MONO|250114|61007400001900000400000000000000",
+          "x.com.samsung.da.description": "EHS",
+          "x.com.samsung.da.serialNum": "**REDACTED**",
+          "x.com.samsung.da.versionId": "Samsung Electronics",
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.number": "DB91-02102A 2026-03-20",
+              "x.com.samsung.da.type": "Software",
+              "x.com.samsung.da.newVersionAvailable": "false",
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.description": "Version"
+            },
+            {
+              "x.com.samsung.da.number": "DB91-02100A 2020-07-10",
+              "x.com.samsung.da.type": "Firmware",
+              "x.com.samsung.da.newVersionAvailable": "false",
+              "x.com.samsung.da.id": "1",
+              "x.com.samsung.da.description": "Version"
+            },
+            {
+              "x.com.samsung.da.number": "DB91-02501B 2025-01-14",
+              "x.com.samsung.da.type": "Firmware",
+              "x.com.samsung.da.newVersionAvailable": "false",
+              "x.com.samsung.da.id": "2",
+              "x.com.samsung.da.description": ""
+            },
+            {
+              "x.com.samsung.da.number": "DB91-02572A 2025-01-13",
+              "x.com.samsung.da.type": "Firmware",
+              "x.com.samsung.da.newVersionAvailable": "false",
+              "x.com.samsung.da.id": "3",
+              "x.com.samsung.da.description": "EHS MONO LOWTEMP"
+            }
+          ]
+        }
+      },
+      {
+        "href": "/subdevice/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.subdevice"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.registerState": "Registered",
+          "x.com.samsung.da.connectState": "Connected",
+          "x.com.samsung.da.deviceId": "**REDACTED**",
+          "x.com.samsung.da.masterUuid": "**REDACTED**",
+          "x.com.samsung.da.name": "Heat Pump",
+          "x.com.samsung.da.description": "EHS"
+        }
+      },
+      {
+        "href": "/power/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.operation"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.power": "On",
+          "x.com.samsung.da.displaycondition": "Enable"
+        }
+      },
+      {
+        "href": "/power/dhw/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.operation"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.power": "Off",
+          "x.com.samsung.da.displaycondition": "Enable"
+        }
+      },
+      {
+        "href": "/temperatures/indoor/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.current": 33.5,
+          "x.com.samsung.da.desired": 24.0,
+          "x.com.samsung.da.minimum": -1000.0,
+          "x.com.samsung.da.maximum": -1000.0,
+          "x.com.samsung.da.increment": 1.0,
+          "x.com.samsung.da.unit": "Celsius",
+          "x.com.samsung.da.type": "Water",
+          "x.com.samsung.da.displaycondition.text": "Enable",
+          "x.com.samsung.da.displaycondition.button": "Disable"
+        }
+      },
+      {
+        "href": "/temperatures/dhw/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.current": 49.5,
+          "x.com.samsung.da.desired": 50.0,
+          "x.com.samsung.da.minimum": 36.0,
+          "x.com.samsung.da.maximum": 55.0,
+          "x.com.samsung.da.increment": 1.0,
+          "x.com.samsung.da.unit": "Celsius",
+          "x.com.samsung.da.type": "Water",
+          "x.com.samsung.da.displaycondition.text": "Enable",
+          "x.com.samsung.da.displaycondition.button": "Enable"
+        }
+      },
+      {
+        "href": "/mode/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.mode"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.supportedModes": [
+            "Auto",
+            "Cool",
+            "Heat"
+          ],
+          "x.com.samsung.da.modes": [
+            "Auto"
+          ],
+          "x.com.samsung.da.options": [
+            "Defrost_Off",
+            "Control_Enable",
+            "DurationOn_1981",
+            "Thermostat_CoolHeat_Off"
+          ]
+        }
+      },
+      {
+        "href": "/mode/dhw/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.mode"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.supportedModes": [
+            "Eco",
+            "Std",
+            "Force"
+          ],
+          "x.com.samsung.da.modes": [
+            "Std"
+          ],
+          "x.com.samsung.da.options": [
+            "Defrost_Off",
+            "Control_Enable",
+            "Thermostat_Dhw_Off"
+          ]
+        }
+      },
+      {
+        "href": "/alarms/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.alarms"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.items": [
+            {
+              "x.com.samsung.da.id": "0",
+              "x.com.samsung.da.alarmType": "Device",
+              "x.com.samsung.da.code": "DA_SAC_E_E000",
+              "x.com.samsung.da.state": "Created",
+              "x.com.samsung.da.triggeredTime": "2026-10-27 20:55:45"
+            }
+          ]
+        }
+      },
+      {
+        "href": "/option/outgoing/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.option.outgoing"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.away": "Off",
+          "x.com.samsung.da.displaycondition": "Enable"
+        }
+      },
+      {
+        "href": "/ehsfsv/vs/0",
+        "rep": {
+          "rt": [
+            "ehsfsv"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "items": [
+            {
+              "setting": "0407010A01017202EE01C20101"
+            },
+            {
+              "setting": "0408010A010096017200C80101"
+            },
+            {
+              "setting": "041B010A0101F402BC02260101"
+            },
+            {
+              "setting": "041C010A01012C019001680101"
+            },
+            {
+              "setting": "07DB010A01FF380032FFEC0101"
+            },
+            {
+              "setting": "07DC010A01006400C800B40101"
+            },
+            {
+              "setting": "07E5010A0100AA02EE01A40101"
+            },
+            {
+              "setting": "07E6010A0100AA02EE010E0101"
+            },
+            {
+              "setting": "07EF010A0100AA02EE01900101"
+            },
+            {
+              "setting": "07F0010A0100AA02EE00FA0101"
+            },
+            {
+              "setting": "082B0101000000000400000100"
+            },
+            {
+              "setting": "082C0101000000000400000100"
+            },
+            {
+              "setting": "082D0101000001000400040100"
+            },
+            {
+              "setting": "0BC30101000000000200010100"
+            },
+            {
+              "setting": "0BFF0101000000000100000100"
+            },
+            {
+              "setting": "0FAB0101000000000100000100"
+            },
+            {
+              "setting": "0FAC010A01FF6A00C800140101"
+            },
+            {
+              "setting": "0FB50101000000000200000100"
+            },
+            {
+              "setting": "0FCA010A010032009600320101"
+            },
+            {
+              "setting": "0FDD0101000000000100000100"
+            }
+          ],
+          "unit": "Celsius"
+        }
+      },
+      {
+        "href": "/ehscycle/vs/0",
+        "rep": {
+          "rt": [
+            "ehscycle"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "indoor": [
+            {
+              "datetime": "2026-10-27T20:44:01",
+              "cycledata": "56FF5557FF556D604600000000000000000100000005F04200000069FFFFFF"
+            },
+            {
+              "datetime": "2026-10-27T20:49:01",
+              "cycledata": "57FF5658FF566D604600000000000000000100000005F04800000069FFFFFF"
+            },
+            {
+              "datetime": "2026-10-27T20:54:01",
+              "cycledata": "57FF5658FF566D604600000000000000000100000005F04D00000069FFFFFF"
+            }
+          ],
+          "outdoor": [
+            {
+              "datetime": "2026-10-27T20:44:01",
+              "cycledata": "001700175B643D3D3F02015A023000020000002D0068A05F00000000"
+            },
+            {
+              "datetime": "2026-10-27T20:49:01",
+              "cycledata": "001B001B5E663C3C3F020140023000020000002C006CA06100000000"
+            },
+            {
+              "datetime": "2026-10-27T20:54:01",
+              "cycledata": "001100115E613D3D3F02012F023000010000002E0068A06100000000"
+            }
+          ],
+          "unit": "Celsius"
+        }
+      },
+      {
+        "href": "/temperatures/outside/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.temperatures"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.current": 7.9,
+          "x.com.samsung.da.desired": 24.0,
+          "x.com.samsung.da.minimum": 18.0,
+          "x.com.samsung.da.maximum": 30.0,
+          "x.com.samsung.da.increment": 1.0,
+          "x.com.samsung.da.unit": "Celsius",
+          "x.com.samsung.da.type": "Air",
+          "x.com.samsung.da.displaycondition.text": "Hide",
+          "x.com.samsung.da.displaycondition.button": "Hide"
+        }
+      },
+      {
+        "href": "/da/softreset/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.softreset"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.softreset": "false"
+        }
+      },
+      {
+        "href": "/energy/consumption/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.energyconsumption"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.cumulativeConsumption": "16839.0",
+          "x.com.samsung.da.instantaneousPower": "1.034000",
+          "x.com.samsung.da.instantaneousPowerUnit": "KW",
+          "x.com.samsung.da.cumulativePower": "16839.0",
+          "x.com.samsung.da.cumulativeUnit": "Wh",
+          "x.com.samsung.da.capacity": "6_13700",
+          "x.com.samsung.da.saveLocation": "/opt/usr/home/owner/apps_rw/com.samsung.sac-service/data/powerusage/append_1132001"
+        }
+      },
+      {
+        "href": "/frequencyratio/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.frequencyratio"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.ratio": 0
+        }
+      },
+      {
+        "href": "/controllerstatus/ehs/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.controllerstatus.ehs"
+          ],
+          "if": [
+            "oic.if.s"
+          ],
+          "x.com.samsung.da.ehs.boosterHeater": false,
+          "x.com.samsung.da.ehs.3wayValve": "Room"
+        }
+      },
+      {
+        "href": "/energy/generation/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.energygeneration"
+          ],
+          "if": [
+            "oic.if.s"
+          ],
+          "x.com.samsung.da.cumulativeGeneration": 23294287.0,
+          "x.com.samsung.da.cumulativeGenerationUnit": "Wh"
+        }
+      },
+      {
+        "href": "/remotectrl/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.da.configuration"
+          ],
+          "if": [
+            "oic.if.a"
+          ],
+          "x.com.samsung.da.remoteControlEnabled": "true"
+        }
+      },
+      {
+        "href": "/file/transfer/vs/0",
+        "rep": {
+          "rt": [
+            "x.com.samsung.file.transfer"
+          ],
+          "if": [
+            "oic.if.s"
+          ],
+          "x.com.samsung.items": [
+            {
+              "x.com.samsung.blob": {
+                "__localthings_type__": "bytes",
+                "len": 36,
+                "sha256": "a6bfa17e0661fe5d9fb99a2e29f8ca86f77154c33b523114c6127d95582620b7",
+                "base64": "8IneagEAAAAEAAAAcNvfahkAAADWAgAAwALhaqEAAACGBwAA"
+              },
+              "x.com.samsung.name": "/opt/usr/home/owner/apps_rw/com.samsung.sac-service/data/powerusage/append_1132001"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "probes": {
+    "/multidevice/vs/0": {
+      "rt": [
+        "x.com.samsung.da.multidevice"
+      ],
+      "if": [
+        "oic.if.a"
+      ],
+      "x.com.samsung.da.numofsubdevice": "1"
+    }
+  },
+  "seeds_note": "Issue #682's MIM-H04EN EHS Wi-Fi kit and its SAC_EHS_MONO heat pump, from the reporter's 0.35.0 diagnostics. Every rep is verbatim from that dump (serials and ids redacted, the OCF device id replaced by a placeholder). Each batch is rebuilt from the dump's parsed resources, so its order is not captured; the leading {href: /device/0} collection entry is what the kit's batch carried, since the dump shows it parsed as a resource. subdeviceIdList is redacted in diagnostics; it is restored as the heat pump's placeholder id, which the dump's materialized subdevice key and /oic/res prefixes both name."
+}

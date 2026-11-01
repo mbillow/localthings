@@ -13,14 +13,15 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .oven_labels import CAVITY_KEYS, main_cavity_divider
 from .registry.adapter import _key
 from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
-from .registry.subdevices import MAIN
+from .registry.oven_labels import CAVITY_KEYS, cavity_divider
 
 
-def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> bool:
+def _is_included(
+    bound: BoundEntity, coordinator: LocalThingsCoordinator, *, live: bool = False
+) -> bool:
     """Return False if the entity should not be registered for this device.
 
     Explicit exists_fn takes priority. Otherwise, if the entity has a
@@ -41,15 +42,17 @@ def _is_included(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> boo
     same rule as everywhere else a whole-resources-dict scan happens --
     this is a free function, so it can't use self._resources.
 
-    Reads `discovery_resources`, not `last_resources`: on an offline load
-    (issue #295) the live cache is still empty, and judging existence
-    against it would filter every rehydrated entity away.
+    Setup uses discovery resources so an empty live cache during an offline
+    load (issue #295) doesn't filter rehydrated entities away. Runtime
+    presence checks use `live=True` so the saved snapshot can't freeze them.
     """
-    rep = coordinator.discovery_resources.get(bound.href)
+    resources = coordinator.last_resources if live else coordinator.discovery_resources
+    rep = resources.get(bound.href)
     if rep is None:
         return False
     if bound.desc.exists_fn is not None:
-        return bound.desc.exists_fn(rep, coordinator.discovery_canonical(bound.subdevice))
+        canonical = coordinator.canonical_resources if live else coordinator.discovery_canonical
+        return bound.desc.exists_fn(rep, canonical(bound.subdevice))
     if bound.desc.field:
         if not rep or is_stub_rep(rep):
             return True
@@ -116,13 +119,11 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._bound = bound
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
-        self._oven_divider_href = None
-        if (
-            bound.subdevice == MAIN
-            and bound.desc.key in CAVITY_KEYS
-            and getattr(coordinator, "device_type_name", None) == "oven"
-        ):
-            self._oven_divider_href = main_cavity_divider(coordinator.discovery_resources)
+        self._oven_divider_href = (
+            cavity_divider(coordinator.discovery_resources, bound.subdevice, coordinator.subdevices)
+            if bound.desc.key in CAVITY_KEYS and getattr(coordinator, "subdevices", ())
+            else None
+        )
         if bound.desc.translation_placeholders is not None:
             self._attr_translation_placeholders = dict(bound.desc.translation_placeholders)
         elif bound.desc.use_instance_name:
@@ -131,6 +132,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
                     _instance_display_name(bound, self._state_key), coordinator.instance_names
                 )
             }
+
         self._update_cavity_name()
 
         # _attr_name is deliberately left unset: HA gives an explicitly-set
@@ -151,7 +153,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
             else self.coordinator.last_resources
         )
         state = (resources.get(self._oven_divider_href) or {}).get("x.com.samsung.da.connected")
-        # Missing or unknown divider state must not imply full-cavity operation.
+        # An unknown divider report must not imply full-cavity operation.
         label = "oven" if state == "Off" else "upper"
         name = self.coordinator.instance_names.get(
             f"oven_cavity_{label}", "Oven" if label == "oven" else "Upper"

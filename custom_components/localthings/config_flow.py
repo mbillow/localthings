@@ -20,12 +20,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.core import callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
     ObjectSelector,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -52,6 +54,7 @@ from .const import (
     CONF_DEVICE_KEY,
     CONF_DEVICE_TOKEN,
     CONF_DEVICE_TYPE,
+    CONF_DISABLED_SUBDEVICES,
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
@@ -66,6 +69,7 @@ from .const import (
     CONF_PSK_IDENTITY,
     CONF_PSK_KEY,
     CONF_PSK_PROFILE,
+    CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
     DEFAULT_CLOUD_COURSES_ENABLED,
@@ -78,6 +82,7 @@ from .const import (
     PSK_PROFILE_OWNER,
     PSK_PROFILE_PEER,
     PSK_TRACKING_ISSUE_URL,
+    READ_MODE_PER_HREF,
     SERVICE_WRITE_RESOURCE,
     TRANSPORT_LEGACY_HTTP,
 )
@@ -430,33 +435,19 @@ def _mint_self_signed(uuid: str) -> tuple[str, str]:
 
 
 def _probe_legacy(host: str, cert_pem: str, key_pem: str, token: str) -> dict:
-    """Read identity over the 8888 bridge, in the shape _create_entry wants.
-
-    Two passes, because the family that picks the envelope table is itself
-    read from the appliance: identity first, then the device through its
-    family's table. An unmapped family stops at identity and goes on as an
-    unrecognized device type, the same as a DTLS board nothing routes.
-    """
-    from .legacy_http import is_mapped
+    """Read identity over the 8888 bridge, in the shape _create_entry wants."""
     from .legacy_http_transport import LegacyHttpTransport
 
-    def _read(family: str | None) -> dict:
-        transport = LegacyHttpTransport(
-            host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token, family=family
-        )
-        transport.connect()
-        try:
-            return _read_device(transport, host, LEGACY_HTTP_PORT)
-        except (OSError, http.client.HTTPException) as err:
-            raise CannotConnect(f"{host}:{LEGACY_HTTP_PORT} did not answer: {err}") from err
-        finally:
-            transport.close()
-
-    info = _read(None)
-    family = info.get("description", "")
-    if is_mapped(family):
-        return _read(family)
-    return {**info, "device_type_name": None, "device_type_recognized": False}
+    transport = LegacyHttpTransport(
+        host, LEGACY_HTTP_PORT, cert_pem=cert_pem, key_pem=key_pem, token=token
+    )
+    transport.connect()
+    try:
+        return _read_device(transport, host, LEGACY_HTTP_PORT)
+    except (OSError, http.client.HTTPException) as err:
+        raise CannotConnect(f"{host}:{LEGACY_HTTP_PORT} did not answer: {err}") from err
+    finally:
+        transport.close()
 
 
 # TLS alerts (RFC 5246 §7.2) that mean "I looked at your certificate and
@@ -738,6 +729,7 @@ def _read_device(transport, host: str, port: int) -> dict:
     """
     from .registry.batch import parse_device0_batch
     from .registry.by_type import resolve as resolve_registry
+    from .registry.flat import read_all
     from .registry.identity import (
         proven_ocf_device_id,
         read_identity,
@@ -750,14 +742,23 @@ def _read_device(transport, host: str, port: int) -> dict:
     identity = read_identity(transport, None)
 
     code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    if code != 0x45 or body is None:
+    per_href = code == 0x84
+    if per_href:
+        # No /device/0 Collection: read /oic/res's hrefs as the coordinator
+        # will poll them (registry/flat.py). A batch board stored this way
+        # while booting is moved back by the coordinator's /device/0 check.
+        resources = read_all(transport, identity.raw.get("/oic/res") or [], logger=_LOGGER)
+        usable = bool(resources)
+    else:
+        usable = code == 0x45 and body is not None
+        resources = parse_device0_batch(body) if usable and isinstance(body, list) else {}
+    if not usable:
         # Authenticated fine, so this isn't a connectivity or credentials
         # problem -- whatever is on this port just isn't an appliance whose
-        # /device/0 we understand.
+        # resources we understand.
         raise UnexpectedResponse(
             f"{host}:{port} answered /device/0 with {code >> 5}.{code & 0x1F:02d} ({code:#04x})"
         )
-    resources = parse_device0_batch(body) if isinstance(body, list) else {}
 
     info = resources.get("/information/vs/0", {})
     registry = resolve_registry(resources, device_types=identity.device_types)
@@ -778,16 +779,18 @@ def _read_device(transport, host: str, port: int) -> dict:
         # when the device reported no usable one.
         "ocf_device_id": proven_ocf_device_id(identity),
         "serial": resolve_serial(raw_serial, host),
-        # None for a board that doesn't report /wirelessinfo/vs/0 -- see
-        # resolve_mac, and CONF_MAC for what the stored value is for.
+        # None for a board that reports no MAC -- see resolve_mac, and
+        # CONF_MAC for what the stored value is for.
         "mac": resolve_mac(resources),
         "model": resolve_model(info.get("x.com.samsung.da.modelNum", ""), identity),
         "manufacturer": identity.manufacturer or "Samsung",
         "device_type_name": registry.name if registry is not None else None,
         "device_type_recognized": registry is not None,
-        # What the appliance calls its own family ('TP6X_WASHER'), which is
-        # what selects the envelope table on the 8888 bridge (issue #168).
+        # What the appliance calls its own family ('TP6X_WASHER'); the 8888
+        # bridge still keys its course table and model settings by it (#168).
         "description": info.get("x.com.samsung.da.description", ""),
+        # Stored as CONF_READ_MODE; None keeps the /device/0 Collection.
+        "read_mode": READ_MODE_PER_HREF if per_href else None,
     }
 
 
@@ -977,6 +980,14 @@ def _probe_and_validate(
     if scan.legacy_http and not scan.candidates:
         raise LegacyHttpFamily(f"{host} serves the legacy bridge on TCP 8888")
 
+    # An identity used directly by the 8888 bridge is not a DTLS client leaf.
+    if (
+        existing_leaf is not None
+        and ca_cert_pem
+        and existing_leaf[0].strip() == ca_cert_pem.strip()
+    ):
+        existing_leaf = None
+
     if existing_leaf is not None:
         cert_pem, key_pem = existing_leaf
         _LOGGER.debug("Reusing the leaf certificate from an existing entry")
@@ -1103,6 +1114,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_MODEL: info["model"],
                 CONF_MANUFACTURER: info["manufacturer"],
                 CONF_DEVICE_TYPE: info["device_type_name"],
+                **({CONF_READ_MODE: info["read_mode"]} if info.get("read_mode") else {}),
                 **(
                     {
                         CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
@@ -1534,9 +1546,19 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_progress_done(next_step_id="legacy_token_received")
 
     async def _request_token(self, cert_pem: str, key_pem: str) -> str | None:
-        return await self.hass.async_add_executor_job(
-            obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
-        )
+        try:
+            return await self.hass.async_add_executor_job(
+                obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
+            )
+        except CallbackCertRejected:
+            # TP6X_RAC_16K accepts the original AC14K_M identity, not a minted leaf.
+            identity = (self._ca_cert_pem, self._ca_key_pem)
+            if not all(identity) or self._legacy_leaf == identity:
+                raise
+            self._legacy_leaf = identity
+            return await self.hass.async_add_executor_job(
+                obtain_device_token, self._host, LEGACY_HTTP_PORT, *identity
+            )
 
     async def async_step_legacy_token_received(
         self, user_input: dict[str, Any] | None = None
@@ -1609,12 +1631,15 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         *,
         data_updates: dict[str, Any],
         title: str | UndefinedType = UNDEFINED,
+        drop: tuple[str, ...] = (),
     ) -> ConfigFlowResult:
         """async_update_reload_and_abort without its reload, which Core
         2026.12 stops making for an entry with an update listener (issue
-        #647); ours refreshes cloud courses on an options change."""
+        #647); ours refreshes cloud courses on an options change. `drop`
+        names keys to remove from the entry."""
+        data = {k: v for k, v in entry.data.items() if k not in drop}
         self.hass.config_entries.async_update_entry(
-            entry, title=title, data={**entry.data, **data_updates}
+            entry, title=title, data={**data, **data_updates}
         )
         self.hass.config_entries.async_schedule_reload(entry.entry_id)
         if self.source == config_entries.SOURCE_RECONFIGURE:
@@ -1793,7 +1818,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 else {}
                             ),
                             **({CONF_MAC: info["mac"]} if info["mac"] is not None else {}),
+                            # A new address can be a different board, so
+                            # the probe's read mode replaces the stored one.
+                            **(
+                                {CONF_READ_MODE: info["read_mode"]} if info.get("read_mode") else {}
+                            ),
                         },
+                        drop=() if info.get("read_mode") else (CONF_READ_MODE,),
                     )
 
         return self.async_show_form(
@@ -1876,6 +1907,15 @@ def _followed_title(entry: config_entries.ConfigEntry, host: str) -> str | Undef
     return f"{entry.title[: -len(suffix)]} ({host})"
 
 
+# The subdevices form field; saved inverted, as CONF_DISABLED_SUBDEVICES.
+_ENABLED_SUBDEVICES = "enabled_subdevices"
+
+
+def _subdevice_order(key: str) -> tuple[bool, int, str]:
+    """Indexed slots in numeric order ('2' before '10'), then the rest."""
+    return (not key.isdigit(), int(key) if key.isdigit() else 0, key)
+
+
 class LocalThingsOptionsFlow(config_entries.OptionsFlow):
     """Per-device options: the remote-control-off write-block override
     (issue #54) plus a debug panel for writing an arbitrary body to an
@@ -1912,13 +1952,17 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             coord.cloud_course_rep(), cycle_options(coord.canonical_resources(MAIN))
         ):
             menu.insert(1, "cloud_courses")
+        if coord is not None and (
+            coord.subdevices or self.config_entry.options.get(CONF_DISABLED_SUBDEVICES)
+        ):
+            menu.insert(1, "subdevices")
         return self.async_show_menu(step_id="init", menu_options=menu)
 
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
 
         return self.async_show_form(
             step_id="settings",
@@ -1947,6 +1991,66 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
                             CONF_CLOUD_COURSES_ENABLED, DEFAULT_CLOUD_COURSES_ENABLED
                         ),
                     ): bool,
+                }
+            ),
+        )
+
+    async def async_step_subdevices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose which discovered subdevices to keep (#670, #681).
+
+        Some slots pass the liveness gate without being hardware, and only
+        the owner can tell. A subdevice switched off here loses its device
+        at once; the options listener then reloads without it.
+        """
+        coord = self._coordinator()
+        if coord is None:
+            return self.async_abort(reason="not_loaded")
+        saved: dict[str, str] = dict(self.config_entry.options.get(CONF_DISABLED_SUBDEVICES) or {})
+        labels: dict[str, str] = {}
+        for sub in [*coord.subdevices, *coord.disabled_subdevices]:
+            device = find_entry_device(
+                self.hass, self.config_entry.entry_id, {coord.subdevice_identifier(sub.key)}
+            )
+            labels[sub.key] = (device.name_by_user or device.name or "") if device else ""
+        # A disabled slot that didn't answer this time is still offered.
+        for key, name in saved.items():
+            labels[key] = labels.get(key) or name
+        keys = sorted(labels, key=_subdevice_order)
+
+        if user_input is not None:
+            kept = set(user_input.get(_ENABLED_SUBDEVICES) or ())
+            disabled = {key: labels[key] or saved.get(key, "") for key in keys if key not in kept}
+            for key in disabled.keys() - saved.keys():
+                device = find_entry_device(
+                    self.hass, self.config_entry.entry_id, {coord.subdevice_identifier(key)}
+                )
+                if device is not None:
+                    dr.async_get(self.hass).async_update_device(
+                        device.id, remove_config_entry_id=self.config_entry.entry_id
+                    )
+            return self.async_create_entry(
+                data={**self.config_entry.options, CONF_DISABLED_SUBDEVICES: disabled}
+            )
+
+        return self.async_show_form(
+            step_id="subdevices",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        _ENABLED_SUBDEVICES,
+                        default=[key for key in keys if key not in saved],
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value=key, label=labels[key] or key)
+                                for key in keys
+                            ],
+                            multiple=True,
+                            mode=SelectSelectorMode.LIST,
+                        )
+                    ),
                 }
             ),
         )

@@ -1,0 +1,111 @@
+{
+  "seeds_note": "Canonical hrefs generated with legacy_http.to_resources from the real issue #646 capture in dryer_tp6x_dv80m8214aw_cooling_8888.json; these hrefs are bridge mappings, not appliance-served OCF resources.",
+  "device0": [
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.progress": "Cooling",
+        "x.com.samsung.da.progressPercentage": 82,
+        "x.com.samsung.da.remainingTime": "00:06:00",
+        "x.com.samsung.da.state": "Run",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "EnergyKW_396",
+          "TimeSync_NotSupported",
+          "NoCheck_SC",
+          "QRatorInfo_DV80M8214AW|30010102001111000100000000000000",
+          "Course_96",
+          "DeviceType_0165",
+          "DrytimeValue_0",
+          "UsagesDB_ok",
+          "LaundryOutTime_0",
+          "MixedLoadBell_Disable",
+          "EnergyLevelSet_050203020205040301020403030505",
+          "MixedLoadBellSet_FFFFFFFFFFFFFFFFFFFFFF020202",
+          "SeamlessControl_Disable",
+          "KidsLockBypass_On"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "292D10EE00093D102E000A2D204E000B5D102E00094D20EE000A5D204E000B4D204E00096D000E10E97D000E10E95D000E33E98D000E000B6D20EE00099D20EE0009AD20EE000"
+        ]
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.dryLevel": "None",
+        "x.com.samsung.da.dryTime": "00:30:00",
+        "x.com.samsung.da.dryerType": "Electricity",
+        "x.com.samsung.da.supportedDryLevel": [
+          "None",
+          "1",
+          "2",
+          "3"
+        ],
+        "x.com.samsung.da.supportedDryTime": [
+          "00:00:00",
+          "00:30:00",
+          "01:00:00",
+          "01:30:00",
+          "02:00:00",
+          "02:30:00"
+        ],
+        "x.com.samsung.da.wrinklePrevent": "Off"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": true
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "TP6X_DRYER",
+        "x.com.samsung.da.deviceSubType": "Dryer",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "TP6X_DV80M8214AW"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "HeatExchangeClean",
+            "x.com.samsung.da.id": "REDACTED",
+            "x.com.samsung.da.triggeredTime": "REDACTED"
+          }
+        ]
+      }
+    }
+  ]
+}

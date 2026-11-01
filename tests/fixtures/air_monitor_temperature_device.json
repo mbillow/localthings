@@ -1,0 +1,221 @@
+{
+  "seeds_note": "Verbatim resources from issue #683's diagnostics download (ASM-KR-TP1-22-ACMB1M, LocalThings 0.35.0); serial and DUID were already redacted by the download.",
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/airqualitystandard/vs/0",
+      "rep": {
+        "x.com.samsung.da.standard": "MinistryofEnvironment"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "ErrorCode_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-10-27T01:36:41",
+            "x.com.samsung.da.state": "Deleted"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/dnd/vs/0",
+      "rep": {
+        "x.com.samsung.da.value": "false",
+        "x.com.samsung.da.startTime": "14:00:00",
+        "x.com.samsung.da.endTime": "22:00:00",
+        "x.com.samsung.da.visible": "true"
+      }
+    },
+    {
+      "href": "/energy/battery/vs/0",
+      "rep": {
+        "x.com.samsung.da.battery": "100",
+        "x.com.samsung.da.batteryResolution": "1",
+        "x.com.samsung.da.charging": "On",
+        "rt": [
+          "x.com.samsung.da.energy.battery"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/humidity/vs/0",
+      "rep": {
+        "x.com.samsung.da.humidity": "30",
+        "x.com.samsung.da.validity": "Valid",
+        "rt": [
+          "x.com.samsung.da.humidity"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "ASM-KR-TP1-22-ACMB1M|10243041|75000000001611C40800020000080000",
+        "x.com.samsung.da.description": "ASM-KR-TP1-22-ACMB1M",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "02443A260310",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "22050300",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "WIFI_HTTPS",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "AM0",
+        "x.com.samsung.da.diagMinVersion": "1.0"
+      }
+    },
+    {
+      "href": "/keepnormalstate/vs/0",
+      "rep": {
+        "x.com.samsung.da.keepnormal": 0
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.longnotisubscription": "false",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/sensordatasinks/vs/0",
+      "rep": {
+        "remove": ""
+      }
+    },
+    {
+      "href": "/sensors/vs/0",
+      "rep": {
+        "x.com.samsung.da.cleanLevel": "1",
+        "x.com.samsung.da.refresh": "Off",
+        "x.com.samsung.da.lastSensingTime": "1793065001",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Sensor for CleanLevel",
+            "x.com.samsung.da.type": "CleanLevel",
+            "x.com.samsung.da.value": [
+              "1"
+            ]
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Sensor for Odor",
+            "x.com.samsung.da.type": "Odor",
+            "x.com.samsung.da.value": [
+              "1"
+            ]
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Sensor for Dust",
+            "x.com.samsung.da.type": "Dust",
+            "x.com.samsung.da.value": [
+              "30",
+              "1"
+            ]
+          },
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "Sensor for FineDust",
+            "x.com.samsung.da.type": "FineDust",
+            "x.com.samsung.da.value": [
+              "7",
+              "1"
+            ]
+          },
+          {
+            "x.com.samsung.da.id": "4",
+            "x.com.samsung.da.description": "Sensor for SuperFineDust",
+            "x.com.samsung.da.type": "SuperFineDust",
+            "x.com.samsung.da.value": [
+              "6",
+              "1"
+            ]
+          },
+          {
+            "x.com.samsung.da.id": "5",
+            "x.com.samsung.da.description": "Sensor for CO2",
+            "x.com.samsung.da.type": "CO2",
+            "x.com.samsung.da.value": [
+              "1000",
+              "1"
+            ]
+          }
+        ],
+        "rt": [
+          "x.com.samsung.da.sensors"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.current": "27.0",
+            "x.com.samsung.da.increment": "1",
+            "x.com.samsung.da.unit": "Celsius",
+            "x.com.samsung.da.validity": "Valid"
+          }
+        ]
+      }
+    }
+  ]
+}

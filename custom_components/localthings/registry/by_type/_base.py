@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import dataclasses
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
 from ..capability import Capability
+from ..entities import BinarySensorDesc, SensorDesc
 
 
 @dataclass(frozen=True)
@@ -14,6 +17,22 @@ class DeviceRegistry:
     name: str
     capabilities: dict[str, list[Capability]]
     pattern_capabilities: list[Capability] = field(default_factory=list)
+    # Poll tiers that may carry an OBSERVE subscription; () when
+    # subscriptions cost other clients their session (the AV boards).
+    subscribe_tiers: tuple[str, ...] = ("hot", "warm")
+    # Write-settle window in seconds; None keeps the coordinator's default,
+    # sized for boards that settle well after the ACK (washer course).
+    write_settle_s: float | None = None
+
+
+def unpolled(*groups: Iterable[Capability]) -> list[Capability]:
+    """Coverage-only capabilities a flat board reads once, at discovery:
+    re-reading them every sweep would cost a GET each for nothing."""
+    return [
+        dataclasses.replace(cap, poll_tier="never") if cap.poll_tier == "cold" else cap
+        for group in groups
+        for cap in group
+    ]
 
 
 def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
@@ -49,3 +68,34 @@ def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
             )
 
     return out
+
+
+def exclude_when(cap: Capability, placeholder: Callable[[dict], bool]) -> Capability:
+    """`cap`, binding nothing on a device `placeholder(resources)` recognizes.
+
+    For a sibling slot that answers with constant filler: once none of its
+    entities bind, the generic subdevice liveness gate rejects it.
+    """
+    return dataclasses.replace(
+        cap,
+        match_fn=lambda rep, resources: (
+            not placeholder(resources) and (cap.match_fn is None or cap.match_fn(rep, resources))
+        ),
+    )
+
+
+def read_only_when(cap: Capability, unconfirmed: Callable[[dict], bool]) -> list[Capability]:
+    """`cap` as a control part and a read part, the controls binding nothing
+    on a device `unconfirmed(resources)` recognizes: a family whose writes
+    failed or were never tested keeps its readings. Controls come first, as
+    they do within each capability (a power switch before its read-only
+    twin)."""
+    readings = tuple(d for d in cap.entities if isinstance(d, (SensorDesc, BinarySensorDesc)))
+    controls = tuple(d for d in cap.entities if not isinstance(d, (SensorDesc, BinarySensorDesc)))
+    if not controls:
+        return [cap]
+    match_fn = cap.match_fn or (lambda rep, resources: True)
+    return [
+        exclude_when(dataclasses.replace(cap, entities=controls, match_fn=match_fn), unconfirmed),
+        dataclasses.replace(cap, entities=readings, match_fn=match_fn),
+    ]
