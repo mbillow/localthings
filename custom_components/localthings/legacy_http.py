@@ -390,20 +390,12 @@ def course_table(family: str) -> dict[str, dict]:
     return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
 
 
-# The TP6X_OV combo's oven labels its Temperatures "Celsius" whatever the
-# panel shows: preheating to 350 F it read 350 "Celsius" (#674). The
-# microwave on the same panel labels its own right.
-_PANEL_UNIT_FAMILIES = frozenset({"TP6X_OV"})
-
-
-def with_panel_unit(
-    family: str | None, bodies: dict[str, Any], main_bodies: Mapping[str, Any]
-) -> dict[str, Any]:
-    """A sibling's `bodies` with its Temperatures in the main unit's unit,
-    for a family whose sibling mislabels its own; unchanged until the main
-    unit has been read."""
-    if _family_key(family) not in _PANEL_UNIT_FAMILIES:
-        return bodies
+# Every slot on a bridge shares one panel, so one unit. The TP6X_OV combo's
+# oven labels its Temperatures "Celsius" whatever the panel shows: preheating
+# to 350 F it read 350 "Celsius" (#674). Device 0 labels its own right.
+def with_panel_unit(bodies: dict[str, Any], main_bodies: Mapping[str, Any]) -> dict[str, Any]:
+    """A sibling's `bodies` with its Temperatures in the main unit's unit;
+    unchanged until the main unit has been read."""
     unit = _first_unit(main_bodies)
     temperatures = bodies.get("Temperatures")
     if unit is None or not isinstance(temperatures, list):

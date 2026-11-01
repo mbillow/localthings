@@ -580,7 +580,7 @@ class LegacyHttpTransport:
     def _with_panel_unit(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         if not index:
             return bodies
-        return with_panel_unit(self._family, bodies, self._state_at(0).last_bodies)
+        return with_panel_unit(bodies, self._state_at(0).last_bodies)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         state = self._state_at(index)
