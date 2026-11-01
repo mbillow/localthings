@@ -832,6 +832,7 @@ OVEN_MODE = Capability(
             field="x.com.samsung.da.options",
             icon="mdi:volume-high",
             entity_category="config",
+            exists_fn=_has_option("Sound"),
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,
