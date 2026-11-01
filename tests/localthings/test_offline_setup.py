@@ -661,7 +661,7 @@ async def test_dark_appliance_without_a_handshake_polls_once_per_cycle(
         patch.object(LocalThingsCoordinator, "_RECONNECT_PAUSE_S", 0),
     ):
         await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
         after_setup = len(polls)
 
         for expected in (1, 2, 3, 4):

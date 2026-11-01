@@ -2119,11 +2119,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._rehydrate_resources = None
         if live_bound == stale_bound and live_included == stale_included:
             return
+        # An entity counts once whether it changed in the bound set, the
+        # included set or both, so a bound-only change doesn't log "0 gone,
+        # 0 new".
+        gone = (stale_bound - live_bound) | (stale_included - live_included)
+        new = (live_bound - stale_bound) | (live_included - stale_included)
         self._log.info(
             "live discovery differs from the snapshot this entry loaded from "
             "(%d entities gone, %d new); reloading",
-            len(stale_included - live_included),
-            len(live_included - stale_included),
+            len(gone),
+            len(new),
         )
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 

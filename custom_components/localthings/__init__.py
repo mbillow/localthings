@@ -437,6 +437,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # the device answers, and no "Error fetching" from the base class
         # when an appliance that is simply switched off fails that first poll.
         coordinator.last_update_success = False
+        # This refresh starts before the platforms are forwarded, so a device
+        # that answers quickly can finish its live discovery while setup is
+        # still going. That is fine: the platforms register from the
+        # snapshot either way, and a live set that differs schedules a reload
+        # (see LocalThingsCoordinator._reconcile_rehydrated).
         entry.async_create_background_task(
             hass, coordinator.async_refresh(), f"{DOMAIN} first refresh {entry.entry_id}"
         )
