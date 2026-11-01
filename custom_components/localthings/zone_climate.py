@@ -71,7 +71,7 @@ class LocalThingsZoneClimate(LocalThingsEntity, ClimateEntity):
     # -- temperature --------------------------------------------------------
 
     @property
-    def temperature_unit(self) -> str:
+    def native_temperature_unit(self) -> str:
         raw = self._rep(self._desc.temperature_href).get("x.com.samsung.da.unit")
         return (
             UnitOfTemperature.FAHRENHEIT
@@ -80,12 +80,18 @@ class LocalThingsZoneClimate(LocalThingsEntity, ClimateEntity):
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         return self._temperature("x.com.samsung.da.current")
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         return self._temperature("x.com.samsung.da.desired")
+
+    # Older cores need aliases; newer cores must not see deprecated members.
+    if not hasattr(ClimateEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
+        current_temperature = native_current_temperature
+        target_temperature = native_target_temperature
 
     @property
     def min_temp(self) -> float:
