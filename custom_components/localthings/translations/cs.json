@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Dávkované množství"
       },
+      "freezer_setpoint": {
+        "name": "Mrazák – požadovaná teplota"
+      },
+      "fridge_setpoint": {
+        "name": "Chladnička – požadovaná teplota"
+      },
       "good_sleep": {
         "name": "Klidný spánek"
       },

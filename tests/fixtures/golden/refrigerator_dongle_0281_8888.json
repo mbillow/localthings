@@ -1,0 +1,9 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "door_open",
+    "fridge_setpoint",
+    "fridge_temperature",
+    "rapid_fridge"
+  ]
+}

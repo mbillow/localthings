@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Schenkhoeveelheid"
       },
+      "freezer_setpoint": {
+        "name": "Vriezer instelpunt"
+      },
+      "fridge_setpoint": {
+        "name": "Koelkast instelpunt"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },

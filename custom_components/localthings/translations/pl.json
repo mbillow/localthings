@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Ilość nalewania"
       },
+      "freezer_setpoint": {
+        "name": "Zamrażarka — temperatura zadana"
+      },
+      "fridge_setpoint": {
+        "name": "Chłodziarka — temperatura zadana"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },

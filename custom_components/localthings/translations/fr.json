@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Quantité distribuée"
       },
+      "freezer_setpoint": {
+        "name": "Congélateur : consigne"
+      },
+      "fridge_setpoint": {
+        "name": "Réfrigérateur : consigne"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },

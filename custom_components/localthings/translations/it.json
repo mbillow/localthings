@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Capacità erogazione"
       },
+      "freezer_setpoint": {
+        "name": "Congelatore: valore impostato"
+      },
+      "fridge_setpoint": {
+        "name": "Frigorifero: valore impostato"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },

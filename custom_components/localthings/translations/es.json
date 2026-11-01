@@ -678,6 +678,12 @@
       "dispense_capacity": {
         "name": "Capacidad de dosificación"
       },
+      "freezer_setpoint": {
+        "name": "Congelador: punto de ajuste"
+      },
+      "fridge_setpoint": {
+        "name": "Frigorífico: punto de ajuste"
+      },
       "good_sleep": {
         "name": "Sueño reparador"
       },
