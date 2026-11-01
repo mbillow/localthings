@@ -194,10 +194,10 @@ class TestShareModeSpec:
 
         assert oven._oven_mode_write("Bake", lower["/mode/vs/0"], None, lower) is None
 
-    def test_a_cavity_without_supported_modes_keeps_the_static_list(self):
+    def test_a_specless_cavity_without_supported_modes_offers_only_idle(self):
         resources = {"/mode/vs/0": {"x.com.samsung.da.defaultMode": "UpperConvection"}}
 
-        assert oven._oven_mode_options(resources) == list(oven._OVEN_MODES)
+        assert oven._oven_mode_options(resources) == ["NoOperation"]
 
 
 class TestCachedSpecs:

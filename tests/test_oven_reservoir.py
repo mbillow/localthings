@@ -1,4 +1,4 @@
-"""Native Reservoir position on the measured NV51K7770S board."""
+"""Reservoir position from paired native switch tokens."""
 
 import json
 from copy import deepcopy
@@ -14,6 +14,7 @@ from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.capabilities import oven as oven_caps
 from custom_components.localthings.registry.entities import BinarySensorDesc
 from custom_components.localthings.registry.subdevices import MAIN
+from tests.conftest import _load_device
 from tests.test_legacy_http_lower_cavity import (
     PREFIX,
     _discovered,
@@ -79,10 +80,35 @@ async def test_reservoir_uses_native_options_and_tracks_position(hass, divided):
 @pytest.mark.parametrize(
     "model", [None, 16, "LCD_OV_WALL", "LCD_OV_WALL_16K_OTHER", "LCD_OV_WALL_20K"]
 )
-def test_reservoir_is_limited_to_the_verified_board(model):
+def test_reservoir_uses_native_switches_regardless_of_board(model):
     resources = {"/information/vs/0": {PREFIX + "modelNum": model}}
     rep = {PREFIX + "options": ["waterTankInSwitch_On", "waterTankOutSwitch_Off"]}
-    assert not oven_caps._has_reservoir(rep, resources)
+    assert oven_caps._has_reservoir(rep, resources)
+
+
+def test_reservoir_reads_the_existing_tp2x_steam_oven_fixture():
+    from custom_components.localthings.registry.by_type import oven
+    from custom_components.localthings.registry.discovery import discover
+
+    resources = _load_device("oven_tp2x_ks_walloven")
+    bound = discover(resources, oven.REGISTRY.capabilities)
+    assert flatten(bound, resources)["reservoir_open"] is False
+
+
+def test_combo_reservoir_belongs_to_the_oven_cavity():
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.discovery import discover
+    from tests.test_legacy_http_nw9300md import _canonical, _seed, _sweep
+
+    transport = _sweep(divided=True)
+    for index in (0, 2, 3):
+        resources = _canonical(_seed(transport, index), index)
+        registry = resolve(resources)
+        assert registry is not None
+        state = flatten(discover(resources, registry.capabilities), resources)
+        assert ("reservoir_open" in state) is (index == 2)
+        if index == 2:
+            assert state["reservoir_open"] is False
 
 
 @pytest.mark.parametrize(

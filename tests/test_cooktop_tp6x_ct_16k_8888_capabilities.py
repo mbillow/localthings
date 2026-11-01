@@ -162,7 +162,7 @@ def test_legacy_envelopes_bind_to_cooktop_sensors():
             "Diagnosis": {"diagnosisStart": "Ready"},
             "Alarms": [],
         },
-        table_for("TP6X_CT_16K"),
+        table_for("Cooktop"),
     )
     reg = resolve(resources)
     assert reg is not None and reg.name == "cooktop"

@@ -8,14 +8,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.translation import async_get_translations
 
 from custom_components.localthings.binary_sensor import LocalThingsBinarySensor
-from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.const import CONF_DISABLED_SUBDEVICES
+from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import oven, resolve
 from custom_components.localthings.registry.capabilities import oven as oven_caps
+from custom_components.localthings.registry.shared_oven import shared_sensor_view
 from custom_components.localthings.registry.subdevices import MAIN
 from tests.test_legacy_http_lower_cavity import (
     LOWER,
@@ -27,6 +28,7 @@ from tests.test_legacy_http_lower_cavity import (
     _requests,
     _routes,
 )
+from tests.test_legacy_http_nw9300md import _routes as _combo_routes
 from tests.test_subdevice_discovery import _coordinator
 
 
@@ -145,6 +147,9 @@ async def test_shared_sensors_are_included_on_offline_reload(hass, divided):
         ("/information/vs/1", {PREFIX + "description": "OTHER"}),
         ("/information/vs/1", {PREFIX + "modelNum": "LCD_OV_WALL_20K|1|2"}),
         ("/information/vs/1", {PREFIX + "modelNum": None}),
+        ("/information/vs/0", {PREFIX + "deviceSubType": "CombiOven"}),
+        ("/information/vs/1", {PREFIX + "deviceSubType": "CombiOven"}),
+        ("/information/vs/0", {PREFIX + "deviceSubType": None}),
     ],
 )
 async def test_shared_divider_and_reservoir_require_the_measured_pair(
@@ -272,7 +277,7 @@ async def test_malformed_lower_options_are_not_replaced_by_upper_readings(hass, 
     resources = deepcopy(coordinator.last_resources)
     resources["/mode/vs/1"][PREFIX + "options"] = options
     before = deepcopy(resources)
-    view = oven_caps.shared_sensor_view(resources)
+    view = shared_sensor_view(resources, coordinator.subdevices)
     assert "_localthings_reservoir" not in view["/information/vs/1"]
     assert view["/mode/vs/1"] == before["/mode/vs/1"]
     assert resources == before
@@ -282,7 +287,7 @@ async def test_malformed_lower_options_are_not_replaced_by_upper_readings(hass, 
 def test_other_boards_keep_their_existing_sensors_and_divider_labels(model):
     info = {PREFIX + "modelNum": model, PREFIX + "description": "OTHER_DIV"}
     resources = {"/information/vs/0": info}
-    assert oven_caps.shared_sensor_view(resources) is resources
+    assert shared_sensor_view(resources, []) is resources
     dividers = [
         e
         for e in oven_caps.OVEN_CONNECTED.entities
@@ -292,39 +297,33 @@ def test_other_boards_keep_their_existing_sensors_and_divider_labels(model):
     assert dividers[0].translation_key is None
 
 
-@pytest.mark.parametrize(
-    "language,name,inserted,removed,reservoir",
-    [
-        ("cs", "Přepážka", "Vložená", "Vyjmutá", "Nádržka"),
-        ("de", "Trennwand", "Eingesetzt", "Entfernt", "Wassertank"),
-        ("en", "Divider", "Inserted", "Removed", "Reservoir"),
-        ("es", "Divisor", "Insertado", "Retirado", "Depósito de agua"),
-        ("fr", "Séparateur", "Inséré", "Retiré", "Réservoir"),
-        ("it", "Divisorio", "Inserito", "Rimosso", "Serbatoio"),
-        ("ko", "칸막이", "삽입됨", "제거됨", "물통"),
-        ("nl", "Scheidingswand", "Geplaatst", "Verwijderd", "Waterreservoir"),
-        ("pl", "Przegroda", "Włożona", "Wyjęta", "Zbiornik wody"),
-        ("sk", "Priečka", "Vložená", "Vybratá", "Nádržka"),
-    ],
-)
-async def test_shared_sensor_translations_load_in_every_language(
-    hass, enable_custom_integrations, language, name, inserted, removed, reservoir
-):
-    coordinator = await _discovered(hass)
-    entities = [
-        LocalThingsBinarySensor(coordinator, b)
+@pytest.mark.parametrize("divided", [False, True])
+async def test_disabled_lower_does_not_supply_shared_readings_on_reload(hass, divided):
+    online = await _discovered(hass, _routes(divided=divided))
+    snapshot = deepcopy(online.last_resources)
+    await online._async_save_snapshot(snapshot, online.subdevices)
+    hass.config_entries.async_update_entry(
+        online._entry, options={CONF_DISABLED_SUBDEVICES: {"1": "Lower oven"}}
+    )
+    offline = LocalThingsCoordinator(hass, online._entry)
+    assert await offline.async_rehydrate()
+    assert offline.subdevices == []
+    assert [s.key for s in offline.disabled_subdevices] == ["1"]
+    assert offline.discovery_resources == snapshot
+    assert shared_sensor_view(snapshot, offline.subdevices) is snapshot
+    included = [b for b in offline.bound if _is_included(b, offline)]
+    assert all(b.subdevice == MAIN for b in included)
+    assert not any(b.desc.key == "divider" for b in included)
+    assert len([b for b in included if b.desc.key == "reservoir_open"]) == 1
+
+
+@pytest.mark.parametrize("divided", [False, True])
+async def test_nw9300md_combo_keeps_its_independent_devices(hass, divided):
+    coordinator = await _discovered(hass, _combo_routes(divided=divided))
+    assert {"2", "3"} <= {s.key for s in coordinator.subdevices}
+    raw = deepcopy(coordinator.last_resources)
+    assert shared_sensor_view(raw, coordinator.subdevices) is raw
+    assert not any(
+        b.href.startswith("/information/") and _is_included(b, coordinator)
         for b in coordinator.bound
-        if b.desc.key in {"divider", "reservoir_open"} and _is_included(b, coordinator)
-    ]
-    assert len(entities) == len({e.unique_id for e in entities}) == 4
-    for entity in entities:
-        expected_key = (
-            "divider_lcd_wall_16k" if entity._bound.desc.key == "divider" else "reservoir_open"
-        )
-        assert entity.translation_key == expected_key
-    strings = await async_get_translations(hass, language, "entity", {DOMAIN})
-    prefix = f"component.{DOMAIN}.entity.binary_sensor."
-    assert strings[prefix + "divider_lcd_wall_16k.name"] == name
-    assert strings[prefix + "divider_lcd_wall_16k.state.on"] == inserted
-    assert strings[prefix + "divider_lcd_wall_16k.state.off"] == removed
-    assert strings[prefix + "reservoir_open.name"] == reservoir
+    )

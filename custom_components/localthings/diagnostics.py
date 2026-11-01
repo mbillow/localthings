@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import cloudcourse
-from .const import CONF_OCF_DEVICE_ID, DOMAIN
+from .const import CONF_OCF_DEVICE_ID, CONF_READ_MODE, DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .registry.capabilities.laundry import cycle_options
 from .registry.encode import json_safe
@@ -95,6 +95,9 @@ async def async_get_config_entry_diagnostics(
             if identity is not None
             else None,
             "unbound_hrefs": sorted(coordinator._unbound_hrefs),
+            # As stored in the entry: "per_href" for a board without a
+            # /device/0 Collection (registry/flat.py), None otherwise.
+            "read_mode": entry.data.get(CONF_READ_MODE),
             # This subdevice's own resources, and only this subdevice's. On a
             # composite device (issue #177) `last_resources` is the union
             # across every live subdevice keyed by real hrefs, so reporting it
@@ -104,8 +107,8 @@ async def async_get_config_entry_diagnostics(
             # subdevices, this is byte-identical to `last_resources`.
             "resources": redact_resources(coordinator.device_resources(MAIN)),
             # The transport's own view where it has one the dump above lacks
-            # -- an 8888 appliance's bodies before translation, which is what
-            # mapping an unmapped family takes. Empty over DTLS.
+            # -- an 8888 appliance's bodies before translation, and any
+            # resource the shared table doesn't read yet. Empty over DTLS.
             "transport": redact_resources(coordinator.transport_diagnostics()),
             # Sibling indoor subdevices discovered on this connection (issue
             # #177). subdeviceIdList (the UUID a prefixed subdevice's key comes
@@ -137,6 +140,8 @@ async def async_get_config_entry_diagnostics(
                 }
                 for skip in coordinator._skipped_subdevices
             ],
+            # Candidates the user switched off in the options flow.
+            "subdevices_disabled": [su.key for su in coordinator.disabled_subdevices],
             # What each enumeration probe returned ({} vs a batch), keyed by the
             # seed href attempted -- lets a report distinguish "checked, nothing
             # there" from "never checked".

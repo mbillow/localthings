@@ -1,0 +1,342 @@
+{
+  "note": "NW9300MD microwave/oven combo, LCD_OV_WALL_16K (issue #681): the bodies are verbatim from the reporter's diagnostics, idle with the divider out. Devices 0, 2 and 3 come from the dump of their own build, which read /devices/3; device 1, the empty slot, from their 0.33.0 dump. Each record's `id` and `description` are constructed from its index and its information endpoint, since diagnostics keep neither. Device 3 is the lower cavity, listed in /devices only with the divider in; it reports its own Lower modes either way.",
+  "device0": {
+    "Alarms": [],
+    "ConfigurationLink": {
+      "href": "/devices/0/configuration"
+    },
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "Doors": [
+      {
+        "id": "0",
+        "openState": "Close"
+      }
+    ],
+    "InformationLink": {
+      "href": "/devices/0/information"
+    },
+    "Mode": {
+      "modes": [
+        "NoOperation"
+      ],
+      "options": [
+        "DeviceType_NW9300MD/AA0",
+        "AdjustingTemp_0",
+        "Sabbath_Off",
+        "EnergySaving_On"
+      ],
+      "supportedModes": [
+        "SpeedPowerConvection,PowerConvection,NoOperation,Autocook,BroilS,SpeedBroil,MicroWave"
+      ]
+    },
+    "Operation": {
+      "kidsLock": "Ready",
+      "operationTime": "00:00:00",
+      "power": "On",
+      "progressPercentage": 1,
+      "remainingTime": "00:00:00",
+      "state": "Ready"
+    },
+    "Oven": {
+      "powerLevel": "0",
+      "recipe": "00000000000000",
+      "state": "Ready"
+    },
+    "Temperatures": [
+      {
+        "current": 175.0,
+        "desired": 0.0,
+        "id": "0",
+        "increment": 5.0,
+        "unit": "Fahrenheit"
+      }
+    ],
+    "resources": [
+      "Alarms",
+      "Configuration",
+      "Information",
+      "Mode",
+      "Operation",
+      "Temperatures",
+      "Oven",
+      "Diagnosis",
+      "Doors"
+    ],
+    "type": "Oven",
+    "id": "0",
+    "description": "LCD_OV_WALL_16K"
+  },
+  "device0_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0110",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17010600,17010400",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K",
+      "deviceSubType": "CombiOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40407941|5002011e021123550100000000000000"
+    }
+  },
+  "device0_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": false
+    }
+  },
+  "device1": {
+    "Alarms": [],
+    "ConfigurationLink": {
+      "href": "/devices/1/configuration"
+    },
+    "Doors": [],
+    "InformationLink": {
+      "href": "/devices/1/information"
+    },
+    "Mode": {
+      "supportedModes": [
+        ""
+      ]
+    },
+    "Temperatures": [
+      {
+        "current": 0.0,
+        "id": "0",
+        "increment": 5.0,
+        "unit": "Fahrenheit"
+      }
+    ],
+    "resources": [
+      "Alarms",
+      "Configuration",
+      "Information",
+      "Mode",
+      "Operation",
+      "Temperatures",
+      "Oven",
+      "Diagnosis",
+      "Doors"
+    ],
+    "type": "Oven",
+    "id": "1",
+    "description": "LCD_OV_WALL_16K_DIV"
+  },
+  "device1_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0110",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17010600,17010400",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K_DIV",
+      "deviceSubType": "CombiOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40407941|5002011e021123550100000000000000"
+    }
+  },
+  "device1_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": false
+    }
+  },
+  "device2": {
+    "Alarms": [],
+    "ConfigurationLink": {
+      "href": "/devices/2/configuration"
+    },
+    "Doors": [
+      {
+        "id": "0",
+        "lock": "Unlock",
+        "openState": "Close"
+      }
+    ],
+    "InformationLink": {
+      "href": "/devices/2/information"
+    },
+    "Mode": {
+      "modes": [
+        "NoOperation"
+      ],
+      "options": [
+        "meatprobe_disconnected",
+        "NoPreheat_Off",
+        "waterInlet_Close",
+        "steamAddLevel_NULL",
+        "descaleAlarm_Normal",
+        "descaleNewWaterAlarm_Off",
+        "descaleEmptyWaterAlarm_Off",
+        "steamGeneratorLevel_Empty",
+        "steamUsingTime_80",
+        "drainRequired_00",
+        "steamState_Standby",
+        "descaleState_Standby",
+        "waterTankInSwitch_On",
+        "pyroFreeState_Standby",
+        "waterTankOutSwitch_Off"
+      ],
+      "supportedModes": [
+        "UpperHealthycook4,UpperHealthycook3,UpperHealthycook2,UpperHealthycook1,Healthycook6,Healthycook5,Healthycook4,Healthycook3,Healthycook2,Healthycook1,NoOperation,UpperDrain,UpperSteamBake,UpperBroil,UpperConvectionRoast,UpperConvectionBake,Autocook,KeepWarm,NoOperation,SelfClean,Drain,PyroFree,Descale,SteamRoast,SteamBake,Broil,Bake,ConvectionRoast,ConvectionBake"
+      ]
+    },
+    "Operation": {
+      "operationTime": "00:00:00",
+      "power": "On",
+      "progressPercentage": 1,
+      "remainingTime": "00:00:00",
+      "state": "Ready"
+    },
+    "Oven": {
+      "recipe": "00000000000000",
+      "state": "Ready"
+    },
+    "Temperatures": [
+      {
+        "current": 175.0,
+        "desired": 0.0,
+        "id": "0",
+        "increment": 5.0,
+        "unit": "Fahrenheit"
+      }
+    ],
+    "resources": [
+      "Alarms",
+      "Configuration",
+      "Information",
+      "Mode",
+      "Operation",
+      "Temperatures",
+      "Oven",
+      "Diagnosis",
+      "Doors"
+    ],
+    "type": "Oven",
+    "id": "2",
+    "description": "LCD_OV_WALL_16K_LOWER"
+  },
+  "device2_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0110",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17010600,17010400",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K_LOWER",
+      "deviceSubType": "CombiOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40407941|5002011e021123550100000000000000"
+    }
+  },
+  "device2_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": false
+    }
+  },
+  "device3": {
+    "Alarms": [],
+    "ConfigurationLink": {
+      "href": "/devices/3/configuration"
+    },
+    "Doors": [],
+    "InformationLink": {
+      "href": "/devices/3/information"
+    },
+    "Mode": {
+      "modes": [
+        "NoOperation"
+      ],
+      "supportedModes": [
+        "LowerHealthycook4,LowerHealthycook3,LowerHealthycook2,LowerHealthycook1,NoOperation,LowerBake,LowerConvectionBake"
+      ]
+    },
+    "Operation": {
+      "operationTime": "00:00:00",
+      "power": "On",
+      "progressPercentage": 1,
+      "remainingTime": "00:00:00",
+      "state": "Ready"
+    },
+    "Oven": {
+      "state": "Ready"
+    },
+    "Temperatures": [
+      {
+        "current": 175.0,
+        "desired": 0.0,
+        "id": "0",
+        "increment": 5.0,
+        "unit": "Fahrenheit"
+      }
+    ],
+    "resources": [
+      "Alarms",
+      "Configuration",
+      "Information",
+      "Mode",
+      "Operation",
+      "Temperatures",
+      "Oven",
+      "Diagnosis",
+      "Doors"
+    ],
+    "type": "Oven",
+    "id": "3",
+    "description": "LCD_OV_WALL_16K_DIV"
+  },
+  "device3_information": {
+    "Information": {
+      "Versions": [
+        {
+          "id": "0",
+          "newVersionAvailable": false,
+          "number": "20201110.0110",
+          "type": "Software"
+        },
+        {
+          "id": "1",
+          "newVersionAvailable": false,
+          "number": "17010600,17010400",
+          "type": "Firmware"
+        }
+      ],
+      "description": "LCD_OV_WALL_16K_DIV",
+      "deviceSubType": "CombiOven",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "LCD_OV_WALL_16K|40407941|5002011e021123550100000000000000"
+    }
+  },
+  "device3_configuration": {
+    "Configuration": {
+      "remoteControlEnabled": false
+    }
+  }
+}

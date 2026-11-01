@@ -14,6 +14,7 @@ from typing import ClassVar
 import pytest
 
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
+from tests.test_legacy_http_transport import _swept_as
 
 PREFIX = "x.com.samsung.da."
 
@@ -82,10 +83,61 @@ def rac(monkeypatch):
         family="TP6X_RAC_16K",
     )
     device.connect()
+    _swept_as(device, "Air_Conditioner")
     return device
 
 
 class TestTp6xRacWriteRoutes:
+    @pytest.fixture
+    def unswept(self, rac):
+        rac._state_at(0).device_type, rac._state_at(0).typed = None, False
+        return rac
+
+    def test_a_write_before_any_sweep_reads_the_type_first(self, unswept):
+        """An air conditioner's writes go per endpoint; sent before a sweep
+        had said what it is, one would go as an aggregate it refuses."""
+        _FakeConnection.routes[("GET", "/devices/0")] = (
+            200,
+            {"Device": {"id": "0", "type": "Air_Conditioner"}},
+        )
+
+        unswept.write(["mode", "vs", "0"], {PREFIX + "modes": ["Cool"]}, timeout=8.0)
+        unswept.write(["mode", "vs", "0"], {PREFIX + "modes": ["Dry"]}, timeout=8.0)
+
+        assert [entry[:2] for entry in _FakeConnection.log] == [
+            ("GET", "/devices/0"),
+            ("PUT", "/devices/0/mode"),
+            ("PUT", "/devices/0/mode"),
+        ]
+
+    def test_a_write_whose_type_cant_be_read_is_refused(self, unswept):
+        _FakeConnection.routes[("GET", "/devices/0")] = (503, None)
+
+        code, _ = unswept.write(["mode", "vs", "0"], {PREFIX + "modes": ["Cool"]}, timeout=8.0)
+
+        assert code == 0xA0
+        assert [method for method, *_ in _FakeConnection.log] == ["GET"]
+
+    def test_a_record_with_no_type_is_read_once(self, unswept):
+        _FakeConnection.routes[("GET", "/devices/0")] = (200, {"Device": {"id": "0"}})
+
+        unswept.write(["power", "vs", "0"], {PREFIX + "power": "Off"}, timeout=8.0)
+        unswept.write(["power", "vs", "0"], {PREFIX + "power": "On"}, timeout=8.0)
+
+        assert [method for method, *_ in _FakeConnection.log] == ["GET", "PUT", "PUT"]
+
+    def test_a_sibling_echoing_device_0_is_refused(self, rac):
+        """Some bridges answer any index with device 0's record."""
+        _FakeConnection.routes[("GET", "/devices/1")] = (
+            200,
+            {"Device": {"id": "0", "type": "Air_Conditioner"}},
+        )
+
+        code, _ = rac.write(["mode", "vs", "1"], {PREFIX + "modes": ["Cool"]}, timeout=8.0)
+
+        assert code == 0x84
+        assert [method for method, *_ in _FakeConnection.log] == ["GET"]
+
     def test_power_uses_the_aggregate_path_without_the_device_wrapper(self, rac):
         code, _ = rac.write(["power", "vs", "0"], {PREFIX + "power": "Off"}, timeout=8.0)
 
