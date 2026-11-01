@@ -776,6 +776,24 @@ class TestClockSync:
         assert "/configuration/vs/0" not in {e["href"] for e in seed}
         assert {"href": "/configuration/vs/0", "rep": {}} in again
 
+    def test_a_refused_probe_is_not_asked_again(self, combo):
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (400, None)
+        combo.read(["device", "0"], timeout=10.0)
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+
+        probes = [e for e in _FakeConnection.log if e[:2] == ("GET", self.ENDPOINT)]
+        assert len(probes) == 1
+        assert "/configuration/vs/0" not in {e["href"] for e in seed}
+
+    def test_a_sync_before_any_sweep_probes_first(self, combo):
+        code, _ = combo.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:2] for entry in _FakeConnection.log] == [
+            ("GET", self.ENDPOINT),
+            ("PUT", self.ENDPOINT),
+        ]
+
     def test_a_sync_goes_to_the_clock_endpoint(self, combo):
         combo.read(["device", "0"], timeout=10.0)
         _FakeConnection.log.clear()

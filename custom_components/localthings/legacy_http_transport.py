@@ -153,6 +153,9 @@ def _device_path(index: int) -> str:
     return f"/devices/{index}"
 
 
+_CLOCK_PATH = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
+
+
 class LegacyHttpTransport:
     """`Transport` over the 8888 bridge. Blocking, like the seam it implements."""
 
@@ -342,18 +345,17 @@ class LegacyHttpTransport:
 
     def _has_clock(self, timeout: float) -> bool:
         """Whether device 0 serves CLOCK_ENDPOINT, probed once: a 200 says
-        it does and a 404 says it doesn't. Any other answer is asked again
-        at the next sweep."""
+        it does and any 4xx says it doesn't. No answer, or a 5xx, is asked
+        again at the next sweep."""
         state = self._state_at(0)
         if state.clock is not None:
             return state.clock
-        path = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
         try:
-            status, _ = self._request("GET", path, timeout=timeout)
+            status, _ = self._request("GET", _CLOCK_PATH, timeout=timeout)
         except (OSError, http.client.HTTPException) as err:
-            _LOGGER.debug("%s: %s failed: %s", self._host, path, err)
+            _LOGGER.debug("%s: %s failed: %s", self._host, _CLOCK_PATH, err)
             return False
-        if status in (200, 404):
+        if status == 200 or 400 <= status < 500:
             state.clock = status == 200
         return status == 200
 
@@ -407,13 +409,14 @@ class LegacyHttpTransport:
             # Untested what the appliance does with it; the Flex Duo still
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
-        clock_body = clock_write(href, body) if isinstance(body, dict) else None
-        if clock_body is not None and not index and state.clock:
-            # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
-            path = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
-            status, response = self._request("PUT", path, body=clock_body, timeout=timeout)
-            return http_status_to_coap(status), response
         deadline = time.monotonic() + timeout
+        clock_body = clock_write(href, body) if isinstance(body, dict) else None
+        if clock_body is not None and not index and self._has_clock(timeout):
+            # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
+            status, response = self._request(
+                "PUT", _CLOCK_PATH, body=clock_body, timeout=_remaining(deadline)
+            )
+            return http_status_to_coap(status), response
         refused = self._learn_type(index, timeout)
         if refused is not None:
             _LOGGER.warning("%s: device %d's type is unknown; write refused", self._host, index)
