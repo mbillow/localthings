@@ -1,12 +1,13 @@
-"""Remote mode choices for LCD_OV_WALL_16K without changing reported state."""
+"""Specless oven choices follow start validation while preserving current-mode display."""
 
+import json
 from copy import deepcopy
 
 import pytest
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.localthings.registry.by_type import oven as oven_registry
-from custom_components.localthings.registry.capabilities import oven
+from custom_components.localthings.registry.capabilities import cook, oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.subdevices import MAIN
 from custom_components.localthings.select import LocalThingsSelect
@@ -19,7 +20,19 @@ from tests.test_legacy_http_lower_cavity import (
     _routes,
 )
 
-EXCLUDED = ("Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil")
+EXCLUDED = (
+    "Drain",
+    "Autocook",
+    "SelfClean",
+    "PyroFree",
+    "Descale",
+    "Broil",
+    "UpperBroil",
+    "BreadProof",
+    "Autocook1",
+    "LowerBroil",
+    "SteamClean",
+)
 
 
 def _mode(coordinator, subdevice=MAIN):
@@ -28,9 +41,8 @@ def _mode(coordinator, subdevice=MAIN):
     )
 
 
-def _resources(model="LCD_OV_WALL_16K|1|2"):
+def _resources():
     return {
-        "/information/vs/0": {PREFIX + "modelNum": model, PREFIX + "deviceSubType": "WallOven"},
         "/mode/vs/0": {
             PREFIX + "modes": ["NoOperation"],
             PREFIX + "supportedModes": [
@@ -61,7 +73,10 @@ async def test_captured_cavity_choices_keep_order_and_the_raw_snapshot(hass, div
         entity = LocalThingsSelect(coordinator, bound)
         live = coordinator.canonical_resources(subdevice)["/mode/vs/0"][PREFIX + "supportedModes"]
         assert bound.desc is next(d for d in oven.OVEN_MODE.entities if d.key == "oven_mode")
-        assert entity._raw_options() == [m for m in live if m not in EXCLUDED]
+        assert entity._raw_options() == [
+            "NoOperation",
+            *cook.startable_modes(coordinator.canonical_resources(subdevice)),
+        ]
         if subdevice == MAIN:
             assert ("UpperBroil" if divided else "Broil") in live
             assert ("UpperConvectionBake" if divided else "Bake") in entity._raw_options()
@@ -76,8 +91,11 @@ async def test_captured_cavity_choices_keep_order_and_the_raw_snapshot(hass, div
 async def test_excluded_modes_cannot_be_held_or_sent_while_running(hass, mode):
     coordinator = await _discovered(hass, _routes(divided=False))
     bound = _mode(coordinator)
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as exc:
         await coordinator.async_send_command(bound, mode)
+    assert exc.value.translation_key == "cook_mode_not_startable"
+    assert exc.value.translation_placeholders is not None
+    assert exc.value.translation_placeholders["mode"] == mode
     assert not any(held.values for held in coordinator._held_cooks.values())
 
     coordinator._observe.apply("/operational/state/vs/0", {PREFIX + "state": "Run"}, source="poll")
@@ -116,7 +134,7 @@ async def test_panel_started_program_keeps_its_display_and_running_status(hass, 
 
 
 @pytest.mark.parametrize("live", [None, [], ["Bake"]])
-@pytest.mark.parametrize("mode", ["Broil", "SelfClean"])
+@pytest.mark.parametrize("mode", ["Broil", "SelfClean", "PanelOnlyProgram"])
 def test_current_excluded_program_displays_even_if_missing_from_supported_modes(live, mode):
     resources = _resources()
     rep = resources["/mode/vs/0"]
@@ -140,18 +158,15 @@ async def test_existing_selector_follows_updated_cavity_modes(hass):
 
 
 @pytest.mark.parametrize("live", [None, []])
-def test_fallback_choices_and_writes_also_exclude_broil(live):
+def test_without_reported_modes_no_static_cooking_choices_are_offered(live):
     resources = _resources()
     resources["/mode/vs/0"][PREFIX + "supportedModes"] = live
     desc = _description(resources)
     assert callable(desc.options)
-    assert desc.options(resources) == [m for m in oven._OVEN_MODES if m != "Broil"]
+    assert desc.options(resources) == ["NoOperation"]
     assert desc.write_fn is not None
     assert desc.write_fn("Broil", resources["/mode/vs/0"], None, resources) is None
-    assert desc.write_fn("Bake", resources["/mode/vs/0"], None, resources) == (
-        ["mode", "vs", "0"],
-        {PREFIX + "modes": ["Bake"]},
-    )
+    assert desc.write_fn("Bake", resources["/mode/vs/0"], None, resources) is None
 
 
 def test_allowed_codes_and_idle_validation_stay_unchanged():
@@ -172,36 +187,29 @@ def test_allowed_codes_and_idle_validation_stay_unchanged():
     assert desc.validate_fn("NoOperation", {}, resources) == "oven_mode_idle_not_selectable"
 
 
-@pytest.mark.parametrize(
-    "model", [None, 16, "LCD_OV_WALL", "LCD_OV_WALL_16K_OTHER", "LCD_OV_WALL_20K"]
-)
-def test_other_model_identities_keep_the_shared_descriptor(model):
-    resources = _resources(model)
-    desc = _description(resources)
-    original = next(d for d in oven.OVEN_MODE.entities if d.key == "oven_mode")
-    assert desc is original
-    assert callable(desc.options)
-    assert desc.options(resources) == resources["/mode/vs/0"][PREFIX + "supportedModes"]
-    assert desc.write_fn is not None
-    assert desc.write_fn("Broil", resources["/mode/vs/0"], None, resources) is not None
-
-
-@pytest.mark.parametrize("subtype", [None, "", "CombiOven", "Microwave", "Oven"])
-def test_shared_board_without_wall_oven_type_keeps_its_choices(subtype):
+@pytest.mark.parametrize("control", ["Start&Setting", "Setting"])
+def test_a_reported_mode_spec_keeps_its_existing_setting_choices(control):
     resources = _resources()
-    resources["/information/vs/0"][PREFIX + "deviceSubType"] = subtype
     rep = resources["/mode/vs/0"]
-    rep[PREFIX + "supportedModes"] = ["NoOperation", *EXCLUDED, "Bake"]
+    rep[cook.MODE_SPEC] = json.dumps(
+        [
+            {"mode": "Bake", "control": "Start&Setting"},
+            {"mode": "Broil", "control": control},
+            {"mode": "Autocook", "control": control},
+        ]
+    )
+    rep[PREFIX + "supportedModes"] = ["NoOperation", "Bake", "Broil", "Autocook"]
     desc = _description(resources)
     assert callable(desc.options)
     assert desc.options(resources) == rep[PREFIX + "supportedModes"]
     assert desc.write_fn is not None
-    for mode in EXCLUDED:
-        assert desc.write_fn(mode, rep, None, resources) is not None
+    assert desc.write_fn("Broil", rep, None, resources) is not None
+    assert desc.write_fn("Autocook", rep, None, resources) is not None
+    assert ("Broil" in cook.startable_modes(resources)) is (control == "Start&Setting")
 
 
 @pytest.mark.parametrize("divided", [False, True])
-def test_same_board_legacy_combo_keeps_both_oven_cavities_choices(divided):
+def test_legacy_combo_oven_cavities_follow_the_same_start_policy(divided):
     from tests.test_legacy_http_nw9300md import _canonical, _seed, _sweep
 
     transport = _sweep(divided=divided)
@@ -211,11 +219,13 @@ def test_same_board_legacy_combo_keeps_both_oven_cavities_choices(divided):
         desc = _description(resources)
         live = rep[PREFIX + "supportedModes"]
         assert callable(desc.options)
-        assert desc.options(resources) == live
+        assert desc.options(resources) == ["NoOperation", *cook.startable_modes(resources)]
         assert desc.write_fn is not None
         for mode in live:
             if mode != "NoOperation":
-                assert desc.write_fn(mode, rep, None, resources) is not None
+                assert (desc.write_fn(mode, rep, None, resources) is not None) is (
+                    mode in cook.startable_modes(resources)
+                )
 
 
 async def test_removed_divider_does_not_restore_fallback_lower_modes(hass):
@@ -248,9 +258,11 @@ def test_mode_filter_does_not_absorb_other_configuration_changes():
         "range_tp1x_da_ks_range_0101x",
         "oven_tp2x_ks_walloven",
         "oven_nv75n_dual_cook",
+        "range_ne63a6111ss",
+        "oven",
     ],
 )
-async def test_other_appliances_keep_their_oven_choices(hass, name):
+async def test_fixtures_filter_only_specless_oven_cavities(hass, name):
     from tests.test_subdevice_discovery import _coordinator, _discover
 
     coordinator = _coordinator(hass)
@@ -261,4 +273,14 @@ async def test_other_appliances_keep_their_oven_choices(hass, name):
         assert bound.desc is next(d for d in oven.OVEN_MODE.entities if d.key == "oven_mode")
         entity = LocalThingsSelect(coordinator, bound)
         resources = coordinator.canonical_resources(bound.subdevice)
-        assert entity._raw_options() == oven._oven_mode_options(resources)
+        rep = resources["/mode/vs/0"]
+        if rep.get(cook.MODE_SPEC) is None:
+            expected = ["NoOperation", *cook.startable_modes(resources)]
+            current = cook.current_mode(resources)
+            if current and current not in expected:
+                expected.append(current)
+        else:
+            expected = cook.selectable_modes(rep[PREFIX + "supportedModes"])
+            if "NoOperation" not in expected:
+                expected.insert(0, "NoOperation")
+        assert entity._raw_options() == expected

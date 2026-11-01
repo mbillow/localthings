@@ -51,8 +51,8 @@ SETPOINT_STEP_F = 5
 # Mode options seen on NV7000BS-class. No dump exists so this list is
 # inferred from Samsung documentation and firmware observations; the
 # firmware rejects unknown modes, so a missing entry is a coverage gap, not
-# a bug. Fallback only, used when a device's own /mode/vs/0 doesn't report
-# supportedModes at all -- see _oven_mode_options/_oven_mode_write below.
+# a bug. Fallback for boards with modeSpec but no supportedModes; specless
+# boards use cook.startable_modes -- see _oven_mode_choices below.
 _OVEN_MODES = (
     "NoOperation",
     "Bake",
@@ -304,45 +304,34 @@ def _cook_time_write(p, rep, href=None, resources=None):
     return ["operational", "state", "vs", "0"], body
 
 
-def _remote_mode_choices(modes, resources, current=None):
-    info = resources.get("/information/vs/0") or {}
-    if not (
-        is_lcd_ov_wall_16k(info.get("x.com.samsung.da.modelNum"))
-        and info.get("x.com.samsung.da.deviceSubType") == "WallOven"
-    ):
-        return modes
-    # NV51K7770S: Broil hits the existing start restriction; cleaning and
-    # Gourmet Cook are owner-requested exclusions, not proven firmware limits.
-    excluded = {"Drain", "Autocook", "SelfClean", "PyroFree", "Descale", "Broil", "UpperBroil"}
-    choices = [mode for mode in modes if mode not in excluded or mode == current]
-    # HA requires the current program in the list to display it. The writer
-    # never passes current, so this does not enable a write of that program.
-    if current in excluded and current not in choices:
-        choices.append(current)
-    return choices
+def _oven_mode_choices(resources):
+    """Writable modes: specless ovens use the same policy as cooking preparation."""
+    rep = resources.get("/mode/vs/0") or {}
+    if rep.get(cook.MODE_SPEC) is None:
+        return cook.startable_modes(resources)
+    live = rep.get("x.com.samsung.da.supportedModes")
+    # An empty list is a lower zone with its divider out (cook.share_mode_spec).
+    if not live and not cook.zoned(resources):
+        return list(_OVEN_MODES)
+    return cook.selectable_modes(live or [])
 
 
 def _oven_mode_options(resources):
-    """Live mode list from the device's own /mode/vs/0 supportedModes when
-    it reports one; the NV7000BS-era _OVEN_MODES guess otherwise. Mirrors
-    laundry.py's options_field pattern (buzzer_sound/finish_sound), but
-    needs the callable form rather than options_field because a static
-    fallback has to kick in when the device's own field is absent."""
-    rep = resources.get("/mode/vs/0") or {}
-    live = rep.get("x.com.samsung.da.supportedModes")
-    current = (rep.get("x.com.samsung.da.modes") or [None])[0]
-    # An empty list is a lower zone with its divider out (cook.share_mode_spec).
-    if not live and not cook.zoned(resources):
-        return _remote_mode_choices(list(_OVEN_MODES), resources, current)
-    live = _remote_mode_choices(cook.selectable_modes(live or []), resources, current)
+    choices = _oven_mode_choices(resources)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
     # Unknown. Listing it makes it selectable too, which _oven_mode_validate
     # turns into a user-facing error rather than a silent no-op.
-    if "NoOperation" in live:
-        return live
-    return ["NoOperation", *live]
+    if "NoOperation" not in choices:
+        choices.insert(0, "NoOperation")
+    rep = resources.get("/mode/vs/0") or {}
+    current = cook.current_mode(resources)
+    # HA needs a panel-started program in the list to display it. The writer
+    # uses only _oven_mode_choices, so this does not enable a write of it.
+    if rep.get(cook.MODE_SPEC) is None and current and current not in choices:
+        choices.append(current)
+    return choices
 
 
 def _oven_mode_validate(p, rep, resources):
@@ -360,13 +349,9 @@ def _oven_mode_validate(p, rep, resources):
 def _oven_mode_write(p, rep, href=None, resources=None):
     # The cavity's view, not its raw rep: a zoned lower cavity's modes come
     # from the board's modeSpec (cook.share_mode_spec).
-    view = (resources or {}).get("/mode/vs/0") or rep
-    live = view.get("x.com.samsung.da.supportedModes")
-    if not live and not cook.zoned(resources or {}):
-        valid = _OVEN_MODES
-    else:
-        valid = cook.selectable_modes(live or [])
-    if p not in _remote_mode_choices(valid, resources or {}):
+    resources = resources or {}
+    view = {**resources, "/mode/vs/0": resources.get("/mode/vs/0") or rep}
+    if p == "NoOperation" or p not in _oven_mode_choices(view):
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
 
@@ -519,11 +504,9 @@ _PROBE_ITEM_ID = "1"
 def _probe_item(rep):
     """The food probe's entry in `/temperatures/vs/0`'s items[], or None.
 
-    Keyed by reported id, not position, so a board listing them the other
-    way round can't swap the two readings. That id 1 is the probe is
-    inferred from issue #490's dump, not confirmed: only the cavity with a
-    probe socket reports a second item, and it carries `increment` 1
-    against the cavity's 5.
+    Keyed by id rather than array position: #490's probe cavity alone has
+    item 1 with increment 1 against the cavity's 5. Confirmed on the
+    NV51K7770S with a 150°F target and 107°F current reading (#665).
     """
     for item in rep.get("x.com.samsung.da.items") or []:
         if item.get("x.com.samsung.da.id") == _PROBE_ITEM_ID:
@@ -545,12 +528,10 @@ def _probe_temp_unit(rep):
 def _probe_connected(rep, resources):
     """True only while a probe is actually plugged in.
 
-    The socket's state lives on a different resource -- `/mode/vs/0`'s
-    options[] carries a `meatprobe_<state>` token -- so an oven with a
-    socket and nothing in it reports a full items[1] reading 0, which as a
-    permanent entity is worse than no entity. Gated on "reports a state and
-    it isn't disconnected" rather than on the connected spelling, which no
-    dump has shown yet.
+    An empty socket can still report zero readings, so use the
+    `meatprobe_<state>` token in `/mode/vs/0`'s options[]. The NV51K7770S
+    confirms connected/disconnected; retain the non-disconnected gate for
+    other boards.
     """
     if _probe_item(rep) is None:
         return False
@@ -611,6 +592,7 @@ OVEN_SETPOINT = Capability(
         # setpoint writes from idle (docs/investigations/oven-cycle-start.md).
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             device_class="temperature",
             state_class="measurement",
             unit_fn=_probe_temp_unit,
@@ -619,6 +601,7 @@ OVEN_SETPOINT = Capability(
         ),
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             device_class="temperature",
             unit_fn=_probe_temp_unit,
             entity_category="diagnostic",
@@ -721,6 +704,7 @@ OVEN_PROBE_CURRENT_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_temp",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             state_class="measurement",
@@ -737,6 +721,7 @@ OVEN_PROBE_DESIRED_OCF = Capability(
     entities=(
         SensorDesc(
             key="food_probe_setpoint",
+            dynamic_presence=True,
             field="temperature",
             device_class="temperature",
             entity_category="diagnostic",
@@ -851,6 +836,7 @@ OVEN_MODE = Capability(
             field="x.com.samsung.da.options",
             icon="mdi:volume-high",
             entity_category="config",
+            exists_fn=_has_option("Sound"),
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,

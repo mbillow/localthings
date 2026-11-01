@@ -48,12 +48,14 @@ from .const import (
     CONF_MODEL,
     CONF_OCF_DEVICE_ID,
     CONF_PORT,
+    CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_LEARN_MODES,
     DEVICE_SUPPORT_ISSUE_URL,
     DOMAIN,
+    READ_MODE_PER_HREF,
     SUMMARY_INTERVAL_S,
     TRANSPORT_LEGACY_HTTP,
 )
@@ -69,6 +71,7 @@ from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
 from .registry.batch import parse_device0_batch
+from .registry.by_type import registry_for
 from .registry.by_type import resolve as resolve_registry
 from .registry.capabilities import cook
 from .registry.capabilities.common import (
@@ -82,12 +85,15 @@ from .registry.capabilities.laundry import cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc
+from .registry.flat import FLAT_TIMEOUT_S, flat_hrefs, iter_resources, read_all
 from .registry.identity import (
     DeviceIdentity,
     device_display_name,
+    display_serial,
     ocf_device_key,
     proven_ocf_device_id,
     read_identity,
+    resolve_firmware,
     resolve_mac,
     resolve_model,
     resolve_serial,
@@ -177,6 +183,14 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 # NV7000BS is four; the headroom is for permutation testing, not for
 # writing a whole device at once.
 _DEBUG_MAX_BATCH_ELEMENTS = 16
+
+
+# Row lists a write may send only the changed row of, and the field each row
+# is matched by (common.merge_items_field).
+_MERGED_ROWS = (
+    ("x.com.samsung.da.items", "x.com.samsung.da.id"),
+    ("x.com.samsung.networkaudio.channelVolume", "name"),
+)
 
 
 def _href_to_path_segs(href: str) -> list[str]:
@@ -401,6 +415,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # first to the cap while the device stays unreachable.
     _REDISCOVERY_BACKOFF_MIN_S: float = 60.0
     _REDISCOVERY_BACKOFF_MAX_S: float = 1800.0
+    # Flat boards (the soundbar) are often switched off for hours and move
+    # their port on every power-on; at the general cap, one turned back on
+    # would wait up to 30 minutes for the next lookup.
+    _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
 
     # A single reconnect is normal appliance behavior (README's "Known
     # device behavior"); only escalate once they pile up in a trailing
@@ -445,6 +463,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # budget, as registry.subdevices' enumeration budget.
     _PROBE_TIMEOUT_S: float = 12.0
     _PROBE_BUDGET_S: float = 20.0
+    # Flat-board sweep (self._flat): the bound and cold-tier hrefs the
+    # sub-polls don't cover, only every Nth poll, with one liveness GET in
+    # between. A sweep holds the session lock that writes wait on, for up to
+    # the budget when hrefs time out.
+    _FLAT_TIMEOUT_S: float = FLAT_TIMEOUT_S
+    _FLAT_BUDGET_S: float = 20.0
+    _FLAT_FULL_EVERY_N_POLLS: int = 4
+    # The once-per-start /device/0 GET of a per-href entry (_device0_answers).
+    _READ_MODE_CHECK_TIMEOUT_S: float = 10.0
+    # One paced read on a live board: the transport's 5 requests/s plus the
+    # round trip.
+    _FLAT_READ_S: float = 0.3
 
     # First-discovery subdevice enumeration is part of config-entry setup, so
     # it must have a finite wall-clock cost. A UUID-prefixed AC whose
@@ -486,6 +516,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # live poll -- see async_rehydrate.
         self._rehydrate_resources: dict[str, dict] | None = None
         self._rehydrated_keys: frozenset[tuple[str, str]] | None = None
+        # What a flat board's discovery took from the last snapshot because
+        # the href didn't answer this time -- see _with_remembered_resources.
+        self._discovery_extra: dict[str, dict] = {}
         # Sibling indoor subdevices on this connection (issue #177); set
         # once at first discovery, narrowed to the ones with live state (see
         # subdevices.discover_partitioned). Never includes MAIN itself.
@@ -558,6 +591,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._subpoll_task: asyncio.Task | None = None
         self._hot_hrefs: list[str] = []
         self._warm_hrefs: list[str] = []
+        # Coverage-only hrefs a flat board's full sweep re-reads, which
+        # `bound` never carries.
+        self._cold_hrefs: list[str] = []
         self.device_type_name: str | None = None
         self.one_ui_version: str = ""
         self._consecutive_poll_timeouts = 0
@@ -589,6 +625,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # observe; consumed once to trigger an immediate resubscribe
         # instead of waiting out _RECOVERY_RETRY_S.
         self._resubscribe_due = False
+        # No /device/0 Collection (registry/flat.py): polled per href. Set
+        # up from the entry (CONF_READ_MODE, decided at setup) and undone
+        # only on proof, a /device/0 answering 2.05 (see _device0_answers).
+        self._flat = self._entry.data.get(CONF_READ_MODE) == READ_MODE_PER_HREF
+        self._read_mode_checked = False
+        self._flat_poll = 0
+        self._subpoll_turn = 0
+        # Set per family at discovery (registry/by_type).
+        self._subscribe_tiers: tuple[str, ...] = ("hot", "warm")
+        self._write_settle_s: float = self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
 
     # ------------------------------------------------------------------
     # Session management (all blocking — must run in executor)
@@ -707,16 +753,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Only read while platforms are being forwarded; nothing consults it
         once the entities exist.
         """
-        if self._rehydrate_resources is None:
-            return self.last_resources
-        return self._rehydrate_resources
+        if self._rehydrate_resources is not None:
+            return self._rehydrate_resources
+        if self._discovery_extra:
+            return {**self._discovery_extra, **self.last_resources}
+        return self.last_resources
 
     def discovery_canonical(self, subdevice: Subdevice) -> dict[str, dict]:
         """`discovery_resources` in `subdevice`'s canonical view -- the
         exists_fn counterpart to canonical_resources."""
-        if self._rehydrate_resources is None:
+        if self._rehydrate_resources is None and not self._discovery_extra:
             return self.canonical_resources(subdevice)
-        resources = self._cook_view(self._rehydrate_resources)
+        resources = self._cook_view(self.discovery_resources)
         return canonical_view(subdevice, resources, self.subdevices)
 
     # ------------------------------------------------------------------
@@ -1004,7 +1052,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Identifiers derive from the master's serial plus this subdevice's
         stable key, never the subdevice's own reported serial -- deterministic
         across reconnects regardless of whether its identity resource
-        answered yet. `serial_number` is set from it when present anyway,
+        answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
         if subdevice.kind == "main":
@@ -1017,7 +1065,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         model = self._device_model(subdevice, resources) or (
             model_num.split("|", 1)[0] if model_num else ""
         )
-        serial = info.get("x.com.samsung.da.serialNum") or None
+        serial = display_serial(info.get("x.com.samsung.da.serialNum"))
         base_name = self.device_info.get("name") or "Samsung Appliance"
         if cavity := _cavity_label(resources):
             # A dual-cavity oven reports the same modelNum on both cavities
@@ -1045,8 +1093,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"{base_name} {label}",
             manufacturer=self.device_info.get("manufacturer") or "Samsung",
             model=model or None,
-            serial_number=serial,
         )
+        if serial:
+            # As on the main card: a placeholder isn't shown, and a key left
+            # out keeps what the registry has.
+            info["serial_number"] = serial
         set_via_device(self.hass, self._entry.entry_id, info, (DOMAIN, self.device_key))
         return info
 
@@ -1065,9 +1116,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _connect_session(self) -> None:
         """Open a session on the stored port, following it if it moved.
 
-        A failed handshake on a DTLS entry asks the device, over plaintext,
-        which secure port it now advertises, and tries that one instead
-        (#435: laundry ports move across a power cycle). Backed off, so an
+        A handshake that met silence or an unreachable port asks the device
+        which secure port it now advertises (over plaintext; flat boards,
+        which advertise nothing, by a ClientHello probe), and tries that one
+        instead (#435: laundry ports move across a power cycle). Backed off, so an
         appliance that is simply off or asleep costs one lookup per backoff
         step, not one per poll. The new port is written to the entry by
         `_persist_moved_port` once a poll has come through on it.
@@ -1111,7 +1163,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._open_session(port)
 
     def _rediscover_port(self, current: int) -> int | None:
-        """The port the device now advertises, when a lookup is due. Blocking."""
+        """The port the device now answers on, when a lookup is due (see
+        probing.moved_secure_port). Blocking."""
         if self._entry.data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
             return None
         now = time.monotonic()
@@ -1119,16 +1172,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return None
         self._rediscovery_backoff_s = min(
             max(self._rediscovery_backoff_s * 2, self._REDISCOVERY_BACKOFF_MIN_S),
-            self._REDISCOVERY_BACKOFF_MAX_S,
+            self._REDISCOVERY_BACKOFF_FLAT_MAX_S if self._flat else self._REDISCOVERY_BACKOFF_MAX_S,
         )
         self._next_rediscovery_ts = now + self._rediscovery_backoff_s
         try:
             return probing.moved_secure_port(
-                self._entry.data[CONF_HOST], current, self._entry.data.get(CONF_OCF_DEVICE_ID)
+                self._entry.data[CONF_HOST],
+                current,
+                self._entry.data.get(CONF_OCF_DEVICE_ID),
+                # A per-href board advertises nothing in plaintext, so only a
+                # ClientHello probe finds its moved port. It holds the session
+                # lock for seconds, so only where needed.
+                probe_scan=self._flat,
             )
         except Exception as e:
             self._log.debug("secure port lookup failed: %s", e)
             return None
+
+    @callback
+    def _persist_read_mode(self) -> None:
+        """Drop CONF_READ_MODE once _device0_answers proved it wrong."""
+        if self._flat or CONF_READ_MODE not in self._entry.data:
+            return
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            data={k: v for k, v in self._entry.data.items() if k != CONF_READ_MODE},
+        )
 
     @callback
     def _persist_moved_port(self) -> None:
@@ -1303,6 +1372,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._handshake_failed = False
         sess = self._session
         assert sess is not None
+        if self._flat and not self._read_mode_checked:
+            self._read_mode_checked = True
+            self._flat = not self._device0_answers(sess)
+        if self._flat:
+            return self._poll_flat_blocking(sess)
         try:
             # 35s gives a slow blockwise transfer room to finish instead of
             # raising TimeoutError every cycle on an otherwise-fine device.
@@ -1374,38 +1448,85 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _poll_subdevice_flat_hrefs(self, subdevice: Subdevice, sess) -> dict[str, dict]:
         """Re-poll a flat-mode subdevice's hrefs individually (issue #205) --
         it has no Collection endpoint to batch-refresh through (see
-        enumerate_subdevices' fallback), so each confirmed href gets its own
-        GET under the subdevice's prefix. A failing href just drops out of
+        enumerate_subdevices' fallback). A failing href just drops out of
         the result, same posture as the Collection path above.
 
         Takes `sess` from the caller rather than re-reading self._session --
         async_close() can null it without holding _session_lock. Skips hrefs
-        already covered by the hot/warm sub-poll tiers, which
-        _run_subpolls refreshes every 3s/6s, strictly more current than
-        this once-per-summary-poll pass could offer."""
+        already covered by the hot/warm sub-poll tiers, which _run_subpolls
+        refreshes every 3s/6s."""
         skip = set(self._hot_hrefs) | set(self._warm_hrefs)
-        result: dict[str, dict] = {}
-        first = True
-        for href in subdevice.flat_hrefs:
-            actual = subdevice.to_actual(href)
-            if actual in skip:
-                continue
-            try:
-                if not first:
-                    sess.pace()
-                first = False
-                path = actual.strip("/").split("/")
-                code, rep = sess.read(path, timeout=10.0)
-                if code == 0x45 and isinstance(rep, dict):
-                    result[actual] = rep
-            except Exception as e:
-                self._log.debug(
-                    "subdevice %s flat href %s poll failed: %s",
-                    subdevice.key,
-                    href,
-                    e,
+        hrefs = [subdevice.to_actual(href) for href in subdevice.flat_hrefs]
+        return dict(
+            iter_resources(
+                sess, [href for href in hrefs if href not in skip], timeout=10.0, logger=self._log
+            )
+        )
+
+    def _oic_res(self) -> list:
+        links = self._identity.raw.get("/oic/res") if self._identity else None
+        return links if isinstance(links, list) else []
+
+    def _device0_answers(self, sess: Transport) -> bool:
+        """True when a per-href entry's /device/0 answers 2.05 after all.
+        Blocking.
+
+        Asked once per coordinator start (_read_mode_checked), on the first
+        poll that has a session. Only that answer moves the entry back to
+        the Collection (_persist_read_mode): a 4.04, no answer, an error or an
+        empty Collection keeps it per href, so a board that is off at
+        startup stays so.
+        """
+        try:
+            code, body = sess.read(_SEED_PATH, timeout=self._READ_MODE_CHECK_TIMEOUT_S)
+        except Exception as e:
+            self._log.debug("/device/0 check: %s", e)
+            return False
+        if code != 0x45 or not isinstance(body, list) or not parse_device0_batch(body):
+            return False
+        self._log.info("/device/0 answered 2.05; polling the Collection again")
+        return True
+
+    def _poll_flat_blocking(self, sess) -> dict[str, dict]:
+        """Poll a flat board (self._flat) one href at a time. Blocking.
+
+        Before discovery this reads everything /oic/res advertises; after it,
+        bound and cold-tier hrefs minus hot/warm ones, which _run_subpolls
+        refreshes. No answer at all is treated as a dead session.
+        """
+        if not self._discovered:
+            results = read_all(sess, self._oic_res(), logger=self._log)
+        else:
+            # A board back from off (failed cycles) is read in full at once:
+            # its settings may have changed while it was dark.
+            self._flat_poll = (
+                0 if self._failed_cycles else (self._flat_poll + 1) % self._FLAT_FULL_EVERY_N_POLLS
+            )
+            if self._flat_poll != 0:
+                # One liveness GET, any answer counts. No answer fails the
+                # cycle, so a device switched off by its own remote reads as
+                # unreachable on the next poll.
+                if self._session_answers(sess):
+                    return {}
+                raise RuntimeError("flat poll: liveness read got no answer")
+            skip = set(self._hot_hrefs) | set(self._warm_hrefs)
+            hrefs = sorted(({bound.href for bound in self.bound} | set(self._cold_hrefs)) - skip)
+            if not hrefs:
+                return {}
+            results = dict(
+                iter_resources(
+                    sess,
+                    hrefs,
+                    timeout=self._FLAT_TIMEOUT_S,
+                    budget=self._FLAT_BUDGET_S,
+                    logger=self._log,
+                    # async_close drops the session without the lock.
+                    stop=lambda: self._session is not sess,
                 )
-        return result
+            )
+        if not results:
+            raise RuntimeError("flat poll: no resource answered")
+        return results
 
     def _poll_hrefs_blocking(
         self,
@@ -1436,34 +1557,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         session = self._session
         if session is None:
             return {}
-        results = {}
-        first = True
-        deadline = time.monotonic() + budget if budget is not None else None
-        for href in hrefs:
-            if stop is not None and stop.is_set():
-                break
+
+        def cancelled() -> bool:
             # async_close cancels the sub-poll without waiting for this
             # thread, then drops the session; reading on would hit None.
-            if self._session is not session:
-                break
-            if deadline is not None:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    self._log.debug("href poll budget spent; skipping %s", href)
-                    continue
-                timeout = min(timeout, remaining)
-            if not first:
-                session.pace()
-            first = False
+            return (stop is not None and stop.is_set()) or self._session is not session
+
+        results = {}
+        for href, rep in iter_resources(
+            session, hrefs, timeout=timeout, budget=budget, logger=self._log, stop=cancelled
+        ):
             try:
-                path = href.strip("/").split("/")
-                code, rep = session.read(path, timeout=timeout)
-                if code == 0x45 and isinstance(rep, dict):
-                    if apply:
-                        self._observe.apply(href, rep, source="poll")
-                    results[href] = rep
-            except Exception as e:
+                if apply:
+                    self._observe.apply(href, rep, source="poll")
+            except Exception as e:  # one bad rep mustn't end the pass
                 self._log.debug("sub-poll %s: %s", href, e)
+                continue
+            results[href] = rep
         return results
 
     def _probe_blocking(self, subdevices: list[Subdevice], apply: bool = True) -> dict[str, dict]:
@@ -1487,6 +1597,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         losing the one number that is genuinely per-unit.
         """
         hrefs = [su.to_actual(href) for su in subdevices for href in PROBE_HREFS]
+        if self._flat:
+            # /oic/res lists everything a flat board has; probing anything
+            # else only waits out a timeout.
+            advertised = set(flat_hrefs(self._oic_res()))
+            hrefs = [href for href in hrefs if href in advertised]
         return self._poll_hrefs_blocking(
             hrefs, timeout=self._PROBE_TIMEOUT_S, apply=apply, budget=self._PROBE_BUDGET_S
         )
@@ -1521,10 +1636,27 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hrefs = list(hot) + (list(warm) if i % 2 == 0 else [])
             if not hrefs:
                 continue
+            if self._flat:
+                # Each pass starts one href later, so a budget spent on hrefs
+                # that time out can't starve the ones behind them for good.
+                turn = self._subpoll_turn % len(hrefs)
+                self._subpoll_turn += 1
+                hrefs = hrefs[turn:] + hrefs[:turn]
+            # A flat board that went dark mustn't hold the lock 10 s per
+            # href: short reads, and a budget of two timeouts on top of the
+            # paced reads a live board needs.
+            limits = (
+                {
+                    "timeout": self._FLAT_TIMEOUT_S,
+                    "budget": 2 * self._FLAT_TIMEOUT_S + self._FLAT_READ_S * len(hrefs),
+                }
+                if self._flat
+                else {}
+            )
             async with self._session_lock:
                 stop = threading.Event()
                 job = self.hass.async_add_executor_job(
-                    functools.partial(self._poll_hrefs_blocking, hrefs, stop=stop)
+                    functools.partial(self._poll_hrefs_blocking, hrefs, stop=stop, **limits)
                 )
                 try:
                     await asyncio.shield(job)
@@ -1594,7 +1726,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = self._session
         if sess is None:
             return resources
-        oic_res = self._identity.raw.get("/oic/res", []) if self._identity else []
+        oic_res = self._oic_res()
         probes: dict[str, bool] = {}
         subdevices, extra = enumerate_subdevices(
             sess,
@@ -1831,6 +1963,41 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # which is where it was before any of this existed.
             self._log.warning("could not write discovery snapshot: %s", e)
 
+    async def _with_remembered_resources(self, live: dict[str, dict]) -> dict[str, dict]:
+        """A flat board's discovery read, plus what the last snapshot holds
+        for the advertised hrefs that didn't answer this time.
+
+        A flat board is read one href at a time, and an href can miss a read
+        now and then. Discovering from the read alone would drop its
+        entities until the next restart. Only discovery sees the remembered
+        reps: the state cache gets the live read alone, so an entity kept
+        this way stays without a value until its href answers. An href
+        /oic/res no longer advertises is let go.
+        """
+        remembered = self._rehydrate_resources
+        if remembered is None:
+            try:
+                stored = await self._snapshot_store.async_load()
+            except Exception as e:  # corrupt or unreadable store
+                self._log.debug("could not read discovery snapshot: %s", e)
+                stored = None
+            remembered = (
+                from_json_safe(stored["resources"]) if stored and stored.get("resources") else {}
+            )
+        advertised = set(flat_hrefs(self._oic_res()))
+        self._discovery_extra = {
+            href: rep
+            for href, rep in remembered.items()
+            if href not in live and href in advertised and isinstance(rep, dict)
+        }
+        if self._discovery_extra:
+            self._log.debug(
+                "discovery keeps %d resources from the last snapshot that didn't answer: %s",
+                len(self._discovery_extra),
+                sorted(self._discovery_extra),
+            )
+        return {**self._discovery_extra, **live}
+
     async def async_rehydrate(self) -> bool:
         """Register the last known entity set without reaching the device.
 
@@ -1945,13 +2112,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         info = resources.get("/information/vs/0", {})
         unbound: list[str] = []
-        hot, warm = set(), set()
+        hot, warm, cold = set(), set(), set()
 
         def _tier_log(href: str, tier: str) -> None:
             if tier == "hot":
                 hot.add(href)
             elif tier == "warm":
                 warm.add(href)
+            elif tier == "cold":
+                cold.add(href)
 
         model_num = info.get("x.com.samsung.da.modelNum", "")
         description = info.get("x.com.samsung.da.description", "")
@@ -2046,6 +2215,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             manufacturer=mfr,
             model=model,
         )
+        if adopted:
+            # Only what the device reported: a key left out keeps the
+            # registry's value, where None would clear it. The polled serial,
+            # not `serial`, which can be the host fallback.
+            if serial_number := display_serial(info.get("x.com.samsung.da.serialNum")):
+                self.device_info["serial_number"] = serial_number
+            if firmware := resolve_firmware(ident):
+                self.device_info["sw_version"] = firmware
         # A snapshot replay passes None: it never reached the device, so
         # writing a key here would freeze a pre-v4 entry's legacy key in as
         # if a poll had confirmed it, and the real UUID would later look
@@ -2081,6 +2258,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         self._hot_hrefs = sorted(hot)
         self._warm_hrefs = sorted(warm)
+        self._cold_hrefs = sorted(cold)
+        family = registry_for(device_type_name)
+        self._subscribe_tiers = family.subscribe_tiers
+        if family.write_settle_s is not None:
+            self._write_settle_s = family.write_settle_s
 
         self._discovered = True
         self._log.info(
@@ -2134,7 +2316,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         committing closes that: `sess` keeps the old object alive, so
         identity can't be recycled onto a new one.
         """
-        hrefs = self._hot_hrefs + self._warm_hrefs
+        # An empty scope means no OBSERVE at all (the AV boards).
+        hrefs = [
+            *(self._hot_hrefs if "hot" in self._subscribe_tiers else ()),
+            *(self._warm_hrefs if "warm" in self._subscribe_tiers else ()),
+        ]
         if not hrefs:
             return
         sess = self._session
@@ -2264,6 +2450,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         if not isinstance(e, TimeoutError):
             return False
+        # A flat board's reads never raise one (iter_resources swallows them,
+        # the liveness GET fails as RuntimeError), so a TimeoutError here is
+        # its handshake: the board is off. Deferring would carry its last
+        # state on as live every other cycle (see _device_unreachable).
+        if self._flat:
+            return False
         self._consecutive_poll_timeouts += 1
         return self._consecutive_poll_timeouts < self._POLL_TIMEOUT_LIMIT
 
@@ -2281,6 +2473,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Clear the bookkeeping a poll getting through invalidates."""
         self.last_response = dt_util.utcnow()
         self._persist_moved_port()
+        self._persist_read_mode()
         self._consecutive_poll_timeouts = 0
         if self._failed_cycles:
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
@@ -2310,7 +2503,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # there's no live session this cycle to resubscribe on.
         if self._observe.mode == MODE_OBSERVE:
             self._observe.downgrade_to_poll()
-        if self._discovered and self._cache.snapshot():
+        # A flat board that stops answering is switched off or gone: its last
+        # state isn't carried on as an appliance's is.
+        if self._discovered and self._cache.snapshot() and not self._flat:
             self._log.debug("Full error:", exc_info=e)
             return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
@@ -2481,11 +2676,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *self.subdevices,
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
-            self._run_discovery(resources)
+            found = await self._with_remembered_resources(resources) if self._flat else resources
+            self._run_discovery(found)
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is
             # being replaced.
-            await self._async_save_snapshot(resources, candidates)
+            await self._async_save_snapshot(found, candidates)
             self._reconcile_rehydrated()
             resources = self._live_subdevice_resources(resources)
         sweep_mismatch = False
@@ -2652,18 +2848,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     **optimistic_body,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
                 }
-            # Same fact, items[] shape (see airconditioner._climate_write's
-            # vendor temperature write).
-            new_items = optimistic_body.get("x.com.samsung.da.items")
-            if isinstance(new_items, list):
-                cached_items = (self._cache.get(write_href) or {}).get("x.com.samsung.da.items")
-                optimistic_body = {
-                    **optimistic_body,
-                    "x.com.samsung.da.items": merge_items_field(cached_items, new_items),
-                }
+            # Same fact for row lists (see airconditioner._climate_write's
+            # vendor temperature write, soundbar.CHANNEL_LEVEL).
+            for rows, key in _MERGED_ROWS:
+                new_rows = optimistic_body.get(rows)
+                if isinstance(new_rows, list):
+                    cached_rows = (self._cache.get(write_href) or {}).get(rows)
+                    optimistic_body = {
+                        **optimistic_body,
+                        rows: merge_items_field(cached_rows, new_rows, key),
+                    }
             self._observe.apply(write_href, optimistic_body, source="optimistic")
             armed_settle = self._observe.mark_write_pending(
-                write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+                write_href, settle_s=self._write_settle_s
             )
 
         def _rearm() -> None:
@@ -2675,7 +2872,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # #9). Re-arm it fresh now that the write actually landed.
             if not write_only:
                 armed_settle = self._observe.mark_write_pending(
-                    write_href, settle_s=self._POST_TIMEOUT_S + self._POLL_TIMEOUT_S
+                    write_href, settle_s=self._write_settle_s
                 )
 
         try:

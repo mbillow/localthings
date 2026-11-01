@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Résistance d'appoint"
+      },
+      "bluetooth_pairing": {
+        "name": "Appairage Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Enceintes arrière"
+      },
+      "woofer_connection": {
+        "name": "Connexion du caisson de basses"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Lancer la cuisson"
+      },
+      "pair_bluetooth": {
+        "name": "Appairer en Bluetooth"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "zone_target_temperature": {
         "name": "Température cible de la zone"
+      },
+      "audio_sync": {
+        "name": "Synchronisation audio"
+      },
+      "bass": {
+        "name": "Graves"
+      },
+      "channel_level_center": {
+        "name": "Niveau central"
+      },
+      "channel_level_front_top": {
+        "name": "Niveau avant haut"
+      },
+      "channel_level_rear": {
+        "name": "Niveau arrière"
+      },
+      "channel_level_rear_side": {
+        "name": "Niveau arrière latéral"
+      },
+      "channel_level_rear_top": {
+        "name": "Niveau arrière haut"
+      },
+      "channel_level_side": {
+        "name": "Niveau latéral"
+      },
+      "channel_level_wide": {
+        "name": "Niveau large"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Aigus"
+      },
+      "woofer_level": {
+        "name": "Niveau du caisson de basses"
       }
     },
     "select": {
@@ -1149,6 +1215,28 @@
           "low": "Faible",
           "high": "Élevé"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Langue des annonces vocales",
+        "state": {
+          "eng": "Anglais",
+          "deu": "Allemand",
+          "fra": "Français",
+          "kor": "Coréen",
+          "spa": "Espagnol",
+          "eng_uk": "Anglais (Royaume-Uni)",
+          "ita": "Italien"
+        }
+      },
+      "equalizer": {
+        "name": "Égaliseur",
+        "state": {
+          "none": "Aucun",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Classique",
+          "custom": "Personnalisé"
+        }
       }
     },
     "sensor": {
@@ -1709,6 +1797,31 @@
       },
       "three_way_valve": {
         "name": "Vanne 3 voies"
+      },
+      "current_eq_mode": {
+        "name": "Mode d'égaliseur actuel"
+      },
+      "installation_type": {
+        "name": "Type d'installation"
+      },
+      "micom_version": {
+        "name": "Version micom"
+      },
+      "network_connection": {
+        "name": "Connexion",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Source du son"
+      },
+      "speaker_status": {
+        "name": "État des enceintes"
+      },
+      "wifi_signal": {
+        "name": "Signal Wi-Fi"
       }
     },
     "switch": {
@@ -1963,6 +2076,36 @@
       },
       "extra_rinse": {
         "name": "Rinçage supplémentaire"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Annonces vocales"
+      },
+      "auto_power_down": {
+        "name": "Arrêt automatique"
+      },
+      "auto_update": {
+        "name": "Mise à jour automatique"
+      },
+      "bass_boost": {
+        "name": "Renforcement des graves"
+      },
+      "night_mode": {
+        "name": "Mode nuit"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Amplificateur vocal"
       }
     },
     "time": {
