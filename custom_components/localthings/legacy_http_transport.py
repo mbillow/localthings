@@ -52,6 +52,7 @@ from .legacy_http import (
     unwrap,
     with_cavity_modes,
     with_panel_unit,
+    with_record_type,
     with_staged,
 )
 from .legacy_http_tls import client_context
@@ -251,7 +252,8 @@ class LegacyHttpTransport:
         status, body = self._request("GET", path, timeout=timeout)
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
-        bodies = self._with_modes(index, self._with_staged(index, unwrap(body)))
+        bodies = with_record_type(unwrap(body), device_type)
+        bodies = self._with_modes(index, self._with_staged(index, bodies))
         bodies = self._with_panel_unit(index, bodies)
         return 0x45, to_resources(bodies, table).get(href, {})
 
@@ -316,8 +318,9 @@ class LegacyHttpTransport:
         state.cavity = cavity_role(record)
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
+        typed = with_record_type(bodies, self._type_at(index))
         resources = to_resources(
-            self._with_panel_unit(index, self._with_modes(index, self._with_staged(index, bodies))),
+            self._with_panel_unit(index, self._with_modes(index, self._with_staged(index, typed))),
             table_for(self._type_at(index)),
         )
         # Each cavity needs its own canonical power capability before remapping.

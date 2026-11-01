@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "출수량"
       },
+      "freezer_setpoint": {
+        "name": "냉동실 설정값"
+      },
+      "fridge_setpoint": {
+        "name": "냉장실 설정값"
+      },
       "good_sleep": {
         "name": "쾌면 시간"
       },
@@ -2013,6 +2019,9 @@
       },
       "storm_wash": {
         "name": "스톰 워시+"
+      },
+      "vacation_mode": {
+        "name": "휴가 모드"
       },
       "welcome_lighting": {
         "name": "웰컴 라이팅"

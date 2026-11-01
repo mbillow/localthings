@@ -325,6 +325,12 @@
       "zone_target_temperature": {
         "name": "Zonen-Zieltemperatur"
       },
+      "freezer_setpoint": {
+        "name": "Gefrierschrank Sollwert"
+      },
+      "fridge_setpoint": {
+        "name": "Kühlschrank Sollwert"
+      },
       "good_sleep": {
         "name": "Guter Schlaf"
       },
@@ -2001,6 +2007,9 @@
       },
       "sound": {
         "name": "Ton"
+      },
+      "vacation_mode": {
+        "name": "Urlaubsmodus"
       },
       "welcome_lighting": {
         "name": "Willkommensbeleuchtung"

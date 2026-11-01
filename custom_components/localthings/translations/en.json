@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Dispense capacity"
       },
+      "freezer_setpoint": {
+        "name": "Freezer setpoint"
+      },
+      "fridge_setpoint": {
+        "name": "Fridge setpoint"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
@@ -2013,6 +2019,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Vacation mode"
       },
       "welcome_lighting": {
         "name": "Welcome lighting"

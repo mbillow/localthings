@@ -10,7 +10,6 @@
     "freezer_temperature",
     "ice_maker_enabled",
     "rapid_freezing",
-    "rapid_fridge",
     "sabbath_mode"
   ]
 }

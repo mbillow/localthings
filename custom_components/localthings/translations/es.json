@@ -678,6 +678,12 @@
       "dispense_capacity": {
         "name": "Capacidad de dosificación"
       },
+      "freezer_setpoint": {
+        "name": "Congelador: punto de ajuste"
+      },
+      "fridge_setpoint": {
+        "name": "Frigorífico: punto de ajuste"
+      },
       "good_sleep": {
         "name": "Sueño reparador"
       },
@@ -2393,6 +2399,9 @@
       },
       "storm_wash": {
         "name": "Lavado Tormenta+"
+      },
+      "vacation_mode": {
+        "name": "Modo vacaciones"
       },
       "welcome_lighting": {
         "name": "Iluminación de bienvenida"

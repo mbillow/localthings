@@ -270,6 +270,7 @@ def for_device_by_oic_type(device_types: Sequence[str]) -> DeviceRegistry | None
 _DEVICE_SUBTYPE_TO_KEY: dict[str, str] = {
     "Cooktop": "cooktop",
     "Dryer": "dryer",  # TP6X_DRYER, DV80M8214AW (#636, #646)
+    "Refrigerator": "refrigerator",  # DONGLE_0281, from the record's `type` (#698)
     "Room_Air_Conditioner": "airconditioner",
     "WallOven": "oven",
     "Washer": "washer",  # TP6X_WASHER, WW6500

@@ -1,0 +1,92 @@
+{
+  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #698 (RR40M7165WW behind an HD39J1230GW dongle, idle). Information.Versions and link/collection metadata omitted, except the record's own `type`. Every retained field is unchanged; the board reports no serial or deviceSubType. No write capture.",
+  "bodies": {
+    "type": "Refrigerator",
+    "Information": {
+      "description": "DONGLE_0281",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "DONGLE_0281|00090741|00090028001130300100000000000000"
+    },
+    "Fridge": {
+      "rapidFridge": "Off"
+    },
+    "Mode": {
+      "modes": [
+        "RVACATION_OFF",
+        "KIMCHIT_RIPE_REMAIN_255:255",
+        "KIMCHIB_RIPE_REMAIN_255:255",
+        "KIMCHIM_RIPE_REMAIN_255:255",
+        "BAR_FRIDGE_TEMP_0",
+        "BAR_FRIDGE_MAXTEMP_0",
+        "BAR_FREEZER_TEMP_0",
+        "BAR_FREEZER_MAXTEMP_0"
+      ],
+      "supportedModes": [
+        "RVACATION_ON",
+        "RVACATION_OFF"
+      ]
+    },
+    "Temperatures": [
+      {
+        "description": "Freezer",
+        "id": "0",
+        "unit": "Celsius"
+      },
+      {
+        "current": 5.0,
+        "description": "Fridge",
+        "desired": 5.0,
+        "id": "1",
+        "maximum": 7,
+        "minimum": 1,
+        "name": "Fridge",
+        "unit": "Celsius"
+      },
+      {
+        "description": "CVRoom",
+        "id": "2",
+        "unit": "Celsius"
+      }
+    ],
+    "Doors": [
+      {
+        "description": "Freezer",
+        "id": "0"
+      },
+      {
+        "description": "Fridge",
+        "id": "1"
+      },
+      {
+        "description": "CVRoom",
+        "id": "2"
+      },
+      {
+        "description": "Single",
+        "id": "3",
+        "name": "Single",
+        "openState": "Close"
+      },
+      {
+        "description": "KimchiT",
+        "id": "4"
+      },
+      {
+        "description": "KimchiB",
+        "id": "5"
+      },
+      {
+        "description": "KimchiM",
+        "id": "6"
+      },
+      {
+        "description": "Homebar",
+        "id": "7"
+      }
+    ],
+    "Configuration": {
+      "region": "000"
+    },
+    "Alarms": []
+  }
+}

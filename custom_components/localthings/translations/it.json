@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Capacità erogazione"
       },
+      "freezer_setpoint": {
+        "name": "Congelatore: valore impostato"
+      },
+      "fridge_setpoint": {
+        "name": "Frigorifero: valore impostato"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
@@ -2013,6 +2019,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Modalità vacanza"
       },
       "welcome_lighting": {
         "name": "Illuminazione di benvenuto"
