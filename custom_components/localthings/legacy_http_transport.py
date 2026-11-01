@@ -34,12 +34,12 @@ from .legacy_http import (
     CAVITY_LOWER,
     CAVITY_UPPER,
     CLOCK_ENDPOINT,
+    CLOCK_HREF,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
     cavity_role,
-    clock,
     clock_write,
     course_table,
     divider_in,
@@ -140,6 +140,9 @@ class _ApplianceState:
     # On device 0's state, for the whole appliance: whether the last
     # `/devices` listing showed a lower cavity, None while unknown.
     divided: bool | None = None
+    # On device 0's state: whether it serves CLOCK_ENDPOINT, None until a
+    # probe has had an answer.
+    clock: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -333,8 +336,26 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
-            resources.update(clock(self._family))
+            if self._has_clock(timeout):
+                resources[CLOCK_HREF] = {}
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
+
+    def _has_clock(self, timeout: float) -> bool:
+        """Whether device 0 serves CLOCK_ENDPOINT, probed once: a 200 says
+        it does and a 404 says it doesn't. Any other answer is asked again
+        at the next sweep."""
+        state = self._state_at(0)
+        if state.clock is not None:
+            return state.clock
+        path = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
+        try:
+            status, _ = self._request("GET", path, timeout=timeout)
+        except (OSError, http.client.HTTPException) as err:
+            _LOGGER.debug("%s: %s failed: %s", self._host, path, err)
+            return False
+        if status in (200, 404):
+            state.clock = status == 200
+        return status == 200
 
     def _sibling_record(
         self, index: int, deadline: float
@@ -387,7 +408,7 @@ class LegacyHttpTransport:
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
         clock_body = clock_write(href, body) if isinstance(body, dict) else None
-        if clock_body is not None and not index and clock(self._family):
+        if clock_body is not None and not index and state.clock:
             # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
             path = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
             status, response = self._request("PUT", path, body=clock_body, timeout=timeout)

@@ -411,20 +411,14 @@ def _first_unit(bodies: Mapping[str, Any]) -> str | None:
     return unit if isinstance(unit, str) else None
 
 
-# Where the CoAP boards take a clock sync (range.RANGE_CLOCK_SYNC). The 8888
-# bridge serves it unlisted at /devices/0/configuration/time, which answers a
-# GET with `{}`; an NQ70M6650DS's panel took the time from it with Smart
-# Control off (#674), though the clock kept flashing until a key was pressed.
+# Where the CoAP boards take a clock sync (range.RANGE_CLOCK_SYNC). Some 8888
+# bridges serve it unlisted at /devices/0/configuration/time, which answers a
+# GET with `{}` and a 404 where it is not served; an NQ70M6650DS's panel took
+# the time from it with Smart Control off (#674), though the clock kept
+# flashing until a key was pressed.
 CLOCK_HREF = "/configuration/vs/0"
 CLOCK_ENDPOINT = "configuration/time"
 _CLOCK_FIELD = PREFIX + "currentTime"
-_CLOCK_FAMILIES = frozenset({"TP6X_OV"})
-
-
-def clock(family: str | None) -> dict[str, dict]:
-    """An empty CLOCK_HREF rep for a family whose clock write is confirmed,
-    so the clock button binds; nothing for any other."""
-    return {CLOCK_HREF: {}} if _family_key(family) in _CLOCK_FAMILIES else {}
 
 
 def clock_write(href: str, body: Mapping[str, Any]) -> dict[str, Any] | None:

@@ -11,7 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.localthings.legacy_http import PREFIX, clock, table_for, to_resources
+from custom_components.localthings.legacy_http import (
+    CLOCK_HREF,
+    PREFIX,
+    table_for,
+    to_resources,
+)
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
@@ -30,8 +35,7 @@ FIXTURE = json.loads(
 
 def test_the_fixture_is_the_translation_of_its_bodies():
     device0 = {e["href"]: e["rep"] for e in FIXTURE["device0"]}
-    family = FIXTURE["bodies"]["Information"]["description"]
-    assert device0 == to_resources(FIXTURE["bodies"], OVEN) | clock(family)
+    assert device0 == to_resources(FIXTURE["bodies"], OVEN) | {CLOCK_HREF: {}}
     for index, bodies in FIXTURE["device_bodies"].items():
         sibling = Subdevice(kind="indexed", key=index, seed_path=("device", index))
         seed = {
