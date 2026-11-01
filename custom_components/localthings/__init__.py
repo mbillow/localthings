@@ -467,9 +467,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator.last_update_success = False
         # This refresh starts before the platforms are forwarded, so a device
         # that answers quickly can finish its live discovery while setup is
-        # still going. That is fine: the platforms register from the
-        # snapshot either way, and a live set that differs schedules a reload
-        # (see LocalThingsCoordinator._reconcile_rehydrated).
+        # still going. The platforms then register from the live set instead
+        # of the snapshot; either way, a live set that differs from the
+        # snapshot schedules a reload (LocalThingsCoordinator._reconcile_rehydrated).
         entry.async_create_background_task(
             hass, coordinator.async_refresh(), f"{DOMAIN} first refresh {entry.entry_id}"
         )
