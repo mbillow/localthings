@@ -51,8 +51,8 @@ SETPOINT_STEP_F = 5
 # Mode options seen on NV7000BS-class. No dump exists so this list is
 # inferred from Samsung documentation and firmware observations; the
 # firmware rejects unknown modes, so a missing entry is a coverage gap, not
-# a bug. Fallback only, used when a device's own /mode/vs/0 doesn't report
-# supportedModes at all -- see _oven_mode_options/_oven_mode_write below.
+# a bug. Fallback for boards with modeSpec but no supportedModes; specless
+# boards use cook.startable_modes -- see _oven_mode_choices below.
 _OVEN_MODES = (
     "NoOperation",
     "Bake",
@@ -304,26 +304,34 @@ def _cook_time_write(p, rep, href=None, resources=None):
     return ["operational", "state", "vs", "0"], body
 
 
-def _oven_mode_options(resources):
-    """Live mode list from the device's own /mode/vs/0 supportedModes when
-    it reports one; the NV7000BS-era _OVEN_MODES guess otherwise. Mirrors
-    laundry.py's options_field pattern (buzzer_sound/finish_sound), but
-    needs the callable form rather than options_field because a static
-    fallback has to kick in when the device's own field is absent."""
+def _oven_mode_choices(resources):
+    """Writable modes: specless ovens use the same policy as cooking preparation."""
     rep = resources.get("/mode/vs/0") or {}
+    if rep.get(cook.MODE_SPEC) is None:
+        return cook.startable_modes(resources)
     live = rep.get("x.com.samsung.da.supportedModes")
     # An empty list is a lower zone with its divider out (cook.share_mode_spec).
     if not live and not cook.zoned(resources):
         return list(_OVEN_MODES)
-    live = cook.selectable_modes(live or [])
+    return cook.selectable_modes(live or [])
+
+
+def _oven_mode_options(resources):
+    choices = _oven_mode_choices(resources)
     # Ranges (every range fixture, plus #404's) and the #277 wall oven idle
     # in NoOperation but leave it out of supportedModes; HA's select drops a
     # current option that isn't in the list, so the idle state showed as
     # Unknown. Listing it makes it selectable too, which _oven_mode_validate
     # turns into a user-facing error rather than a silent no-op.
-    if "NoOperation" in live:
-        return live
-    return ["NoOperation", *live]
+    if "NoOperation" not in choices:
+        choices.insert(0, "NoOperation")
+    rep = resources.get("/mode/vs/0") or {}
+    current = cook.current_mode(resources)
+    # HA needs a panel-started program in the list to display it. The writer
+    # uses only _oven_mode_choices, so this does not enable a write of it.
+    if rep.get(cook.MODE_SPEC) is None and current and current not in choices:
+        choices.append(current)
+    return choices
 
 
 def _oven_mode_validate(p, rep, resources):
@@ -331,8 +339,8 @@ def _oven_mode_validate(p, rep, resources):
     so the idle state displays, not because the oven accepts it as a mode
     (#445 review). Picking it used to fall through to _oven_mode_write's
     None and the coordinator's warning-and-return, so the user saw nothing
-    happen. Every other option in the list came from supportedModes and
-    passes."""
+    happen. Other values pass through to the writer or cooking preparation
+    checks."""
     if p == "NoOperation":
         return "oven_mode_idle_not_selectable"
     return None
@@ -341,13 +349,9 @@ def _oven_mode_validate(p, rep, resources):
 def _oven_mode_write(p, rep, href=None, resources=None):
     # The cavity's view, not its raw rep: a zoned lower cavity's modes come
     # from the board's modeSpec (cook.share_mode_spec).
-    view = (resources or {}).get("/mode/vs/0") or rep
-    live = view.get("x.com.samsung.da.supportedModes")
-    if not live and not cook.zoned(resources or {}):
-        valid = _OVEN_MODES
-    else:
-        valid = cook.selectable_modes(live or [])
-    if p not in valid:
+    resources = resources or {}
+    view = {**resources, "/mode/vs/0": resources.get("/mode/vs/0") or rep}
+    if p == "NoOperation" or p not in _oven_mode_choices(view):
         return None
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
 
