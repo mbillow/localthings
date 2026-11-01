@@ -51,6 +51,7 @@ from .legacy_http import (
     unmapped_wrappers,
     unwrap,
     with_cavity_modes,
+    with_panel_unit,
     with_staged,
 )
 from .legacy_http_tls import client_context
@@ -251,6 +252,7 @@ class LegacyHttpTransport:
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
         bodies = self._with_modes(index, self._with_staged(index, unwrap(body)))
+        bodies = self._with_panel_unit(index, bodies)
         return 0x45, to_resources(bodies, table).get(href, {})
 
     def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
@@ -315,7 +317,7 @@ class LegacyHttpTransport:
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
         resources = to_resources(
-            self._with_modes(index, self._with_staged(index, bodies)),
+            self._with_panel_unit(index, self._with_modes(index, self._with_staged(index, bodies))),
             table_for(self._type_at(index)),
         )
         # Each cavity needs its own canonical power capability before remapping.
@@ -574,6 +576,11 @@ class LegacyHttpTransport:
                 del state.staged[key]
         held = with_staged(bodies, {key: value for key, (value, _) in state.staged.items()})
         return self._with_course_defaults(state, held)
+
+    def _with_panel_unit(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
+        if not index:
+            return bodies
+        return with_panel_unit(bodies, self._state_at(0).last_bodies)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         state = self._state_at(index)
