@@ -2008,6 +2008,9 @@
       "sound": {
         "name": "Ton"
       },
+      "vacation_mode": {
+        "name": "Urlaubsmodus"
+      },
       "welcome_lighting": {
         "name": "Willkommensbeleuchtung"
       },

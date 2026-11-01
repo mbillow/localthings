@@ -4,6 +4,7 @@
     "door_open",
     "fridge_setpoint",
     "fridge_temperature",
-    "rapid_fridge"
+    "rapid_fridge",
+    "vacation_mode"
   ]
 }

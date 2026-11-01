@@ -2020,6 +2020,9 @@
       "storm_wash": {
         "name": "스톰 워시+"
       },
+      "vacation_mode": {
+        "name": "휴가 모드"
+      },
       "welcome_lighting": {
         "name": "웰컴 라이팅"
       },

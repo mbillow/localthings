@@ -1032,6 +1032,37 @@ def _flex_zone_write(p, rep, href=None):
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": modes}
 
 
+# Vacation mode is a token in the same modes list (#698's DONGLE_0281 and
+# #78's RR40M7165WW advertise RVACATION_ON/OFF; newer boards list only a
+# VACATION_MODE_CONTROL flag and stay out). Never seen on, and the write --
+# the whole list back with that one token swapped, as _flex_zone_write does
+# -- is unconfirmed on hardware.
+_VACATION_PREFIX = "RVACATION_"
+
+
+def _vacation_supported(rep, resources):
+    return "RVACATION_ON" in (rep.get("x.com.samsung.da.supportedModes") or ())
+
+
+def _vacation_on(rep):
+    modes = rep.get("x.com.samsung.da.modes") or []
+    token = next((m for m in modes if m.startswith(_VACATION_PREFIX)), None)
+    return None if token is None else token == "RVACATION_ON"
+
+
+def _vacation_write(p, rep, href=None):
+    if p not in ("On", "Off"):
+        return None
+    token = _VACATION_PREFIX + p.upper()
+    modes = list(rep.get("x.com.samsung.da.modes") or [])
+    at = next((i for i, m in enumerate(modes) if m.startswith(_VACATION_PREFIX)), None)
+    if at is None:
+        modes.append(token)
+    else:
+        modes[at] = token
+    return ["mode", "vs", "0"], {"x.com.samsung.da.modes": modes}
+
+
 FLEX_ZONE = Capability(
     href="/mode/vs/0",
     poll_tier="warm",
@@ -1051,6 +1082,14 @@ FLEX_ZONE = Capability(
             exists_fn=lambda rep, resources: _flex_zone_current(rep) is not None,
             rep_fn=_flex_zone_current,
             write_fn=_flex_zone_write,
+        ),
+        SwitchDesc(
+            key="vacation_mode",
+            icon="mdi:beach",
+            entity_category="config",
+            exists_fn=_vacation_supported,
+            rep_fn=_vacation_on,
+            write_fn=_vacation_write,
         ),
     ),
 )

@@ -2020,6 +2020,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Vacation mode"
+      },
       "welcome_lighting": {
         "name": "Welcome lighting"
       },

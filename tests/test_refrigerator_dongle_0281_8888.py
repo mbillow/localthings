@@ -140,3 +140,44 @@ class TestWrites:
         assert to_write([("/refrigeration/vs/0", body)], table_for("Refrigerator")) == {
             "Device": {"Fridge": {"rapidFridge": "On"}}
         }
+
+
+class TestVacationMode:
+    """Unconfirmed on hardware: the bridge lists RVACATION_ON/OFF but no
+    dump has ever shown it on (#698)."""
+
+    @staticmethod
+    def _desc() -> SwitchDesc:
+        desc = next(d for d in fridge.FLEX_ZONE.entities if d.key == "vacation_mode")
+        assert isinstance(desc, SwitchDesc)
+        return desc
+
+    def test_it_reads_off(self):
+        assert _state(_resources())["vacation_mode"] is False
+
+    def test_turning_it_on_swaps_only_its_token(self):
+        rep = _resources()["/mode/vs/0"]
+        modes = rep["x.com.samsung.da.modes"]
+        write = self._desc().write_fn
+        assert write is not None
+
+        result = write("On", rep)
+        assert result is not None
+        path, body = result
+
+        assert path == ["mode", "vs", "0"]
+        assert body == {"x.com.samsung.da.modes": ["RVACATION_ON", *modes[1:]]}
+        assert to_write([("/mode/vs/0", body)], table_for("Refrigerator")) == {
+            "Device": {"Mode": {"modes": ["RVACATION_ON", *modes[1:]]}}
+        }
+
+    def test_a_board_without_the_on_value_gets_no_switch(self):
+        """The AILITE/TP1X fridges list a VACATION_MODE_CONTROL flag instead."""
+        rep = {
+            "x.com.samsung.da.modes": ["RVACATION_OFF", "FCONVERT_FREEZER"],
+            "x.com.samsung.da.supportedModes": ["VACATION_MODE_CONTROL"],
+        }
+        exists = self._desc().exists_fn
+        assert exists is not None
+
+        assert exists(rep, {}) is False

@@ -2400,6 +2400,9 @@
       "storm_wash": {
         "name": "Lavado Tormenta+"
       },
+      "vacation_mode": {
+        "name": "Modo vacaciones"
+      },
       "welcome_lighting": {
         "name": "Iluminación de bienvenida"
       },
