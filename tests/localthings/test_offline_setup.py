@@ -412,6 +412,54 @@ async def test_reconcile_is_quiet_when_live_discovery_agrees(
     reload.assert_not_called()
 
 
+async def test_reconcile_reloads_when_only_exists_fn_differs(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """An entity can stay bound while its exists_fn result changes -- an
+    options token appearing after a firmware update, say. The bound sets
+    then agree, but the platforms would register a different entity set, so
+    an online device that disagrees with its snapshot only here must still
+    reload. Once the first live poll lands, nothing is judged against the
+    snapshot any more."""
+    resources = _load_fridge()
+
+    with _reachable(resources):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        # A bound entity whose exists_fn turns False once its field is gone
+        # from an otherwise unchanged rep.
+        gated = next(
+            b
+            for b in coordinator.bound
+            if b.desc.exists_fn is not None
+            and b.desc.field
+            and b.desc.field in resources.get(b.href, {})
+            and len(resources[b.href]) > 1
+            and not b.desc.exists_fn(
+                {k: v for k, v in resources[b.href].items() if k != b.desc.field}, resources
+            )
+        )
+        await hass.config_entries.async_unload(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    # The snapshot predates the field: same hrefs, so the same bound set.
+    snapshot = hass_storage[_store_key(mock_entry)]["data"]["resources"]
+    del snapshot[gated.href][gated.desc.field]
+
+    with (
+        _reachable(resources),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    reload.assert_called_once_with(mock_entry.entry_id)
+    assert not coordinator.rehydrated
+    assert coordinator.discovery_resources == coordinator.last_resources
+
+
 def _load_washer() -> dict:
     data = json.loads((FIXTURES / "washer_device.json").read_text())
     return parse_device0_batch(data["device0"])
