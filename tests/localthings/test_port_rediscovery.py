@@ -9,6 +9,7 @@ appliance that is simply off isn't asked every poll.
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -21,16 +22,19 @@ from custom_components.localthings.const import (
     AUTH_PSK,
     CONF_AUTH_CARRIER,
     CONF_DEVICE_TOKEN,
+    CONF_DEVICE_TYPE,
     CONF_HOST,
     CONF_OCF_DEVICE_ID,
     CONF_PORT,
     CONF_PSK_IDENTITY,
     CONF_PSK_KEY,
     CONF_PSK_PROFILE,
+    CONF_READ_MODE,
     CONF_TRANSPORT,
     DOMAIN,
     MULTICAST_SECURE_PORT,
     PSK_PROFILE_OWNER,
+    READ_MODE_PER_HREF,
     TRANSPORT_LEGACY_HTTP,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
@@ -80,7 +84,9 @@ class _Appliance:
 
         return _Transport()
 
-    def advertised(self, host: str, current: int, device_id: str | None = None) -> int | None:
+    def advertised(
+        self, host: str, current: int, device_id: str | None = None, *, probe_scan: bool = False
+    ) -> int | None:
         self.lookups += 1
         if self.live_port is None or self.live_port == current:
             return None
@@ -164,6 +170,32 @@ async def test_the_backoff_is_capped(hass: HomeAssistant, appliance, monkeypatch
         with pytest.raises(TimeoutError):
             coordinator._connect_session()
     assert coordinator._rediscovery_backoff_s == coordinator._REDISCOVERY_BACKOFF_MAX_S
+
+
+async def test_a_flat_board_off_for_hours_is_looked_up_every_minute(
+    hass: HomeAssistant, appliance, monkeypatch
+) -> None:
+    """A soundbar's port moves on every power-on, so after a night off the
+    next lookup must not sit 30 minutes out: it would stay unavailable that
+    long after being switched on."""
+    appliance.live_port = None
+    coordinator = _coordinator(hass, **{CONF_READ_MODE: READ_MODE_PER_HREF})
+    clock = [0.0]
+    monkeypatch.setattr(coordinator_module.time, "monotonic", lambda: clock[0])
+
+    for _ in range(12):
+        clock[0] += coordinator._REDISCOVERY_BACKOFF_MAX_S
+        with pytest.raises(TimeoutError):
+            coordinator._connect_session()
+    assert coordinator._rediscovery_backoff_s == coordinator._REDISCOVERY_BACKOFF_FLAT_MAX_S
+
+    # Switched on: the port moved, and the next lookup is at most a minute out.
+    lookups = appliance.lookups
+    appliance.live_port = NEW_PORT
+    clock[0] += coordinator._REDISCOVERY_BACKOFF_FLAT_MAX_S
+    coordinator._connect_session()
+    assert appliance.lookups == lookups + 1
+    assert coordinator._moved_port == NEW_PORT
 
 
 async def test_a_successful_connect_resets_the_backoff(
@@ -307,3 +339,34 @@ async def test_an_alert_from_the_stored_port_does_not_look_for_a_moved_one(
 
     assert device.dialled == [OLD_PORT]
     assert device.lookups == 0
+
+
+def test_startup_rediscovery_uses_the_stored_read_mode(hass: HomeAssistant) -> None:
+    """Before the first poll, the entry's read mode decides on the probe: a
+    per-href board advertises nothing in plaintext."""
+    calls = []
+
+    def _recorder(host, current, device_id=None, *, probe_scan=False):
+        calls.append(probe_scan)
+
+    with patch.object(probing, "moved_secure_port", _recorder):
+        _coordinator(hass, **{CONF_DEVICE_TYPE: "washer"})._rediscover_port(40294)
+        _coordinator(hass, **{CONF_READ_MODE: READ_MODE_PER_HREF})._rediscover_port(40294)
+        _coordinator(hass)._rediscover_port(40294)
+
+    assert calls == [False, True, False]
+
+
+def test_a_board_proven_to_have_device0_is_not_probe_scanned(hass: HomeAssistant) -> None:
+    calls = []
+    coordinator = _coordinator(hass, **{CONF_READ_MODE: READ_MODE_PER_HREF})
+    coordinator._flat = False  # its /device/0 answered 2.05 (_device0_answers)
+
+    with patch.object(
+        probing,
+        "moved_secure_port",
+        lambda host, current, device_id=None, *, probe_scan=False: calls.append(probe_scan),
+    ):
+        coordinator._rediscover_port(40294)
+
+    assert calls == [False]

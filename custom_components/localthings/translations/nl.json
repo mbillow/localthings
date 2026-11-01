@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Bijverwarming"
+      },
+      "bluetooth_pairing": {
+        "name": "Bluetooth-koppeling"
+      },
+      "rear_speakers": {
+        "name": "Achterspeakers"
+      },
+      "woofer_connection": {
+        "name": "Woofer-verbinding"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Bereiding starten"
+      },
+      "pair_bluetooth": {
+        "name": "Bluetooth koppelen"
       }
     },
     "climate": {
@@ -315,6 +327,60 @@
       },
       "zone_target_temperature": {
         "name": "Doeltemperatuur zone"
+      },
+      "audio_sync": {
+        "name": "Audiosynchronisatie"
+      },
+      "bass": {
+        "name": "Bas"
+      },
+      "channel_level_center": {
+        "name": "Centerniveau"
+      },
+      "channel_level_front_top": {
+        "name": "Topniveau voor"
+      },
+      "channel_level_rear": {
+        "name": "Rear-niveau"
+      },
+      "channel_level_rear_side": {
+        "name": "Zijniveau achter"
+      },
+      "channel_level_rear_top": {
+        "name": "Topniveau achter"
+      },
+      "channel_level_side": {
+        "name": "Zijniveau"
+      },
+      "channel_level_wide": {
+        "name": "Wide-niveau"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Hoge tonen"
+      },
+      "woofer_level": {
+        "name": "Wooferniveau"
       }
     },
     "select": {
@@ -1149,6 +1215,28 @@
           "low": "Laag",
           "high": "Hoog"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Taal van spraakmeldingen",
+        "state": {
+          "eng": "Engels",
+          "deu": "Duits",
+          "fra": "Frans",
+          "kor": "Koreaans",
+          "spa": "Spaans",
+          "eng_uk": "Engels (VK)",
+          "ita": "Italiaans"
+        }
+      },
+      "equalizer": {
+        "name": "Equalizer",
+        "state": {
+          "none": "Geen",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klassiek",
+          "custom": "Aangepast"
+        }
       }
     },
     "sensor": {
@@ -1709,6 +1797,31 @@
       },
       "three_way_valve": {
         "name": "Driewegklep"
+      },
+      "current_eq_mode": {
+        "name": "Huidige EQ-modus"
+      },
+      "installation_type": {
+        "name": "Installatietype"
+      },
+      "micom_version": {
+        "name": "Micom-versie"
+      },
+      "network_connection": {
+        "name": "Verbinding",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Geluid van"
+      },
+      "speaker_status": {
+        "name": "Luidsprekerstatus"
+      },
+      "wifi_signal": {
+        "name": "Wifi-signaal"
       }
     },
     "switch": {
@@ -1963,6 +2076,36 @@
       },
       "extra_rinse": {
         "name": "Extra spoelen"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Spraakmeldingen"
+      },
+      "auto_power_down": {
+        "name": "Automatisch uitschakelen"
+      },
+      "auto_update": {
+        "name": "Automatisch updaten"
+      },
+      "bass_boost": {
+        "name": "Basversterking"
+      },
+      "night_mode": {
+        "name": "Nachtmodus"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Stemversterker"
       }
     },
     "time": {

@@ -12,14 +12,17 @@ from pathlib import Path
 import pytest
 
 from custom_components.localthings.legacy_http import PREFIX, table_for, to_resources
+from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import BinarySensorDesc, SensorDesc
 from custom_components.localthings.registry.subdevices import Subdevice
 from tests.conftest import _discover_full, _load_device_full
+from tests.test_legacy_http_transport import _FakeConnection
 
 NAME = "microwave_tp6x_ov_17k_8888"
 OVEN = table_for("Oven")
+OVEN_SLOT = Subdevice(kind="indexed", key="2", seed_path=("device", "2"))
 FIXTURE = json.loads(
     (Path(__file__).parent / "fixtures" / f"{NAME}_device.json").read_text(encoding="utf-8")
 )
@@ -133,3 +136,38 @@ def test_a_slot_that_differs_from_the_blank_one_is_not_filtered(href, field, val
     )
 
     assert [s.key for s in materialized] == ["1", "2"]
+
+
+# The oven's Information names only the board it shares with the microwave, so
+# with no record name it was named "<microwave> Tp6X Ov 17K". The reporter's
+# /devices lists the oven with no name but type "Oven" (2026-10-29).
+def test_an_unnamed_sibling_is_named_by_its_record_type(monkeypatch):
+    monkeypatch.setattr("custom_components.localthings.legacy_http_transport._STATE", {})
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.http.client.HTTPSConnection",
+        _FakeConnection,
+    )
+    monkeypatch.setattr(
+        "custom_components.localthings.legacy_http_transport.client_context",
+        lambda cert_pem, key_pem: object(),
+    )
+    body = FIXTURE["device_bodies"]["2"]
+    record = {
+        key: value for key, value in body.items() if key not in ("Configuration", "Information")
+    }
+    _FakeConnection.log = []
+    _FakeConnection.routes = {
+        "/devices": (200, {"Devices": [{**record, "id": "2"}]}),
+        "/devices/2/configuration": (200, {"Configuration": body["Configuration"]}),
+        "/devices/2/information": (200, {"Information": body["Information"]}),
+    }
+    transport = LegacyHttpTransport(
+        "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_OV"
+    )
+    transport.connect()
+
+    code, seed = transport.read(["device", "2"], timeout=10.0)
+
+    assert code == 0x45
+    view = {OVEN_SLOT.to_canonical(e["href"]): e["rep"] for e in seed}
+    assert view["/information/vs/0"][PREFIX + "deviceName"] == "Oven"
