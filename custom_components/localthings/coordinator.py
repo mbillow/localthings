@@ -516,6 +516,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # live poll -- see async_rehydrate.
         self._rehydrate_resources: dict[str, dict] | None = None
         self._rehydrated_keys: frozenset[tuple[str, str]] | None = None
+        self._rehydrated_included: frozenset[tuple[str, str]] | None = None
         # What a flat board's discovery took from the last snapshot because
         # the href didn't answer this time -- see _with_remembered_resources.
         self._discovery_extra: dict[str, dict] = {}
@@ -1925,6 +1926,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         agree here would register byte-identical entities."""
         return frozenset((b.subdevice.key, _key(b)) for b in self.bound)
 
+    def _included_keys(self) -> frozenset[tuple[str, str]]:
+        """The subset of `_bound_keys` that platforms actually register:
+        bound entities that also pass entity._is_included (exists_fn or the
+        field gate), judged against `discovery_resources`."""
+        # entity.py imports this module, so this one can't import it at the top.
+        from .entity import _is_included
+
+        return frozenset((b.subdevice.key, _key(b)) for b in self.bound if _is_included(b, self))
+
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]
     ) -> None:
@@ -2066,38 +2076,59 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._discovered = False
         self._rehydrate_resources = resources
         self._rehydrated_keys = self._bound_keys()
+        self._rehydrated_included = self._included_keys()
         if not self.bound:
             return False
         self._log.info(
-            "device unreachable; restored %d entities from the last discovery "
-            "snapshot and will keep retrying every %ds",
+            "restored %d entities from the last discovery snapshot; "
+            "connecting to the device every %ds until it answers",
             len(self.bound),
             SUMMARY_INTERVAL_S,
         )
         return True
 
     @callback
-    def _reconcile_rehydrated(self) -> None:
+    def _reconcile_rehydrated(self, resources: dict[str, dict]) -> None:
         """Reload the entry when a live discovery disagrees with the snapshot
-        this load registered from.
+        this load registered from, and stop judging anything against that
+        snapshot from here on.
 
         Platforms enumerate `bound` exactly once, at forward time, so a
         firmware update, a newly-answering sibling subdevice or a different
         appliance at the same IP can't be picked up in place -- the entry has
         to come back up against the live set.
+
+        Both the bound set and the included set are compared: an entity can
+        stay bound while its exists_fn flips (an options token appearing
+        after a firmware update, say), and that changes what the platforms
+        would register just as much. `resources` is what the first live
+        cycle handed `_run_discovery`; the state cache doesn't hold it yet,
+        so the included set is judged against it directly.
         """
         if self._rehydrated_keys is None:
             return
-        stale = self._rehydrated_keys
+        stale_bound = self._rehydrated_keys
+        stale_included = self._rehydrated_included or frozenset()
         self._rehydrated_keys = None
-        live = self._bound_keys()
-        if live == stale:
+        self._rehydrated_included = None
+        live_bound = self._bound_keys()
+        self._rehydrate_resources = resources
+        try:
+            live_included = self._included_keys()
+        finally:
+            self._rehydrate_resources = None
+        if live_bound == stale_bound and live_included == stale_included:
             return
+        # An entity counts once whether it changed in the bound set, the
+        # included set or both, so a bound-only change doesn't log "0 gone,
+        # 0 new".
+        gone = (stale_bound - live_bound) | (stale_included - live_included)
+        new = (live_bound - stale_bound) | (live_included - stale_included)
         self._log.info(
             "live discovery differs from the snapshot this entry loaded from "
             "(%d entities gone, %d new); reloading",
-            len(stale - live),
-            len(live - stale),
+            len(gone),
+            len(new),
         )
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
@@ -2494,7 +2525,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         self._failed_cycles += 1
         if self._failed_cycles == 1:
-            self._log.error("%s: %s", what, e)
+            self._log.info("%s: %s", what, e)
         else:
             self._log.debug("%s (%d cycles): %s", what, self._failed_cycles, e)
         # Without this, a fully unreachable device left the connection-mode
@@ -2682,7 +2713,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # comes up against this discovery rather than the one that is
             # being replaced.
             await self._async_save_snapshot(found, candidates)
-            self._reconcile_rehydrated()
+            self._reconcile_rehydrated(found)
             resources = self._live_subdevice_resources(resources)
         sweep_mismatch = False
         if self._observe.mode == MODE_OBSERVE:
