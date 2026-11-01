@@ -797,6 +797,26 @@ class TestClockSync:
         assert code == 0x84
         assert _FakeConnection.log == []
 
+    def test_an_air_conditioner_keeps_its_region(self, transport):
+        fixture = Path(__file__).parent / "fixtures" / "airconditioner_tp6x_rac_17k_8888.json"
+        bodies = json.loads(fixture.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes["/devices/0/configuration"] = (
+            200,
+            {"Configuration": bodies["Configuration"]},
+        )
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (200, {})
+        rac = LegacyHttpTransport(
+            "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_17K"
+        )
+        rac.connect()
+
+        _, seed = rac.read(["device", "0"], timeout=10.0)
+
+        region = [e["rep"] for e in seed if e["href"] == "/configuration/vs/0"]
+        assert region == [{PREFIX + "region": "105"}]
+        assert ("GET", self.ENDPOINT) not in [e[:2] for e in _FakeConnection.log]
+
 
 class TestWallOvenStart:
     """The cook start's Collection batch over 8888 (#572): this firmware has no

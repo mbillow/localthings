@@ -336,7 +336,7 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
-            if self._has_clock(timeout):
+            if CLOCK_HREF not in resources and self._has_clock(timeout):
                 resources[CLOCK_HREF] = {}
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
 
