@@ -252,7 +252,7 @@ def with_record_type(bodies: Mapping[str, Any], device_type: str | None) -> dict
     if (
         device_type not in _RECORD_TYPE_AS_SUBTYPE
         or not isinstance(information, Mapping)
-        or "deviceSubType" in information
+        or information.get("deviceSubType")
     ):
         return dict(bodies)
     return {**bodies, "Information": {**information, "deviceSubType": device_type}}

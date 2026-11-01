@@ -50,6 +50,13 @@ class TestRouting:
         assert registry is not None
         assert registry.name == "refrigerator"
 
+    def test_an_empty_subtype_takes_the_record_type(self):
+        bodies = {"Information": {"deviceSubType": ""}}
+
+        assert with_record_type(bodies, "Refrigerator") == {
+            "Information": {"deviceSubType": "Refrigerator"}
+        }
+
     def test_a_reported_subtype_is_kept(self):
         bodies = {"Information": {"deviceSubType": "Kimchi"}}
 
@@ -112,6 +119,21 @@ class TestEntities:
         assert (desc.native_min_fn(rep), desc.native_max_fn(rep)) == (1.0, 7.0)
         assert desc.unit_fn is not None and desc.unit_fn(rep) == "°C"
 
+    def test_a_stub_keeps_every_entity_until_it_is_read(self):
+        stub = {"href": TEMPERATURES}
+        for desc in fridge.TEMPERATURES_FALLBACK.entities:
+            assert desc.exists_fn is not None and desc.exists_fn(stub, {}) is True
+
+    def test_a_setpoint_needs_the_items_own_bounds(self):
+        rep = {
+            "x.com.samsung.da.items": [
+                {"x.com.samsung.da.description": "Fridge", "x.com.samsung.da.desired": "37"}
+            ]
+        }
+        exists = _desc("fridge_setpoint").exists_fn
+
+        assert exists is not None and exists(rep, {}) is False
+
 
 class TestWrites:
     def test_the_setpoint_writes_the_fridge_item_by_its_id(self):
@@ -155,9 +177,9 @@ class TestVacationMode:
     def test_it_reads_off(self):
         assert _state(_resources())["vacation_mode"] is False
 
-    def test_turning_it_on_swaps_only_its_token(self):
+    def test_turning_it_on_sends_only_its_token(self):
+        """Not the status tokens beside it, which are read-only."""
         rep = _resources()["/mode/vs/0"]
-        modes = rep["x.com.samsung.da.modes"]
         write = self._desc().write_fn
         assert write is not None
 
@@ -166,9 +188,9 @@ class TestVacationMode:
         path, body = result
 
         assert path == ["mode", "vs", "0"]
-        assert body == {"x.com.samsung.da.modes": ["RVACATION_ON", *modes[1:]]}
+        assert body == {"x.com.samsung.da.modes": ["RVACATION_ON"]}
         assert to_write([("/mode/vs/0", body)], table_for("Refrigerator")) == {
-            "Device": {"Mode": {"modes": ["RVACATION_ON", *modes[1:]]}}
+            "Device": {"Mode": {"modes": ["RVACATION_ON"]}}
         }
 
     def test_a_board_without_the_on_value_gets_no_switch(self):

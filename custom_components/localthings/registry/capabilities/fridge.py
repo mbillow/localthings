@@ -70,6 +70,21 @@ TEMP_CURRENT_GENERIC = Capability(
 )
 
 
+def _temperatures_item_write(item_id, p):
+    """One compartment's setpoint as a /temperatures/vs/0 items write."""
+    return (
+        ["temperatures", "vs", "0"],
+        {
+            "x.com.samsung.da.items": [
+                {
+                    "x.com.samsung.da.id": item_id,
+                    "x.com.samsung.da.desired": str(round(float(p))),
+                }
+            ]
+        },
+    )
+
+
 def _temp_setpoint_write(p, rep, href=None, resources=None):
     """Prefer vendor /temperatures/vs/0 when present, else the direct OCF
     /temperature/desired/ write -- on some models only the vendor path
@@ -84,17 +99,7 @@ def _temp_setpoint_write(p, rep, href=None, resources=None):
             item_id = "0"
         else:
             return None
-        return (
-            ["temperatures", "vs", "0"],
-            {
-                "x.com.samsung.da.items": [
-                    {
-                        "x.com.samsung.da.id": item_id,
-                        "x.com.samsung.da.desired": str(round(float(p))),
-                    }
-                ]
-            },
-        )
+        return _temperatures_item_write(item_id, p)
     return ([s for s in href.strip("/").split("/") if s], {"temperature": round(float(p))})
 
 
@@ -563,7 +568,9 @@ REFRIGERATION = Capability(
         SwitchDesc(
             key="rapid_fridge",
             field="x.com.samsung.da.rapidFridge",
-            exists_fn=lambda rep, resources: "x.com.samsung.da.rapidFridge" in rep,
+            exists_fn=lambda rep, resources: (
+                is_stub_rep(rep) or "x.com.samsung.da.rapidFridge" in rep
+            ),
             icon="mdi:fridge-industrial",
             entity_category="config",
             value_fn=lambda v: v == "On",
@@ -572,7 +579,9 @@ REFRIGERATION = Capability(
         SwitchDesc(
             key="rapid_freezing",
             field="x.com.samsung.da.rapidFreezing",
-            exists_fn=lambda rep, resources: "x.com.samsung.da.rapidFreezing" in rep,
+            exists_fn=lambda rep, resources: (
+                is_stub_rep(rep) or "x.com.samsung.da.rapidFreezing" in rep
+            ),
             icon="mdi:snowflake",
             entity_category="config",
             value_fn=lambda v: v == "On",
@@ -1034,14 +1043,15 @@ def _flex_zone_write(p, rep, href=None):
 
 # Vacation mode is a token in the same modes list (#698's DONGLE_0281 and
 # #78's RR40M7165WW advertise RVACATION_ON/OFF; newer boards list only a
-# VACATION_MODE_CONTROL flag and stay out). Never seen on, and the write --
-# the whole list back with that one token swapped, as _flex_zone_write does
-# -- is unconfirmed on hardware.
+# VACATION_MODE_CONTROL flag and stay out). Never seen on. The write sends
+# the token alone, as the AC mode writes do, so the read-only status tokens
+# beside it (KIMCHIT_RIPE_REMAIN_255:255, ...) are never echoed back as
+# commands; unconfirmed on hardware.
 _VACATION_PREFIX = "RVACATION_"
 
 
 def _vacation_supported(rep, resources):
-    return "RVACATION_ON" in (rep.get("x.com.samsung.da.supportedModes") or ())
+    return is_stub_rep(rep) or "RVACATION_ON" in (rep.get("x.com.samsung.da.supportedModes") or ())
 
 
 def _vacation_on(rep):
@@ -1053,14 +1063,7 @@ def _vacation_on(rep):
 def _vacation_write(p, rep, href=None):
     if p not in ("On", "Off"):
         return None
-    token = _VACATION_PREFIX + p.upper()
-    modes = list(rep.get("x.com.samsung.da.modes") or [])
-    at = next((i for i, m in enumerate(modes) if m.startswith(_VACATION_PREFIX)), None)
-    if at is None:
-        modes.append(token)
-    else:
-        modes[at] = token
-    return ["mode", "vs", "0"], {"x.com.samsung.da.modes": modes}
+    return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [_VACATION_PREFIX + p.upper()]}
 
 
 FLEX_ZONE = Capability(
@@ -1272,13 +1275,14 @@ def _temp_item_unit(items, keyword):
     return normalize_temp_unit(item.get("x.com.samsung.da.unit")) if item else "°F"
 
 
-def _temp_item_reports(keyword, field):
-    """exists_fn for one compartment's field. The DONGLE_0281 bridge (#698)
+def _temp_item_reports(keyword, *fields):
+    """exists_fn for one compartment's fields. The DONGLE_0281 bridge (#698)
     lists Freezer and CVRoom items with only an id and a unit on a
-    fridge-only RR40M7165WW."""
+    fridge-only RR40M7165WW. A stub passes, as in common's gates."""
 
     def _exists(rep, resources):
-        return _temp_item(rep.get("x.com.samsung.da.items"), keyword).get(field) is not None
+        item = _temp_item(rep.get("x.com.samsung.da.items"), keyword)
+        return is_stub_rep(rep) or all(item.get(f) is not None for f in fields)
 
     return _exists
 
@@ -1291,25 +1295,22 @@ def _temp_item_bound(keyword, field, default):
     return _bound
 
 
+_SETPOINT_FIELDS = (
+    "x.com.samsung.da.desired",
+    "x.com.samsung.da.minimum",
+    "x.com.samsung.da.maximum",
+)
+
+
 def _temp_item_write(keyword):
-    """The same items write _temp_setpoint_write sends, addressed by the
-    compartment's own item id rather than the Samsung 0/1 convention."""
+    """_temp_setpoint_write's items write, addressed by the compartment's
+    own item id rather than the Samsung 0/1 convention."""
 
     def _write(p, rep, href=None):
         item_id = _temp_item(rep.get("x.com.samsung.da.items"), keyword).get("x.com.samsung.da.id")
         if item_id is None:
             return None
-        return (
-            ["temperatures", "vs", "0"],
-            {
-                "x.com.samsung.da.items": [
-                    {
-                        "x.com.samsung.da.id": item_id,
-                        "x.com.samsung.da.desired": str(round(float(p))),
-                    }
-                ]
-            },
-        )
+        return _temperatures_item_write(item_id, p)
 
     return _write
 
@@ -1327,7 +1328,7 @@ def _temp_item_setpoint(key, keyword, default_min, default_max):
         native_min_fn=_temp_item_bound(keyword, "x.com.samsung.da.minimum", default_min),
         native_max_fn=_temp_item_bound(keyword, "x.com.samsung.da.maximum", default_max),
         unit_fn=lambda rep: _temp_item_unit(rep.get("x.com.samsung.da.items"), keyword),
-        exists_fn=_temp_item_reports(keyword, "x.com.samsung.da.desired"),
+        exists_fn=_temp_item_reports(keyword, *_SETPOINT_FIELDS),
         value_fn=lambda items: _int(_temp_item(items, keyword).get("x.com.samsung.da.desired")),
         write_fn=_temp_item_write(keyword),
     )
@@ -1358,9 +1359,9 @@ TEMPERATURES_FALLBACK = Capability(
             exists_fn=_temp_item_reports("Fridge", "x.com.samsung.da.current"),
             value_fn=lambda items: _temp_item_value(items, "Fridge"),
         ),
-        # Fallback defaults are the CoAP fridges' Celsius ranges; every item
-        # on record reports its own minimum and maximum. Over 8888 this is the
-        # TP6X ACs' Temperatures write, unconfirmed on a fridge yet (#698).
+        # Bound by the item's own minimum and maximum, which it must report;
+        # the defaults only cover a stub. Over 8888 this is the TP6X ACs'
+        # Temperatures write, unconfirmed on a fridge yet (#698).
         _temp_item_setpoint("fridge_setpoint", "Fridge", 1.0, 7.0),
         _temp_item_setpoint("freezer_setpoint", "Freezer", -23.0, -15.0),
     ),
