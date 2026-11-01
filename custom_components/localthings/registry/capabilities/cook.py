@@ -384,21 +384,19 @@ def startable_modes(resources: dict) -> list[str]:
     ]
 
 
-def is_lcd_wall_oven(resources: dict) -> bool:
-    """The NV51K7770S board verified with a removable divider."""
-    model = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum")
-    return isinstance(model, str) and model.split("|", 1)[0] == "LCD_OV_WALL_16K"
-
-
 def can_start(rep: dict, resources: dict) -> bool:
     """exists_fn for the start button: a board that declares a startable
     mode, whether or not this cavity offers one right now, or one whose
     modeSpec is empty for now (#600). A press while nothing is startable is
     refused by plan_start."""
     spec = (resources.get(MODE_HREF) or {}).get(MODE_SPEC)
-    # Lower reports only NoOperation with the divider out; keep its button
-    # registered for reinsertion (docs/investigations/oven-divider-recovery.md).
-    if spec is None and is_lcd_wall_oven(resources):
+    # A specless lower cavity offers no modes with its divider out (#572).
+    # Keep Start registered so reinsertion can restore it without a reload.
+    if (
+        spec is None
+        and cavity(resources) == "Lower"
+        and (resources.get(CONNECTED_HREF) or {}).get("x.com.samsung.da.connected") == "Off"
+    ):
         return True
     if _is_empty_spec(spec):
         return True
@@ -614,6 +612,7 @@ PARAM_START = "start"
 def _device_values(resources: dict) -> tuple:
     return (
         current_mode(resources),
+        device_unit(resources),
         _temp_item(resources).get(_DESIRED),
         (resources.get(OPERATION_HREF) or {}).get(_OPERATION_TIME),
     )
@@ -624,10 +623,9 @@ class HeldCook:
     kept here rather than written (the board discards them from `Ready`)
     until a start sends them.
 
-    Same rules as the 8888 washer's held course (#519): a new mode brings
-    its own defaults, so it drops a held setpoint and time; and everything
-    is dropped once the oven leaves `Ready` or its own mode, setpoint or
-    time changes, since the panel has been used.
+    The first mode selection validates earlier entries; reselecting it
+    preserves them. A different mode brings its own defaults. Panel
+    changes or leaving `Ready` discard held choices.
     """
 
     def __init__(self) -> None:
@@ -642,13 +640,10 @@ class HeldCook:
         """Validate `value` against the declaration and hold it. Raises
         CookStartError when the board rules it out."""
         self._expire(resources)
-        # Checked as the start would be: against the held mode (else the
-        # board's default) and whatever else is already held.
-        if param == PARAM_MODE:
-            plan_start(resources, mode=value, complete=False)
+        held = {**self.values, param: value}
+        if param == PARAM_MODE and self.values.get(PARAM_MODE) not in (None, value):
             held = {PARAM_MODE: value}
-        else:
-            held = {**self.values, param: value}
+        try:
             plan = plan_start(
                 resources,
                 mode=held.get(PARAM_MODE),
@@ -656,10 +651,33 @@ class HeldCook:
                 duration=held.get(PARAM_DURATION),
                 complete=False,
             )
-            held = {
-                **held,
-                param: plan.temperature if param == PARAM_TEMPERATURE else plan.duration,
-            }
+        except CookStartError as err:
+            if err.key != "cook_mode_required" or param not in (PARAM_TEMPERATURE, PARAM_DURATION):
+                raise
+            # Without a default mode (NV51K7770S), one available mode must
+            # accept the whole combination before it can be held.
+            for candidate in startable_modes(resources):
+                try:
+                    plan_start(
+                        resources,
+                        mode=candidate,
+                        temperature=held.get(PARAM_TEMPERATURE),
+                        duration=held.get(PARAM_DURATION),
+                        complete=False,
+                    )
+                except CookStartError:
+                    continue
+                break
+            else:
+                raise
+            # A candidate check must not choose a mode or round its inputs.
+        else:
+            for key, normalized in (
+                (PARAM_TEMPERATURE, plan.temperature),
+                (PARAM_DURATION, plan.duration),
+            ):
+                if key in held:
+                    held[key] = normalized
         if not self.values:
             self._base = _device_values(resources)
         self.values = held

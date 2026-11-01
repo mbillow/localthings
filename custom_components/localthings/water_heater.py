@@ -156,7 +156,7 @@ class LocalThingsWaterHeater(LocalThingsEntity, WaterHeaterEntity):
     # -- temperature --------------------------------------------------------
 
     @property
-    def temperature_unit(self) -> str:
+    def native_temperature_unit(self) -> str:
         raw = self._rep(TEMPERATURE_HREF).get("x.com.samsung.da.unit")
         return (
             UnitOfTemperature.FAHRENHEIT
@@ -165,12 +165,18 @@ class LocalThingsWaterHeater(LocalThingsEntity, WaterHeaterEntity):
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         return _num(self._rep(TEMPERATURE_HREF).get("x.com.samsung.da.current"))
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         return _num(self._rep(TEMPERATURE_HREF).get("x.com.samsung.da.desired"))
+
+    # Older cores need aliases; newer cores must not see deprecated members.
+    if not hasattr(WaterHeaterEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
+        current_temperature = native_current_temperature
+        target_temperature = native_target_temperature
 
     def _range(self) -> list | None:
         """The device's own (minimum, maximum) pair, or None. Both ends

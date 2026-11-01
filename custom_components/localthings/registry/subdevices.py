@@ -57,6 +57,9 @@ _UUID_PREFIX_RE = re.compile(r"^/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-
 # tolerated-404 RETRIEVE, not the kind of guess the write-contract
 # 'don't guess' rule is about. Widen only if a board needs more siblings.
 _SPECULATIVE_DEVICE_INDICES = (1, 2)
+# Probed only once /device/2 answers: the NW9300MD combo's lower oven cavity
+# (#681), so every other board keeps its two probes.
+_SPECULATIVE_LAST_INDEX = 3
 
 
 @dataclass(frozen=True)
@@ -445,7 +448,8 @@ def enumerate_subdevices(
             if m and int(m.group(1)) >= 1
         }
     )
-    if not indices:
+    speculative = not indices
+    if speculative:
         # A board that hides its whole tree from /oic/res gives us nothing
         # to enumerate from -- fall back to the bounded speculative probe
         # this replaces from identity.py.
@@ -462,6 +466,8 @@ def enumerate_subdevices(
         subdevice = Subdevice(kind="indexed", key=str(n), seed_path=seed)
         fetched.update(batch)  # already real /x/<n> hrefs, no normalization needed
         subdevices.append(subdevice)
+        if speculative and n == indices[-1] < _SPECULATIVE_LAST_INDEX:
+            indices.append(n + 1)
 
     # /multidevice/vs/0 (issue #177 follow-up): the Pattern A reporter's
     # board lists it in /oic/res but it never appears in /device/0's batch,

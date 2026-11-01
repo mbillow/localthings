@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import logging
 import re
+from dataclasses import replace
 from typing import Any
 
 from homeassistant import const as ha_const
@@ -18,13 +19,17 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
-from .coordinator import LocalThingsCoordinator, mode_spec_store, snapshot_store
-from .entity import _is_included, async_load_instance_names
-from .registry.adapter import _key
+from .coordinator import (
+    LocalThingsCoordinator,
+    disabled_subdevice_keys,
+    mode_spec_store,
+    snapshot_store,
+)
+from .entity import LocalThingsEntity, _is_included, async_load_instance_names
 from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
-from .registry.capabilities.cook import is_lcd_wall_oven
+from .registry.capabilities import cook
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
-from .registry.entities import PLATFORM_OF, ButtonDesc
+from .registry.entities import PLATFORM_OF, BinarySensorDesc, ButtonDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -283,6 +288,63 @@ def _drop_duplicate_cooktop_timer(
 
 
 @callback
+def _drop_read_only_power_switches(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove an old Power switch when discovery now selects its read-only sensor."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            bound.desc.key != "power_switch"
+            or not isinstance(bound.desc, BinarySensorDesc)
+            or not _is_included(bound, coordinator)
+            or bound.desc.field not in coordinator.discovery_resources.get(bound.href, {})
+        ):
+            continue
+        unique_id = LocalThingsEntity(coordinator, bound).unique_id
+        assert unique_id is not None
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        # A platform change cannot reuse the switch's registry row.
+        _LOGGER.info(
+            "Removing %s, superseded by a Power binary sensor; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
+def _drop_unsupported_sound_switches(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove old Sound switches that no longer pass their descriptor's existence check."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, SwitchDesc)
+            or bound.desc.key != "sound"
+            or bound.desc.exists_fn is None
+            or _is_included(bound, coordinator)
+        ):
+            continue
+        unique_id = LocalThingsEntity(coordinator, bound).unique_id
+        assert unique_id is not None
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info(
+            "Removing %s: the device reports no Sound option; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_washer_entities_from_filters(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -314,9 +376,9 @@ def _drop_washer_entities_from_filters(
 def _drop_misidentified_oven_controls(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Remove laundry controls left by the old WALL-to-washer type match."""
+    """Remove obsolete washer controls where a lower oven now has its own Start (#684)."""
     current = {
-        (PLATFORM_OF[type(bound.desc)], _key(bound))
+        (PLATFORM_OF[type(bound.desc)], LocalThingsEntity(coordinator, bound).unique_id)
         for bound in coordinator.bound
         if _is_included(bound, coordinator)
     }
@@ -325,9 +387,7 @@ def _drop_misidentified_oven_controls(
         if (
             not isinstance(bound.desc, ButtonDesc)
             or bound.desc.key != "start_cooking"
-            or bound.subdevice.kind != "indexed"
-            or bound.subdevice.key != "1"
-            or not is_lcd_wall_oven(coordinator.discovery_canonical(bound.subdevice))
+            or cook.cavity(coordinator.discovery_canonical(bound.subdevice)) != "Lower"
             or not _is_included(bound, coordinator)
         ):
             continue
@@ -336,10 +396,11 @@ def _drop_misidentified_oven_controls(
             ("button", "pause"),
             ("number", "delay_start_hours"),
         ):
-            state_key = f"{bound.subdevice.key_prefix}{key}"
-            if (platform, state_key) in current:
+            obsolete = replace(bound, desc=replace(bound.desc, key=key))
+            unique_id = LocalThingsEntity(coordinator, obsolete).unique_id
+            assert unique_id is not None
+            if (platform, unique_id) in current:
                 continue
-            unique_id = f"{DOMAIN}_{coordinator.device_key}_{state_key}"
             entity_id = ent_reg.async_get_entity_id(platform, DOMAIN, unique_id)
             old = ent_reg.async_get(entity_id) if entity_id else None
             if old is None or old.config_entry_id != entry.entry_id:
@@ -437,19 +498,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(coordinator.async_add_listener(lambda: None))
     await coordinator.async_load_mode_specs()
 
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryNotReady:
-        # An entry that has polled successfully before comes up on its last
-        # known entity set and keeps retrying on the normal poll interval,
-        # rather than sitting in setup-retry with a device that reads as
-        # broken and entities that exist only as registry rows (issue #295).
-        #
-        # An entry that has never reached the device has no snapshot, so
-        # there is nothing to show and no device metadata to name it with --
-        # that case still fails, which is also what keeps the door open for
-        # setup flows that need to interact with the device (issue #168).
-        if not await coordinator.async_rehydrate():
+    # An entry that has polled before comes up straight from its discovery
+    # snapshot and makes its first connection in the background. Waiting
+    # for that connection here held up Home Assistant's startup by the full
+    # handshake and poll timeouts whenever the appliance was switched off,
+    # only to end up on the same snapshot anyway.
+    if await coordinator.async_rehydrate():
+        # Start out as an offline load always has: entities unavailable until
+        # the device answers, and no "Error fetching" from the base class
+        # when an appliance that is simply switched off fails that first poll.
+        coordinator.last_update_success = False
+        # This refresh starts before the platforms are forwarded, so a device
+        # that answers quickly can finish its live discovery while setup is
+        # still going. The platforms then register from the live set instead
+        # of the snapshot; either way, a live set that differs from the
+        # snapshot schedules a reload (LocalThingsCoordinator._reconcile_rehydrated).
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh(), f"{DOMAIN} first refresh {entry.entry_id}"
+        )
+    else:
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except ConfigEntryNotReady:
+            # An entry that has never reached the device has no snapshot, so
+            # there is nothing to show and no device metadata to name it with
+            # -- that case still fails, which is also what keeps the door open
+            # for setup flows that need to interact with the device (issue
+            # #168).
             await coordinator.async_close()
             raise
 
@@ -482,21 +557,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # toggle not working. Every other option (CONF_LEARN_MODES,
     # CONF_BYPASS_REMOTE_CONTROL, ...) is read live on its own next use and
     # has no comparable standing state to refresh, so this listener exists
-    # for cloud courses specifically rather than as a general
-    # options-changed hook. Must be a coroutine function -- HA wraps
+    # for cloud courses and the subdevice choice, which reloads, rather than
+    # as a general options-changed hook. Must be a coroutine function -- HA wraps
     # whatever an update listener returns in async_create_task, which raises
     # on a plain callback's None.
-    async def _async_options_updated(_hass: HomeAssistant, _entry: ConfigEntry) -> None:
-        coordinator._on_cloud_courses_changed()
-
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
+    _drop_read_only_power_switches(hass, entry, coordinator)
+    _drop_unsupported_sound_switches(hass, entry, coordinator)
     _drop_washer_entities_from_filters(hass, entry, coordinator)
     _drop_misidentified_oven_controls(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """React to an options-flow save (see async_setup_entry)."""
+    coordinator: LocalThingsCoordinator | None = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is None:
+        return
+    # Subdevices are chosen at discovery, so a changed choice needs a fresh
+    # setup. Reloading here, after the save, is what lets it see the new one.
+    if disabled_subdevice_keys(entry.options) != coordinator.disabled_keys:
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+        return
+    coordinator._on_cloud_courses_changed()
 
 
 async def async_remove_config_entry_device(

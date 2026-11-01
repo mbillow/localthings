@@ -19,18 +19,17 @@ from pathlib import Path
 import pytest
 
 from custom_components.localthings.legacy_http import (
+    CAVITY_LOWER,
+    CAVITY_UPPER,
     COURSE_TABLE_HREF,
-    IDENTITY,
-    LCD_OV_WALL,
     PREFIX,
-    TP6X_RAC,
-    TP6X_WASHER,
     StagedKey,
     add_staged,
     batch_steps,
+    cavity_role,
     course_table,
+    divider_in,
     http_status_to_coap,
-    is_mapped,
     is_start,
     model_settings,
     split_start_only,
@@ -46,6 +45,11 @@ from custom_components.localthings.registry.capabilities.common import model_all
 from custom_components.localthings.registry.discovery import discover
 
 FIXTURE = Path(__file__).parent / "fixtures" / "washer_tp6x_ww6500_8888.json"
+DRYER_CAPTURE = Path(__file__).parent / "fixtures" / "dryer_tp6x_dv80m8214aw_cooling_8888.json"
+
+WASHER = table_for("Washer")
+AIR_CONDITIONER = table_for("Air_Conditioner")
+OVEN = table_for("Oven")
 
 # What `GET /devices/0` reports, plus the two resources that aggregate only
 # links to, merged the way a caller would hand them over.
@@ -82,7 +86,7 @@ BODIES = {
 
 class TestToResources:
     def test_fields_take_the_samsung_prefix_and_keep_their_names(self):
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert resources["/washer/vs/0"] == {
             PREFIX + "waterTemperature": "40",
@@ -95,7 +99,7 @@ class TestToResources:
         """This firmware's `Mode` carries the `Course_` token array, which
         is /course/vs/0's contract on the OCF side -- /mode/vs/0 is a
         different resource, and this appliance 404s it."""
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert "/mode/vs/0" not in resources
         assert resources["/course/vs/0"][PREFIX + "options"] == [
@@ -108,14 +112,14 @@ class TestToResources:
         """The one structural exception: this firmware reports both inside
         `Operation`, where the OCF side has them as resources of their own
         and this repository's capabilities read them there."""
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert resources["/power/vs/0"] == {PREFIX + "power": "On"}
         assert resources["/kidslock/vs/0"] == {PREFIX + "kidsLock": "Ready"}
         assert PREFIX + "power" not in resources["/operational/state/vs/0"]
 
     def test_operational_state_keeps_the_rest(self):
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert resources["/operational/state/vs/0"] == {
             PREFIX + "state": "Run",
@@ -126,7 +130,7 @@ class TestToResources:
         }
 
     def test_information_is_renamed_in_exactly_two_places(self):
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
         info = resources["/information/vs/0"]
 
         assert info[PREFIX + "modelNum"] == "TP6X_WW6500|FF1BE000"
@@ -135,7 +139,7 @@ class TestToResources:
         assert info[PREFIX + "description"] == "TP6X_WASHER"
 
     def test_alarms_become_an_items_array_of_prefixed_maps(self):
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert resources["/alarms/vs/0"] == {
             PREFIX + "items": [
@@ -151,7 +155,7 @@ class TestToResources:
         """Absent, not empty: an empty rep is a board's confirmed answer
         that it has none of this, which callers already read differently
         (registry.batch.is_stub_rep)."""
-        resources = to_resources({k: v for k, v in BODIES.items() if k != "Diagnosis"}, TP6X_WASHER)
+        resources = to_resources({k: v for k, v in BODIES.items() if k != "Diagnosis"}, WASHER)
 
         assert "/diagnosis/vs/0" not in resources
 
@@ -159,7 +163,7 @@ class TestToResources:
         """The whole point of the translation: what comes out is keyed and
         shaped exactly like parse_device0_batch's output, so registry/ and
         discovery.py need no notion of which transport fed them."""
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
 
         assert all(href.startswith("/") for href in resources)
         assert all(isinstance(rep, dict) for rep in resources.values())
@@ -168,9 +172,7 @@ class TestToResources:
 
 class TestToWrite:
     def test_one_step_wraps_the_resource_the_appliance_expects(self):
-        body = to_write(
-            [("/course/vs/0", {PREFIX + "options": ["LaundryOutTime_60"]})], TP6X_WASHER
-        )
+        body = to_write([("/course/vs/0", {PREFIX + "options": ["LaundryOutTime_60"]})], WASHER)
 
         assert body == {"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}
 
@@ -182,7 +184,7 @@ class TestToWrite:
                 ("/course/vs/0", {PREFIX + "options": ["Course_63"]}),
                 ("/operational/state/vs/0", {PREFIX + "state": "Run"}),
             ],
-            TP6X_WASHER,
+            WASHER,
         )
 
         assert body == {
@@ -193,12 +195,12 @@ class TestToWrite:
         }
 
     def test_a_fanned_out_field_writes_back_into_its_own_wrapper(self):
-        body = to_write([("/power/vs/0", {PREFIX + "power": "Off"})], TP6X_WASHER)
+        body = to_write([("/power/vs/0", {PREFIX + "power": "Off"})], WASHER)
 
         assert body == {"Device": {"Operation": {"power": "Off"}}}
 
     def test_a_renamed_field_writes_under_its_wire_name(self):
-        body = to_write([("/information/vs/0", {PREFIX + "modelNum": "X"})], TP6X_WASHER)
+        body = to_write([("/information/vs/0", {PREFIX + "modelNum": "X"})], WASHER)
 
         assert body == {"Device": {"Information": {"modelID": "X"}}}
 
@@ -206,13 +208,13 @@ class TestToWrite:
         """Rather than inventing a wrapper for it: a write nobody can place
         must not reach the appliance as a guess."""
         assert to_write(
-            [("/energy/consumption/vs/0", {PREFIX + "cumulativePower": "1"})], TP6X_WASHER
+            [("/energy/consumption/vs/0", {PREFIX + "cumulativePower": "1"})], WASHER
         ) == {"Device": {}}
 
     def test_writes_round_trip_through_the_table(self):
-        resources = to_resources(BODIES, TP6X_WASHER)
+        resources = to_resources(BODIES, WASHER)
         body = to_write(
-            [(href, rep) for href, rep in resources.items() if href == "/washer/vs/0"], TP6X_WASHER
+            [(href, rep) for href, rep in resources.items() if href == "/washer/vs/0"], WASHER
         )
 
         assert body["Device"]["Washer"] == BODIES["Washer"]
@@ -321,7 +323,7 @@ class TestAgainstTheDeviceDump:
                 dump["/devices/0/configuration"],
                 dump["/devices/0/information"],
             ),
-            TP6X_WASHER,
+            WASHER,
         )
 
     def test_the_dump_produces_the_canonical_resource_set(self):
@@ -338,8 +340,7 @@ class TestAgainstTheDeviceDump:
         }
 
     def test_the_device_types_as_a_washer(self):
-        """Through `description` ('TP6X_WASHER') and the consumer-prefix
-        rule, with no new board token and no change to by_type."""
+        """Through the `deviceSubType` its record reports ('Washer')."""
         registry = resolve(self._resources())
 
         assert registry is not None
@@ -397,16 +398,116 @@ class TestAgainstTheDeviceDump:
         assert len(cycle_options(self._resources())) == 14
 
 
-class TestFamilies:
-    def test_a_mapped_family_gets_its_own_table(self):
-        assert table_for("TP6X_WASHER") is TP6X_WASHER
-        assert is_mapped("TP6X_WASHER")
+class TestAgainstTheDryerCapture:
+    """The DV80M8214AW mid-cycle (#646), through the washer's shared table and
+    the CoAP dryer registry. Its record names no board token; its
+    `deviceSubType` ('Dryer') types it."""
 
-    def test_an_unmapped_family_gets_identity_only(self):
-        assert table_for("TP6X_DRYER") == IDENTITY
-        assert table_for(None) == IDENTITY
-        assert not is_mapped("TP6X_DRYER")
-        assert not is_mapped(None)
+    @staticmethod
+    def _resources():
+        bodies = json.loads(DRYER_CAPTURE.read_text(encoding="utf-8"))["bodies"]
+        return to_resources(bodies, table_for(bodies["type"]))
+
+    def test_it_types_as_a_dryer(self):
+        registry = resolve(self._resources())
+
+        assert registry is not None
+        assert registry.name == "dryer"
+
+    def test_nothing_is_left_unbound(self):
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        unbound: list[str] = []
+
+        discover(
+            resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+        )
+
+        assert unbound == []
+
+    def test_the_cooling_phase_and_course_read_through(self):
+        """Cooling is reported although `supportedProgress` omits it."""
+        from custom_components.localthings.registry.adapter import flatten
+
+        resources = self._resources()
+        registry = resolve(resources)
+        assert registry is not None
+        state = flatten(discover(resources, registry.capabilities), resources)
+
+        assert state["progress"] == "cooling"
+        assert state["progress_percentage"] == 82
+        assert state["cycle"] == "96"
+
+
+class TestDeviceTypes:
+    @pytest.mark.parametrize("device_type", ["Washer", "Dryer"])
+    def test_laundrys_mode_is_its_course(self, device_type):
+        resources = to_resources({"Mode": {"options": ["Course_1C"]}}, table_for(device_type))
+
+        assert resources == {"/course/vs/0": {PREFIX + "options": ["Course_1C"]}}
+
+    def test_any_other_types_mode_is_its_mode(self):
+        for device_type in ("Oven", "Cooktop", "Air_Conditioner", "Unmapped", None):
+            resources = to_resources({"Mode": {"options": ["X_1"]}}, table_for(device_type))
+
+            assert resources == {"/mode/vs/0": {PREFIX + "options": ["X_1"]}}
+
+    def test_an_unmapped_type_reads_whole(self):
+        """Not identity alone: what it reports lands where the CoAP boards
+        keep it, so discovery can route it and show what it doesn't bind."""
+        resources = to_resources(
+            {
+                "Operation": {"power": "On", "state": "Ready"},
+                "Configuration": {"remoteControlEnabled": True},
+            },
+            table_for("Unmapped"),
+        )
+
+        assert resources == {
+            "/power/vs/0": {PREFIX + "power": "On"},
+            "/operational/state/vs/0": {PREFIX + "state": "Ready"},
+            "/remotectrl/vs/0": {PREFIX + "remoteControlEnabled": True},
+        }
+
+
+class TestCavities:
+    """A divided oven's cavities, from what each slot reports for itself."""
+
+    @staticmethod
+    def _record(description, modes):
+        return {"description": description, "Mode": {"supportedModes": [modes]}}
+
+    def test_a_div_slot_with_modes_is_the_lower_cavity(self):
+        """The NV51K777OS's lower slot reports the upper's list; the suffix
+        decides."""
+        record = self._record("LCD_OV_WALL_16K_DIV", "UpperBake,Bake,NoOperation")
+
+        assert cavity_role(record) == CAVITY_LOWER
+
+    def test_a_slot_offering_upper_modes_is_the_upper_cavity(self):
+        """Whatever its description: the NW9300MD's oven is `_LOWER`."""
+        for description in ("LCD_OV_WALL_16K", "LCD_OV_WALL_16K_LOWER", None):
+            record = self._record(description, "UpperConvectionBake,Bake,NoOperation")
+
+            assert cavity_role(record) == CAVITY_UPPER
+
+    def test_an_empty_div_slot_is_no_cavity(self):
+        """The NW9300MD's slot 1 (#681)."""
+        assert cavity_role(self._record("LCD_OV_WALL_16K_DIV", "")) is None
+
+    def test_an_undivided_appliance_has_no_cavities(self):
+        for modes in ("MicroWave,SpeedBroil,NoOperation", "Bake,Broil,NoOperation"):
+            assert cavity_role(self._record("TP6X_OV_17K", modes)) is None
+        assert cavity_role({"description": "TP6X_WW6500"}) is None
+
+    def test_the_divider_is_in_while_devices_lists_a_lower_cavity(self):
+        upper = self._record("LCD_OV_WALL_16K", "UpperBake,Bake")
+        lower = self._record("LCD_OV_WALL_16K_DIV", "LowerBake")
+
+        assert divider_in([upper, lower])
+        assert not divider_in([upper])
+        assert not divider_in([upper, self._record("LCD_OV_WALL_16K_DIV", "")])
 
 
 class TestStaging:
@@ -416,18 +517,18 @@ class TestStaging:
     def test_a_cycle_token_is_split_off_and_other_tokens_stay(self):
         body = to_write(
             [("/course/vs/0", {PREFIX + "options": ["Course_63", "LaundryOutTime_60"]})],
-            TP6X_WASHER,
+            WASHER,
         )
 
-        sendable, staged = split_start_only(body, TP6X_WASHER)
+        sendable, staged = split_start_only(body, WASHER)
 
         assert sendable == {"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}
         assert staged == {("Mode", "options", "Course"): "Course_63"}
 
     def test_a_setting_is_split_off_whole(self):
-        body = to_write([("/washer/vs/0", {PREFIX + "spinLevel": "800"})], TP6X_WASHER)
+        body = to_write([("/washer/vs/0", {PREFIX + "spinLevel": "800"})], WASHER)
 
-        sendable, staged = split_start_only(body, TP6X_WASHER)
+        sendable, staged = split_start_only(body, WASHER)
 
         assert sendable == {"Device": {}}
         assert staged == {("Washer", "spinLevel", None): "800"}
@@ -486,14 +587,7 @@ class TestTp6xRac:
         return json.loads(fixture.read_text(encoding="utf-8"))["bodies"]
 
     def _resources(self, fixture=None):
-        return to_resources(self._bodies(fixture or self.FIXTURES[0]), TP6X_RAC)
-
-    def test_every_capacity_shares_the_table(self):
-        """The reporter's unit is a 16K; issue #524's are 17K."""
-        for family in ("TP6X_RAC_16K", "TP6X_RAC_17K", "TP6X_RAC_09K"):
-            assert table_for(family) is TP6X_RAC
-            assert is_mapped(family)
-        assert not is_mapped("TP6X_RACX_16K")
+        return to_resources(self._bodies(fixture or self.FIXTURES[0]), AIR_CONDITIONER)
 
     @pytest.mark.parametrize("fixture", FIXTURES, ids=lambda p: p.stem)
     def test_the_dump_produces_the_legacy_board_hrefs(self, fixture):
@@ -536,7 +630,7 @@ class TestTp6xRac:
 
         def wire(payload):
             segs, body = _climate_write(payload, rep, resources={})
-            return to_write([("/" + "/".join(segs), body)], TP6X_RAC)["Device"]
+            return to_write([("/" + "/".join(segs), body)], AIR_CONDITIONER)["Device"]
 
         assert wire(("power", False)) == {"Operation": {"power": "Off"}}
         assert wire(("mode", "Cool")) == {"Mode": {"modes": ["Cool"]}}
@@ -556,7 +650,7 @@ class TestTp6xRac:
     def test_a_list_body_passes_the_start_split_untouched(self):
         aggregate = {"Device": {"Temperatures": [{"id": "0", "desired": 23}]}}
 
-        sendable, staged = split_start_only(aggregate, TP6X_RAC)
+        sendable, staged = split_start_only(aggregate, AIR_CONDITIONER)
 
         assert sendable == aggregate
         assert staged == {}
@@ -576,7 +670,7 @@ class TestLcdOvWall:
         return json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
 
     def _resources(self, bodies=None):
-        return to_resources(bodies or self._bodies(), LCD_OV_WALL)
+        return to_resources(bodies or self._bodies(), OVEN)
 
     def _state(self, resources):
         from custom_components.localthings.registry.adapter import flatten
@@ -586,11 +680,6 @@ class TestLcdOvWall:
         return flatten(
             discover(resources, registry.capabilities, registry.pattern_capabilities), resources
         )
-
-    def test_the_family_is_mapped_at_any_capacity(self):
-        for family in ("LCD_OV_WALL_16K", "LCD_OV_WALL_30K"):
-            assert table_for(family) is LCD_OV_WALL
-            assert is_mapped(family)
 
     def test_the_dump_produces_the_wall_oven_hrefs(self):
         assert set(self._resources()) == {
@@ -667,7 +756,7 @@ class TestLcdOvWall:
 
         def wire(write, value, href):
             segs, body = write(value, resources[href])
-            return to_write([("/" + "/".join(segs), body)], LCD_OV_WALL)["Device"]
+            return to_write([("/" + "/".join(segs), body)], OVEN)["Device"]
 
         assert wire(_oven_mode_write, "UpperConvectionBake", "/mode/vs/0") == {
             "Mode": {"modes": ["UpperConvectionBake"]}
@@ -680,7 +769,15 @@ class TestLcdOvWall:
         }
 
     def test_the_washer_power_flag_is_not_read_off_an_oven(self):
-        assert model_settings("LCD_OV_WALL_16K", self._bodies()) == {}
+        bodies = self._bodies()
+        # The wall oven uses measured behavior, not the washer's feature byte.
+        for feature_byte in ("00", "01"):
+            model_id = bodies["Information"]["modelID"].split("|")
+            model_id[2] = model_id[2][:26] + feature_byte + model_id[2][28:]
+            bodies["Information"]["modelID"] = "|".join(model_id)
+            assert model_settings("LCD_OV_WALL_16K", bodies) == {
+                "/wm/setinfo/vs/0": {PREFIX + "isModelSettingPowerOnOff": "false"}
+            }
 
 
 _MODE = {"href": "/mode/vs/0", "rep": {PREFIX + "modes": ["Bake"]}}
@@ -692,14 +789,14 @@ class TestBatchSteps:
     since a start that lost its mode would still carry its Run."""
 
     def test_the_marker_is_skipped_and_the_rest_kept_in_order(self):
-        steps = batch_steps([{"href": "/devices/0"}, _MODE, _RUN], LCD_OV_WALL)
+        steps = batch_steps([{"href": "/devices/0"}, _MODE, _RUN], OVEN)
 
         assert steps == [(_MODE["href"], _MODE["rep"]), (_RUN["href"], _RUN["rep"])]
 
     def test_an_element_this_family_has_no_row_for_refuses_the_batch(self):
         """The washer's mode is /course/vs/0, so a /mode/vs/0 element would
         drop and leave a bare Run."""
-        assert batch_steps([_MODE, _RUN], TP6X_WASHER) is None
+        assert batch_steps([_MODE, _RUN], WASHER) is None
 
     @pytest.mark.parametrize(
         "element",
@@ -710,4 +807,4 @@ class TestBatchSteps:
         ],
     )
     def test_a_malformed_element_refuses_the_batch(self, element):
-        assert batch_steps([element, _RUN], LCD_OV_WALL) is None
+        assert batch_steps([element, _RUN], OVEN) is None

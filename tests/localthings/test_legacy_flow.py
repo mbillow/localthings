@@ -214,8 +214,8 @@ async def test_the_same_appliance_is_not_added_twice(hass: HomeAssistant, legacy
 async def test_an_unmapped_family_is_confirmed_like_an_unknown_device(
     hass: HomeAssistant, legacy_bridge
 ) -> None:
-    """No envelope table means no borrowed one: the flow asks, exactly as it
-    does for a DTLS device nothing routes."""
+    """A family nothing routes is confirmed exactly as a DTLS device nothing
+    routes is."""
     _, probe, _mint = legacy_bridge
     probe.return_value = {
         **LEGACY_DEVICE,
@@ -233,14 +233,16 @@ async def test_an_unmapped_family_is_confirmed_like_an_unknown_device(
     assert result["step_id"] == "confirm_unknown_type"
 
 
-def test_probe_reads_an_unmapped_family_for_identity_only(monkeypatch) -> None:
+def test_probe_reads_the_device_once_whatever_its_family(monkeypatch) -> None:
+    """One shared table reads every family, so whether the device is
+    recognized comes from routing what it reports, not from its family."""
     from custom_components.localthings import config_flow
 
-    families: list[str | None] = []
+    created: list[dict] = []
 
     class _Transport:
-        def __init__(self, *args, family=None, **kwargs):
-            families.append(family)
+        def __init__(self, *args, **kwargs):
+            created.append(kwargs)
 
         def connect(self):
             pass
@@ -248,45 +250,16 @@ def test_probe_reads_an_unmapped_family_for_identity_only(monkeypatch) -> None:
         def close(self):
             pass
 
-    def _read(transport, host, port):
-        return {**LEGACY_DEVICE, "description": "TP6X_DRYER"}
-
+    resolved = {**LEGACY_DEVICE, "description": "TP6X_DRYER"}
     monkeypatch.setattr(
         "custom_components.localthings.legacy_http_transport.LegacyHttpTransport", _Transport
     )
-    monkeypatch.setattr(config_flow, "_read_device", _read)
+    monkeypatch.setattr(config_flow, "_read_device", lambda transport, host, port: resolved)
 
     info = config_flow._probe_legacy(MOCK_HOST, "C", "K", "tok")
 
-    assert families == [None]
-    assert info["device_type_recognized"] is False
-    assert info["device_type_name"] is None
-
-
-def test_probe_reads_a_mapped_family_through_its_table(monkeypatch) -> None:
-    from custom_components.localthings import config_flow
-
-    families: list[str | None] = []
-
-    class _Transport:
-        def __init__(self, *args, family=None, **kwargs):
-            families.append(family)
-
-        def connect(self):
-            pass
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(
-        "custom_components.localthings.legacy_http_transport.LegacyHttpTransport", _Transport
-    )
-    monkeypatch.setattr(config_flow, "_read_device", lambda transport, host, port: LEGACY_DEVICE)
-
-    info = config_flow._probe_legacy(MOCK_HOST, "C", "K", "tok")
-
-    assert families == [None, "TP6X_WASHER"]
-    assert info["device_type_recognized"] is True
+    assert len(created) == 1
+    assert info == resolved
 
 
 def _legacy_entry(hass: HomeAssistant, **extra):
@@ -539,3 +512,25 @@ async def test_reauth_stores_the_ca_signed_leaf_it_needed(
     assert entry.data[CONF_LEAF_CERT_PEM] == "CA-FULLCHAIN"
     assert entry.data[CONF_LEAF_KEY_PEM] == "CA-LEAFKEY"
     assert entry.data[CONF_CA_CERT_PEM] == "CA-CERT"
+
+
+async def test_refused_minted_identity_retries_original_ca_once(hass, legacy_bridge):
+    from custom_components.localthings.const import CONF_LEAF_KEY_PEM
+    from custom_components.localthings.legacy_http_token import CallbackCertRejected
+
+    token, _, _mint = legacy_bridge
+    result = await _rejected_callback(hass, token)
+    token.side_effect = [CallbackCertRejected("minted identity refused"), "tok-original-identity"]
+    with patch(
+        "custom_components.localthings.config_flow._mint_credentials",
+        return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CA_CERT_PEM: "CA-CERT", CONF_CA_KEY_PEM: "CA-KEY"}
+        )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_LEAF_CERT_PEM] == "CA-CERT"
+    assert result["data"][CONF_LEAF_KEY_PEM] == "CA-KEY"
+    assert token.call_args_list[-2].args[2:] == ("CA-FULLCHAIN", "CA-LEAFKEY")
+    assert token.call_args_list[-1].args[2:] == ("CA-CERT", "CA-KEY")
+    assert token.call_count == 3

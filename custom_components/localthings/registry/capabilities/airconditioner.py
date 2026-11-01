@@ -1858,6 +1858,9 @@ _AC_IGNORED = [
     # Empty ({}) on a cool-only RAC (issue #569). Revisit if a heat-pump dump
     # populates it.
     "/auxiliaryheater/vs/0",
+    # The MIM-H04EN EHS Wi-Fi kit's (#682): a fixed 24/24 placeholder marked
+    # Hide. The heat pump behind the kit reports its real one.
+    "/temperatures/indoor/vs/0",
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

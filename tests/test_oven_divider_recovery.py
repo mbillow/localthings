@@ -1,4 +1,4 @@
-"""Legacy oven controls survive divider changes and earlier misidentification."""
+"""Lower oven controls recover after divider changes and old washer routing."""
 
 from dataclasses import replace
 
@@ -8,10 +8,12 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings import _drop_misidentified_oven_controls
+from custom_components.localthings.button import LocalThingsButton
 from custom_components.localthings.button import async_setup_entry as setup_buttons
-from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.const import CONF_DISABLED_SUBDEVICES, DOMAIN
+from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import flatten
-from custom_components.localthings.registry.by_type import for_device_by_model
 from custom_components.localthings.registry.capabilities import cook
 from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
 from custom_components.localthings.registry.entities import PLATFORM_OF
@@ -19,7 +21,7 @@ from custom_components.localthings.registry.subdevices import MAIN
 from tests.test_legacy_http_lower_cavity import (
     PREFIX,
     _discovered,
-    _fake_https,  # noqa: F401
+    _fake_https,  # noqa: F401 -- fake legacy transport
     _FakeConnection,
     _lower,
     _routes,
@@ -153,21 +155,17 @@ async def test_old_lower_laundry_rows_are_removed_without_losing_oven_entities(h
         assert all(registry.async_get(row.entity_id) == row for row in kept)
 
 
-@pytest.mark.parametrize(
-    "case", ["unknown_model", "other_model", "similar_model", "other_entry", "currently_supported"]
-)
+@pytest.mark.parametrize("case", ["not_lower", "no_start", "other_entry", "currently_supported"])
 async def test_laundry_cleanup_requires_confirmed_obsolete_lower_oven_controls(hass, case):
     coordinator = await _discovered(hass)
-    if case in ("unknown_model", "other_model", "similar_model"):
+    if case == "not_lower":
         coordinator._observe.apply(
-            "/information/vs/1",
-            {
-                PREFIX + "modelNum": {
-                    "unknown_model": "",
-                    "other_model": "DA_WM_TP1",
-                    "similar_model": "LCD_OV_WALL_17K",
-                }[case]
-            },
+            "/information/vs/1", {PREFIX + "description": "Other cavity"}, source="poll"
+        )
+    elif case == "no_start":
+        coordinator._observe.apply(
+            "/mode/vs/1",
+            {cook.MODE_SPEC: [{"mode": "LowerBake", "control": "Setting"}]},
             source="poll",
         )
     elif case == "currently_supported":
@@ -202,33 +200,63 @@ async def test_laundry_cleanup_requires_confirmed_obsolete_lower_oven_controls(h
 
 
 @pytest.mark.parametrize("spec", [[], [{"mode": "LowerBake", "control": "Setting"}], "malformed"])
-async def test_wall_button_keeps_existing_mode_spec_rules(hass, spec):
+async def test_lower_button_keeps_existing_mode_spec_rules(hass, spec):
     coordinator = await _discovered(hass, _routes(divided=False))
     resources = coordinator.canonical_resources(_lower(coordinator))
     resources = {**resources, cook.MODE_HREF: {**resources[cook.MODE_HREF], cook.MODE_SPEC: spec}}
     assert cook.can_start({}, resources) is (spec == [])
 
 
-@pytest.mark.parametrize(
-    "model",
-    [None, 123, "LCD_OV_WALL", "LCD_OV_WALL_17K", "LCD_OV_WALL_16K_OTHER", "TP2X_KS_WALLOVEN"],
-)
-def test_no_start_button_is_added_to_other_boards_with_no_cooking_modes(model):
+@pytest.mark.parametrize("description", ["OTHER_DIV", "Another_DIV"])
+def test_removed_lower_start_registration_uses_cavity_state_not_model(description):
     resources = {
-        "/information/vs/0": {PREFIX + "modelNum": model},
+        "/information/vs/0": {PREFIX + "description": description},
         cook.MODE_HREF: {PREFIX + "supportedModes": ["NoOperation"]},
+        cook.CONNECTED_HREF: {PREFIX + "connected": "Off"},
+    }
+    assert cook.can_start({}, resources)
+    assert cook.startable_modes(resources) == []
+    with pytest.raises(cook.CookStartError):
+        cook.plan_start(resources, "LowerBake", 350, 300)
+
+
+@pytest.mark.parametrize(
+    "description,connected", [("Unknown", "Off"), ("OTHER_DIV", "On"), ("OTHER_DIV", None)]
+)
+def test_empty_mode_list_alone_does_not_add_start(description, connected):
+    resources = {
+        "/information/vs/0": {PREFIX + "description": description},
+        cook.MODE_HREF: {PREFIX + "supportedModes": ["NoOperation"]},
+        cook.CONNECTED_HREF: {PREFIX + "connected": connected},
     }
     assert not cook.can_start({}, resources)
 
 
-@pytest.mark.parametrize("description", ["LCD_OV_WALL_16K", "LCD_OV_WALL_16K_DIV"])
-@pytest.mark.parametrize("model", ["LCD_OV_WALL_16K|1|2", ""])
-def test_oven_type_does_not_depend_on_available_cooking_modes(model, description):
-    registry = for_device_by_model(model, description)
-    assert registry is not None
-    assert registry.name == "oven"
-
-
-@pytest.mark.parametrize("model", ["DISCOVERY", "OVERTURE", "BOARD|OV|1"])
-def test_ov_type_token_does_not_match_substrings_or_capability_data(model):
-    assert for_device_by_model(model, "") is None
+@pytest.mark.parametrize("disabled", [False, True])
+async def test_snapshot_keeps_start_and_cleanup_respects_disabled_lower(hass, disabled):
+    online = await _discovered(hass, _routes(divided=False))
+    await online._async_save_snapshot(online.last_resources, online.subdevices)
+    if disabled:
+        hass.config_entries.async_update_entry(
+            online._entry, options={CONF_DISABLED_SUBDEVICES: {"1": "Lower oven"}}
+        )
+    restored = LocalThingsCoordinator(hass, online._entry)
+    assert await restored.async_rehydrate()
+    restored.last_update_success = False
+    assert restored.last_resources == {}
+    starts = [
+        LocalThingsButton(restored, b)
+        for b in restored.bound
+        if b.subdevice.key == "1" and b.desc.key == "start_cooking" and _is_included(b, restored)
+    ]
+    assert len(starts) == (0 if disabled else 1)
+    assert all(not button.available for button in starts)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "button",
+        DOMAIN,
+        f"{DOMAIN}_{restored.device_key}_subdevice1_start",
+        config_entry=online._entry,
+    )
+    _drop_misidentified_oven_controls(hass, online._entry, restored)
+    assert (registry.async_get(old.entity_id) is not None) is disabled

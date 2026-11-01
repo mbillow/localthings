@@ -33,9 +33,11 @@ from custom_components.localthings.const import (
     CONF_PSK_IDENTITY,
     CONF_PSK_KEY,
     CONF_PSK_PROFILE,
+    CONF_READ_MODE,
     DOMAIN,
     PSK_PROFILE_OWNER,
     PSK_PROFILE_PEER,
+    READ_MODE_PER_HREF,
 )
 from custom_components.localthings.credentials import psk_credentials
 from custom_components.localthings.probing import CredentialHint, HostProbe
@@ -206,6 +208,8 @@ async def test_owner_psk_creates_a_psk_entry_bound_to_the_proven_di(
         assert field not in data
     # What the coordinator will build its session from.
     assert psk_credentials(data) == (OWNER_UUID, KEY)
+    # The washer answers /device/0: the Collection, no stored read mode.
+    assert CONF_READ_MODE not in data
 
 
 async def test_peer_psk_is_never_prefilled_from_doxm(
@@ -358,6 +362,63 @@ async def test_reconfigure_a_psk_entry_needs_a_matching_di(hass: HomeAssistant, 
     )
     assert result["errors"] == {"base": "wrong_device"}
     assert entry.data[CONF_HOST] == "10.0.0.9"
+
+
+class FlatPskAppliance(PskAppliance):
+    """A PSK board without /device/0 (an AV board), whose resources answer."""
+
+    _RESOURCES: ClassVar[dict[str, dict]] = {
+        "/sec/networkaudio/audio": {"volume": 7},
+        "/sec/networkaudio/switch/binary": {"value": True},
+    }
+
+    def read(self, path, timeout=15.0):
+        href = "/" + "/".join(path)
+        if href == "/oic/d":
+            return 0x45, {"di": self.device_id, "rt": ["oic.wk.d", "oic.d.networkaudio"]}
+        if href == "/oic/res":
+            return 0x45, [{"href": h} for h in self._RESOURCES]
+        if href in self._RESOURCES:
+            return 0x45, dict(self._RESOURCES[href])
+        if href == "/device/0":
+            return 0x84, None
+        return super().read(path, timeout)
+
+
+async def test_a_board_without_device0_is_stored_per_href(
+    hass: HomeAssistant, monkeypatch, appliance
+) -> None:
+    monkeypatch.setattr(config_flow, "DtlsTransport", FlatPskAppliance)
+    _hint(monkeypatch, CredentialHint(sct=1, owner_uuid=OWNER_UUID))
+    result = await _choose(hass, await _refused(hass), "psk_owner")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PSK_IDENTITY: OWNER_UUID, CONF_PSK_KEY: KEY}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_READ_MODE] == READ_MODE_PER_HREF
+
+
+@pytest.mark.parametrize(
+    ("before", "transport", "after"),
+    [
+        ({}, FlatPskAppliance, READ_MODE_PER_HREF),
+        ({CONF_READ_MODE: READ_MODE_PER_HREF}, PskAppliance, None),
+        ({CONF_READ_MODE: READ_MODE_PER_HREF}, FlatPskAppliance, READ_MODE_PER_HREF),
+    ],
+)
+async def test_reconfigure_detects_the_read_mode_again(
+    hass: HomeAssistant, monkeypatch, appliance, before, transport, after
+) -> None:
+    """A new address can be a different board, so setup's detection reruns."""
+    monkeypatch.setattr(config_flow, "DtlsTransport", transport)
+    entry = _psk_entry(**before)
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: MOCK_HOST}
+    )
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data.get(CONF_READ_MODE) == after
 
 
 def test_psk_alerts_are_not_read_as_a_certificate_rejection() -> None:
