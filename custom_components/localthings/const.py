@@ -23,6 +23,11 @@ CONF_PORT = "port"
 CONF_TRANSPORT = "transport"
 TRANSPORT_DTLS = "dtls"
 TRANSPORT_LEGACY_HTTP = "legacy_http"
+# How a CoAP device is read, decided once at setup (config_flow._read_device).
+# Absent: GET its /device/0 Collection. READ_MODE_PER_HREF: it has none, so
+# each href /oic/res advertises is read on its own (registry/flat.py).
+CONF_READ_MODE = "read_mode"
+READ_MODE_PER_HREF = "per_href"
 
 # The legacy 8888 bridge needs one credential the CoAP path does not: a
 # device token, which only the appliance can issue (see

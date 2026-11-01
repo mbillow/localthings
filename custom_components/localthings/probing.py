@@ -510,14 +510,18 @@ def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
     return tuple(ports), answered
 
 
-def moved_secure_port(host: str, current: int, device_id: str | None = None) -> int | None:
-    """The secure port the device now advertises, if it isn't `current`.
+def moved_secure_port(
+    host: str, current: int, device_id: str | None = None, *, probe_scan: bool = False
+) -> int | None:
+    """A different secure port the device now answers on, if there is one.
 
     For a reconnect whose handshake failed: ports are kernel-assigned and
     move across a power cycle (WD86 58227 -> 41820, #435), so the stored
-    one can go stale while the device is fine. One sequential plaintext
-    lookup, nothing scanned. 5684 is never returned: it answers on any
-    board, and on the S61B it served no PSK session at all (#435).
+    one can go stale while the device is fine. The plaintext advertisement
+    is tried first, then, with `probe_scan`, the slower ClientHello probe
+    (AV boards advertise nothing in plaintext). 5684 is never returned: it
+    answers on any board, and on the S61B it served no PSK session at all
+    (#435).
 
     When 5683 is answered by a non-appliance stack (#540), its ports are
     not the device's: the responder whose `di` is the entry's `device_id`
@@ -530,7 +534,20 @@ def moved_secure_port(host: str, current: int, device_id: str | None = None) -> 
             from smartthings_local.protocol.ocf_multicast import secure_ports_for_di
 
             advertised = secure_ports_for_di(_ocf_responders(host), device_id)
-    return next((port for port in advertised if port not in (current, MULTICAST_SECURE_PORT)), None)
+    skip = (current, MULTICAST_SECURE_PORT)
+    moved = next((port for port in advertised if port not in skip), None)
+    if moved is not None:
+        return moved
+    if not probe_scan:
+        return None
+    try:
+        for port in _clienthello_scan(host, _probe_ports(advertised), _preferred_port(advertised)):
+            if port not in skip:
+                _LOGGER.debug("port on %s moved via ClientHello probe: %s", host, port)
+                return port
+    except Exception as exc:
+        _LOGGER.debug("ClientHello probe during port rediscovery on %s failed: %s", host, exc)
+    return None
 
 
 def _read_plaintext_identity(host: str, port: int) -> PlaintextIdentity | None:

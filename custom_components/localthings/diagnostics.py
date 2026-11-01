@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from . import cloudcourse
-from .const import CONF_OCF_DEVICE_ID, DOMAIN
+from .const import CONF_OCF_DEVICE_ID, CONF_READ_MODE, DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .registry.capabilities.laundry import cycle_options
 from .registry.encode import json_safe
@@ -95,6 +95,9 @@ async def async_get_config_entry_diagnostics(
             if identity is not None
             else None,
             "unbound_hrefs": sorted(coordinator._unbound_hrefs),
+            # As stored in the entry: "per_href" for a board without a
+            # /device/0 Collection (registry/flat.py), None otherwise.
+            "read_mode": entry.data.get(CONF_READ_MODE),
             # This subdevice's own resources, and only this subdevice's. On a
             # composite device (issue #177) `last_resources` is the union
             # across every live subdevice keyed by real hrefs, so reporting it

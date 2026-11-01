@@ -420,16 +420,14 @@ class TestWrites:
 
         assert code == 0x44
         assert _requests() == [
-            ("GET", "/devices/1/configuration"),
             ("PUT", "/devices/1"),
-            ("GET", "/devices/1/configuration"),
             ("PUT", "/devices/1"),
         ]
-        body = _FakeConnection.log[1][2]
+        body = _FakeConnection.log[0][2]
         assert body is not None
         assert body["Device"]["Mode"] == {"modes": ["LowerBake"]}
         assert body["Device"]["Operation"] == {"operationTime": "00:05:00"}
-        assert _FakeConnection.log[3][2] == {"Device": {"Operation": {"state": "Run"}}}
+        assert _FakeConnection.log[1][2] == {"Device": {"Operation": {"state": "Run"}}}
 
     def test_a_batch_naming_the_other_cavity_is_refused(self):
         batch = [{"href": "/operational/state/vs/0", "rep": {PREFIX + "state": "Run"}}]

@@ -25,7 +25,7 @@ import logging
 import re
 import ssl
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -51,6 +51,7 @@ from .legacy_http import (
     unmapped_wrappers,
     unwrap,
     with_cavity_modes,
+    with_panel_unit,
     with_staged,
 )
 from .legacy_http_tls import client_context
@@ -60,7 +61,6 @@ from .registry.capabilities.laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     course_option_mask,
 )
-from .registry.capabilities.oven import is_lcd_ov_wall_16k
 from .registry.subdevices import Subdevice
 from .transport import AuthRejected, OvenStartUnconfirmed
 
@@ -162,7 +162,6 @@ class LegacyHttpTransport:
         key_pem: str,
         token: str,
         family: str | None = None,
-        bypass_remote_control: Callable[[], bool] | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -170,7 +169,6 @@ class LegacyHttpTransport:
         self._key_pem = key_pem
         self._token = token
         self._family = family or ""
-        self._bypass_remote_control = bypass_remote_control
         self._ctx: ssl.SSLContext | None = None
 
     @property
@@ -255,6 +253,7 @@ class LegacyHttpTransport:
         if status != 200 or not isinstance(body, dict):
             return http_status_to_coap(status), None
         bodies = self._with_modes(index, self._with_staged(index, unwrap(body)))
+        bodies = self._with_panel_unit(index, bodies)
         return 0x45, to_resources(bodies, table).get(href, {})
 
     def _read_seed(self, index: int, timeout: float) -> tuple[int, Any]:
@@ -310,7 +309,7 @@ class LegacyHttpTransport:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
         if index:
             bodies = _with_record_description(bodies, record.get("description"))
-            bodies = _with_record_name(bodies, record.get("name"))
+            bodies = _with_record_name(bodies, record.get("name") or _record_type(record))
         state = self._state_at(index)
         state.last_bodies = bodies
         state.device_type = _record_type(record)
@@ -319,7 +318,7 @@ class LegacyHttpTransport:
         # Before the modes: a sibling's own listing decides them.
         listed = self._listed_rep(index, devices) if index and devices is not None else None
         resources = to_resources(
-            self._with_modes(index, self._with_staged(index, bodies)),
+            self._with_panel_unit(index, self._with_modes(index, self._with_staged(index, bodies))),
             table_for(self._type_at(index)),
         )
         # Each cavity needs its own canonical power capability before remapping.
@@ -426,12 +425,7 @@ class LegacyHttpTransport:
         for key, value in staged.items():
             state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        info = state.last_bodies.get("Information") or {}
-        settings_first = (
-            is_lcd_ov_wall_16k(info.get("modelID"))
-            and info.get("deviceSubType") == "WallOven"
-            and "Mode" in sendable["Device"]
-        )
+        settings_first = device_type == "Oven" and "Mode" in sendable["Device"]
         if is_start(sendable) and (settings_first or (state.staged and self._idle(index))):
             return self._start(index, sendable, timeout, settings_first=settings_first)
         if not sendable["Device"]:
@@ -514,26 +508,6 @@ class LegacyHttpTransport:
         operation = self._state_at(index).last_bodies.get("Operation") or {}
         return operation.get("state") == "Ready"
 
-    def _oven_start_permission(
-        self, index: int, phase: str, timeout: float
-    ) -> tuple[int, str] | None:
-        """Require current permission from the cavity receiving the next start write."""
-        if self._bypass_remote_control is not None and self._bypass_remote_control():
-            return None
-        status, body = self._request("GET", f"{_device_path(index)}/configuration", timeout=timeout)
-        if status != 200:
-            code = http_status_to_coap(status) if status >= 400 else 0xA2
-            return code, f"Smart Control could not be verified {phase} (HTTP {status})"
-        configuration = body.get("Configuration") if isinstance(body, dict) else None
-        enabled = (
-            configuration.get("remoteControlEnabled") if isinstance(configuration, dict) else None
-        )
-        if enabled is True or (isinstance(enabled, str) and enabled.lower() == "true"):
-            return None
-        if enabled is False or (isinstance(enabled, str) and enabled.lower() == "false"):
-            return 0x83, f"Smart Control is off {phase}"
-        return 0xA2, f"Smart Control status is missing or invalid {phase}"
-
     def _already_ready(self, index: int, timeout: float) -> bool:
         """Whether a fresh read says the appliance is idle.
 
@@ -548,16 +522,21 @@ class LegacyHttpTransport:
     def _start(
         self, index: int, aggregate: dict[str, Any], timeout: float, *, settings_first: bool = False
     ) -> tuple[int, Any]:
-        """Load settings, then Run if needed. WW6500 takes Run in both writes;
-        NV51K7770S requires it omitted from the first, with a 0.5s pause (#667)."""
+        """Start with every held value in the same body, then Run if needed.
+
+        Measured on a TP6X_WW6500: the composed body loads the programme and
+        leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
+        That second `Run` is sent only when a fresh read says it isn't
+        running.
+
+        Oven records omit Run from the settings write, then send it after
+        0.5s, measured on the NV51K7770S (#667); other ovens are unconfirmed.
+        """
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
         deadline = time.monotonic() + timeout
         if settings_first:
-            blocked = self._oven_start_permission(index, "before settings", _remaining(deadline))
-            if blocked is not None:
-                return blocked
             operation = body["Device"]["Operation"]
             operation.pop("state", None)
             if not operation:
@@ -571,11 +550,7 @@ class LegacyHttpTransport:
         time.sleep(
             min(_OVEN_START_SETTLE_S, _remaining(deadline)) if settings_first else _START_SETTLE_S
         )
-        if settings_first:
-            blocked = self._oven_start_permission(index, "before Run", _remaining(deadline))
-            if blocked is not None:
-                return blocked
-        elif self._running(index, timeout):
+        if not settings_first and self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
         run_timeout = _remaining(deadline) if settings_first else timeout
@@ -591,6 +566,7 @@ class LegacyHttpTransport:
                 raise OvenStartUnconfirmed(str(err)) from err
             raise
         if not settings_first and not 200 <= run_status < 300 and self._running(index, timeout):
+            # It got there by itself between the read and the Run.
             return http_status_to_coap(status), response
         return http_status_to_coap(run_status), run_response
 
@@ -627,6 +603,11 @@ class LegacyHttpTransport:
                 del state.staged[key]
         held = with_staged(bodies, {key: value for key, (value, _) in state.staged.items()})
         return self._with_course_defaults(state, held)
+
+    def _with_panel_unit(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
+        if not index:
+            return bodies
+        return with_panel_unit(bodies, self._state_at(0).last_bodies)
 
     def _with_modes(self, index: int, bodies: dict[str, Any]) -> dict[str, Any]:
         state = self._state_at(index)
@@ -800,9 +781,10 @@ def _with_record_description(bodies: dict[str, Any], description: Any) -> dict[s
 
 
 def _with_record_name(bodies: dict[str, Any], name: Any) -> dict[str, Any]:
-    """`bodies` with a sibling record's name (`Hood`, #676) on its
-    Information, which otherwise names only the board it shares with the
-    main unit. It names the sibling's type, not anything the owner sets."""
+    """`bodies` with a sibling record's name (`Hood`, #676), or its type
+    (`Oven`, #674) when it has none, on its Information, which otherwise
+    names only the board it shares with the main unit. It names the
+    sibling's type, not anything the owner sets."""
     if not (isinstance(name, str) and name):
         return bodies
     information = bodies.get("Information")

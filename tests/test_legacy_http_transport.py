@@ -765,7 +765,6 @@ class TestWallOvenStart:
 
         assert code == 0x44
         assert [entry[:3] for entry in _FakeConnection.log] == [
-            ("GET", "/devices/0/configuration", None),
             (
                 "PUT",
                 "/devices/0",
@@ -777,7 +776,6 @@ class TestWallOvenStart:
                     }
                 },
             ),
-            ("GET", "/devices/0/configuration", None),
             ("PUT", "/devices/0", {"Device": {"Operation": {"state": "Run"}}}),
         ]
 

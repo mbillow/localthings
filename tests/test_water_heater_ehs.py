@@ -81,9 +81,9 @@ def test_operation_list_includes_off_and_mapped_modes():
 
 def test_temperature_reads_current_and_target():
     entity = _entity(_load_device("ehs"))
-    assert entity.current_temperature == 38.0
-    assert entity.target_temperature == 40.0
-    assert entity.temperature_unit == UnitOfTemperature.CELSIUS
+    assert entity.native_current_temperature == 38.0
+    assert entity.native_target_temperature == 40.0
+    assert entity.native_temperature_unit == UnitOfTemperature.CELSIUS
     assert entity.min_temp == 40.0
     assert entity.max_temp == 62.0
     assert entity.target_temperature_step == 0.5

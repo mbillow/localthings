@@ -390,6 +390,27 @@ def course_table(family: str) -> dict[str, dict]:
     return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
 
 
+# Every slot on a bridge shares one panel, so one unit. The TP6X_OV combo's
+# oven labels its Temperatures "Celsius" whatever the panel shows: preheating
+# to 350 F it read 350 "Celsius" (#674). Device 0 labels its own right.
+def with_panel_unit(bodies: dict[str, Any], main_bodies: Mapping[str, Any]) -> dict[str, Any]:
+    """A sibling's `bodies` with its Temperatures in the main unit's unit;
+    unchanged until the main unit has been read."""
+    unit = _first_unit(main_bodies)
+    temperatures = bodies.get("Temperatures")
+    if unit is None or not isinstance(temperatures, list):
+        return bodies
+    relabeled = [{**t, "unit": unit} if isinstance(t, dict) else t for t in temperatures]
+    return {**bodies, "Temperatures": relabeled}
+
+
+def _first_unit(bodies: Mapping[str, Any]) -> str | None:
+    temperatures = bodies.get("Temperatures")
+    first = temperatures[0] if isinstance(temperatures, list) and temperatures else None
+    unit = first.get("unit") if isinstance(first, dict) else None
+    return unit if isinstance(unit, str) else None
+
+
 def _bare(name: str) -> str:
     return name[len(PREFIX) :] if name.startswith(PREFIX) else name
 

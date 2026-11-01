@@ -31,14 +31,15 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 
 | Appliance | Appliance |
 |---|---|
-| Air conditioner, including multi-unit systems | EHS heat pump |
-| Air dresser | Microwave |
-| Air monitor | Oven |
-| Air purifier | Range and range hood |
-| Cooktop, gas, radiant electric and induction; some models read-only | Refrigerator, kimchi refrigerator, wine cellar |
+| Air conditioner, including multi-unit systems | Microwave |
+| Air dresser | Oven |
+| Air monitor | Range and range hood |
+| Air purifier | Refrigerator, kimchi refrigerator, wine cellar |
+| Cooktop, gas, radiant electric and induction; some models read-only | Soundbar, settings and status |
 | Dehumidifier | Vacuum clean station |
 | Dishwasher | Washer and washer-dryer |
 | Dryer | Water purifier |
+| EHS heat pump | |
 
 What you see depends on what each appliance reports. Typical controls and sensors include power, program or mode selection, start, pause and stop, temperatures and setpoints, time remaining and finish time, door and child-lock state, energy use, filter status and alarms.
 
