@@ -545,6 +545,15 @@
       },
       "booster_heater": {
         "name": "Resistencia de apoyo"
+      },
+      "bluetooth_pairing": {
+        "name": "Emparejamiento Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Altavoces traseros"
+      },
+      "woofer_connection": {
+        "name": "Conexión del woofer"
       }
     },
     "button": {
@@ -595,6 +604,9 @@
       },
       "start_cooking": {
         "name": "Iniciar cocción"
+      },
+      "pair_bluetooth": {
+        "name": "Emparejar Bluetooth"
       }
     },
     "climate": {
@@ -666,6 +678,12 @@
       "dispense_capacity": {
         "name": "Capacidad de dosificación"
       },
+      "freezer_setpoint": {
+        "name": "Congelador: punto de ajuste"
+      },
+      "fridge_setpoint": {
+        "name": "Frigorífico: punto de ajuste"
+      },
       "good_sleep": {
         "name": "Sueño reparador"
       },
@@ -695,9 +713,91 @@
       },
       "zone_target_temperature": {
         "name": "Temperatura objetivo de zona"
+      },
+      "audio_sync": {
+        "name": "Sincronización de audio"
+      },
+      "bass": {
+        "name": "Graves"
+      },
+      "channel_level_center": {
+        "name": "Nivel central"
+      },
+      "channel_level_front_top": {
+        "name": "Nivel frontal superior"
+      },
+      "channel_level_rear": {
+        "name": "Nivel trasero"
+      },
+      "channel_level_rear_side": {
+        "name": "Nivel trasero lateral"
+      },
+      "channel_level_rear_top": {
+        "name": "Nivel trasero superior"
+      },
+      "channel_level_side": {
+        "name": "Nivel lateral"
+      },
+      "channel_level_wide": {
+        "name": "Nivel ancho"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Agudos"
+      },
+      "woofer_level": {
+        "name": "Nivel de woofer"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lama norte",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "east_flap": {
+        "name": "Lama este",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "south_flap": {
+        "name": "Lama sur",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "west_flap": {
+        "name": "Lama oeste",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidad de iluminación de bienvenida",
         "state": {
@@ -812,6 +912,32 @@
           "87": "Solo aclarado"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciclo",
+        "state": {
+          "80": "Delicado",
+          "83": "Normal",
+          "84": "Intenso",
+          "86": "Express 60",
+          "90": "Autolimpieza",
+          "0e": "Lavado IA",
+          "07": "Prelavado intenso",
+          "8d": "Ollas y sartenes",
+          "8e": "Plástico",
+          "8f": "Cuidado del bebé",
+          "82": "Automático",
+          "8a": "Eco",
+          "a7": "Intenso",
+          "a8": "Express",
+          "8c": "Extra silencioso",
+          "88": "Autolimpieza",
+          "85": "Delicado",
+          "0c": "Express",
+          "0d": "Autolimpieza",
+          "87": "Solo aclarado",
+          "01": "Prelavado"
+        }
+      },
       "dispense_type": {
         "name": "Tipo de dosificación"
       },
@@ -873,6 +999,7 @@
           "1a": "Lana",
           "1b": "Ropa de cama",
           "1c": "Camisas",
+          "43": "Camisas",
           "1d": "Toallas",
           "1e": "Exterior",
           "1f": "Carga mixta",
@@ -1529,6 +1656,28 @@
           "low": "Baja",
           "high": "Alta"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Idioma de los avisos de voz",
+        "state": {
+          "eng": "inglés",
+          "deu": "alemán",
+          "fra": "francés",
+          "kor": "coreano",
+          "spa": "español",
+          "eng_uk": "inglés (UK)",
+          "ita": "italiano"
+        }
+      },
+      "equalizer": {
+        "name": "Ecualizador",
+        "state": {
+          "none": "Ninguno",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Clásica",
+          "custom": "Personalizado"
+        }
       }
     },
     "sensor": {
@@ -1840,7 +1989,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado de la cavidad"
+        "name": "Estado de la cavidad",
+        "state": {
+          "ready": "Listo",
+          "preheat": "Precalentamiento",
+          "cooking": "Cocción",
+          "finish": "Finalizado"
+        }
       },
       "power_level": {
         "name": "Nivel de potencia"
@@ -2089,6 +2244,31 @@
       },
       "three_way_valve": {
         "name": "Válvula de 3 vías"
+      },
+      "current_eq_mode": {
+        "name": "Modo de ecualización actual"
+      },
+      "installation_type": {
+        "name": "Tipo de instalación"
+      },
+      "micom_version": {
+        "name": "Versión de micom"
+      },
+      "network_connection": {
+        "name": "Conexión",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Sonido desde"
+      },
+      "speaker_status": {
+        "name": "Estado de los altavoces"
+      },
+      "wifi_signal": {
+        "name": "Señal Wi-Fi"
       }
     },
     "switch": {
@@ -2281,6 +2461,9 @@
       "storm_wash": {
         "name": "Lavado Tormenta+"
       },
+      "vacation_mode": {
+        "name": "Modo vacaciones"
+      },
       "welcome_lighting": {
         "name": "Iluminación de bienvenida"
       },
@@ -2343,6 +2526,36 @@
       },
       "extra_rinse": {
         "name": "Aclarado extra"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Avisos de voz"
+      },
+      "auto_power_down": {
+        "name": "Apagado automático"
+      },
+      "auto_update": {
+        "name": "Actualización automática"
+      },
+      "bass_boost": {
+        "name": "Refuerzo de graves"
+      },
+      "night_mode": {
+        "name": "Modo nocturno"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Amplificador de voz"
       }
     },
     "time": {

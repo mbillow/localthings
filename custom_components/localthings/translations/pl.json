@@ -71,7 +71,7 @@
         "name": "Dostępna aktualizacja oprogramowania"
       },
       "instance_open": {
-        "name": "{instance_name} — otwarte"
+        "name": "{instance_name} — otwarcie"
       },
       "paired_hood_connected": {
         "name": "Sparowany okap połączony"
@@ -101,7 +101,7 @@
         "name": "Zasilanie"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -110,7 +110,7 @@
         "name": "Smart Control"
       },
       "softener_low": {
-        "name": "Niski poziom płynu zmiękczającego"
+        "name": "Niski poziom środka zmiękczającego"
       },
       "add_wash_available": {
         "name": "AddWash dozwolone"
@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Grzałka wspomagająca"
+      },
+      "bluetooth_pairing": {
+        "name": "Parowanie Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Tylne głośniki"
+      },
+      "woofer_connection": {
+        "name": "Połączenie woofera"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Rozpocznij gotowanie"
+      },
+      "pair_bluetooth": {
+        "name": "Paruj Bluetooth"
       }
     },
     "climate": {
@@ -286,14 +298,20 @@
       "dispense_capacity": {
         "name": "Ilość nalewania"
       },
+      "freezer_setpoint": {
+        "name": "Zamrażarka — temperatura zadana"
+      },
+      "fridge_setpoint": {
+        "name": "Chłodziarka — temperatura zadana"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
       "instance_setpoint": {
-        "name": "{instance_name} — wartość zadana"
+        "name": "{instance_name} — temperatura zadana"
       },
       "oven_setpoint": {
-        "name": "Wartość zadana"
+        "name": "Temperatura zadana"
       },
       "paired_hood_shutoff_timer": {
         "name": "Timer wyłączenia sparowanego okapu"
@@ -315,9 +333,91 @@
       },
       "zone_target_temperature": {
         "name": "Docelowa temperatura strefy"
+      },
+      "audio_sync": {
+        "name": "Synchronizacja dźwięku"
+      },
+      "bass": {
+        "name": "Basy"
+      },
+      "channel_level_center": {
+        "name": "Poziom centralnego"
+      },
+      "channel_level_front_top": {
+        "name": "Poziom przednich górnych"
+      },
+      "channel_level_rear": {
+        "name": "Poziom tylnych"
+      },
+      "channel_level_rear_side": {
+        "name": "Poziom tylnych bocznych"
+      },
+      "channel_level_rear_top": {
+        "name": "Poziom tylnych górnych"
+      },
+      "channel_level_side": {
+        "name": "Poziom bocznych"
+      },
+      "channel_level_wide": {
+        "name": "Poziom szerokich"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Wysokie tony"
+      },
+      "woofer_level": {
+        "name": "Poziom woofera"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Żaluzja północna",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "east_flap": {
+        "name": "Żaluzja wschodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "south_flap": {
+        "name": "Żaluzja południowa",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "west_flap": {
+        "name": "Żaluzja zachodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Zasięg oświetlenia powitalnego",
         "state": {
@@ -351,7 +451,7 @@
         }
       },
       "brightness_level": {
-        "name": "Jasność nocna",
+        "name": "Jasność oświetlenia w nocy",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -359,10 +459,10 @@
         }
       },
       "cooler_temperature_setpoint": {
-        "name": "Temperatura chłodziarki"
+        "name": "Temperatura lodówki"
       },
       "day_brightness": {
-        "name": "Jasność wnętrza",
+        "name": "Jasność oświetlenia",
         "state": {
           "33": "Niska",
           "66": "Średnia",
@@ -432,6 +532,32 @@
           "87": "Tylko płukanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cykl",
+        "state": {
+          "80": "Delikatne",
+          "83": "Normalny",
+          "84": "Intensywny",
+          "86": "Express 60",
+          "90": "Samoczyszczenie",
+          "0e": "AI Wash",
+          "07": "Wstępne spłukiwanie",
+          "8d": "Garnki i patelnie",
+          "85": "Delikatne",
+          "0c": "Ekspresowy",
+          "0d": "Samoczyszczenie",
+          "8e": "Tworzywa sztuczne",
+          "8f": "Dziecięce",
+          "82": "Automatyczny",
+          "8a": "Eko",
+          "a7": "Intensywny",
+          "a8": "Ekspresowy",
+          "8c": "Wyjątkowo cichy",
+          "88": "Samoczyszczenie",
+          "87": "Tylko płukanie",
+          "01": "Płukanie wstępne"
+        }
+      },
       "dispense_type": {
         "name": "Rodzaj nalewania"
       },
@@ -495,6 +621,7 @@
           "1a": "Wełna",
           "1b": "Pościel",
           "1c": "Koszule",
+          "43": "Koszule",
           "1d": "Ręczniki",
           "1e": "Odzież wierzchnia",
           "1f": "Pranie mieszane",
@@ -568,9 +695,9 @@
       "flex_zone_mode": {
         "name": "Tryb strefy Flex",
         "state": {
-          "cv_ttype_rf9000a_fridge": "Chłodziarka",
+          "cv_ttype_rf9000a_fridge": "Chłodzenie",
           "cv_ttype_rf9000a_freeze": "Zamrażanie",
-          "cv_ttype_rf9000a_softfreeze": "Lekkie zamrażanie",
+          "cv_ttype_rf9000a_softfreeze": "Lekkie mrożenie",
           "cv_ttype_rf9000a_meat_fish": "Mięso/ryby",
           "cv_ttype_rf9000a_fruit_veggies": "Owoce i warzywa",
           "cv_ttype_rf9000a_beverage": "Napoje",
@@ -578,9 +705,9 @@
           "cv_fdr_deli": "Wędliny",
           "cv_fdr_beverage": "Napoje",
           "cv_fdr_meat": "Mięso",
-          "cv_fdr_soft_freezer": "Lekkie zamrażanie",
+          "cv_fdr_soft_freezer": "Lekkie mrożenie",
           "fconvert_freezer": "Zamrażanie",
-          "fconvert_fridge": "Chłodziarka",
+          "fconvert_fridge": "Chłodzenie",
           "fconvert_off": "Wył."
         }
       },
@@ -600,9 +727,9 @@
         "name": "{instance_name} — rodzaj",
         "state": {
           "off": "Wył.",
-          "whiskey_iceball_3": "3 kulki/dzień",
-          "whiskey_iceball_6": "6 kulek/dzień",
-          "whiskey_iceball_9": "9 kulek/dzień"
+          "whiskey_iceball_3": "3 kostki/dzień",
+          "whiskey_iceball_6": "6 kostek/dzień",
+          "whiskey_iceball_9": "9 kostek/dzień"
         }
       },
       "led_brightness": {
@@ -622,7 +749,7 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "micro_wave_grill": "Mikrofale + grill",
           "micro_wave_convection": "Mikrofale + termoobieg",
@@ -638,7 +765,7 @@
       "oven_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "bake": "Pieczenie",
           "broil": "Opiekanie",
           "convection": "Termoobieg",
@@ -681,10 +808,10 @@
           "kimchi_storage_low_salt_warm": "Kimchi niskosolne, łagodne",
           "kimchi_storage_crunfch": "Kimchi chrupiące",
           "kimchi_storage_buy": "Kimchi kupne",
-          "storage_fridge_normal": "Chłodziarka",
-          "storage_fridge_cold": "Chłodziarka, mocno",
-          "storage_fridge_warm": "Chłodziarka, słabo",
-          "storage_fridge": "Chłodziarka",
+          "storage_fridge_normal": "Lodówka",
+          "storage_fridge_cold": "Lodówka, mocno",
+          "storage_fridge_warm": "Lodówka, słabo",
+          "storage_fridge": "Lodówka",
           "storage_freezer_normal": "Zamrażarka",
           "storage_freezer_cold": "Zamrażarka, mocno",
           "storage_freezer_warm": "Zamrażarka, słabo",
@@ -710,7 +837,7 @@
           "fdr_deli": "Wędliny",
           "fdr_drinks": "Napoje",
           "ttype_meat_fish": "Mięso/ryby",
-          "ttype_rf9000a_fridge": "Chłodziarka"
+          "ttype_rf9000a_fridge": "Chłodzenie"
         }
       },
       "winecellar_pantry_zone_mode": {
@@ -759,7 +886,7 @@
         }
       },
       "softener_concentration": {
-        "name": "Stężenie płynu zmiękczającego",
+        "name": "Stężenie środka zmiękczającego",
         "state": {
           "01": "1x",
           "02": "2x",
@@ -767,7 +894,7 @@
         }
       },
       "softener_quantity": {
-        "name": "Ilość płynu zmiękczającego",
+        "name": "Ilość środka zmiękczającego",
         "state": {
           "00": "Brak",
           "01": "Niska",
@@ -1149,6 +1276,28 @@
           "low": "Niska",
           "high": "Wysoka"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Język komunikatów głosowych",
+        "state": {
+          "eng": "angielski",
+          "deu": "niemiecki",
+          "fra": "francuski",
+          "kor": "koreański",
+          "spa": "hiszpański",
+          "eng_uk": "angielski (UK)",
+          "ita": "włoski"
+        }
+      },
+      "equalizer": {
+        "name": "Korektor",
+        "state": {
+          "none": "Brak",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klasyczny",
+          "custom": "Niestandardowy"
+        }
       }
     },
     "sensor": {
@@ -1463,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stan komory"
+        "name": "Stan komory",
+        "state": {
+          "ready": "Gotowe",
+          "preheat": "Nagrzewanie wstępne",
+          "cooking": "Gotowanie",
+          "finish": "Zakończono"
+        }
       },
       "power_level": {
         "name": "Poziom mocy"
@@ -1623,10 +1778,10 @@
       "cooking_mode": {
         "name": "Tryb pieczenia",
         "state": {
-          "no_operation": "Brak pracy",
+          "no_operation": "Wyłączono",
           "micro_wave": "Mikrofale",
           "autocook": "Automatyczne pieczenie",
-          "keep_warm": "Utrzymywanie ciepła"
+          "keep_warm": "Utrzymuj ciepło"
         }
       },
       "cook_time": {
@@ -1709,6 +1864,31 @@
       },
       "three_way_valve": {
         "name": "Zawór trójdrogowy"
+      },
+      "current_eq_mode": {
+        "name": "Bieżący tryb korektora"
+      },
+      "installation_type": {
+        "name": "Typ instalacji"
+      },
+      "micom_version": {
+        "name": "Wersja micom"
+      },
+      "network_connection": {
+        "name": "Połączenie",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Dźwięk z"
+      },
+      "speaker_status": {
+        "name": "Stan głośnika"
+      },
+      "wifi_signal": {
+        "name": "Sygnał Wi-Fi"
       }
     },
     "switch": {
@@ -1785,10 +1965,10 @@
         "name": "Blokada brzęczyka"
       },
       "cabinet_light_dim": {
-        "name": "Rozjaśniaj stopniowo"
+        "name": "Powolne rozjaśnianie"
       },
       "cabinet_light_switch": {
-        "name": "Oświetlenie wnętrza"
+        "name": "Oświetlenie"
       },
       "child_lock": {
         "name": "Blokada rodzicielska"
@@ -1878,7 +2058,7 @@
         "name": "Pranie wstępne"
       },
       "rapid_freezing": {
-        "name": "Szybkie zamrażanie"
+        "name": "Szybkie mrożenie"
       },
       "rapid_fridge": {
         "name": "Szybkie chłodzenie"
@@ -1900,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Tryb wakacyjny"
       },
       "welcome_lighting": {
         "name": "Oświetlenie powitalne"
@@ -1938,7 +2121,7 @@
         "name": "Automatyczne dozowanie detergentu"
       },
       "auto_softener": {
-        "name": "Automatyczne dozowanie płynu zmiękczającego"
+        "name": "Automatyczne dozowanie środka zmiękczającego"
       },
       "booster_light": {
         "name": "Oświetlenie boostera"
@@ -1963,6 +2146,36 @@
       },
       "extra_rinse": {
         "name": "Dodatkowe płukanie"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Komunikaty głosowe"
+      },
+      "auto_power_down": {
+        "name": "Automatyczne wyłączanie"
+      },
+      "auto_update": {
+        "name": "Automatyczna aktualizacja"
+      },
+      "bass_boost": {
+        "name": "Wzmocnienie basów"
+      },
+      "night_mode": {
+        "name": "Tryb nocny"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Wzmacniacz głosu"
       }
     },
     "time": {
@@ -2171,7 +2384,7 @@
       },
       "settings": {
         "title": "Ustawienia urządzenia",
-        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/płynu zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
+        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/środka zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
         "data": {
           "bypass_remote_control_lock": "Zezwalaj na zapisy nawet wtedy, gdy zdalne sterowanie jest zgłaszane jako wyłączone",
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",

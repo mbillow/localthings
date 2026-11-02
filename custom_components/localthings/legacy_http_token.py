@@ -205,7 +205,10 @@ def request_token(host: str, port: int, listen_address: str, context: ssl.SSLCon
         connection.putheader("Content-Length", str(len(body)))
         connection.endheaders(body)
         response = connection.getresponse()
-        response.read()
+        response_body = response.read()
+        # TP6X_RAC reports a rejected client identity as nginx HTTP 400.
+        if response.status == 400 and b"The SSL certificate error" in response_body:
+            raise CallbackCertRejected("The appliance refused the token request certificate")
         return response.status
     finally:
         connection.close()

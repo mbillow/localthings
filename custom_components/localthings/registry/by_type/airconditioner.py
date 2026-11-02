@@ -54,6 +54,7 @@ REGISTRY = DeviceRegistry(
             dishwasher.DIAGNOSIS,
             CLIMATE_ARTIK051,
             CLIMATE_OTHER,
+            airconditioner.FOUR_WAY_FLAPS,
             airconditioner.AIR_PURIFY,
             airconditioner.AUTO_CLEAN,
             airconditioner.AIR_FILTER,

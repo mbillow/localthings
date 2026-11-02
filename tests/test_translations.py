@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 from string import Formatter
 
+import pytest
 import yaml
 from homeassistant.helpers.translation import async_get_translations, recursive_flatten
 
@@ -886,3 +887,19 @@ def test_instance_name_templates_lead_with_the_placeholder():
         for platform, key in keys:
             name = entity[platform][key]["name"]
             assert name.startswith("{instance_name}"), (language, platform, key, name)
+
+
+@pytest.mark.parametrize("lang", _languages())
+def test_the_dw8700b_dishwasher_table_differs_only_where_its_owner_said(lang):
+    """Home Assistant can't layer one catalog table on another, so the
+    DW8700B's (#718) is a full copy; this keeps it in step with the shared
+    table everywhere but its own two courses."""
+    select = _load(lang)["entity"]["select"]
+    shared, variant = select["dishwasher_cycle"], select["dishwasher_cycle_dw8700b"]
+    own = {"8a", "01"}
+
+    assert variant["name"] == shared["name"]
+    assert {k: v for k, v in variant["state"].items() if k not in own} == {
+        k: v for k, v in shared["state"].items() if k not in own
+    }
+    assert own <= variant["state"].keys()

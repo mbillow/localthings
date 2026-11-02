@@ -34,7 +34,6 @@
     "subdevice1_oven_setpoint",
     "subdevice1_oven_state",
     "subdevice1_progress_percentage",
-    "subdevice1_sound",
     "warming_center_state"
   ]
 }

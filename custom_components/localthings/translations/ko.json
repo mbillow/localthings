@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "보조 히터"
+      },
+      "bluetooth_pairing": {
+        "name": "블루투스 페어링"
+      },
+      "rear_speakers": {
+        "name": "리어 스피커"
+      },
+      "woofer_connection": {
+        "name": "우퍼 연결"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "조리 시작"
+      },
+      "pair_bluetooth": {
+        "name": "블루투스 페어링"
       }
     },
     "climate": {
@@ -286,6 +298,12 @@
       "dispense_capacity": {
         "name": "출수량"
       },
+      "freezer_setpoint": {
+        "name": "냉동실 설정값"
+      },
+      "fridge_setpoint": {
+        "name": "냉장실 설정값"
+      },
       "good_sleep": {
         "name": "쾌면 시간"
       },
@@ -315,9 +333,91 @@
       },
       "zone_target_temperature": {
         "name": "구역 목표 온도"
+      },
+      "audio_sync": {
+        "name": "오디오 동기화"
+      },
+      "bass": {
+        "name": "저음"
+      },
+      "channel_level_center": {
+        "name": "센터 레벨"
+      },
+      "channel_level_front_top": {
+        "name": "프런트 탑 레벨"
+      },
+      "channel_level_rear": {
+        "name": "리어 레벨"
+      },
+      "channel_level_rear_side": {
+        "name": "리어 사이드 레벨"
+      },
+      "channel_level_rear_top": {
+        "name": "리어 탑 레벨"
+      },
+      "channel_level_side": {
+        "name": "사이드 레벨"
+      },
+      "channel_level_wide": {
+        "name": "와이드 레벨"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "고음"
+      },
+      "woofer_level": {
+        "name": "우퍼 레벨"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "북쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "east_flap": {
+        "name": "동쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "south_flap": {
+        "name": "남쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "west_flap": {
+        "name": "서쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "웰컴 라이팅 감지 거리",
         "state": {
@@ -432,6 +532,32 @@
           "87": "헹굼단독"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "코스",
+        "state": {
+          "80": "섬세",
+          "83": "표준",
+          "84": "강력",
+          "86": "급속 60분",
+          "90": "내부 세척",
+          "0e": "AI 맞춤 세척",
+          "07": "애벌 세척",
+          "8d": "냄비 및 팬",
+          "8e": "플라스틱",
+          "8f": "젖병 살균",
+          "82": "자동",
+          "8a": "에코",
+          "a7": "강력",
+          "a8": "급속",
+          "8c": "저소음",
+          "88": "내부 세척",
+          "85": "섬세",
+          "0c": "급속",
+          "0d": "내부 세척",
+          "87": "헹굼단독",
+          "01": "애벌세척"
+        }
+      },
       "dispense_type": {
         "name": "출수 종류"
       },
@@ -493,6 +619,7 @@
           "1a": "울",
           "1b": "이불",
           "1c": "셔츠",
+          "43": "셔츠",
           "1d": "타월",
           "1e": "아웃도어",
           "1f": "혼합",
@@ -1149,6 +1276,28 @@
           "low": "약",
           "high": "강"
         }
+      },
+      "audio_prompt_language": {
+        "name": "음성 안내 언어",
+        "state": {
+          "eng": "영어",
+          "deu": "독일어",
+          "fra": "프랑스어",
+          "kor": "한국어",
+          "spa": "스페인어",
+          "eng_uk": "영어 (UK)",
+          "ita": "이탈리아어"
+        }
+      },
+      "equalizer": {
+        "name": "이퀄라이저",
+        "state": {
+          "none": "없음",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "클래식",
+          "custom": "사용자 정의"
+        }
       }
     },
     "sensor": {
@@ -1463,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "조리실 상태"
+        "name": "조리실 상태",
+        "state": {
+          "ready": "준비됨",
+          "preheat": "예열",
+          "cooking": "조리 중",
+          "finish": "완료"
+        }
       },
       "power_level": {
         "name": "출력 단계"
@@ -1709,6 +1864,31 @@
       },
       "three_way_valve": {
         "name": "3방 밸브"
+      },
+      "current_eq_mode": {
+        "name": "현재 EQ 모드"
+      },
+      "installation_type": {
+        "name": "설치 유형"
+      },
+      "micom_version": {
+        "name": "마이컴 버전"
+      },
+      "network_connection": {
+        "name": "연결",
+        "state": {
+          "ethernet": "이더넷",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "사운드 출처"
+      },
+      "speaker_status": {
+        "name": "스피커 상태"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi 신호"
       }
     },
     "switch": {
@@ -1901,6 +2081,9 @@
       "storm_wash": {
         "name": "스톰 워시+"
       },
+      "vacation_mode": {
+        "name": "휴가 모드"
+      },
       "welcome_lighting": {
         "name": "웰컴 라이팅"
       },
@@ -1963,6 +2146,36 @@
       },
       "extra_rinse": {
         "name": "헹굼 추가"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "음성 안내"
+      },
+      "auto_power_down": {
+        "name": "자동 꺼짐"
+      },
+      "auto_update": {
+        "name": "자동 업데이트"
+      },
+      "bass_boost": {
+        "name": "베이스 부스트"
+      },
+      "night_mode": {
+        "name": "야간 모드"
+      },
+      "pass_through": {
+        "name": "패스스루"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "음성 증폭"
       }
     },
     "time": {

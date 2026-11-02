@@ -165,6 +165,15 @@
       },
       "booster_heater": {
         "name": "Pomocné vykurovacie teleso"
+      },
+      "bluetooth_pairing": {
+        "name": "Párovanie Bluetooth"
+      },
+      "rear_speakers": {
+        "name": "Pripojenie zadných reproduktorov"
+      },
+      "woofer_connection": {
+        "name": "Pripojenie woofera"
       }
     },
     "button": {
@@ -215,6 +224,9 @@
       },
       "start_cooking": {
         "name": "Spustiť varenie"
+      },
+      "pair_bluetooth": {
+        "name": "Spárovať Bluetooth"
       }
     },
     "climate": {
@@ -286,6 +298,12 @@
       "dispense_capacity": {
         "name": "Dávkované množstvo"
       },
+      "freezer_setpoint": {
+        "name": "Mraznička – požadovaná teplota"
+      },
+      "fridge_setpoint": {
+        "name": "Chladnička – požadovaná teplota"
+      },
       "good_sleep": {
         "name": "Pokojný spánok"
       },
@@ -315,9 +333,91 @@
       },
       "zone_target_temperature": {
         "name": "Požadovaná teplota zóny"
+      },
+      "audio_sync": {
+        "name": "Synchronizácia zvuku"
+      },
+      "bass": {
+        "name": "Basy"
+      },
+      "channel_level_center": {
+        "name": "Úroveň stredu"
+      },
+      "channel_level_front_top": {
+        "name": "Úroveň predných horných"
+      },
+      "channel_level_rear": {
+        "name": "Úroveň zadných"
+      },
+      "channel_level_rear_side": {
+        "name": "Úroveň zadných bočných"
+      },
+      "channel_level_rear_top": {
+        "name": "Úroveň zadných horných"
+      },
+      "channel_level_side": {
+        "name": "Úroveň bočných"
+      },
+      "channel_level_wide": {
+        "name": "Úroveň širokých"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Výšky"
+      },
+      "woofer_level": {
+        "name": "Úroveň woofera"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela juh",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivosť uvítacieho osvetlenia",
         "state": {
@@ -432,6 +532,32 @@
           "87": "Iba plákanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemný",
+          "83": "Normálny",
+          "84": "Intenzívny",
+          "86": "Express 60",
+          "90": "Samočistenie",
+          "0e": "AI umývanie",
+          "07": "Predoplach",
+          "8d": "Hrnce a panvice",
+          "85": "Jemný",
+          "0c": "Expresný",
+          "0d": "Samočistenie",
+          "8e": "Plast",
+          "8f": "Detské potreby",
+          "82": "Automatický",
+          "8a": "Eko",
+          "a7": "Intenzívny",
+          "a8": "Expresný",
+          "8c": "Extra tichý",
+          "88": "Samočistenie",
+          "87": "Iba plákanie",
+          "01": "Predumytie"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkovania"
       },
@@ -495,6 +621,7 @@
           "1a": "Vlna",
           "1b": "Posteľná bielizeň",
           "1c": "Košele",
+          "43": "Košele",
           "1d": "Uteráky",
           "1e": "Outdoor",
           "1f": "Zmiešaná náplň",
@@ -1149,6 +1276,28 @@
           "low": "Nízka",
           "high": "Vysoká"
         }
+      },
+      "audio_prompt_language": {
+        "name": "Jazyk hlasových výziev",
+        "state": {
+          "eng": "angličtina",
+          "deu": "nemčina",
+          "fra": "francúzština",
+          "kor": "kórejčina",
+          "spa": "španielčina",
+          "eng_uk": "angličtina (UK)",
+          "ita": "taliančina"
+        }
+      },
+      "equalizer": {
+        "name": "Ekvalizér",
+        "state": {
+          "none": "Žiadny",
+          "pop": "Pop",
+          "jazz": "Jazz",
+          "classic": "Klasika",
+          "custom": "Vlastný"
+        }
       }
     },
     "sensor": {
@@ -1463,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav vnútorného priestoru"
+        "name": "Stav vnútorného priestoru",
+        "state": {
+          "ready": "Pripravené",
+          "preheat": "Predhrievanie",
+          "cooking": "Varenie",
+          "finish": "Dokončené"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"
@@ -1709,6 +1864,31 @@
       },
       "three_way_valve": {
         "name": "Trojcestný ventil"
+      },
+      "current_eq_mode": {
+        "name": "Aktuálny režim ekvalizéra"
+      },
+      "installation_type": {
+        "name": "Typ inštalácie"
+      },
+      "micom_version": {
+        "name": "Verzia micom"
+      },
+      "network_connection": {
+        "name": "Pripojenie",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Zvuk zo"
+      },
+      "speaker_status": {
+        "name": "Stav reproduktora"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signál"
       }
     },
     "switch": {
@@ -1901,6 +2081,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Režim dovolenky"
+      },
       "welcome_lighting": {
         "name": "Uvítacie osvetlenie"
       },
@@ -1963,6 +2146,36 @@
       },
       "extra_rinse": {
         "name": "Extra plákanie"
+      },
+      "active_voice_amplifier": {
+        "name": "Active Voice Amplifier"
+      },
+      "audio_prompt": {
+        "name": "Hlasové výzvy"
+      },
+      "auto_power_down": {
+        "name": "Automatické vypnutie"
+      },
+      "auto_update": {
+        "name": "Automatická aktualizácia"
+      },
+      "bass_boost": {
+        "name": "Zosilnenie basov"
+      },
+      "night_mode": {
+        "name": "Nočný režim"
+      },
+      "pass_through": {
+        "name": "Pass-through"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit Sound"
+      },
+      "voice_amplifier": {
+        "name": "Zosilnenie hlasu"
       }
     },
     "time": {
