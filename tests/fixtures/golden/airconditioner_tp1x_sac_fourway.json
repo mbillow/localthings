@@ -1,0 +1,29 @@
+{
+  "state_keys": [
+    "air_filter_status",
+    "air_filter_usage",
+    "air_filter_usage_hours",
+    "alarm_code",
+    "auto_clean",
+    "auto_clean_progress",
+    "auto_clean_running",
+    "beep",
+    "climate",
+    "current_temperature_c",
+    "display_light",
+    "east_flap",
+    "energy_kwh",
+    "energy_saved_kwh",
+    "firmware_update",
+    "humidity",
+    "mute_once",
+    "north_flap",
+    "outdoor_temperature",
+    "selfcheck_error",
+    "selfcheck_result",
+    "selfcheck_status",
+    "south_flap",
+    "tropical_night_mode",
+    "west_flap"
+  ]
+}

@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela juh",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivosť uvítacieho osvetlenia",
         "state": {
@@ -504,6 +532,32 @@
           "87": "Iba plákanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemný",
+          "83": "Normálny",
+          "84": "Intenzívny",
+          "86": "Express 60",
+          "90": "Samočistenie",
+          "0e": "AI umývanie",
+          "07": "Predoplach",
+          "8d": "Hrnce a panvice",
+          "85": "Jemný",
+          "0c": "Expresný",
+          "0d": "Samočistenie",
+          "8e": "Plast",
+          "8f": "Detské potreby",
+          "82": "Automatický",
+          "8a": "Eko",
+          "a7": "Intenzívny",
+          "a8": "Expresný",
+          "8c": "Extra tichý",
+          "88": "Samočistenie",
+          "87": "Iba plákanie",
+          "01": "Predumytie"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkovania"
       },
@@ -567,6 +621,7 @@
           "1a": "Vlna",
           "1b": "Posteľná bielizeň",
           "1c": "Košele",
+          "43": "Košele",
           "1d": "Uteráky",
           "1e": "Outdoor",
           "1f": "Zmiešaná náplň",
@@ -1557,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav vnútorného priestoru"
+        "name": "Stav vnútorného priestoru",
+        "state": {
+          "ready": "Pripravené",
+          "preheat": "Predhrievanie",
+          "cooking": "Varenie",
+          "finish": "Dokončené"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"

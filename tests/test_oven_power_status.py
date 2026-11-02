@@ -36,7 +36,7 @@ def _power(coordinator):
     ]
 
 
-@pytest.mark.parametrize("subtype", [None, "CombiOven", "Microwave", ""])
+@pytest.mark.parametrize("subtype", [None, "Microwave", ""])
 def test_shared_board_without_wall_oven_type_keeps_existing_power_behavior(subtype):
     bodies = {
         "Information": {
@@ -47,24 +47,41 @@ def test_shared_board_without_wall_oven_type_keeps_existing_power_behavior(subty
     assert model_settings("LCD_OV_WALL_16K", bodies) == {}
 
 
-def test_same_board_combo_cavities_keep_their_existing_power_control():
+def _power_descs(resources):
     from custom_components.localthings.registry.by_type import resolve
+
+    registry = resolve(resources)
+    assert registry is not None
+    return [
+        b.desc
+        for b in discover(resources, registry.capabilities)
+        if b.desc.key == "power_switch"
+        and (b.desc.exists_fn is None or b.desc.exists_fn(resources[b.href], resources))
+    ]
+
+
+def test_same_board_combo_oven_cavities_report_power_without_a_control():
+    """#681: on the NW9300MD's oven, Power off is accepted and does nothing,
+    and every slot reads On whatever the knob says."""
     from tests.test_legacy_http_nw9300md import _canonical, _seed, _sweep
 
     transport = _sweep(divided=True)
-    for index in (0, 2, 3):
+    for index in (2, 3):
         resources = _canonical(_seed(transport, index), index)
-        assert SETINFO_HREF not in resources
-        registry = resolve(resources)
-        assert registry is not None
-        bound = discover(resources, registry.capabilities)
-        power = [
-            b
-            for b in bound
-            if b.desc.key == "power_switch"
-            and (b.desc.exists_fn is None or b.desc.exists_fn(resources[b.href], resources))
-        ]
-        assert len(power) == 1 and isinstance(power[0].desc, SwitchDesc)
+        assert resources[SETINFO_HREF] == {"x.com.samsung.da.isModelSettingPowerOnOff": "false"}
+        power = _power_descs(resources)
+        assert power and not any(isinstance(d, SwitchDesc) for d in power)
+
+
+def test_same_board_combo_microwave_keeps_its_power_control():
+    """Untested on the NW9300MD's microwave slot."""
+    from tests.test_legacy_http_nw9300md import _seed, _sweep
+
+    resources = _seed(_sweep(divided=True), 0)
+
+    assert SETINFO_HREF not in resources
+    power = _power_descs(resources)
+    assert len(power) == 1 and isinstance(power[0], SwitchDesc)
 
 
 @pytest.mark.parametrize("divided", [False, True])

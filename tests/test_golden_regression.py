@@ -220,6 +220,23 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_ailp_fac():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_sac_fourway():
+    """TP1X_DA-AC-SAC-01001 4-way cassette (issue #704), typed by /oic/d;
+    its /fourwayflaps/vs/0 vanes bind as one select per side."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_tp1x_sac_fourway"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_oven_tp2x_ks_walloven():
     """TP2X_DA-KS-WALLOVEN-000002 (issue #300), a steam-oven-class board
     (water tank, descale, pyro-free) quite unlike the NV7000BS-class board

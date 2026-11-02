@@ -41,6 +41,7 @@ from .legacy_http import (
     course_table,
     divider_in,
     http_status_to_coap,
+    is_disconnected,
     is_start,
     model_settings,
     split_start_only,
@@ -374,7 +375,10 @@ class LegacyHttpTransport:
         return 0x45, devices
 
     def _listed_rep(self, index: int, devices: list) -> dict[str, str]:
-        listed = any(isinstance(d, dict) and d.get("id") == str(index) for d in devices)
+        listed = any(
+            isinstance(d, dict) and d.get("id") == str(index) and not is_disconnected(d)
+            for d in devices
+        )
         self._state_at(index).listed = listed
         return {_LISTED_FIELD: "On" if listed else "Off"}
 

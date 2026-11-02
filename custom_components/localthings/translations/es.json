@@ -770,6 +770,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lama norte",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "east_flap": {
+        "name": "Lama este",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "south_flap": {
+        "name": "Lama sur",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "west_flap": {
+        "name": "Lama oeste",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidad de iluminación de bienvenida",
         "state": {
@@ -884,6 +912,32 @@
           "87": "Solo aclarado"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciclo",
+        "state": {
+          "80": "Delicado",
+          "83": "Normal",
+          "84": "Intenso",
+          "86": "Express 60",
+          "90": "Autolimpieza",
+          "0e": "Lavado IA",
+          "07": "Prelavado intenso",
+          "8d": "Ollas y sartenes",
+          "8e": "Plástico",
+          "8f": "Cuidado del bebé",
+          "82": "Automático",
+          "8a": "Eco",
+          "a7": "Intenso",
+          "a8": "Express",
+          "8c": "Extra silencioso",
+          "88": "Autolimpieza",
+          "85": "Delicado",
+          "0c": "Express",
+          "0d": "Autolimpieza",
+          "87": "Solo aclarado",
+          "01": "Prelavado"
+        }
+      },
       "dispense_type": {
         "name": "Tipo de dosificación"
       },
@@ -945,6 +999,7 @@
           "1a": "Lana",
           "1b": "Ropa de cama",
           "1c": "Camisas",
+          "43": "Camisas",
           "1d": "Toallas",
           "1e": "Exterior",
           "1f": "Carga mixta",
@@ -1934,7 +1989,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado de la cavidad"
+        "name": "Estado de la cavidad",
+        "state": {
+          "ready": "Listo",
+          "preheat": "Precalentamiento",
+          "cooking": "Cocción",
+          "finish": "Finalizado"
+        }
       },
       "power_level": {
         "name": "Nivel de potencia"

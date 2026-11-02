@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamel noord",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "east_flap": {
+        "name": "Lamel oost",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "south_flap": {
+        "name": "Lamel zuid",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "west_flap": {
+        "name": "Lamel west",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Nabijheidsniveau welkomstverlichting",
         "state": {
@@ -504,6 +532,32 @@
           "87": "Alleen spoelen"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programma",
+        "state": {
+          "80": "Delicaat",
+          "83": "Normaal",
+          "84": "Intensief",
+          "86": "Express 60",
+          "90": "Zelfreiniging",
+          "0e": "AI Wash",
+          "07": "Voorspoelen",
+          "8d": "Potten en pannen",
+          "8e": "Kunststof",
+          "8f": "Babyverzorging",
+          "82": "Auto",
+          "8a": "Eco",
+          "a7": "Intensief",
+          "a8": "Express",
+          "8c": "Extra stil",
+          "88": "Zelfreiniging",
+          "85": "Delicaat",
+          "0c": "Express",
+          "0d": "Zelfreiniging",
+          "87": "Alleen spoelen",
+          "01": "Voorspoelen"
+        }
+      },
       "dispense_type": {
         "name": "Type dispenser"
       },
@@ -565,6 +619,7 @@
           "1a": "Wol",
           "1b": "Beddengoed",
           "1c": "Overhemden",
+          "43": "Overhemden",
           "1d": "Handdoeken",
           "1e": "Outdoor",
           "1f": "Gemengde was",
@@ -1557,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Status ovenruimte"
+        "name": "Status ovenruimte",
+        "state": {
+          "ready": "Gereed",
+          "preheat": "Voorverwarmen",
+          "cooking": "Bereiden",
+          "finish": "Voltooid"
+        }
       },
       "power_level": {
         "name": "Vermogensniveau"

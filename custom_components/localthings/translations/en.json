@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "North flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "east_flap": {
+        "name": "East flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "south_flap": {
+        "name": "South flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "west_flap": {
+        "name": "West flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Welcome lighting proximity",
         "state": {
@@ -504,6 +532,32 @@
           "87": "Rinse Only"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cycle",
+        "state": {
+          "80": "Delicate",
+          "83": "Normal",
+          "84": "Heavy",
+          "86": "Express 60",
+          "90": "Self clean",
+          "0e": "AI Wash",
+          "07": "Pre blast",
+          "8d": "Pots and pans",
+          "85": "Delicate",
+          "0c": "Express",
+          "0d": "Self clean",
+          "8e": "Plastic",
+          "8f": "Baby Care",
+          "82": "Auto",
+          "8a": "Eco",
+          "a7": "Heavy",
+          "a8": "Express",
+          "8c": "Extra Silence",
+          "88": "Self Clean",
+          "87": "Rinse Only",
+          "01": "Pre-wash"
+        }
+      },
       "dispense_type": {
         "name": "Dispense type"
       },
@@ -567,6 +621,7 @@
           "1a": "Wool",
           "1b": "Bedding",
           "1c": "Shirts",
+          "43": "Shirts",
           "1d": "Towels",
           "1e": "Outdoor",
           "1f": "Mixed load",
@@ -1557,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Cavity state"
+        "name": "Cavity state",
+        "state": {
+          "ready": "Ready",
+          "preheat": "Preheat",
+          "cooking": "Cooking",
+          "finish": "Finished"
+        }
       },
       "power_level": {
         "name": "Power level"
