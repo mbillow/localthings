@@ -17,8 +17,31 @@ uses unconditionally.
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0.
 """
 
+from dataclasses import replace
+
 from ..capabilities import air_purifier, airconditioner, common, dishwasher, ehs, ignored
+from ..entities import ClimateDesc
 from ._base import DeviceRegistry, _build
+
+
+def _artik051(rep, resources):
+    info = resources.get("/information/vs/0", {})
+    model = info.get("x.com.samsung.da.modelNum") or resources.get("/oic/p", {}).get("mnmo", "")
+    return str(model).startswith("ARTIK051")
+
+
+# Minimal power writes still return 4.00 while taking effect on ARTIK051 (#714).
+CLIMATE_ARTIK051 = replace(
+    airconditioner.CLIMATE,
+    match_fn=_artik051,
+    entities=tuple(
+        replace(desc, confirm_on_refusal=True) if isinstance(desc, ClimateDesc) else desc
+        for desc in airconditioner.CLIMATE.entities
+    ),
+)
+CLIMATE_OTHER = replace(
+    airconditioner.CLIMATE, match_fn=lambda rep, resources: not _artik051(rep, resources)
+)
 
 REGISTRY = DeviceRegistry(
     name="airconditioner",
@@ -29,7 +52,8 @@ REGISTRY = DeviceRegistry(
             airconditioner.ENERGY_METER_GENERIC,
             airconditioner.ENERGY_METER_LEGACY,
             dishwasher.DIAGNOSIS,
-            airconditioner.CLIMATE,
+            CLIMATE_ARTIK051,
+            CLIMATE_OTHER,
             airconditioner.AIR_PURIFY,
             airconditioner.AUTO_CLEAN,
             airconditioner.AIR_FILTER,

@@ -66,6 +66,9 @@ class SamsungEntityDescription:
     # False for a write the appliance takes with Remote Control off; the
     # coordinator then leaves the refusal, if any, to the appliance.
     needs_remote_control: bool = True
+    # Some boards apply a write but answer 4.00; require a fresh matching GET
+    # before accepting that response. Raw writes retain the device's response.
+    confirm_on_refusal: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
