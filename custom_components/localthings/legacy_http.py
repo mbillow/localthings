@@ -205,10 +205,24 @@ def cavity_role(record: Mapping[str, Any]) -> str | None:
     return None
 
 
+def is_disconnected(record: Mapping[str, Any]) -> bool:
+    """Whether a listed record says it is not connected. The NW9300MD's
+    `/devices` lists its lower cavity with the divider out too, and only that
+    record's own `connected` turns false (#681)."""
+    connected = record.get("connected")
+    if isinstance(connected, str):
+        return connected.strip().lower() in ("false", "off")
+    return connected is False
+
+
 def divider_in(devices: list) -> bool:
-    """Whether `/devices` lists a lower cavity, which it does only while the
-    divider is in."""
-    return any(isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER for d in devices)
+    """Whether `/devices` lists a connected lower cavity: the NV51K777OS
+    lists one only while the divider is in (#572), the NW9300MD lists it
+    disconnected otherwise (#681)."""
+    return any(
+        isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER and not is_disconnected(d)
+        for d in devices
+    )
 
 
 def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None) -> dict[str, Any]:
@@ -392,9 +406,10 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     if not isinstance(info, Mapping):
         return {}
     model_id = info.get("modelID")
-    # NV51K7770S power writes do not operate either cavity (#664, #572).
-    # The same board also serves CombiOven models whose behavior is unverified.
-    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") == "WallOven":
+    # Power writes are accepted and do nothing on this board: on both of the
+    # NV51K7770S's cavities (#664, #572) and on the NW9300MD combo's oven
+    # (#681), whose every slot reports CombiOven and power On throughout.
+    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") in ("WallOven", "CombiOven"):
         return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
     if _family_key(family) not in _SETINFO_FAMILIES:
         return {}

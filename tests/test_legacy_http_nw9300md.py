@@ -81,6 +81,21 @@ def _sweep(*, divided: bool) -> LegacyHttpTransport:
     return transport
 
 
+def _sweep_listed_disconnected() -> LegacyHttpTransport:
+    """The divider out as the reporter measured it live (#681): `/devices`
+    still lists slot 3, whose own `connected` reads false."""
+    routes = _routes(divided=True)
+    devices = [dict(d) for d in routes["/devices"][1]["Devices"]]
+    for device in devices:
+        if device["id"] == "3":
+            device["connected"] = False
+    routes["/devices"] = (200, {"Devices": devices})
+    _FakeConnection.routes = routes
+    transport = _transport()
+    _seed(transport, 0)
+    return transport
+
+
 def test_the_microwave_keeps_its_modes():
     transport = _transport()
 
@@ -120,6 +135,37 @@ def test_divider_out_the_lower_cavity_offers_nothing_but_is_an_oven():
     assert resources["/mode/vs/0"][PREFIX + "supportedModes"] == ["NoOperation"]
     assert resources["/connected/vs/0"] == {PREFIX + "connected": "Off"}
     assert resolve(resources) is oven.REGISTRY
+
+
+def test_a_listed_but_disconnected_lower_cavity_means_the_divider_is_out():
+    transport = _sweep_listed_disconnected()
+
+    modes = _modes(transport, 2)
+    lower = _canonical(_seed(transport, 3), 3)
+
+    assert "ConvectionBake" in modes
+    assert not any(m.startswith(("Upper", "Lower")) for m in modes)
+    assert lower["/mode/vs/0"][PREFIX + "supportedModes"] == ["NoOperation"]
+    assert lower["/connected/vs/0"] == {PREFIX + "connected": "Off"}
+
+
+def test_the_empty_slot_binds_nothing():
+    """Slot 1 types as nothing and falls back to the microwave's registry,
+    where it would read as a second oven with a constant 0 degrees (#681)."""
+    from custom_components.localthings.registry.discovery import discover
+
+    resources = _canonical(_seed(_sweep(divided=False), 1), 1)
+
+    assert resolve(resources) is None
+    assert discover(resources, microwave.REGISTRY.capabilities) == []
+
+
+def test_the_lower_cavity_with_the_divider_out_is_not_the_empty_slot():
+    from custom_components.localthings.registry.capabilities.oven import (
+        is_empty_legacy_oven_slot,
+    )
+
+    assert not is_empty_legacy_oven_slot(_canonical(_seed(_sweep(divided=False), 3), 3))
 
 
 @pytest.mark.parametrize("divided", [True, False])

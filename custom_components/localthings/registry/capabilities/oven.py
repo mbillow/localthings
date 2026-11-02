@@ -235,15 +235,24 @@ def is_tp6x_ov_board(resources):
 
 
 def is_empty_legacy_oven_slot(resources):
-    """The blank `/devices/1` the NQ70M6650DS combo's 8888 bridge answers
-    between its microwave (0) and oven (2), and leaves out of `/devices`
-    (#674): no cavity type, no modes, powered off."""
+    """The blank `/devices/1` a combo's 8888 bridge answers between its
+    microwave (0) and oven (2), and leaves out of `/devices`. The
+    NQ70M6650DS's (#674) has no cavity type or modes and is powered off; the
+    NW9300MD's (#681) has no modes and no Operation at all, only a constant
+    0 degree Temperatures."""
     mode = resources.get("/mode/vs/0") or {}
+    if mode.get("x.com.samsung.da.supportedModes"):
+        return False
+    if is_tp6x_ov_board(resources):
+        return (
+            _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
+            and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+        )
+    information = resources.get("/information/vs/0") or {}
     return (
-        is_tp6x_ov_board(resources)
-        and _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
-        and not mode.get("x.com.samsung.da.supportedModes")
-        and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
+        is_lcd_ov_wall_16k(information.get("x.com.samsung.da.modelNum"))
+        and "/operational/state/vs/0" not in resources
+        and "/power/vs/0" not in resources
     )
 
 
