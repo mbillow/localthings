@@ -1,5 +1,10 @@
 {
   "entity": {
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    },
     "binary_sensor": {
       "auto_clean_running": {
         "name": "Automatische Reinigung läuft"

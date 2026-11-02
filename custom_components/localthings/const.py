@@ -11,7 +11,9 @@ PLATFORMS = [
     "time",
     "climate",
     "fan",
+    "update",
     "water_heater",
+    "media_player",
 ]
 
 CONF_HOST = "host"

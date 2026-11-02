@@ -12,11 +12,23 @@ from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
     ButtonDesc,
+    MediaPlayerDesc,
     NumberDesc,
     SelectDesc,
     SensorDesc,
     SwitchDesc,
+    UpdateDesc,
 )
+from . import av
+
+HREF_SWITCH = "/sec/networkaudio/switch/binary"
+HREF_AUDIO = "/sec/networkaudio/audio"
+HREF_MODE = "/sec/networkaudio/mode"
+HREF_SOUNDMODE = "/sec/networkaudio/soundmode"
+HREF_MEDIA_PLAYBACK = "/capability/mediaPlayback/main/0"
+HREF_MEDIA_SHUFFLE = "/capability/mediaPlaybackShuffle/main/0"
+HREF_MEDIA_TRACK_DATA = "/capability/audioTrackData/main/0"
+HREF_SW_UPDATE = "/sec/networkaudio/swUpdate"
 
 
 def _write(field: str, encode=lambda p: p):
@@ -51,6 +63,24 @@ def _int_on(p) -> int:
 def _on_off(p) -> str:
     return "on" if p == "On" else "off"
 
+
+# Controlled through the media player, so no standalone entities; bound for
+# coverage and poll tier.
+MEDIA_SURFACE_COVERAGE: list[Capability] = [
+    Capability(href=HREF_SWITCH, rt_filter="oic.r.switch.binary", poll_tier="hot"),
+    Capability(href=HREF_AUDIO, rt_filter="oic.r.audio", poll_tier="hot"),
+    Capability(href=HREF_MODE, rt_filter="oic.r.mode", poll_tier="warm"),
+    Capability(
+        href=HREF_SOUNDMODE,
+        rt_filter="x.com.samsung.networkaudio.soundmode",
+        poll_tier="warm",
+    ),
+    Capability(
+        href="/sec/networkaudio/playback",
+        rt_filter="x.com.samsung.networkaudio.playback",
+        poll_tier="hot",
+    ),
+]
 
 # ------------------------------------------------------------------
 # Configuration
@@ -506,6 +536,19 @@ SPEAKER_STATUS = Capability(
     ),
 )
 
+# Firmware status for update.py.
+SW_UPDATE = Capability(
+    href=HREF_SW_UPDATE,
+    poll_tier="cold",
+    entities=(
+        UpdateDesc(
+            key="firmware",
+            rep_fn=lambda rep: rep.get("x.com.samsung.networkaudio.updateStatus"),
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
 VERSION_INFO = Capability(
     href="/sec/networkaudio/versionInfo",
     poll_tier="cold",
@@ -520,6 +563,48 @@ VERSION_INFO = Capability(
         ),
     ),
 )
+
+
+def _media_player_write(payload, rep, href=None, resources=None):
+    """(kind, value) pairs from the media_player platform -> (path, body).
+
+    Each pair writes one field on the href that owns it.
+    """
+    kind, value = payload
+    if kind == "power":
+        return ["sec", "networkaudio", "switch", "binary"], {"value": bool(value)}
+    if kind == "volume":
+        return ["sec", "networkaudio", "audio"], {"volume": _number(value)}
+    if kind == "mute":
+        return ["sec", "networkaudio", "audio"], {"mute": bool(value)}
+    if kind == "source":
+        return ["sec", "networkaudio", "mode"], {"mode": value}
+    if kind == "sound_mode":
+        return ["sec", "networkaudio", "soundmode"], {"x.com.samsung.networkaudio.soundmode": value}
+    return av.media_write(kind, value)
+
+
+# The media player reads its siblings from the snapshot, like climate.py.
+MEDIA_PLAYER = Capability(
+    href=HREF_MEDIA_PLAYBACK,
+    rt_filter="x.com.st.mediaplayer",
+    poll_tier="hot",
+    entities=(
+        MediaPlayerDesc(
+            key="media_player",
+            rep_fn=av.first_mode,
+            write_fn=_media_player_write,
+        ),
+    ),
+)
+
+# The media player's other resources: written (next/previous, repeat) or
+# empty on every capture so far (musicinfo).
+MEDIA_COVERAGE: list[Capability] = [
+    Capability(href="/capability/mediaTrackControl/main/0"),
+    Capability(href="/capability/mediaPlaybackRepeat/main/0"),
+    Capability(href="/sec/networkaudio/musicinfo"),
+]
 
 
 def _wifi_signal_pct(rep: dict):
@@ -551,16 +636,6 @@ NETWORK_INFO = Capability(
 
 # Nothing worth an entity; bound to keep the coverage repair quiet.
 COVERAGE: list[Capability] = [
-    # Power, volume, input, sound mode and playback state: a media player's.
-    Capability(href="/sec/networkaudio/switch/binary"),
-    Capability(href="/sec/networkaudio/audio"),
-    Capability(href="/sec/networkaudio/mode"),
-    Capability(href="/sec/networkaudio/soundmode"),
-    Capability(href="/sec/networkaudio/playback"),
-    # Firmware update status; only "noupdate" has been seen.
-    Capability(href="/sec/networkaudio/swUpdate"),
-    # Empty on every capture so far.
-    Capability(href="/sec/networkaudio/musicinfo"),
     # AutoEQ calibration counters with no known vocabulary.
     Capability(href="/sec/networkaudio/autoeq"),
     # Static identity strings (MACs) -- HA connections carry the same.

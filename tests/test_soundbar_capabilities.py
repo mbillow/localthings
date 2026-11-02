@@ -16,6 +16,7 @@ from custom_components.localthings.registry.capabilities import soundbar
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
     ButtonDesc,
+    MediaPlayerDesc,
     NumberDesc,
     SelectDesc,
 )
@@ -58,19 +59,61 @@ def test_no_unbound_hrefs():
     assert unbound == []
 
 
-def test_media_surface_resources_are_covered_without_entities():
-    """Power, volume, input and playback stay bound but get no entities yet."""
+def test_media_player_is_the_only_power_volume_source_surface():
+    """Media controls live only on the media player; their resources stay bound."""
     state = _state()
-    for key in (
+    for dup in (
         "power_switch",
         "volume",
         "mute",
         "input_source",
         "soundbar_sound_mode",
         "playback",
-        "media_player",
     ):
-        assert key not in state
+        assert dup not in state
+    assert state["media_player"] == "stop"
+
+
+def test_media_player_write_contracts():
+    desc = soundbar.MEDIA_PLAYER.entities[0]
+    assert isinstance(desc, MediaPlayerDesc)
+    write = desc.write_fn
+    assert write is not None
+    assert write(("power", False), {}) == (
+        ["sec", "networkaudio", "switch", "binary"],
+        {"value": False},
+    )
+    assert write(("volume", 42), {}) == (["sec", "networkaudio", "audio"], {"volume": 42})
+    assert write(("mute", True), {}) == (["sec", "networkaudio", "audio"], {"mute": True})
+    assert write(("source", "bt"), {}) == (["sec", "networkaudio", "mode"], {"mode": "bt"})
+    assert write(("sound_mode", "music"), {}) == (
+        ["sec", "networkaudio", "soundmode"],
+        {"x.com.samsung.networkaudio.soundmode": "music"},
+    )
+    assert write(("shuffle", True), {}) == (
+        ["capability", "mediaPlaybackShuffle", "main", "0"],
+        {"mode": "enabled"},
+    )
+    # The plugin posts these though the soundbar advertises no supportedModes.
+    assert write(("next_track", None), {}) == (
+        ["capability", "mediaTrackControl", "main", "0"],
+        {"modes": ["next"]},
+    )
+    assert write(("previous_track", None), {}) == (
+        ["capability", "mediaTrackControl", "main", "0"],
+        {"modes": ["previous"]},
+    )
+
+
+def test_seek_write_is_a_delta():
+    desc = soundbar.MEDIA_PLAYER.entities[0]
+    assert isinstance(desc, MediaPlayerDesc)
+    write = desc.write_fn
+    assert write is not None
+    assert write(("seek", -15), {}) == (
+        ["capability", "mediaPlayback", "main", "0"],
+        {"modes": ["seek"], "position": -15},
+    )
 
 
 def test_bass_boost_hidden_when_the_mode_disables_it():
@@ -246,6 +289,7 @@ def test_woofer_and_tone_writes():
 
 def test_diagnostics_carry_the_static_strings():
     state = _state()
+    assert state["firmware"] == "noupdate"
     assert state["speaker_status"] == "normal"
     assert state["micom_version"] == "39"
     assert state["woofer_connection"] is False

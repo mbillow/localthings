@@ -380,6 +380,11 @@
     }
   },
   "entity": {
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
+    },
     "binary_sensor": {
       "after_run_active": {
         "name": "Activo tras finalizar"

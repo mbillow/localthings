@@ -15,7 +15,7 @@ from datetime import datetime
 from datetime import time as dt_time
 from typing import Any, Literal
 
-WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
+WriteFn = Callable[..., "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
 # write. resources is the coordinator's full href->rep snapshot, for the same
 # cross-resource lookups exists_fn needs (e.g. reading a sibling href's live
@@ -207,6 +207,19 @@ class WaterHeaterDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class UpdateDesc(SamsungEntityDescription):
+    # Read-only: no install request is known to work on the soundbar.
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaPlayerDesc(SamsungEntityDescription):
+    # Binds the playback resource and reads power/volume/source/track from
+    # siblings; write_fn maps (kind, value) -> (path_segs, body), like ClimateDesc.
+    write_fn: WriteFn = None
+
+
 PLATFORM_OF: dict[type, str] = {
     SensorDesc: "sensor",
     BinarySensorDesc: "binary_sensor",
@@ -216,8 +229,10 @@ PLATFORM_OF: dict[type, str] = {
     ButtonDesc: "button",
     NumberDesc: "number",
     TimeDesc: "time",
+    UpdateDesc: "update",
     ClimateDesc: "climate",
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
     ZoneClimateDesc: "climate",
+    MediaPlayerDesc: "media_player",
 }
