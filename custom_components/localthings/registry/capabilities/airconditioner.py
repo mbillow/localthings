@@ -1899,6 +1899,10 @@ FOUR_WAY_FLAPS = Capability(
             field=f"x.com.samsung.da.{side}Flap",
             icon="mdi:arrow-oscillating",
             options_field="x.com.samsung.da.supportedModes",
+            exists_fn=lambda rep, resources, side=side: (
+                f"x.com.samsung.da.{side}Flap" in rep
+                and bool(rep.get("x.com.samsung.da.supportedModes"))
+            ),
             write_fn=_flap_write(f"x.com.samsung.da.{side}Flap"),
         )
         for side in _FLAP_SIDES

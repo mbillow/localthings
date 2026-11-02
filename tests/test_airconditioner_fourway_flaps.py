@@ -66,3 +66,11 @@ def test_a_value_the_unit_does_not_list_is_not_written():
     assert write is not None
 
     assert write("Horizontal", _resources()[HREF]) is None
+
+
+def test_a_unit_listing_no_supported_modes_gets_no_select():
+    exists = _desc("north").exists_fn
+    assert exists is not None
+
+    assert exists({"x.com.samsung.da.northFlap": "Stop"}, {}) is False
+    assert exists(_resources()[HREF], {}) is True
