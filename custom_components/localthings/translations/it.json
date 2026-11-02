@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Aletta nord",
+        "state": {
+          "stop": "Fissa",
+          "vertical": "Oscillazione"
+        }
+      },
+      "east_flap": {
+        "name": "Aletta est",
+        "state": {
+          "stop": "Fissa",
+          "vertical": "Oscillazione"
+        }
+      },
+      "south_flap": {
+        "name": "Aletta sud",
+        "state": {
+          "stop": "Fissa",
+          "vertical": "Oscillazione"
+        }
+      },
+      "west_flap": {
+        "name": "Aletta ovest",
+        "state": {
+          "stop": "Fissa",
+          "vertical": "Oscillazione"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Prossimità illuminazione di benvenuto",
         "state": {

@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Volet nord",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "east_flap": {
+        "name": "Volet est",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "south_flap": {
+        "name": "Volet sud",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "west_flap": {
+        "name": "Volet ouest",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximité de l'éclairage d'accueil",
         "state": {

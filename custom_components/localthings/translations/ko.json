@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "북쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "east_flap": {
+        "name": "동쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "south_flap": {
+        "name": "남쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "west_flap": {
+        "name": "서쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "웰컴 라이팅 감지 거리",
         "state": {

@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "North flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "east_flap": {
+        "name": "East flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "south_flap": {
+        "name": "South flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "west_flap": {
+        "name": "West flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Welcome lighting proximity",
         "state": {

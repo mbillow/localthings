@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamel noord",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "east_flap": {
+        "name": "Lamel oost",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "south_flap": {
+        "name": "Lamel zuid",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "west_flap": {
+        "name": "Lamel west",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Nabijheidsniveau welkomstverlichting",
         "state": {

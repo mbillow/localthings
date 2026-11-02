@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamelle Nord",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "east_flap": {
+        "name": "Lamelle Ost",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "south_flap": {
+        "name": "Lamelle Süd",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "west_flap": {
+        "name": "Lamelle West",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Empfindlichkeit der Willkommensbeleuchtung",
         "state": {

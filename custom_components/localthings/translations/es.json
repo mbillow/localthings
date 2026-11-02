@@ -770,6 +770,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lama norte",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "east_flap": {
+        "name": "Lama este",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "south_flap": {
+        "name": "Lama sur",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
+      "west_flap": {
+        "name": "Lama oeste",
+        "state": {
+          "stop": "Fija",
+          "vertical": "Oscilación"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidad de iluminación de bienvenida",
         "state": {

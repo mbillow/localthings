@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Żaluzja północna",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "east_flap": {
+        "name": "Żaluzja wschodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "south_flap": {
+        "name": "Żaluzja południowa",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "west_flap": {
+        "name": "Żaluzja zachodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Zasięg oświetlenia powitalnego",
         "state": {

@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela jih",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivost uvítacího osvětlení",
         "state": {

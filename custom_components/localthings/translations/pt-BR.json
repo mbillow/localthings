@@ -390,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Aleta norte",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "east_flap": {
+        "name": "Aleta leste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "south_flap": {
+        "name": "Aleta sul",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "west_flap": {
+        "name": "Aleta oeste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidade da iluminação de boas-vindas",
         "state": {
