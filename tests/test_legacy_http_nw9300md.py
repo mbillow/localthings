@@ -160,6 +160,19 @@ def test_the_empty_slot_binds_nothing():
     assert discover(resources, microwave.REGISTRY.capabilities) == []
 
 
+def test_the_empty_slot_is_recognized_without_its_information_read():
+    """A sibling's linked Information read can run out of its budget; the
+    record's description then stands in for it."""
+    from custom_components.localthings.registry.capabilities.oven import (
+        is_empty_legacy_oven_slot,
+    )
+
+    resources = _canonical(_seed(_sweep(divided=False), 1), 1)
+    resources["/information/vs/0"] = {PREFIX + "description": "LCD_OV_WALL_16K_DIV"}
+
+    assert is_empty_legacy_oven_slot(resources)
+
+
 def test_the_lower_cavity_with_the_divider_out_is_not_the_empty_slot():
     from custom_components.localthings.registry.capabilities.oven import (
         is_empty_legacy_oven_slot,

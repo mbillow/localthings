@@ -408,8 +408,13 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     model_id = info.get("modelID")
     # Power writes are accepted and do nothing on this board: on both of the
     # NV51K7770S's cavities (#664, #572) and on the NW9300MD combo's oven
-    # (#681), whose every slot reports CombiOven and power On throughout.
-    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") in ("WallOven", "CombiOven"):
+    # (#681). Every NW9300MD slot reports CombiOven; its microwave's power
+    # is untested and keeps its switch.
+    subtype = info.get("deviceSubType")
+    combo_oven = subtype == "CombiOven" and not any(
+        m.startswith("MicroWave") for m in _supported_modes(bodies)
+    )
+    if is_lcd_ov_wall_16k(model_id) and (subtype == "WallOven" or combo_oven):
         return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
     if _family_key(family) not in _SETINFO_FAMILIES:
         return {}

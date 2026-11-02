@@ -248,9 +248,15 @@ def is_empty_legacy_oven_slot(resources):
             _option_value(mode.get("x.com.samsung.da.options"), "DeviceType") == "NULL"
             and (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power") == "Off"
         )
+    # The description stands in when the linked Information read failed
+    # (legacy_http_transport._with_record_description).
     information = resources.get("/information/vs/0") or {}
+    description = information.get("x.com.samsung.da.description")
     return (
-        is_lcd_ov_wall_16k(information.get("x.com.samsung.da.modelNum"))
+        (
+            is_lcd_ov_wall_16k(information.get("x.com.samsung.da.modelNum"))
+            or (isinstance(description, str) and description.startswith("LCD_OV_WALL_16K"))
+        )
         and "/operational/state/vs/0" not in resources
         and "/power/vs/0" not in resources
     )
