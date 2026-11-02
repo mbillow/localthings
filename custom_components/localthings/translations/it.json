@@ -504,6 +504,32 @@
           "87": "Solo risciacquo"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciclo",
+        "state": {
+          "80": "Delicato",
+          "83": "Normale",
+          "84": "Intenso",
+          "86": "Express 60",
+          "90": "Autopulizia",
+          "0e": "AI Wash",
+          "07": "Prelavaggio intenso",
+          "8d": "Pentole e padelle",
+          "8e": "Plastica",
+          "8f": "Bambini",
+          "82": "Automatico",
+          "8a": "Eco",
+          "a7": "Intenso",
+          "a8": "Express",
+          "8c": "Extra silenzioso",
+          "88": "Autopulizia",
+          "85": "Delicato",
+          "0c": "Express",
+          "0d": "Autopulizia",
+          "87": "Solo risciacquo",
+          "01": "Prelavaggio"
+        }
+      },
       "dispense_type": {
         "name": "Tipo erogazione"
       },

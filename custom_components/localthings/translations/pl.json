@@ -504,6 +504,32 @@
           "87": "Tylko płukanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cykl",
+        "state": {
+          "80": "Delikatne",
+          "83": "Normalny",
+          "84": "Intensywny",
+          "86": "Express 60",
+          "90": "Samoczyszczenie",
+          "0e": "AI Wash",
+          "07": "Wstępne spłukiwanie",
+          "8d": "Garnki i patelnie",
+          "85": "Delikatne",
+          "0c": "Ekspresowy",
+          "0d": "Samoczyszczenie",
+          "8e": "Tworzywa sztuczne",
+          "8f": "Dziecięce",
+          "82": "Automatyczny",
+          "8a": "Eko",
+          "a7": "Intensywny",
+          "a8": "Ekspresowy",
+          "8c": "Wyjątkowo cichy",
+          "88": "Samoczyszczenie",
+          "87": "Tylko płukanie",
+          "01": "Płukanie wstępne"
+        }
+      },
       "dispense_type": {
         "name": "Rodzaj nalewania"
       },

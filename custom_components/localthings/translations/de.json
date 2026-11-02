@@ -504,6 +504,32 @@
           "87": "Nur Spülen"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programm",
+        "state": {
+          "80": "Schonprogramm",
+          "83": "Normal",
+          "84": "Intensiv",
+          "86": "Express 60",
+          "90": "Selbstreinigung",
+          "0e": "KI-Spülen",
+          "07": "Vorspülen",
+          "8d": "Töpfe und Pfannen",
+          "8e": "Plastik",
+          "8f": "Babypflege",
+          "82": "Automatik",
+          "8a": "Eco",
+          "a7": "Intensiv",
+          "a8": "Express",
+          "8c": "Extra leise",
+          "88": "Selbstreinigung",
+          "85": "Schonprogramm",
+          "0c": "Express",
+          "0d": "Selbstreinigung",
+          "87": "Nur Spülen",
+          "01": "Vorspülen"
+        }
+      },
       "dispense_type": {
         "name": "Ausgabetyp"
       },

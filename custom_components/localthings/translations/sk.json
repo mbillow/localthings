@@ -504,6 +504,32 @@
           "87": "Iba plákanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemný",
+          "83": "Normálny",
+          "84": "Intenzívny",
+          "86": "Express 60",
+          "90": "Samočistenie",
+          "0e": "AI umývanie",
+          "07": "Predoplach",
+          "8d": "Hrnce a panvice",
+          "85": "Jemný",
+          "0c": "Expresný",
+          "0d": "Samočistenie",
+          "8e": "Plast",
+          "8f": "Detské potreby",
+          "82": "Automatický",
+          "8a": "Eko",
+          "a7": "Intenzívny",
+          "a8": "Expresný",
+          "8c": "Extra tichý",
+          "88": "Samočistenie",
+          "87": "Iba plákanie",
+          "01": "Predumytie"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkovania"
       },

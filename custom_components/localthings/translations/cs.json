@@ -504,6 +504,32 @@
           "87": "Pouze máchání"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemné",
+          "83": "Normální",
+          "84": "Intenzivní",
+          "86": "Express 60",
+          "90": "Samočištění",
+          "0e": "AI mytí",
+          "07": "Předoplach",
+          "8d": "Hrnce a pánve",
+          "8e": "Plast",
+          "8f": "Dětské potřeby",
+          "82": "Automatický",
+          "8a": "Eco",
+          "a7": "Intenzivní",
+          "a8": "Expresní",
+          "8c": "Extra tichý",
+          "88": "Samočištění",
+          "85": "Jemné",
+          "0c": "Express",
+          "0d": "Samočištění",
+          "87": "Pouze máchání",
+          "01": "Předmytí"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkování"
       },

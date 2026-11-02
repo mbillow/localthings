@@ -504,6 +504,32 @@
           "87": "Rinçage seul"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programme",
+        "state": {
+          "80": "Délicat",
+          "83": "Normal",
+          "84": "Intensif",
+          "86": "Express 60",
+          "90": "Autonettoyage",
+          "0e": "Lavage IA",
+          "07": "Prélavage intensif",
+          "8d": "Casseroles et poêles",
+          "85": "Délicat",
+          "0c": "Express",
+          "0d": "Autonettoyage",
+          "8e": "Plastique",
+          "8f": "Spécial bébé",
+          "82": "Auto",
+          "8a": "Éco",
+          "a7": "Intensif",
+          "a8": "Express",
+          "8c": "Extra silencieux",
+          "88": "Autonettoyage",
+          "87": "Rinçage seul",
+          "01": "Prélavage"
+        }
+      },
       "dispense_type": {
         "name": "Type de distribution"
       },
