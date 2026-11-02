@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "Woofer connection"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} running"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "Pair Bluetooth"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} stop"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} start cooking"
       }
     },
     "climate": {
@@ -306,6 +297,12 @@
       },
       "dispense_capacity": {
         "name": "Dispense capacity"
+      },
+      "freezer_setpoint": {
+        "name": "Freezer setpoint"
+      },
+      "fridge_setpoint": {
+        "name": "Fridge setpoint"
       },
       "good_sleep": {
         "name": "Good Sleep"
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "Woofer level"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} cook time"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} setpoint"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "North flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "east_flap": {
+        "name": "East flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "south_flap": {
+        "name": "South flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
+      "west_flap": {
+        "name": "West flap",
+        "state": {
+          "stop": "Fixed",
+          "vertical": "Swing"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Welcome lighting proximity",
         "state": {
@@ -513,6 +532,32 @@
           "87": "Rinse Only"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cycle",
+        "state": {
+          "80": "Delicate",
+          "83": "Normal",
+          "84": "Heavy",
+          "86": "Express 60",
+          "90": "Self clean",
+          "0e": "AI Wash",
+          "07": "Pre blast",
+          "8d": "Pots and pans",
+          "85": "Delicate",
+          "0c": "Express",
+          "0d": "Self clean",
+          "8e": "Plastic",
+          "8f": "Baby Care",
+          "82": "Auto",
+          "8a": "Eco",
+          "a7": "Heavy",
+          "a8": "Express",
+          "8c": "Extra Silence",
+          "88": "Self Clean",
+          "87": "Rinse Only",
+          "01": "Pre-wash"
+        }
+      },
       "dispense_type": {
         "name": "Dispense type"
       },
@@ -576,6 +621,7 @@
           "1a": "Wool",
           "1b": "Bedding",
           "1c": "Shirts",
+          "43": "Shirts",
           "1d": "Towels",
           "1e": "Outdoor",
           "1f": "Mixed load",
@@ -1252,37 +1298,6 @@
           "classic": "Classic",
           "custom": "Custom"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} cooking mode",
-        "state": {
-          "no_operation": "No operation",
-          "bake": "Bake",
-          "broil": "Broil",
-          "convection": "Convection",
-          "convection_bake": "Convection bake",
-          "convection_broil": "Convection broil",
-          "frozen_pizza_plus": "Frozen Pizza+",
-          "slow_cook": "Slow cook",
-          "plate_warm": "Plate warm",
-          "air_fry": "Air fry",
-          "convection_roast": "Convection roast",
-          "keep_warm": "Keep warm",
-          "bread_proof": "Bread proof",
-          "dehydrate": "Dehydrate",
-          "self_clean": "Self clean",
-          "air_fryer": "Air fry",
-          "upper_broil": "Upper broil",
-          "upper_convection_bake": "Upper convection bake",
-          "upper_convection_roast": "Upper convection roast",
-          "lower_bake": "Lower bake",
-          "lower_convection_bake": "Lower convection bake",
-          "steam_bake": "Steam bake",
-          "steam_roast": "Steam roast",
-          "upper_steam_bake": "Upper steam bake",
-          "descale": "Descale",
-          "drain": "Drain"
-        }
       }
     },
     "sensor": {
@@ -1597,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Cavity state"
+        "name": "Cavity state",
+        "state": {
+          "ready": "Ready",
+          "preheat": "Preheat",
+          "cooking": "Cooking",
+          "finish": "Finished"
+        }
       },
       "power_level": {
         "name": "Power level"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signal"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} temperature"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} estimated finish"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} operation time"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} cavity state",
-        "state": {
-          "ready": "Ready",
-          "preheat": "Preheat",
-          "cooking": "Cooking",
-          "finish": "Finished"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} progress percent"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} machine state",
-        "state": {
-          "idle": "Idle",
-          "active": "Active",
-          "pause": "Paused"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} cook time"
       }
     },
     "switch": {
@@ -2091,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Vacation mode"
       },
       "welcome_lighting": {
         "name": "Welcome lighting"
@@ -2627,9 +2619,7 @@
         "ice_maker": "Ice maker",
         "cubed_ice": "Cubed ice",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ice balls",
-        "oven_cavity_upper": "Upper",
-        "oven_cavity_oven": "Oven"
+        "whiskey_ice_ball": "Ice balls"
       }
     }
   },

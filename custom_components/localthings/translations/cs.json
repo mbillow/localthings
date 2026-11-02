@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "Připojení wooferu"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} běží"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "Spárovat Bluetooth"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} zastavit"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} spustit vaření"
       }
     },
     "climate": {
@@ -306,6 +297,12 @@
       },
       "dispense_capacity": {
         "name": "Dávkované množství"
+      },
+      "freezer_setpoint": {
+        "name": "Mrazák – požadovaná teplota"
+      },
+      "fridge_setpoint": {
+        "name": "Chladnička – požadovaná teplota"
       },
       "good_sleep": {
         "name": "Klidný spánek"
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "Úroveň wooferu"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} doba vaření"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} požadovaná teplota"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela jih",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivost uvítacího osvětlení",
         "state": {
@@ -513,6 +532,32 @@
           "87": "Pouze máchání"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemné",
+          "83": "Normální",
+          "84": "Intenzivní",
+          "86": "Express 60",
+          "90": "Samočištění",
+          "0e": "AI mytí",
+          "07": "Předoplach",
+          "8d": "Hrnce a pánve",
+          "8e": "Plast",
+          "8f": "Dětské potřeby",
+          "82": "Automatický",
+          "8a": "Eco",
+          "a7": "Intenzivní",
+          "a8": "Expresní",
+          "8c": "Extra tichý",
+          "88": "Samočištění",
+          "85": "Jemné",
+          "0c": "Express",
+          "0d": "Samočištění",
+          "87": "Pouze máchání",
+          "01": "Předmytí"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkování"
       },
@@ -574,6 +619,7 @@
           "1a": "Vlna",
           "1b": "Ložní prádlo",
           "1c": "Košile",
+          "43": "Košile",
           "1d": "Ručníky",
           "1e": "Outdoor",
           "1f": "Smíšená náplň",
@@ -1252,37 +1298,6 @@
           "classic": "Klasika",
           "custom": "Vlastní"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} režim vaření",
-        "state": {
-          "no_operation": "Bez provozu",
-          "bake": "Pečení",
-          "broil": "Gril",
-          "convection": "Konvekce",
-          "convection_bake": "Konvekční pečení",
-          "convection_broil": "Konvekční gril",
-          "frozen_pizza_plus": "Mražená pizza+",
-          "slow_cook": "Pomalé vaření",
-          "plate_warm": "Ohřev talířů",
-          "air_fry": "Fritéza na vzduch",
-          "convection_roast": "Pečení horkým vzduchem",
-          "keep_warm": "Udržování teploty",
-          "bread_proof": "Kynutí těsta",
-          "dehydrate": "Sušení",
-          "self_clean": "Samočištění",
-          "air_fryer": "Horkovzdušná fritéza",
-          "upper_broil": "Gril (horní)",
-          "upper_convection_bake": "Konvekční pečení (horní)",
-          "upper_convection_roast": "Pečení horkým vzduchem (horní)",
-          "lower_bake": "Pečení (dolní)",
-          "lower_convection_bake": "Konvekční pečení (dolní)",
-          "steam_bake": "Pečení s párou",
-          "steam_roast": "Pečení masa s párou",
-          "upper_steam_bake": "Pečení s párou (horní)",
-          "descale": "Odvápnění",
-          "drain": "Vypuštění vody"
-        }
       }
     },
     "sensor": {
@@ -1597,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav trouby"
+        "name": "Stav trouby",
+        "state": {
+          "ready": "Připraveno",
+          "preheat": "Předehřev",
+          "cooking": "Vaření",
+          "finish": "Dokončeno"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signál"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} teplota"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} odhadované dokončení"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} doba provozu"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} stav trouby",
-        "state": {
-          "ready": "Připraveno",
-          "preheat": "Předehřev",
-          "cooking": "Vaření",
-          "finish": "Dokončeno"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} průběh v procentech"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} stav stroje",
-        "state": {
-          "idle": "Nečinný",
-          "active": "Aktivní",
-          "pause": "Pozastaveno"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} doba vaření"
       }
     },
     "switch": {
@@ -2091,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Režim dovolené"
       },
       "welcome_lighting": {
         "name": "Uvítací osvětlení"
@@ -2627,9 +2619,7 @@
         "ice_maker": "Výrobník ledu",
         "cubed_ice": "Kostky ledu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Ledové koule",
-        "oven_cavity_upper": "Horní prostor",
-        "oven_cavity_oven": "Trouba"
+        "whiskey_ice_ball": "Ledové koule"
       }
     }
   },

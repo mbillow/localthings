@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "우퍼 연결"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} 작동 중"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "블루투스 페어링"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} 정지"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} 조리 시작"
       }
     },
     "climate": {
@@ -306,6 +297,12 @@
       },
       "dispense_capacity": {
         "name": "출수량"
+      },
+      "freezer_setpoint": {
+        "name": "냉동실 설정값"
+      },
+      "fridge_setpoint": {
+        "name": "냉장실 설정값"
       },
       "good_sleep": {
         "name": "쾌면 시간"
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "우퍼 레벨"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} 조리 시간"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} 설정 온도"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "북쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "east_flap": {
+        "name": "동쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "south_flap": {
+        "name": "남쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "west_flap": {
+        "name": "서쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "웰컴 라이팅 감지 거리",
         "state": {
@@ -513,6 +532,32 @@
           "87": "헹굼단독"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "코스",
+        "state": {
+          "80": "섬세",
+          "83": "표준",
+          "84": "강력",
+          "86": "급속 60분",
+          "90": "내부 세척",
+          "0e": "AI 맞춤 세척",
+          "07": "애벌 세척",
+          "8d": "냄비 및 팬",
+          "8e": "플라스틱",
+          "8f": "젖병 살균",
+          "82": "자동",
+          "8a": "에코",
+          "a7": "강력",
+          "a8": "급속",
+          "8c": "저소음",
+          "88": "내부 세척",
+          "85": "섬세",
+          "0c": "급속",
+          "0d": "내부 세척",
+          "87": "헹굼단독",
+          "01": "애벌세척"
+        }
+      },
       "dispense_type": {
         "name": "출수 종류"
       },
@@ -574,6 +619,7 @@
           "1a": "울",
           "1b": "이불",
           "1c": "셔츠",
+          "43": "셔츠",
           "1d": "타월",
           "1e": "아웃도어",
           "1f": "혼합",
@@ -1252,37 +1298,6 @@
           "classic": "클래식",
           "custom": "사용자 정의"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} 조리 모드",
-        "state": {
-          "no_operation": "작동 안 함",
-          "bake": "베이크",
-          "broil": "브로일",
-          "convection": "컨벡션",
-          "convection_bake": "컨벡션 베이크",
-          "convection_broil": "컨벡션 브로일",
-          "frozen_pizza_plus": "냉동 피자+",
-          "slow_cook": "저온 조리",
-          "plate_warm": "접시 데우기",
-          "air_fry": "에어프라이",
-          "convection_roast": "컨벡션 로스트",
-          "keep_warm": "보온",
-          "bread_proof": "발효",
-          "dehydrate": "건조",
-          "self_clean": "자동 세척",
-          "air_fryer": "에어프라이",
-          "upper_broil": "브로일 (상단)",
-          "upper_convection_bake": "컨벡션 베이크 (상단)",
-          "upper_convection_roast": "컨벡션 로스트 (상단)",
-          "lower_bake": "베이크 (하단)",
-          "lower_convection_bake": "컨벡션 베이크 (하단)",
-          "steam_bake": "스팀 베이크",
-          "steam_roast": "스팀 로스트",
-          "upper_steam_bake": "스팀 베이크 (상단)",
-          "descale": "석회 제거",
-          "drain": "배수"
-        }
       }
     },
     "sensor": {
@@ -1597,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "조리실 상태"
+        "name": "조리실 상태",
+        "state": {
+          "ready": "준비됨",
+          "preheat": "예열",
+          "cooking": "조리 중",
+          "finish": "완료"
+        }
       },
       "power_level": {
         "name": "출력 단계"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi 신호"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} 온도"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} 예상 완료 시각"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} 운전 시간"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} 조리실 상태",
-        "state": {
-          "ready": "준비됨",
-          "preheat": "예열",
-          "cooking": "조리 중",
-          "finish": "완료"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} 진행률"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} 기기 상태",
-        "state": {
-          "idle": "대기",
-          "active": "작동 중",
-          "pause": "일시 정지"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} 조리 시간"
       }
     },
     "switch": {
@@ -2091,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "스톰 워시+"
+      },
+      "vacation_mode": {
+        "name": "휴가 모드"
       },
       "welcome_lighting": {
         "name": "웰컴 라이팅"
@@ -2627,9 +2619,7 @@
         "ice_maker": "제빙기",
         "cubed_ice": "각얼음",
         "ice_bites": "아이스 바이트",
-        "whiskey_ice_ball": "볼 얼음",
-        "oven_cavity_upper": "상부",
-        "oven_cavity_oven": "오븐"
+        "whiskey_ice_ball": "볼 얼음"
       }
     }
   },

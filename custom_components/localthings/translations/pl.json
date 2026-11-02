@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "Połączenie woofera"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} pracuje"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "Paruj Bluetooth"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} zatrzymaj"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} rozpocznij gotowanie"
       }
     },
     "climate": {
@@ -306,6 +297,12 @@
       },
       "dispense_capacity": {
         "name": "Ilość nalewania"
+      },
+      "freezer_setpoint": {
+        "name": "Zamrażarka — temperatura zadana"
+      },
+      "fridge_setpoint": {
+        "name": "Chłodziarka — temperatura zadana"
       },
       "good_sleep": {
         "name": "Good Sleep"
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "Poziom woofera"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} czas gotowania"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} temperatura zadana"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Żaluzja północna",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "east_flap": {
+        "name": "Żaluzja wschodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "south_flap": {
+        "name": "Żaluzja południowa",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "west_flap": {
+        "name": "Żaluzja zachodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Zasięg oświetlenia powitalnego",
         "state": {
@@ -513,6 +532,32 @@
           "87": "Tylko płukanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cykl",
+        "state": {
+          "80": "Delikatne",
+          "83": "Normalny",
+          "84": "Intensywny",
+          "86": "Express 60",
+          "90": "Samoczyszczenie",
+          "0e": "AI Wash",
+          "07": "Wstępne spłukiwanie",
+          "8d": "Garnki i patelnie",
+          "85": "Delikatne",
+          "0c": "Ekspresowy",
+          "0d": "Samoczyszczenie",
+          "8e": "Tworzywa sztuczne",
+          "8f": "Dziecięce",
+          "82": "Automatyczny",
+          "8a": "Eko",
+          "a7": "Intensywny",
+          "a8": "Ekspresowy",
+          "8c": "Wyjątkowo cichy",
+          "88": "Samoczyszczenie",
+          "87": "Tylko płukanie",
+          "01": "Płukanie wstępne"
+        }
+      },
       "dispense_type": {
         "name": "Rodzaj nalewania"
       },
@@ -576,6 +621,7 @@
           "1a": "Wełna",
           "1b": "Pościel",
           "1c": "Koszule",
+          "43": "Koszule",
           "1d": "Ręczniki",
           "1e": "Odzież wierzchnia",
           "1f": "Pranie mieszane",
@@ -1252,37 +1298,6 @@
           "classic": "Klasyczny",
           "custom": "Niestandardowy"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} tryb pieczenia",
-        "state": {
-          "no_operation": "Wyłączono",
-          "bake": "Pieczenie",
-          "broil": "Opiekanie",
-          "convection": "Termoobieg",
-          "convection_bake": "Pieczenie z termoobiegiem",
-          "convection_broil": "Opiekanie z termoobiegiem",
-          "frozen_pizza_plus": "Pizza mrożona+",
-          "slow_cook": "Wolne gotowanie",
-          "plate_warm": "Podgrzewanie talerzy",
-          "air_fry": "Smażenie na gorącym powietrzu",
-          "convection_roast": "Pieczenie mięs z termoobiegiem",
-          "keep_warm": "Utrzymywanie ciepła",
-          "bread_proof": "Wyrastanie ciasta",
-          "dehydrate": "Suszenie żywności",
-          "self_clean": "Samoczyszczenie",
-          "air_fryer": "Smażenie na gorącym powietrzu",
-          "upper_broil": "Opiekanie (górna)",
-          "upper_convection_bake": "Pieczenie z termoobiegiem (górna)",
-          "upper_convection_roast": "Pieczenie mięs z termoobiegiem (górna)",
-          "lower_bake": "Pieczenie (dolna)",
-          "lower_convection_bake": "Pieczenie z termoobiegiem (dolna)",
-          "steam_bake": "Pieczenie z parą",
-          "steam_roast": "Pieczenie mięs z parą",
-          "upper_steam_bake": "Pieczenie z parą (górna)",
-          "descale": "Odkamienianie",
-          "drain": "Opróżnianie wody"
-        }
       }
     },
     "sensor": {
@@ -1597,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stan komory"
+        "name": "Stan komory",
+        "state": {
+          "ready": "Gotowe",
+          "preheat": "Nagrzewanie wstępne",
+          "cooking": "Gotowanie",
+          "finish": "Zakończono"
+        }
       },
       "power_level": {
         "name": "Poziom mocy"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "Sygnał Wi-Fi"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} temperatura"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} szacowane zakończenie"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} czas operacji"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} stan komory",
-        "state": {
-          "ready": "Gotowe",
-          "preheat": "Nagrzewanie wstępne",
-          "cooking": "Gotowanie",
-          "finish": "Zakończono"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} postęp w procentach"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} stan urządzenia",
-        "state": {
-          "idle": "Bezczynny",
-          "active": "Aktywne",
-          "pause": "Wstrzymane"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} czas gotowania"
       }
     },
     "switch": {
@@ -2091,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Tryb wakacyjny"
       },
       "welcome_lighting": {
         "name": "Oświetlenie powitalne"
@@ -2627,9 +2619,7 @@
         "ice_maker": "Kostkarka do lodu",
         "cubed_ice": "Kostki lodu",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Kule lodu",
-        "oven_cavity_upper": "Górna komora",
-        "oven_cavity_oven": "Piekarnik"
+        "whiskey_ice_ball": "Kule lodu"
       }
     }
   },

@@ -802,3 +802,44 @@ class TestWallOvenStart:
 
         assert code == 0x85
         assert _FakeConnection.log == []
+
+
+class TestRecordType:
+    """The DONGLE_0281 fridge bridge (#698) names its type only in its
+    record's `type`; both read paths carry it as the subtype routing reads."""
+
+    FRIDGE: ClassVar[dict] = {
+        "Device": {
+            "Fridge": {"rapidFridge": "Off"},
+            "InformationLink": {"href": "/devices/0/information"},
+            "id": "0",
+            "type": "Refrigerator",
+        }
+    }
+    INFORMATION: ClassVar[dict] = {
+        "Information": {"description": "DONGLE_0281", "modelID": "DONGLE_0281|0"}
+    }
+
+    @pytest.fixture
+    def fridge(self, transport):
+        _FakeConnection.routes = {
+            "/devices/0": (200, self.FRIDGE),
+            "/devices/0/information": (200, self.INFORMATION),
+        }
+        transport._state_at(0).typed = False
+        return transport
+
+    def test_the_seed_names_the_subtype(self, fridge):
+        _, body = fridge.read(["device", "0"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert reps["/information/vs/0"][PREFIX + "deviceSubType"] == "Refrigerator"
+        assert reps["/refrigeration/vs/0"] == {PREFIX + "rapidFridge": "Off"}
+
+    def test_a_single_read_names_the_subtype(self, fridge):
+        fridge.read(["device", "0"], timeout=10.0)
+
+        code, rep = fridge.read(["information", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        assert rep[PREFIX + "deviceSubType"] == "Refrigerator"

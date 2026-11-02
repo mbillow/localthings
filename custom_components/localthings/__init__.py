@@ -314,16 +314,21 @@ def _drop_read_only_power_switches(
         ent_reg.async_remove(old.entity_id)
 
 
+_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing"})
+
+
 @callback
 def _drop_unsupported_sound_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Remove old Sound switches that no longer pass their descriptor's existence check."""
+    """Remove old switches that no longer pass their descriptor's existence
+    check: Sound, and the rapid switches older releases gave fridges whose
+    /refrigeration/vs/0 reports only the other field (#698)."""
     ent_reg = er.async_get(hass)
     for bound in coordinator.bound:
         if (
             not isinstance(bound.desc, SwitchDesc)
-            or bound.desc.key != "sound"
+            or bound.desc.key not in _GATED_SWITCH_KEYS
             or bound.desc.exists_fn is None
             or _is_included(bound, coordinator)
         ):
@@ -335,7 +340,7 @@ def _drop_unsupported_sound_switches(
         if old is None or old.config_entry_id != entry.entry_id:
             continue
         _LOGGER.info(
-            "Removing %s: the device reports no Sound option; "
+            "Removing %s: the device does not report it; "
             "update any automation or dashboard that referenced it",
             old.entity_id,
         )

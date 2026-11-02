@@ -1,5 +1,6 @@
 """Tests for samsung_appliance/registry/by_type."""
 
+import json
 from typing import cast
 
 import pytest
@@ -816,11 +817,17 @@ class TestOneUiVersionIsNotConsulted:
 
     def test_resolve_types_every_one_ui_reporting_fixture_without_it(self, all_device_fixtures):
         """The claim above, checked: for every dump that reports a
-        oneUiVersion, the model strings alone reach a registry."""
+        oneUiVersion, its model strings, or its own /oic/d type where the
+        fixture records one, reach a registry. The 4-way cassette (#704)
+        carries no board token of its own: `SAC` is shared with the EHS's
+        `SAC_EHS_MONO`."""
         from custom_components.localthings.registry.by_type import resolve
+        from tests.conftest import FIXTURES
 
         seen = 0
         for name, resources in all_device_fixtures.items():
+            raw = json.loads((FIXTURES / f"{name}_device.json").read_text())
+            device_types = tuple(raw.get("oic_device_types", ()))
             one_ui = (
                 resources.get("/otninformation/vs/0", {})
                 .get("swVersionInfo", {})
@@ -829,7 +836,7 @@ class TestOneUiVersionIsNotConsulted:
             if not one_ui:
                 continue
             seen += 1
-            assert resolve(resources) is not None, (
+            assert resolve(resources, device_types=device_types) is not None, (
                 f"{name} reports oneUiVersion {one_ui!r} and nothing else types it"
             )
         assert seen, "no fixture reports oneUiVersion -- has the corpus changed?"

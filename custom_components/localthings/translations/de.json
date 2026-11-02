@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "Woofer-Verbindung"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} Läuft"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "Bluetooth koppeln"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} Stopp"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} Garen starten"
       }
     },
     "climate": {
@@ -334,6 +325,12 @@
       "zone_target_temperature": {
         "name": "Zonen-Zieltemperatur"
       },
+      "freezer_setpoint": {
+        "name": "Gefrierschrank Sollwert"
+      },
+      "fridge_setpoint": {
+        "name": "Kühlschrank Sollwert"
+      },
       "good_sleep": {
         "name": "Guter Schlaf"
       },
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "Woofer-Pegel"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} Kochzeit"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} Sollwert"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamelle Nord",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "east_flap": {
+        "name": "Lamelle Ost",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "south_flap": {
+        "name": "Lamelle Süd",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "west_flap": {
+        "name": "Lamelle West",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Empfindlichkeit der Willkommensbeleuchtung",
         "state": {
@@ -513,6 +532,32 @@
           "87": "Nur Spülen"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programm",
+        "state": {
+          "80": "Schonprogramm",
+          "83": "Normal",
+          "84": "Intensiv",
+          "86": "Express 60",
+          "90": "Selbstreinigung",
+          "0e": "KI-Spülen",
+          "07": "Vorspülen",
+          "8d": "Töpfe und Pfannen",
+          "8e": "Plastik",
+          "8f": "Babypflege",
+          "82": "Automatik",
+          "8a": "Eco",
+          "a7": "Intensiv",
+          "a8": "Express",
+          "8c": "Extra leise",
+          "88": "Selbstreinigung",
+          "85": "Schonprogramm",
+          "0c": "Express",
+          "0d": "Selbstreinigung",
+          "87": "Nur Spülen",
+          "01": "Vorspülen"
+        }
+      },
       "dispense_type": {
         "name": "Ausgabetyp"
       },
@@ -573,6 +618,7 @@
           "1a": "Wolle",
           "1b": "Bettwäsche",
           "1c": "Hemden",
+          "43": "Hemden",
           "1d": "Handtücher",
           "1e": "Outdoor",
           "1f": "Mischwäsche",
@@ -1252,37 +1298,6 @@
           "classic": "Klassik",
           "custom": "Benutzerdefiniert"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} Kochmodus",
-        "state": {
-          "no_operation": "Kein Betrieb",
-          "bake": "Backen",
-          "broil": "Grillen",
-          "convection": "Umluft",
-          "convection_bake": "Umluftbacken",
-          "convection_broil": "Umluftgrillen",
-          "frozen_pizza_plus": "Tiefkühlpizza+",
-          "slow_cook": "Langsam garen",
-          "plate_warm": "Tellerwärmen",
-          "air_fry": "Heißluftfritteuse",
-          "convection_roast": "Umluftbraten",
-          "keep_warm": "Warmhalten",
-          "bread_proof": "Teig gehen lassen",
-          "dehydrate": "Dörren",
-          "self_clean": "Selbstreinigung",
-          "air_fryer": "Heißluftfritteuse",
-          "upper_broil": "Grillen (oben)",
-          "upper_convection_bake": "Umluftbacken (oben)",
-          "upper_convection_roast": "Umluftbraten (oben)",
-          "lower_bake": "Backen (unten)",
-          "lower_convection_bake": "Umluftbacken (unten)",
-          "steam_bake": "Dampfbacken",
-          "steam_roast": "Dampfbraten",
-          "upper_steam_bake": "Dampfbacken (oben)",
-          "descale": "Entkalken",
-          "drain": "Wasser ablassen"
-        }
       }
     },
     "sensor": {
@@ -1591,7 +1606,13 @@
         }
       },
       "cavity_state": {
-        "name": "Garraumzustand"
+        "name": "Garraumzustand",
+        "state": {
+          "ready": "Bereit",
+          "preheat": "Vorheizen",
+          "cooking": "Garen",
+          "finish": "Fertig"
+        }
       },
       "power_level": {
         "name": "Leistungsstufe"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "WLAN-Signal"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} Temperatur"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} Voraussichtliches Ende"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} Betriebszeit"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} Ofenzustand",
-        "state": {
-          "ready": "Bereit",
-          "preheat": "Vorheizen",
-          "cooking": "Garen",
-          "finish": "Fertig"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} Fortschritt in Prozent"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} Maschinenzustand",
-        "state": {
-          "idle": "Leerlauf",
-          "active": "Aktiv",
-          "pause": "Pausiert"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} Kochzeit"
       }
     },
     "switch": {
@@ -2079,6 +2068,9 @@
       },
       "sound": {
         "name": "Ton"
+      },
+      "vacation_mode": {
+        "name": "Urlaubsmodus"
       },
       "welcome_lighting": {
         "name": "Willkommensbeleuchtung"
@@ -2627,9 +2619,7 @@
         "ice_maker": "Eisbereiter",
         "cubed_ice": "Eiswürfel",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Eiskugeln",
-        "oven_cavity_upper": "Oberer Garraum",
-        "oven_cavity_oven": "Ofen"
+        "whiskey_ice_ball": "Eiskugeln"
       }
     }
   },

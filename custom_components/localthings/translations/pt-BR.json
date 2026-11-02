@@ -174,9 +174,6 @@
       },
       "woofer_connection": {
         "name": "Conexão do subwoofer"
-      },
-      "oven_cavity_cycle_active": {
-        "name": "{cavity} em funcionamento"
       }
     },
     "button": {
@@ -230,12 +227,6 @@
       },
       "pair_bluetooth": {
         "name": "Parear Bluetooth"
-      },
-      "oven_cavity_stop": {
-        "name": "{cavity} parar"
-      },
-      "oven_cavity_start_cooking": {
-        "name": "{cavity} iniciar cozimento"
       }
     },
     "climate": {
@@ -306,6 +297,12 @@
       },
       "dispense_capacity": {
         "name": "Volume de água a servir"
+      },
+      "freezer_setpoint": {
+        "name": "Congelador — temperatura de ajuste"
+      },
+      "fridge_setpoint": {
+        "name": "Refrigerador — temperatura de ajuste"
       },
       "good_sleep": {
         "name": "Bom sono"
@@ -390,15 +387,37 @@
       },
       "woofer_level": {
         "name": "Nível do subwoofer"
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} tempo de cozimento"
-      },
-      "oven_cavity_oven_setpoint": {
-        "name": "{cavity} temperatura de ajuste"
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Aleta norte",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "east_flap": {
+        "name": "Aleta leste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "south_flap": {
+        "name": "Aleta sul",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "west_flap": {
+        "name": "Aleta oeste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidade da iluminação de boas-vindas",
         "state": {
@@ -513,6 +532,32 @@
           "87": "Somente enxágue"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciclo",
+        "state": {
+          "80": "Delicado",
+          "83": "Normal",
+          "84": "Intensivo",
+          "86": "Expresso 60",
+          "90": "Autolimpeza",
+          "0e": "Lavagem com IA",
+          "07": "Pré-jato",
+          "8d": "Panelas e frigideiras",
+          "85": "Delicado",
+          "0c": "Expresso",
+          "0d": "Autolimpeza",
+          "8e": "Plástico",
+          "8f": "Baby Care",
+          "82": "Automático",
+          "8a": "Econômico",
+          "a7": "Intensivo",
+          "a8": "Expresso",
+          "8c": "Extra silencioso",
+          "88": "Autolimpeza",
+          "87": "Somente enxágue",
+          "01": "Pré-lavagem"
+        }
+      },
       "dispense_type": {
         "name": "Tipo de água a servir"
       },
@@ -576,6 +621,7 @@
           "1a": "Lã",
           "1b": "Roupas de cama",
           "1c": "Camisas",
+          "43": "Camisas",
           "1d": "Toalhas",
           "1e": "Atividades ao ar livre",
           "1f": "Carga mista",
@@ -1252,37 +1298,6 @@
           "classic": "Clássico",
           "custom": "Personalizado"
         }
-      },
-      "oven_cavity_oven_mode": {
-        "name": "{cavity} modo de cozimento",
-        "state": {
-          "no_operation": "Sem operação",
-          "bake": "Assar",
-          "broil": "Grelhar",
-          "convection": "Convecção",
-          "convection_bake": "Assar com convecção",
-          "convection_broil": "Grelhar com convecção",
-          "frozen_pizza_plus": "Pizza congelada+",
-          "slow_cook": "Cozimento lento",
-          "plate_warm": "Aquecer pratos",
-          "air_fry": "Fritar com ar",
-          "convection_roast": "Dourar com convecção",
-          "keep_warm": "Manter aquecido",
-          "bread_proof": "Fermentar pão",
-          "dehydrate": "Desidratar",
-          "self_clean": "Autolimpeza",
-          "air_fryer": "Fritar com ar",
-          "upper_broil": "Grelhar na cavidade superior",
-          "upper_convection_bake": "Assar com convecção na cavidade superior",
-          "upper_convection_roast": "Dourar com convecção na cavidade superior",
-          "lower_bake": "Assar na cavidade inferior",
-          "lower_convection_bake": "Assar com convecção na cavidade inferior",
-          "steam_bake": "Assar com vapor",
-          "steam_roast": "Dourar com vapor",
-          "upper_steam_bake": "Assar com vapor na cavidade superior",
-          "descale": "Descalcificar",
-          "drain": "Drenar"
-        }
       }
     },
     "sensor": {
@@ -1597,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado da cavidade"
+        "name": "Estado da cavidade",
+        "state": {
+          "ready": "Pronto",
+          "preheat": "Pré-aquecimento",
+          "cooking": "Cozinhando",
+          "finish": "Concluído"
+        }
       },
       "power_level": {
         "name": "Nível de potência"
@@ -1868,38 +1889,6 @@
       },
       "wifi_signal": {
         "name": "Sinal Wi-Fi"
-      },
-      "oven_cavity_current_temp_c": {
-        "name": "{cavity} temperatura"
-      },
-      "oven_cavity_finish_time": {
-        "name": "{cavity} conclusão estimada"
-      },
-      "oven_cavity_operation_time_minutes": {
-        "name": "{cavity} tempo de operação"
-      },
-      "oven_cavity_oven_state": {
-        "name": "{cavity} estado da cavidade",
-        "state": {
-          "ready": "Pronto",
-          "preheat": "Pré-aquecimento",
-          "cooking": "Cozinhando",
-          "finish": "Concluído"
-        }
-      },
-      "oven_cavity_progress_percentage": {
-        "name": "{cavity} porcentagem de progresso"
-      },
-      "oven_cavity_machine_state": {
-        "name": "{cavity} estado da máquina",
-        "state": {
-          "idle": "Ocioso",
-          "active": "Ativo",
-          "pause": "Pausado"
-        }
-      },
-      "oven_cavity_cook_time": {
-        "name": "{cavity} tempo de cozimento"
       }
     },
     "switch": {
@@ -2091,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Modo férias"
       },
       "welcome_lighting": {
         "name": "Iluminação de boas-vindas"
@@ -2627,9 +2619,7 @@
         "ice_maker": "Máquina de gelo",
         "cubed_ice": "Gelo em cubos",
         "ice_bites": "Ice Bites",
-        "whiskey_ice_ball": "Gelo em esferas",
-        "oven_cavity_upper": "Cavidade superior",
-        "oven_cavity_oven": "Forno"
+        "whiskey_ice_ball": "Gelo em esferas"
       }
     }
   },

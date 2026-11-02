@@ -1871,3 +1871,40 @@ COVERAGE = [
     for h in CLIMATE_CONSUMED_HREFS
     if h not in (HREF_TEMP_CURRENT, HREF_TEMPS_VS)
 ] + [Capability(href=h) for h in _AC_IGNORED]
+
+
+# A 4-way cassette's per-side vanes (#704, TP1X_DA-AC-SAC-01001): one field
+# per side, each taking a value from the shared supportedModes list
+# (Stop/Vertical). The reporter confirmed each moves on its own from the
+# SmartThings app. The write sends one side's field alone; unconfirmed on
+# hardware.
+_FLAP_SIDES = ("north", "east", "south", "west")
+
+
+def _flap_write(field):
+    def _write(p, rep, href=None):
+        if p not in (rep.get("x.com.samsung.da.supportedModes") or ()):
+            return None
+        return ["fourwayflaps", "vs", "0"], {field: p}
+
+    return _write
+
+
+FOUR_WAY_FLAPS = Capability(
+    href="/fourwayflaps/vs/0",
+    poll_tier="warm",
+    entities=tuple(
+        SelectDesc(
+            key=f"{side}_flap",
+            field=f"x.com.samsung.da.{side}Flap",
+            icon="mdi:arrow-oscillating",
+            options_field="x.com.samsung.da.supportedModes",
+            exists_fn=lambda rep, resources, side=side: (
+                f"x.com.samsung.da.{side}Flap" in rep
+                and bool(rep.get("x.com.samsung.da.supportedModes"))
+            ),
+            write_fn=_flap_write(f"x.com.samsung.da.{side}Flap"),
+        )
+        for side in _FLAP_SIDES
+    ),
+)

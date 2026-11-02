@@ -1057,6 +1057,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         but is informational only, not an identifier.
         """
         if subdevice.kind == "main":
+            if self.device_type_name == "oven" and any(
+                cook.cavity(self.discovery_canonical(child)) == "Lower" for child in self.subdevices
+            ):
+                # These controls also operate the whole oven without the divider.
+                return {
+                    **self.device_info,
+                    "name": f"{self.device_info.get('name') or 'Samsung Oven'} Main oven",
+                }
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1068,7 +1076,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         serial = display_serial(info.get("x.com.samsung.da.serialNum"))
         base_name = self.device_info.get("name") or "Samsung Appliance"
-        if cavity := _cavity_label(resources):
+        if cavity := _cavity_label(self.discovery_canonical(subdevice)):
             # A dual-cavity oven reports the same modelNum on both cavities
             # (issue #490), so the model label below names them identically
             # and the two are indistinguishable in HA. The cavity says which

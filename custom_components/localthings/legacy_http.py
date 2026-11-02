@@ -97,6 +97,10 @@ RESOURCES: tuple[Resource, ...] = (
         start_only=frozenset({"waterTemperature", "rinseCycles", "spinLevel"}),
     ),
     Resource(endpoint="oven", wrapper="Oven", href="/oven/vs/0"),
+    # The DONGLE_0281 fridge's rapid-cool flag (#698), where the CoAP fridges
+    # keep it. The endpoint follows the other wrappers' lowercase spelling;
+    # neither it nor a write is confirmed on hardware yet.
+    Resource(endpoint="fridge", wrapper="Fridge", href="/refrigeration/vs/0"),
     Resource(
         endpoint="temperatures",
         wrapper="Temperatures",
@@ -130,15 +134,20 @@ _LAUNDRY = (
     ),
 )
 
+# A Configuration that holds only the region, as on the ARTIK051 ACs'
+# /configuration/vs/0 (#563). On /remotectrl/vs/0 it would read as Remote
+# Control off and block every write.
+_REGION_CONFIGURATION = (
+    Resource(endpoint="configuration", wrapper="Configuration", href="/configuration/vs/0"),
+)
+
 # Resources a device type keeps somewhere else, keyed by the `type` its own
-# record reports. An air conditioner's Configuration is its region, the
-# ARTIK051 ACs' /configuration/vs/0 (#563).
+# record reports.
 _BY_TYPE: dict[str, tuple[Resource, ...]] = {
     "Washer": _LAUNDRY,
     "Dryer": _LAUNDRY,
-    "Air_Conditioner": (
-        Resource(endpoint="configuration", wrapper="Configuration", href="/configuration/vs/0"),
-    ),
+    "Air_Conditioner": _REGION_CONFIGURATION,
+    "Refrigerator": _REGION_CONFIGURATION,  # DONGLE_0281 (#698)
 }
 
 
@@ -196,10 +205,24 @@ def cavity_role(record: Mapping[str, Any]) -> str | None:
     return None
 
 
+def is_disconnected(record: Mapping[str, Any]) -> bool:
+    """Whether a listed record says it is not connected. The NW9300MD's
+    `/devices` lists its lower cavity with the divider out too, and only that
+    record's own `connected` turns false (#681)."""
+    connected = record.get("connected")
+    if isinstance(connected, str):
+        return connected.strip().lower() in ("false", "off")
+    return connected is False
+
+
 def divider_in(devices: list) -> bool:
-    """Whether `/devices` lists a lower cavity, which it does only while the
-    divider is in."""
-    return any(isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER for d in devices)
+    """Whether `/devices` lists a connected lower cavity: the NV51K777OS
+    lists one only while the divider is in (#572), the NW9300MD lists it
+    disconnected otherwise (#681)."""
+    return any(
+        isinstance(d, Mapping) and cavity_role(d) == CAVITY_LOWER and not is_disconnected(d)
+        for d in devices
+    )
 
 
 def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None) -> dict[str, Any]:
@@ -227,6 +250,26 @@ def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None)
         if isinstance(name, str) and name not in modes:
             modes.append(name)
     return {**bodies, "Mode": {**mode, "supportedModes": [",".join(modes)]}}
+
+
+# Record types that stand in for a missing `deviceSubType`. The DONGLE_0281
+# fridge bridge reports only `type: Refrigerator` (#698). Other types stay
+# out: a hood slot's record says `Cooktop` (#676), and as a subtype that
+# would outrank the board token that types it.
+_RECORD_TYPE_AS_SUBTYPE = frozenset({"Refrigerator"})
+
+
+def with_record_type(bodies: Mapping[str, Any], device_type: str | None) -> dict[str, Any]:
+    """`bodies` with the record's own `type` as its Information's
+    `deviceSubType`, which registry routing reads, when it names none."""
+    information = bodies.get("Information")
+    if (
+        device_type not in _RECORD_TYPE_AS_SUBTYPE
+        or not isinstance(information, Mapping)
+        or information.get("deviceSubType")
+    ):
+        return dict(bodies)
+    return {**bodies, "Information": {**information, "deviceSubType": device_type}}
 
 
 def unmapped_wrappers(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> list[str]:
@@ -363,9 +406,15 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     if not isinstance(info, Mapping):
         return {}
     model_id = info.get("modelID")
-    # NV51K7770S power writes do not operate either cavity (#664, #572).
-    # The same board also serves CombiOven models whose behavior is unverified.
-    if is_lcd_ov_wall_16k(model_id) and info.get("deviceSubType") == "WallOven":
+    # Power writes are accepted and do nothing on this board: on both of the
+    # NV51K7770S's cavities (#664, #572) and on the NW9300MD combo's oven
+    # (#681). Every NW9300MD slot reports CombiOven; its microwave's power
+    # is untested and keeps its switch.
+    subtype = info.get("deviceSubType")
+    combo_oven = subtype == "CombiOven" and not any(
+        m.startswith("MicroWave") for m in _supported_modes(bodies)
+    )
+    if is_lcd_ov_wall_16k(model_id) and (subtype == "WallOven" or combo_oven):
         return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
     if _family_key(family) not in _SETINFO_FAMILIES:
         return {}
