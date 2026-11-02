@@ -36,6 +36,30 @@ def test_microwave_fixture_resolves_and_has_no_unbound_hrefs():
     assert unbound == []
 
 
+def test_ocf_cook_temperatures_bind_beside_the_vendor_array():
+    """#709: the LCD_R18_SCO board reports /temperature/{current,desired}/
+    cook/0 with the same reading as /temperatures/vs/0; they bind without
+    adding or changing an entity."""
+    from custom_components.localthings.registry.adapter import flatten
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    reg = resolve(resources)
+    assert reg is not None
+    before = flatten(discover(resources, reg.capabilities), resources)
+    resources = {
+        **resources,
+        "/temperature/current/cook/0": {"temperature": 0.0},
+        "/temperature/desired/cook/0": {"temperature": 0.0},
+    }
+
+    unbound: list[str] = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+
+    assert unbound == []
+    assert flatten(bound, resources) == before
+
+
 def test_microwave_hood_fan_fixture_resolves_and_has_no_unbound_hrefs():
     """Issues #137/#142: `/hood/fanspeed/vs/0` (the combi unit's built-in
     vent fan) was previously unbound on this family."""

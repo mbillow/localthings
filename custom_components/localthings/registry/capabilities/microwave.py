@@ -354,6 +354,13 @@ MICROWAVE_SETPOINT = Capability(
     ),
 )
 
+# OCF twins of MICROWAVE_SETPOINT's vendor array, which the LCD_R18_SCO board
+# (NQ5B6753CAA, #709) reports alongside it with the same reading. Bound as
+# duplicates so they leave unbound_hrefs; the vendor array carries the unit
+# and increment and is the write path.
+MICROWAVE_TEMP_CURRENT_OCF_DUPLICATE = Capability(href="/temperature/current/cook/0")
+MICROWAVE_TEMP_DESIRED_OCF_DUPLICATE = Capability(href="/temperature/desired/cook/0")
+
 MICROWAVE_MODE = Capability(
     href="/mode/vs/0",
     poll_tier="warm",

@@ -46,6 +46,8 @@ REGISTRY = DeviceRegistry(
                 *common.POWER,
                 microwave.MICROWAVE_CAVITY,
                 microwave.MICROWAVE_SETPOINT,
+                microwave.MICROWAVE_TEMP_CURRENT_OCF_DUPLICATE,
+                microwave.MICROWAVE_TEMP_DESIRED_OCF_DUPLICATE,
                 microwave.MICROWAVE_MODE,
                 oven.OVEN_OPERATIONAL_STATE,
                 oven.OVEN_DOOR,
