@@ -1584,7 +1584,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado da cavidade"
+        "name": "Estado da cavidade",
+        "state": {
+          "ready": "Pronto",
+          "preheat": "Pré-aquecimento",
+          "cooking": "Cozinhando",
+          "finish": "Concluído"
+        }
       },
       "power_level": {
         "name": "Nível de potência"

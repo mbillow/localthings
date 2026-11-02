@@ -1578,7 +1578,13 @@
         }
       },
       "cavity_state": {
-        "name": "Garraumzustand"
+        "name": "Garraumzustand",
+        "state": {
+          "ready": "Bereit",
+          "preheat": "Vorheizen",
+          "cooking": "Garen",
+          "finish": "Fertig"
+        }
       },
       "power_level": {
         "name": "Leistungsstufe"

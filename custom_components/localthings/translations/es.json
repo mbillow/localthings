@@ -1961,7 +1961,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado de la cavidad"
+        "name": "Estado de la cavidad",
+        "state": {
+          "ready": "Listo",
+          "preheat": "Precalentamiento",
+          "cooking": "Cocción",
+          "finish": "Finalizado"
+        }
       },
       "power_level": {
         "name": "Nivel de potencia"

@@ -1584,7 +1584,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stato camera di cottura"
+        "name": "Stato camera di cottura",
+        "state": {
+          "ready": "Pronto",
+          "preheat": "Preriscaldamento",
+          "cooking": "Cottura",
+          "finish": "Completato"
+        }
       },
       "power_level": {
         "name": "Livello potenza"

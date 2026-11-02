@@ -1584,7 +1584,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav vnútorného priestoru"
+        "name": "Stav vnútorného priestoru",
+        "state": {
+          "ready": "Pripravené",
+          "preheat": "Predhrievanie",
+          "cooking": "Varenie",
+          "finish": "Dokončené"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"

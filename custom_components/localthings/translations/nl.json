@@ -1584,7 +1584,13 @@
         }
       },
       "cavity_state": {
-        "name": "Status ovenruimte"
+        "name": "Status ovenruimte",
+        "state": {
+          "ready": "Gereed",
+          "preheat": "Voorverwarmen",
+          "cooking": "Bereiden",
+          "finish": "Voltooid"
+        }
       },
       "power_level": {
         "name": "Vermogensniveau"

@@ -313,7 +313,15 @@ MICROWAVE_CAVITY = Capability(
     href="/oven/vs/0",
     poll_tier="hot",
     entities=(
-        SensorDesc(key="cavity_state", field="x.com.samsung.da.state"),
+        # The oven's lower-case enum (OVEN_CAVITY), so one template covers
+        # both appliances (#703).
+        SensorDesc(
+            key="cavity_state",
+            field="x.com.samsung.da.state",
+            device_class="enum",
+            options=("ready", "preheat", "cooking", "finish"),
+            value_fn=lambda v: v.lower() if isinstance(v, str) else v,
+        ),
         SensorDesc(
             key="power_level",
             field="x.com.samsung.da.powerLevel",

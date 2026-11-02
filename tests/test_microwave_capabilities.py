@@ -60,6 +60,20 @@ def test_ocf_cook_temperatures_bind_beside_the_vendor_array():
     assert flatten(bound, resources) == before
 
 
+def test_cavity_state_is_the_ovens_lower_case_enum():
+    """#703: the oven's cavity state has been a lower-case enum since
+    v0.35.0; the microwave's now reads the same."""
+    from custom_components.localthings.registry.entities import SensorDesc
+
+    desc = next(d for d in microwave.MICROWAVE_CAVITY.entities if d.key == "cavity_state")
+    oven_desc = next(d for d in oven.OVEN_CAVITY.entities if d.key == "oven_state")
+    assert isinstance(desc, SensorDesc) and isinstance(oven_desc, SensorDesc)
+
+    assert desc.value_fn("Ready") == "ready"
+    assert desc.value_fn("Finish") == "finish"
+    assert (desc.device_class, desc.options) == (oven_desc.device_class, oven_desc.options)
+
+
 def test_microwave_hood_fan_fixture_resolves_and_has_no_unbound_hrefs():
     """Issues #137/#142: `/hood/fanspeed/vs/0` (the combi unit's built-in
     vent fan) was previously unbound on this family."""

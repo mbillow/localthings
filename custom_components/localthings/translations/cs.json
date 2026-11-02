@@ -1584,7 +1584,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav trouby"
+        "name": "Stav trouby",
+        "state": {
+          "ready": "Připraveno",
+          "preheat": "Předehřev",
+          "cooking": "Vaření",
+          "finish": "Dokončeno"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"
