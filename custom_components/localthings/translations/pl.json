@@ -1298,6 +1298,13 @@
           "classic": "Klasyczny",
           "custom": "Niestandardowy"
         }
+      },
+      "rear_speaker_position": {
+        "name": "Ustawienie tylnych głośników",
+        "state": {
+          "front": "Z przodu",
+          "rear": "Z tyłu"
+        }
       }
     },
     "sensor": {

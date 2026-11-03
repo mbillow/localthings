@@ -8,6 +8,7 @@ wide and top levels, so those are untested; they send the same writes as
 their checked neighbours.
 """
 
+from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -50,6 +51,28 @@ def _int_on(p) -> int:
 
 def _on_off(p) -> str:
     return "on" if p == "On" else "off"
+
+
+def _has_av_setting(resources: dict, field: str) -> bool:
+    value = resources.get("/sec/networkaudio/av/soundsetting", {}).get(field)
+    return type(value) is int and value in (0, 1)
+
+
+def _legacy_av_setting(rep: dict, resources: dict, legacy_field: str, field: str) -> bool:
+    return not _has_av_setting(resources, field) and (
+        not rep or is_stub_rep(rep) or legacy_field in rep
+    )
+
+
+def _has_rear_position(rep: dict, resources: dict) -> bool:
+    current = rep.get("x.com.samsung.networkaudio.currentRearPosition")
+    choices = rep.get("x.com.samsung.networkaudio.rearPositionList")
+    return (
+        isinstance(current, str)
+        and current.lower() != "none"
+        and isinstance(choices, list)
+        and current in choices
+    )
 
 
 # ------------------------------------------------------------------
@@ -323,6 +346,12 @@ ACTIVE_VOICE_AMPLIFIER = Capability(
         SwitchDesc(
             key="active_voice_amplifier",
             field="x.com.samsung.networkaudio.activeVoiceAmplifier",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep,
+                resources,
+                "x.com.samsung.networkaudio.activeVoiceAmplifier",
+                "activevoiceamplifier",
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.activeVoiceAmplifier", _int_on),
@@ -337,9 +366,51 @@ SPACEFIT_SOUND = Capability(
         SwitchDesc(
             key="spacefit_sound",
             field="x.com.samsung.networkaudio.spacefitSound",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep, resources, "x.com.samsung.networkaudio.spacefitSound", "spacefitsound"
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.spacefitSound", _int_on),
+        ),
+    ),
+)
+
+AV_SOUND_SETTING = Capability(
+    href="/sec/networkaudio/av/soundsetting",
+    poll_tier="warm",
+    # HW-Q990H confirms these unprefixed fields; prefer them to legacy aliases.
+    entities=(
+        SwitchDesc(
+            key="active_voice_amplifier",
+            field="activevoiceamplifier",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "activevoiceamplifier"),
+            write_fn=_write("activevoiceamplifier", _int_on),
+        ),
+        SwitchDesc(
+            key="spacefit_sound",
+            field="spacefitsound",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "spacefitsound"),
+            write_fn=_write("spacefitsound", _int_on),
+        ),
+    ),
+)
+
+REAR_SPEAKER_POSITION = Capability(
+    href="/sec/networkaudio/surroundspeaker",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="rear_speaker_position",
+            field="x.com.samsung.networkaudio.currentRearPosition",
+            options_field="x.com.samsung.networkaudio.rearPositionList",
+            entity_category="config",
+            exists_fn=_has_rear_position,
+            write_fn=_write("x.com.samsung.networkaudio.currentRearPosition", str),
         ),
     ),
 )
@@ -571,8 +642,6 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/lastConnections"),
     # Static "has a mic" flag.
     Capability(href="/sec/networkaudio/mic"),
-    # Rear-speaker steering (isSupport says whether the bar has it).
-    Capability(href="/sec/networkaudio/surroundspeaker"),
     # Static "has a VFD" flag.
     Capability(href="/sec/networkaudio/vfd"),
     # Relative volume steps, command-only.

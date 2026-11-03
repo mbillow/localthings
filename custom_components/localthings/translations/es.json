@@ -1678,6 +1678,13 @@
           "classic": "Clásica",
           "custom": "Personalizado"
         }
+      },
+      "rear_speaker_position": {
+        "name": "Ubicación de los altavoces traseros",
+        "state": {
+          "front": "Delante",
+          "rear": "Detrás"
+        }
       }
     },
     "sensor": {

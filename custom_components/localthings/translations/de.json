@@ -1298,6 +1298,13 @@
           "classic": "Klassik",
           "custom": "Benutzerdefiniert"
         }
+      },
+      "rear_speaker_position": {
+        "name": "Position der Rücklautsprecher",
+        "state": {
+          "front": "Vorne",
+          "rear": "Hinten"
+        }
       }
     },
     "sensor": {

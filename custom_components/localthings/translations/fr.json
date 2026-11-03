@@ -1298,6 +1298,13 @@
           "classic": "Classique",
           "custom": "Personnalisé"
         }
+      },
+      "rear_speaker_position": {
+        "name": "Placement des enceintes arrière",
+        "state": {
+          "front": "Avant",
+          "rear": "Arrière"
+        }
       }
     },
     "sensor": {

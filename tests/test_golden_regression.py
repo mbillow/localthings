@@ -2142,3 +2142,15 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_s61b():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q990h():
+    """A reconstructed Q990H contract fixture adds three settings, not a new registry."""
+    from tests.conftest import _load_device
+
+    name = "soundbar_q990h"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"])
