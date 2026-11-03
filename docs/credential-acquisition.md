@@ -154,6 +154,21 @@ record the tested versions, backups, results, and limits. Import the recovered
 identity unchanged. An identity containing a zero byte needs `smartthings-local`
 0.1.23 or newer, which LocalThings requires.
 
+## HW-Q990H soundbar with a local iPhone backup
+
+An existing soundbar credential was recovered from SmartThings' legacy OCF
+store in a finished, unencrypted local backup of the iPhone that originally
+paired an HW-Q990H. A fresh PSK session authenticated the expected `/oic/d`
+identity and read protected soundbar settings. No removal, re-registration,
+factory reset, Keychain access or OCF security write was needed in this test.
+
+The [iPhone soundbar recovery notes](ios-soundbar-credentials.md) describe the
+backup prerequisites, exact-device matching, private output, LocalThings' hex
+key format, and verification limits. The external helper and the working
+soundbar implementation are separate from LocalThings. Soundbar discovery and
+settings support landed in [#606](https://github.com/mbillow/localthings/pull/606);
+this recovery test does not establish which controls work on every model.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)
