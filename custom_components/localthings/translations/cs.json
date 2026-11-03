@@ -1298,6 +1298,13 @@
           "classic": "Klasika",
           "custom": "Vlastní"
         }
+      },
+      "rear_speaker_position": {
+        "name": "Umístění zadních reproduktorů",
+        "state": {
+          "front": "Vpředu",
+          "rear": "Vzadu"
+        }
       }
     },
     "sensor": {
