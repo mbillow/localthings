@@ -131,11 +131,9 @@ async def test_opt_in_is_generic_and_reaches_dispatch(power_coordinator, opt_in)
     )
 
 
-@pytest.mark.parametrize(
-    "model,expected", [("ARTIK051_PRAC_20K|board", True), ("TP6X_RAC_16K", False), ("", False)]
-)
+@pytest.mark.parametrize("model", ["ARTIK051_PRAC_20K|board", "TP6X_RAC_16K", ""])
 @pytest.mark.parametrize("identity_href", ["/information/vs/0", "/oic/p"])
-def test_only_artik051_ac_climate_opts_in(model, expected, identity_href):
+def test_all_ac_climates_opt_in_independently_of_model(model, identity_href):
     resources = {
         "/mode/vs/0": {"x.com.samsung.da.modes": ["Cool"]},
         identity_href: {
@@ -145,5 +143,16 @@ def test_only_artik051_ac_climate_opts_in(model, expected, identity_href):
     bound = discover(resources, REGISTRY.capabilities)
     climates = [b for b in bound if isinstance(b.desc, ClimateDesc)]
     assert len(climates) == 1
-    assert climates[0].desc.confirm_on_refusal is expected
+    assert climates[0].desc.confirm_on_refusal is True
     assert all(not b.desc.confirm_on_refusal for b in bound if not isinstance(b.desc, ClimateDesc))
+
+
+async def test_same_state_refusal_is_a_confirmed_no_op(power_coordinator):
+    coordinator, session = power_coordinator
+    coordinator._observe.apply("/power/vs/0", {POWER: "On"}, source="poll")
+    session.read.return_value = (0x45, {POWER: "On"})
+    await coordinator._async_put(
+        ["power", "vs", "0"], {POWER: "On"}, "/power/vs/0", confirm_on_refusal=True
+    )
+    session.read.assert_called_once()
+    session.write.assert_called_once()

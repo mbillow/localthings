@@ -223,6 +223,9 @@ def _coap_code_str(code: int) -> str:
     return f"{code >> 5}.{code & 0x1F:02d}"
 
 
+_COAP_BAD_REQUEST = 0x80
+
+
 def _coap_accepted(code: int) -> bool:
     """True for a 2.xx class CoAP response."""
     return (code >> 5) == 2
@@ -3016,7 +3019,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # An opted-in control may apply a write while replying 4.00 (#714).
         # A failed GET cannot overturn an explicit refusal.
         if (
-            code == 0x80
+            code == _COAP_BAD_REQUEST
             and confirm_on_refusal
             and await self._took_effect(path_segs, body, strict=True)
         ):

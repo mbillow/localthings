@@ -67,7 +67,8 @@ class SamsungEntityDescription:
     # coordinator then leaves the refusal, if any, to the appliance.
     needs_remote_control: bool = True
     # Some boards apply a write but answer 4.00; require a fresh matching GET
-    # before accepting that response. Raw writes retain the device's response.
+    # before accepting it, including a refusal of a value already set (a no-op).
+    # Raw writes retain the device's response.
     confirm_on_refusal: bool = False
 
 
