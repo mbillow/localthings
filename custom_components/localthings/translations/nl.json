@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Beeldmodus"
+      },
+      "rear_speaker_position": {
+        "name": "Plaatsing achterluidsprekers",
+        "state": {
+          "front": "Voor",
+          "rear": "Achter"
+        }
       }
     },
     "sensor": {

@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "화면 모드"
+      },
+      "rear_speaker_position": {
+        "name": "후면 스피커 배치",
+        "state": {
+          "front": "전면",
+          "rear": "후면"
+        }
       }
     },
     "sensor": {

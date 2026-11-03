@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Režim obrazu"
+      },
+      "rear_speaker_position": {
+        "name": "Umiestnenie zadných reproduktorov",
+        "state": {
+          "front": "Vpredu",
+          "rear": "Vzadu"
+        }
       }
     },
     "sensor": {

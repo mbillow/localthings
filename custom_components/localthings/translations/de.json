@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Bildmodus"
+      },
+      "rear_speaker_position": {
+        "name": "Position der Rücklautsprecher",
+        "state": {
+          "front": "Vorne",
+          "rear": "Hinten"
+        }
       }
     },
     "sensor": {

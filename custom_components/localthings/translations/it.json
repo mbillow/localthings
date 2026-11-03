@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Modalità immagine"
+      },
+      "rear_speaker_position": {
+        "name": "Posizione degli altoparlanti posteriori",
+        "state": {
+          "front": "Davanti",
+          "rear": "Dietro"
+        }
       }
     },
     "sensor": {

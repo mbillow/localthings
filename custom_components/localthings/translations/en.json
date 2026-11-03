@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Picture mode"
+      },
+      "rear_speaker_position": {
+        "name": "Rear speaker placement",
+        "state": {
+          "front": "Front",
+          "rear": "Rear"
+        }
       }
     },
     "sensor": {
