@@ -167,8 +167,10 @@ _LOWER_PREFIX = "Lower"
 CAVITY_UPPER = "upper"
 CAVITY_LOWER = "lower"
 
-# The NV51K7770S repeats its upper list, so use its panel-confirmed lower
-# modes (#572); the NW9300MD also reports LowerHealthycook1-4 itself (#681).
+# The NV51K7770S (#572) repeats its upper list: LowerConvectionBake was
+# captured, while Bake and Convection Roast are the reporter's reading
+# of the panel. Healthycook1-4 are inferred from its UpperHealthycook1-4
+# and the NW9300MD's own lower list (#681).
 _ASSUMED_LOWER_MODES = (
     "LowerBake",
     "LowerConvectionBake",
