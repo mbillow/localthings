@@ -61,11 +61,17 @@
       "door_open": {
         "name": "Porta"
       },
-      "freezer_door_open": {
-        "name": "Porta do congelador"
+      "door_1_open": {
+        "name": "Porta 1"
       },
-      "fridge_door_open": {
-        "name": "Porta do refrigerador"
+      "door_2_open": {
+        "name": "Porta 2"
+      },
+      "door_3_open": {
+        "name": "Porta 3"
+      },
+      "door_4_open": {
+        "name": "Porta 4"
       },
       "filter_blockage": {
         "name": "Obstrução do filtro"

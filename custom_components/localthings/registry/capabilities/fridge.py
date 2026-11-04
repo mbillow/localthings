@@ -1242,40 +1242,38 @@ def _reporting_doors(items):
     return [i for i in items or [] if i.get("x.com.samsung.da.openState") is not None]
 
 
-def _door_item(items, keyword, fallback_id):
-    """One compartment's door item. Its own description names it where the
-    bridge sends one (#698); the DONGLE_0260 bridge sends only ids, which
-    follow the Samsung convention "0" = Freezer, "1" = Fridge (#728)."""
-    for item in items or []:
-        if (item.get("x.com.samsung.da.description") or "").lower() == keyword:
-            return item
-    for item in items or []:
-        if not item.get("x.com.samsung.da.description") and (
-            item.get("x.com.samsung.da.id") == fallback_id
-        ):
-            return item
-    return {}
+def _nth_reporting_door(items, n):
+    """The n-th (1-based) door item that reports a state, in the bridge's
+    order. Doors are numbered rather than named: an id-only bridge such as
+    DONGLE_0260 (#728) doesn't say which compartment a door belongs to, so
+    users rename Door 1 / Door 2 to suit their fridge."""
+    doors = _reporting_doors(items)
+    return doors[n - 1] if len(doors) >= n else {}
 
 
-def _compartment_door(key, keyword, fallback_id):
-    """A per-compartment door, only where two or more doors report: on a
-    single-door fridge the aggregate door_open is the same switch."""
+# Enough for the four-compartment models; positions beyond what the fridge
+# reports simply don't bind.
+MAX_NUMBERED_DOORS = 4
+
+
+def _numbered_door(n):
+    """Door n, only where two or more doors report: on a single-door fridge
+    the aggregate door_open is the same switch. A not-yet-fetched stub binds
+    the first two only, so it can't mint phantom Door 3 / Door 4 entities."""
 
     def _exists(rep, resources):
-        items = rep.get("x.com.samsung.da.items")
-        return is_stub_rep(rep) or (
-            len(_reporting_doors(items)) >= 2
-            and _door_item(items, keyword, fallback_id).get("x.com.samsung.da.openState")
-            is not None
-        )
+        if is_stub_rep(rep):
+            return n <= 2
+        doors = _reporting_doors(rep.get("x.com.samsung.da.items"))
+        return len(doors) >= 2 and len(doors) >= n
 
     return BinarySensorDesc(
-        key=key,
+        key=f"door_{n}_open",
         field="x.com.samsung.da.items",
         device_class="door",
         exists_fn=_exists,
         value_fn=lambda items: (
-            _door_item(items, keyword, fallback_id).get("x.com.samsung.da.openState") == "Open"
+            _nth_reporting_door(items, n).get("x.com.samsung.da.openState") == "Open"
         ),
     )
 
@@ -1293,8 +1291,7 @@ DOORS_FALLBACK = Capability(
                 i.get("x.com.samsung.da.openState") == "Open" for i in (items or [])
             ),
         ),
-        _compartment_door("fridge_door_open", "fridge", "1"),
-        _compartment_door("freezer_door_open", "freezer", "0"),
+        *(_numbered_door(n) for n in range(1, MAX_NUMBERED_DOORS + 1)),
     ),
 )
 

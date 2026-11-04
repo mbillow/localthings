@@ -61,11 +61,17 @@
       "door_open": {
         "name": "Drzwi"
       },
-      "freezer_door_open": {
-        "name": "Drzwi zamrażarki"
+      "door_1_open": {
+        "name": "Drzwi 1"
       },
-      "fridge_door_open": {
-        "name": "Drzwi chłodziarki"
+      "door_2_open": {
+        "name": "Drzwi 2"
+      },
+      "door_3_open": {
+        "name": "Drzwi 3"
+      },
+      "door_4_open": {
+        "name": "Drzwi 4"
       },
       "filter_blockage": {
         "name": "Zatkany filtr"

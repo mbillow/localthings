@@ -61,11 +61,17 @@
       "door_open": {
         "name": "문"
       },
-      "freezer_door_open": {
-        "name": "냉동실 문"
+      "door_1_open": {
+        "name": "문 1"
       },
-      "fridge_door_open": {
-        "name": "냉장실 문"
+      "door_2_open": {
+        "name": "문 2"
+      },
+      "door_3_open": {
+        "name": "문 3"
+      },
+      "door_4_open": {
+        "name": "문 4"
       },
       "filter_blockage": {
         "name": "필터 막힘"
