@@ -33,11 +33,14 @@ from typing import Any
 from .legacy_http import (
     CAVITY_LOWER,
     CAVITY_UPPER,
+    CLOCK_ENDPOINT,
+    CLOCK_HREF,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
     cavity_role,
+    clock_write,
     course_table,
     divider_in,
     http_status_to_coap,
@@ -140,6 +143,9 @@ class _ApplianceState:
     # On device 0's state, for the whole appliance: whether the last
     # `/devices` listing showed a lower cavity, None while unknown.
     divided: bool | None = None
+    # On device 0's state: whether it serves CLOCK_ENDPOINT, None until a
+    # probe has had an answer.
+    clock: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -148,6 +154,9 @@ _STATE: dict[tuple[str, int, int], _ApplianceState] = {}
 
 def _device_path(index: int) -> str:
     return f"/devices/{index}"
+
+
+_CLOCK_PATH = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
 
 
 class LegacyHttpTransport:
@@ -335,7 +344,25 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
+            if CLOCK_HREF not in resources and self._has_clock(timeout):
+                resources[CLOCK_HREF] = {}
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
+
+    def _has_clock(self, timeout: float) -> bool:
+        """Whether device 0 serves CLOCK_ENDPOINT, probed once: a 200 says
+        it does and any 4xx says it doesn't. No answer, or a 5xx, is asked
+        again at the next sweep."""
+        state = self._state_at(0)
+        if state.clock is not None:
+            return state.clock
+        try:
+            status, _ = self._request("GET", _CLOCK_PATH, timeout=timeout)
+        except (OSError, http.client.HTTPException) as err:
+            _LOGGER.debug("%s: %s failed: %s", self._host, _CLOCK_PATH, err)
+            return False
+        if status == 200 or 400 <= status < 500:
+            state.clock = status == 200
+        return status == 200
 
     def _sibling_record(
         self, index: int, deadline: float
@@ -391,6 +418,13 @@ class LegacyHttpTransport:
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
         deadline = time.monotonic() + timeout
+        clock_body = clock_write(href, body) if isinstance(body, dict) else None
+        if clock_body is not None and not index and self._has_clock(timeout):
+            # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
+            status, response = self._request(
+                "PUT", _CLOCK_PATH, body=clock_body, timeout=_remaining(deadline)
+            )
+            return http_status_to_coap(status), response
         refused = self._learn_type(index, timeout)
         if refused is not None:
             _LOGGER.warning("%s: device %d's type is unknown; write refused", self._host, index)
