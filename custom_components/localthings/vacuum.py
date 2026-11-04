@@ -83,10 +83,16 @@ class LocalThingsVacuum(LocalThingsEntity, StateVacuumEntity):
         return rv.fan_speed_list(self._rep)
 
     async def _send(self, group: str, value: str) -> None:
+        if not self._supports(group, value):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="vacuum_unsupported_command",
+                translation_placeholders={"command": f"{group}_{value}"},
+            )
         await self.coordinator.async_send_command(self._bound, (group, value))
 
     async def async_start(self) -> None:
-        # From a pause, resume the run rather than start a new Auto one.
+        # From a pause, resume the run. A robot that can't resume restarts it.
         if self.activity == VacuumActivity.PAUSED and self._supports(rv.CONTROL, "Cleaning"):
             await self._send(rv.CONTROL, "Cleaning")
             return
@@ -121,12 +127,11 @@ class LocalThingsVacuum(LocalThingsEntity, StateVacuumEntity):
         **kwargs: Any,
     ) -> None:
         """Send any token the robot lists in supportedModes, e.g.
-        `Cleaning_Repeat` or `Control_Point`."""
-        group, sep, value = command.rpartition("_")
-        if not sep or not self._supports(group, value):
+        `Cleaning_Repeat` or `Control_Point`. Tokens take no parameters."""
+        if params:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
-                translation_key="vacuum_unsupported_command",
-                translation_placeholders={"command": command},
+                translation_key="vacuum_command_params",
             )
+        group, _, value = command.rpartition("_")
         await self._send(group, value)

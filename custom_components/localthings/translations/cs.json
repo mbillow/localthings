@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Tento robotický vysavač neuvádí {command} mezi podporovanými příkazy."
+    },
+    "vacuum_command_params": {
+      "message": "Příkazy robotického vysavače nemají žádné parametry."
     }
   },
   "selector": {

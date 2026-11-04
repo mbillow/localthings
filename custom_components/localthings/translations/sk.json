@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Tento robotický vysávač neuvádza {command} medzi podporovanými príkazmi."
+    },
+    "vacuum_command_params": {
+      "message": "Príkazy robotického vysávača nemajú žiadne parametre."
     }
   },
   "selector": {

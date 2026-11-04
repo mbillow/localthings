@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Ten robot sprzątający nie wymienia {command} wśród obsługiwanych poleceń."
+    },
+    "vacuum_command_params": {
+      "message": "Polecenia robota sprzątającego nie przyjmują parametrów."
     }
   },
   "selector": {

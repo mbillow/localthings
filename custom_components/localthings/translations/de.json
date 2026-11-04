@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Dieser Saugroboter führt {command} nicht unter seinen unterstützten Befehlen."
+    },
+    "vacuum_command_params": {
+      "message": "Befehle für den Saugroboter haben keine Parameter."
     }
   },
   "selector": {

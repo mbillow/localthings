@@ -30,9 +30,8 @@ SOUND = "Sound"
 ACCESS = "Access"
 REPEATED_CLEANING = "RepeatedCleaning"
 
-# Control_* -> Home Assistant vacuum activity. Values without a clear
-# activity (Reserve, ViewSet, After, PowerOff) are left to the Cleaning_*
-# fallback in activity().
+# Control_* -> Home Assistant vacuum activity. The rest (Reserve, ViewSet,
+# After, PowerOff) read as idle: none of them is the robot moving.
 _CONTROL_ACTIVITY = {
     "Cleaning": "cleaning",
     "Point": "cleaning",
@@ -87,10 +86,11 @@ def supports(rep: dict, group: str, value: str) -> bool:
 
 
 def activity(rep: dict) -> str | None:
-    """HA vacuum activity, from Control_* first, then the cleaning program."""
+    """HA vacuum activity from Control_*, or from the cleaning program on a
+    rep that carries no Control_* token."""
     control = group_value(rep, CONTROL)
-    if control in _CONTROL_ACTIVITY:
-        return _CONTROL_ACTIVITY[control]
+    if control is not None:
+        return _CONTROL_ACTIVITY.get(control, "idle")
     program = group_value(rep, CLEANING)
     if program is not None and program != STOP_PROGRAM:
         return "cleaning"
@@ -118,14 +118,6 @@ def _mode_write(token: str):
     return ["mode", "vs", "0"], {MODES_FIELD: [token]}
 
 
-def _vacuum_write(payload, rep, href=None):
-    """`(group, value)` from vacuum.py -> one modes token."""
-    group, value = payload
-    if not supports(rep, group, value):
-        return None
-    return _mode_write(f"{group}_{value}")
-
-
 def _group_write(group: str):
     def write(payload, rep, href=None):
         if not supports(rep, group, payload):
@@ -133,6 +125,24 @@ def _group_write(group: str):
         return _mode_write(f"{group}_{payload}")
 
     return write
+
+
+def _vacuum_write(payload, rep, href=None):
+    """`(group, value)` from vacuum.py -> one modes token."""
+    group, value = payload
+    return _group_write(group)(value, rep)
+
+
+def _expect_control(body: dict) -> dict:
+    """Optimistic cache body for a Cleaning_* write: also assume the
+    Control_* state it leads to, since activity() reads Control_* and the
+    settle guard holds back the poll that would report it."""
+    tokens = list(body.get(MODES_FIELD) or [])
+    program = next((t[len(CLEANING) + 1 :] for t in tokens if t.startswith(CLEANING + "_")), None)
+    if program is None:
+        return body
+    control = "Idle" if program == STOP_PROGRAM else "Cleaning"
+    return {**body, MODES_FIELD: [*tokens, f"{CONTROL}_{control}"]}
 
 
 def _group_options(group: str):
@@ -157,6 +167,7 @@ VACUUM = Capability(
             rep_fn=activity,
             write_fn=_vacuum_write,
             merges_modes=True,
+            optimistic_fn=_expect_control,
         ),
         # What the robot reports it is doing, unreduced: Homing, Point,
         # Reserve and the rest all collapse into a handful of HA activities.
@@ -166,9 +177,7 @@ VACUUM = Capability(
             icon="mdi:robot-vacuum",
             entity_category="diagnostic",
             rep_fn=lambda rep: _lower(group_value(rep, CONTROL)),
-            options=lambda resources: [
-                v.lower() for v in supported_values(resources.get(HREF_MODE) or {}, CONTROL)
-            ],
+            options=lambda resources: [v.lower() for v in _group_options(CONTROL)(resources)],
             exists_fn=_has_group(CONTROL),
         ),
         BinarySensorDesc(
@@ -189,6 +198,7 @@ VACUUM = Capability(
             exists_fn=_has_group(CLEANING),
             write_fn=_group_write(CLEANING),
             merges_modes=True,
+            optimistic_fn=_expect_control,
         ),
         SelectDesc(
             key="robot_sound",

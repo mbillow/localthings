@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "이 로봇청소기는 지원 명령에 {command}이(가) 없습니다."
+    },
+    "vacuum_command_params": {
+      "message": "로봇청소기 명령에는 매개변수가 없습니다."
     }
   },
   "selector": {

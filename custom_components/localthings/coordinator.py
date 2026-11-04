@@ -185,10 +185,10 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 _DEBUG_MAX_BATCH_ELEMENTS = 16
 
 
-# Row lists a write may send only the changed row of, and the field each row
-# is matched by (common.merge_items_field).
 _MODES_FIELD = "x.com.samsung.da.modes"
 
+# Row lists a write may send only the changed row of, and the field each row
+# is matched by (common.merge_items_field).
 _MERGED_ROWS = (
     ("x.com.samsung.da.items", "x.com.samsung.da.id"),
     ("x.com.samsung.networkaudio.channelVolume", "name"),

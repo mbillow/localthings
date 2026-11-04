@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Ce robot aspirateur ne compte pas {command} parmi ses commandes prises en charge."
+    },
+    "vacuum_command_params": {
+      "message": "Les commandes du robot aspirateur ne prennent pas de paramètres."
     }
   },
   "selector": {

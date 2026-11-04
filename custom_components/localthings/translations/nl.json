@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Deze robotstofzuiger vermeldt {command} niet bij zijn ondersteunde opdrachten."
+    },
+    "vacuum_command_params": {
+      "message": "Opdrachten voor de robotstofzuiger hebben geen parameters."
     }
   },
   "selector": {

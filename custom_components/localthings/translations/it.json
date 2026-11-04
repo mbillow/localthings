@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Questo robot aspirapolvere non elenca {command} tra i comandi supportati."
+    },
+    "vacuum_command_params": {
+      "message": "I comandi del robot aspirapolvere non accettano parametri."
     }
   },
   "selector": {

@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "Este robô aspirador não lista {command} entre seus comandos suportados."
+    },
+    "vacuum_command_params": {
+      "message": "Os comandos do robô aspirador não aceitam parâmetros."
     }
   },
   "selector": {

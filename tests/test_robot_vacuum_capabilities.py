@@ -108,14 +108,33 @@ def test_vendor_battery_stands_in_without_the_ocf_resource():
         (("Control_Pause",), VacuumActivity.PAUSED),
         (("Control_Idle",), VacuumActivity.IDLE),
         (("Control_Alarm",), VacuumActivity.ERROR),
-        # No activity of its own: falls back to whether a program is running.
-        (("Control_Reserve", "Cleaning_Stop"), None),
-        (("Control_After", "Cleaning_Repeat"), VacuumActivity.CLEANING),
+        # A Control_* value with no activity of its own isn't the robot
+        # moving, even with a program set (a scheduled run).
+        (("Control_Reserve", "Cleaning_Auto"), VacuumActivity.IDLE),
+        (("Control_PowerOff", "Cleaning_Stop"), VacuumActivity.IDLE),
     ],
 )
 def test_activity_mapping(tokens, expected):
     entity, _ = _vacuum(_with_modes(_resources(), *tokens))
     assert entity.activity == expected
+
+
+def test_program_alone_decides_without_a_control_token():
+    rep = {MODES: ["Cleaning_Repeat"]}
+    assert rv.activity(rep) == "cleaning"
+    assert rv.activity({MODES: ["Cleaning_Stop"]}) is None
+
+
+def test_optimistic_body_assumes_the_control_state_a_program_leads_to():
+    desc = next(b.desc for b in _bind(_resources())[1] if isinstance(b.desc, VacuumDesc))
+    assert desc.optimistic_fn is not None
+    assert desc.optimistic_fn({MODES: ["Cleaning_Auto"]}) == {
+        MODES: ["Cleaning_Auto", "Control_Cleaning"]
+    }
+    assert desc.optimistic_fn({MODES: ["Cleaning_Stop"]}) == {
+        MODES: ["Cleaning_Stop", "Control_Idle"]
+    }
+    assert desc.optimistic_fn({MODES: ["Turbo_On"]}) == {MODES: ["Turbo_On"]}
 
 
 def test_features_follow_supported_modes():
@@ -183,6 +202,8 @@ async def test_unsupported_values_are_refused():
         await entity.async_set_fan_speed("quiet")
     with pytest.raises(ServiceValidationError):
         await entity.async_send_command("Control_Selfdestruct")
+    with pytest.raises(ServiceValidationError):
+        await entity.async_send_command("Cleaning_Repeat", {"times": 2})
     assert coordinator.commands == []
     desc = next(b.desc for b in _bind(_resources())[1] if isinstance(b.desc, VacuumDesc))
     assert desc.write_fn(("Turbo", "Silence"), _resources()[rv.HREF_MODE]) is None

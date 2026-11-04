@@ -2656,6 +2656,9 @@
     },
     "vacuum_unsupported_command": {
       "message": "This robot vacuum doesn't list {command} among its supported commands."
+    },
+    "vacuum_command_params": {
+      "message": "Robot vacuum commands take no parameters."
     }
   },
   "selector": {

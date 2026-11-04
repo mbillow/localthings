@@ -143,6 +143,29 @@ async def test_robot_vacuum_modes_write_merges_into_the_cached_list(coordinator)
     ]
 
 
+async def test_robot_vacuum_start_shows_cleaning_straight_away(coordinator) -> None:
+    """Start writes Cleaning_Auto only, but activity reads Control_*, and the
+    settle guard holds back the poll that would report Control_Cleaning."""
+    href = "/mode/vs/0"
+    coordinator._observe.apply(
+        href,
+        {
+            "x.com.samsung.da.modes": ["Cleaning_Stop", "Control_Charging", "Turbo_Off"],
+            "x.com.samsung.da.supportedModes": ["Cleaning_Auto", "Cleaning_Stop"],
+        },
+        source="poll",
+    )
+    desc = robot_vacuum.VACUUM.entities[0]
+    bound = BoundEntity(href=href, capability=robot_vacuum.VACUUM, desc=desc)
+
+    await coordinator.async_send_command(bound, ("Cleaning", "Auto"))
+
+    assert coordinator._session.post_calls[0][1] == {"x.com.samsung.da.modes": ["Cleaning_Auto"]}
+    cached = coordinator._cache.get(href)
+    assert cached["x.com.samsung.da.modes"] == ["Cleaning_Auto", "Control_Cleaning", "Turbo_Off"]
+    assert robot_vacuum.activity(cached) == "cleaning"
+
+
 # ---------------------------------------------------------------------------
 # Subdevice write translation (issue #177): a composite-entity write_fn (here
 # airconditioner._climate_write) returns *canonical* path_segs
