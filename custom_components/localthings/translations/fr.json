@@ -790,7 +790,21 @@
           "steam_roast": "Rôtissage vapeur",
           "upper_steam_bake": "Cuisson vapeur (cavité supérieure)",
           "descale": "Détartrage",
-          "drain": "Vidange"
+          "drain": "Vidange",
+          "healthycook1": "Cuisson saine 1",
+          "healthycook2": "Cuisson saine 2",
+          "healthycook3": "Cuisson saine 3",
+          "healthycook4": "Cuisson saine 4",
+          "healthycook5": "Cuisson saine 5",
+          "healthycook6": "Cuisson saine 6",
+          "upper_healthycook1": "Cuisson saine 1 (cavité supérieure)",
+          "upper_healthycook2": "Cuisson saine 2 (cavité supérieure)",
+          "upper_healthycook3": "Cuisson saine 3 (cavité supérieure)",
+          "upper_healthycook4": "Cuisson saine 4 (cavité supérieure)",
+          "lower_healthycook1": "Cuisson saine 1 (cavité inférieure)",
+          "lower_healthycook2": "Cuisson saine 2 (cavité inférieure)",
+          "lower_healthycook3": "Cuisson saine 3 (cavité inférieure)",
+          "lower_healthycook4": "Cuisson saine 4 (cavité inférieure)"
         }
       },
       "operating_mode": {

@@ -790,7 +790,21 @@
           "steam_roast": "Pečení masa s párou",
           "upper_steam_bake": "Pečení s párou (horní)",
           "descale": "Odvápnění",
-          "drain": "Vypuštění vody"
+          "drain": "Vypuštění vody",
+          "healthycook1": "Zdravé vaření 1",
+          "healthycook2": "Zdravé vaření 2",
+          "healthycook3": "Zdravé vaření 3",
+          "healthycook4": "Zdravé vaření 4",
+          "healthycook5": "Zdravé vaření 5",
+          "healthycook6": "Zdravé vaření 6",
+          "upper_healthycook1": "Zdravé vaření 1 (horní)",
+          "upper_healthycook2": "Zdravé vaření 2 (horní)",
+          "upper_healthycook3": "Zdravé vaření 3 (horní)",
+          "upper_healthycook4": "Zdravé vaření 4 (horní)",
+          "lower_healthycook1": "Zdravé vaření 1 (dolní)",
+          "lower_healthycook2": "Zdravé vaření 2 (dolní)",
+          "lower_healthycook3": "Zdravé vaření 3 (dolní)",
+          "lower_healthycook4": "Zdravé vaření 4 (dolní)"
         }
       },
       "operating_mode": {

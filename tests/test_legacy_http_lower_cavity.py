@@ -134,7 +134,13 @@ class TestReads:
 
         lower = _seed(transport, 1)["/mode/vs/1"][PREFIX + "supportedModes"]
 
-        assert lower == ["NoOperation", "LowerBake", "LowerConvectionBake", "LowerConvectionRoast"]
+        assert lower == [
+            "NoOperation",
+            "LowerBake",
+            "LowerConvectionBake",
+            "LowerConvectionRoast",
+            *(f"LowerHealthycook{i}" for i in range(1, 5)),
+        ]
 
     def test_a_listed_sibling_reads_as_listed(self):
         assert _seed(_transport(), 1)["/connected/vs/1"] == {PREFIX + "connected": "On"}
@@ -254,11 +260,13 @@ class TestCavityModes:
             "LowerBake",
             "LowerConvectionBake",
             "LowerConvectionRoast",
+            *(f"LowerHealthycook{i}" for i in range(1, 5)),
         ]
         assert _startable(resources, 1) == [
             "LowerBake",
             "LowerConvectionBake",
             "LowerConvectionRoast",
+            *(f"LowerHealthycook{i}" for i in range(1, 5)),
         ]
 
     def test_only_upper_modes_start_with_the_divider_in(self):

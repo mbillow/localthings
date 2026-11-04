@@ -790,7 +790,21 @@
           "steam_roast": "Arrosto a vapore",
           "upper_steam_bake": "Cottura a vapore (superiore)",
           "descale": "Decalcificazione",
-          "drain": "Scarico acqua"
+          "drain": "Scarico acqua",
+          "healthycook1": "Cottura salutare 1",
+          "healthycook2": "Cottura salutare 2",
+          "healthycook3": "Cottura salutare 3",
+          "healthycook4": "Cottura salutare 4",
+          "healthycook5": "Cottura salutare 5",
+          "healthycook6": "Cottura salutare 6",
+          "upper_healthycook1": "Cottura salutare 1 (superiore)",
+          "upper_healthycook2": "Cottura salutare 2 (superiore)",
+          "upper_healthycook3": "Cottura salutare 3 (superiore)",
+          "upper_healthycook4": "Cottura salutare 4 (superiore)",
+          "lower_healthycook1": "Cottura salutare 1 (inferiore)",
+          "lower_healthycook2": "Cottura salutare 2 (inferiore)",
+          "lower_healthycook3": "Cottura salutare 3 (inferiore)",
+          "lower_healthycook4": "Cottura salutare 4 (inferiore)"
         }
       },
       "operating_mode": {

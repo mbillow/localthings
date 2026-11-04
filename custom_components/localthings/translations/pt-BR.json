@@ -790,7 +790,21 @@
           "steam_roast": "Dourar com vapor",
           "upper_steam_bake": "Assar com vapor na cavidade superior",
           "descale": "Descalcificar",
-          "drain": "Drenar"
+          "drain": "Drenar",
+          "healthycook1": "Cozimento saudável 1",
+          "healthycook2": "Cozimento saudável 2",
+          "healthycook3": "Cozimento saudável 3",
+          "healthycook4": "Cozimento saudável 4",
+          "healthycook5": "Cozimento saudável 5",
+          "healthycook6": "Cozimento saudável 6",
+          "upper_healthycook1": "Cozimento saudável 1 na cavidade superior",
+          "upper_healthycook2": "Cozimento saudável 2 na cavidade superior",
+          "upper_healthycook3": "Cozimento saudável 3 na cavidade superior",
+          "upper_healthycook4": "Cozimento saudável 4 na cavidade superior",
+          "lower_healthycook1": "Cozimento saudável 1 na cavidade inferior",
+          "lower_healthycook2": "Cozimento saudável 2 na cavidade inferior",
+          "lower_healthycook3": "Cozimento saudável 3 na cavidade inferior",
+          "lower_healthycook4": "Cozimento saudável 4 na cavidade inferior"
         }
       },
       "operating_mode": {

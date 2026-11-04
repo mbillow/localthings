@@ -790,7 +790,21 @@
           "steam_roast": "스팀 로스트",
           "upper_steam_bake": "스팀 베이크 (상단)",
           "descale": "석회 제거",
-          "drain": "배수"
+          "drain": "배수",
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
         }
       },
       "operating_mode": {
