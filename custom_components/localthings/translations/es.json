@@ -438,6 +438,12 @@
       "door_open": {
         "name": "Puerta"
       },
+      "freezer_door_open": {
+        "name": "Puerta del congelador"
+      },
+      "fridge_door_open": {
+        "name": "Puerta del frigorífico"
+      },
       "filter_blockage": {
         "name": "Obstrucción del filtro"
       },

@@ -58,6 +58,12 @@
       "door_open": {
         "name": "Dvířka"
       },
+      "freezer_door_open": {
+        "name": "Dvířka mrazáku"
+      },
+      "fridge_door_open": {
+        "name": "Dvířka chladničky"
+      },
       "filter_blockage": {
         "name": "Ucpání filtru"
       },

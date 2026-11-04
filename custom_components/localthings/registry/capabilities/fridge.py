@@ -1238,6 +1238,48 @@ def _any_door_generic(resources):
     return any(h.startswith("/door/") for h in resources)
 
 
+def _reporting_doors(items):
+    return [i for i in items or [] if i.get("x.com.samsung.da.openState") is not None]
+
+
+def _door_item(items, keyword, fallback_id):
+    """One compartment's door item. Its own description names it where the
+    bridge sends one (#698); the DONGLE_0260 bridge sends only ids, which
+    follow the Samsung convention "0" = Freezer, "1" = Fridge (#728)."""
+    for item in items or []:
+        if (item.get("x.com.samsung.da.description") or "").lower() == keyword:
+            return item
+    for item in items or []:
+        if not item.get("x.com.samsung.da.description") and (
+            item.get("x.com.samsung.da.id") == fallback_id
+        ):
+            return item
+    return {}
+
+
+def _compartment_door(key, keyword, fallback_id):
+    """A per-compartment door, only where two or more doors report: on a
+    single-door fridge the aggregate door_open is the same switch."""
+
+    def _exists(rep, resources):
+        items = rep.get("x.com.samsung.da.items")
+        return is_stub_rep(rep) or (
+            len(_reporting_doors(items)) >= 2
+            and _door_item(items, keyword, fallback_id).get("x.com.samsung.da.openState")
+            is not None
+        )
+
+    return BinarySensorDesc(
+        key=key,
+        field="x.com.samsung.da.items",
+        device_class="door",
+        exists_fn=_exists,
+        value_fn=lambda items: (
+            _door_item(items, keyword, fallback_id).get("x.com.samsung.da.openState") == "Open"
+        ),
+    )
+
+
 DOORS_FALLBACK = Capability(
     href="/doors/vs/0",
     match_fn=lambda rep, resources: not _any_door_generic(resources),
@@ -1251,6 +1293,8 @@ DOORS_FALLBACK = Capability(
                 i.get("x.com.samsung.da.openState") == "Open" for i in (items or [])
             ),
         ),
+        _compartment_door("fridge_door_open", "fridge", "1"),
+        _compartment_door("freezer_door_open", "freezer", "0"),
     ),
 )
 

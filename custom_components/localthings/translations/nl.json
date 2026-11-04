@@ -61,6 +61,12 @@
       "door_open": {
         "name": "Deur"
       },
+      "freezer_door_open": {
+        "name": "Vriezerdeur"
+      },
+      "fridge_door_open": {
+        "name": "Koelkastdeur"
+      },
       "filter_blockage": {
         "name": "Filterverstopping"
       },

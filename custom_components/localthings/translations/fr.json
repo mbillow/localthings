@@ -61,6 +61,12 @@
       "door_open": {
         "name": "Porte"
       },
+      "freezer_door_open": {
+        "name": "Porte du congélateur"
+      },
+      "fridge_door_open": {
+        "name": "Porte du réfrigérateur"
+      },
       "filter_blockage": {
         "name": "Filtre obstrué"
       },
