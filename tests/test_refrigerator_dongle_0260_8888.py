@@ -98,3 +98,29 @@ def test_doors_follow_the_bridge_order_whatever_their_ids():
     assert state["door_2_open"] is False
     assert state["door_3_open"] is True
     assert "door_4_open" not in state
+
+
+def test_a_missing_door_reads_unknown_not_closed():
+    """A door position the items don't fill reads unknown, not a false Closed."""
+    from custom_components.localthings.registry.capabilities.fridge import DOORS_FALLBACK
+
+    by_key = {e.key: e for e in DOORS_FALLBACK.entities}
+    items = _bodies()["Doors"]
+    items = [{"x.com.samsung.da.openState": i["openState"]} for i in items if "openState" in i]
+
+    assert by_key["door_2_open"].value_fn(items) is False
+    assert by_key["door_3_open"].value_fn(items) is None
+
+
+def test_a_stub_doors_resource_binds_no_numbered_doors():
+    """A not-yet-fetched /doors/vs/0 must not mint Door 1 / Door 2: on a
+    single-door fridge they would stay forever."""
+    from custom_components.localthings.registry.capabilities.fridge import DOORS_FALLBACK
+
+    stub = {"href": "/doors/vs/0"}
+    numbered = [
+        e for e in DOORS_FALLBACK.entities if e.key.startswith("door_") and e.key != "door_open"
+    ]
+
+    assert numbered
+    assert not any(e.exists_fn(stub, {}) for e in numbered)

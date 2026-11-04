@@ -1246,9 +1246,20 @@ def _nth_reporting_door(items, n):
     """The n-th (1-based) door item that reports a state, in the bridge's
     order. Doors are numbered rather than named: an id-only bridge such as
     DONGLE_0260 (#728) doesn't say which compartment a door belongs to, so
-    users rename Door 1 / Door 2 to suit their fridge."""
+    users rename Door 1 / Door 2 to suit their fridge.
+
+    Assumes the bridge keeps every door's openState in every poll: if one
+    item dropped it for a poll, the doors after it would shift down a
+    number. No capture so far does this. None when there's no n-th door."""
     doors = _reporting_doors(items)
-    return doors[n - 1] if len(doors) >= n else {}
+    return doors[n - 1] if len(doors) >= n else None
+
+
+def _door_is_open(door):
+    """None (unknown) for a missing door rather than a false Closed."""
+    if door is None:
+        return None
+    return door.get("x.com.samsung.da.openState") == "Open"
 
 
 # Enough for the four-compartment models; positions beyond what the fridge
@@ -1259,11 +1270,13 @@ MAX_NUMBERED_DOORS = 4
 def _numbered_door(n):
     """Door n, only where two or more doors report: on a single-door fridge
     the aggregate door_open is the same switch. A not-yet-fetched stub binds
-    the first two only, so it can't mint phantom Door 3 / Door 4 entities."""
+    nothing: binary sensors aren't re-checked at runtime, so a guess here
+    would leave phantom doors on fridges that have fewer (e.g. the
+    single-door kimchi fridge). A later reload picks the doors up."""
 
     def _exists(rep, resources):
         if is_stub_rep(rep):
-            return n <= 2
+            return False
         doors = _reporting_doors(rep.get("x.com.samsung.da.items"))
         return len(doors) >= 2 and len(doors) >= n
 
@@ -1272,9 +1285,7 @@ def _numbered_door(n):
         field="x.com.samsung.da.items",
         device_class="door",
         exists_fn=_exists,
-        value_fn=lambda items: (
-            _nth_reporting_door(items, n).get("x.com.samsung.da.openState") == "Open"
-        ),
+        value_fn=lambda items: _door_is_open(_nth_reporting_door(items, n)),
     )
 
 
