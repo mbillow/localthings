@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "model": "powerbot_7000_17M",
+    "device_type": "robot_vacuum",
+    "source": "issue #659 diagnostics (redacted by the integration); /file/list/vs/0 and /file/transfer/vs/0 left out, as they are probed outside the batch (the transfer read times out on this robot)",
+    "note": "POWERbot R7040 robot vacuum, docked and charging. No /information/vs/0 in the batch and an empty modelNum, so it routes by /oic/d (oic.d.robotcleaner) alone."
+  },
+  "oic_device_types": [
+    "oic.wk.d",
+    "oic.d.robotcleaner"
+  ],
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.code": "4",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.triggeredTime": "2026-10-19T22:13:35",
+            "x.com.samsung.da.state": "deleted"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/energy/battery/0",
+      "rep": {
+        "charge": 100
+      }
+    },
+    {
+      "href": "/energy/battery/vs/0",
+      "rep": {
+        "x.com.samsung.da.batteryCharge": "100"
+      }
+    },
+    {
+      "href": "/mode/0",
+      "rep": {
+        "modes": [
+          "Cleaning_Stop",
+          "Control_Charging",
+          "Access_UnLock",
+          "Turbo_Off",
+          "SmartTurbo_Off",
+          "Sound_SoundEffect",
+          "Locale_840",
+          "Schedule_0",
+          "BatteryFull_Full",
+          "RepeatedCleaning_Off"
+        ],
+        "supportedModes": [
+          "Cleaning_Auto",
+          "Cleaning_Part",
+          "Cleaning_Repeat",
+          "Cleaning_Manual",
+          "Cleaning_Stop",
+          "Control_Homing",
+          "Control_Alarm",
+          "Control_Idle",
+          "Control_Charging",
+          "Control_Reserve",
+          "Control_PowerOff",
+          "Control_ViewSet",
+          "Control_After",
+          "Control_Point",
+          "Control_Pause",
+          "Control_Cleaning",
+          "Access_Lock",
+          "Access_UnLock",
+          "Turbo_On",
+          "Turbo_Off",
+          "Sound_SoundEffect",
+          "Sound_Mute",
+          "BatteryFull_Full",
+          "BatteryFull_NotFull",
+          "RepeatedCleaning_Off",
+          "RepeatedCleaning_On",
+          "RepeatCleaning_Enable",
+          "Suction_C",
+          "History_Enable",
+          "Energy_Disable",
+          "Schedule_A",
+          "HOMECARE_WIZARD_V2"
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": [
+          "Cleaning_Stop",
+          "Control_Charging",
+          "Access_UnLock",
+          "Turbo_Off",
+          "SmartTurbo_Off",
+          "Sound_SoundEffect",
+          "Locale_840",
+          "Schedule_0",
+          "BatteryFull_Full",
+          "RepeatedCleaning_Off"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "Cleaning_Auto",
+          "Cleaning_Part",
+          "Cleaning_Repeat",
+          "Cleaning_Manual",
+          "Cleaning_Stop",
+          "Control_Homing",
+          "Control_Alarm",
+          "Control_Idle",
+          "Control_Charging",
+          "Control_Reserve",
+          "Control_PowerOff",
+          "Control_ViewSet",
+          "Control_After",
+          "Control_Point",
+          "Control_Pause",
+          "Control_Cleaning",
+          "Access_Lock",
+          "Access_UnLock",
+          "Turbo_On",
+          "Turbo_Off",
+          "Sound_SoundEffect",
+          "Sound_Mute",
+          "BatteryFull_Full",
+          "BatteryFull_NotFull",
+          "RepeatedCleaning_Off",
+          "RepeatedCleaning_On",
+          "RepeatCleaning_Enable",
+          "Suction_C",
+          "History_Enable",
+          "Energy_Disable",
+          "Schedule_A",
+          "HOMECARE_WIZARD_V2"
+        ]
+      }
+    },
+    {
+      "href": "/movement/vs/0",
+      "rep": {
+        "x.com.samsung.da.behavior": "Stop"
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": true
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    }
+  ]
+}

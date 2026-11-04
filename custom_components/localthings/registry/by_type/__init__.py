@@ -18,6 +18,7 @@ from . import (
     oven,
     range_hood,
     refrigerator,
+    robot_vacuum,
     soundbar,
     vacuum_station,
     washer,
@@ -57,6 +58,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
+    "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
@@ -231,6 +233,8 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.oven": "oven",
     "oic.d.range": "range",  # issue #324 -- oven+cooktop combo, no /information/vs/0
     "oic.d.refrigerator": "refrigerator",
+    # POWERbot R7040 (issue #659): empty modelNum, so /oic/d is its only route.
+    "oic.d.robotcleaner": "robot_vacuum",
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",
