@@ -164,11 +164,34 @@ async def test_offline_start_retains_device_labels_on_reconnect(hass, monkeypatc
     await hass.config_entries.async_unload(restored._entry.entry_id)
 
 
-async def test_other_ovens_with_a_lower_cavity_use_main_label(hass):
+@pytest.mark.parametrize("fixture", ["oven_nv75n_dual_cook", "range_tp1x_da_ks_range_0101x"])
+@pytest.mark.parametrize("offline", [False, True])
+async def test_ovens_and_ranges_with_a_lower_cavity_use_main_label(hass, fixture, offline):
+    coordinator = _coordinator(hass)
+    await _discover(coordinator, fixture)
+    if offline:
+        await coordinator._async_save_snapshot(coordinator.last_resources, coordinator.subdevices)
+        coordinator = LocalThingsCoordinator(hass, coordinator._entry)
+        assert await coordinator.async_rehydrate()
+        assert coordinator.last_resources == {}
+    base_name = coordinator.device_info["name"]
+    assert coordinator.device_info_for(MAIN)["name"] == f"{base_name} Main oven"
+    assert len(coordinator.subdevices) == 1
+    assert (
+        coordinator.device_info_for(coordinator.subdevices[0])["name"] == f"{base_name} Lower oven"
+    )
+
+
+@pytest.mark.parametrize("name", [None, ""])
+async def test_cavities_share_the_same_fallback_name(hass, name):
     coordinator = _coordinator(hass)
     await _discover(coordinator, "oven_nv75n_dual_cook")
-    name = coordinator.device_info_for(MAIN)["name"]
-    assert name is not None and name.endswith("Main oven")
+    coordinator.device_info["name"] = name
+    assert coordinator.device_info_for(MAIN)["name"] == "Samsung Appliance Main oven"
+    assert (
+        coordinator.device_info_for(coordinator.subdevices[0])["name"]
+        == "Samsung Appliance Lower oven"
+    )
 
 
 @pytest.mark.parametrize(
@@ -176,7 +199,6 @@ async def test_other_ovens_with_a_lower_cavity_use_main_label(hass):
     [
         "oven_tp2x_ks_walloven",
         "microwave_nw9300md",
-        "range_tp1x_da_ks_range_0101x",
         "airconditioner_fac_bora_2in1",
     ],
 )

@@ -8,7 +8,7 @@ import functools
 import logging
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -281,6 +281,15 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
     cavity = cook.cavity(resources)
     return f"{cavity} oven" if cavity else None
+
+
+def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dict]]) -> str | None:
+    """The main cavity also operates the whole oven without the divider."""
+    if device_type != "microwave" and any(
+        cook.cavity(resources) == "Lower" for resources in siblings
+    ):
+        return "Main oven"
+    return None
 
 
 # Write errors after which the session is fine and a re-poll shows the
@@ -1056,15 +1065,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
+        base_name = self.device_info.get("name") or "Samsung Appliance"
         if subdevice.kind == "main":
-            if self.device_type_name == "oven" and any(
-                cook.cavity(self.discovery_canonical(child)) == "Lower" for child in self.subdevices
+            if label := _main_cavity_label(
+                self.device_type_name,
+                (self.discovery_canonical(child) for child in self.subdevices),
             ):
-                # These controls also operate the whole oven without the divider.
-                return {
-                    **self.device_info,
-                    "name": f"{self.device_info.get('name') or 'Samsung Oven'} Main oven",
-                }
+                return {**self.device_info, "name": f"{base_name} {label}"}
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1075,7 +1082,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model_num.split("|", 1)[0] if model_num else ""
         )
         serial = display_serial(info.get("x.com.samsung.da.serialNum"))
-        base_name = self.device_info.get("name") or "Samsung Appliance"
+        # Discovery includes saved snapshots so cavity labels survive offline startup.
         if cavity := _cavity_label(self.discovery_canonical(subdevice)):
             # A dual-cavity oven reports the same modelNum on both cavities
             # (issue #490), so the model label below names them identically
