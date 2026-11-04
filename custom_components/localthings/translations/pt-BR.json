@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Volume de água a servir"
       },
+      "freezer_setpoint": {
+        "name": "Congelador — temperatura de ajuste"
+      },
+      "fridge_setpoint": {
+        "name": "Refrigerador — temperatura de ajuste"
+      },
       "good_sleep": {
         "name": "Bom sono"
       },
@@ -384,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Aleta norte",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "east_flap": {
+        "name": "Aleta leste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "south_flap": {
+        "name": "Aleta sul",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
+      "west_flap": {
+        "name": "Aleta oeste",
+        "state": {
+          "stop": "Fixa",
+          "vertical": "Oscilação"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximidade da iluminação de boas-vindas",
         "state": {
@@ -498,6 +532,32 @@
           "87": "Somente enxágue"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciclo",
+        "state": {
+          "80": "Delicado",
+          "83": "Normal",
+          "84": "Intensivo",
+          "86": "Expresso 60",
+          "90": "Autolimpeza",
+          "0e": "Lavagem com IA",
+          "07": "Pré-jato",
+          "8d": "Panelas e frigideiras",
+          "85": "Delicado",
+          "0c": "Expresso",
+          "0d": "Autolimpeza",
+          "8e": "Plástico",
+          "8f": "Baby Care",
+          "82": "Automático",
+          "8a": "Econômico",
+          "a7": "Intensivo",
+          "a8": "Expresso",
+          "8c": "Extra silencioso",
+          "88": "Autolimpeza",
+          "87": "Somente enxágue",
+          "01": "Pré-lavagem"
+        }
+      },
       "dispense_type": {
         "name": "Tipo de água a servir"
       },
@@ -561,6 +621,7 @@
           "1a": "Lã",
           "1b": "Roupas de cama",
           "1c": "Camisas",
+          "43": "Camisas",
           "1d": "Toalhas",
           "1e": "Atividades ao ar livre",
           "1f": "Carga mista",
@@ -1551,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Estado da cavidade"
+        "name": "Estado da cavidade",
+        "state": {
+          "ready": "Pronto",
+          "preheat": "Pré-aquecimento",
+          "cooking": "Cozinhando",
+          "finish": "Concluído"
+        }
       },
       "power_level": {
         "name": "Nível de potência"
@@ -2013,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Modo férias"
       },
       "welcome_lighting": {
         "name": "Iluminação de boas-vindas"

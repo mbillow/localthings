@@ -390,13 +390,8 @@ def can_start(rep: dict, resources: dict) -> bool:
     modeSpec is empty for now (#600). A press while nothing is startable is
     refused by plan_start."""
     spec = (resources.get(MODE_HREF) or {}).get(MODE_SPEC)
-    # A specless lower cavity offers no modes with its divider out (#572).
-    # Keep Start registered so reinsertion can restore it without a reload.
-    if (
-        spec is None
-        and cavity(resources) == "Lower"
-        and (resources.get(CONNECTED_HREF) or {}).get("x.com.samsung.da.connected") == "Off"
-    ):
+    # Specless lower cavities use their own modes or the shared fallback (#572).
+    if spec is None and cavity(resources) == "Lower":
         return True
     if _is_empty_spec(spec):
         return True

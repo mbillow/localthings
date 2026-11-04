@@ -30,6 +30,7 @@ REGISTRY = DeviceRegistry(
             airconditioner.ENERGY_METER_LEGACY,
             dishwasher.DIAGNOSIS,
             airconditioner.CLIMATE,
+            airconditioner.FOUR_WAY_FLAPS,
             airconditioner.AIR_PURIFY,
             airconditioner.AUTO_CLEAN,
             airconditioner.AIR_FILTER,

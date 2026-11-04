@@ -298,6 +298,12 @@
       "dispense_capacity": {
         "name": "Dávkované množství"
       },
+      "freezer_setpoint": {
+        "name": "Mrazák – požadovaná teplota"
+      },
+      "fridge_setpoint": {
+        "name": "Chladnička – požadovaná teplota"
+      },
       "good_sleep": {
         "name": "Klidný spánek"
       },
@@ -384,6 +390,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela jih",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývání"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivost uvítacího osvětlení",
         "state": {
@@ -498,6 +532,32 @@
           "87": "Pouze máchání"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemné",
+          "83": "Normální",
+          "84": "Intenzivní",
+          "86": "Express 60",
+          "90": "Samočištění",
+          "0e": "AI mytí",
+          "07": "Předoplach",
+          "8d": "Hrnce a pánve",
+          "8e": "Plast",
+          "8f": "Dětské potřeby",
+          "82": "Automatický",
+          "8a": "Eco",
+          "a7": "Intenzivní",
+          "a8": "Expresní",
+          "8c": "Extra tichý",
+          "88": "Samočištění",
+          "85": "Jemné",
+          "0c": "Express",
+          "0d": "Samočištění",
+          "87": "Pouze máchání",
+          "01": "Předmytí"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkování"
       },
@@ -559,6 +619,7 @@
           "1a": "Vlna",
           "1b": "Ložní prádlo",
           "1c": "Košile",
+          "43": "Košile",
           "1d": "Ručníky",
           "1e": "Outdoor",
           "1f": "Smíšená náplň",
@@ -1551,7 +1612,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav trouby"
+        "name": "Stav trouby",
+        "state": {
+          "ready": "Připraveno",
+          "preheat": "Předehřev",
+          "cooking": "Vaření",
+          "finish": "Dokončeno"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"
@@ -2013,6 +2080,9 @@
       },
       "storm_wash": {
         "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Režim dovolené"
       },
       "welcome_lighting": {
         "name": "Uvítací osvětlení"

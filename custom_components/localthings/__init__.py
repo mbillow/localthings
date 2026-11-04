@@ -5,7 +5,6 @@ from __future__ import annotations
 import inspect
 import logging
 import re
-from dataclasses import replace
 from typing import Any
 
 from homeassistant import const as ha_const
@@ -27,9 +26,8 @@ from .coordinator import (
 )
 from .entity import LocalThingsEntity, _is_included, async_load_instance_names
 from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
-from .registry.capabilities import cook
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
-from .registry.entities import PLATFORM_OF, BinarySensorDesc, ButtonDesc, SwitchDesc
+from .registry.entities import BinarySensorDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
 from .services import async_setup_services
@@ -316,16 +314,21 @@ def _drop_read_only_power_switches(
         ent_reg.async_remove(old.entity_id)
 
 
+_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing"})
+
+
 @callback
 def _drop_unsupported_sound_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Remove old Sound switches that no longer pass their descriptor's existence check."""
+    """Remove old switches that no longer pass their descriptor's existence
+    check: Sound, and the rapid switches older releases gave fridges whose
+    /refrigeration/vs/0 reports only the other field (#698)."""
     ent_reg = er.async_get(hass)
     for bound in coordinator.bound:
         if (
             not isinstance(bound.desc, SwitchDesc)
-            or bound.desc.key != "sound"
+            or bound.desc.key not in _GATED_SWITCH_KEYS
             or bound.desc.exists_fn is None
             or _is_included(bound, coordinator)
         ):
@@ -337,7 +340,7 @@ def _drop_unsupported_sound_switches(
         if old is None or old.config_entry_id != entry.entry_id:
             continue
         _LOGGER.info(
-            "Removing %s: the device reports no Sound option; "
+            "Removing %s: the device does not report it; "
             "update any automation or dashboard that referenced it",
             old.entity_id,
         )
@@ -370,47 +373,6 @@ def _drop_washer_entities_from_filters(
             registry_entry.entity_id,
         )
         ent_reg.async_remove(registry_entry.entity_id)
-
-
-@callback
-def _drop_misidentified_oven_controls(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
-) -> None:
-    """Remove obsolete washer controls where a lower oven now has its own Start (#684)."""
-    current = {
-        (PLATFORM_OF[type(bound.desc)], LocalThingsEntity(coordinator, bound).unique_id)
-        for bound in coordinator.bound
-        if _is_included(bound, coordinator)
-    }
-    ent_reg = er.async_get(hass)
-    for bound in coordinator.bound:
-        if (
-            not isinstance(bound.desc, ButtonDesc)
-            or bound.desc.key != "start_cooking"
-            or cook.cavity(coordinator.discovery_canonical(bound.subdevice)) != "Lower"
-            or not _is_included(bound, coordinator)
-        ):
-            continue
-        for platform, key in (
-            ("button", "start"),
-            ("button", "pause"),
-            ("number", "delay_start_hours"),
-        ):
-            obsolete = replace(bound, desc=replace(bound.desc, key=key))
-            unique_id = LocalThingsEntity(coordinator, obsolete).unique_id
-            assert unique_id is not None
-            if (platform, unique_id) in current:
-                continue
-            entity_id = ent_reg.async_get_entity_id(platform, DOMAIN, unique_id)
-            old = ent_reg.async_get(entity_id) if entity_id else None
-            if old is None or old.config_entry_id != entry.entry_id:
-                continue
-            _LOGGER.info(
-                "Removing %s: an earlier discovery misidentified the lower oven as a washer; "
-                "update any automation or dashboard that referenced it",
-                old.entity_id,
-            )
-            ent_reg.async_remove(old.entity_id)
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -567,7 +529,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _drop_read_only_power_switches(hass, entry, coordinator)
     _drop_unsupported_sound_switches(hass, entry, coordinator)
     _drop_washer_entities_from_filters(hass, entry, coordinator)
-    _drop_misidentified_oven_controls(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
