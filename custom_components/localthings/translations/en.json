@@ -1298,6 +1298,25 @@
           "classic": "Classic",
           "custom": "Custom"
         }
+      },
+      "cleaning_mode": {
+        "name": "Cleaning mode",
+        "state": {
+          "auto": "Auto",
+          "part": "Spot",
+          "repeat": "Repeat",
+          "manual": "Manual",
+          "stop": "Stop",
+          "map": "Map"
+        }
+      },
+      "robot_sound": {
+        "name": "Sound",
+        "state": {
+          "soundeffect": "Sound effects",
+          "mute": "Mute",
+          "voice": "Voice"
+        }
       }
     },
     "sensor": {
@@ -1889,6 +1908,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signal"
+      },
+      "robot_status": {
+        "name": "Robot status",
+        "state": {
+          "cleaning": "Cleaning",
+          "point": "Spot cleaning",
+          "homing": "Returning to base",
+          "charging": "Charging",
+          "idle": "Idle",
+          "pause": "Paused",
+          "alarm": "Alarm",
+          "reserve": "Scheduled",
+          "poweroff": "Powered off"
+        }
+      },
+      "robot_movement": {
+        "name": "Movement"
       }
     },
     "switch": {
@@ -2176,6 +2212,9 @@
       },
       "voice_amplifier": {
         "name": "Voice amplifier"
+      },
+      "repeated_cleaning": {
+        "name": "Repeat cleaning"
       }
     },
     "time": {
@@ -2216,6 +2255,20 @@
     "water_heater": {
       "dhw": {
         "name": "Hot water"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Quiet",
+              "extra_quiet": "Extra quiet"
+            }
+          }
+        }
       }
     }
   },
@@ -2597,6 +2650,12 @@
     },
     "paired_hood_fan_off": {
       "message": "Turn the range hood's fan on before setting its shutoff timer."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "This robot vacuum doesn't support the fan speed {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "This robot vacuum doesn't list {command} among its supported commands."
     }
   },
   "selector": {

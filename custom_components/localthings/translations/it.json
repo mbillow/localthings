@@ -1298,6 +1298,25 @@
           "classic": "Classica",
           "custom": "Personalizzato"
         }
+      },
+      "cleaning_mode": {
+        "name": "Modalità di pulizia",
+        "state": {
+          "auto": "Auto",
+          "part": "Localizzata",
+          "repeat": "Ripeti",
+          "manual": "Manuale",
+          "stop": "Stop",
+          "map": "Mappa"
+        }
+      },
+      "robot_sound": {
+        "name": "Suono",
+        "state": {
+          "soundeffect": "Effetti sonori",
+          "mute": "Muto",
+          "voice": "Voce"
+        }
       }
     },
     "sensor": {
@@ -1889,6 +1908,23 @@
       },
       "wifi_signal": {
         "name": "Segnale Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Stato del robot",
+        "state": {
+          "cleaning": "In pulizia",
+          "point": "Pulizia localizzata",
+          "homing": "Ritorno alla base",
+          "charging": "In carica",
+          "idle": "Inattivo",
+          "pause": "In pausa",
+          "alarm": "Allarme",
+          "reserve": "Programmato",
+          "poweroff": "Spento"
+        }
+      },
+      "robot_movement": {
+        "name": "Movimento"
       }
     },
     "switch": {
@@ -2176,6 +2212,9 @@
       },
       "voice_amplifier": {
         "name": "Amplificatore vocale"
+      },
+      "repeated_cleaning": {
+        "name": "Ripeti pulizia"
       }
     },
     "time": {
@@ -2216,6 +2255,20 @@
     "water_heater": {
       "dhw": {
         "name": "Acqua calda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normale",
+              "turbo": "Turbo",
+              "quiet": "Silenzioso",
+              "extra_quiet": "Extra silenzioso"
+            }
+          }
+        }
       }
     }
   },
@@ -2597,6 +2650,12 @@
     },
     "paired_hood_fan_off": {
       "message": "Accendi la ventola della cappa prima di impostare il timer di spegnimento."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Questo robot aspirapolvere non supporta la potenza di aspirazione {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Questo robot aspirapolvere non elenca {command} tra i comandi supportati."
     }
   },
   "selector": {

@@ -1298,6 +1298,25 @@
           "classic": "Klasyczny",
           "custom": "Niestandardowy"
         }
+      },
+      "cleaning_mode": {
+        "name": "Tryb sprzątania",
+        "state": {
+          "auto": "Automatyczny",
+          "part": "Miejscowy",
+          "repeat": "Powtarzanie",
+          "manual": "Ręczny",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Dźwięk",
+        "state": {
+          "soundeffect": "Efekty dźwiękowe",
+          "mute": "Wyciszony",
+          "voice": "Głos"
+        }
       }
     },
     "sensor": {
@@ -1889,6 +1908,23 @@
       },
       "wifi_signal": {
         "name": "Sygnał Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Stan robota",
+        "state": {
+          "cleaning": "Sprzątanie",
+          "point": "Sprzątanie miejscowe",
+          "homing": "Powrót do stacji",
+          "charging": "Ładowanie",
+          "idle": "Bezczynny",
+          "pause": "Wstrzymany",
+          "alarm": "Alarm",
+          "reserve": "Zaplanowany",
+          "poweroff": "Wyłączony"
+        }
+      },
+      "robot_movement": {
+        "name": "Ruch"
       }
     },
     "switch": {
@@ -2176,6 +2212,9 @@
       },
       "voice_amplifier": {
         "name": "Wzmacniacz głosu"
+      },
+      "repeated_cleaning": {
+        "name": "Powtarzanie sprzątania"
       }
     },
     "time": {
@@ -2216,6 +2255,20 @@
     "water_heater": {
       "dhw": {
         "name": "Gorąca woda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normalna",
+              "turbo": "Turbo",
+              "quiet": "Cicha",
+              "extra_quiet": "Bardzo cicha"
+            }
+          }
+        }
       }
     }
   },
@@ -2597,6 +2650,12 @@
     },
     "paired_hood_fan_off": {
       "message": "Włącz wentylator okapu przed ustawieniem wyłącznika czasowego."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ten robot sprzątający nie obsługuje mocy ssania {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ten robot sprzątający nie wymienia {command} wśród obsługiwanych poleceń."
     }
   },
   "selector": {

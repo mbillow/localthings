@@ -1298,6 +1298,25 @@
           "classic": "클래식",
           "custom": "사용자 정의"
         }
+      },
+      "cleaning_mode": {
+        "name": "청소 모드",
+        "state": {
+          "auto": "자동",
+          "part": "집중",
+          "repeat": "반복",
+          "manual": "수동",
+          "stop": "정지",
+          "map": "지도"
+        }
+      },
+      "robot_sound": {
+        "name": "소리",
+        "state": {
+          "soundeffect": "효과음",
+          "mute": "음소거",
+          "voice": "음성"
+        }
       }
     },
     "sensor": {
@@ -1889,6 +1908,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi 신호"
+      },
+      "robot_status": {
+        "name": "로봇 상태",
+        "state": {
+          "cleaning": "청소 중",
+          "point": "집중 청소",
+          "homing": "충전대로 복귀 중",
+          "charging": "충전 중",
+          "idle": "대기",
+          "pause": "일시정지",
+          "alarm": "알람",
+          "reserve": "예약",
+          "poweroff": "전원 꺼짐"
+        }
+      },
+      "robot_movement": {
+        "name": "이동"
       }
     },
     "switch": {
@@ -2176,6 +2212,9 @@
       },
       "voice_amplifier": {
         "name": "음성 증폭"
+      },
+      "repeated_cleaning": {
+        "name": "반복 청소"
       }
     },
     "time": {
@@ -2216,6 +2255,20 @@
     "water_heater": {
       "dhw": {
         "name": "온수"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "보통",
+              "turbo": "터보",
+              "quiet": "조용히",
+              "extra_quiet": "매우 조용히"
+            }
+          }
+        }
       }
     }
   },
@@ -2597,6 +2650,12 @@
     },
     "paired_hood_fan_off": {
       "message": "자동 꺼짐 타이머를 설정하기 전에 레인지 후드 팬을 켜세요."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "이 로봇청소기는 흡입력 {fan_speed}을(를) 지원하지 않습니다."
+    },
+    "vacuum_unsupported_command": {
+      "message": "이 로봇청소기는 지원 명령에 {command}이(가) 없습니다."
     }
   },
   "selector": {

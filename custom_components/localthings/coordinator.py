@@ -187,6 +187,8 @@ _DEBUG_MAX_BATCH_ELEMENTS = 16
 
 # Row lists a write may send only the changed row of, and the field each row
 # is matched by (common.merge_items_field).
+_MODES_FIELD = "x.com.samsung.da.modes"
+
 _MERGED_ROWS = (
     ("x.com.samsung.da.items", "x.com.samsung.da.id"),
     ("x.com.samsung.networkaudio.channelVolume", "name"),
@@ -2878,6 +2880,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 optimistic_body = {
                     **optimistic_body,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
+                }
+            new_modes = optimistic_body.get(_MODES_FIELD)
+            if getattr(desc, "merges_modes", False) and isinstance(new_modes, list):
+                cached_modes = (self._cache.get(write_href) or {}).get(_MODES_FIELD)
+                optimistic_body = {
+                    **optimistic_body,
+                    _MODES_FIELD: merge_options_field(cached_modes, new_modes),
                 }
             # Same fact for row lists (see airconditioner._climate_write's
             # vendor temperature write, soundbar.CHANNEL_LEVEL).

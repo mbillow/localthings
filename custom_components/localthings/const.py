@@ -12,6 +12,7 @@ PLATFORMS = [
     "climate",
     "fan",
     "water_heater",
+    "vacuum",
 ]
 
 CONF_HOST = "host"

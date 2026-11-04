@@ -1298,6 +1298,25 @@
           "classic": "Klasika",
           "custom": "Vlastný"
         }
+      },
+      "cleaning_mode": {
+        "name": "Režim upratovania",
+        "state": {
+          "auto": "Automatický",
+          "part": "Bodový",
+          "repeat": "Opakovať",
+          "manual": "Ručný",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Zvuk",
+        "state": {
+          "soundeffect": "Zvukové efekty",
+          "mute": "Stlmené",
+          "voice": "Hlas"
+        }
       }
     },
     "sensor": {
@@ -1889,6 +1908,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signál"
+      },
+      "robot_status": {
+        "name": "Stav robota",
+        "state": {
+          "cleaning": "Upratuje",
+          "point": "Bodové upratovanie",
+          "homing": "Návrat na základňu",
+          "charging": "Nabíja sa",
+          "idle": "Nečinný",
+          "pause": "Pozastavené",
+          "alarm": "Alarm",
+          "reserve": "Naplánované",
+          "poweroff": "Vypnuté"
+        }
+      },
+      "robot_movement": {
+        "name": "Pohyb"
       }
     },
     "switch": {
@@ -2176,6 +2212,9 @@
       },
       "voice_amplifier": {
         "name": "Zosilnenie hlasu"
+      },
+      "repeated_cleaning": {
+        "name": "Opakovať upratovanie"
       }
     },
     "time": {
@@ -2216,6 +2255,20 @@
     "water_heater": {
       "dhw": {
         "name": "Teplá voda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normálny",
+              "turbo": "Turbo",
+              "quiet": "Tichý",
+              "extra_quiet": "Veľmi tichý"
+            }
+          }
+        }
       }
     }
   },
@@ -2597,6 +2650,12 @@
     },
     "paired_hood_fan_off": {
       "message": "Pred nastavením časovača vypnutia zapnite ventilátor digestora."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Tento robotický vysávač nepodporuje sací výkon {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Tento robotický vysávač neuvádza {command} medzi podporovanými príkazmi."
     }
   },
   "selector": {
