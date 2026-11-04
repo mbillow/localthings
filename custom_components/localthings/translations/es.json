@@ -294,6 +294,9 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "No se pudo confirmar el inicio de la cocción y no se volvió a intentar. Compruebe el aparato antes de intentarlo de nuevo. Detalles: {error}"
+    },
     "command_refused": {
       "message": "El electrodoméstico rechazó el comando para {href}: {error}"
     },

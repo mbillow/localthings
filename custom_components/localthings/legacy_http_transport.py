@@ -64,7 +64,7 @@ from .registry.capabilities.laundry import (
     course_option_mask,
 )
 from .registry.subdevices import Subdevice
-from .transport import AuthRejected
+from .transport import AuthRejected, OvenStartUnconfirmed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +96,7 @@ _AUTH_HEADER = "Authorization"
 # How long a start is given to take before its state is read back. The
 # composed start has been measured loading the programme without running it.
 _START_SETTLE_S = 3.0
+_OVEN_START_SETTLE_S = 0.5
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 # What the stop button sends; see _already_ready.
@@ -431,8 +432,9 @@ class LegacyHttpTransport:
         for key, value in staged.items():
             state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and state.staged and self._idle(index):
-            return self._start(index, sendable, timeout)
+        settings_first = device_type == "Oven" and "Mode" in sendable["Device"]
+        if is_start(sendable) and (settings_first or (state.staged and self._idle(index))):
+            return self._start(index, sendable, timeout, settings_first=settings_first)
         if not sendable["Device"]:
             return 0x44, None
         if sendable == _READY and self._already_ready(index, timeout):
@@ -524,28 +526,53 @@ class LegacyHttpTransport:
         """
         return self._operation_state(index, timeout) == "Ready"
 
-    def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
-        """Start with every held value in the same body -- the only way this
-        firmware takes them -- then make sure it actually runs.
+    def _start(
+        self, index: int, aggregate: dict[str, Any], timeout: float, *, settings_first: bool = False
+    ) -> tuple[int, Any]:
+        """Start with every held value in the same body, then Run if needed.
 
         Measured on a TP6X_WW6500: the composed body loads the programme and
         leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
         That second `Run` is sent only when a fresh read says it isn't
         running.
+
+        Oven records omit Run from the settings write, then send it after
+        0.5s, measured on the NV51K7770S (#667); other ovens are unconfirmed.
         """
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
-        status, response = self._request("PUT", base, body=body, timeout=timeout)
+        deadline = time.monotonic() + timeout
+        if settings_first:
+            operation = body["Device"]["Operation"]
+            operation.pop("state", None)
+            if not operation:
+                del body["Device"]["Operation"]
+        status, response = self._request(
+            "PUT", base, body=body, timeout=_remaining(deadline) if settings_first else timeout
+        )
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
         held.clear()
-        time.sleep(_START_SETTLE_S)
-        if self._running(index, timeout):
+        time.sleep(
+            min(_OVEN_START_SETTLE_S, _remaining(deadline)) if settings_first else _START_SETTLE_S
+        )
+        if not settings_first and self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
-        if not 200 <= run_status < 300 and self._running(index, timeout):
+        run_timeout = _remaining(deadline) if settings_first else timeout
+        try:
+            run_status, run_response = self._request("PUT", base, body=_RUN, timeout=run_timeout)
+        except AuthRejected as err:
+            if settings_first:
+                return 0x81, str(err)
+            raise
+        except Exception as err:
+            if settings_first:
+                # Only this request can have started the oven; never replay it.
+                raise OvenStartUnconfirmed(str(err)) from err
+            raise
+        if not settings_first and not 200 <= run_status < 300 and self._running(index, timeout):
             # It got there by itself between the read and the Run.
             return http_status_to_coap(status), response
         return http_status_to_coap(run_status), run_response
