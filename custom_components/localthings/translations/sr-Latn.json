@@ -71,7 +71,7 @@
         "name": "Dostupno ažuriranje firmvera"
       },
       "instance_open": {
-        "name": "{instance_name} otvoreno"
+        "name": "{instance_name} - otvoreno"
       },
       "paired_hood_connected": {
         "name": "Upareni aspirator povezan"
@@ -308,7 +308,7 @@
         "name": "Prijatno spavanje"
       },
       "instance_setpoint": {
-        "name": "{instance_name} zadana vrednost"
+        "name": "{instance_name} - zadana vrednost"
       },
       "oven_setpoint": {
         "name": "Zadana vrednost"
@@ -724,7 +724,7 @@
         "name": "Temperatura tople vode"
       },
       "ice_type": {
-        "name": "Tip leda ({instance_name})",
+        "name": "{instance_name} - tip leda",
         "state": {
           "off": "Isključeno",
           "whiskey_iceball_3": "3 kugle/dan",
@@ -763,41 +763,55 @@
         }
       },
       "oven_mode": {
-        "name": "Režim kuvanja",
+        "name": "Režim pripreme hrane",
         "state": {
-          "no_operation": "Nema aktivnosti",
+          "no_operation": "Bez operacije",
           "bake": "Pečenje",
           "broil": "Grilovanje",
-          "convection": "Konvekcija",
-          "convection_bake": "Pečenje sa konvekcijom",
-          "convection_broil": "Grilovanje sa konvekcijom",
+          "convection": "Konvekcija (Ventilator)",
+          "convection_bake": "Pečenje sa ventilatorom",
+          "convection_broil": "Grilovanje sa ventilatorom",
           "frozen_pizza_plus": "Zamrznuta pica+",
           "slow_cook": "Sporo kuvanje",
           "plate_warm": "Zagrevanje tanjira",
           "air_fry": "Prženje na vazduhu",
-          "convection_roast": "Pečenje mesa sa konvekcijom",
+          "convection_roast": "Pečenje mesa sa ventilatorom",
           "keep_warm": "Održavanje toplote",
           "bread_proof": "Narastanje testa",
-          "dehydrate": "Dehidratacija",
+          "dehydrate": "Dehidratacija (Sušenje)",
           "self_clean": "Samočišćenje",
           "air_fryer": "Prženje na vazduhu",
-          "upper_broil": "Gornje grilovanje",
-          "upper_convection_bake": "Gornje pečenje sa konvekcijom",
-          "upper_convection_roast": "Gornje pečenje mesa sa konvekcijom",
+          "upper_broil": "Gornji gril",
+          "upper_convection_bake": "Gornje pečenje sa ventilatorom",
+          "upper_convection_roast": "Gornje pečenje mesa sa ventilatorom",
           "lower_bake": "Donje pečenje",
-          "lower_convection_bake": "Donje pečenje sa konvekcijom",
+          "lower_convection_bake": "Donje pečenje sa ventilatorom",
           "steam_bake": "Pečenje sa parom",
           "steam_roast": "Pečenje mesa sa parom",
           "upper_steam_bake": "Gornje pečenje sa parom",
           "descale": "Uklanjanje kamenca",
-          "drain": "Ispuštanje vode"
+          "drain": "Ispuštanje vode",
+          "healthycook1": "Zdravo kuvanje 1",
+          "healthycook2": "Zdravo kuvanje 2",
+          "healthycook3": "Zdravo kuvanje 3",
+          "healthycook4": "Zdravo kuvanje 4",
+          "healthycook5": "Zdravo kuvanje 5",
+          "healthycook6": "Zdravo kuvanje 6",
+          "upper_healthycook1": "Gornje zdravo kuvanje 1",
+          "upper_healthycook2": "Gornje zdravo kuvanje 2",
+          "upper_healthycook3": "Gornje zdravo kuvanje 3",
+          "upper_healthycook4": "Gornje zdravo kuvanje 4",
+          "lower_healthycook1": "Donje zdravo kuvanje 1",
+          "lower_healthycook2": "Donje zdravo kuvanje 2",
+          "lower_healthycook3": "Donje zdravo kuvanje 3",
+          "lower_healthycook4": "Donje zdravo kuvanje 4"
         }
       },
       "operating_mode": {
         "name": "Režim rada"
       },
       "kimchi_zone_mode": {
-        "name": "Režim skladištenja ({instance_name})",
+        "name": "{instance_name} - režim skladištenja",
         "state": {
           "off": "Isključeno",
           "kimchi_storage_normal": "Kimči",
@@ -1292,11 +1306,30 @@
       "equalizer": {
         "name": "Ekvilajzer",
         "state": {
-          "none": "Nema",
+          "none": "Bez efekta",
           "pop": "Pop",
           "jazz": "Džez",
           "classic": "Klasika",
           "custom": "Prilagođeno"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Režim čišćenja",
+        "state": {
+          "auto": "Automatski",
+          "part": "Lokalno",
+          "repeat": "Ponovljeno",
+          "manual": "Ručno",
+          "stop": "Zaustavljeno",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Zvuk",
+        "state": {
+          "soundeffect": "Zvučni efekti",
+          "mute": "Utišano",
+          "voice": "Glas"
         }
       }
     },
@@ -1555,13 +1588,13 @@
         "name": "Temperatura frižidera"
       },
       "kimchi_ripening_status": {
-        "name": "Status sazrevanja ({instance_name})"
+        "name": "{instance_name} - status sazrevanja"
       },
       "kimchi_ripening_remaining": {
-        "name": "Preostalo vreme sazrevanja ({instance_name})"
+        "name": "{instance_name} - preostalo vreme sazrevanja"
       },
       "kimchi_rack_count": {
-        "name": "Broj polica ({instance_name})"
+        "name": "{instance_name} - broj polica"
       },
       "hood_filter_capacity": {
         "name": "Kapacitet filtera"
@@ -1573,7 +1606,7 @@
         "name": "Iskorišćenost filtera"
       },
       "instance_temperature": {
-        "name": "Temperatura ({instance_name})"
+        "name": "{instance_name} - temperatura"
       },
       "job_beginning_status": {
         "name": "Status početka zadatka"
@@ -1745,7 +1778,7 @@
         }
       },
       "ice_making_status": {
-        "name": "Status pravljenja leda ({instance_name})",
+        "name": "{instance_name} - status pravljenja leda",
         "state": {
           "icestatus_stop": "Mirovanje",
           "icestatus_run": "Pravljenje leda"
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signal"
+      },
+      "robot_status": {
+        "name": "Status robota",
+        "state": {
+          "cleaning": "Čišćenje",
+          "point": "Lokalno čišćenje",
+          "homing": "Povratak na bazu",
+          "charging": "Punjenje",
+          "idle": "Mirovanje",
+          "pause": "Pauzirano",
+          "alarm": "Alarm",
+          "reserve": "Zakazano",
+          "poweroff": "Isključen"
+        }
+      },
+      "robot_movement": {
+        "name": "Kretanje"
       }
     },
     "switch": {
@@ -2016,7 +2066,7 @@
         "name": "AI precizno hlađenje"
       },
       "instance_enabled": {
-        "name": "{instance_name} omogućen"
+        "name": "{instance_name} - omogućen"
       },
       "intensive": {
         "name": "Intenzivno"
@@ -2175,7 +2225,10 @@
         "name": "SpaceFit zvuk"
       },
       "voice_amplifier": {
-        "name": "Pojačalo glasa"
+        "name": "Pojačavač glasa"
+      },
+      "repeated_cleaning": {
+        "name": "Ponovi čišćenje"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Topla voda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normalno",
+              "turbo": "Turbo",
+              "quiet": "Tiho",
+              "extra_quiet": "Veoma tiho"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Komanda za {href} nije uspela čak ni nakon ponovnog povezivanja: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Početak kuvanja nije mogao biti potvrđen i pokušaj nije ponovljen. Proverite uređaj pre nego što pokušate ponovo. Detalji: {error}"
+    },
     "command_refused": {
       "message": "Aparat je odbio komandu za {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Uključite ventilator aspiratora pre nego što podesite tajmer za njegovo isključivanje."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ovaj robot usisivač ne podržava brzinu ventilatora {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ovaj robot usisivač nema {command} na listi podržanih komandi."
+    },
+    "vacuum_command_params": {
+      "message": "Komande za robot usisivač ne primaju parametre."
     }
   },
   "selector": {
