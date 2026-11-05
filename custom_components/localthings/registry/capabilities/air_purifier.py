@@ -24,6 +24,7 @@ round (collided Low/Medium on one, stuck at 0 on the other).
 
 import datetime
 
+from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -106,9 +107,65 @@ _AIR_QUALITY_SENSORS = (
     ("dust", "mdi:blur", "Dust", "measurement", "pm10", "μg/m³"),
     ("fine_dust", "mdi:blur", "FineDust", "measurement", "pm25", "μg/m³"),
     ("super_fine_dust", "mdi:blur", "SuperFineDust", "measurement", "pm1", "μg/m³"),
-    ("odor", "mdi:scent", "Odor", None, None, None),
-    ("clean_level", "mdi:air-filter", "CleanLevel", None, None, None),
 )
+
+# Samsung's dust health-concern capabilities enumerate `unknown`, `good`,
+# `moderate`, `slightlyUnhealthy`, 'unhealthy`, `veryUnhealthy`, and
+# `hazardous`. The tested purifier does not report a `slightlyUnhealthy`
+# grade, instead skipping from 2 = `moderate` to 3 = `unhealthy`, so
+# 'slightlyUnhealthy' is omitted. It is assumed that a grade of 5 will
+# be reported as `hazardous`, but this is unconfirmed.
+
+
+_HEALTH_CONCERN_STATES = (
+    "unknown",
+    "good",
+    "moderate",
+    "unhealthy",
+    "very_unhealthy",
+    "hazardous",
+)
+
+
+def _purifier_is_off_or_sleep(resources):
+    airflow = resources.get(HREF_AIRFLOW) or {}
+    if str(airflow.get("speed")) == "1":
+        return True
+
+    power = resources.get("/power/0") or {}
+    if power.get("value") is False:
+        return True
+
+    power = resources.get("/power/vs/0") or {}
+    return str(power.get("x.com.samsung.da.power")).lower() == "off"
+
+
+def _air_quality_value(items, resources, sensor_type):
+    value = sensor_item_value(items, sensor_type)
+    return None if value == 0 and _purifier_is_off_or_sleep(resources) else value
+
+
+def _grade_value(items, sensor_type, states, index=0):
+    value = sensor_item_value(items, sensor_type, index)
+    if value is None or value in (0, 10):
+        return None
+    if 0 < value < len(states):
+        return states[value]
+    return str(value)
+
+
+def _has_grade(sensor_type):
+    def exists(rep, resources):
+        return is_stub_rep(rep) or any(
+            isinstance(item, dict)
+            and item.get("x.com.samsung.da.type") == sensor_type
+            and isinstance(values := item.get("x.com.samsung.da.value"), (list, tuple))
+            and len(values) > 1
+            for item in (rep.get("x.com.samsung.da.items") or [])
+        )
+
+    return exists
+
 
 AIR_QUALITY = Capability(
     href="/sensors/vs/0",
@@ -129,9 +186,52 @@ AIR_QUALITY = Capability(
                 # #166) -- that's a separate problem, and not one worth
                 # hiding a working reading over.
                 exists_fn=has_sensor_type(sensor_type),
-                value_fn=lambda items, t=sensor_type: sensor_item_value(items, t),
+                value_fn=lambda items, t=sensor_type: (
+                    None if (value := sensor_item_value(items, t)) == 0 else value
+                ),
+                resources_value_fn=lambda items, resources, t=sensor_type: (
+                    _air_quality_value(items, resources, t)
+                ),
             )
             for key, icon, sensor_type, state_class, device_class, unit in _AIR_QUALITY_SENSORS
+        ),
+        SensorDesc(
+            key="odor",
+            field="x.com.samsung.da.items",
+            icon="mdi:scent",
+            exists_fn=has_sensor_type("Odor"),
+            value_fn=lambda items: (
+                None if (value := sensor_item_value(items, "Odor")) == 0 else value
+            ),
+        ),
+        SensorDesc(
+            key="clean_level",
+            field="x.com.samsung.da.items",
+            icon="mdi:air-filter",
+            device_class="enum",
+            options=_HEALTH_CONCERN_STATES[1:],
+            exists_fn=has_sensor_type("CleanLevel"),
+            value_fn=lambda items: _grade_value(
+                items, "CleanLevel", _HEALTH_CONCERN_STATES
+            ),
+        ),
+        *(
+            SensorDesc(
+                key=key,
+                field="x.com.samsung.da.items",
+                icon="mdi:blur",
+                device_class="enum",
+                options=_HEALTH_CONCERN_STATES[1:],
+                exists_fn=_has_grade(sensor_type),
+                value_fn=lambda items, t=sensor_type: _grade_value(
+                    items, t, _HEALTH_CONCERN_STATES, 1
+                ),
+            )
+            for key, sensor_type in (
+                ("dust_grade", "Dust"),
+                ("fine_dust_grade", "FineDust"),
+                ("super_fine_dust_grade", "SuperFineDust"),
+            )
         ),
         # CO2 (issue #387) -- same field/shape air_monitor.SENSORS already
         # models with device_class='carbon_dioxide'/unit='ppm'. Gated on the
