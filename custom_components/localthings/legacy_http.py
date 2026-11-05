@@ -151,10 +151,21 @@ _BY_TYPE: dict[str, tuple[Resource, ...]] = {
 }
 
 
+_FLEXDRY_IMMEDIATE = (
+    Resource(endpoint="mode", wrapper="Mode", href="/course/vs/0"),
+    Resource(endpoint="washer", wrapper="Washer", href="/washer/vs/0"),
+)
+_BY_FAMILY: dict[str, tuple[Resource, ...]] = {
+    "TP6X_DRYER_DRUM": _FLEXDRY_IMMEDIATE,
+    "TP6X_DRYER_TOPLOAD": _FLEXDRY_IMMEDIATE,
+}
+
+
 @cache
-def table_for(device_type: str | None) -> tuple[Resource, ...]:
+def table_for(device_type: str | None, family: str | None = None) -> tuple[Resource, ...]:
     """The resource table for an appliance reporting `device_type`."""
     overrides = {resource.wrapper: resource for resource in _BY_TYPE.get(device_type or "", ())}
+    overrides.update({resource.wrapper: resource for resource in _BY_FAMILY.get(family or "", ())})
     return tuple(overrides.get(resource.wrapper, resource) for resource in RESOURCES)
 
 
@@ -377,15 +388,23 @@ def to_resources(bodies: Mapping[str, Any], table: tuple[Resource, ...]) -> dict
     return out
 
 
-# Where cycle_select reads a washer's course-table id to pick its labels.
+# Where cycle_select reads a washer's or dryer's course-table id to pick labels.
 COURSE_TABLE_HREF = "/st/washercourse/vs/0"
+DRYER_COURSE_TABLE_HREF = "/st/dryercourse/vs/0"
 _COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
 
-# This family serves no /st/washercourse/vs/0, so its table is declared per
-# family. TP6X_WASHER is Table_00: a dial walk through all 14 panel positions
-# on a WW6500 matched the existing washer_cycle_table_00 catalog on 13 codes,
-# and the fourteenth (0x6C) is Denim by elimination.
-FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00"}
+# These legacy families do not serve their course-table resource, so the href
+# and table are declared per family. TP6X_WASHER is Table_00: a dial walk
+# through all 14 panel positions on a WW6500 matched the catalog on 13 codes;
+# 0x6C is Denim by elimination. FlexDry's Table_00 assignments are provisional:
+# its bridge reports course codes but no table id (issue #649).
+FAMILY_COURSE_TABLES: dict[str, tuple[str, str]] = {
+    "TP6X_WASHER": (COURSE_TABLE_HREF, "Table_00"),
+    "TP6X_DRYER_DRUM": (DRYER_COURSE_TABLE_HREF, "Table_00"),
+    "TP6X_DRYER_TOPLOAD": (DRYER_COURSE_TABLE_HREF, "Table_00"),
+}
+
+FLEXDRY_FAMILIES = frozenset({"TP6X_DRYER_DRUM", "TP6X_DRYER_TOPLOAD"})
 
 
 # Where model_allows_power_on_off reads whether remote power on/off works.
@@ -438,13 +457,19 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "true" if flags & 1 else "false"}}
 
 
-def course_table(family: str) -> dict[str, dict]:
-    """A `/st/washercourse/vs/0` rep for `family`; empty (raw course codes)
-    for a family nobody has walked the dial on."""
-    table = FAMILY_COURSE_TABLES.get(family)
-    if not table:
+def course_table(family: str | None) -> dict[str, dict]:
+    """Return the configured synthetic course-table rep for a legacy family."""
+    family_key = _family_key(family)
+    course_table = FAMILY_COURSE_TABLES.get(family_key)
+    if not course_table:
         return {}
-    return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
+    href, table = course_table
+    return {href: {_COURSE_TABLE_FIELD: table}}
+
+
+def is_flexdry_family(family: str | None) -> bool:
+    """Whether this family is one of the two FlexDry sections."""
+    return _family_key(family) in FLEXDRY_FAMILIES
 
 
 # Every slot on a bridge shares one panel, so one unit. The TP6X_OV combo's

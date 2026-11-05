@@ -1,0 +1,64 @@
+{
+  "flexdry_drum": {
+    "state_keys": [
+      "alarm_code",
+      "child_lock",
+      "completion_minutes",
+      "cycle",
+      "cycle_active",
+      "damp_alert",
+      "diagnosis",
+      "dry_level",
+      "dry_time",
+      "dryer_temperature",
+      "dryer_type",
+      "finish_time",
+      "machine_state",
+      "progress",
+      "progress_percentage",
+      "remote_control",
+      "wrinkle_prevent",
+      "wrinkle_prevent_active"
+    ],
+    "cycle_codes": [
+      "01",
+      "9C",
+      "94",
+      "A5",
+      "A2",
+      "27",
+      "A1",
+      "9B",
+      "9E",
+      "A3",
+      "A4",
+      "A0"
+    ],
+    "current_course_code": "01"
+  },
+  "flexdry_topload": {
+    "state_keys": [
+      "alarm_code",
+      "child_lock",
+      "completion_minutes",
+      "cycle",
+      "cycle_active",
+      "diagnosis",
+      "dry_level",
+      "dryer_type",
+      "finish_time",
+      "machine_state",
+      "progress",
+      "progress_percentage",
+      "remote_control",
+      "wrinkle_prevent"
+    ],
+    "cycle_codes": [
+      "AD",
+      "AE",
+      "AF",
+      "B0"
+    ],
+    "current_course_code": "AD"
+  }
+}

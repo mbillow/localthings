@@ -596,7 +596,13 @@
           "7f": "Séchage minuté",
           "98": "Séchage rapide 35",
           "eb": "Délicat",
-          "b6": "Synthétiques"
+          "b6": "Synthétiques",
+          "94": "Serviettes",
+          "a1": "Anti-froissage",
+          "ad": "Chemises/blouses",
+          "ae": "Sous-vêtements",
+          "af": "Pulls",
+          "b0": "Accessoires"
         }
       },
       "dryer_cycle_table_03": {
@@ -1311,6 +1317,17 @@
           "jazz": "Jazz",
           "classic": "Classique",
           "custom": "Personnalisé"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Température",
+        "state": {
+          "none": "Aucune",
+          "extra_low": "Très faible",
+          "low": "Faible",
+          "medium_low": "Moyenne / Faible",
+          "medium": "Moyenne",
+          "high": "Élevée"
         }
       },
       "cleaning_mode": {

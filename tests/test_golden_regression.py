@@ -131,9 +131,80 @@ def test_registry_reproduces_golden_state_keys_for_dryer_tp6x_8888():
     )
 
 
+@pytest.mark.parametrize("name", ["flexdry_drum", "flexdry_topload"])
+def test_registry_reproduces_golden_state_keys_for_flexdry(name):
+    from custom_components.localthings.legacy_http import course_table
+    from custom_components.localthings.registry.by_type import dryer as dryer_registry
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.capabilities import dryer as dryer_capabilities
+    from custom_components.localthings.registry.entities import (
+        BinarySensorDesc,
+        ButtonDesc,
+        SelectDesc,
+        SensorDesc,
+        SwitchDesc,
+    )
+    from tests.conftest import _load_device
+
+    resources = _load_device(name)
+    family = resources["/information/vs/0"]["x.com.samsung.da.description"]
+    resources.update(course_table(family))
+    golden = json.loads((GOLDEN / "flexdry_sections.json").read_text())[name]
+    registry = resolve(resources)
+
+    assert registry is not None and registry.name == "flexdry"
+    assert registry is not dryer_registry.REGISTRY
+    state_keys = _new_state_keys(name, resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+    descriptions = [
+        desc for caps in registry.capabilities.values() for cap in caps for desc in cap.entities
+    ]
+    assert all(
+        isinstance(desc, (SensorDesc, BinarySensorDesc))
+        or (
+            isinstance(desc, SelectDesc)
+            and desc.key in {"cycle", "dry_level", "dry_time", "dryer_temperature"}
+        )
+        or (isinstance(desc, SwitchDesc) and desc.key in {"wrinkle_prevent", "damp_alert"})
+        or (isinstance(desc, ButtonDesc) and desc.key in {"start", "pause", "stop"})
+        for desc in descriptions
+    )
+    for key in ("start", "pause", "stop"):
+        button = next(
+            desc for desc in descriptions if isinstance(desc, ButtonDesc) and desc.key == key
+        )
+        assert button.exists_fn is None
+
+    if name == "flexdry_drum":
+        temperature = next(
+            desc
+            for desc in descriptions
+            if isinstance(desc, SelectDesc) and desc.key == "dryer_temperature"
+        )
+        course = resources["/course/vs/0"]
+        course["x.com.samsung.da.options"] = ["Course_A4"]
+        assert temperature.options(resources) == ["ExtraLow", "Low", "MediumLow", "Medium", "High"]
+        course["x.com.samsung.da.options"] = ["Course_01"]
+        assert temperature.options(resources) == ["Medium"]
+
+    cycle = next(
+        entity
+        for entity in dryer_capabilities.DRYER_COURSE.entities
+        if isinstance(entity, SelectDesc)
+    )
+    rep_fn = cycle.rep_fn
+    assert rep_fn is not None
+    assert [code.upper() for code in cycle.options(resources)] == golden["cycle_codes"]
+    assert rep_fn(resources["/course/vs/0"]).upper() == golden["current_course_code"]
+
+
 def test_registry_reproduces_golden_state_keys_for_refrigerator_dongle_0281_8888():
-    """RR40M7165WW behind a DONGLE_0281 bridge (#698), typed by its record's
-    `type` since it reports no `deviceSubType`."""
+    """RR40M7165WW behind a DONGLE_0281 bridge (#698)."""
     from tests.conftest import _load_device
 
     name = "refrigerator_dongle_0281_8888"

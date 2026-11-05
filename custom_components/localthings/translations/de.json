@@ -596,7 +596,13 @@
           "7f": "Zeittrocknen",
           "98": "Schnelltrocknen 35",
           "eb": "Feinwäsche",
-          "b6": "Synthetik"
+          "b6": "Synthetik",
+          "94": "Handtücher",
+          "a1": "Knitterschutz",
+          "ad": "Hemden/Blusen",
+          "ae": "Unterwäsche",
+          "af": "Pullover",
+          "b0": "Accessoires"
         }
       },
       "dryer_cycle_table_03": {
@@ -1311,6 +1317,17 @@
           "jazz": "Jazz",
           "classic": "Klassik",
           "custom": "Benutzerdefiniert"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Temperatur",
+        "state": {
+          "none": "Keine",
+          "extra_low": "Extra niedrig",
+          "low": "Niedrig",
+          "medium_low": "Mittel / Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
         }
       },
       "cleaning_mode": {
