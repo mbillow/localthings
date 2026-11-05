@@ -8,7 +8,7 @@ import functools
 import logging
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -111,6 +111,7 @@ from .rekey import rekey_entry
 from .transport import (
     AuthRejected,
     DecodeError,
+    OvenStartUnconfirmed,
     Transport,
     create_transport,
 )
@@ -184,6 +185,8 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 # writing a whole device at once.
 _DEBUG_MAX_BATCH_ELEMENTS = 16
 
+
+_MODES_FIELD = "x.com.samsung.da.modes"
 
 # Row lists a write may send only the changed row of, and the field each row
 # is matched by (common.merge_items_field).
@@ -284,6 +287,15 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
     cavity = cook.cavity(resources)
     return f"{cavity} oven" if cavity else None
+
+
+def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dict]]) -> str | None:
+    """The main cavity also operates the whole oven without the divider."""
+    if device_type != "microwave" and any(
+        cook.cavity(resources) == "Lower" for resources in siblings
+    ):
+        return "Main oven"
+    return None
 
 
 # Write errors after which the session is fine and a re-poll shows the
@@ -1059,7 +1071,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
+        base_name = self.device_info.get("name") or "Samsung Appliance"
         if subdevice.kind == "main":
+            if label := _main_cavity_label(
+                self.device_type_name,
+                (self.discovery_canonical(child) for child in self.subdevices),
+            ):
+                return {**self.device_info, "name": f"{base_name} {label}"}
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1070,8 +1088,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model_num.split("|", 1)[0] if model_num else ""
         )
         serial = display_serial(info.get("x.com.samsung.da.serialNum"))
-        base_name = self.device_info.get("name") or "Samsung Appliance"
-        if cavity := _cavity_label(resources):
+        # Discovery includes saved snapshots so cavity labels survive offline startup.
+        if cavity := _cavity_label(self.discovery_canonical(subdevice)):
             # A dual-cavity oven reports the same modelNum on both cavities
             # (issue #490), so the model label below names them identically
             # and the two are indistinguishable in HA. The cavity says which
@@ -2882,6 +2900,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     **optimistic_body,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
                 }
+            new_modes = optimistic_body.get(_MODES_FIELD)
+            if getattr(desc, "merges_modes", False) and isinstance(new_modes, list):
+                cached_modes = (self._cache.get(write_href) or {}).get(_MODES_FIELD)
+                optimistic_body = {
+                    **optimistic_body,
+                    _MODES_FIELD: merge_options_field(cached_modes, new_modes),
+                }
             # Same fact for row lists (see airconditioner._climate_write's
             # vendor temperature write, soundbar.CHANNEL_LEVEL).
             for rows, key in _MERGED_ROWS:
@@ -2993,7 +3018,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
-                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
                 # subscriptions on it are too -- downgrade here, before the
@@ -3004,10 +3028,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._observe.mode == MODE_OBSERVE:
                     self._observe.downgrade_to_poll()
                     self._resubscribe_due = True
+                if isinstance(e, OvenStartUnconfirmed):
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="cook_start_unconfirmed",
+                        translation_placeholders={"error": str(e)},
+                    ) from e
+                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
+                    if isinstance(e2, OvenStartUnconfirmed):
+                        raise HomeAssistantError(
+                            translation_domain=DOMAIN,
+                            translation_key="cook_start_unconfirmed",
+                            translation_placeholders={"error": str(e2)},
+                        ) from e2
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
                         translation_domain=DOMAIN,

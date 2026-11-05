@@ -390,6 +390,9 @@ def can_start(rep: dict, resources: dict) -> bool:
     modeSpec is empty for now (#600). A press while nothing is startable is
     refused by plan_start."""
     spec = (resources.get(MODE_HREF) or {}).get(MODE_SPEC)
+    # Specless lower cavities use their own modes or the shared fallback (#572).
+    if spec is None and cavity(resources) == "Lower":
+        return True
     if _is_empty_spec(spec):
         return True
     return any(s.startable for s in mode_specs(resources).values())

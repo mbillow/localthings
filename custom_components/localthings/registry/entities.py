@@ -70,6 +70,14 @@ class SamsungEntityDescription:
     # before accepting it, including a refusal of a value already set (a no-op).
     # Raw writes retain the device's response.
     confirm_on_refusal: bool = False
+    # The write carries one `<Group>_<Value>` token of a multi-group
+    # x.com.samsung.da.modes list (robot_vacuum). The coordinator merges it
+    # by prefix into the cached list, as it does for options, instead of
+    # letting the one token stand in for the whole list until the next poll.
+    merges_modes: bool = False
+    # Wire body -> the body to merge into the cache, for a write whose effect
+    # the device reports in fields it never accepts. The wire body is unchanged.
+    optimistic_fn: Callable[[dict], dict] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -167,9 +175,6 @@ class NumberDesc(SamsungEntityDescription):
     bounds_fn: Callable[[dict, dict], tuple[float, float, float] | None] | None = None
     range_field: str | None = None  # resource field containing [min, max] list
     write_fn: WriteFn = None
-    # Wire body -> the body to merge into the cache, for a write whose effect
-    # the device reports in fields it never accepts. The wire body is unchanged.
-    optimistic_fn: Callable[[dict], dict] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -211,6 +216,13 @@ class WaterHeaterDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True, kw_only=True)
+class VacuumDesc(SamsungEntityDescription):
+    # Composite vacuum entity: rep_fn gives the HA activity; vacuum.py reads
+    # the rest from the bound rep. write_fn takes a (group, value) payload.
+    write_fn: WriteFn = None
+
+
 PLATFORM_OF: dict[type, str] = {
     SensorDesc: "sensor",
     BinarySensorDesc: "binary_sensor",
@@ -224,4 +236,5 @@ PLATFORM_OF: dict[type, str] = {
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
     ZoneClimateDesc: "climate",
+    VacuumDesc: "vacuum",
 }

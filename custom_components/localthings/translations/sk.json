@@ -790,7 +790,21 @@
           "steam_roast": "Opekanie s parou",
           "upper_steam_bake": "Pečenie s parou (horná)",
           "descale": "Odvápnenie",
-          "drain": "Vypustenie vody"
+          "drain": "Vypustenie vody",
+          "healthycook1": "Zdravé varenie 1",
+          "healthycook2": "Zdravé varenie 2",
+          "healthycook3": "Zdravé varenie 3",
+          "healthycook4": "Zdravé varenie 4",
+          "healthycook5": "Zdravé varenie 5",
+          "healthycook6": "Zdravé varenie 6",
+          "upper_healthycook1": "Zdravé varenie 1 (horná)",
+          "upper_healthycook2": "Zdravé varenie 2 (horná)",
+          "upper_healthycook3": "Zdravé varenie 3 (horná)",
+          "upper_healthycook4": "Zdravé varenie 4 (horná)",
+          "lower_healthycook1": "Zdravé varenie 1 (dolná)",
+          "lower_healthycook2": "Zdravé varenie 2 (dolná)",
+          "lower_healthycook3": "Zdravé varenie 3 (dolná)",
+          "lower_healthycook4": "Zdravé varenie 4 (dolná)"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Klasika",
           "custom": "Vlastný"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Režim upratovania",
+        "state": {
+          "auto": "Automatický",
+          "part": "Bodový",
+          "repeat": "Opakovať",
+          "manual": "Ručný",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Zvuk",
+        "state": {
+          "soundeffect": "Zvukové efekty",
+          "mute": "Stlmené",
+          "voice": "Hlas"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signál"
+      },
+      "robot_status": {
+        "name": "Stav robota",
+        "state": {
+          "cleaning": "Upratuje",
+          "point": "Bodové upratovanie",
+          "homing": "Návrat na základňu",
+          "charging": "Nabíja sa",
+          "idle": "Nečinný",
+          "pause": "Pozastavené",
+          "alarm": "Alarm",
+          "reserve": "Naplánované",
+          "poweroff": "Vypnuté"
+        }
+      },
+      "robot_movement": {
+        "name": "Pohyb"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Zosilnenie hlasu"
+      },
+      "repeated_cleaning": {
+        "name": "Opakovať upratovanie"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Teplá voda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normálny",
+              "turbo": "Turbo",
+              "quiet": "Tichý",
+              "extra_quiet": "Veľmi tichý"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Príkaz pre {href} zlyhal aj po opätovnom pripojení: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Spustenie varenia sa nepodarilo potvrdiť a nebolo zopakované. Pred ďalším pokusom skontrolujte spotrebič. Podrobnosti: {error}"
+    },
     "command_refused": {
       "message": "Spotrebič odmietol príkaz pre {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Pred nastavením časovača vypnutia zapnite ventilátor digestora."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Tento robotický vysávač nepodporuje sací výkon {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Tento robotický vysávač neuvádza {command} medzi podporovanými príkazmi."
+    },
+    "vacuum_command_params": {
+      "message": "Príkazy robotického vysávača nemajú žiadne parametre."
     }
   },
   "selector": {

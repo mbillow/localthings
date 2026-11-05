@@ -790,7 +790,21 @@
           "steam_roast": "Arrosto a vapore",
           "upper_steam_bake": "Cottura a vapore (superiore)",
           "descale": "Decalcificazione",
-          "drain": "Scarico acqua"
+          "drain": "Scarico acqua",
+          "healthycook1": "Cottura salutare 1",
+          "healthycook2": "Cottura salutare 2",
+          "healthycook3": "Cottura salutare 3",
+          "healthycook4": "Cottura salutare 4",
+          "healthycook5": "Cottura salutare 5",
+          "healthycook6": "Cottura salutare 6",
+          "upper_healthycook1": "Cottura salutare 1 (superiore)",
+          "upper_healthycook2": "Cottura salutare 2 (superiore)",
+          "upper_healthycook3": "Cottura salutare 3 (superiore)",
+          "upper_healthycook4": "Cottura salutare 4 (superiore)",
+          "lower_healthycook1": "Cottura salutare 1 (inferiore)",
+          "lower_healthycook2": "Cottura salutare 2 (inferiore)",
+          "lower_healthycook3": "Cottura salutare 3 (inferiore)",
+          "lower_healthycook4": "Cottura salutare 4 (inferiore)"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Classica",
           "custom": "Personalizzato"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Modalità di pulizia",
+        "state": {
+          "auto": "Auto",
+          "part": "Localizzata",
+          "repeat": "Ripeti",
+          "manual": "Manuale",
+          "stop": "Stop",
+          "map": "Mappa"
+        }
+      },
+      "robot_sound": {
+        "name": "Suono",
+        "state": {
+          "soundeffect": "Effetti sonori",
+          "mute": "Muto",
+          "voice": "Voce"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Segnale Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Stato del robot",
+        "state": {
+          "cleaning": "In pulizia",
+          "point": "Pulizia localizzata",
+          "homing": "Ritorno alla base",
+          "charging": "In carica",
+          "idle": "Inattivo",
+          "pause": "In pausa",
+          "alarm": "Allarme",
+          "reserve": "Programmato",
+          "poweroff": "Spento"
+        }
+      },
+      "robot_movement": {
+        "name": "Movimento"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Amplificatore vocale"
+      },
+      "repeated_cleaning": {
+        "name": "Ripeti pulizia"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Acqua calda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normale",
+              "turbo": "Turbo",
+              "quiet": "Silenzioso",
+              "extra_quiet": "Extra silenzioso"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Il comando per {href} è fallito anche dopo la riconnessione: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Non è stato possibile confermare l’avvio della cottura e il tentativo non è stato ripetuto. Controllare l’apparecchio prima di riprovare. Dettagli: {error}"
+    },
     "command_refused": {
       "message": "L'elettrodomestico ha rifiutato il comando per {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Accendi la ventola della cappa prima di impostare il timer di spegnimento."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Questo robot aspirapolvere non supporta la potenza di aspirazione {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Questo robot aspirapolvere non elenca {command} tra i comandi supportati."
+    },
+    "vacuum_command_params": {
+      "message": "I comandi del robot aspirapolvere non accettano parametri."
     }
   },
   "selector": {

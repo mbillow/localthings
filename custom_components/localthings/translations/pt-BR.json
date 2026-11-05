@@ -790,7 +790,21 @@
           "steam_roast": "Dourar com vapor",
           "upper_steam_bake": "Assar com vapor na cavidade superior",
           "descale": "Descalcificar",
-          "drain": "Drenar"
+          "drain": "Drenar",
+          "healthycook1": "Cozimento saudável 1",
+          "healthycook2": "Cozimento saudável 2",
+          "healthycook3": "Cozimento saudável 3",
+          "healthycook4": "Cozimento saudável 4",
+          "healthycook5": "Cozimento saudável 5",
+          "healthycook6": "Cozimento saudável 6",
+          "upper_healthycook1": "Cozimento saudável 1 na cavidade superior",
+          "upper_healthycook2": "Cozimento saudável 2 na cavidade superior",
+          "upper_healthycook3": "Cozimento saudável 3 na cavidade superior",
+          "upper_healthycook4": "Cozimento saudável 4 na cavidade superior",
+          "lower_healthycook1": "Cozimento saudável 1 na cavidade inferior",
+          "lower_healthycook2": "Cozimento saudável 2 na cavidade inferior",
+          "lower_healthycook3": "Cozimento saudável 3 na cavidade inferior",
+          "lower_healthycook4": "Cozimento saudável 4 na cavidade inferior"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Clássico",
           "custom": "Personalizado"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Modo de limpeza",
+        "state": {
+          "auto": "Automático",
+          "part": "Localizada",
+          "repeat": "Repetir",
+          "manual": "Manual",
+          "stop": "Parar",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Som",
+        "state": {
+          "soundeffect": "Efeitos sonoros",
+          "mute": "Mudo",
+          "voice": "Voz"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Sinal Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Status do robô",
+        "state": {
+          "cleaning": "Limpando",
+          "point": "Limpeza localizada",
+          "homing": "Voltando à base",
+          "charging": "Carregando",
+          "idle": "Ocioso",
+          "pause": "Pausado",
+          "alarm": "Alarme",
+          "reserve": "Agendado",
+          "poweroff": "Desligado"
+        }
+      },
+      "robot_movement": {
+        "name": "Movimento"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Amplificador de voz"
+      },
+      "repeated_cleaning": {
+        "name": "Repetir limpeza"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Água quente"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Silencioso",
+              "extra_quiet": "Extra silencioso"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "O comando para {href} falhou mesmo após reconectar: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Não foi possível confirmar o início do cozimento, e a tentativa não foi repetida. Verifique o aparelho antes de tentar novamente. Detalhes: {error}"
+    },
     "command_refused": {
       "message": "O aparelho recusou o comando para {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Ligue o ventilador da coifa antes de definir o temporizador de desligamento."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Este robô aspirador não suporta a potência de sucção {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Este robô aspirador não lista {command} entre seus comandos suportados."
+    },
+    "vacuum_command_params": {
+      "message": "Os comandos do robô aspirador não aceitam parâmetros."
     }
   },
   "selector": {

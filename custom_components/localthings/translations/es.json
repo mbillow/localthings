@@ -294,6 +294,9 @@
     "command_failed": {
       "message": "El comando para {href} falló incluso después de reconectar: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "No se pudo confirmar el inicio de la cocción y no se volvió a intentar. Compruebe el aparato antes de intentarlo de nuevo. Detalles: {error}"
+    },
     "command_refused": {
       "message": "El electrodoméstico rechazó el comando para {href}: {error}"
     },
@@ -377,6 +380,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Encienda el ventilador de la campana extractora antes de programar su temporizador de apagado."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Este robot aspirador no admite la potencia de succión {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Este robot aspirador no incluye {command} entre sus comandos admitidos."
+    },
+    "vacuum_command_params": {
+      "message": "Los comandos del robot aspirador no admiten parámetros."
     }
   },
   "entity": {
@@ -1170,7 +1182,21 @@
           "steam_roast": "Asar al vapor",
           "upper_steam_bake": "Hornear al vapor (superior)",
           "descale": "Descalcificación",
-          "drain": "Vaciado de agua"
+          "drain": "Vaciado de agua",
+          "healthycook1": "Cocción saludable 1",
+          "healthycook2": "Cocción saludable 2",
+          "healthycook3": "Cocción saludable 3",
+          "healthycook4": "Cocción saludable 4",
+          "healthycook5": "Cocción saludable 5",
+          "healthycook6": "Cocción saludable 6",
+          "upper_healthycook1": "Cocción saludable 1 (superior)",
+          "upper_healthycook2": "Cocción saludable 2 (superior)",
+          "upper_healthycook3": "Cocción saludable 3 (superior)",
+          "upper_healthycook4": "Cocción saludable 4 (superior)",
+          "lower_healthycook1": "Cocción saludable 1 (inferior)",
+          "lower_healthycook2": "Cocción saludable 2 (inferior)",
+          "lower_healthycook3": "Cocción saludable 3 (inferior)",
+          "lower_healthycook4": "Cocción saludable 4 (inferior)"
         }
       },
       "operating_mode": {
@@ -1677,6 +1703,25 @@
           "jazz": "Jazz",
           "classic": "Clásica",
           "custom": "Personalizado"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Modo de limpieza",
+        "state": {
+          "auto": "Automático",
+          "part": "Puntual",
+          "repeat": "Repetir",
+          "manual": "Manual",
+          "stop": "Detener",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Sonido",
+        "state": {
+          "soundeffect": "Efectos de sonido",
+          "mute": "Silencio",
+          "voice": "Voz"
         }
       }
     },
@@ -2269,6 +2314,23 @@
       },
       "wifi_signal": {
         "name": "Señal Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Estado del robot",
+        "state": {
+          "cleaning": "Limpiando",
+          "point": "Limpieza puntual",
+          "homing": "Volviendo a la base",
+          "charging": "Cargando",
+          "idle": "Inactivo",
+          "pause": "En pausa",
+          "alarm": "Alarma",
+          "reserve": "Programado",
+          "poweroff": "Apagado"
+        }
+      },
+      "robot_movement": {
+        "name": "Movimiento"
       }
     },
     "switch": {
@@ -2556,6 +2618,9 @@
       },
       "voice_amplifier": {
         "name": "Amplificador de voz"
+      },
+      "repeated_cleaning": {
+        "name": "Repetir limpieza"
       }
     },
     "time": {
@@ -2596,6 +2661,20 @@
     "water_heater": {
       "dhw": {
         "name": "Agua caliente"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Silencioso",
+              "extra_quiet": "Extra silencioso"
+            }
+          }
+        }
       }
     }
   },

@@ -790,7 +790,21 @@
           "steam_roast": "Pieczenie mięs z parą",
           "upper_steam_bake": "Pieczenie z parą (górna)",
           "descale": "Odkamienianie",
-          "drain": "Opróżnianie wody"
+          "drain": "Opróżnianie wody",
+          "healthycook1": "Zdrowe gotowanie 1",
+          "healthycook2": "Zdrowe gotowanie 2",
+          "healthycook3": "Zdrowe gotowanie 3",
+          "healthycook4": "Zdrowe gotowanie 4",
+          "healthycook5": "Zdrowe gotowanie 5",
+          "healthycook6": "Zdrowe gotowanie 6",
+          "upper_healthycook1": "Zdrowe gotowanie 1 (górna)",
+          "upper_healthycook2": "Zdrowe gotowanie 2 (górna)",
+          "upper_healthycook3": "Zdrowe gotowanie 3 (górna)",
+          "upper_healthycook4": "Zdrowe gotowanie 4 (górna)",
+          "lower_healthycook1": "Zdrowe gotowanie 1 (dolna)",
+          "lower_healthycook2": "Zdrowe gotowanie 2 (dolna)",
+          "lower_healthycook3": "Zdrowe gotowanie 3 (dolna)",
+          "lower_healthycook4": "Zdrowe gotowanie 4 (dolna)"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Klasyczny",
           "custom": "Niestandardowy"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Tryb sprzątania",
+        "state": {
+          "auto": "Automatyczny",
+          "part": "Miejscowy",
+          "repeat": "Powtarzanie",
+          "manual": "Ręczny",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Dźwięk",
+        "state": {
+          "soundeffect": "Efekty dźwiękowe",
+          "mute": "Wyciszony",
+          "voice": "Głos"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Sygnał Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Stan robota",
+        "state": {
+          "cleaning": "Sprzątanie",
+          "point": "Sprzątanie miejscowe",
+          "homing": "Powrót do stacji",
+          "charging": "Ładowanie",
+          "idle": "Bezczynny",
+          "pause": "Wstrzymany",
+          "alarm": "Alarm",
+          "reserve": "Zaplanowany",
+          "poweroff": "Wyłączony"
+        }
+      },
+      "robot_movement": {
+        "name": "Ruch"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Wzmacniacz głosu"
+      },
+      "repeated_cleaning": {
+        "name": "Powtarzanie sprzątania"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Gorąca woda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normalna",
+              "turbo": "Turbo",
+              "quiet": "Cicha",
+              "extra_quiet": "Bardzo cicha"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Nie udało się potwierdzić rozpoczęcia gotowania i nie ponowiono próby. Sprawdź urządzenie przed ponowną próbą. Szczegóły: {error}"
+    },
     "command_refused": {
       "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Włącz wentylator okapu przed ustawieniem wyłącznika czasowego."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ten robot sprzątający nie obsługuje mocy ssania {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ten robot sprzątający nie wymienia {command} wśród obsługiwanych poleceń."
+    },
+    "vacuum_command_params": {
+      "message": "Polecenia robota sprzątającego nie przyjmują parametrów."
     }
   },
   "selector": {

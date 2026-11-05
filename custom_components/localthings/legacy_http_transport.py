@@ -33,11 +33,14 @@ from typing import Any
 from .legacy_http import (
     CAVITY_LOWER,
     CAVITY_UPPER,
+    CLOCK_ENDPOINT,
+    CLOCK_HREF,
     Resource,
     StagedKey,
     add_staged,
     batch_steps,
     cavity_role,
+    clock_write,
     course_table,
     divider_in,
     http_status_to_coap,
@@ -64,7 +67,7 @@ from .registry.capabilities.laundry import (
     course_option_mask,
 )
 from .registry.subdevices import Subdevice
-from .transport import AuthRejected
+from .transport import AuthRejected, OvenStartUnconfirmed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +99,7 @@ _AUTH_HEADER = "Authorization"
 # How long a start is given to take before its state is read back. The
 # composed start has been measured loading the programme without running it.
 _START_SETTLE_S = 3.0
+_OVEN_START_SETTLE_S = 0.5
 
 _RUN = {"Device": {"Operation": {"state": "Run"}}}
 # What the stop button sends; see _already_ready.
@@ -139,6 +143,9 @@ class _ApplianceState:
     # On device 0's state, for the whole appliance: whether the last
     # `/devices` listing showed a lower cavity, None while unknown.
     divided: bool | None = None
+    # On device 0's state: whether it serves CLOCK_ENDPOINT, None until a
+    # probe has had an answer.
+    clock: bool | None = None
 
 
 # Keyed by (host, port, device index).
@@ -147,6 +154,9 @@ _STATE: dict[tuple[str, int, int], _ApplianceState] = {}
 
 def _device_path(index: int) -> str:
     return f"/devices/{index}"
+
+
+_CLOCK_PATH = f"{_device_path(0)}/{CLOCK_ENDPOINT}"
 
 
 class LegacyHttpTransport:
@@ -334,7 +344,25 @@ class LegacyHttpTransport:
         else:
             # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
             resources.update(course_table(self._family))
+            if CLOCK_HREF not in resources and self._has_clock(timeout):
+                resources[CLOCK_HREF] = {}
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
+
+    def _has_clock(self, timeout: float) -> bool:
+        """Whether device 0 serves CLOCK_ENDPOINT, probed once: a 200 says
+        it does and any 4xx says it doesn't. No answer, or a 5xx, is asked
+        again at the next sweep."""
+        state = self._state_at(0)
+        if state.clock is not None:
+            return state.clock
+        try:
+            status, _ = self._request("GET", _CLOCK_PATH, timeout=timeout)
+        except (OSError, http.client.HTTPException) as err:
+            _LOGGER.debug("%s: %s failed: %s", self._host, _CLOCK_PATH, err)
+            return False
+        if status == 200 or 400 <= status < 500:
+            state.clock = status == 200
+        return status == 200
 
     def _sibling_record(
         self, index: int, deadline: float
@@ -390,6 +418,13 @@ class LegacyHttpTransport:
             # answers /devices/1 with the divider out (#572).
             return 0x83, f"The appliance does not list device {index} now"
         deadline = time.monotonic() + timeout
+        clock_body = clock_write(href, body) if isinstance(body, dict) else None
+        if clock_body is not None and not index and self._has_clock(timeout):
+            # Its own endpoint, not the aggregate; see legacy_http.CLOCK_HREF.
+            status, response = self._request(
+                "PUT", _CLOCK_PATH, body=clock_body, timeout=_remaining(deadline)
+            )
+            return http_status_to_coap(status), response
         refused = self._learn_type(index, timeout)
         if refused is not None:
             _LOGGER.warning("%s: device %d's type is unknown; write refused", self._host, index)
@@ -431,8 +466,9 @@ class LegacyHttpTransport:
         for key, value in staged.items():
             state.staged[key] = (value, staged_current(state.last_bodies, key))
             _LOGGER.info("%s: %s held until the next start", self._host, value)
-        if is_start(sendable) and state.staged and self._idle(index):
-            return self._start(index, sendable, timeout)
+        settings_first = device_type == "Oven" and "Mode" in sendable["Device"]
+        if is_start(sendable) and (settings_first or (state.staged and self._idle(index))):
+            return self._start(index, sendable, timeout, settings_first=settings_first)
         if not sendable["Device"]:
             return 0x44, None
         if sendable == _READY and self._already_ready(index, timeout):
@@ -524,28 +560,53 @@ class LegacyHttpTransport:
         """
         return self._operation_state(index, timeout) == "Ready"
 
-    def _start(self, index: int, aggregate: dict[str, Any], timeout: float) -> tuple[int, Any]:
-        """Start with every held value in the same body -- the only way this
-        firmware takes them -- then make sure it actually runs.
+    def _start(
+        self, index: int, aggregate: dict[str, Any], timeout: float, *, settings_first: bool = False
+    ) -> tuple[int, Any]:
+        """Start with every held value in the same body, then Run if needed.
 
         Measured on a TP6X_WW6500: the composed body loads the programme and
         leaves the appliance in `Ready`; a plain `Run` afterwards starts it.
         That second `Run` is sent only when a fresh read says it isn't
         running.
+
+        Oven records omit Run from the settings write, then send it after
+        0.5s, measured on the NV51K7770S (#667); other ovens are unconfirmed.
         """
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
-        status, response = self._request("PUT", base, body=body, timeout=timeout)
+        deadline = time.monotonic() + timeout
+        if settings_first:
+            operation = body["Device"]["Operation"]
+            operation.pop("state", None)
+            if not operation:
+                del body["Device"]["Operation"]
+        status, response = self._request(
+            "PUT", base, body=body, timeout=_remaining(deadline) if settings_first else timeout
+        )
         if not 200 <= status < 300:
             return http_status_to_coap(status), response
         held.clear()
-        time.sleep(_START_SETTLE_S)
-        if self._running(index, timeout):
+        time.sleep(
+            min(_OVEN_START_SETTLE_S, _remaining(deadline)) if settings_first else _START_SETTLE_S
+        )
+        if not settings_first and self._running(index, timeout):
             return http_status_to_coap(status), response
         _LOGGER.debug("%s: programme loaded but not running; sending Run", self._host)
-        run_status, run_response = self._request("PUT", base, body=_RUN, timeout=timeout)
-        if not 200 <= run_status < 300 and self._running(index, timeout):
+        run_timeout = _remaining(deadline) if settings_first else timeout
+        try:
+            run_status, run_response = self._request("PUT", base, body=_RUN, timeout=run_timeout)
+        except AuthRejected as err:
+            if settings_first:
+                return 0x81, str(err)
+            raise
+        except Exception as err:
+            if settings_first:
+                # Only this request can have started the oven; never replay it.
+                raise OvenStartUnconfirmed(str(err)) from err
+            raise
+        if not settings_first and not 200 <= run_status < 300 and self._running(index, timeout):
             # It got there by itself between the read and the Run.
             return http_status_to_coap(status), response
         return http_status_to_coap(run_status), run_response

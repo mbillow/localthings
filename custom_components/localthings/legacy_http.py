@@ -176,11 +176,19 @@ _LOWER_PREFIX = "Lower"
 CAVITY_UPPER = "upper"
 CAVITY_LOWER = "lower"
 
-# A lower cavity naming no Lower modes of its own runs these. The
-# NV51K777OS's (#572) reports the upper cavity's list: cooks started at the
-# panel ran as LowerConvectionBake with the divider in, and the other two are
-# the reporter's reading of the panel.
-_ASSUMED_LOWER_MODES = ("LowerBake", "LowerConvectionBake", "LowerConvectionRoast")
+# The NV51K7770S (#572) repeats its upper list: LowerConvectionBake was
+# captured, while Bake and Convection Roast are the reporter's reading
+# of the panel. Healthycook1-4 are inferred from its UpperHealthycook1-4
+# and the NW9300MD's own lower list (#681).
+_ASSUMED_LOWER_MODES = (
+    "LowerBake",
+    "LowerConvectionBake",
+    "LowerConvectionRoast",
+    "LowerHealthycook1",
+    "LowerHealthycook2",
+    "LowerHealthycook3",
+    "LowerHealthycook4",
+)
 
 _IDLE_MODE = "NoOperation"
 
@@ -458,6 +466,23 @@ def _first_unit(bodies: Mapping[str, Any]) -> str | None:
     first = temperatures[0] if isinstance(temperatures, list) and temperatures else None
     unit = first.get("unit") if isinstance(first, dict) else None
     return unit if isinstance(unit, str) else None
+
+
+# Where the CoAP boards take a clock sync (range.RANGE_CLOCK_SYNC). Some 8888
+# bridges serve it unlisted at /devices/0/configuration/time, which answers a
+# GET with `{}` and a 404 where it is not served; an NQ70M6650DS's panel took
+# the time from it with Smart Control off (#674), though the clock kept
+# flashing until a key was pressed.
+CLOCK_HREF = "/configuration/vs/0"
+CLOCK_ENDPOINT = "configuration/time"
+_CLOCK_FIELD = PREFIX + "currentTime"
+
+
+def clock_write(href: str, body: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The CLOCK_ENDPOINT body for a clock sync, or None for any other write."""
+    if href != CLOCK_HREF or set(body) != {_CLOCK_FIELD}:
+        return None
+    return {"Time": {"currentTime": body[_CLOCK_FIELD]}}
 
 
 def _bare(name: str) -> str:

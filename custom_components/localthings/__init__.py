@@ -25,10 +25,11 @@ from .coordinator import (
     snapshot_store,
 )
 from .entity import LocalThingsEntity, _is_included, async_load_instance_names
-from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
+from .registry.by_type import WASHER_ONLY_ENTITIES, registry_for, resolve
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
 from .registry.entities import BinarySensorDesc, SwitchDesc
 from .registry.identity import resolve_serial
+from .registry.subdevices import MAIN
 from .rekey import rekey_entry
 from .services import async_setup_services
 
@@ -348,27 +349,36 @@ def _drop_unsupported_sound_switches(
 
 
 @callback
-def _drop_washer_entities_from_filters(
+def _drop_misidentified_washer_entities(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Drop the washer rows a microfiber filter kept from #475's routing.
+    """Drop washer-only rows left by earlier routing (#475, #681).
 
-    Runs on every setup for the same reason as
-    _drop_sensors_superseded_by_selects: idempotent, and a version bump would
-    fail the whole entry on a downgrade. Gated on the device type, since
-    every key here is real on a washer. The keys are derived from the two
-    registries, so a washer entity added later is covered too.
+    Repeat on setup, as in _drop_sensors_superseded_by_selects, so a
+    downgrade does not prevent the next upgrade from cleaning up again.
     """
-    if coordinator.device_type_name != "microfiber_filter":
+    main_registry = registry_for(coordinator.device_type_name)
+    obsolete = set()
+    for subdevice in (MAIN, *coordinator.subdevices):
+        registry = main_registry
+        if subdevice != MAIN:
+            registry = resolve(coordinator.discovery_canonical(subdevice)) or main_registry
+        obsolete.update(
+            (platform, f"{subdevice.key_prefix}{key}")
+            for platform, key in WASHER_ONLY_ENTITIES.get(registry.name, ())
+        )
+    if not obsolete:
         return
     ent_reg = er.async_get(hass)
     prefix = f"{DOMAIN}_{coordinator.device_key}_"
     for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if registry_entry.platform != DOMAIN or not registry_entry.unique_id.startswith(prefix):
+            continue
         key = registry_entry.unique_id.removeprefix(prefix)
-        if (registry_entry.domain, key) not in WASHER_ONLY_ENTITIES:
+        if (registry_entry.domain, key) not in obsolete:
             continue
         _LOGGER.info(
-            "Removing %s, which a microfiber filter has no hardware for; "
+            "Removing %s, left by an earlier washer misidentification; "
             "update any automation or dashboard that referenced it",
             registry_entry.entity_id,
         )
@@ -528,7 +538,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
     _drop_read_only_power_switches(hass, entry, coordinator)
     _drop_unsupported_sound_switches(hass, entry, coordinator)
-    _drop_washer_entities_from_filters(hass, entry, coordinator)
+    _drop_misidentified_washer_entities(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

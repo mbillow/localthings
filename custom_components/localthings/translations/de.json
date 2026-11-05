@@ -790,7 +790,21 @@
           "steam_roast": "Dampfbraten",
           "upper_steam_bake": "Dampfbacken (oben)",
           "descale": "Entkalken",
-          "drain": "Wasser ablassen"
+          "drain": "Wasser ablassen",
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen 1 (oben)",
+          "upper_healthycook2": "Gesundes Garen 2 (oben)",
+          "upper_healthycook3": "Gesundes Garen 3 (oben)",
+          "upper_healthycook4": "Gesundes Garen 4 (oben)",
+          "lower_healthycook1": "Gesundes Garen 1 (unten)",
+          "lower_healthycook2": "Gesundes Garen 2 (unten)",
+          "lower_healthycook3": "Gesundes Garen 3 (unten)",
+          "lower_healthycook4": "Gesundes Garen 4 (unten)"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Klassik",
           "custom": "Benutzerdefiniert"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Reinigungsmodus",
+        "state": {
+          "auto": "Auto",
+          "part": "Punktreinigung",
+          "repeat": "Wiederholen",
+          "manual": "Manuell",
+          "stop": "Stopp",
+          "map": "Karte"
+        }
+      },
+      "robot_sound": {
+        "name": "Ton",
+        "state": {
+          "soundeffect": "Toneffekte",
+          "mute": "Stumm",
+          "voice": "Sprache"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "WLAN-Signal"
+      },
+      "robot_status": {
+        "name": "Roboterstatus",
+        "state": {
+          "cleaning": "Reinigt",
+          "point": "Punktreinigung",
+          "homing": "Kehrt zur Station zurück",
+          "charging": "Lädt",
+          "idle": "Bereit",
+          "pause": "Pausiert",
+          "alarm": "Alarm",
+          "reserve": "Geplant",
+          "poweroff": "Ausgeschaltet"
+        }
+      },
+      "robot_movement": {
+        "name": "Bewegung"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Stimmverstärker"
+      },
+      "repeated_cleaning": {
+        "name": "Reinigung wiederholen"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Warmwasser"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Leise",
+              "extra_quiet": "Extra leise"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Der Garstart konnte nicht bestätigt werden und wurde nicht wiederholt. Prüfen Sie das Gerät, bevor Sie es erneut versuchen. Details: {error}"
+    },
     "command_refused": {
       "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Schalten Sie den Lüfter der Dunstabzugshaube ein, bevor Sie den Abschalttimer einstellen."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Dieser Saugroboter unterstützt die Saugstufe {fan_speed} nicht."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Dieser Saugroboter führt {command} nicht unter seinen unterstützten Befehlen."
+    },
+    "vacuum_command_params": {
+      "message": "Befehle für den Saugroboter haben keine Parameter."
     }
   },
   "selector": {

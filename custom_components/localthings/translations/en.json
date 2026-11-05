@@ -790,7 +790,21 @@
           "steam_roast": "Steam roast",
           "upper_steam_bake": "Upper steam bake",
           "descale": "Descale",
-          "drain": "Drain"
+          "drain": "Drain",
+          "healthycook1": "Healthy cook 1",
+          "healthycook2": "Healthy cook 2",
+          "healthycook3": "Healthy cook 3",
+          "healthycook4": "Healthy cook 4",
+          "healthycook5": "Healthy cook 5",
+          "healthycook6": "Healthy cook 6",
+          "upper_healthycook1": "Upper healthy cook 1",
+          "upper_healthycook2": "Upper healthy cook 2",
+          "upper_healthycook3": "Upper healthy cook 3",
+          "upper_healthycook4": "Upper healthy cook 4",
+          "lower_healthycook1": "Lower healthy cook 1",
+          "lower_healthycook2": "Lower healthy cook 2",
+          "lower_healthycook3": "Lower healthy cook 3",
+          "lower_healthycook4": "Lower healthy cook 4"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Classic",
           "custom": "Custom"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Cleaning mode",
+        "state": {
+          "auto": "Auto",
+          "part": "Spot",
+          "repeat": "Repeat",
+          "manual": "Manual",
+          "stop": "Stop",
+          "map": "Map"
+        }
+      },
+      "robot_sound": {
+        "name": "Sound",
+        "state": {
+          "soundeffect": "Sound effects",
+          "mute": "Mute",
+          "voice": "Voice"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signal"
+      },
+      "robot_status": {
+        "name": "Robot status",
+        "state": {
+          "cleaning": "Cleaning",
+          "point": "Spot cleaning",
+          "homing": "Returning to base",
+          "charging": "Charging",
+          "idle": "Idle",
+          "pause": "Paused",
+          "alarm": "Alarm",
+          "reserve": "Scheduled",
+          "poweroff": "Powered off"
+        }
+      },
+      "robot_movement": {
+        "name": "Movement"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Voice amplifier"
+      },
+      "repeated_cleaning": {
+        "name": "Repeat cleaning"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Hot water"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Quiet",
+              "extra_quiet": "Extra quiet"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "The command to {href} failed even after reconnecting: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Cooking start could not be confirmed and was not retried. Check the appliance before trying again. Details: {error}"
+    },
     "command_refused": {
       "message": "The appliance refused the command to {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Turn the range hood's fan on before setting its shutoff timer."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "This robot vacuum doesn't support the fan speed {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "This robot vacuum doesn't list {command} among its supported commands."
+    },
+    "vacuum_command_params": {
+      "message": "Robot vacuum commands take no parameters."
     }
   },
   "selector": {

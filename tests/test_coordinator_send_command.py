@@ -29,7 +29,7 @@ from custom_components.localthings.const import (
     DOMAIN,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
-from custom_components.localthings.registry.capabilities import laundry
+from custom_components.localthings.registry.capabilities import laundry, robot_vacuum
 from custom_components.localthings.registry.capabilities.airconditioner import _climate_write
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.discovery import BoundEntity
@@ -114,6 +114,56 @@ async def test_options_write_optimistic_cache_keeps_sibling_tokens(coordinator) 
         "Course_1D",
         "GMT_04",
     ]
+
+
+async def test_robot_vacuum_modes_write_merges_into_the_cached_list(coordinator) -> None:
+    """A robot vacuum's /mode/vs/0 modes list holds one token per group
+    (issue #659). Its single-token write must replace only its own group in
+    the optimistic cache, and still go out as that one token."""
+    href = "/mode/vs/0"
+    supported = ["Control_Charging", "Control_Homing", "Turbo_On", "Turbo_Off"]
+    coordinator._observe.apply(
+        href,
+        {
+            "x.com.samsung.da.modes": ["Cleaning_Stop", "Control_Charging", "Turbo_Off"],
+            "x.com.samsung.da.supportedModes": supported,
+        },
+        source="poll",
+    )
+    desc = robot_vacuum.VACUUM.entities[0]
+    bound = BoundEntity(href=href, capability=robot_vacuum.VACUUM, desc=desc)
+
+    await coordinator.async_send_command(bound, ("Control", "Homing"))
+
+    assert coordinator._session.post_calls[0][1] == {"x.com.samsung.da.modes": ["Control_Homing"]}
+    assert coordinator._cache.get(href)["x.com.samsung.da.modes"] == [
+        "Cleaning_Stop",
+        "Control_Homing",
+        "Turbo_Off",
+    ]
+
+
+async def test_robot_vacuum_start_shows_cleaning_straight_away(coordinator) -> None:
+    """Start writes Cleaning_Auto only, but activity reads Control_*, and the
+    settle guard holds back the poll that would report Control_Cleaning."""
+    href = "/mode/vs/0"
+    coordinator._observe.apply(
+        href,
+        {
+            "x.com.samsung.da.modes": ["Cleaning_Stop", "Control_Charging", "Turbo_Off"],
+            "x.com.samsung.da.supportedModes": ["Cleaning_Auto", "Cleaning_Stop"],
+        },
+        source="poll",
+    )
+    desc = robot_vacuum.VACUUM.entities[0]
+    bound = BoundEntity(href=href, capability=robot_vacuum.VACUUM, desc=desc)
+
+    await coordinator.async_send_command(bound, ("Cleaning", "Auto"))
+
+    assert coordinator._session.post_calls[0][1] == {"x.com.samsung.da.modes": ["Cleaning_Auto"]}
+    cached = coordinator._cache.get(href)
+    assert cached["x.com.samsung.da.modes"] == ["Cleaning_Auto", "Control_Cleaning", "Turbo_Off"]
+    assert robot_vacuum.activity(cached) == "cleaning"
 
 
 # ---------------------------------------------------------------------------

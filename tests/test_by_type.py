@@ -242,6 +242,7 @@ class TestForDeviceByOicType:
             ("oic.d.washer", "washer"),
             ("x.com.st.d.hood", "range_hood"),
             ("x.com.st.d.stickcleaner", "vacuum_station"),
+            ("oic.d.robotcleaner", "robot_vacuum"),
             ("x.com.st.d.steamcloset", "air_dresser"),
             ("x.com.st.d.airqualitysensor", "air_monitor"),
         ],
@@ -265,14 +266,14 @@ class TestForDeviceByOicType:
 
         assert for_device_by_oic_type(("oic.d.somethingnew",)) is None
 
-    def test_robotcleaner_is_not_mapped_to_the_vacuum_station_registry(self):
-        """'oic.d.robotcleaner' names an actual robot vacuum, a different
-        product from the clean/auto-empty station vacuum_station covers (no
-        vacuum-body capabilities at all) -- mapping it there would misroute
-        a genuine robot-vacuum dump."""
+    def test_robotcleaner_maps_to_robot_vacuum_not_the_station(self):
+        """'oic.d.robotcleaner' names an actual robot vacuum (issue #659), a
+        different product from the stick vacuum's clean station
+        vacuum_station covers."""
         from custom_components.localthings.registry.by_type import for_device_by_oic_type
 
-        assert for_device_by_oic_type(("oic.d.robotcleaner",)) is None
+        reg = for_device_by_oic_type(("oic.wk.d", "oic.d.robotcleaner"))
+        assert reg is not None and reg.name == "robot_vacuum"
 
     def test_cooktop_maps_to_the_one_cooktop_registry(self):
         """Both cooktop board generations report 'oic.d.cooktop' and share one
