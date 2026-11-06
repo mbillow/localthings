@@ -566,6 +566,12 @@
       },
       "woofer_connection": {
         "name": "Conexión del woofer"
+      },
+      "lamp": {
+        "name": "Lámpara"
+      },
+      "energy_saving": {
+        "name": "Ahorro de energía"
       }
     },
     "button": {
@@ -2337,6 +2343,9 @@
       },
       "robot_movement": {
         "name": "Movimiento"
+      },
+      "oven_setpoint": {
+        "name": "Punto de ajuste"
       }
     },
     "switch": {

@@ -110,7 +110,7 @@ def test_fan_reads_presets_and_speeds():
 
 async def test_fan_writes_reach_the_confirmed_wire_bodies():
     fan, coordinator = _fan(_resources())
-    await fan.async_set_percentage(67)
+    await fan.async_set_percentage(50)
     await fan.async_turn_off()
 
     wire = []

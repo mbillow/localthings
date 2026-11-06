@@ -30,6 +30,7 @@ from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import normalize_temp_unit, option_value
+from .microwave import MICROWAVE_STATUS
 
 # Observed as high as 4; user-reported hardware with 5 burners exists.
 # Kept a little above both since exists_fn gates unused slots out.
@@ -366,6 +367,126 @@ COOKTOP_MONITORING = Capability(
                 exists_fn=_mask_decoded,
             )
             for bit in range(_MASK_BURNERS)
+        ),
+    ),
+)
+
+
+# ---------------------------------------------------------------------------
+# DAWIT 3.0 oven half (issue #726, OS70H30E / TP1X_DA-KS-RANGE-0103X)
+#
+# The ME80H microwave's bare-field `/oven/status/vs/0` generation (see
+# microwave.py), on a range: no /oven/vs/0, /mode/vs/0, /temperatures/vs/0 or
+# /doors/vs/0. Read-only for the same reason as that microwave's.
+# ---------------------------------------------------------------------------
+
+_SHARED_STATUS_KEYS = frozenset(
+    {
+        "machine_state",
+        "cycle_active",
+        "door_open",
+        "child_lock",
+        "cooking_mode",
+        "cook_time",
+        "cook_time_remaining",
+        "cook_finish_time",
+        "sub_operation",
+    }
+)
+
+
+def _status_temperature_unit(rep):
+    return normalize_temp_unit((rep.get("temperature") or {}).get("unit"), default="°F")
+
+
+def _status_temperature(name):
+    def read(rep):
+        try:
+            return float((rep.get("temperature") or {})[name])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    return read
+
+
+def _reports(field):
+    return lambda rep, resources: field in rep
+
+
+def _on(v):
+    return str(v).lower() == "on"
+
+
+def _dawit_status_entities():
+    shared = tuple(e for e in MICROWAVE_STATUS.entities if e.key in _SHARED_STATUS_KEYS)
+    return (
+        *shared,
+        SensorDesc(
+            key="current_temp_c",
+            device_class="temperature",
+            state_class="measurement",
+            unit_fn=_status_temperature_unit,
+            rep_fn=_status_temperature("current"),
+            exists_fn=_reports("temperature"),
+        ),
+        # 0 at rest, like the other ovens' desired temperature.
+        SensorDesc(
+            key="oven_setpoint",
+            device_class="temperature",
+            unit_fn=_status_temperature_unit,
+            rep_fn=_status_temperature("target"),
+            exists_fn=_reports("temperature"),
+        ),
+        BinarySensorDesc(
+            key="lamp",
+            field="lamp",
+            device_class="light",
+            exists_fn=_reports("lamp"),
+            value_fn=_on,
+        ),
+        BinarySensorDesc(
+            key="remote_control",
+            field="smartControl",
+            device_class="connectivity",
+            exists_fn=_reports("smartControl"),
+            value_fn=_on,
+        ),
+    )
+
+
+DAWIT_OVEN_STATUS = Capability(
+    href="/oven/status/vs/0",
+    poll_tier="hot",
+    entities=_dawit_status_entities(),
+)
+
+DAWIT_OVEN_SETTINGS = Capability(
+    href="/oven/settings/status/vs/0",
+    poll_tier="warm",
+    entities=(
+        BinarySensorDesc(
+            key="beep",
+            field="beepSound",
+            entity_category="diagnostic",
+            icon="mdi:volume-high",
+            exists_fn=_reports("beepSound"),
+            value_fn=_on,
+        ),
+        BinarySensorDesc(
+            key="display_time_auto_sync",
+            field="displayTimeAutoSync",
+            entity_category="diagnostic",
+            icon="mdi:clock-sync",
+            exists_fn=_reports("displayTimeAutoSync"),
+            value_fn=_on,
+        ),
+        BinarySensorDesc(
+            key="energy_saving",
+            field="12HourEnergySaving",
+            entity_category="diagnostic",
+            icon="mdi:leaf",
+            exists_fn=_reports("12HourEnergySaving"),
+            value_fn=_on,
         ),
     ),
 )
