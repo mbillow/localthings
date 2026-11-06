@@ -1343,6 +1343,15 @@
           "mute": "Mudo",
           "voice": "Voz"
         }
+      },
+      "tv_input": {
+        "name": "Entrada"
+      },
+      "tv_picture_mode": {
+        "name": "Modo de imagem"
+      },
+      "tv_sound_mode": {
+        "name": "Modo de som"
       }
     },
     "sensor": {
