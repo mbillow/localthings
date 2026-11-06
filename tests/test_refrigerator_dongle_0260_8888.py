@@ -123,4 +123,4 @@ def test_a_stub_doors_resource_binds_no_numbered_doors():
     ]
 
     assert numbered
-    assert not any(e.exists_fn(stub, {}) for e in numbered)
+    assert all(e.exists_fn is not None and not e.exists_fn(stub, {}) for e in numbered)
