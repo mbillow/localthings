@@ -726,7 +726,15 @@
           "cv_fdr_soft_freezer": "소프트 냉동",
           "fconvert_freezer": "냉동",
           "fconvert_fridge": "냉장",
-          "fconvert_off": "끄기"
+          "fconvert_off": "끄기",
+          "cv_ttype_freezer": "냉동",
+          "cv_ttype_soft_freezer": "소프트 냉동",
+          "cv_ttype_chill": "칠",
+          "cv_ttype_cool": "냉장",
+          "cv_ttype_ferment": "숙성",
+          "cv_ttype_kimchi_warm": "김치 약",
+          "cv_ttype_kimchi_normal": "김치",
+          "cv_ttype_kimchi_cold": "김치 강"
         }
       },
       "heated_dry": {
@@ -2718,6 +2726,7 @@
         "winecellar_bottom": "하단 와인 구역",
         "door_freezer": "냉동실 문",
         "door_cooler": "냉장실 문",
+        "door_fridge": "냉장실 문",
         "door_cvroom": "맞춤 보관실 문",
         "door_winecellar": "와인셀러 문",
         "door_onedoorfreezer": "메인 문",

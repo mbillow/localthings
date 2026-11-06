@@ -726,7 +726,15 @@
           "cv_fdr_soft_freezer": "Mierne mrazenie",
           "fconvert_freezer": "Mrazenie",
           "fconvert_fridge": "Chladenie",
-          "fconvert_off": "Vypnuté"
+          "fconvert_off": "Vypnuté",
+          "cv_ttype_freezer": "Mraznička",
+          "cv_ttype_soft_freezer": "Mierne mrazenie",
+          "cv_ttype_chill": "Vychladenie",
+          "cv_ttype_cool": "Chladenie",
+          "cv_ttype_ferment": "Kvasenie",
+          "cv_ttype_kimchi_warm": "Kimči, slabé",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, silné"
         }
       },
       "heated_dry": {
@@ -2718,6 +2726,7 @@
         "winecellar_bottom": "Dolná zóna na víno",
         "door_freezer": "Dvierka mrazničky",
         "door_cooler": "Dvierka chladničky",
+        "door_fridge": "Dvierka chladničky",
         "door_cvroom": "Dvierka flexibilnej zóny",
         "door_winecellar": "Dvierka vinotéky",
         "door_onedoorfreezer": "Hlavné dvierka",

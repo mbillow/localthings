@@ -726,7 +726,15 @@
           "cv_fdr_soft_freezer": "Zachtvriezer",
           "fconvert_freezer": "Vriezen",
           "fconvert_fridge": "Koelen",
-          "fconvert_off": "Uit"
+          "fconvert_off": "Uit",
+          "cv_ttype_freezer": "Vriezer",
+          "cv_ttype_soft_freezer": "Zachtvriezer",
+          "cv_ttype_chill": "Koelen op laag",
+          "cv_ttype_cool": "Koel",
+          "cv_ttype_ferment": "Fermenteren",
+          "cv_ttype_kimchi_warm": "Kimchi, zwak",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, sterk"
         }
       },
       "heated_dry": {
@@ -2718,6 +2726,7 @@
         "winecellar_bottom": "Onderste wijnzone",
         "door_freezer": "Vriezerdeur",
         "door_cooler": "Koelkastdeur",
+        "door_fridge": "Koelkastdeur",
         "door_cvroom": "Flexzonedeur",
         "door_winecellar": "Wijnkoelerdeur",
         "door_onedoorfreezer": "Hoofddeur",

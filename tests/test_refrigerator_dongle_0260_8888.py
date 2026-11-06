@@ -1,6 +1,7 @@
 """The BRB260087WW behind a DONGLE_0260 8888 bridge (#728): its Doors items
 carry only ids, so each reporting door gets a numbered sensor (Door 1,
-Door 2, ...) alongside the aggregate, for users to rename."""
+Door 2, ...) alongside the aggregate, for users to rename. Described doors
+are named instead; see test_refrigerator_tp6x_ref_16k_8888.py."""
 
 import copy
 import json
@@ -88,9 +89,9 @@ def test_a_single_reporting_door_gets_only_the_aggregate():
 def test_doors_follow_the_bridge_order_whatever_their_ids():
     bodies = copy.deepcopy(_bodies())
     bodies["Doors"] = [
-        {"description": "Fridge", "id": "7", "openState": "Open"},
-        {"description": "Freezer", "id": "8", "openState": "Close"},
-        {"description": "CVRoom", "id": "9", "openState": "Open"},
+        {"id": "7", "openState": "Open"},
+        {"id": "8", "openState": "Close"},
+        {"id": "9", "openState": "Open"},
     ]
     state = _state(bodies)
 
@@ -98,6 +99,18 @@ def test_doors_follow_the_bridge_order_whatever_their_ids():
     assert state["door_2_open"] is False
     assert state["door_3_open"] is True
     assert "door_4_open" not in state
+
+
+def test_one_undescribed_door_numbers_them_all():
+    """Named keys need every reporting door to have one; a mix would leave
+    the undescribed door's number depending on its neighbours'."""
+    bodies = copy.deepcopy(_bodies())
+    bodies["Doors"][0]["description"] = "Freezer"
+    state = _state(bodies)
+
+    assert state["door_1_open"] is False
+    assert state["door_2_open"] is False
+    assert "door_freezer_open" not in state
 
 
 def test_a_missing_door_reads_unknown_not_closed():

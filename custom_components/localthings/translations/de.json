@@ -726,7 +726,15 @@
           "cv_fdr_soft_freezer": "Sanftgefrierfach",
           "fconvert_freezer": "Gefrieren",
           "fconvert_fridge": "Kühlen",
-          "fconvert_off": "Aus"
+          "fconvert_off": "Aus",
+          "cv_ttype_freezer": "Gefrierschrank",
+          "cv_ttype_soft_freezer": "Sanftgefrierfach",
+          "cv_ttype_chill": "Kaltlagerung",
+          "cv_ttype_cool": "Kühlen",
+          "cv_ttype_ferment": "Fermentieren",
+          "cv_ttype_kimchi_warm": "Kimchi, schwach",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, stark"
         }
       },
       "heated_dry": {
@@ -2718,6 +2726,7 @@
         "winecellar_bottom": "Untere Weinzone",
         "door_freezer": "Gefrierschranktür",
         "door_cooler": "Kühlschranktür",
+        "door_fridge": "Kühlschranktür",
         "door_cvroom": "Flex-Zonen-Tür",
         "door_winecellar": "Weinkühlschranktür",
         "door_onedoorfreezer": "Haupttür",

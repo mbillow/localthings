@@ -726,7 +726,15 @@
           "cv_fdr_soft_freezer": "Congelatore leggero",
           "fconvert_freezer": "Congelamento",
           "fconvert_fridge": "Refrigerazione",
-          "fconvert_off": "Spento"
+          "fconvert_off": "Spento",
+          "cv_ttype_freezer": "Congelatore",
+          "cv_ttype_soft_freezer": "Congelatore leggero",
+          "cv_ttype_chill": "Raffreddamento",
+          "cv_ttype_cool": "Fresco",
+          "cv_ttype_ferment": "Fermentazione",
+          "cv_ttype_kimchi_warm": "Kimchi, debole",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, forte"
         }
       },
       "heated_dry": {
@@ -2718,6 +2726,7 @@
         "winecellar_bottom": "Zona vino inferiore",
         "door_freezer": "Sportello congelatore",
         "door_cooler": "Sportello frigorifero",
+        "door_fridge": "Sportello frigorifero",
         "door_cvroom": "Sportello zona flessibile",
         "door_winecellar": "Sportello cantinetta",
         "door_onedoorfreezer": "Sportello principale",

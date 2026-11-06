@@ -15,6 +15,7 @@ segments.
 """
 
 import datetime
+import re
 from dataclasses import dataclass
 
 from ..batch import is_stub_rep
@@ -587,6 +588,30 @@ REFRIGERATION = Capability(
             value_fn=lambda v: v == "On",
             write_fn=_refrigeration_write("x.com.samsung.da.rapidFreezing"),
         ),
+        # #749's TP6X_REF_16K keeps these two here, under the keys the CoAP
+        # boards give them on hrefs of their own; those win where present.
+        SwitchDesc(
+            key="defrost_delay",
+            field="x.com.samsung.da.delayDefrost",
+            exists_fn=lambda rep, resources: (
+                "x.com.samsung.da.delayDefrost" in rep and "/defrost/delay/vs/0" not in resources
+            ),
+            icon="mdi:snowflake-off",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=_refrigeration_write("x.com.samsung.da.delayDefrost"),
+        ),
+        SwitchDesc(
+            key="ice_maker_enabled",
+            field="x.com.samsung.da.iceMaker",
+            exists_fn=lambda rep, resources: (
+                "x.com.samsung.da.iceMaker" in rep
+                and not any(h.startswith("/icemaker/") for h in resources)
+            ),
+            icon="mdi:cube-outline",
+            value_fn=lambda v: v == "On",
+            write_fn=_refrigeration_write("x.com.samsung.da.iceMaker"),
+        ),
     ),
 )
 
@@ -1025,7 +1050,7 @@ def _flex_zone_supported(rep):
     return set(rep.get("x.com.samsung.da.supportedOptions") or ())
 
 
-def _flex_zone_current(rep):
+def _flex_zone_option(rep):
     # Every dump seen has at most one modes/supportedOptions overlap; a
     # future device reporting two would read the first and the write below
     # would drop both.
@@ -1034,11 +1059,72 @@ def _flex_zone_current(rep):
     return next((m for m in modes if m in supported), None)
 
 
+# Boards with no supportedOptions (#749's TP6X_REF_16K over 8888) keep the
+# zone's mode as a CV_<family>_<mode> token, and list every family's tokens
+# in supportedModes; the zone offers its own family's. CVN_* names the zone
+# type, not its mode.
+_CV_TOKEN = re.compile(r"CV_[A-Z0-9]+_")
+
+
+def _cv_family(token):
+    match = _CV_TOKEN.match(token) if isinstance(token, str) else None
+    return match.group() if match else None
+
+
+def _cv_current(rep):
+    return next(
+        (m for m in rep.get("x.com.samsung.da.modes") or [] if _cv_family(m) is not None), None
+    )
+
+
+def _cv_options(rep):
+    family = _cv_family(_cv_current(rep))
+    if family is None:
+        return []
+    return [m for m in rep.get("x.com.samsung.da.supportedModes") or [] if _cv_family(m) == family]
+
+
+def _flex_zone_current(rep):
+    if _flex_zone_supported(rep):
+        return _flex_zone_option(rep)
+    current = _cv_current(rep)
+    return current if current in _cv_options(rep) else None
+
+
+def _flex_zone_options(resources):
+    rep = resources.get("/mode/vs/0") or {}
+    if _flex_zone_supported(rep):
+        return list(rep.get("x.com.samsung.da.supportedOptions") or [])
+    return _cv_options(rep)
+
+
 def _flex_zone_write(p, rep, href=None):
     supported = _flex_zone_supported(rep)
+    if not supported:
+        # The token alone, as _vacation_write sends it; unconfirmed on hardware.
+        if p not in _cv_options(rep):
+            return None
+        return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
     modes = [m for m in (rep.get("x.com.samsung.da.modes") or []) if m not in supported]
     modes.append(p)
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": modes}
+
+
+# Fridges without /filter/waterfilter/vs/0 (#749) report the replacement
+# alert as a WATERFILTER_* token: every capture with both has ENABLE beside
+# filterStatus "replace" (at 100% usage) and DISABLE beside "normal".
+_WATER_FILTER_STATUS = {"WATERFILTER_ENABLE": "replace", "WATERFILTER_DISABLE": "normal"}
+
+
+def _water_filter_token_status(rep):
+    modes = rep.get("x.com.samsung.da.modes") or []
+    return next((_WATER_FILTER_STATUS[m] for m in modes if m in _WATER_FILTER_STATUS), None)
+
+
+def _water_filter_token_reported(rep, resources):
+    return (
+        "/filter/waterfilter/vs/0" not in resources and _water_filter_token_status(rep) is not None
+    )
 
 
 # Vacation mode is a token in the same modes list (#698's DONGLE_0281 and
@@ -1075,7 +1161,7 @@ FLEX_ZONE = Capability(
             icon="mdi:thermostat",
             translation_key="flex_zone_mode",
             entity_category="config",
-            options_field="x.com.samsung.da.supportedOptions",
+            options=_flex_zone_options,
             # A nonempty supportedOptions alone isn't sufficient: the
             # kimchi-refrigerator family (issue #26) also populates both
             # fields, but its tokens carry a "_[n]:[n]" suffix on
@@ -1085,6 +1171,14 @@ FLEX_ZONE = Capability(
             exists_fn=lambda rep, resources: _flex_zone_current(rep) is not None,
             rep_fn=_flex_zone_current,
             write_fn=_flex_zone_write,
+        ),
+        SensorDesc(
+            key="filter_status",
+            icon="mdi:filter-check",
+            device_class="enum",
+            options=("normal", "replace"),
+            exists_fn=_water_filter_token_reported,
+            rep_fn=_water_filter_token_status,
         ),
         SwitchDesc(
             key="vacation_mode",
@@ -1242,17 +1336,27 @@ def _reporting_doors(items):
     return [i for i in items or [] if i.get("x.com.samsung.da.openState") is not None]
 
 
-def _nth_reporting_door(items, n):
-    """The n-th (1-based) door item that reports a state, in the bridge's
-    order. Doors are numbered rather than named: an id-only bridge such as
-    DONGLE_0260 (#728) doesn't say which compartment a door belongs to, so
-    users rename Door 1 / Door 2 to suit their fridge.
+def _door_slug(item):
+    raw = item.get("x.com.samsung.da.description")
+    return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_") if isinstance(raw, str) else ""
 
-    Assumes the bridge keeps every door's openState in every poll: if one
-    item dropped it for a poll, the doors after it would shift down a
-    number. No capture so far does this. None when there's no n-th door."""
+
+def _named_doors(items):
+    """{slug: item} when every reporting door has a description of its own,
+    else None: one id-only item (#728's DONGLE_0260) or two alike would
+    leave a door without a stable key, so the doors are numbered instead."""
     doors = _reporting_doors(items)
-    return doors[n - 1] if len(doors) >= n else None
+    slugs = [_door_slug(i) for i in doors]
+    if not all(slugs) or len(set(slugs)) != len(slugs):
+        return None
+    return dict(zip(slugs, doors, strict=True))
+
+
+def _separate_doors(rep):
+    """Two or more reporting doors: on a single-door fridge the aggregate
+    door_open is the same switch. A not-yet-fetched stub binds nothing, as
+    binary sensors aren't re-checked at runtime; a later reload adds them."""
+    return not is_stub_rep(rep) and len(_reporting_doors(rep.get("x.com.samsung.da.items"))) >= 2
 
 
 def _door_is_open(door):
@@ -1262,23 +1366,52 @@ def _door_is_open(door):
     return door.get("x.com.samsung.da.openState") == "Open"
 
 
+def _named_door(slug):
+    def _door(rep):
+        return (_named_doors(rep.get("x.com.samsung.da.items")) or {}).get(slug)
+
+    return BinarySensorDesc(
+        key="open",
+        rep_fn=lambda rep: _door_is_open(_door(rep)),
+        translation_key="instance_open",
+        use_instance_name=True,
+        device_class="door",
+    )
+
+
+def _door_entities(rep):
+    """One sensor per door, keyed and named by the device's own description
+    ("door_freezer_open", as DOOR_GENERIC keys /door/freezer/0)."""
+    if not _separate_doors(rep):
+        return ()
+    named = _named_doors(rep.get("x.com.samsung.da.items")) or {}
+    return tuple((f"door_{slug}", _named_door(slug)) for slug in named)
+
+
+def _nth_reporting_door(items, n):
+    """The n-th (1-based) door item that reports a state, in the bridge's
+    order, for doors with no usable description.
+
+    Assumes the bridge keeps every door's openState in every poll: if one
+    item dropped it for a poll, the doors after it would shift down a
+    number. No capture so far does this. None when there's no n-th door."""
+    doors = _reporting_doors(items)
+    return doors[n - 1] if len(doors) >= n else None
+
+
 # Enough for the four-compartment models; positions beyond what the fridge
 # reports simply don't bind.
 MAX_NUMBERED_DOORS = 4
 
 
 def _numbered_door(n):
-    """Door n, only where two or more doors report: on a single-door fridge
-    the aggregate door_open is the same switch. A not-yet-fetched stub binds
-    nothing: binary sensors aren't re-checked at runtime, so a guess here
-    would leave phantom doors on fridges that have fewer (e.g. the
-    single-door kimchi fridge). A later reload picks the doors up."""
-
     def _exists(rep, resources):
-        if is_stub_rep(rep):
-            return False
-        doors = _reporting_doors(rep.get("x.com.samsung.da.items"))
-        return len(doors) >= 2 and len(doors) >= n
+        items = rep.get("x.com.samsung.da.items")
+        return (
+            _separate_doors(rep)
+            and _named_doors(items) is None
+            and len(_reporting_doors(items)) >= n
+        )
 
     return BinarySensorDesc(
         key=f"door_{n}_open",
@@ -1304,6 +1437,7 @@ DOORS_FALLBACK = Capability(
         ),
         *(_numbered_door(n) for n in range(1, MAX_NUMBERED_DOORS + 1)),
     ),
+    expand_fn=_door_entities,
 )
 
 
