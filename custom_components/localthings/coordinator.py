@@ -226,6 +226,9 @@ def _coap_code_str(code: int) -> str:
     return f"{code >> 5}.{code & 0x1F:02d}"
 
 
+_COAP_BAD_REQUEST = 0x80
+
+
 def _coap_accepted(code: int) -> bool:
     """True for a 2.xx class CoAP response."""
     return (code >> 5) == 2
@@ -2932,7 +2935,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
         try:
-            await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+            await self._async_put(
+                path_segs,
+                body,
+                write_href,
+                on_retry=_rearm,
+                confirm_on_refusal=desc.confirm_on_refusal and not write_only,
+            )
             if (
                 remote_control_off
                 and not write_only
@@ -2959,9 +2968,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise
         await self.async_request_refresh()
 
-    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
-        """Whether a fresh read shows `body`. A read that fails proves
-        nothing, so it counts as taken."""
+    async def _took_effect(
+        self, path_segs: list[str], body: dict | list, *, strict: bool = False
+    ) -> bool:
+        """Whether a fresh read shows `body`; strict confirmation requires a successful read."""
         await asyncio.sleep(self._CONFIRM_DELAY_S)
 
         def _read() -> Any:
@@ -2976,8 +2986,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 rep = await self.hass.async_add_executor_job(_read)
             except Exception as err:
                 self._log.debug("confirming read of %s failed: %s", path_segs, err)
-                return True
-        return rep is None or _payload_present_in(body, rep)
+                return not strict
+        return (not strict) if rep is None else _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2985,6 +2995,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         body: dict | list,
         write_href: str,
         on_retry: Callable[[], None] | None = None,
+        *,
+        confirm_on_refusal: bool = False,
     ) -> None:
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too."""
@@ -3041,6 +3053,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        # An opted-in control may apply a write while replying 4.00 (#714).
+        # A failed GET cannot overturn an explicit refusal.
+        if (
+            code == _COAP_BAD_REQUEST
+            and confirm_on_refusal
+            and await self._took_effect(path_segs, body, strict=True)
+        ):
+            self._log.debug("PUT %s refused, but confirmed by live GET", write_href)
+            return
+
         if not _coap_accepted(code):
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.

@@ -660,6 +660,7 @@ CLIMATE = Capability(
             translation_key="airconditioner",
             rep_fn=_first_mode,
             write_fn=_climate_write,
+            confirm_on_refusal=True,
         ),
         # Purification/Ventilation/SmartVentilation mode select (PR #316) --
         # _is_ventilation_mode_device gates this to devices using that

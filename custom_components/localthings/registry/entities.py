@@ -66,6 +66,10 @@ class SamsungEntityDescription:
     # False for a write the appliance takes with Remote Control off; the
     # coordinator then leaves the refusal, if any, to the appliance.
     needs_remote_control: bool = True
+    # Some boards apply a write but answer 4.00; require a fresh matching GET
+    # before accepting it, including a refusal of a value already set (a no-op).
+    # Raw writes retain the device's response.
+    confirm_on_refusal: bool = False
     # The write carries one `<Group>_<Value>` token of a multi-group
     # x.com.samsung.da.modes list (robot_vacuum). The coordinator merges it
     # by prefix into the cached list, as it does for options, instead of
