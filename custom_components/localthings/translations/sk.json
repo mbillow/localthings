@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Dvierka"
       },
+      "door_1_open": {
+        "name": "Dvierka 1"
+      },
+      "door_2_open": {
+        "name": "Dvierka 2"
+      },
+      "door_3_open": {
+        "name": "Dvierka 3"
+      },
+      "door_4_open": {
+        "name": "Dvierka 4"
+      },
       "filter_blockage": {
         "name": "Upchatie filtra"
       },

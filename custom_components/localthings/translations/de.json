@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Tür"
       },
+      "door_1_open": {
+        "name": "Tür 1"
+      },
+      "door_2_open": {
+        "name": "Tür 2"
+      },
+      "door_3_open": {
+        "name": "Tür 3"
+      },
+      "door_4_open": {
+        "name": "Tür 4"
+      },
       "filter_blockage": {
         "name": "Filterverstopfung"
       },

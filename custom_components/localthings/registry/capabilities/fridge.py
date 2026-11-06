@@ -1238,6 +1238,57 @@ def _any_door_generic(resources):
     return any(h.startswith("/door/") for h in resources)
 
 
+def _reporting_doors(items):
+    return [i for i in items or [] if i.get("x.com.samsung.da.openState") is not None]
+
+
+def _nth_reporting_door(items, n):
+    """The n-th (1-based) door item that reports a state, in the bridge's
+    order. Doors are numbered rather than named: an id-only bridge such as
+    DONGLE_0260 (#728) doesn't say which compartment a door belongs to, so
+    users rename Door 1 / Door 2 to suit their fridge.
+
+    Assumes the bridge keeps every door's openState in every poll: if one
+    item dropped it for a poll, the doors after it would shift down a
+    number. No capture so far does this. None when there's no n-th door."""
+    doors = _reporting_doors(items)
+    return doors[n - 1] if len(doors) >= n else None
+
+
+def _door_is_open(door):
+    """None (unknown) for a missing door rather than a false Closed."""
+    if door is None:
+        return None
+    return door.get("x.com.samsung.da.openState") == "Open"
+
+
+# Enough for the four-compartment models; positions beyond what the fridge
+# reports simply don't bind.
+MAX_NUMBERED_DOORS = 4
+
+
+def _numbered_door(n):
+    """Door n, only where two or more doors report: on a single-door fridge
+    the aggregate door_open is the same switch. A not-yet-fetched stub binds
+    nothing: binary sensors aren't re-checked at runtime, so a guess here
+    would leave phantom doors on fridges that have fewer (e.g. the
+    single-door kimchi fridge). A later reload picks the doors up."""
+
+    def _exists(rep, resources):
+        if is_stub_rep(rep):
+            return False
+        doors = _reporting_doors(rep.get("x.com.samsung.da.items"))
+        return len(doors) >= 2 and len(doors) >= n
+
+    return BinarySensorDesc(
+        key=f"door_{n}_open",
+        field="x.com.samsung.da.items",
+        device_class="door",
+        exists_fn=_exists,
+        value_fn=lambda items: _door_is_open(_nth_reporting_door(items, n)),
+    )
+
+
 DOORS_FALLBACK = Capability(
     href="/doors/vs/0",
     match_fn=lambda rep, resources: not _any_door_generic(resources),
@@ -1251,6 +1302,7 @@ DOORS_FALLBACK = Capability(
                 i.get("x.com.samsung.da.openState") == "Open" for i in (items or [])
             ),
         ),
+        *(_numbered_door(n) for n in range(1, MAX_NUMBERED_DOORS + 1)),
     ),
 )
 

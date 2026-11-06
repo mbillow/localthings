@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Sportello"
       },
+      "door_1_open": {
+        "name": "Sportello 1"
+      },
+      "door_2_open": {
+        "name": "Sportello 2"
+      },
+      "door_3_open": {
+        "name": "Sportello 3"
+      },
+      "door_4_open": {
+        "name": "Sportello 4"
+      },
       "filter_blockage": {
         "name": "Ostruzione del filtro"
       },
