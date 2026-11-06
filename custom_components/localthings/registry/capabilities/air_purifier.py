@@ -23,6 +23,7 @@ round (collided Low/Medium on one, stuck at 0 on the other).
 """
 
 import datetime
+import re
 
 from ..capability import Capability
 from ..entities import (
@@ -246,9 +247,13 @@ _SPEED_LEVEL = "x.com.samsung.da.speedLevel"
 
 
 def is_tp6x_vtl(resources) -> bool:
-    """The 8888 TP6X_VTL_16K purifier (#608), named by its description."""
+    """The 8888 TP6X_VTL_16K purifier (#608), by the same whole-token match
+    on modelNum or description that routes it."""
     info = resources.get("/information/vs/0") or {}
-    return "VTL" in str(info.get("x.com.samsung.da.description", "")).upper().split("_")
+    return any(
+        "VTL" in re.split(r"[^A-Z0-9]+", str(info.get(field, "")).upper())
+        for field in ("x.com.samsung.da.modelNum", "x.com.samsung.da.description")
+    )
 
 
 def _speed_level_fan_write(payload, rep, href=None):

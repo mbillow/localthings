@@ -3,7 +3,7 @@
 import re
 from collections.abc import Sequence
 
-from ..capabilities.cook import MODE_HREF, MODE_SPEC, has_entries, mode_specs
+from ..capabilities.cook import MODE_HREF, MODE_SPEC, mode_specs, selectable_modes
 from ..entities import PLATFORM_OF
 from . import (
     air_dresser,
@@ -384,10 +384,10 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     # After a Wi-Fi board restart an LCD_R18 microwave lists only
     # HOMECARE_WIZARD_V2 until its power is cut (#600), and would come up as
     # an oven (#744). Its modeSpec, live or remembered by the coordinator,
-    # still names the modes.
-    listed = [m for m in supported_modes if m != "HOMECARE_WIZARD_V2"]
-    if not listed and has_entries(mode.get(MODE_SPEC)):
-        supported_modes = tuple(mode_specs({MODE_HREF: mode}))
+    # still names the modes. Only that shape: an empty list means something
+    # else on other boards.
+    if supported_modes and not selectable_modes(list(supported_modes)):
+        supported_modes = tuple(mode_specs({MODE_HREF: {MODE_SPEC: mode.get(MODE_SPEC, "[]")}}))
     cavity = resources.get("/oven/vs/0")
     if isinstance(cavity, dict):
         if any(

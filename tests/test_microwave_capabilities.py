@@ -981,3 +981,18 @@ def test_microwave_keeps_its_type_from_a_remembered_mode_spec():
     remembered = cook.with_cached_specs(spell, {"/mode/vs/0": spec})
     reg = resolve(remembered, device_types=oic)
     assert reg is not None and reg.name == "microwave"
+
+
+def test_an_empty_mode_list_does_not_type_from_the_mode_spec():
+    """Only the #600 shape (HOMECARE flags alone) falls back to modeSpec."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    spec = resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"]
+    mode = {
+        **resources["/mode/vs/0"],
+        "x.com.samsung.da.supportedModes": [],
+        "x.com.samsung.da.modeSpec": spec,
+    }
+    reg = resolve({**resources, "/mode/vs/0": mode}, device_types=("oic.wk.d", "oic.d.oven"))
+    assert reg is not None and reg.name != "microwave"

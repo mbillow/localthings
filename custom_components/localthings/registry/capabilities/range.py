@@ -24,13 +24,16 @@ same caveat as oven.py's RMW writes) -- power level uses the same
 read-modify-write pattern already proven safe elsewhere in this codebase.
 """
 
+from dataclasses import replace
 from datetime import datetime
 
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import normalize_temp_unit, option_value
-from .microwave import MICROWAVE_STATUS
+from .microwave import MICROWAVE_SETTINGS, MICROWAVE_STATUS
+from .oven import _IDLE_FLOOR as OVEN_IDLE_FLOOR
+from .oven import _setpoint as oven_setpoint_value
 
 # Observed as high as 4; user-reported hardware with 5 burners exists.
 # Kept a little above both since exists_fn gates unused slots out.
@@ -393,20 +396,36 @@ _SHARED_STATUS_KEYS = frozenset(
         "sub_operation",
     }
 )
+_SHARED_SETTINGS_KEYS = frozenset({"beep", "display_time_auto_sync"})
+
+
+def _no_ocf_cavity(rep, resources):
+    """Keeps these off a range that also serves the OCF cavity, whose oven
+    capabilities bind the same keys."""
+    return "/oven/vs/0" not in resources
 
 
 def _status_temperature_unit(rep):
     return normalize_temp_unit((rep.get("temperature") or {}).get("unit"), default="°F")
 
 
-def _status_temperature(name):
-    def read(rep):
-        try:
-            return float((rep.get("temperature") or {})[name])
-        except (KeyError, TypeError, ValueError):
-            return None
+def _status_target(rep):
+    """0 at rest means unset, as on the other ovens (#444)."""
+    return oven_setpoint_value((rep.get("temperature") or {}).get("target"))
 
-    return read
+
+def _status_current(rep):
+    """None at rest while the cavity sits at its idle floor, as on the other
+    ovens: 175 F on this range is Bake's tempMin, not a reading."""
+    temperature = rep.get("temperature") or {}
+    try:
+        current = float(temperature["current"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    floor = OVEN_IDLE_FLOOR.get(_status_temperature_unit(rep), 0)
+    if _status_target(rep) is None and current <= floor:
+        return None
+    return current
 
 
 def _reports(field):
@@ -417,24 +436,25 @@ def _on(v):
     return str(v).lower() == "on"
 
 
-def _dawit_status_entities():
-    shared = tuple(e for e in MICROWAVE_STATUS.entities if e.key in _SHARED_STATUS_KEYS)
-    return (
-        *shared,
+DAWIT_OVEN_STATUS = Capability(
+    href="/oven/status/vs/0",
+    match_fn=_no_ocf_cavity,
+    poll_tier="hot",
+    entities=(
+        *(e for e in MICROWAVE_STATUS.entities if e.key in _SHARED_STATUS_KEYS),
         SensorDesc(
             key="current_temp_c",
             device_class="temperature",
             state_class="measurement",
             unit_fn=_status_temperature_unit,
-            rep_fn=_status_temperature("current"),
+            rep_fn=_status_current,
             exists_fn=_reports("temperature"),
         ),
-        # 0 at rest, like the other ovens' desired temperature.
         SensorDesc(
             key="oven_setpoint",
             device_class="temperature",
             unit_fn=_status_temperature_unit,
-            rep_fn=_status_temperature("target"),
+            rep_fn=_status_target,
             exists_fn=_reports("temperature"),
         ),
         BinarySensorDesc(
@@ -451,35 +471,14 @@ def _dawit_status_entities():
             exists_fn=_reports("smartControl"),
             value_fn=_on,
         ),
-    )
-
-
-DAWIT_OVEN_STATUS = Capability(
-    href="/oven/status/vs/0",
-    poll_tier="hot",
-    entities=_dawit_status_entities(),
+    ),
 )
 
-DAWIT_OVEN_SETTINGS = Capability(
-    href="/oven/settings/status/vs/0",
-    poll_tier="warm",
+DAWIT_OVEN_SETTINGS = replace(
+    MICROWAVE_SETTINGS,
+    match_fn=_no_ocf_cavity,
     entities=(
-        BinarySensorDesc(
-            key="beep",
-            field="beepSound",
-            entity_category="diagnostic",
-            icon="mdi:volume-high",
-            exists_fn=_reports("beepSound"),
-            value_fn=_on,
-        ),
-        BinarySensorDesc(
-            key="display_time_auto_sync",
-            field="displayTimeAutoSync",
-            entity_category="diagnostic",
-            icon="mdi:clock-sync",
-            exists_fn=_reports("displayTimeAutoSync"),
-            value_fn=_on,
-        ),
+        *(e for e in MICROWAVE_SETTINGS.entities if e.key in _SHARED_SETTINGS_KEYS),
         BinarySensorDesc(
             key="energy_saving",
             field="12HourEnergySaving",

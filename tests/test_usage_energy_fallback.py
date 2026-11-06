@@ -225,12 +225,13 @@ def test_an_ac_with_an_all_zero_third_field_reads_plain_wh():
     )
 
 
-def test_an_ac_runtime_board_reads_its_energy_as_plain_wh():
-    """#488's TP2X_RAC_20K capture: its second field equals the live
-    cumulativePower outright."""
+def test_an_ac_runtime_board_still_publishes_no_energy_fallback():
+    """#488's TP2X_RAC_20K capture. On a multi-split the energy beside a
+    runtime counter is the shared outdoor unit's (#329), so a per-head
+    sensor would count it once per head."""
     data = json.loads((FIXTURES / "usage_blobs.json").read_text())["airconditioner_tp2x_rac_20k"]
     state = _ac_state({TRANSFER: _transfer_rep(from_json_safe(data["blob"]))})
-    assert state["energy_kwh"] == pytest.approx(data["cumulative_wh"] / 1000)
+    assert "energy_kwh" not in state
     assert state["usage_runtime_hours"] == data["runtime_hours"]
 
 
