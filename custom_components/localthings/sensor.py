@@ -28,6 +28,7 @@ from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
 from .observe import MODE_OBSERVE, MODE_POLL
 from .registry.entities import SensorDesc
+from .registry.subdevices import MAIN
 
 
 async def async_setup_entry(
@@ -232,7 +233,7 @@ class LocalThingsConnectionModeSensor(CoordinatorEntity[LocalThingsCoordinator],
 
     @property
     def device_info(self) -> DeviceInfo:
-        return self.coordinator.device_info
+        return self.coordinator.device_info_for(MAIN)
 
     @property
     def native_value(self) -> str:
@@ -267,7 +268,7 @@ class LocalThingsLastResponseSensor(CoordinatorEntity[LocalThingsCoordinator], R
 
     @property
     def device_info(self) -> DeviceInfo:
-        return self.coordinator.device_info
+        return self.coordinator.device_info_for(MAIN)
 
     @property
     def available(self) -> bool:
