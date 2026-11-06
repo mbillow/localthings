@@ -981,6 +981,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normal",
+          "50": "Secagem de algodão",
+          "51": "Secagem de sintéticos",
           "55": "Roupas brancas",
           "57": "Autolimpeza+",
           "5b": "Algodão",
@@ -1020,6 +1022,8 @@
           "ab": "Lavagem fria econômica",
           "b1": "Autolimpeza+",
           "ba": "Drenar/Centrifugar",
+          "c7": "Limpeza do tambor Eco",
+          "ca": "Air Wash",
           "d0": "Algodão",
           "d1": "Algodão econômico",
           "d2": "Sintéticos",
@@ -1032,7 +1036,9 @@
           "da": "Lavagem supereconômica",
           "db": "Super-rápido",
           "dc": "Lavagem rápida 15 min",
-          "e4": "Antialérgico"
+          "e3": "Lavagem diária",
+          "e4": "Antialérgico",
+          "e7": "Lavar + secar rápido"
         }
       },
       "washer_cycle_table_02": {

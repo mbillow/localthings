@@ -1,0 +1,33 @@
+{
+  "note": "TP6X_VTL_16K air purifier over 8888 (issue #608): the `transport.bodies` block of a LocalThings 0.36.0 diagnostics download, posted redacted in the issue, powered on. Information is rebuilt from the same download's /information/vs/0, which the redacted excerpt kept as resources only. Carries no serial or uuid.",
+  "device_type": "Air_Purifier",
+  "bodies": {
+    "Alarms": [
+      {"alarmType": "Device", "code": "ErrorCode_OFF", "id": "0"},
+      {"alarmType": "Device", "code": "FilterAlarm_OFF", "id": "1"}
+    ],
+    "Consumables": [{"id": "0", "name": "FilterProgress", "state": "3"}],
+    "Diagnosis": {"diagnosisStart": "Ready"},
+    "Mode": {
+      "options": [
+        "Comode_Off",
+        "Blooming_6",
+        "Function_15",
+        "Volume_66",
+        "Spi_Off",
+        "OptionCode_16702",
+        "FilterCleanAlarm_0"
+      ]
+    },
+    "Operation": {"power": "On"},
+    "Sensors": [
+      {"id": "0", "type": "Dust", "values": [9.0, 1.0]},
+      {"id": "1", "type": "FineDust", "values": [9.0, 1.0]},
+      {"id": "2", "type": "Odor", "values": [1.0]},
+      {"id": "3", "type": "CleanLevel", "values": [1.0]}
+    ],
+    "Wind": {"direction": "Off", "speedLevel": 0},
+    "Configuration": {"region": "000"},
+    "Information": {"modelID": "TP6X_VTL_16K", "description": "TP6X_VTL_16K"}
+  }
+}

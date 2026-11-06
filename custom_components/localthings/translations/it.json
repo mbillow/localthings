@@ -981,6 +981,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normale",
+          "50": "Asciugatura cotone",
+          "51": "Asciugatura sintetici",
           "55": "Bianchi",
           "57": "Self Clean+",
           "5b": "Cotone",
@@ -1020,6 +1022,8 @@
           "ab": "Eco freddo",
           "b1": "Self Clean+",
           "ba": "Scarico/Centrifuga",
+          "c7": "Pulizia cestello Eco",
+          "ca": "Lavaggio ad aria",
           "d0": "Cotone",
           "d1": "Cotone E",
           "d2": "Sintetici",
@@ -1032,7 +1036,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "Rapido 15'",
-          "e4": "Anti-allergia"
+          "e3": "Lavaggio quotidiano",
+          "e4": "Anti-allergia",
+          "e7": "Lavaggio+Asciugatura rapido"
         }
       },
       "washer_cycle_table_02": {

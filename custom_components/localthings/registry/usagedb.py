@@ -191,6 +191,21 @@ def cumulative_energy_kwh(rep: dict) -> float | None:
     return parsed[-1][1] / 10
 
 
+def cumulative_energy_kwh_from_wh(rep: dict) -> float | None:
+    """The newest record's cumulative energy, in kWh, for a family known to
+    store plain Wh whatever its third field holds.
+
+    Every air conditioner measured does: the runtime-carrying
+    `ARTIK051_PRAC_20K` (#329) and `TP2X_RAC_20K` (#488), and the
+    `A-CAWW-TP2-20-COMMON` System AC (#741), whose all-zero third field would
+    otherwise pass for a washer's and be read 100x high.
+    """
+    parsed = records(rep)
+    if not parsed:
+        return None
+    return parsed[-1][1] / 1000
+
+
 def cumulative_runtime_hours(rep: dict) -> float | None:
     """The newest record's cumulative running time, in hours.
 

@@ -3,6 +3,7 @@
 import re
 from collections.abc import Sequence
 
+from ..capabilities.cook import MODE_HREF, MODE_SPEC, has_entries, mode_specs
 from ..entities import PLATFORM_OF
 from . import (
     air_dresser,
@@ -130,6 +131,7 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "DHM": "dehumidifier",  # issue #88 -- target humidity, no climate
     "EHS": "ehs",  # heat pump: zone1 heating/cooling + domestic hot water
     "TVTL": "air_purifier",  # issue #56 (ARTIK051)
+    "VTL": "air_purifier",  # issue #608 (TP6X_VTL_16K, 8888)
     "VTWW": "air_purifier",  # issue #151 (BESPOKE Cube Air)
     # issue #190: same lineage as VTWW, but the '-WW-' delimiter falls one
     # letter left ('A-VTWW-' -> 'AVT-WW-'), splitting into a different token.
@@ -379,6 +381,13 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     supported_modes = mode.get("x.com.samsung.da.supportedModes") or ()
     if not isinstance(supported_modes, (list, tuple)):
         supported_modes = ()
+    # After a Wi-Fi board restart an LCD_R18 microwave lists only
+    # HOMECARE_WIZARD_V2 until its power is cut (#600), and would come up as
+    # an oven (#744). Its modeSpec, live or remembered by the coordinator,
+    # still names the modes.
+    listed = [m for m in supported_modes if m != "HOMECARE_WIZARD_V2"]
+    if not listed and has_entries(mode.get(MODE_SPEC)):
+        supported_modes = tuple(mode_specs({MODE_HREF: mode}))
     cavity = resources.get("/oven/vs/0")
     if isinstance(cavity, dict):
         if any(

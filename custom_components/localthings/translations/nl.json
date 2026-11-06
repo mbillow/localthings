@@ -981,6 +981,8 @@
         "name": "Programma",
         "state": {
           "01": "Normaal",
+          "50": "Katoen drogen",
+          "51": "Synthetisch drogen",
           "55": "Witte was",
           "57": "Self Clean+",
           "5b": "Katoen",
@@ -1020,6 +1022,8 @@
           "ab": "Eco koud",
           "b1": "Self Clean+",
           "ba": "Afpompen/centrifugeren",
+          "c7": "Eco trommelreiniging",
+          "ca": "Air Wash",
           "d0": "Katoen",
           "d1": "Eco katoen",
           "d2": "Synthetisch",
@@ -1032,7 +1036,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "15' Snelle was",
-          "e4": "Anti-allergie"
+          "e3": "Dagelijkse was",
+          "e4": "Anti-allergie",
+          "e7": "Snel wassen+drogen"
         }
       },
       "washer_cycle_table_02": {

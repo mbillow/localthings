@@ -71,7 +71,7 @@ from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
 from .registry.batch import parse_device0_batch
-from .registry.by_type import registry_for
+from .registry.by_type import DeviceRegistry, registry_for
 from .registry.by_type import resolve as resolve_registry
 from .registry.capabilities import cook
 from .registry.capabilities.common import (
@@ -1696,6 +1696,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Discovery (runs once on first successful poll)
     # ------------------------------------------------------------------
 
+    def _resolve_with_remembered_specs(
+        self, resources: dict[str, dict], device_types: Sequence[str] = ()
+    ) -> DeviceRegistry | None:
+        """resolve(), typing the device from its remembered modeSpec while
+        the board lists no modes (#744), as the cook view already does."""
+        return resolve_registry(
+            cook.with_cached_specs(resources, self._mode_specs), device_types=device_types
+        )
+
     def _subdevice_probe_priority(
         self,
         resources: dict[str, dict],
@@ -2188,7 +2197,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         bound, device_type_name, materialized, skipped = discover_partitioned(
             self._without_disabled(resources),
             [s for s in self.subdevices if s.key not in self.disabled_keys],
-            resolve_registry,
+            self._resolve_with_remembered_specs,
             CAPABILITIES,
             log=unbound.append,
             tier_log=_tier_log,

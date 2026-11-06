@@ -981,6 +981,8 @@
         "name": "Programme",
         "state": {
           "01": "Normal",
+          "50": "Séchage coton",
+          "51": "Séchage synthétiques",
           "55": "Blancs",
           "57": "Autonettoyage+",
           "5b": "Coton",
@@ -1020,6 +1022,8 @@
           "ab": "Éco - froid",
           "b1": "Auto-nettoyage+",
           "ba": "Vidange/Essorage",
+          "c7": "Nettoyage du tambour Eco",
+          "ca": "Lavage à l'air",
           "d0": "Coton",
           "d1": "Coton Éco",
           "d2": "Synthétiques",
@@ -1032,7 +1036,9 @@
           "da": "Super Éco",
           "db": "Super rapide",
           "dc": "Rapide 15'",
-          "e4": "Anti-allergènes"
+          "e3": "Lavage quotidien",
+          "e4": "Anti-allergènes",
+          "e7": "Lavage + séchage rapide"
         }
       },
       "washer_cycle_table_02": {
