@@ -1344,8 +1344,8 @@
           "voice": "음성"
         }
       },
-      "automatic_ventilation_state": {
-        "name": "자동 환기 상태",
+      "smart_ventilate_mode": {
+        "name": "스마트 환기 모드",
         "state": {
           "sensing": "감지만",
           "alarm": "알림 받기",
@@ -2316,8 +2316,8 @@
       "drum_light": {
         "name": "통 조명"
       },
-      "range_hood_periodic_air_sensing": {
-        "name": "주기적 공기 감지"
+      "smart_ventilate": {
+        "name": "스마트 환기"
       },
       "hood_do_not_disturb": {
         "name": "방해 금지"

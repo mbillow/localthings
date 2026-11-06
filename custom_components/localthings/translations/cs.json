@@ -1344,8 +1344,8 @@
           "voice": "Hlas"
         }
       },
-      "automatic_ventilation_state": {
-        "name": "Stav automatického větrání",
+      "smart_ventilate_mode": {
+        "name": "Režim chytrého větrání",
         "state": {
           "sensing": "Pouze detekce",
           "alarm": "Dostávat oznámení",
@@ -2316,8 +2316,8 @@
       "drum_light": {
         "name": "Osvětlení bubnu"
       },
-      "range_hood_periodic_air_sensing": {
-        "name": "Pravidelné měření kvality vzduchu"
+      "smart_ventilate": {
+        "name": "Chytré větrání"
       },
       "hood_do_not_disturb": {
         "name": "Nerušit"

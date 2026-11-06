@@ -1344,8 +1344,8 @@
           "voice": "Głos"
         }
       },
-      "automatic_ventilation_state": {
-        "name": "Stan automatycznej wentylacji",
+      "smart_ventilate_mode": {
+        "name": "Tryb inteligentnej wentylacji",
         "state": {
           "sensing": "Tylko wykrywanie",
           "alarm": "Otrzymuj powiadomienia",
@@ -2316,8 +2316,8 @@
       "drum_light": {
         "name": "Oświetlenie bębna"
       },
-      "range_hood_periodic_air_sensing": {
-        "name": "Okresowy pomiar powietrza"
+      "smart_ventilate": {
+        "name": "Inteligentna wentylacja"
       },
       "hood_do_not_disturb": {
         "name": "Nie przeszkadzać"

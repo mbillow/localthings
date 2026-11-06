@@ -1344,8 +1344,8 @@
           "voice": "Stem"
         }
       },
-      "automatic_ventilation_state": {
-        "name": "Status automatische ventilatie",
+      "smart_ventilate_mode": {
+        "name": "Modus voor slim ventileren",
         "state": {
           "sensing": "Alleen detecteren",
           "alarm": "Meldingen ontvangen",
@@ -2316,8 +2316,8 @@
       "drum_light": {
         "name": "Trommellicht"
       },
-      "range_hood_periodic_air_sensing": {
-        "name": "Periodieke luchtmeting"
+      "smart_ventilate": {
+        "name": "Slim ventileren"
       },
       "hood_do_not_disturb": {
         "name": "Niet storen"

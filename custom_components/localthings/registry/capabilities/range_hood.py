@@ -367,8 +367,7 @@ AIR_LEVEL_CHECK = Capability(
     poll_tier="warm",
     entities=(
         SwitchDesc(
-            key="periodic_air_sensing",
-            translation_key="range_hood_periodic_air_sensing",
+            key="smart_ventilate",
             field="x.com.samsung.da.periodicSensingActivationState",
             icon="mdi:fan-auto",
             entity_category="config",
@@ -379,7 +378,7 @@ AIR_LEVEL_CHECK = Capability(
             write_fn=_periodic_sensing_write,
         ),
         SelectDesc(
-            key="automatic_ventilation_state",
+            key="smart_ventilate_mode",
             field="x.com.samsung.da.autoExeState",
             options=_sensing_modes,
             icon="mdi:fan-auto",

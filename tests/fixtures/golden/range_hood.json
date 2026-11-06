@@ -7,7 +7,6 @@
     "alarm_code",
     "auto_ventilation_action",
     "automatic_operation",
-    "automatic_ventilation_state",
     "clean_level",
     "dust",
     "dust_air_quality",
@@ -27,7 +26,8 @@
     "lamp_brightness",
     "last_air_sensing_level",
     "last_air_sensing_time",
-    "periodic_air_sensing",
+    "smart_ventilate",
+    "smart_ventilate_mode",
     "super_fine_dust",
     "super_fine_dust_air_quality"
   ]

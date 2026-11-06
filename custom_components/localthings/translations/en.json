@@ -1344,8 +1344,8 @@
           "voice": "Voice"
         }
       },
-      "automatic_ventilation_state": {
-        "name": "Automatic ventilation state",
+      "smart_ventilate_mode": {
+        "name": "Smart ventilate mode",
         "state": {
           "sensing": "Detection only",
           "alarm": "Get notifications",
@@ -2316,8 +2316,8 @@
       "drum_light": {
         "name": "Drum light"
       },
-      "range_hood_periodic_air_sensing": {
-        "name": "Periodic air sensing"
+      "smart_ventilate": {
+        "name": "Smart ventilate"
       },
       "hood_do_not_disturb": {
         "name": "Do not disturb"

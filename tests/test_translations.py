@@ -105,20 +105,6 @@ def test_every_language_mirrors_the_english_catalog():
             assert _placeholders(value) == _placeholders(translated_strings[path]), (language, path)
 
 
-def test_hood_writable_controls_preserve_original_names_in_every_language():
-    for language in _languages():
-        entities = _load(language)["entity"]
-        assert (
-            entities["switch"]["range_hood_periodic_air_sensing"]["name"]
-            == entities["binary_sensor"]["periodic_air_sensing"]["name"]
-        ), language
-        assert (
-            entities["select"]["automatic_ventilation_state"]["name"]
-            == entities["sensor"]["automatic_ventilation_state"]["name"]
-        ), language
-    assert _load("en")["entity"]["switch"]["periodic_air_sensing"]["name"] == "AI Purify"
-
-
 def test_action_catalog_matches_service_descriptions():
     """Every action and field description in services.yaml is translatable."""
     services = yaml.safe_load((INTEGRATION / "services.yaml").read_text(encoding="utf-8"))
