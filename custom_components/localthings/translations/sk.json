@@ -1343,6 +1343,14 @@
           "mute": "Stlmené",
           "voice": "Hlas"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Režim inteligentného vetrania",
+        "state": {
+          "sensing": "Iba detekcia",
+          "alarm": "Dostávať upozornenia",
+          "airpurify": "Tiché vetranie"
+        }
       }
     },
     "sensor": {
@@ -1954,6 +1962,66 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "air_sensing_interval": {
+        "name": "Interval merania vzduchu"
+      },
+      "range_hood_pm10": {
+        "name": "PM10"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normálna",
+          "poor": "Zlá",
+          "very_poor": "Veľmi zlá",
+          "processing": "Spracovanie"
+        }
+      },
+      "range_hood_pm25": {
+        "name": "PM2.5"
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normálna",
+          "poor": "Zlá",
+          "very_poor": "Veľmi zlá",
+          "processing": "Spracovanie"
+        }
+      },
+      "range_hood_pm1": {
+        "name": "PM1.0"
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normálna",
+          "poor": "Zlá",
+          "very_poor": "Veľmi zlá",
+          "processing": "Spracovanie"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Posledná nameraná úroveň kvality vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normálna",
+          "poor": "Zlá",
+          "very_poor": "Veľmi zlá"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Úroveň čistoty",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normálna",
+          "poor": "Zlá",
+          "very_poor": "Veľmi zlá"
+        }
       }
     },
     "switch": {
@@ -2244,6 +2312,18 @@
       },
       "repeated_cleaning": {
         "name": "Opakovať upratovanie"
+      },
+      "drum_light": {
+        "name": "Osvetlenie bubna"
+      },
+      "smart_ventilate": {
+        "name": "Inteligentné vetranie"
+      },
+      "hood_do_not_disturb": {
+        "name": "Nerušiť"
+      },
+      "buzzer_sound": {
+        "name": "Zvuk bzučiaka"
       }
     },
     "time": {
@@ -2279,6 +2359,12 @@
       },
       "sensing_skip_start": {
         "name": "Začiatok vynechania merania AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Začiatok režimu Nerušiť"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Koniec režimu Nerušiť"
       }
     },
     "water_heater": {

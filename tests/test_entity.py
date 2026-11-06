@@ -10,8 +10,13 @@ not just fix phantom ones.
 
 from typing import cast
 
+import pytest
+
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
+from custom_components.localthings.registry.adapter import flatten
+from custom_components.localthings.registry.capabilities.common import ALARMS
+from custom_components.localthings.registry.capabilities.range_hood import HOOD_ALARMS
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.discovery import BoundEntity
 from custom_components.localthings.registry.entities import SensorDesc
@@ -105,3 +110,37 @@ class TestNoFieldEntities:
         bound = _bound(desc, "/x/vs/0")
         coord = _coord({"/x/vs/0": {}})
         assert _is_included(bound, coord) is True
+
+
+@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
+def test_metadata_only_alarm_resource_registers_healthy_sensor(capability):
+    """TP1X_REF_21K omits items when clear, but still returns OCF metadata."""
+    resources = {
+        "/alarms/vs/0": {
+            "rt": ["x.com.samsung.da.alarms"],
+            "if": ["oic.if.baseline", "oic.if.a"],
+        }
+    }
+    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
+    assert _is_included(bound, _coord(resources)) is True
+    assert flatten([bound], resources)["alarm_code"] == "none"
+    assert _is_included(bound, _coord({})) is False
+
+
+@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
+def test_alarm_sensor_keeps_active_and_deleted_semantics(capability):
+    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
+    resources = {
+        "/alarms/vs/0": {
+            "x.com.samsung.da.items": [
+                {"x.com.samsung.da.code": "DoorA_Opened"},
+                {
+                    "x.com.samsung.da.code": "ErrorCode_OLD",
+                    "x.com.samsung.da.state": "Deleted",
+                },
+                {"x.com.samsung.da.code": "ErrorCode_OFF"},
+            ]
+        }
+    }
+    assert _is_included(bound, _coord(resources)) is True
+    assert flatten([bound], resources)["alarm_code"] == "DoorA_Opened"

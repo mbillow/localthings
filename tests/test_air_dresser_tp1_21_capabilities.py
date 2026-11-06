@@ -13,7 +13,7 @@ raw code until a reporter can map codes to names in the SmartThings app.
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import air_dresser, for_device_by_model
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SelectDesc, SwitchDesc
+from custom_components.localthings.registry.entities import SwitchDesc
 from tests.conftest import _load_device
 
 
@@ -48,13 +48,13 @@ def test_buzzer_sound_present_and_writable():
     """Issue #208's actual coverage gap: /buzzersound/vs/0 was unbound on
     this board before laundry.BUZZER_SOUND was added to the registry."""
     state = _state()
-    assert state["buzzer_sound"] == "On"
+    assert state["buzzer_sound"] is True
     assert "finish_sound" not in state  # supportedFinishSound absent -- self-gated off
 
     desc = next(
         e
         for e in air_dresser.REGISTRY.capabilities["/buzzersound/vs/0"][0].entities
-        if e.key == "buzzer_sound" and isinstance(e, SelectDesc)
+        if e.key == "buzzer_sound" and isinstance(e, SwitchDesc)
     )
     assert desc.write_fn is not None
     result = desc.write_fn("Off", {})

@@ -10,6 +10,7 @@
     "delay_finish_at",
     "delay_start_hours",
     "diagnosis",
+    "drum_light",
     "dry_level",
     "dry_time",
     "dryer_type",
