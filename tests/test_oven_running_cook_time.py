@@ -3,6 +3,7 @@
 import pytest
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
+from custom_components.localthings.button import LocalThingsButton
 from custom_components.localthings.number import LocalThingsNumber
 from custom_components.localthings.registry.capabilities import cook, oven
 from custom_components.localthings.registry.subdevices import MAIN
@@ -68,6 +69,54 @@ async def test_running_timer_updates_only_duration_in_its_own_cavity(
     assert actual[PREFIX + "state"] == "Run"
     assert (coordinator.resource(other_href) or {}) == other_before
     assert not coordinator._held_cooks
+
+
+@pytest.mark.parametrize(
+    "index,divided,mode",
+    [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
+)
+@pytest.mark.parametrize("initial_time", ["00:00:00", "00:02:00"])
+@pytest.mark.parametrize(
+    "minutes,expected",
+    [
+        (0, "00:00:00"),
+        (1, "00:01:00"),
+        (15, "00:15:00"),
+        (59, "00:59:00"),
+        (60, "01:00:00"),
+        (90, "01:30:00"),
+        (599, "09:59:00"),
+        (1439, "23:59:00"),
+    ],
+)
+async def test_start_after_running_timer_edit_is_quiet_without_restarting(
+    hass, index, divided, mode, initial_time, minutes, expected
+):
+    routes = _running_routes(index, divided, mode)
+    routes[f"/devices/{index}"][1]["Device"]["Operation"]["operationTime"] = initial_time
+    coordinator = await _discovered(hass, routes)
+    cavity = _lower(coordinator) if index else MAIN
+    bound = next(
+        b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "start_cooking"
+    )
+    start = LocalThingsButton(coordinator, bound)
+    other_href = f"/operational/state/vs/{1 - index}"
+    other_before = dict(coordinator.resource(other_href) or {})
+    _FakeConnection.log.clear()
+
+    await _timer(coordinator, cavity).async_set_native_value(minutes)
+    await start.async_press()
+    await start.async_press()
+
+    assert start.available
+    assert _writes() == [
+        (f"/devices/{index}", {"Device": {"Operation": {"operationTime": expected}}})
+    ]
+    actual = coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))
+    assert actual[PREFIX + "operationTime"] == expected
+    assert actual[PREFIX + "remainingTime"] == "00:01:47"
+    assert actual[PREFIX + "state"] == "Run"
+    assert (coordinator.resource(other_href) or {}) == other_before
 
 
 @pytest.mark.parametrize("minutes", [0, 3])
