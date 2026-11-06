@@ -1343,6 +1343,15 @@
           "mute": "Wyciszony",
           "voice": "Głos"
         }
+      },
+      "tv_input": {
+        "name": "Wejście"
+      },
+      "tv_picture_mode": {
+        "name": "Tryb obrazu"
+      },
+      "tv_sound_mode": {
+        "name": "Tryb dźwięku"
       }
     },
     "sensor": {

@@ -1343,6 +1343,15 @@
           "mute": "Gedempt",
           "voice": "Stem"
         }
+      },
+      "tv_input": {
+        "name": "Ingang"
+      },
+      "tv_picture_mode": {
+        "name": "Beeldmodus"
+      },
+      "tv_sound_mode": {
+        "name": "Geluidsmodus"
       }
     },
     "sensor": {

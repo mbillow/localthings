@@ -1343,6 +1343,15 @@
           "mute": "음소거",
           "voice": "음성"
         }
+      },
+      "tv_input": {
+        "name": "입력"
+      },
+      "tv_picture_mode": {
+        "name": "화면 모드"
+      },
+      "tv_sound_mode": {
+        "name": "음향 모드"
       }
     },
     "sensor": {

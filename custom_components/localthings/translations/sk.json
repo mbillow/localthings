@@ -1343,6 +1343,15 @@
           "mute": "Stlmené",
           "voice": "Hlas"
         }
+      },
+      "tv_input": {
+        "name": "Vstup"
+      },
+      "tv_picture_mode": {
+        "name": "Režim obrazu"
+      },
+      "tv_sound_mode": {
+        "name": "Režim zvuku"
       }
     },
     "sensor": {

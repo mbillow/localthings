@@ -156,3 +156,59 @@ async def test_same_state_refusal_is_a_confirmed_no_op(power_coordinator):
     )
     session.read.assert_called_once()
     session.write.assert_called_once()
+
+
+@pytest.mark.parametrize("opt_in", [False, True])
+@pytest.mark.parametrize("readback", ["modeExternalGame", "modeExternalAdaptivewPlus", None])
+async def test_tv_semantic_refusal_needs_opt_in_and_fresh_matching_read(
+    power_coordinator, opt_in, readback
+):
+    coordinator, session = power_coordinator
+    field = "x.com.samsung.tv.currentMode"
+    href = "/sec/tv/mode/sound"
+    session.write.return_value = (0x44, {"controlResponse": {"result": False}})
+    session.read.return_value = (0x45, {field: readback})
+    # Optimistic cache contents cannot establish that a refused command worked.
+    coordinator._observe.apply(href, {field: "modeExternalGame"}, source="poll")
+    call = coordinator._async_put(
+        href.strip("/").split("/"),
+        {field: "modeExternalGame"},
+        href,
+        confirm_on_refusal=opt_in,
+    )
+    if opt_in and readback == "modeExternalGame":
+        await call
+    else:
+        with pytest.raises(HomeAssistantError) as error:
+            await call
+        assert error.value.translation_key == "command_refused"
+        assert error.value.translation_placeholders == {
+            "href": href,
+            "error": "2.04 controlResponse.result=false",
+        }
+    assert session.read.call_count == int(opt_in)
+    session.write.assert_called_once()
+
+
+async def test_semantic_refusal_is_not_accepted_when_confirmation_times_out(power_coordinator):
+    coordinator, session = power_coordinator
+    session.write.return_value = (0x44, {"controlResponse": {"result": False}})
+    session.read.side_effect = TimeoutError
+    with pytest.raises(HomeAssistantError, match="refused"):
+        await coordinator._async_put(
+            ["sec", "tv", "mode", "sound"],
+            {"x.com.samsung.tv.currentMode": "modeExternalGame"},
+            "/sec/tv/mode/sound",
+            confirm_on_refusal=True,
+        )
+    session.write.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "response", [None, {}, {"controlResponse": None}, {"controlResponse": {"result": True}}]
+)
+async def test_ordinary_success_payloads_remain_successful(power_coordinator, response):
+    coordinator, session = power_coordinator
+    session.write.return_value = (0x44, response)
+    await coordinator._async_put(["example"], {"value": 1}, "/example", confirm_on_refusal=True)
+    session.read.assert_not_called()

@@ -1,0 +1,101 @@
+{
+  "capture_note": "Selected authenticated GETs from QE50QN90AATXXU, 2026-11-06. Only the three mode resources are included; this is not a full diagnostics dump. device0 is a synthetic wrapper for the per-href capture, not a Collection this TV serves. Names TV, PC and HDMI 3 are device-supplied generic input labels. No identity, network, account, content or security resources are included.",
+  "device_types": [
+    "oic.wk.d",
+    "oic.d.tv"
+  ],
+  "device0": [
+    {
+      "href": "/sec/tv/mode/picture",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "Dynamic",
+            "x.com.samsung.tv.id": "modeDynamic"
+          },
+          {
+            "x.com.samsung.tv.name": "FILMMAKER MODE",
+            "x.com.samsung.tv.id": "modeFilmmakerMode"
+          },
+          {
+            "x.com.samsung.tv.name": "Movie",
+            "x.com.samsung.tv.id": "modeMovie"
+          },
+          {
+            "x.com.samsung.tv.name": "Natural",
+            "x.com.samsung.tv.id": "modeNatural"
+          },
+          {
+            "x.com.samsung.tv.name": "Standard",
+            "x.com.samsung.tv.id": "modeStandard"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "modeFilmmakerMode"
+      }
+    },
+    {
+      "href": "/sec/tv/mode/sound",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "Adaptive Sound+",
+            "x.com.samsung.tv.id": "modeExternalAdaptivewPlus"
+          },
+          {
+            "x.com.samsung.tv.name": "Game",
+            "x.com.samsung.tv.id": "modeExternalGame"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "modeExternalAdaptivewPlus"
+      }
+    },
+    {
+      "href": "/sec/tv/inputsource",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "TV",
+            "x.com.samsung.tv.id": "dtv"
+          },
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "HDMI1"
+          },
+          {
+            "x.com.samsung.tv.name": "HDMI 3",
+            "x.com.samsung.tv.id": "HDMI3"
+          },
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "HDMI4"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "HDMI1"
+      }
+    }
+  ]
+}

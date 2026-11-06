@@ -1735,6 +1735,15 @@
           "mute": "Silencio",
           "voice": "Voz"
         }
+      },
+      "tv_input": {
+        "name": "Entrada"
+      },
+      "tv_picture_mode": {
+        "name": "Modo de imagen"
+      },
+      "tv_sound_mode": {
+        "name": "Modo de sonido"
       }
     },
     "sensor": {
