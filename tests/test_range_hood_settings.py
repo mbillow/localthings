@@ -6,6 +6,7 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.sensor.const import DEVICE_CLASS_UNITS
 
@@ -120,11 +121,10 @@ def test_local_dnd_time_write_converts_to_utc_and_preserves_partner(part, local,
         ("2026-07-03T03:00:00Z", datetime.time(23), datetime.time(6)),
     ],
 )
-def test_dnd_utc_clock_is_presented_in_local_timezone(time_machine, monkeypatch, date, start, end):
+def test_dnd_utc_clock_is_presented_in_local_timezone(monkeypatch, date, start, end):
     from homeassistant.util import dt as dt_util
 
-    time_machine.move_to(date)
-    with monkeypatch.context() as patch:
+    with freeze_time(date), monkeypatch.context() as patch:
         patch.setattr(dt_util, "DEFAULT_TIME_ZONE", ZoneInfo("America/Los_Angeles"))
         for part, want in (("start", start), ("end", end)):
             desc = _desc(f"hood_do_not_disturb_{part}")
