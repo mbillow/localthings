@@ -949,3 +949,50 @@ def test_progress_reads_unknown_for_the_fixed_201_a_running_cook_reports():
     assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "201"}) is None
     assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "40"}) == 40
     assert desc.rep_fn({"x.com.samsung.da.state": "Ready"}) == 0
+
+
+def _no_modes_spell(resources, mode_spec="[]"):
+    """The LCD_R18 microwave after a Wi-Fi board restart (#600): only
+    HOMECARE_WIZARD_V2 listed, and an empty modeSpec."""
+    mode = {
+        **resources["/mode/vs/0"],
+        "x.com.samsung.da.supportedModes": ["HOMECARE_WIZARD_V2"],
+        "x.com.samsung.da.modeSpec": mode_spec,
+    }
+    return {**resources, "/mode/vs/0": mode}
+
+
+def test_microwave_keeps_its_type_from_a_remembered_mode_spec():
+    """#744: without its modes the microwave resolved as an oven, and the
+    Sound sweep then judged its own Sound switch by the oven's check. The
+    coordinator fills in the remembered modeSpec, which still names the
+    MicroWave modes."""
+    from custom_components.localthings.registry.capabilities import cook
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    spec = resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"]
+    oic = ("oic.wk.d", "oic.d.oven")
+    spell = _no_modes_spell(resources)
+
+    reg = resolve(spell, device_types=oic)
+    assert reg is not None and reg.name != "microwave"
+
+    remembered = cook.with_cached_specs(spell, {"/mode/vs/0": spec})
+    reg = resolve(remembered, device_types=oic)
+    assert reg is not None and reg.name == "microwave"
+
+
+def test_an_empty_mode_list_does_not_type_from_the_mode_spec():
+    """Only the #600 shape (HOMECARE flags alone) falls back to modeSpec."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    spec = resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"]
+    mode = {
+        **resources["/mode/vs/0"],
+        "x.com.samsung.da.supportedModes": [],
+        "x.com.samsung.da.modeSpec": spec,
+    }
+    reg = resolve({**resources, "/mode/vs/0": mode}, device_types=("oic.wk.d", "oic.d.oven"))
+    assert reg is not None and reg.name != "microwave"

@@ -23,6 +23,7 @@ round (collided Low/Medium on one, stuck at 0 on the other).
 """
 
 import datetime
+import re
 
 from ..capability import Capability
 from ..entities import (
@@ -242,11 +243,56 @@ AIRFLOW_GENERIC = Capability(
     ),
 )
 
+_SPEED_LEVEL = "x.com.samsung.da.speedLevel"
+
+
+def is_tp6x_vtl(resources) -> bool:
+    """The 8888 TP6X_VTL_16K purifier (#608), by the same whole-token match
+    on modelNum or description that routes it."""
+    info = resources.get("/information/vs/0") or {}
+    return any(
+        "VTL" in re.split(r"[^A-Z0-9]+", str(info.get(field, "")).upper())
+        for field in ("x.com.samsung.da.modelNum", "x.com.samsung.da.description")
+    )
+
+
+def _speed_level_fan_write(payload, rep, href=None):
+    kind, value, *args = payload
+    if kind == "power":
+        return _power_write(args[0] if args else "/power/vs/0", value)
+    if kind == "speed":
+        return ["airflow", "vs", "0"], {_SPEED_LEVEL: int(value)}
+    return None
+
+
+# The TP6X_VTL_16K serves no /airflow/0, and its speedLevel is the control:
+# the same Auto=0..High=4 code, written and read back for every mode and
+# confirmed on the unit (#608).
+AIRFLOW_LEVEL_FAN = Capability(
+    href="/airflow/vs/0",
+    match_fn=lambda rep, resources: "/airflow/0" not in resources and is_tp6x_vtl(resources),
+    poll_tier="warm",
+    entities=(
+        FanDesc(
+            key="airflow_fan",
+            translation_key="air_purifier_fan",
+            field=_SPEED_LEVEL,
+            write_fn=_speed_level_fan_write,
+        ),
+        SensorDesc(
+            key="fan_direction",
+            field="x.com.samsung.da.direction",
+            icon="mdi:rotate-3d-variant",
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
 # Read-only fallback: speedLevel is unreliable (see module docstring),
 # unlike /airflow/0's speed.
 AIRFLOW_VS_FALLBACK = Capability(
     href="/airflow/vs/0",
-    match_fn=lambda rep, resources: "/airflow/0" not in resources,
+    match_fn=lambda rep, resources: "/airflow/0" not in resources and not is_tp6x_vtl(resources),
     poll_tier="warm",
     entities=(
         SensorDesc(

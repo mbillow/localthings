@@ -30,6 +30,10 @@ carry the resource with the same field names, and only the TVTL family has no
 such href. It was covered as opaque plumbing until two AVT-WW-TP1 dumps
 (issues #84 and #190) showed it drives a real user-facing feature.
 
+- TP6X_VTL_16K (issue #608), on the 8888 bridge. Resolved via its 'VTL'
+  token. The TVTL family's surface without /airflow/0, so its fan is
+  AIRFLOW_LEVEL_FAN on /airflow/vs/0's speedLevel.
+
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0 (identical field/write
 contract).
 """
@@ -54,6 +58,7 @@ REGISTRY = DeviceRegistry(
             air_purifier.DEVICE_ACTIVE,
             air_purifier.AIRFLOW_GENERIC,
             air_purifier.AIRFLOW_VS_FALLBACK,
+            air_purifier.AIRFLOW_LEVEL_FAN,
             air_purifier.MODE,
             air_purifier.FAN,
             air_purifier.WIND_STRENGTH_FAN,

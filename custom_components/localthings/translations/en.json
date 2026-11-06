@@ -174,6 +174,12 @@
       },
       "woofer_connection": {
         "name": "Woofer connection"
+      },
+      "lamp": {
+        "name": "Lamp"
+      },
+      "energy_saving": {
+        "name": "Energy saving"
       }
     },
     "button": {
@@ -981,6 +987,8 @@
         "name": "Cycle",
         "state": {
           "01": "Normal",
+          "50": "Cotton Dry",
+          "51": "Synthetics Dry",
           "55": "Whites",
           "57": "Self Clean+",
           "5b": "Cotton",
@@ -1020,6 +1028,8 @@
           "ab": "Eco Cold",
           "b1": "Self Clean+",
           "ba": "Drain/Spin",
+          "c7": "Eco Drum Clean",
+          "ca": "Air Wash",
           "d0": "Cotton",
           "d1": "E Cotton",
           "d2": "Synthetics",
@@ -1032,7 +1042,9 @@
           "da": "Super Eco Wash",
           "db": "Super Speed",
           "dc": "15' Quick Wash",
-          "e4": "Anti Allergen"
+          "e3": "Daily Wash",
+          "e4": "Anti Allergen",
+          "e7": "Speed Wash+Dry"
         }
       },
       "washer_cycle_table_02": {
@@ -1939,6 +1951,9 @@
       },
       "robot_movement": {
         "name": "Movement"
+      },
+      "oven_setpoint": {
+        "name": "Setpoint"
       }
     },
     "switch": {

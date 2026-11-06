@@ -2185,14 +2185,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # with no candidates behaves exactly like the old single discover()
         # call.
         self.disabled_subdevices = [s for s in self.subdevices if s.key in self.disabled_keys]
+        enabled_resources = self._without_disabled(resources)
         bound, device_type_name, materialized, skipped = discover_partitioned(
-            self._without_disabled(resources),
+            enabled_resources,
             [s for s in self.subdevices if s.key not in self.disabled_keys],
             resolve_registry,
             CAPABILITIES,
             log=unbound.append,
             tier_log=_tier_log,
             oic_device_types=self._identity.device_types if self._identity else (),
+            # Remembered specs are keyed by real href, so they go in before
+            # each subdevice's canonical view is taken, as in _cook_view.
+            type_resources=cook.with_cached_specs(enabled_resources, self._mode_specs),
         )
         self.subdevices = materialized
         self._skipped_subdevices = skipped

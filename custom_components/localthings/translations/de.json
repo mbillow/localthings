@@ -174,6 +174,12 @@
       },
       "woofer_connection": {
         "name": "Woofer-Verbindung"
+      },
+      "lamp": {
+        "name": "Lampe"
+      },
+      "energy_saving": {
+        "name": "Energiesparen"
       }
     },
     "button": {
@@ -944,6 +950,8 @@
         "name": "Programm",
         "state": {
           "01": "Normal",
+          "50": "Trocknen Baumwolle",
+          "51": "Trocknen Pflegeleicht",
           "55": "Weißwäsche",
           "57": "Selbstreinigung+",
           "5b": "Baumwolle",
@@ -983,6 +991,8 @@
           "ab": "Eco Kalt",
           "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
+          "c7": "Eco-Trommelreinigung",
+          "ca": "Air Wash",
           "d0": "Baumwolle",
           "d1": "Eco Baumwolle",
           "d2": "Pflegeleicht",
@@ -995,7 +1005,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "Schnelle Wäsche 15'",
-          "e4": "Anti-Allergie"
+          "e3": "Tägliche Wäsche",
+          "e4": "Anti-Allergie",
+          "e7": "Schnell Waschen + Trocknen"
         }
       },
       "washer_cycle_table_02": {
@@ -1939,6 +1951,9 @@
       },
       "robot_movement": {
         "name": "Bewegung"
+      },
+      "oven_setpoint": {
+        "name": "Sollwert"
       }
     },
     "switch": {

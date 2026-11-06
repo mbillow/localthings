@@ -913,13 +913,17 @@ def _meter_reports_cumulative_power(resources) -> bool:
     return "x.com.samsung.da.cumulativePower" in rep
 
 
-def _usage_energy_exists(rep, resources) -> bool:
+def usage_energy_exists(energy_fn):
     """Bind the file's energy only where the meter resource cannot supply it
     and the blob actually decodes -- an unreadable payload must produce no
     entity rather than a permanently-unknown one."""
-    if _meter_reports_cumulative_power(resources):
-        return False
-    return usagedb.cumulative_energy_kwh(rep) is not None
+
+    def exists(rep, resources) -> bool:
+        if _meter_reports_cumulative_power(resources):
+            return False
+        return energy_fn(rep) is not None
+
+    return exists
 
 
 FILE_TRANSFER = Capability(
@@ -950,7 +954,7 @@ FILE_TRANSFER = Capability(
             state_class="total_increasing",
             unit="kWh",
             rep_fn=usagedb.cumulative_energy_kwh,
-            exists_fn=_usage_energy_exists,
+            exists_fn=usage_energy_exists(usagedb.cumulative_energy_kwh),
         ),
         # Runtime, unlike energy, is not a fallback: no other resource on
         # these boards reports it, so there is nothing to defer to. Issue

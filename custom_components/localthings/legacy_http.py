@@ -120,6 +120,16 @@ RESOURCES: tuple[Resource, ...] = (
     INFORMATION,
     Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
     Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+    # The TP6X_VTL_16K purifier's readings (#608), in the CoAP purifiers'
+    # shapes; its sensors name their reading list `values`, not `value`.
+    Resource(
+        endpoint="sensors",
+        wrapper="Sensors",
+        href="/sensors/vs/0",
+        as_items=True,
+        rename={"values": "value"},
+    ),
+    Resource(endpoint="consumables", wrapper="Consumables", href="/consumable/vs/0", as_items=True),
 )
 
 # A washer's or dryer's Mode is its cycle (`Course_XX`), which CoAP laundry
@@ -147,6 +157,7 @@ _BY_TYPE: dict[str, tuple[Resource, ...]] = {
     "Washer": _LAUNDRY,
     "Dryer": _LAUNDRY,
     "Air_Conditioner": _REGION_CONFIGURATION,
+    "Air_Purifier": _REGION_CONFIGURATION,  # TP6X_VTL_16K (#608)
     "Refrigerator": _REGION_CONFIGURATION,  # DONGLE_0281 (#698)
 }
 

@@ -566,6 +566,12 @@
       },
       "woofer_connection": {
         "name": "Conexión del woofer"
+      },
+      "lamp": {
+        "name": "Lámpara"
+      },
+      "energy_saving": {
+        "name": "Ahorro de energía"
       }
     },
     "button": {
@@ -1373,6 +1379,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normal",
+          "50": "Secado de algodón",
+          "51": "Secado de sintéticos",
           "55": "Blancos",
           "57": "Autolimpieza+",
           "5b": "Algodón",
@@ -1412,6 +1420,8 @@
           "ab": "Eco frío",
           "b1": "Autolimpieza+",
           "ba": "Solo centrifugar",
+          "c7": "Limpieza de tambor Eco",
+          "ca": "Lavado con aire",
           "d0": "Algodón",
           "d1": "Algodón E",
           "d2": "Sintéticos",
@@ -1424,7 +1434,9 @@
           "da": "Super Eco",
           "db": "Súper velocidad",
           "dc": "Lavado rápido 15'",
-          "e4": "Antialérgico"
+          "e3": "Lavado diario",
+          "e4": "Antialérgico",
+          "e7": "Lavado + Secado rápido"
         }
       },
       "washer_cycle_table_02": {
@@ -2331,6 +2343,9 @@
       },
       "robot_movement": {
         "name": "Movimiento"
+      },
+      "oven_setpoint": {
+        "name": "Punto de ajuste"
       }
     },
     "switch": {

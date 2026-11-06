@@ -78,7 +78,8 @@ from .operational import OPERATIONAL_STATE
 # an unconfirmed code (FlexWash's washer_flexwash_device fixture, for
 # instance) still renders that code raw rather than borrowing a Table_02
 # label -- the two tables are unrelated code spaces despite a handful of
-# overlapping hex values.
+# overlapping hex values. A WD80N645OOW/EU washer-dryer's owner read six more
+# out of the app (issue #736).
 # ---------------------------------------------------------------------------
 
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count, soil level.
