@@ -57,8 +57,8 @@ def test_invalid_pm_reading_stays_unknown(values):
     assert flatten(bound, {"/sensors/vs/0": rep})["dust"] is None
 
 
-def test_smart_ventilate_writes_do_not_overwrite_mode():
-    desc = _desc("smart_ventilate")
+def test_periodic_air_sensing_writes_do_not_overwrite_mode():
+    desc = _desc("periodic_air_sensing")
     assert desc.write_fn is not None
     assert desc.write_fn("Off", {"x.com.samsung.da.autoExeState": "Alarm"}) == (
         ["airlevelcheck", "vs", "0"],
@@ -71,7 +71,7 @@ def test_smart_ventilate_writes_do_not_overwrite_mode():
 
 
 def test_modes_include_detection_only_and_future_advertised_values():
-    desc = _desc("smart_ventilate_mode")
+    desc = _desc("automatic_ventilation_state")
     rep = {
         "x.com.samsung.da.autoExeState": "Airpurify",
         "x.com.samsung.da.supportedAutoExeState": ["Airpurify", "Alarm", "Future"],
@@ -154,8 +154,8 @@ def test_absent_setting_fields_do_not_create_phantom_controls():
     keys = {b.desc.key for b in bound if _is_included(b, coordinator)}
     assert not keys.intersection(
         {
-            "smart_ventilate",
-            "smart_ventilate_mode",
+            "periodic_air_sensing",
+            "automatic_ventilation_state",
             "hood_do_not_disturb",
             "hood_do_not_disturb_start",
             "hood_do_not_disturb_end",
@@ -164,14 +164,14 @@ def test_absent_setting_fields_do_not_create_phantom_controls():
     )
 
 
-def test_interval_is_read_only_duration_and_superseded_sensors_are_removed():
+def test_interval_is_read_only_and_original_control_keys_are_preserved():
     assert not any(isinstance(e, NumberDesc) for e in range_hood.AIR_LEVEL_CHECK.entities)
     desc = _desc("air_sensing_interval")
     assert desc.device_class == "duration"
     assert desc.unit == "s"
     assert desc.value_fn("3600") == 3600
     keys = {e.key for e in range_hood.AIR_LEVEL_CHECK.entities}
-    assert not keys.intersection({"periodic_air_sensing", "automatic_ventilation_state"})
+    assert {"periodic_air_sensing", "automatic_ventilation_state"} <= keys
 
 
 @pytest.mark.parametrize(

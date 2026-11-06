@@ -76,7 +76,7 @@ def test_range_hood_fixture_values():
     assert state["dust"] == 18
     assert state["fine_dust"] == 14
     assert state["super_fine_dust"] == 9
-    assert state["smart_ventilate"] is False
+    assert state["periodic_air_sensing"] is False
     assert state["air_sensing_state"] == "NonProcessing"
     assert state["last_air_sensing_level"] == "normal"
     assert state["after_run_active"] is False

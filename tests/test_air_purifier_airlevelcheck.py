@@ -226,9 +226,7 @@ def test_read_only_keys_match_the_range_hood_capability():
     so both families read from one translation catalog entry each. If either
     side renames one, this catches the drift.
 
-    periodic_air_sensing is excluded: it's a SwitchDesc here and a
-    Smart ventilate on the hood, while this family keeps its AI Purify
-    controls and existing entity IDs.
+    The writable sensing controls have family-specific names.
     """
     from custom_components.localthings.registry.capabilities import range_hood
 
@@ -242,16 +240,18 @@ def test_read_only_keys_match_the_range_hood_capability():
 
 
 def test_purifier_and_hood_have_independently_named_writable_sensing_controls():
-    """The hood's app calls this Smart ventilate; purifier IDs stay unchanged."""
+    """The shared state key must not give the hood the purifier's AI Purify name."""
     from custom_components.localthings.registry.capabilities import range_hood
     from custom_components.localthings.registry.entities import SwitchDesc
 
-    hood = next(d for d in range_hood.AIR_LEVEL_CHECK.entities if d.key == "smart_ventilate")
+    hood = next(d for d in range_hood.AIR_LEVEL_CHECK.entities if d.key == "periodic_air_sensing")
     assert isinstance(hood, SwitchDesc)
     assert hood.write_fn is not None
     ours = _desc("periodic_air_sensing")
     assert isinstance(ours, SwitchDesc)
     assert ours.write_fn is not None
+    assert hood.translation_key == "range_hood_periodic_air_sensing"
+    assert ours.translation_key is None
 
 
 def test_read_only_diagnostics_match_the_hood_on_visibility():

@@ -1736,8 +1736,8 @@
           "voice": "Voz"
         }
       },
-      "smart_ventilate_mode": {
-        "name": "Modo de ventilación inteligente",
+      "automatic_ventilation_state": {
+        "name": "Estado de ventilación automática",
         "state": {
           "sensing": "Solo detección",
           "alarm": "Recibir notificaciones",
@@ -2708,8 +2708,8 @@
       "drum_light": {
         "name": "Luz del tambor"
       },
-      "smart_ventilate": {
-        "name": "Ventilación inteligente"
+      "range_hood_periodic_air_sensing": {
+        "name": "Detección de aire periódica"
       },
       "hood_do_not_disturb": {
         "name": "No molestar"
