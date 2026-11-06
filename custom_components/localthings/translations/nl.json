@@ -790,7 +790,21 @@
           "steam_roast": "Stoombraden",
           "upper_steam_bake": "Stoombakken (boven)",
           "descale": "Ontkalken",
-          "drain": "Water aftappen"
+          "drain": "Water aftappen",
+          "healthycook1": "Gezond koken 1",
+          "healthycook2": "Gezond koken 2",
+          "healthycook3": "Gezond koken 3",
+          "healthycook4": "Gezond koken 4",
+          "healthycook5": "Gezond koken 5",
+          "healthycook6": "Gezond koken 6",
+          "upper_healthycook1": "Gezond koken 1 (boven)",
+          "upper_healthycook2": "Gezond koken 2 (boven)",
+          "upper_healthycook3": "Gezond koken 3 (boven)",
+          "upper_healthycook4": "Gezond koken 4 (boven)",
+          "lower_healthycook1": "Gezond koken 1 (onder)",
+          "lower_healthycook2": "Gezond koken 2 (onder)",
+          "lower_healthycook3": "Gezond koken 3 (onder)",
+          "lower_healthycook4": "Gezond koken 4 (onder)"
         }
       },
       "operating_mode": {
@@ -1297,6 +1311,25 @@
           "jazz": "Jazz",
           "classic": "Klassiek",
           "custom": "Aangepast"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Reinigingsmodus",
+        "state": {
+          "auto": "Auto",
+          "part": "Plaatselijk",
+          "repeat": "Herhalen",
+          "manual": "Handmatig",
+          "stop": "Stop",
+          "map": "Kaart"
+        }
+      },
+      "robot_sound": {
+        "name": "Geluid",
+        "state": {
+          "soundeffect": "Geluidseffecten",
+          "mute": "Gedempt",
+          "voice": "Stem"
         }
       }
     },
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Wifi-signaal"
+      },
+      "robot_status": {
+        "name": "Robotstatus",
+        "state": {
+          "cleaning": "Reinigen",
+          "point": "Plaatselijk reinigen",
+          "homing": "Terug naar basis",
+          "charging": "Opladen",
+          "idle": "Inactief",
+          "pause": "Gepauzeerd",
+          "alarm": "Alarm",
+          "reserve": "Gepland",
+          "poweroff": "Uitgeschakeld"
+        }
+      },
+      "robot_movement": {
+        "name": "Beweging"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Stemversterker"
+      },
+      "repeated_cleaning": {
+        "name": "Reiniging herhalen"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Warm water"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normaal",
+              "turbo": "Turbo",
+              "quiet": "Stil",
+              "extra_quiet": "Extra stil"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Het starten van de bereiding kon niet worden bevestigd en is niet opnieuw geprobeerd. Controleer het apparaat voordat u het opnieuw probeert. Details: {error}"
+    },
     "command_refused": {
       "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Zet de ventilator van de afzuigkap aan voordat u de uitschakeltimer instelt."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Deze robotstofzuiger ondersteunt zuigkracht {fan_speed} niet."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Deze robotstofzuiger vermeldt {command} niet bij zijn ondersteunde opdrachten."
+    },
+    "vacuum_command_params": {
+      "message": "Opdrachten voor de robotstofzuiger hebben geen parameters."
     }
   },
   "selector": {

@@ -8,7 +8,7 @@ import functools
 import logging
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -111,6 +111,7 @@ from .rekey import rekey_entry
 from .transport import (
     AuthRejected,
     DecodeError,
+    OvenStartUnconfirmed,
     Transport,
     create_transport,
 )
@@ -185,6 +186,8 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 _DEBUG_MAX_BATCH_ELEMENTS = 16
 
 
+_MODES_FIELD = "x.com.samsung.da.modes"
+
 # Row lists a write may send only the changed row of, and the field each row
 # is matched by (common.merge_items_field).
 _MERGED_ROWS = (
@@ -221,6 +224,9 @@ def _coap_code_str(code: int) -> str:
     alongside it in every debug response so a caller can format it
     differently."""
     return f"{code >> 5}.{code & 0x1F:02d}"
+
+
+_COAP_BAD_REQUEST = 0x80
 
 
 def _coap_accepted(code: int) -> bool:
@@ -281,6 +287,15 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
     cavity = cook.cavity(resources)
     return f"{cavity} oven" if cavity else None
+
+
+def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dict]]) -> str | None:
+    """The main cavity also operates the whole oven without the divider."""
+    if device_type != "microwave" and any(
+        cook.cavity(resources) == "Lower" for resources in siblings
+    ):
+        return "Main oven"
+    return None
 
 
 # Write errors after which the session is fine and a re-poll shows the
@@ -1056,7 +1071,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
+        base_name = self.device_info.get("name") or "Samsung Appliance"
         if subdevice.kind == "main":
+            if label := _main_cavity_label(
+                self.device_type_name,
+                (self.discovery_canonical(child) for child in self.subdevices),
+            ):
+                return {**self.device_info, "name": f"{base_name} {label}"}
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1067,8 +1088,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model_num.split("|", 1)[0] if model_num else ""
         )
         serial = display_serial(info.get("x.com.samsung.da.serialNum"))
-        base_name = self.device_info.get("name") or "Samsung Appliance"
-        if cavity := _cavity_label(resources):
+        # Discovery includes saved snapshots so cavity labels survive offline startup.
+        if cavity := _cavity_label(self.discovery_canonical(subdevice)):
             # A dual-cavity oven reports the same modelNum on both cavities
             # (issue #490), so the model label below names them identically
             # and the two are indistinguishable in HA. The cavity says which
@@ -2879,6 +2900,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     **optimistic_body,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
                 }
+            new_modes = optimistic_body.get(_MODES_FIELD)
+            if getattr(desc, "merges_modes", False) and isinstance(new_modes, list):
+                cached_modes = (self._cache.get(write_href) or {}).get(_MODES_FIELD)
+                optimistic_body = {
+                    **optimistic_body,
+                    _MODES_FIELD: merge_options_field(cached_modes, new_modes),
+                }
             # Same fact for row lists (see airconditioner._climate_write's
             # vendor temperature write, soundbar.CHANNEL_LEVEL).
             for rows, key in _MERGED_ROWS:
@@ -2907,7 +2935,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
         try:
-            await self._async_put(path_segs, body, write_href, on_retry=_rearm)
+            await self._async_put(
+                path_segs,
+                body,
+                write_href,
+                on_retry=_rearm,
+                confirm_on_refusal=desc.confirm_on_refusal and not write_only,
+            )
             if (
                 remote_control_off
                 and not write_only
@@ -2934,9 +2968,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise
         await self.async_request_refresh()
 
-    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
-        """Whether a fresh read shows `body`. A read that fails proves
-        nothing, so it counts as taken."""
+    async def _took_effect(
+        self, path_segs: list[str], body: dict | list, *, strict: bool = False
+    ) -> bool:
+        """Whether a fresh read shows `body`; strict confirmation requires a successful read."""
         await asyncio.sleep(self._CONFIRM_DELAY_S)
 
         def _read() -> Any:
@@ -2951,8 +2986,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 rep = await self.hass.async_add_executor_job(_read)
             except Exception as err:
                 self._log.debug("confirming read of %s failed: %s", path_segs, err)
-                return True
-        return rep is None or _payload_present_in(body, rep)
+                return not strict
+        return (not strict) if rep is None else _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2960,6 +2995,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         body: dict | list,
         write_href: str,
         on_retry: Callable[[], None] | None = None,
+        *,
+        confirm_on_refusal: bool = False,
     ) -> None:
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too."""
@@ -2981,7 +3018,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
-                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
                 # subscriptions on it are too -- downgrade here, before the
@@ -2992,10 +3028,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._observe.mode == MODE_OBSERVE:
                     self._observe.downgrade_to_poll()
                     self._resubscribe_due = True
+                if isinstance(e, OvenStartUnconfirmed):
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="cook_start_unconfirmed",
+                        translation_placeholders={"error": str(e)},
+                    ) from e
+                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
+                    if isinstance(e2, OvenStartUnconfirmed):
+                        raise HomeAssistantError(
+                            translation_domain=DOMAIN,
+                            translation_key="cook_start_unconfirmed",
+                            translation_placeholders={"error": str(e2)},
+                        ) from e2
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
                         translation_domain=DOMAIN,
@@ -3004,6 +3053,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        # An opted-in control may apply a write while replying 4.00 (#714).
+        # A failed GET cannot overturn an explicit refusal.
+        if (
+            code == _COAP_BAD_REQUEST
+            and confirm_on_refusal
+            and await self._took_effect(path_segs, body, strict=True)
+        ):
+            self._log.debug("PUT %s refused, but confirmed by live GET", write_href)
+            return
+
         if not _coap_accepted(code):
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.

@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_washer_entities_from_filters
+from custom_components.localthings import _drop_misidentified_washer_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 
@@ -30,7 +30,7 @@ def _entry(hass: HomeAssistant) -> MockConfigEntry:
 def _coordinator(device_type: str) -> LocalThingsCoordinator:
     return cast(
         LocalThingsCoordinator,
-        SimpleNamespace(device_type_name=device_type, device_key=MOCK_SERIAL),
+        SimpleNamespace(device_type_name=device_type, device_key=MOCK_SERIAL, subdevices=[]),
     )
 
 
@@ -60,7 +60,7 @@ async def test_drops_the_washer_rows_from_a_filter(hass: HomeAssistant) -> None:
         _row(hass, entry, "sensor", "start"),
     ]
 
-    _drop_washer_entities_from_filters(hass, entry, _coordinator("microfiber_filter"))
+    _drop_misidentified_washer_entities(hass, entry, _coordinator("microfiber_filter"))
 
     ent_reg = er.async_get(hass)
     assert all(ent_reg.async_get(r.entity_id) is None for r in dropped)
@@ -75,7 +75,7 @@ async def test_leaves_a_washer_alone(hass: HomeAssistant) -> None:
         _row(hass, entry, "button", "start"),
     ]
 
-    _drop_washer_entities_from_filters(hass, entry, _coordinator("washer"))
+    _drop_misidentified_washer_entities(hass, entry, _coordinator("washer"))
 
     assert all(er.async_get(hass).async_get(r.entity_id) is not None for r in rows)
 
@@ -85,9 +85,9 @@ async def test_is_idempotent(hass: HomeAssistant) -> None:
     _row(hass, entry, "button", "stop")
     coordinator = _coordinator("microfiber_filter")
 
-    _drop_washer_entities_from_filters(hass, entry, coordinator)
+    _drop_misidentified_washer_entities(hass, entry, coordinator)
     before = set(er.async_get(hass).entities)
-    _drop_washer_entities_from_filters(hass, entry, coordinator)
+    _drop_misidentified_washer_entities(hass, entry, coordinator)
 
     assert set(er.async_get(hass).entities) == before
 

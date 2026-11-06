@@ -3,6 +3,7 @@
 import re
 from collections.abc import Sequence
 
+from ..entities import PLATFORM_OF
 from . import (
     air_dresser,
     air_monitor,
@@ -18,6 +19,7 @@ from . import (
     oven,
     range_hood,
     refrigerator,
+    robot_vacuum,
     soundbar,
     vacuum_station,
     washer,
@@ -29,6 +31,7 @@ from . import (
 from ._base import DeviceRegistry
 
 __all__ = [
+    "WASHER_ONLY_ENTITIES",
     "DeviceRegistry",
     "_board_tokens",
     "for_device_by_model",
@@ -57,10 +60,24 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
+    "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
+}
+
+
+def _entity_keys(registry: DeviceRegistry) -> set[tuple[str, str]]:
+    caps = [c for cs in registry.capabilities.values() for c in cs]
+    caps += registry.pattern_capabilities
+    return {(PLATFORM_OF[type(desc)], desc.key) for cap in caps for desc in cap.entities}
+
+
+# Old routing gave filters (#475) and oven/microwave cavities (#681) washer entities.
+WASHER_ONLY_ENTITIES = {
+    name: frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(_REGISTRY_BY_KEY[name]))
+    for name in ("microfiber_filter", "oven", "microwave")
 }
 
 
@@ -231,6 +248,8 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.oven": "oven",
     "oic.d.range": "range",  # issue #324 -- oven+cooktop combo, no /information/vs/0
     "oic.d.refrigerator": "refrigerator",
+    # POWERbot R7040 (issue #659): empty modelNum, so /oic/d is its only route.
+    "oic.d.robotcleaner": "robot_vacuum",
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",

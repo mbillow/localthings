@@ -5,8 +5,6 @@ delay, start and child-lock entities it has no hardware behind.
 """
 
 from ..capabilities import common, cooktop, ignored, microfiber_filter
-from ..entities import PLATFORM_OF
-from . import washer
 from ._base import DeviceRegistry, _build
 
 REGISTRY = DeviceRegistry(
@@ -26,14 +24,3 @@ REGISTRY = DeviceRegistry(
         ]
     ),
 )
-
-
-def _entity_keys(registry: DeviceRegistry) -> set[tuple[str, str]]:
-    caps = [c for cs in registry.capabilities.values() for c in cs]
-    caps += registry.pattern_capabilities
-    return {(PLATFORM_OF[type(desc)], desc.key) for cap in caps for desc in cap.entities}
-
-
-# (platform, key) of every entity a filter could have had on the washer
-# registry (#475) and can't have on this one.
-WASHER_ONLY_ENTITIES = frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(REGISTRY))
