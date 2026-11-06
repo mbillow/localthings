@@ -308,7 +308,7 @@
         "name": "Хороший сон"
       },
       "instance_setpoint": {
-        "name": "Уставка {instance_name}"
+        "name": "{instance_name}: уставка"
       },
       "oven_setpoint": {
         "name": "Уставка"
@@ -541,7 +541,7 @@
           "86": "Экспресс 60",
           "90": "Самоочистка",
           "0e": "AI Wash",
-          "07": "Предварительный напор",
+          "07": "Предварительная промывка",
           "8d": "Кастрюли и сковороды",
           "85": "Деликатный",
           "0c": "Экспресс",
@@ -724,7 +724,7 @@
         "name": "Температура горячей воды"
       },
       "ice_type": {
-        "name": "Тип {instance_name}",
+        "name": "{instance_name}: тип",
         "state": {
           "off": "Выкл.",
           "whiskey_iceball_3": "3 шарика в день",
@@ -790,14 +790,28 @@
           "steam_roast": "Запекание на пару",
           "upper_steam_bake": "Верхняя выпечка на пару",
           "descale": "Удаление накипи",
-          "drain": "Слив"
+          "drain": "Слив",
+          "healthycook1": "Здоровое приготовление 1",
+          "healthycook2": "Здоровое приготовление 2",
+          "healthycook3": "Здоровое приготовление 3",
+          "healthycook4": "Здоровое приготовление 4",
+          "healthycook5": "Здоровое приготовление 5",
+          "healthycook6": "Здоровое приготовление 6",
+          "upper_healthycook1": "Верхнее здоровое приготовление 1",
+          "upper_healthycook2": "Верхнее здоровое приготовление 2",
+          "upper_healthycook3": "Верхнее здоровое приготовление 3",
+          "upper_healthycook4": "Верхнее здоровое приготовление 4",
+          "lower_healthycook1": "Нижнее здоровое приготовление 1",
+          "lower_healthycook2": "Нижнее здоровое приготовление 2",
+          "lower_healthycook3": "Нижнее здоровое приготовление 3",
+          "lower_healthycook4": "Нижнее здоровое приготовление 4"
         }
       },
       "operating_mode": {
         "name": "Режим работы"
       },
       "kimchi_zone_mode": {
-        "name": "Режим хранения {instance_name}",
+        "name": "{instance_name}: режим хранения",
         "state": {
           "off": "Выкл.",
           "kimchi_storage_normal": "Кимчи",
@@ -1013,7 +1027,7 @@
           "d4": "Полоскание + отжим",
           "d5": "Очистка барабана",
           "d6": "Постельное бельё",
-          "d7": "Уход за уличной одеждой",
+          "d7": "Уличная одежда",
           "d8": "Шерсть",
           "da": "Супер-эко стирка",
           "db": "Суперскорость",
@@ -1298,6 +1312,25 @@
           "classic": "Классика",
           "custom": "Пользовательский"
         }
+      },
+      "cleaning_mode": {
+        "name": "Режим уборки",
+        "state": {
+          "auto": "Авто",
+          "part": "Локальная",
+          "repeat": "Повторная",
+          "manual": "Ручная",
+          "stop": "Стоп",
+          "map": "По карте"
+        }
+      },
+      "robot_sound": {
+        "name": "Звук",
+        "state": {
+          "soundeffect": "Звуковые эффекты",
+          "mute": "Без звука",
+          "voice": "Голос"
+        }
       }
     },
     "sensor": {
@@ -1555,13 +1588,13 @@
         "name": "Температура холодильной камеры"
       },
       "kimchi_ripening_status": {
-        "name": "Состояние созревания {instance_name}"
+        "name": "{instance_name}: состояние созревания"
       },
       "kimchi_ripening_remaining": {
-        "name": "Оставшееся время созревания {instance_name}"
+        "name": "{instance_name}: оставшееся время созревания"
       },
       "kimchi_rack_count": {
-        "name": "Количество стеллажей {instance_name}"
+        "name": "{instance_name}: количество стеллажей"
       },
       "hood_filter_capacity": {
         "name": "Ёмкость фильтра"
@@ -1573,7 +1606,7 @@
         "name": "Износ фильтра"
       },
       "instance_temperature": {
-        "name": "Температура {instance_name}"
+        "name": "{instance_name}: температура"
       },
       "job_beginning_status": {
         "name": "Состояние начала задания"
@@ -1745,7 +1778,7 @@
         }
       },
       "ice_making_status": {
-        "name": "Состояние приготовления {instance_name}",
+        "name": "{instance_name}: состояние приготовления",
         "state": {
           "icestatus_stop": "Ожидание",
           "icestatus_run": "Приготовление льда"
@@ -1889,6 +1922,23 @@
       },
       "wifi_signal": {
         "name": "Сигнал Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Состояние робота",
+        "state": {
+          "cleaning": "Уборка",
+          "point": "Локальная уборка",
+          "homing": "Возвращение на базу",
+          "charging": "Зарядка",
+          "idle": "Ожидание",
+          "pause": "Приостановлен",
+          "alarm": "Тревога",
+          "reserve": "По расписанию",
+          "poweroff": "Выключен"
+        }
+      },
+      "robot_movement": {
+        "name": "Движение"
       }
     },
     "switch": {
@@ -2176,6 +2226,9 @@
       },
       "voice_amplifier": {
         "name": "Усиление голоса"
+      },
+      "repeated_cleaning": {
+        "name": "Повторная уборка"
       }
     },
     "time": {
@@ -2216,6 +2269,20 @@
     "water_heater": {
       "dhw": {
         "name": "Горячая вода"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Обычная",
+              "turbo": "Турбо",
+              "quiet": "Тихая",
+              "extra_quiet": "Сверхтихая"
+            }
+          }
+        }
       }
     }
   },
@@ -2514,6 +2581,9 @@
     "command_failed": {
       "message": "Команда для {href} не выполнена даже после переподключения: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Не удалось подтвердить запуск приготовления, повторная попытка не выполнялась. Проверьте прибор, прежде чем повторять. Подробности: {error}"
+    },
     "command_refused": {
       "message": "Прибор отклонил команду для {href}: {error}"
     },
@@ -2597,6 +2667,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Включите вентилятор вытяжки, прежде чем задавать таймер её отключения."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Этот робот-пылесос не поддерживает скорость вентилятора {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Этот робот-пылесос не указывает {command} среди поддерживаемых команд."
+    },
+    "vacuum_command_params": {
+      "message": "Команды робота-пылесоса не принимают параметров."
     }
   },
   "selector": {
