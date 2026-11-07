@@ -688,6 +688,17 @@
           "very": "Zeer"
         }
       },
+      "dryer_temperature": {
+        "name": "Temperatuur",
+        "state": {
+          "none": "Geen warmte",
+          "extra_low": "Extra laag",
+          "low": "Laag",
+          "medium_low": "Middel-laag",
+          "medium": "Middel",
+          "high": "Hoog"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoriete capaciteit"
       },

@@ -688,6 +688,17 @@
           "very": "Velmi"
         }
       },
+      "dryer_temperature": {
+        "name": "Teplota",
+        "state": {
+          "none": "Bez ohřevu",
+          "extra_low": "Extra nízká",
+          "low": "Nízká",
+          "medium_low": "Středně nízká",
+          "medium": "Střední",
+          "high": "Vysoká"
+        }
+      },
       "favorite_capacity": {
         "name": "Oblíbené množství"
       },

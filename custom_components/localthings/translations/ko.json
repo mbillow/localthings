@@ -688,6 +688,17 @@
           "very": "매우 많이"
         }
       },
+      "dryer_temperature": {
+        "name": "건조 온도",
+        "state": {
+          "none": "열 없음",
+          "extra_low": "매우 낮음",
+          "low": "낮음",
+          "medium_low": "중간 낮음",
+          "medium": "중간",
+          "high": "높음"
+        }
+      },
       "favorite_capacity": {
         "name": "즐겨찾기 출수량"
       },

@@ -688,6 +688,17 @@
           "very": "Sehr"
         }
       },
+      "dryer_temperature": {
+        "name": "Temperatur",
+        "state": {
+          "none": "Keine Wärme",
+          "extra_low": "Extra niedrig",
+          "low": "Niedrig",
+          "medium_low": "Mittel-niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoritenmenge"
       },
