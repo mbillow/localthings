@@ -31,7 +31,7 @@ from ..entities import (
 )
 from . import cook
 from .common import normalize_temp_unit
-from .operational import STOP_BUTTON
+from .operational import STOP_BUTTON, _remaining_seconds
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -120,6 +120,77 @@ def _finish_time(rep):
         return None
     finish = datetime.now(UTC) + timedelta(seconds=total_s)
     return finish.replace(second=0, microsecond=0)
+
+
+def _cook_finish_time(rep):
+    """now() + remainingTime to the second, while a cook is running. The
+    stateless reading for diagnostics and the state-key snapshot; the
+    entity itself reads CookFinishTracker below."""
+    if _to_ocf(rep.get("x.com.samsung.da.state")) != "active":
+        return None
+    total_s = _remaining_seconds(rep.get("x.com.samsung.da.remainingTime"))
+    if not total_s:
+        return None
+    return (datetime.now(UTC) + timedelta(seconds=total_s)).replace(microsecond=0)
+
+
+class CookFinishTracker:
+    """When the running cook ends, to the second, and when the last one did.
+
+    A TP1X microwave (MW7300B) reports remainingTime with seconds, but pushes
+    /operational/state/vs/0 only about every 10 s, and the coordinator
+    re-flattens on every other resource's update in between. now() plus a
+    remainingTime that is already several seconds old put the finish up to
+    6 s late until the next fresh read corrected it: 67 state changes over a
+    3-minute cook, in pairs 0.4 s apart. So the finish is anchored to when a
+    remainingTime value arrives -- recomputed only when that value changes.
+
+    What is left is asymmetric. Fresh reads wobble by ±1 s; an earlier finish
+    of EARLIER_DEADBAND or more is a real one (time taken off on the panel,
+    or a fresh read correcting an old one). The coordinator's 32 s /device/0
+    sweep returns a remainingTime 2-3 s older than the push and the direct
+    GET do, and an old value only ever moves the finish later, so a later
+    finish needs LATER_DEADBAND -- under the 10 s the panel adds time in.
+
+    Paused: frozen; resuming re-anchors without a deadband, since the
+    countdown stood still for however long the pause was.
+    Ended, finished or cancelled: the moment the board reported it, kept
+    until the next cook. The entity restores the last value across a restart.
+    """
+
+    EARLIER_DEADBAND = timedelta(seconds=2)
+    LATER_DEADBAND = timedelta(seconds=5)
+
+    def __init__(self, value: datetime | None = None) -> None:
+        self.value = value
+        self._state: str | None = None
+        self._anchor: str | None = None
+
+    def update(self, rep: dict, now: datetime) -> datetime | None:
+        state = _to_ocf(rep.get("x.com.samsung.da.state"))
+        previous, self._state = self._state, state
+        now = now.replace(microsecond=0)
+        if state == "active":
+            remaining = rep.get("x.com.samsung.da.remainingTime")
+            if remaining != self._anchor:
+                self._anchor = remaining
+                total_s = _remaining_seconds(remaining)
+                if total_s:
+                    finish = now + timedelta(seconds=total_s)
+                    if previous != "active" or self._moved(finish):
+                        self.value = finish
+            return self.value
+        self._anchor = None
+        if state == "idle" and previous in ("active", "pause"):
+            self.value = now
+        return self.value
+
+    def _moved(self, finish: datetime) -> bool:
+        if self.value is None:
+            return True
+        if finish < self.value:
+            return self.value - finish >= self.EARLIER_DEADBAND
+        return finish - self.value >= self.LATER_DEADBAND
 
 
 def _op_minutes(op_time):
@@ -464,6 +535,18 @@ OVEN_OPERATIONAL_STATE = Capability(
             device_class="timestamp",
             hysteresis=True,
             rep_fn=_finish_time,
+        ),
+        # Disabled by default so ovens and ranges don't gain a second finish
+        # time beside finish_time on update.
+        SensorDesc(
+            key="precise_finish_time",
+            translation_key="cook_finish_time",
+            device_class="timestamp",
+            icon="mdi:timer-outline",
+            enabled_default=False,
+            tracker_factory=CookFinishTracker,
+            exists_fn=lambda rep, resources: "x.com.samsung.da.remainingTime" in rep,
+            rep_fn=_cook_finish_time,
         ),
         NumberDesc(
             key="cook_time",
