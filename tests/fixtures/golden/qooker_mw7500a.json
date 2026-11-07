@@ -16,6 +16,7 @@
     "operation_time_minutes",
     "power_level",
     "power_switch",
+    "precise_finish_time",
     "progress_percentage",
     "setpoint",
     "sound"

@@ -16,6 +16,7 @@
     "operation_time_minutes",
     "power_level",
     "power_switch",
+    "precise_finish_time",
     "progress_percentage",
     "sound",
     "subdevice2_alarm_code",
@@ -31,6 +32,7 @@
     "subdevice2_oven_setpoint",
     "subdevice2_oven_state",
     "subdevice2_power_switch",
+    "subdevice2_precise_finish_time",
     "subdevice2_progress_percentage",
     "subdevice2_remote_control",
     "subdevice2_reservoir_open"

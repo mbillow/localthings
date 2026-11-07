@@ -96,6 +96,12 @@ class SensorDesc(SamsungEntityDescription):
     # (see sensor.py). Only for values expected to jitter between
     # device-side revisions -- not a general-purpose flag.
     hysteresis: bool = False
+    # Opt-in: a value that depends on how the device's state has moved, not
+    # only on where it is now (oven.py's CookFinishTracker). Called with the
+    # restored value, or None; the instance's `update(rep, now)` runs on each
+    # coordinator update and returns the state. The entity is then restored
+    # across a restart. rep_fn still feeds the state-key snapshot.
+    tracker_factory: Callable[[Any], Any] | None = None
     # Opt-in, entity-instance-only hold -- see sensor.py's _apply_sticky
     # for the full contract (arm/value/bypass semantics, one window per
     # bypass, why this never touches the coordinator cache).

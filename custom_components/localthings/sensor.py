@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from homeassistant.components.sensor import (
@@ -42,7 +42,7 @@ async def async_setup_entry(
         if not isinstance(bound.desc, SensorDesc):
             continue
         if _is_included(bound, coordinator):
-            entities.append(LocalThingsSensor(coordinator, bound))
+            entities.append(_sensor_for(coordinator, bound))
         elif bound.desc.dynamic_presence:
             pending.append(bound)
     entities.append(LocalThingsConnectionModeSensor(coordinator))
@@ -56,13 +56,19 @@ async def async_setup_entry(
         detected = []
         for bound in pending[:]:
             if _is_included(bound, coordinator, live=True):
-                detected.append(LocalThingsSensor(coordinator, bound))
+                detected.append(_sensor_for(coordinator, bound))
                 pending.remove(bound)
         if detected:
             async_add_entities(detected)
 
     if pending:
         entry.async_on_unload(coordinator.async_add_listener(async_add_detected_sensors))
+
+
+def _sensor_for(coordinator: LocalThingsCoordinator, bound) -> SensorEntity:
+    if cast(SensorDesc, bound.desc).tracker_factory is not None:
+        return LocalThingsTrackedSensor(coordinator, bound)
+    return LocalThingsSensor(coordinator, bound)
 
 
 class LocalThingsSensor(LocalThingsEntity, SensorEntity):
@@ -212,6 +218,43 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
             return self._hysteresis_value
         self._hysteresis_value = raw
         return raw
+
+
+class LocalThingsTrackedSensor(LocalThingsSensor, RestoreSensor):
+    """A LocalThingsSensor whose value comes from its descriptor's
+    tracker_factory instead of the flattened snapshot, restored across a
+    restart (oven.py's CookFinishTracker keeps the last cook's end)."""
+
+    def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
+        super().__init__(coordinator, bound)
+        self._tracker = None
+
+    def _tracker_for(self, restored=None):
+        if self._tracker is None:
+            factory = cast(SensorDesc, self._bound.desc).tracker_factory
+            assert factory is not None
+            self._tracker = factory(restored)
+        return self._tracker
+
+    def _track(self) -> None:
+        rep = self._resources.get(self._bound.href) or {}
+        self._tracker_for().update(rep, datetime.now(UTC))
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last = await self.async_get_last_sensor_data()
+        restored = last.native_value if last is not None else None
+        self._tracker_for(restored if isinstance(restored, datetime) else None)
+        self._track()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._track()
+        super()._handle_coordinator_update()
+
+    @property
+    def native_value(self):
+        return self._tracker_for().value
 
 
 class LocalThingsConnectionModeSensor(CoordinatorEntity[LocalThingsCoordinator], SensorEntity):

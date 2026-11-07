@@ -16,6 +16,7 @@
     "oven_setpoint",
     "oven_state",
     "power_switch",
+    "precise_finish_time",
     "progress_percentage",
     "remote_control",
     "sound",
@@ -33,6 +34,7 @@
     "subdevice1_oven_setpoint",
     "subdevice1_oven_state",
     "subdevice1_power_switch",
+    "subdevice1_precise_finish_time",
     "subdevice1_progress_percentage",
     "subdevice1_remote_control",
     "subdevice1_sound"

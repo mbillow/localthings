@@ -11,6 +11,7 @@
     "machine_state",
     "operation_time_minutes",
     "power_level",
+    "precise_finish_time",
     "progress_percentage",
     "remote_control",
     "subdevice2_alarm_code",
@@ -22,6 +23,7 @@
     "subdevice2_machine_state",
     "subdevice2_operation_time_minutes",
     "subdevice2_oven_state",
+    "subdevice2_precise_finish_time",
     "subdevice2_progress_percentage",
     "subdevice2_remote_control",
     "subdevice2_reservoir_open"
