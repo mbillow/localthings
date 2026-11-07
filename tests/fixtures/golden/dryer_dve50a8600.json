@@ -11,6 +11,7 @@
     "diagnosis",
     "dry_level",
     "dryer_type",
+    "drying_temperature",
     "energy_kwh",
     "finish_time",
     "firmware_update",

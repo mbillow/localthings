@@ -1,0 +1,111 @@
+{
+  "seeds_note": "Canonical hrefs generated with legacy_http.to_resources from the real issue #762 capture in washer_dongle_wf7500_8888.json; these hrefs are bridge mappings, not appliance-served OCF resources.",
+  "device0": [
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.progress": "None",
+        "x.com.samsung.da.progressPercentage": 1,
+        "x.com.samsung.da.remainingTime": "00:45:00",
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Weightsensing",
+          "Wash",
+          "Rinse",
+          "Spin",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "Course_01",
+          "DeviceType_0154",
+          "SteamWash_Disable",
+          "UsagesDB_ok",
+          "LaundryOutTime_0",
+          "AddWashSet_0",
+          "AddWashAvailable_7",
+          "AddWashIndicator_Off"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "301833EA43FC33E70843EA53FC53E71830EA20FC33E55831EA43FC33E728520A43FC33E548410A43FC33E738000A43FC00074830EA207C33E75810EA207C33E76830EA207C30877830EA21FC33E568106A43FC33E78831EA43FC13E7A8410A43FC520578520A520C000"
+        ]
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.soilLevel": "Normal",
+        "x.com.samsung.da.spinLevel": "High",
+        "x.com.samsung.da.supportedSoilLevel": [
+          "None",
+          "Light",
+          "Down",
+          "Normal",
+          "Up",
+          "Heavy"
+        ],
+        "x.com.samsung.da.supportedSpinLevel": [
+          "RinseHold",
+          "NoSpin",
+          "Low",
+          "Medium",
+          "High",
+          "ExtraHigh"
+        ],
+        "x.com.samsung.da.supportedWaterTemperature": [
+          "None",
+          "TapCold",
+          "Cold",
+          "Warm",
+          "Hot",
+          "ExtraHot"
+        ],
+        "x.com.samsung.da.waterTemperature": "Warm"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": true
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "DONGLE_WM",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "DONGLE_WF7500|00185441|",
+        "x.com.samsung.da.deviceSubType": "Washer"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    }
+  ]
+}
