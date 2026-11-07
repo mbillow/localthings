@@ -12,6 +12,7 @@
     "diagnosis",
     "drum_clean_cycles_remaining",
     "drum_clean_last_cleaned",
+    "drum_light",
     "dry_level",
     "dry_time",
     "dryer_type",

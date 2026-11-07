@@ -2,16 +2,23 @@
   "state_keys": [
     "after_run_active",
     "after_run_progress",
+    "air_sensing_interval",
     "air_sensing_state",
     "alarm_code",
     "auto_ventilation_action",
     "automatic_operation",
-    "automatic_ventilation_state",
     "clean_level",
+    "dust",
+    "dust_air_quality",
     "energy_kwh",
     "energy_saved_kwh",
     "fan",
+    "fine_dust",
+    "fine_dust_air_quality",
     "firmware_update",
+    "hood_do_not_disturb",
+    "hood_do_not_disturb_end",
+    "hood_do_not_disturb_start",
     "hood_filter_capacity",
     "hood_filter_status",
     "hood_filter_usage",
@@ -19,9 +26,9 @@
     "lamp_brightness",
     "last_air_sensing_level",
     "last_air_sensing_time",
-    "periodic_air_sensing",
-    "dust",
-    "fine_dust",
-    "super_fine_dust"
+    "smart_ventilate",
+    "smart_ventilate_mode",
+    "super_fine_dust",
+    "super_fine_dust_air_quality"
   ]
 }

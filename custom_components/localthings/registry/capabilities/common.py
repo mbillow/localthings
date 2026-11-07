@@ -517,10 +517,11 @@ ALARMS = Capability(
     entities=(
         SensorDesc(
             key="alarm_code",
-            field="x.com.samsung.da.items",
             icon="mdi:alert",
             entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
+            # A clear TP1X_REF_21K returns only rt/if, with no items field.
+            # Do not let optional-field gating drop its alarm entity on restart.
+            rep_fn=lambda rep: _active_alarm_codes(rep.get("x.com.samsung.da.items")),
         ),
     ),
 )

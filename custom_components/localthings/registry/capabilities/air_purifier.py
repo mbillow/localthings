@@ -586,11 +586,9 @@ SOUND_VOLUME = Capability(
 # "Off" keeps sampling but doesn't act on it (the app calls that
 # "sensing only").
 #
-# range_hood.AIR_LEVEL_CHECK models the same href's read-only fields
-# (reused verbatim below) but is deliberately not imported: it exposes
-# periodic_air_sensing as a read-only BinarySensorDesc where this board
-# needs it writable, and reusing it would migrate every hood user's entity
-# to a different platform.
+# range_hood reuses the partial-write helpers below, but has its own
+# descriptors and UTC clock conversion. Purifier time windows stay in
+# device wall-clock time, and their existing entity keys are unchanged.
 #
 # Every write below was exercised on AVT-WW-TP1-23-AXX500 hardware and
 # verified by surviving a reconnect (this board 2.04s writes it silently

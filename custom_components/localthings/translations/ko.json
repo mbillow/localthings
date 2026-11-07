@@ -1363,6 +1363,14 @@
           "mute": "음소거",
           "voice": "음성"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "스마트 환기 모드",
+        "state": {
+          "sensing": "감지만",
+          "alarm": "알림 받기",
+          "airpurify": "조용히 환기"
+        }
       }
     },
     "sensor": {
@@ -1974,6 +1982,66 @@
       },
       "oven_setpoint": {
         "name": "설정 온도"
+      },
+      "air_sensing_interval": {
+        "name": "공기 감지 간격"
+      },
+      "range_hood_pm10": {
+        "name": "PM10"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm25": {
+        "name": "PM2.5"
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm1": {
+        "name": "PM1.0"
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "마지막 공기질 감지 단계",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "청정도",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
       }
     },
     "switch": {
@@ -2264,6 +2332,18 @@
       },
       "repeated_cleaning": {
         "name": "반복 청소"
+      },
+      "drum_light": {
+        "name": "통 조명"
+      },
+      "smart_ventilate": {
+        "name": "스마트 환기"
+      },
+      "hood_do_not_disturb": {
+        "name": "방해 금지"
+      },
+      "buzzer_sound": {
+        "name": "부저음"
       }
     },
     "time": {
@@ -2299,6 +2379,12 @@
       },
       "sensing_skip_start": {
         "name": "AI Purify 감지 건너뛰기 시작"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "방해 금지 시작"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "방해 금지 종료"
       }
     },
     "water_heater": {

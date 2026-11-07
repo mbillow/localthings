@@ -16,6 +16,8 @@ speed and lamp are enum sensors here, not the fan entity and selects the
 fields otherwise invite.
 """
 
+import datetime
+
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
@@ -25,6 +27,13 @@ from ..entities import (
     SelectDesc,
     SensorDesc,
     SwitchDesc,
+    TimeDesc,
+)
+from .air_purifier import (
+    _periodic_sensing_write,
+    _skip_status_write,
+    _skip_time_read,
+    _skip_time_write,
 )
 from .common import (
     epoch_to_utc,
@@ -59,10 +68,11 @@ HOOD_ALARMS = Capability(
     entities=(
         SensorDesc(
             key="alarm_code",
-            field="x.com.samsung.da.items",
             icon="mdi:alert",
             entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
+            # Like common.ALARMS, a present resource need not contain items
+            # when clear; metadata must not suppress the sensor at setup.
+            rep_fn=lambda rep: _active_alarm_codes(rep.get("x.com.samsung.da.items")),
         ),
     ),
 )
@@ -241,44 +251,178 @@ AFTER_RUN = Capability(
 # air_purifier.AIR_QUALITY needed for a board that reports only some of them
 # (issue #414). No hood dump has been short one yet; this is the guard, not a
 # fix for anything observed here.
+def _particle_grade(items, sensor_type):
+    # The hood's second value matches SmartThings' four-level display;
+    # other Samsung families use different grade floors, so keep this local.
+    grade = sensor_item_value(items, sensor_type, 1)
+    # Direct sensing captures show all three grades become 10 until readings settle.
+    return {1: "good", 2: "normal", 3: "poor", 4: "very_poor", 10: "processing"}.get(
+        grade, str(grade) if grade is not None else None
+    )
+
+
+def _clean_level(items):
+    # CleanLevel 1-4 tracks this hood's Kr1-Kr4 stored air-quality assessment.
+    level = sensor_item_value(items, "CleanLevel")
+    return {1: "good", 2: "normal", 3: "poor", 4: "very_poor"}.get(
+        level, str(level) if level is not None else None
+    )
+
+
 AIR_QUALITY = Capability(
     href="/sensors/vs/0",
     poll_tier="warm",
     entities=(
         SensorDesc(
             key="clean_level",
+            translation_key="range_hood_clean_level",
+            device_class="enum",
+            options=("good", "normal", "poor", "very_poor"),
             field="x.com.samsung.da.items",
             icon="mdi:air-filter",
             exists_fn=has_sensor_type("CleanLevel"),
-            value_fn=lambda items: sensor_item_value(items, "CleanLevel"),
+            value_fn=_clean_level,
         ),
         *(
             SensorDesc(
                 key=key,
+                translation_key=f"range_hood_{device_class}",
+                device_class=device_class,
+                state_class="measurement",
+                unit="μg/m³",
+                icon="mdi:blur",
                 field="x.com.samsung.da.items",
                 exists_fn=has_sensor_type(type_),
                 value_fn=lambda items, t=type_: sensor_item_value(items, t),
             )
-            for key, type_ in (
-                ("dust", "Dust"),
-                ("fine_dust", "FineDust"),
-                ("super_fine_dust", "SuperFineDust"),
+            for key, type_, device_class in (
+                ("dust", "Dust", "pm10"),
+                ("fine_dust", "FineDust", "pm25"),
+                ("super_fine_dust", "SuperFineDust", "pm1"),
+            )
+        ),
+        *(
+            SensorDesc(
+                key=f"{key}_air_quality",
+                translation_key=f"range_hood_{device_class}_air_quality",
+                field="x.com.samsung.da.items",
+                device_class="enum",
+                options=("good", "normal", "poor", "very_poor", "processing"),
+                icon="mdi:air-filter",
+                exists_fn=has_sensor_type(type_),
+                value_fn=lambda items, t=type_: _particle_grade(items, t),
+            )
+            for key, type_, device_class in (
+                ("dust", "Dust", "pm10"),
+                ("fine_dust", "FineDust", "pm25"),
+                ("super_fine_dust", "SuperFineDust", "pm1"),
             )
         ),
     ),
 )
 
 
+def _sensing_modes(resources):
+    rep = resources.get("/airlevelcheck/vs/0") or {}
+    supported = rep.get("x.com.samsung.da.supportedAutoExeState")
+    modes = supported if isinstance(supported, list) else []
+    # Detection only is writable even though this hood omits Sensing from
+    # supportedAutoExeState; all three app labels were cross-checked live.
+    return list(dict.fromkeys(["Sensing", *(m for m in modes if isinstance(m, str) and m)]))
+
+
+def _sensing_mode_write(payload, rep, href=None):
+    if payload not in _sensing_modes({"/airlevelcheck/vs/0": rep}):
+        return None
+    return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.autoExeState": payload}
+
+
+def _hood_dnd_read(part):
+    def read(raw):
+        if not isinstance(raw, str) or len(raw) != 8:
+            return None
+        start, end = _skip_time_read("start")(raw), _skip_time_read("end")(raw)
+        if start is None or end is None:
+            return None
+        # App 22:00-05:00 in Los Angeles reports 06001300 locally: UTC,
+        # unlike the air-purifier's wall-clock field. TimeEntity localizes it.
+        now = datetime.datetime.now(datetime.UTC)
+        value = datetime.datetime.combine(
+            now.date(), start if part == "start" else end, datetime.UTC
+        )
+        return value if value >= now else value + datetime.timedelta(days=1)
+
+    return read
+
+
+def _hood_dnd_payload(value, now):
+    local = datetime.datetime.combine(now.date(), value, now.tzinfo)
+    if local < now:
+        local += datetime.timedelta(days=1)
+    return local.astimezone(datetime.UTC).time()
+
+
 AIR_LEVEL_CHECK = Capability(
     href="/airlevelcheck/vs/0",
     poll_tier="warm",
     entities=(
-        BinarySensorDesc(
-            key="periodic_air_sensing",
+        SwitchDesc(
+            key="smart_ventilate",
             field="x.com.samsung.da.periodicSensingActivationState",
-            icon="mdi:radar",
-            entity_category="diagnostic",
+            icon="mdi:fan-auto",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                rep.get("x.com.samsung.da.periodicSensingActivationState") is not None
+            ),
             value_fn=lambda value: str(value).lower() == "on",
+            write_fn=_periodic_sensing_write,
+        ),
+        SelectDesc(
+            key="smart_ventilate_mode",
+            field="x.com.samsung.da.autoExeState",
+            options=_sensing_modes,
+            icon="mdi:fan-auto",
+            entity_category="config",
+            exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.autoExeState")),
+            write_fn=_sensing_mode_write,
+        ),
+        SwitchDesc(
+            key="hood_do_not_disturb",
+            field="x.com.samsung.da.periodicSensingSkipStatus",
+            icon="mdi:sleep",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                rep.get("x.com.samsung.da.periodicSensingSkipStatus") is not None
+            ),
+            value_fn=lambda value: str(value).lower() == "on",
+            write_fn=_skip_status_write,
+        ),
+        *(
+            TimeDesc(
+                key=f"hood_do_not_disturb_{part}",
+                field="x.com.samsung.da.periodicSensingSkipTime",
+                icon=f"mdi:clock-{part}",
+                entity_category="config",
+                exists_fn=lambda rep, resources: (
+                    rep.get("x.com.samsung.da.periodicSensingSkipTime") is not None
+                ),
+                value_fn=_hood_dnd_read(part),
+                payload_fn=_hood_dnd_payload,
+                write_fn=_skip_time_write(part),
+            )
+            for part in ("start", "end")
+        ),
+        SensorDesc(
+            key="air_sensing_interval",
+            field="x.com.samsung.da.periodicSensingInterval",
+            device_class="duration",
+            unit="s",
+            icon="mdi:timer-cog",
+            entity_category="diagnostic",
+            exists_fn=lambda rep, resources: (
+                rep.get("x.com.samsung.da.periodicSensingInterval") is not None
+            ),
+            value_fn=int_or_none,
         ),
         SensorDesc(
             key="air_sensing_state",
@@ -295,14 +439,18 @@ AIR_LEVEL_CHECK = Capability(
         ),
         SensorDesc(
             key="last_air_sensing_level",
+            translation_key="range_hood_last_air_sensing_level",
+            device_class="enum",
+            options=("good", "normal", "poor", "very_poor"),
+            # Kr1-Kr4 track CleanLevel 1-4 in this hood's recorded last results.
+            value_fn=lambda value: {
+                "Kr1": "good",
+                "Kr2": "normal",
+                "Kr3": "poor",
+                "Kr4": "very_poor",
+            }.get(value, value),
             field="x.com.samsung.da.lastSensingLevel",
             icon="mdi:air-filter",
-            entity_category="diagnostic",
-        ),
-        SensorDesc(
-            key="automatic_ventilation_state",
-            field="x.com.samsung.da.autoExeState",
-            icon="mdi:fan-auto",
             entity_category="diagnostic",
         ),
     ),

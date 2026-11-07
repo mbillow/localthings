@@ -617,6 +617,13 @@ WASHER_COURSE = Capability(
             table_href="/st/washercourse/vs/0",
             display_fn=_washer_course_label,
         ),
+        # Same lamp token and write contract as dryer.DRYER_COURSE.
+        bool_option_switch(
+            "drum_light",
+            "mdi:lightbulb",
+            "DrumLight",
+            gate_on_presence=True,
+        ),
         _bool_option_switch(
             "extra_rinse",
             "mdi:water-plus",
