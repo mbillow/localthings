@@ -16,6 +16,7 @@ from .common import diagnosis_status, option_value
 from .laundry import (
     OPTION_KIND_DRY,
     OPTION_KIND_DRY_TIME,
+    OPTION_KIND_WATER_TEMPERATURE,
     bool_option_exists,
     course_narrowed_options,
     cycle_select,
@@ -96,6 +97,25 @@ DRYER_SETTINGS = Capability(
             ),
             exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.supportedDryTime")),
             write_fn=_setting_write("x.com.samsung.da.dryTime"),
+        ),
+        # A dryer reports its heat setting in the shared laundry field
+        # waterTemperature (DVE50A8600 #79, DV45K6500EW #761); its course mask
+        # narrows it on the same 0x8 nibble a washer uses.
+        SelectDesc(
+            key="drying_temperature",
+            field="x.com.samsung.da.waterTemperature",
+            icon="mdi:thermometer",
+            entity_category="config",
+            translation_key="dryer_temperature",
+            options=course_narrowed_options(
+                OPTION_KIND_WATER_TEMPERATURE,
+                "x.com.samsung.da.waterTemperature",
+                "x.com.samsung.da.supportedWaterTemperature",
+            ),
+            exists_fn=lambda rep, resources: bool(
+                rep.get("x.com.samsung.da.supportedWaterTemperature")
+            ),
+            write_fn=_setting_write("x.com.samsung.da.waterTemperature"),
         ),
         SensorDesc(
             key="dryer_type",

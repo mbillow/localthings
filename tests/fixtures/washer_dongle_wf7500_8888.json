@@ -1,0 +1,78 @@
+{
+  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #762 (WF45K6500AW AddWash washer behind a DONGLE_WF7500 module, idle). Information.Versions and link/collection metadata omitted, except the record's own `type`. Every retained field is unchanged; the board reports no serial or deviceSubType. No write capture.",
+  "bodies": {
+    "Alarms": [],
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "Mode": {
+      "options": [
+        "Course_01",
+        "DeviceType_0154",
+        "SteamWash_Disable",
+        "UsagesDB_ok",
+        "LaundryOutTime_0",
+        "AddWashSet_0",
+        "AddWashAvailable_7",
+        "AddWashIndicator_Off"
+      ],
+      "supportedOptions": [
+        "301833EA43FC33E70843EA53FC53E71830EA20FC33E55831EA43FC33E728520A43FC33E548410A43FC33E738000A43FC00074830EA207C33E75810EA207C33E76830EA207C30877830EA21FC33E568106A43FC33E78831EA43FC13E7A8410A43FC520578520A520C000"
+      ]
+    },
+    "Operation": {
+      "kidsLock": "Ready",
+      "power": "On",
+      "progress": "None",
+      "progressPercentage": 1,
+      "remainingTime": "00:45:00",
+      "state": "Ready",
+      "supportedProgress": [
+        "None",
+        "Weightsensing",
+        "Wash",
+        "Rinse",
+        "Spin",
+        "Finish"
+      ]
+    },
+    "Washer": {
+      "soilLevel": "Normal",
+      "spinLevel": "High",
+      "supportedSoilLevel": [
+        "None",
+        "Light",
+        "Down",
+        "Normal",
+        "Up",
+        "Heavy"
+      ],
+      "supportedSpinLevel": [
+        "RinseHold",
+        "NoSpin",
+        "Low",
+        "Medium",
+        "High",
+        "ExtraHigh"
+      ],
+      "supportedWaterTemperature": [
+        "None",
+        "TapCold",
+        "Cold",
+        "Warm",
+        "Hot",
+        "ExtraHot"
+      ],
+      "waterTemperature": "Warm"
+    },
+    "type": "Washer",
+    "Configuration": {
+      "remoteControlEnabled": true
+    },
+    "Information": {
+      "description": "DONGLE_WM",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "DONGLE_WF7500|00185441|"
+    }
+  }
+}

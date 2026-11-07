@@ -1,0 +1,29 @@
+{
+  "state_keys": [
+    "add_wash_alarm",
+    "add_wash_alarm_final_rinse",
+    "add_wash_alarm_rinse",
+    "add_wash_alarm_spin",
+    "add_wash_available",
+    "add_wash_indicator",
+    "alarm_code",
+    "child_lock",
+    "completion_minutes",
+    "cycle",
+    "cycle_active",
+    "delay_start_hours",
+    "delay_wash_set",
+    "diagnosis_status",
+    "finish_time",
+    "laundry_out_time",
+    "machine_state",
+    "power_switch",
+    "pre_wash_selected",
+    "progress",
+    "progress_percentage",
+    "remote_control",
+    "soil_level",
+    "spin_speed",
+    "wash_temperature"
+  ]
+}

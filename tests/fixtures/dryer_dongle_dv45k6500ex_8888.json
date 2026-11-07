@@ -1,0 +1,79 @@
+{
+  "capture_note": "Captured transport.bodies from the real diagnostics attached to issue #761 (DV45K6500EW electric dryer behind a DONGLE_DV45K6500Ex module, idle). Information.Versions and link/collection metadata omitted, except the record's own `type`. Every retained field is unchanged; the board reports no serial or deviceSubType. No write capture.",
+  "bodies": {
+    "Alarms": [],
+    "Diagnosis": {
+      "diagnosisStart": "Ready"
+    },
+    "EnergyConsumption": {
+      "saveLocation": "/files/usage.db"
+    },
+    "Mode": {
+      "options": [
+        "Course_01",
+        "DeviceType_0152",
+        "RackDry_Disable",
+        "DrytimeValue_0",
+        "UsagesDB_ok",
+        "LaundryOutTime_0"
+      ],
+      "supportedOptions": [
+        "3018410D33EE000708520D33EE000718520D33EE000778410D33EE000768204D308E000758102D33EE000748410D308E0006F8520D520E0007C8520D000E13E7D8520D000E0007E8000D000E13E7F853ED000E53E808520D000E23E818102D33EE000"
+      ]
+    },
+    "Operation": {
+      "kidsLock": "Ready",
+      "power": "On",
+      "progress": "None",
+      "progressPercentage": 1,
+      "remainingTime": "01:15:00",
+      "state": "Ready",
+      "supportedProgress": [
+        "None",
+        "Drying",
+        "Cooling",
+        "Finish"
+      ]
+    },
+    "Washer": {
+      "dryLevel": "Normal",
+      "dryTime": "00:00:00",
+      "dryerType": "Electricity",
+      "supportedDryLevel": [
+        "None",
+        "Damp",
+        "Less",
+        "Normal",
+        "More",
+        "Very"
+      ],
+      "supportedDryTime": [
+        "00:00:00",
+        "00:20:00",
+        "00:30:00",
+        "00:40:00",
+        "00:50:00",
+        "01:00:00"
+      ],
+      "supportedWaterTemperature": [
+        "None",
+        "ExtraLow",
+        "Low",
+        "MediumLow",
+        "Medium",
+        "High"
+      ],
+      "waterTemperature": "Medium",
+      "wrinklePrevent": "Off"
+    },
+    "type": "Dryer",
+    "Configuration": {
+      "remoteControlEnabled": true
+    },
+    "Information": {
+      "description": "DONGLE_DRY",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "DONGLE_DV45K6500Ex|00185441|"
+    }
+  }
+}

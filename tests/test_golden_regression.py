@@ -146,6 +146,36 @@ def test_registry_reproduces_golden_state_keys_for_refrigerator_dongle_0281_8888
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_dryer_dongle_dv45k6500ex_8888():
+    """DV45K6500EW behind a DONGLE_DV45K6500Ex module (#761), typed by its
+    record's `type` since it reports no `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "dryer_dongle_dv45k6500ex_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_dongle_wf7500_8888():
+    """WF45K6500AW behind a DONGLE_WF7500 module (#762), typed by its
+    record's `type` since it reports no `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "washer_dongle_wf7500_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
     """DVE50A8600V/A3 (issue #79) -- description pairs two model numbers
     ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
