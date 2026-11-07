@@ -602,7 +602,13 @@
           "7f": "Tijdprogramma",
           "98": "Snel drogen 35",
           "eb": "Fijne was",
-          "b6": "Synthetisch"
+          "b6": "Synthetisch",
+          "94": "Handdoeken",
+          "a1": "Kreukvrij",
+          "ad": "Overhemden/blouses",
+          "ae": "Ondergoed",
+          "af": "Truien",
+          "b0": "Accessoires"
         }
       },
       "dryer_cycle_table_03": {
@@ -1323,6 +1329,17 @@
           "jazz": "Jazz",
           "classic": "Klassiek",
           "custom": "Aangepast"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Temperatuur",
+        "state": {
+          "none": "Geen",
+          "extra_low": "Extra laag",
+          "low": "Laag",
+          "medium_low": "Gemiddeld / Laag",
+          "medium": "Gemiddeld",
+          "high": "Hoog"
         }
       },
       "cleaning_mode": {

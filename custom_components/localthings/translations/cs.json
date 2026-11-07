@@ -602,7 +602,13 @@
           "7f": "Časové sušení",
           "98": "Rychlé sušení 35",
           "eb": "Jemné prádlo",
-          "b6": "Syntetika"
+          "b6": "Syntetika",
+          "94": "Ručníky",
+          "a1": "Proti pomačkání",
+          "ad": "Košile/halenky",
+          "ae": "Spodní prádlo",
+          "af": "Svetry",
+          "b0": "Doplňky"
         }
       },
       "dryer_cycle_table_03": {
@@ -1323,6 +1329,17 @@
           "jazz": "Jazz",
           "classic": "Klasika",
           "custom": "Vlastní"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Teplota",
+        "state": {
+          "none": "Žádná",
+          "extra_low": "Extra nízké",
+          "low": "Nízká",
+          "medium_low": "Střední / Nízká",
+          "medium": "Střední",
+          "high": "Vysoká"
         }
       },
       "cleaning_mode": {

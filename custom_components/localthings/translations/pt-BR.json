@@ -602,7 +602,13 @@
           "7f": "Secagem por tempo",
           "98": "Secagem rápida 35",
           "eb": "Delicados",
-          "b6": "Sintéticos"
+          "b6": "Sintéticos",
+          "94": "Toalhas",
+          "a1": "Remover rugas",
+          "ad": "Camisa/blusa",
+          "ae": "Roupa íntima",
+          "af": "Suéter",
+          "b0": "Acessórios"
         }
       },
       "dryer_cycle_table_03": {
@@ -1323,6 +1329,17 @@
           "jazz": "Jazz",
           "classic": "Clássico",
           "custom": "Personalizado"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Nenhum",
+          "extra_low": "Extra baixo",
+          "low": "Baixo",
+          "medium_low": "Médio / Baixo",
+          "medium": "Médio",
+          "high": "Alto"
         }
       },
       "cleaning_mode": {

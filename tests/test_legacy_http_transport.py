@@ -17,6 +17,7 @@ from typing import ClassVar
 
 import pytest
 
+from custom_components.localthings import legacy_http_transport
 from custom_components.localthings.legacy_http import http_status_to_coap
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 from custom_components.localthings.registry.capabilities import cook
@@ -169,6 +170,210 @@ class TestSeed:
         assert code == 0x45
         assert reps["/st/washercourse/vs/0"] == {PREFIX + "st.courseTable": "Table_00"}
         assert len(_FakeConnection.log) - before == 4  # with the clock probe
+
+    def test_indexed_dryer_seed_carries_its_course_table(self, transport, monkeypatch):
+        transport._family = "TP6X_DRYER_DRUM"
+        course_table_calls: list[str | None] = []
+        actual_course_table = legacy_http_transport.course_table
+
+        def capture_course_table(family: str | None) -> dict[str, dict]:
+            course_table_calls.append(family)
+            return actual_course_table(family)
+
+        monkeypatch.setattr(legacy_http_transport, "course_table", capture_course_table)
+        record = {
+            "id": "1",
+            "description": "TP6X_DRYER_TOPLOAD",
+            "Mode": {"options": ["Course_AD"], "supportedOptions": ["0ADAEAFB0"]},
+            "Washer": {"dryerType": "Electricity"},
+        }
+        monkeypatch.setattr(
+            transport,
+            "_sibling_record",
+            lambda index, deadline: (0x45, record, [{"id": "1"}]),
+        )
+
+        code, body = transport.read(["device", "1"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert code == 0x45
+        assert reps["/st/dryercourse/vs/1"] == {PREFIX + "st.courseTable": "Table_00"}
+        assert course_table_calls == ["TP6X_DRYER_TOPLOAD"]
+
+    def test_indexed_dryer_uses_information_family_not_record_description(
+        self, transport, monkeypatch
+    ):
+        transport._family = "TP6X_DRYER_DRUM"
+        record = {
+            "id": "1",
+            "description": "TP6X_DRYER_TOPLOAD(REDACTED)",
+            "Mode": {"options": ["Course_AD"], "supportedOptions": ["0ADAEAFB0"]},
+        }
+        monkeypatch.setattr(
+            transport,
+            "_sibling_record",
+            lambda index, deadline: (0x45, record, [{"id": "1"}]),
+        )
+        _FakeConnection.routes["/devices/1/information"] = (
+            200,
+            {"Information": {"description": "TP6X_DRYER_TOPLOAD"}},
+        )
+
+        code, body = transport.read(["device", "1"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert code == 0x45
+        assert reps["/st/dryercourse/vs/1"] == {PREFIX + "st.courseTable": "Table_00"}
+
+    def test_indexed_washer_seed_does_not_gain_a_course_table(self, transport, monkeypatch):
+        transport._family = "TP6X_WASHER"
+        record = {
+            "id": "1",
+            "description": "TP6X_WASHER",
+            "Mode": {
+                "options": ["Course_5B"],
+                "supportedOptions": ["35B847E933FA53F5C841E923FA53F"],
+            },
+            "Washer": {"waterTemperature": "60"},
+        }
+        monkeypatch.setattr(
+            transport,
+            "_sibling_record",
+            lambda index, deadline: (0x45, record, [{"id": "1"}]),
+        )
+
+        code, body = transport.read(["device", "1"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert code == 0x45
+        assert not any(PREFIX + "st.courseTable" in rep for rep in reps.values())
+
+    def test_primary_flexdry_dry_level_write_is_allowed(self, transport, monkeypatch):
+        transport._family = "TP6X_DRYER_DRUM"
+        _swept_as(transport, "Dryer")
+        transport._state_at(0).last_bodies = {"Washer": {"supportedDryLevel": ["Normal", "More"]}}
+        requests = []
+
+        def request(method, path, body=None, timeout=None):
+            requests.append((method, path, body))
+            return 200, {"ok": True}
+
+        monkeypatch.setattr(transport, "_request", request)
+
+        code, response = transport.write(
+            ["washer", "vs", "0"],
+            {PREFIX + "dryLevel": "More"},
+            timeout=1.0,
+        )
+
+        assert code == 0x45
+        assert response == {"ok": True}
+        assert requests == [("PUT", "/devices/0", {"Device": {"Washer": {"dryLevel": "More"}}})]
+
+    @pytest.mark.parametrize(
+        "index,path,body,expected",
+        [
+            (0, "course", {"options": ["Course_01"]}, {"Mode": {"options": ["Course_01"]}}),
+            (1, "course", {"options": ["Course_AD"]}, {"Mode": {"options": ["Course_AD"]}}),
+            (0, "washer", {"dryTime": "00:20:00"}, {"Washer": {"dryTime": "00:20:00"}}),
+            (
+                0,
+                "washer",
+                {"waterTemperature": "Medium"},
+                {"Washer": {"waterTemperature": "Medium"}},
+            ),
+            (0, "washer", {"wrinklePrevent": "On"}, {"Washer": {"wrinklePrevent": "On"}}),
+            (
+                0,
+                "course",
+                {"options": ["MixedLoadBell_Enable"]},
+                {"Mode": {"options": ["MixedLoadBell_Enable"]}},
+            ),
+        ],
+    )
+    def test_flexdry_supported_settings_are_sent(
+        self, transport, monkeypatch, index, path, body, expected
+    ):
+        transport._family = "TP6X_DRYER_DRUM"
+        _swept_as(transport, "Dryer", index)
+        state = transport._state_at(index)
+        state.listed = True
+        state.last_bodies = {
+            "Mode": {
+                "options": ["MixedLoadBell_Disable"],
+                "supportedOptions": [
+                    "3018410D33EE0009C8520D33EE000" if index == 0 else "0ADAEAFB0"
+                ],
+            },
+            "Washer": {
+                "supportedDryTime": ["00:20:00"],
+                "supportedWaterTemperature": ["Medium", "High"],
+                "wrinklePrevent": "Off",
+            },
+        }
+        calls = []
+        monkeypatch.setattr(
+            transport,
+            "_request",
+            lambda method, path, body, timeout: calls.append((method, path, body)) or (204, None),
+        )
+        code, _ = transport.write(
+            [path, "vs", str(index)], {PREFIX + k: v for k, v in body.items()}, 1
+        )
+        assert code == 0x44
+        assert calls == [("PUT", f"/devices/{index}", {"Device": expected})]
+
+    @pytest.mark.parametrize("operation", ["Run", "Pause", "Ready"])
+    @pytest.mark.parametrize("index", [0, 1])
+    def test_flexdry_operation_is_sent(self, transport, monkeypatch, operation, index):
+        transport._family = "TP6X_DRYER_DRUM"
+        _swept_as(transport, "Dryer", index)
+        transport._state_at(index).listed = True
+        requests = []
+
+        def request(method, path, body=None, timeout=None):
+            requests.append((method, path, body))
+            return (200, {"Operation": {"state": "Run"}}) if method == "GET" else (204, None)
+
+        monkeypatch.setattr(transport, "_request", request)
+
+        code, _ = transport.write(
+            ["operational", "state", "vs", str(index)], {PREFIX + "state": operation}, 1
+        )
+
+        assert code == 0x44
+        assert [request for request in requests if request[0] == "PUT"] == [
+            ("PUT", f"/devices/{index}", {"Device": {"Operation": {"state": operation}}})
+        ]
+
+    @pytest.mark.parametrize("operation", ["Run", "Pause", "Ready"])
+    def test_unlisted_upper_flexdry_operation_is_refused(self, transport, monkeypatch, operation):
+        transport._family = "TP6X_DRYER_DRUM"
+        _swept_as(transport, "Dryer", 1)
+        transport._state_at(1).listed = False
+        monkeypatch.setattr(
+            transport,
+            "_request",
+            lambda *args, **kwargs: pytest.fail("unlisted section must not send HTTP"),
+        )
+        code, _ = transport.write(
+            ["operational", "state", "vs", "1"], {PREFIX + "state": operation}, 1
+        )
+        assert code == 0x83
+
+    def test_unlisted_upper_flexdry_cycle_is_refused(self, transport, monkeypatch):
+        transport._family = "TP6X_DRYER_DRUM"
+        _swept_as(transport, "Dryer", 1)
+        state = transport._state_at(1)
+        state.listed = False
+        state.last_bodies = {"Mode": {"supportedOptions": ["0ADAEAFB0"]}}
+        monkeypatch.setattr(
+            transport,
+            "_request",
+            lambda *args, **kwargs: pytest.fail("unlisted section must not send HTTP"),
+        )
+        code, _ = transport.write(["course", "vs", "1"], {PREFIX + "options": ["Course_AD"]}, 1)
+        assert code == 0x83
 
     def test_the_seed_carries_the_power_flag_from_the_model_id(self, transport, monkeypatch):
         """A WW6500 refuses remote power, and says so in its modelID, so the

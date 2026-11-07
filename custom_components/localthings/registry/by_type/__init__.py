@@ -54,6 +54,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "dehumidifier": dehumidifier.REGISTRY,
     "dishwasher": dishwasher.REGISTRY,
     "dryer": dryer.REGISTRY,
+    "flexdry": dryer.FLEXDRY_REGISTRY,
     "ehs": ehs.REGISTRY,
     "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
@@ -95,6 +96,14 @@ _CONSUMER_PREFIX_TO_KEY: dict[str, str] = {
     "WA": "washer",  # Top-load washers (e.g. WA8000T) -- issue #106
     "DV": "dryer",
     "DW": "dishwasher",
+}
+
+# These FlexDry sections report a board description rather than a consumer
+# model number. Keep the match exact; a generic TP6X_DRYER description is
+# not enough to identify either section.
+_CONSUMER_DESCRIPTION_TO_KEY: dict[str, str] = {
+    "TP6X_DRYER_DRUM": "flexdry",
+    "TP6X_DRYER_TOPLOAD": "flexdry",
 }
 
 # Board-family token -> registry key, matched against whole tokens of
@@ -202,6 +211,8 @@ def _consumer_model_key(description: str) -> str | None:
     But issue #79's dryer pairs two model numbers in one description, so
     the true consumer token sits one segment before the actual last
     segment -- scan from the end and take the first segment that resolves.
+    Two FlexDry sections have no consumer-model suffix, so their exact
+    descriptions are handled before that scan.
 
     Splits on '_' only, unlike `_board_tokens` above: widening the split to
     '-' would start reading board-family segments as consumer models (the
@@ -213,7 +224,10 @@ def _consumer_model_key(description: str) -> str | None:
     never reads as a 'WA' top-load washer (issue #106). This is still the
     weakest evidence, so for_device_by_model() consults it last.
     """
-    segments = (description or "").split("/", 1)[0].split("_")
+    head = (description or "").split("/", 1)[0]
+    if key := _CONSUMER_DESCRIPTION_TO_KEY.get(head.upper()):
+        return key
+    segments = head.split("_")
     for segment in reversed(segments):
         # A consumer model carries digits ('WA8000T'), or is the bare board
         # code ('DA_DW_TP1_21_COMMON'). A word is neither: the NW9300MD's

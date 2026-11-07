@@ -602,7 +602,13 @@
           "7f": "Asciugatura a tempo",
           "98": "Asciugatura rapida 35",
           "eb": "Delicati",
-          "b6": "Sintetici"
+          "b6": "Sintetici",
+          "94": "Asciugamani",
+          "a1": "Antipiega",
+          "ad": "Camicie/bluse",
+          "ae": "Intimo",
+          "af": "Maglioni",
+          "b0": "Accessori"
         }
       },
       "dryer_cycle_table_03": {
@@ -1323,6 +1329,17 @@
           "jazz": "Jazz",
           "classic": "Classica",
           "custom": "Personalizzato"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Nessuna",
+          "extra_low": "Extra bassa",
+          "low": "Bassa",
+          "medium_low": "Media / Bassa",
+          "medium": "Media",
+          "high": "Alta"
         }
       },
       "cleaning_mode": {
