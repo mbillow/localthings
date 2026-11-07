@@ -58,6 +58,18 @@
       "door_open": {
         "name": "Dvířka"
       },
+      "door_1_open": {
+        "name": "Dvířka 1"
+      },
+      "door_2_open": {
+        "name": "Dvířka 2"
+      },
+      "door_3_open": {
+        "name": "Dvířka 3"
+      },
+      "door_4_open": {
+        "name": "Dvířka 4"
+      },
       "filter_blockage": {
         "name": "Ucpání filtru"
       },
@@ -714,7 +726,15 @@
           "cv_fdr_soft_freezer": "Mírný mrazák",
           "fconvert_freezer": "Mražení",
           "fconvert_fridge": "Chlazení",
-          "fconvert_off": "Vypnuto"
+          "fconvert_off": "Vypnuto",
+          "cv_ttype_freezer": "Mrazák",
+          "cv_ttype_soft_freezer": "Mírný mrazák",
+          "cv_ttype_chill": "Vychlazení",
+          "cv_ttype_cool": "Chlazení",
+          "cv_ttype_ferment": "Kvašení",
+          "cv_ttype_kimchi_warm": "Kimči, slabé",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, silné"
         }
       },
       "heated_dry": {
@@ -2706,6 +2726,7 @@
         "winecellar_bottom": "Dolní vinná zóna",
         "door_freezer": "Dvířka mrazáku",
         "door_cooler": "Dvířka chladničky",
+        "door_fridge": "Dvířka chladničky",
         "door_cvroom": "Dvířka flexibilní zóny",
         "door_winecellar": "Dvířka vinotéky",
         "door_onedoorfreezer": "Hlavní dvířka",

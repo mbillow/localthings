@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Drzwi"
       },
+      "door_1_open": {
+        "name": "Drzwi 1"
+      },
+      "door_2_open": {
+        "name": "Drzwi 2"
+      },
+      "door_3_open": {
+        "name": "Drzwi 3"
+      },
+      "door_4_open": {
+        "name": "Drzwi 4"
+      },
       "filter_blockage": {
         "name": "Zatkany filtr"
       },
@@ -714,7 +726,15 @@
           "cv_fdr_soft_freezer": "Lekkie mrożenie",
           "fconvert_freezer": "Zamrażanie",
           "fconvert_fridge": "Chłodzenie",
-          "fconvert_off": "Wył."
+          "fconvert_off": "Wył.",
+          "cv_ttype_freezer": "Zamrażarka",
+          "cv_ttype_soft_freezer": "Lekkie mrożenie",
+          "cv_ttype_chill": "Schładzanie",
+          "cv_ttype_cool": "Chłodzenie",
+          "cv_ttype_ferment": "Fermentacja",
+          "cv_ttype_kimchi_warm": "Kimchi, łagodne",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, mocne"
         }
       },
       "heated_dry": {
@@ -2706,6 +2726,7 @@
         "winecellar_bottom": "Dolna strefa wina",
         "door_freezer": "Drzwi zamrażarki",
         "door_cooler": "Drzwi chłodziarki",
+        "door_fridge": "Drzwi chłodziarki",
         "door_cvroom": "Drzwi strefy Flex",
         "door_winecellar": "Drzwi winiarki",
         "door_onedoorfreezer": "Drzwi główne",
