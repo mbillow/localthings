@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Tür"
       },
+      "door_1_open": {
+        "name": "Tür 1"
+      },
+      "door_2_open": {
+        "name": "Tür 2"
+      },
+      "door_3_open": {
+        "name": "Tür 3"
+      },
+      "door_4_open": {
+        "name": "Tür 4"
+      },
       "filter_blockage": {
         "name": "Filterverstopfung"
       },
@@ -174,6 +186,12 @@
       },
       "woofer_connection": {
         "name": "Woofer-Verbindung"
+      },
+      "lamp": {
+        "name": "Lampe"
+      },
+      "energy_saving": {
+        "name": "Energiesparen"
       }
     },
     "button": {
@@ -670,6 +688,17 @@
           "very": "Sehr"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatur",
+        "state": {
+          "none": "Keine Wärme",
+          "extra_low": "Extra niedrig",
+          "low": "Niedrig",
+          "medium_low": "Mittel-niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoritenmenge"
       },
@@ -708,7 +737,15 @@
           "cv_fdr_soft_freezer": "Sanftgefrierfach",
           "fconvert_freezer": "Gefrieren",
           "fconvert_fridge": "Kühlen",
-          "fconvert_off": "Aus"
+          "fconvert_off": "Aus",
+          "cv_ttype_freezer": "Gefrierschrank",
+          "cv_ttype_soft_freezer": "Sanftgefrierfach",
+          "cv_ttype_chill": "Kaltlagerung",
+          "cv_ttype_cool": "Kühlen",
+          "cv_ttype_ferment": "Fermentieren",
+          "cv_ttype_kimchi_warm": "Kimchi, schwach",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, stark"
         }
       },
       "heated_dry": {
@@ -944,6 +981,8 @@
         "name": "Programm",
         "state": {
           "01": "Normal",
+          "50": "Trocknen Baumwolle",
+          "51": "Trocknen Pflegeleicht",
           "55": "Weißwäsche",
           "57": "Selbstreinigung+",
           "5b": "Baumwolle",
@@ -983,6 +1022,8 @@
           "ab": "Eco Kalt",
           "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
+          "c7": "Eco-Trommelreinigung",
+          "ca": "Air Wash",
           "d0": "Baumwolle",
           "d1": "Eco Baumwolle",
           "d2": "Pflegeleicht",
@@ -995,7 +1036,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "Schnelle Wäsche 15'",
-          "e4": "Anti-Allergie"
+          "e3": "Tägliche Wäsche",
+          "e4": "Anti-Allergie",
+          "e7": "Schnell Waschen + Trocknen"
         }
       },
       "washer_cycle_table_02": {
@@ -1696,12 +1739,14 @@
           "idle": "Leerlauf",
           "delaywash": "Startverzögerung",
           "weightsensing": "Beladungserkennung",
+          "laundrysensing": "Wäscheerkennung",
           "wash": "Waschen",
           "rinse": "Spülen",
           "spin": "Schleudern",
           "finish": "Fertig",
           "steaming": "Dämpfen",
           "airwashing": "Luftreinigung",
+          "aidrying": "Trocknen",
           "drying": "Trocknen",
           "dryingwithdooropen": "Lüften",
           "cooling": "Abkühlen",
@@ -1939,6 +1984,9 @@
       },
       "robot_movement": {
         "name": "Bewegung"
+      },
+      "oven_setpoint": {
+        "name": "Sollwert"
       }
     },
     "switch": {
@@ -2676,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Befehle für den Saugroboter haben keine Parameter."
+    },
+    "media_option_not_supported": {
+      "message": "Das Gerät bietet diese Option gerade nicht an."
     }
   },
   "selector": {
@@ -2691,6 +2742,7 @@
         "winecellar_bottom": "Untere Weinzone",
         "door_freezer": "Gefrierschranktür",
         "door_cooler": "Kühlschranktür",
+        "door_fridge": "Kühlschranktür",
         "door_cvroom": "Flex-Zonen-Tür",
         "door_winecellar": "Weinkühlschranktür",
         "door_onedoorfreezer": "Haupttür",

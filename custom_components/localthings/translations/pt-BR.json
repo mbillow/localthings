@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Porta"
       },
+      "door_1_open": {
+        "name": "Porta 1"
+      },
+      "door_2_open": {
+        "name": "Porta 2"
+      },
+      "door_3_open": {
+        "name": "Porta 3"
+      },
+      "door_4_open": {
+        "name": "Porta 4"
+      },
       "filter_blockage": {
         "name": "Obstrução do filtro"
       },
@@ -174,6 +186,12 @@
       },
       "woofer_connection": {
         "name": "Conexão do subwoofer"
+      },
+      "lamp": {
+        "name": "Lâmpada"
+      },
+      "energy_saving": {
+        "name": "Economia de energia"
       }
     },
     "button": {
@@ -670,6 +688,17 @@
           "very": "Muito"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Sem calor",
+          "extra_low": "Extra baixa",
+          "low": "Baixa",
+          "medium_low": "Média baixa",
+          "medium": "Média",
+          "high": "Alta"
+        }
+      },
       "favorite_capacity": {
         "name": "Volume favorito"
       },
@@ -708,7 +737,15 @@
           "cv_fdr_soft_freezer": "Congelador suave",
           "fconvert_freezer": "Congelar",
           "fconvert_fridge": "Refrigerador",
-          "fconvert_off": "Desligado"
+          "fconvert_off": "Desligado",
+          "cv_ttype_freezer": "Congelador",
+          "cv_ttype_soft_freezer": "Congelador suave",
+          "cv_ttype_chill": "Resfriar",
+          "cv_ttype_cool": "Fresco",
+          "cv_ttype_ferment": "Fermentar",
+          "cv_ttype_kimchi_warm": "Kimchi, suave",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, forte"
         }
       },
       "heated_dry": {
@@ -981,6 +1018,8 @@
         "name": "Ciclo",
         "state": {
           "01": "Normal",
+          "50": "Secagem de algodão",
+          "51": "Secagem de sintéticos",
           "55": "Roupas brancas",
           "57": "Autolimpeza+",
           "5b": "Algodão",
@@ -1020,6 +1059,8 @@
           "ab": "Lavagem fria econômica",
           "b1": "Autolimpeza+",
           "ba": "Drenar/Centrifugar",
+          "c7": "Limpeza do tambor Eco",
+          "ca": "Air Wash",
           "d0": "Algodão",
           "d1": "Algodão econômico",
           "d2": "Sintéticos",
@@ -1032,7 +1073,9 @@
           "da": "Lavagem supereconômica",
           "db": "Super-rápido",
           "dc": "Lavagem rápida 15 min",
-          "e4": "Antialérgico"
+          "e3": "Lavagem diária",
+          "e4": "Antialérgico",
+          "e7": "Lavar + secar rápido"
         }
       },
       "washer_cycle_table_02": {
@@ -1702,12 +1745,14 @@
           "idle": "Ocioso",
           "delaywash": "Início adiado",
           "weightsensing": "Detecção de peso",
+          "laundrysensing": "Detecção de roupas",
           "wash": "Lavando",
           "rinse": "Enxaguando",
           "spin": "Centrifugando",
           "finish": "Concluído",
           "steaming": "Aplicando vapor",
           "airwashing": "Lavando a ar",
+          "aidrying": "Secando",
           "drying": "Secando",
           "dryingwithdooropen": "Ventilando",
           "cooling": "Resfriando",
@@ -1939,6 +1984,9 @@
       },
       "robot_movement": {
         "name": "Movimento"
+      },
+      "oven_setpoint": {
+        "name": "Temperatura de ajuste"
       }
     },
     "switch": {
@@ -2676,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Os comandos do robô aspirador não aceitam parâmetros."
+    },
+    "media_option_not_supported": {
+      "message": "O dispositivo não oferece essa opção no momento."
     }
   },
   "selector": {
@@ -2691,6 +2742,7 @@
         "winecellar_bottom": "Zona de vinhos inferior",
         "door_freezer": "Porta do congelador",
         "door_cooler": "Porta do refrigerador",
+        "door_fridge": "Porta do refrigerador",
         "door_cvroom": "Porta da zona flexível",
         "door_winecellar": "Porta da adega",
         "door_onedoorfreezer": "Porta principal",

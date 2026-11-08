@@ -120,6 +120,16 @@ RESOURCES: tuple[Resource, ...] = (
     INFORMATION,
     Resource(endpoint="diagnosis", wrapper="Diagnosis", href="/diagnosis/vs/0"),
     Resource(endpoint="alarms", wrapper="Alarms", href="/alarms/vs/0", as_items=True),
+    # The TP6X_VTL_16K purifier's readings (#608), in the CoAP purifiers'
+    # shapes; its sensors name their reading list `values`, not `value`.
+    Resource(
+        endpoint="sensors",
+        wrapper="Sensors",
+        href="/sensors/vs/0",
+        as_items=True,
+        rename={"values": "value"},
+    ),
+    Resource(endpoint="consumables", wrapper="Consumables", href="/consumable/vs/0", as_items=True),
 )
 
 # A washer's or dryer's Mode is its cycle (`Course_XX`), which CoAP laundry
@@ -147,6 +157,7 @@ _BY_TYPE: dict[str, tuple[Resource, ...]] = {
     "Washer": _LAUNDRY,
     "Dryer": _LAUNDRY,
     "Air_Conditioner": _REGION_CONFIGURATION,
+    "Air_Purifier": _REGION_CONFIGURATION,  # TP6X_VTL_16K (#608)
     "Refrigerator": _REGION_CONFIGURATION,  # DONGLE_0281 (#698)
 }
 
@@ -261,10 +272,11 @@ def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None)
 
 
 # Record types that stand in for a missing `deviceSubType`. The DONGLE_0281
-# fridge bridge reports only `type: Refrigerator` (#698). Other types stay
-# out: a hood slot's record says `Cooktop` (#676), and as a subtype that
-# would outrank the board token that types it.
-_RECORD_TYPE_AS_SUBTYPE = frozenset({"Refrigerator"})
+# fridge (#698), DONGLE_DRY dryer (#761) and DONGLE_WM washer (#762) report
+# only their record's `type`. Other types stay out: a hood slot's record says
+# `Cooktop` (#676), and as a subtype that would outrank the board token that
+# types it.
+_RECORD_TYPE_AS_SUBTYPE = frozenset({"Dryer", "Refrigerator", "Washer"})
 
 
 def with_record_type(bodies: Mapping[str, Any], device_type: str | None) -> dict[str, Any]:

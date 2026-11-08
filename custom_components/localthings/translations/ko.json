@@ -61,6 +61,18 @@
       "door_open": {
         "name": "문"
       },
+      "door_1_open": {
+        "name": "문 1"
+      },
+      "door_2_open": {
+        "name": "문 2"
+      },
+      "door_3_open": {
+        "name": "문 3"
+      },
+      "door_4_open": {
+        "name": "문 4"
+      },
       "filter_blockage": {
         "name": "필터 막힘"
       },
@@ -174,6 +186,12 @@
       },
       "woofer_connection": {
         "name": "우퍼 연결"
+      },
+      "lamp": {
+        "name": "램프"
+      },
+      "energy_saving": {
+        "name": "절전"
       }
     },
     "button": {
@@ -670,6 +688,17 @@
           "very": "매우 많이"
         }
       },
+      "drying_temperature": {
+        "name": "건조 온도",
+        "state": {
+          "none": "열 없음",
+          "extra_low": "매우 낮음",
+          "low": "낮음",
+          "medium_low": "중간 낮음",
+          "medium": "중간",
+          "high": "높음"
+        }
+      },
       "favorite_capacity": {
         "name": "즐겨찾기 출수량"
       },
@@ -708,7 +737,15 @@
           "cv_fdr_soft_freezer": "소프트 냉동",
           "fconvert_freezer": "냉동",
           "fconvert_fridge": "냉장",
-          "fconvert_off": "끄기"
+          "fconvert_off": "끄기",
+          "cv_ttype_freezer": "냉동",
+          "cv_ttype_soft_freezer": "소프트 냉동",
+          "cv_ttype_chill": "칠",
+          "cv_ttype_cool": "냉장",
+          "cv_ttype_ferment": "숙성",
+          "cv_ttype_kimchi_warm": "김치 약",
+          "cv_ttype_kimchi_normal": "김치",
+          "cv_ttype_kimchi_cold": "김치 강"
         }
       },
       "heated_dry": {
@@ -981,6 +1018,8 @@
         "name": "코스",
         "state": {
           "01": "표준세탁",
+          "50": "면 건조",
+          "51": "합성섬유 건조",
           "55": "흰옷",
           "57": "통세척+",
           "5b": "면",
@@ -1020,6 +1059,8 @@
           "ab": "에코 냉수 세탁",
           "b1": "통세척+",
           "ba": "배수/탈수",
+          "c7": "에코 통세척",
+          "ca": "에어워시",
           "d0": "면",
           "d1": "에코 면",
           "d2": "합성섬유",
@@ -1032,7 +1073,9 @@
           "da": "초절약세탁",
           "db": "쾌속세탁",
           "dc": "15분 쾌속세탁",
-          "e4": "알레르기 케어"
+          "e3": "데일리 세탁",
+          "e4": "알레르기 케어",
+          "e7": "스피드 세탁+건조"
         }
       },
       "washer_cycle_table_02": {
@@ -1701,13 +1744,15 @@
         "state": {
           "idle": "대기",
           "delaywash": "예약 시작",
-          "weightsensing": "세탁물 감지",
+          "weightsensing": "무게 감지",
+          "laundrysensing": "세탁물 감지",
           "wash": "세탁",
           "rinse": "헹굼",
           "spin": "탈수",
           "finish": "완료",
           "steaming": "스팀",
           "airwashing": "에어워시",
+          "aidrying": "건조",
           "drying": "건조",
           "dryingwithdooropen": "환기",
           "cooling": "냉각",
@@ -1939,6 +1984,9 @@
       },
       "robot_movement": {
         "name": "이동"
+      },
+      "oven_setpoint": {
+        "name": "설정 온도"
       }
     },
     "switch": {
@@ -2676,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "로봇청소기 명령에는 매개변수가 없습니다."
+    },
+    "media_option_not_supported": {
+      "message": "기기에서 지금은 이 옵션을 제공하지 않습니다."
     }
   },
   "selector": {
@@ -2691,6 +2742,7 @@
         "winecellar_bottom": "하단 와인 구역",
         "door_freezer": "냉동실 문",
         "door_cooler": "냉장실 문",
+        "door_fridge": "냉장실 문",
         "door_cvroom": "맞춤 보관실 문",
         "door_winecellar": "와인셀러 문",
         "door_onedoorfreezer": "메인 문",

@@ -154,6 +154,38 @@ record the tested versions, backups, results, and limits. Import the recovered
 identity unchanged. An identity containing a zero byte needs `smartthings-local`
 0.1.23 or newer, which LocalThings requires.
 
+## WD11 washer with a local iPhone backup
+
+An existing OwnerPSK for one `WD11BB944DGBGU` washer was recovered from a
+finished, unencrypted Finder backup of the iPhone that originally paired it.
+The washer was not removed, reset or re-registered. To locate the same kind of
+record in your own backup:
+
+1. Keep the backup private. In its `Manifest.db`, query `Files` for
+   `domain = 'AppDomain-com.samsung.oneconnect4ios'` and
+   `relativePath = 'Library/Security/oic_svr_db_client.dat'`. Require exactly
+   one match. Its `fileID` identifies the backup file at
+   `<backup>/<first two fileID characters>/<fileID>`; Finder's *Files* export
+   does not include this private app store.
+2. Decode that file as CBOR. The `cred` section may itself be CBOR-encoded
+   bytes; inspect its `creds` array. Select exactly one PSK record whose
+   `subjectuuid` matches the intended washer's OCF device UUID. The client
+   identity is `cred.rowneruuid`, not the device UUID. Decode that record's
+   `privatedata.data` according to its `encoding` (raw bytes or base64).
+3. Convert the 16- or 32-byte key to 32 or 64 hexadecimal characters and
+   import it through LocalThings' **Owner** option. Verify an authenticated
+   `/oic/d` read identifies the expected washer before relying on any
+   protected data or controls. Never publish the backup, key or UUIDs.
+
+On this unit, the recovered key completed a DTLS handshake and an authenticated
+`GET /oic/sec/acl` returned `2.05 Content`; the owner then added the washer to
+Home Assistant. LocalThings 0.35.0 needed a local config-flow change to offer
+the credential menu after its automatic certificate probe timed out; a stock
+installation may instead return to the IP form. No OCF security write was
+made. This proves local credential access for one appliance, not that every
+washer control works or that every SmartThings version stores credentials in
+the same format.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)

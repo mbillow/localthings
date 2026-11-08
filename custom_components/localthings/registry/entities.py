@@ -16,6 +16,8 @@ from datetime import time as dt_time
 from typing import Any, Literal
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
+# ((kind, value), rep) -> (path_segs, body), for the composite media player.
+MediaWriteFn = Callable[[tuple[str, Any], dict], "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
 # write. resources is the coordinator's full href->rep snapshot, for the same
 # cross-resource lookups exists_fn needs (e.g. reading a sibling href's live
@@ -28,6 +30,8 @@ ButtonPayloadFn = Callable[[datetime], Any] | None
 # platform supplies `now` so the registry stays free of HA's timezone
 # handling, the same split ButtonPayloadFn uses.
 TimePayloadFn = Callable[[dt_time, datetime], Any] | None
+# payload -> whether a write policy applies to that payload.
+PayloadPredicate = Callable[[Any], bool] | None
 
 
 def _identity(v: Any) -> Any:
@@ -78,6 +82,20 @@ class SamsungEntityDescription:
     # Wire body -> the body to merge into the cache, for a write whose effect
     # the device reports in fields it never accepts. The wire body is unchanged.
     optimistic_fn: Callable[[dict], dict] | None = None
+    # A write that must not be resent once it may have reached the device:
+    # a lost reply can follow one that landed, and a relative seek or a skip
+    # would then apply twice. A write that never left is still retried.
+    resend_unsafe_fn: PayloadPredicate = None
+    # Cache the optimistic value only once the device acknowledged the
+    # write, so a failed one can't become the next write's baseline.
+    cache_after_ack_fn: PayloadPredicate = None
+    # A payload that is a command, with no readable state behind it (a
+    # skip): treated as write_only, so nothing is cached and polls of its
+    # href aren't held back.
+    command_fn: PayloadPredicate = None
+    # The device can refuse a command inside a 2.04 and say so in the body,
+    # {"controlResponse": {"result": false}} (AV boards).
+    control_response: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -216,6 +234,41 @@ class WaterHeaterDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True)
+class MediaModeSurface:
+    """A selectable mode (source, sound mode): where it lives and how to read it."""
+
+    href: str
+    field: str
+    options_field: str
+    # Wire value -> label, for values with no readable name (`wifiidle`).
+    labels: Mapping[str, str] | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaPlayerDesc(SamsungEntityDescription):
+    # Binds the generic /capability/mediaPlayback resource; the family names
+    # its sibling resources here, so media_player.py needs no per-family code.
+    # write_fn maps (kind, value) -> (path_segs, body), like ClimateDesc.
+    device_class: str = "speaker"
+    power_href: str = ""
+    audio_href: str = ""
+    source: MediaModeSurface | None = None
+    sound_mode: MediaModeSurface | None = None
+    track_href: str | None = None
+    shuffle_href: str | None = None
+    # Advertises next/previous in supportedModes while a stream is active.
+    track_control_href: str | None = None
+    # resources -> the family's own playback state ("PLAYING", "PAUSED", ...),
+    # preferred over the generic feed when it reports one.
+    status_fn: Callable[[dict], str | None] | None = None
+    # resources -> False when the generic playback and track feeds are stale,
+    # e.g. a soundbar keeps its last stream's track on an HDMI input.
+    stream_active_fn: Callable[[dict], bool] | None = None
+    write_fn: MediaWriteFn = None
+    validate_fn: ValidateFn = None
+
+
 @dataclass(frozen=True, kw_only=True)
 class VacuumDesc(SamsungEntityDescription):
     # Composite vacuum entity: rep_fn gives the HA activity; vacuum.py reads
@@ -236,5 +289,6 @@ PLATFORM_OF: dict[type, str] = {
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
     ZoneClimateDesc: "climate",
+    MediaPlayerDesc: "media_player",
     VacuumDesc: "vacuum",
 }

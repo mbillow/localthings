@@ -58,6 +58,18 @@
       "door_open": {
         "name": "Dvířka"
       },
+      "door_1_open": {
+        "name": "Dvířka 1"
+      },
+      "door_2_open": {
+        "name": "Dvířka 2"
+      },
+      "door_3_open": {
+        "name": "Dvířka 3"
+      },
+      "door_4_open": {
+        "name": "Dvířka 4"
+      },
       "filter_blockage": {
         "name": "Ucpání filtru"
       },
@@ -174,6 +186,12 @@
       },
       "woofer_connection": {
         "name": "Připojení wooferu"
+      },
+      "lamp": {
+        "name": "Lampa"
+      },
+      "energy_saving": {
+        "name": "Úspora energie"
       }
     },
     "button": {
@@ -670,6 +688,17 @@
           "very": "Velmi"
         }
       },
+      "drying_temperature": {
+        "name": "Teplota",
+        "state": {
+          "none": "Bez ohřevu",
+          "extra_low": "Extra nízká",
+          "low": "Nízká",
+          "medium_low": "Středně nízká",
+          "medium": "Střední",
+          "high": "Vysoká"
+        }
+      },
       "favorite_capacity": {
         "name": "Oblíbené množství"
       },
@@ -708,7 +737,15 @@
           "cv_fdr_soft_freezer": "Mírný mrazák",
           "fconvert_freezer": "Mražení",
           "fconvert_fridge": "Chlazení",
-          "fconvert_off": "Vypnuto"
+          "fconvert_off": "Vypnuto",
+          "cv_ttype_freezer": "Mrazák",
+          "cv_ttype_soft_freezer": "Mírný mrazák",
+          "cv_ttype_chill": "Vychlazení",
+          "cv_ttype_cool": "Chlazení",
+          "cv_ttype_ferment": "Kvašení",
+          "cv_ttype_kimchi_warm": "Kimči, slabé",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, silné"
         }
       },
       "heated_dry": {
@@ -981,6 +1018,8 @@
         "name": "Cyklus",
         "state": {
           "01": "Normální",
+          "50": "Sušení bavlny",
+          "51": "Sušení syntetiky",
           "55": "Bílé prádlo",
           "57": "Samočištění+",
           "5b": "Bavlna",
@@ -1020,6 +1059,8 @@
           "ab": "Eco studená",
           "b1": "Samočištění+",
           "ba": "Vypuštění/odstřeďování",
+          "c7": "Eco čištění bubnu",
+          "ca": "Sušení vzduchem",
           "d0": "Bavlna",
           "d1": "Eko bavlna",
           "d2": "Syntetika",
@@ -1032,7 +1073,9 @@
           "da": "Super Eco",
           "db": "Super rychlé",
           "dc": "15min rychlé praní",
-          "e4": "Antialergenní"
+          "e3": "Denní praní",
+          "e4": "Antialergenní",
+          "e7": "Rychlé praní+sušení"
         }
       },
       "washer_cycle_table_02": {
@@ -1702,12 +1745,14 @@
           "idle": "Nečinný",
           "delaywash": "Odložený start",
           "weightsensing": "Detekce náplně",
+          "laundrysensing": "Rozpoznávání prádla",
           "wash": "Praní",
           "rinse": "Máchání",
           "spin": "Odstřeďování",
           "finish": "Dokončeno",
           "steaming": "Napařování",
           "airwashing": "Osvěžení vzduchem",
+          "aidrying": "Sušení",
           "drying": "Sušení",
           "dryingwithdooropen": "Větrání",
           "cooling": "Chlazení",
@@ -1939,6 +1984,9 @@
       },
       "robot_movement": {
         "name": "Pohyb"
+      },
+      "oven_setpoint": {
+        "name": "Požadovaná teplota"
       }
     },
     "switch": {
@@ -2676,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Příkazy robotického vysavače nemají žádné parametry."
+    },
+    "media_option_not_supported": {
+      "message": "Zařízení tuto možnost právě nenabízí."
     }
   },
   "selector": {
@@ -2691,6 +2742,7 @@
         "winecellar_bottom": "Dolní vinná zóna",
         "door_freezer": "Dvířka mrazáku",
         "door_cooler": "Dvířka chladničky",
+        "door_fridge": "Dvířka chladničky",
         "door_cvroom": "Dvířka flexibilní zóny",
         "door_winecellar": "Dvířka vinotéky",
         "door_onedoorfreezer": "Hlavní dvířka",
