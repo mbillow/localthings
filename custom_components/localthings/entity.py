@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Iterable
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -57,6 +61,44 @@ def _is_included(
             return True
         return bound.desc.field in rep
     return True  # rep_fn or no-field entities (ButtonDesc) are always included
+
+
+def async_add_bound_entities(
+    entry: ConfigEntry,
+    coordinator: LocalThingsCoordinator,
+    async_add_entities: AddEntitiesCallback,
+    bounds: Iterable[BoundEntity],
+    factory: Callable[[BoundEntity], Entity],
+    extra: Iterable[Entity] = (),
+) -> None:
+    """Add the included bounds now, and any `dynamic_presence` bound that
+    isn't included yet once a live update shows it (PR #665).
+
+    Each late bound is added once, so dropping out and coming back reuses
+    the same entity, with its ID and customizations; LocalThingsEntity.available
+    covers the gaps.
+    """
+    entities: list[Entity] = []
+    pending: list[BoundEntity] = []
+    for bound in bounds:
+        if _is_included(bound, coordinator):
+            entities.append(factory(bound))
+        elif bound.desc.dynamic_presence:
+            pending.append(bound)
+    entities.extend(extra)
+    async_add_entities(entities)
+    if not pending:
+        return
+
+    @callback
+    def _add_detected() -> None:
+        detected = [b for b in pending if _is_included(b, coordinator, live=True)]
+        for bound in detected:
+            pending.remove(bound)
+        if detected:
+            async_add_entities(factory(b) for b in detected)
+
+    entry.async_on_unload(coordinator.async_add_listener(_add_detected))
 
 
 def _derive_name(state_key: str) -> str:
@@ -173,6 +215,13 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
                 entry.entity_id, translation_key=tk
             )
         super()._handle_coordinator_update()
+
+    @property
+    def available(self) -> bool:
+        return super().available and (
+            not self._bound.desc.dynamic_presence
+            or _is_included(self._bound, self.coordinator, live=True)
+        )
 
     @property
     def _resources(self) -> dict:

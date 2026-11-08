@@ -63,6 +63,9 @@ class SamsungEntityDescription:
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
+    # Recheck exists_fn after setup: add when present, unavailable when
+    # absent. For presence that follows live state, not the model.
+    dynamic_presence: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -100,8 +103,6 @@ class SamsungEntityDescription:
 
 @dataclass(frozen=True, kw_only=True)
 class SensorDesc(SamsungEntityDescription):
-    # Recheck inclusion after setup: add when present, unavailable when absent.
-    dynamic_presence: bool = False
     device_class: str | None = None
     state_class: str | None = None
     unit: str | None = None

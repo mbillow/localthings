@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.entities import SwitchDesc
 
 
@@ -21,10 +21,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsSwitch(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, SwitchDesc) and _is_included(b, coordinator)
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        (b for b in coordinator.bound if isinstance(b.desc, SwitchDesc)),
+        lambda b: LocalThingsSwitch(coordinator, b),
     )
 
 

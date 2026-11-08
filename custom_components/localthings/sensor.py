@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -25,7 +25,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .observe import MODE_OBSERVE, MODE_POLL
 from .registry.entities import SensorDesc
 from .registry.subdevices import MAIN
@@ -37,33 +37,17 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = []
-    pending = []
-    for bound in coordinator.bound:
-        if not isinstance(bound.desc, SensorDesc):
-            continue
-        if _is_included(bound, coordinator):
-            entities.append(LocalThingsSensor(coordinator, bound))
-        elif bound.desc.dynamic_presence:
-            pending.append(bound)
-    entities.append(LocalThingsConnectionModeSensor(coordinator))
-    entities.append(LocalThingsLastResponseSensor(coordinator))
-    async_add_entities(entities)
-
-    @callback
-    def async_add_detected_sensors() -> None:
-        # A probe can first appear after setup. Add it once so reconnecting
-        # keeps its identity and user customizations.
-        detected = []
-        for bound in pending[:]:
-            if _is_included(bound, coordinator, live=True):
-                detected.append(LocalThingsSensor(coordinator, bound))
-                pending.remove(bound)
-        if detected:
-            async_add_entities(detected)
-
-    if pending:
-        entry.async_on_unload(coordinator.async_add_listener(async_add_detected_sensors))
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        (b for b in coordinator.bound if isinstance(b.desc, SensorDesc)),
+        lambda b: LocalThingsSensor(coordinator, b),
+        extra=(
+            LocalThingsConnectionModeSensor(coordinator),
+            LocalThingsLastResponseSensor(coordinator),
+        ),
+    )
 
 
 class LocalThingsSensor(LocalThingsEntity, SensorEntity):
@@ -84,13 +68,6 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
         self._sticky_value = None
         self._sticky_until: float | None = None
         self._sticky_spent = False
-
-    @property
-    def available(self) -> bool:
-        desc = cast(SensorDesc, self._bound.desc)
-        return super().available and (
-            not desc.dynamic_presence or _is_included(self._bound, self.coordinator, live=True)
-        )
 
     @property
     def native_unit_of_measurement(self):
