@@ -12,6 +12,10 @@ from custom_components.localthings.const import CONF_DEVICE_KEY, CONF_DISABLED_S
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.subdevices import MAIN
+from custom_components.localthings.sensor import (
+    LocalThingsConnectionModeSensor,
+    LocalThingsLastResponseSensor,
+)
 from tests.test_legacy_http_lower_cavity import (
     PREFIX,
     _discovered,
@@ -162,6 +166,38 @@ async def test_offline_start_retains_device_labels_on_reconnect(hass, monkeypatc
     assert restored.device_info_for(MAIN)["name"] == main.name
     assert restored.device_info_for(restored.subdevices[0])["name"] == lower.name
     await hass.config_entries.async_unload(restored._entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    "sensor_class", [LocalThingsConnectionModeSensor, LocalThingsLastResponseSensor]
+)
+@pytest.mark.parametrize("offline", [False, True])
+async def test_diagnostic_registration_keeps_main_device_label(
+    hass, monkeypatch, sensor_class, offline
+):
+    coordinator = await _discovered(hass, _routes(divided=False))
+    if offline:
+        await coordinator._async_save_snapshot(coordinator.last_resources, coordinator.subdevices)
+        coordinator = LocalThingsCoordinator(hass, coordinator._entry)
+        assert await coordinator.async_rehydrate()
+    await _load(hass, monkeypatch, coordinator)
+    devices = dr.async_get(hass)
+    main_id = _rows(hass, coordinator)["number", "oven_setpoint"].device_id
+    assert main_id is not None
+    main = devices.async_update_device(
+        main_id, name=f"{coordinator.device_info['name']} Main oven", name_by_user="My oven"
+    )
+    assert main is not None
+    # Platforms register concurrently; diagnostics must also be safe to register last.
+    registered = devices.async_get_or_create(
+        config_entry_id=coordinator._entry.entry_id,
+        **sensor_class(coordinator).device_info,
+    )
+    assert registered.id == main_id
+    assert registered.identifiers == main.identifiers
+    assert registered.name == main.name
+    assert registered.name_by_user == "My oven"
+    await hass.config_entries.async_unload(coordinator._entry.entry_id)
 
 
 @pytest.mark.parametrize("fixture", ["oven_nv75n_dual_cook", "range_tp1x_da_ks_range_0101x"])
