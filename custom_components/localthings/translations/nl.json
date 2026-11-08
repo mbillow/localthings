@@ -688,7 +688,7 @@
           "very": "Zeer"
         }
       },
-      "dryer_temperature": {
+      "drying_temperature": {
         "name": "Temperatuur",
         "state": {
           "none": "Geen warmte",

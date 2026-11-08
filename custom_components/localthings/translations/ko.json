@@ -688,7 +688,7 @@
           "very": "매우 많이"
         }
       },
-      "dryer_temperature": {
+      "drying_temperature": {
         "name": "건조 온도",
         "state": {
           "none": "열 없음",

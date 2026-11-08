@@ -688,7 +688,7 @@
           "very": "Très sec"
         }
       },
-      "dryer_temperature": {
+      "drying_temperature": {
         "name": "Température",
         "state": {
           "none": "Sans chaleur",

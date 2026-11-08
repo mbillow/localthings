@@ -688,7 +688,7 @@
           "very": "Molto"
         }
       },
-      "dryer_temperature": {
+      "drying_temperature": {
         "name": "Temperatura",
         "state": {
           "none": "Senza calore",

@@ -106,7 +106,6 @@ DRYER_SETTINGS = Capability(
             field="x.com.samsung.da.waterTemperature",
             icon="mdi:thermometer",
             entity_category="config",
-            translation_key="dryer_temperature",
             options=course_narrowed_options(
                 OPTION_KIND_WATER_TEMPERATURE,
                 "x.com.samsung.da.waterTemperature",

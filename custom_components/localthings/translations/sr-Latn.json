@@ -688,6 +688,17 @@
           "very": "Veoma"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Bez grejanja",
+          "extra_low": "Veoma niska",
+          "low": "Niska",
+          "medium_low": "Srednje niska",
+          "medium": "Srednja",
+          "high": "Visoka"
+        }
+      },
       "favorite_capacity": {
         "name": "Omiljeni kapacitet"
       },

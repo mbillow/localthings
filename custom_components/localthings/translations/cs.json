@@ -688,7 +688,7 @@
           "very": "Velmi"
         }
       },
-      "dryer_temperature": {
+      "drying_temperature": {
         "name": "Teplota",
         "state": {
           "none": "Bez ohřevu",
