@@ -103,6 +103,20 @@ def test_progress_is_a_translatable_enum():
     )
 
 
+@pytest.mark.parametrize(
+    ("raw", "state"), [("Laundrysensing", "laundrysensing"), ("Aidrying", "aidrying")]
+)
+def test_laundry_sensing_and_ai_drying_are_translated_states(raw, state):
+    """Both reported by a washer (#765), AI drying during its AI Drying
+    program. The raw casing is assumed; the state lowercases it either way."""
+    desc = next(
+        e for e in OPERATIONAL_STATE.entities if e.key == "progress" and isinstance(e, SensorDesc)
+    )
+    assert desc.options is not None and desc.rep_fn is not None
+    assert desc.rep_fn({"x.com.samsung.da.state": "Run", "x.com.samsung.da.progress": raw}) == state
+    assert state in desc.options
+
+
 class TestProgressPercentage:
     """issue #9: device firmware leaves progressPercentage stale (e.g. '1')
     after a cycle ends instead of resetting it, so it must be gated on
