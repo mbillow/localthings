@@ -3361,6 +3361,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         mode: str | None = None,
         temperature: float | None = None,
         duration: int | None = None,
+        require_idle: bool = False,
     ) -> None:
         """Start a cook in one Collection write to the cavity's own
         collection (`/device/0`, or `/device/1` for a lower cavity).
@@ -3371,6 +3372,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         fills the rest from the mode's own defaults. Either way it is
         checked against the board's modeSpec first, and a rejected start
         raises before anything is sent.
+
+        A repeated Start with nothing held leaves a running cook alone.
+        The start_cooking action sets require_idle to retain its error.
         """
         if not subdevice.seed_path:
             # A prefixed subdevice with no collection of its own (#205): no
@@ -3388,6 +3392,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         held = self._held_cooks.setdefault(subdevice, cook.HeldCook())
         try:
             if mode is None and temperature is None and duration is None:
+                if (
+                    not require_idle
+                    and not held.values
+                    and (resources.get(cook.OPERATION_HREF) or {}).get("x.com.samsung.da.state")
+                    == "Run"
+                ):
+                    self._log.info(
+                        "cook already running on /%s; ignoring Start", "/".join(subdevice.seed_path)
+                    )
+                    return
                 plan = held.plan(resources)
             else:
                 plan = cook.plan_start(resources, mode, temperature, duration)

@@ -295,6 +295,7 @@ async def _async_start_cooking(hass: HomeAssistant, call: ServiceCall) -> None:
         mode=call.data.get(ATTR_MODE),
         temperature=temperature,
         duration=int(duration.total_seconds()) if duration is not None else None,
+        require_idle=True,
     )
 
 

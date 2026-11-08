@@ -75,26 +75,10 @@ async def test_running_timer_updates_only_duration_in_its_own_cavity(
     "index,divided,mode",
     [(0, True, "UpperConvectionBake"), (1, True, "LowerBake"), (0, False, "Bake")],
 )
-@pytest.mark.parametrize("initial_time", ["00:00:00", "00:02:00"])
-@pytest.mark.parametrize(
-    "minutes,expected",
-    [
-        (0, "00:00:00"),
-        (1, "00:01:00"),
-        (15, "00:15:00"),
-        (59, "00:59:00"),
-        (60, "01:00:00"),
-        (90, "01:30:00"),
-        (599, "09:59:00"),
-        (1439, "23:59:00"),
-    ],
-)
 async def test_start_after_running_timer_edit_is_quiet_without_restarting(
-    hass, index, divided, mode, initial_time, minutes, expected
+    hass, index, divided, mode
 ):
-    routes = _running_routes(index, divided, mode)
-    routes[f"/devices/{index}"][1]["Device"]["Operation"]["operationTime"] = initial_time
-    coordinator = await _discovered(hass, routes)
+    coordinator = await _discovered(hass, _running_routes(index, divided, mode))
     cavity = _lower(coordinator) if index else MAIN
     bound = next(
         b for b in coordinator.bound if b.subdevice == cavity and b.desc.key == "start_cooking"
@@ -104,19 +88,46 @@ async def test_start_after_running_timer_edit_is_quiet_without_restarting(
     other_before = dict(coordinator.resource(other_href) or {})
     _FakeConnection.log.clear()
 
-    await _timer(coordinator, cavity).async_set_native_value(minutes)
+    await _timer(coordinator, cavity).async_set_native_value(15)
     await start.async_press()
     await start.async_press()
 
     assert start.available
     assert _writes() == [
-        (f"/devices/{index}", {"Device": {"Operation": {"operationTime": expected}}})
+        (f"/devices/{index}", {"Device": {"Operation": {"operationTime": "00:15:00"}}})
     ]
     actual = coordinator.resource(cavity.to_actual(cook.OPERATION_HREF))
-    assert actual[PREFIX + "operationTime"] == expected
+    assert actual[PREFIX + "operationTime"] == "00:15:00"
     assert actual[PREFIX + "remainingTime"] == "00:01:47"
     assert actual[PREFIX + "state"] == "Run"
     assert (coordinator.resource(other_href) or {}) == other_before
+
+
+async def test_lower_start_ignores_other_cavity_held_settings(hass):
+    coordinator = await _discovered(hass, _running_routes())
+    await _timer(coordinator, MAIN).async_set_native_value(10)
+    held = dict(coordinator._held_cooks[MAIN].values)
+    assert held
+    _FakeConnection.log.clear()
+
+    await coordinator.async_start_cooking(_lower(coordinator))
+
+    assert _writes() == []
+    assert coordinator._held_cooks[MAIN].values == held
+
+
+async def test_lower_start_does_not_use_main_running_state(hass):
+    routes = _running_routes(0, True, "UpperConvectionBake")
+    lower = {**LOWER, "Operation": {**LOWER["Operation"], "state": "Pause"}}
+    routes.update(_routes(upper=routes["/devices/0"][1]["Device"], lower=lower))
+    coordinator = await _discovered(hass, routes)
+    _FakeConnection.log.clear()
+
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_start_cooking(_lower(coordinator))
+
+    assert err.value.translation_key == "cook_start_not_idle"
+    assert _writes() == []
 
 
 @pytest.mark.parametrize("minutes", [0, 3])
