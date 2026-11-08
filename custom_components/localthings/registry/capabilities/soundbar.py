@@ -341,7 +341,9 @@ ADVANCED_AUDIO = Capability(
             field="x.com.samsung.networkaudio.bassboost",
             value_fn=lambda v: v == 1,
             entity_category="config",
-            exists_fn=lambda rep, resources: rep.get("x.com.samsung.networkaudio.bassboost") != -1,
+            exists_fn=lambda rep, resources: (
+                rep.get("x.com.samsung.networkaudio.bassboost") not in (None, -1)
+            ),
             dynamic_presence=True,
             write_fn=_write("x.com.samsung.networkaudio.bassboost", _int_on),
         ),

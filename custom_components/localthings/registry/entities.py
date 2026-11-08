@@ -64,7 +64,9 @@ class SamsungEntityDescription:
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
     # Recheck exists_fn after setup: add when present, unavailable when
-    # absent. For presence that follows live state, not the model.
+    # absent. For presence that follows live state, not the model. Only the
+    # platforms that use entity.async_add_bound_entities add a late entity:
+    # sensor, binary_sensor, number, switch, select, button, time and light.
     dynamic_presence: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an

@@ -688,6 +688,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         which copies every tracked href to build the snapshot dict."""
         return self._cache.get(href) or {}
 
+    def cached_resource(self, href: str) -> dict | None:
+        """Like `resource`, but None for an href the cache doesn't hold."""
+        return self._cache.get(href)
+
     def transport_diagnostics(self) -> dict[str, Any]:
         return self._session.diagnostics() if self._session is not None else {}
 
@@ -1973,11 +1977,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _included_keys(self) -> frozenset[tuple[str, str]]:
         """The subset of `_bound_keys` that platforms actually register:
         bound entities that also pass entity._is_included (exists_fn or the
-        field gate), judged against `discovery_resources`."""
+        field gate), judged against `discovery_resources`.
+
+        Dynamic-presence entities are left out: their platform adds them when
+        they appear, so a difference there needs no reload."""
         # entity.py imports this module, so this one can't import it at the top.
         from .entity import _is_included
 
-        return frozenset((b.subdevice.key, _key(b)) for b in self.bound if _is_included(b, self))
+        return frozenset(
+            (b.subdevice.key, _key(b))
+            for b in self.bound
+            if not b.desc.dynamic_presence and _is_included(b, self)
+        )
 
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]

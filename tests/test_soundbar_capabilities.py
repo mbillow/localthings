@@ -159,6 +159,8 @@ def test_bass_boost_hidden_when_the_mode_disables_it():
     rep = {"x.com.samsung.networkaudio.bassboost": -1}
     assert desc.exists_fn(rep, {}) is False
     assert desc.exists_fn({"x.com.samsung.networkaudio.bassboost": 0}, {}) is True
+    # A rep without the field doesn't advertise it either.
+    assert desc.exists_fn({}, {}) is False
     assert "bass_boost" not in _state()
 
 

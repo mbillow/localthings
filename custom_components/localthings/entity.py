@@ -49,8 +49,13 @@ def _is_included(
     load (issue #295) doesn't filter rehydrated entities away. Runtime
     presence checks use `live=True` so the saved snapshot can't freeze them.
     """
-    resources = coordinator.last_resources if live else coordinator.discovery_resources
-    rep = resources.get(bound.href)
+    # live reads the one rep: last_resources copies the whole cache, and this
+    # runs on every update for each dynamic-presence entity.
+    rep = (
+        coordinator.cached_resource(bound.href)
+        if live
+        else coordinator.discovery_resources.get(bound.href)
+    )
     if rep is None:
         return False
     if bound.desc.exists_fn is not None:

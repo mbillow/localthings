@@ -860,3 +860,24 @@ async def test_state_gated_entities_follow_the_live_state(
         )
         == 1
     )
+
+
+async def test_a_state_gated_entity_never_reloads_the_entry(hass: HomeAssistant) -> None:
+    """A snapshot saved with the sub connected, then a first live poll in
+    standby: the platform handles woofer_level itself, so no reload."""
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = _coordinator(hass, entry)
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+    href = "/sec/networkaudio/woofer"
+
+    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "on"})
+    coordinator._rehydrated_keys = coordinator._bound_keys()
+    coordinator._rehydrated_included = coordinator._included_keys()
+    assert all(key != "woofer_level" for _, key in coordinator._rehydrated_included)
+
+    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "off"})
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        coordinator._reconcile_rehydrated(coordinator.last_resources)
+    reload.assert_not_called()
