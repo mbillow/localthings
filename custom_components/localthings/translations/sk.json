@@ -1,10 +1,5 @@
 {
   "entity": {
-    "update": {
-      "firmware": {
-        "name": "Firmvér"
-      }
-    },
     "binary_sensor": {
       "auto_clean_running": {
         "name": "Prebieha automatické čistenie"

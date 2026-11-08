@@ -1,10 +1,5 @@
 {
   "entity": {
-    "update": {
-      "firmware": {
-        "name": "Oprogramowanie"
-      }
-    },
     "binary_sensor": {
       "auto_clean_running": {
         "name": "Automatyczne czyszczenie w toku"

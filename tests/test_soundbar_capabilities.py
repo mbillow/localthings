@@ -6,6 +6,8 @@ reads produce.
 
 from typing import Any
 
+import pytest
+
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.by_type import (
     for_device_by_oic_type,
@@ -94,7 +96,6 @@ def test_media_player_write_contracts():
         ["capability", "mediaPlaybackShuffle", "main", "0"],
         {"mode": "enabled"},
     )
-    # The plugin posts these though the soundbar advertises no supportedModes.
     assert write(("next_track", None), {}) == (
         ["capability", "mediaTrackControl", "main", "0"],
         {"modes": ["next"]},
@@ -105,15 +106,50 @@ def test_media_player_write_contracts():
     )
 
 
-def test_seek_write_is_a_delta():
+def test_seek_write_is_a_delta_in_milliseconds():
     desc = soundbar.MEDIA_PLAYER.entities[0]
     assert isinstance(desc, MediaPlayerDesc)
     write = desc.write_fn
     assert write is not None
-    assert write(("seek", -15), {}) == (
+    assert write(("seek", -15_000), {}) == (
         ["capability", "mediaPlayback", "main", "0"],
-        {"modes": ["seek"], "position": -15},
+        {"modes": ["seek"], "position": -15_000},
     )
+
+
+def test_unadvertised_sources_and_sound_modes_are_not_written():
+    desc = soundbar.MEDIA_PLAYER.entities[0]
+    assert isinstance(desc, MediaPlayerDesc)
+    write: Any = desc.write_fn
+    resources = _load_device("soundbar_s61b")
+    assert write(("source", "bt"), {}, None, resources) is not None
+    assert write(("source", "hdmi2"), {}, None, resources) is None
+    assert write(("sound_mode", "game"), {}, None, resources) is not None
+    assert write(("sound_mode", "night"), {}, None, resources) is None
+
+
+def test_write_policy_is_declared_per_payload():
+    desc = soundbar.MEDIA_PLAYER.entities[0]
+    resend_unsafe: Any = desc.resend_unsafe_fn
+    cache_after_ack: Any = desc.cache_after_ack_fn
+    for payload in (("seek", 1), ("next_track", None), ("previous_track", None)):
+        assert resend_unsafe(payload)
+    assert resend_unsafe(("playback", "playpause"))
+    for payload in (("playback", "play"), ("volume", 3), ("source", "bt"), ("power", True)):
+        assert not resend_unsafe(payload)
+    assert cache_after_ack(("seek", 1))
+    assert not cache_after_ack(("volume", 3))
+
+
+@pytest.mark.parametrize(
+    ("source", "active"),
+    [("", True), ("bt", True), ("wifiidle", True), ("hdmi1", False), ("optical", False)],
+)
+def test_streams_are_only_trusted_off_the_wired_inputs(source, active):
+    desc = soundbar.MEDIA_PLAYER.entities[0]
+    assert isinstance(desc, MediaPlayerDesc)
+    stream_active: Any = desc.stream_active_fn
+    assert stream_active({soundbar.HREF_MODE: {"mode": source}}) is active
 
 
 def test_bass_boost_hidden_when_the_mode_disables_it():
@@ -289,7 +325,6 @@ def test_woofer_and_tone_writes():
 
 def test_diagnostics_carry_the_static_strings():
     state = _state()
-    assert state["firmware"] == "noupdate"
     assert state["speaker_status"] == "normal"
     assert state["micom_version"] == "39"
     assert state["woofer_connection"] is False

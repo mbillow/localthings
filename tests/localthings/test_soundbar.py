@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from homeassistant.components.media_player import MediaPlayerState
@@ -36,8 +37,22 @@ from custom_components.localthings.const import (
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.observe import MODE_OBSERVE
 from custom_components.localthings.registry.batch import parse_device0_batch
+from custom_components.localthings.registry.capabilities import av
+from custom_components.localthings.registry.capabilities import soundbar as soundbar_caps
 from custom_components.localthings.registry.identity import DeviceIdentity
 from tests.conftest import FIXTURES
+
+# The hrefs the soundbar's media player reads, for the unit-level tests.
+PROFILE = SimpleNamespace(
+    playback_href=av.HREF_MEDIA_PLAYBACK,
+    power_href=soundbar_caps.HREF_SWITCH,
+    track_href=av.HREF_TRACK_DATA,
+)
+
+
+def _stream(coordinator, source: str = "") -> None:
+    """Put the bar on a network stream: its source goes empty while one plays."""
+    coordinator._observe.apply("/sec/networkaudio/mode", {"mode": source}, source="optimistic")
 
 
 def _freeze_polls(coordinator) -> None:
@@ -212,11 +227,12 @@ async def test_media_player_state_and_controls(hass: HomeAssistant) -> None:
     player = players[0]
     entity_id = player.entity_id
 
-    assert player.state == MediaPlayerState.IDLE  # powered, modes ["stop"]
+    # On a wired input the playback feed says nothing about what plays.
+    assert player.state == MediaPlayerState.ON
     assert player.attributes["volume_level"] == 0.11
     assert player.attributes["is_volume_muted"] is False
     assert player.attributes["source"] == "optical"
-    assert player.attributes["source_list"] == ["optical", "bt", "wifiidle"]
+    assert player.attributes["source_list"] == ["optical", "bt", "Wi-Fi"]
     assert player.attributes["sound_mode"] == "standard"
 
     async def call(service: str, data: dict | None = None) -> None:
@@ -231,11 +247,17 @@ async def test_media_player_state_and_controls(hass: HomeAssistant) -> None:
     await call("media_play")
     await call("media_stop")
     await call("shuffle_set", {"shuffle": True})
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator._observe.apply(
+        "/capability/mediaTrackControl/main/0",
+        {"supportedModes": ["next", "previous"]},
+        source="optimistic",
+    )
+    await hass.async_block_till_done()
     await call("media_next_track")
 
-    # HA seeks to absolute seconds; the device takes a delta. The fixture
-    # sits at 120000 ms.
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    # HA seeks to absolute seconds; the device takes a delta in ms. The
+    # fixture sits at 120000 ms.
     coordinator._observe.apply(
         "/capability/mediaPlayback/main/0",
         {"modes": ["play"], "position": 120_000},
@@ -282,14 +304,11 @@ async def test_media_player_state_and_controls(hass: HomeAssistant) -> None:
         ["capability", "mediaTrackControl", "main", "0"],
         {"modes": ["next"]},
     ) in session.writes
-    assert (
-        ["capability", "mediaPlayback", "main", "0"],
-        {"modes": ["seek"], "position": -60},
-    ) in session.writes
-    assert (
-        ["capability", "mediaPlayback", "main", "0"],
-        {"modes": ["seek"], "position": 60},
-    ) in session.writes
+    # A playing feed advances while the test runs, a few ms at most.
+    seeks = [b["position"] for p, b in session.writes if b.get("modes") == ["seek"]]
+    assert len(seeks) == 2
+    assert -61_000 < seeks[0] <= -60_000
+    assert 59_000 < seeks[1] <= 60_000
     assert (["sec", "networkaudio", "switch", "binary"], {"value": False}) in session.writes
 
 
@@ -303,6 +322,7 @@ async def test_media_position_and_duration_are_seconds_not_milliseconds(
     player = next(iter(hass.data["media_player"].entities))
 
     # Seed the fake itself, so sub-polls return the same reps.
+    session.resources["/sec/networkaudio/mode"]["mode"] = ""
     session.resources["/capability/mediaPlayback/main/0"].update(
         {"modes": ["play"], "position": 133_556}
     )
@@ -342,6 +362,7 @@ async def test_state_follows_the_networkaudio_playback_line(
             source="optimistic",
         )
 
+    _stream(coordinator)
     _seed_status("PLAYING")
     await hass.async_block_till_done()
     assert (
@@ -383,63 +404,6 @@ async def test_state_follows_the_networkaudio_playback_line(
     assert player.state == MediaPlayerState.IDLE
 
 
-async def test_airplay_stateless_surface_presents_as_playing(
-    hass: HomeAssistant,
-) -> None:
-    """STOPPED with a live track and an AirPlay sender counts as playing."""
-    entry = _mock_entry(hass)
-    await _setup_soundbar(hass, entry)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    player = next(iter(hass.data["media_player"].entities))
-    _freeze_polls(coordinator)
-    await hass.async_block_till_done()
-
-    coordinator._observe.apply(
-        "/sec/networkaudio/playback",
-        {"x.com.samsung.networkaudio.status": "STOPPED"},
-        source="optimistic",
-    )
-    coordinator._observe.apply(
-        "/capability/audioTrackData/main/0",
-        {"title": "Stáří", "appName": "airplay-app"},
-        source="optimistic",
-    )
-    coordinator._observe.apply(
-        "/sec/networkaudio/soundFrom",
-        {
-            "x.com.samsung.networkaudio.soundFrom": {
-                "connectionType": "WIFI",
-                "name": "AirPlay",
-                "status": 1,
-            }
-        },
-        source="optimistic",
-    )
-    await hass.async_block_till_done()
-
-    assert player.state == MediaPlayerState.PLAYING
-
-    # Stream over: the title clears and the sender session drops.
-    coordinator._observe.apply(
-        "/capability/audioTrackData/main/0",
-        {"title": ""},
-        source="optimistic",
-    )
-    coordinator._observe.apply(
-        "/sec/networkaudio/soundFrom",
-        {
-            "x.com.samsung.networkaudio.soundFrom": {
-                "connectionType": "WIFI",
-                "name": "",
-                "status": 0,
-            }
-        },
-        source="optimistic",
-    )
-    await hass.async_block_till_done()
-    assert player.state == MediaPlayerState.IDLE
-
-
 async def test_device_registry_carries_firmware_but_no_uuid_serial(
     hass: HomeAssistant,
 ) -> None:
@@ -465,7 +429,7 @@ async def test_standalone_entities_register(hass: HomeAssistant) -> None:
     coordinator = _coordinator(hass, entry)
 
     keys = {b.desc.key for b in coordinator.bound}
-    for expected in ("media_player", "bass", "woofer_level", "firmware", "network_connection"):
+    for expected in ("media_player", "bass", "woofer_level", "night_mode", "network_connection"):
         assert expected in keys
     # The media player's surfaces have no standalone duplicates.
     for dup in ("power_switch", "volume", "mute", "input_source", "soundbar_sound_mode"):
@@ -529,6 +493,7 @@ async def test_seek_from_the_beginning_of_a_track(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     # The live track is what makes 0 a real position.
+    _stream(coordinator)
     coordinator._observe.apply(
         "/capability/audioTrackData/main/0",
         {"title": "Intro", "artist": "Test"},
@@ -548,10 +513,11 @@ async def test_seek_from_the_beginning_of_a_track(hass: HomeAssistant) -> None:
         {"entity_id": player.entity_id, "seek_position": 90.0},
         blocking=True,
     )
-    assert (
-        ["capability", "mediaPlayback", "main", "0"],
-        {"modes": ["seek"], "position": 90},
-    ) in session.writes
+    [(path, body)] = session.writes
+    assert path == ["capability", "mediaPlayback", "main", "0"]
+    assert body["modes"] == ["seek"]
+    # The feed plays on while the test runs.
+    assert 89_000 < body["position"] <= 90_000
 
 
 async def test_position_timestamp_follows_only_the_position_feed(
@@ -572,6 +538,7 @@ async def test_position_timestamp_follows_only_the_position_feed(
         raise AssertionError(f"{href} {field} never became {value!r}")
 
     # Seed what the bar would answer live mid-track.
+    session.resources["/sec/networkaudio/mode"]["mode"] = ""
     session.resources["/capability/mediaPlayback/main/0"].update(
         {"modes": ["play"], "position": 120_000}
     )
@@ -622,6 +589,7 @@ async def test_airplay_frozen_feed_shows_no_progress_and_offers_no_seek(
     _freeze_polls(coordinator)
     await hass.async_block_till_done()
 
+    _stream(coordinator, "bt")
     for href, rep in (
         ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": "PLAYING"}),
         ("/capability/mediaPlayback/main/0", {"modes": ["stop"], "position": 133_556}),
@@ -639,37 +607,6 @@ async def test_airplay_frozen_feed_shows_no_progress_and_offers_no_seek(
     assert len(session.writes) == writes
 
 
-async def test_firmware_update_entity_follows_sw_update(hass: HomeAssistant) -> None:
-    entry = _mock_entry(hass)
-    await _setup_soundbar(hass, entry)
-    coordinator = _coordinator(hass, entry)
-    _freeze_polls(coordinator)
-    await hass.async_block_till_done()
-
-    [update] = hass.states.async_all("update")
-    assert update.state == "off"  # noupdate, progress -1
-    assert update.attributes["in_progress"] is False
-
-    coordinator._observe.apply(
-        "/sec/networkaudio/swUpdate",
-        {
-            "x.com.samsung.networkaudio.updateStatus": "downloading",
-            "x.com.samsung.networkaudio.updateVersion": "1301.9",
-            "x.com.samsung.networkaudio.updateProgress": 40,
-        },
-        source="optimistic",
-    )
-    coordinator.async_update_listeners()
-    await hass.async_block_till_done()
-
-    update = hass.states.get(update.entity_id)
-    assert update is not None
-    assert update.state == "on"
-    assert update.attributes["latest_version"] == "1301.9"
-    assert update.attributes["in_progress"] is True
-    assert update.attributes["update_percentage"] == 40
-
-
 async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
     from homeassistant.components.media_player import MediaPlayerEntityFeature
 
@@ -678,3 +615,86 @@ async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
         not next(iter(hass.data["media_player"].entities)).supported_features
         & MediaPlayerEntityFeature.PLAY_MEDIA
     )
+
+
+async def test_a_wired_input_hides_the_last_streams_state(hass: HomeAssistant) -> None:
+    """The bar keeps a Spotify track, PAUSED and next/previous after
+    switching to HDMI (HW-Q950T, #719); none of it describes the input."""
+    from homeassistant.components.media_player import MediaPlayerEntityFeature
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    for href, rep in (
+        ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": "PAUSED"}),
+        ("/capability/mediaPlayback/main/0", {"modes": ["pause"], "position": 61_000}),
+        ("/capability/audioTrackData/main/0", {"title": "Song", "appName": "Spotify"}),
+        ("/capability/mediaTrackControl/main/0", {"supportedModes": ["next", "previous"]}),
+    ):
+        coordinator._observe.apply(href, rep, source="poll")
+    _stream(coordinator)
+    await hass.async_block_till_done()
+    assert player.state == MediaPlayerState.PAUSED
+    assert player.media_title == "Song"
+    assert player.supported_features & MediaPlayerEntityFeature.NEXT_TRACK
+    assert player.supported_features & MediaPlayerEntityFeature.SEEK
+
+    _stream(coordinator, "hdmi1")
+    await hass.async_block_till_done()
+    assert player.state == MediaPlayerState.ON
+    assert player.media_title is None
+    assert player.app_name is None
+    assert player.media_position is None
+    assert not player.supported_features & MediaPlayerEntityFeature.NEXT_TRACK
+    assert not player.supported_features & MediaPlayerEntityFeature.SEEK
+
+
+async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None:
+    from homeassistant.components.media_player import MediaPlayerEntityFeature as F
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    # The S61B capture: optical, idle, nothing in mediaTrackControl.
+    features = player.supported_features
+    for feature in (F.SELECT_SOURCE, F.SELECT_SOUND_MODE, F.PLAY, F.PAUSE, F.STOP, F.SHUFFLE_SET):
+        assert features & feature
+    for feature in (F.NEXT_TRACK, F.PREVIOUS_TRACK, F.SEEK, F.REPEAT_SET):
+        assert not features & feature
+
+    coordinator._observe.apply(
+        "/capability/mediaPlayback/main/0", {"supportedModes": ["play"]}, source="poll"
+    )
+    coordinator._observe.apply("/sec/networkaudio/mode", {"supportedModes": []}, source="poll")
+    await hass.async_block_till_done()
+    features = player.supported_features
+    assert features & F.PLAY
+    assert not features & (F.PAUSE | F.STOP | F.SELECT_SOURCE)
+
+
+async def test_only_advertised_sources_are_written(hass: HomeAssistant) -> None:
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    player = next(iter(hass.data["media_player"].entities))
+
+    async def select(source: str) -> None:
+        await hass.services.async_call(
+            "media_player",
+            "select_source",
+            {"entity_id": player.entity_id, "source": source},
+            blocking=True,
+        )
+
+    await select("Wi-Fi")
+    assert session.writes[-1] == (["sec", "networkaudio", "mode"], {"mode": "wifiidle"})
+    writes = len(session.writes)
+    await select("hdmi2")
+    assert len(session.writes) == writes

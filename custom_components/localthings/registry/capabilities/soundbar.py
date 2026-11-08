@@ -12,12 +12,12 @@ from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
     ButtonDesc,
+    MediaModeSurface,
     MediaPlayerDesc,
     NumberDesc,
     SelectDesc,
     SensorDesc,
     SwitchDesc,
-    UpdateDesc,
 )
 from . import av
 
@@ -25,10 +25,7 @@ HREF_SWITCH = "/sec/networkaudio/switch/binary"
 HREF_AUDIO = "/sec/networkaudio/audio"
 HREF_MODE = "/sec/networkaudio/mode"
 HREF_SOUNDMODE = "/sec/networkaudio/soundmode"
-HREF_MEDIA_PLAYBACK = "/capability/mediaPlayback/main/0"
-HREF_MEDIA_SHUFFLE = "/capability/mediaPlaybackShuffle/main/0"
-HREF_MEDIA_TRACK_DATA = "/capability/audioTrackData/main/0"
-HREF_SW_UPDATE = "/sec/networkaudio/swUpdate"
+HREF_PLAYBACK_STATUS = "/sec/networkaudio/playback"
 
 
 def _write(field: str, encode=lambda p: p):
@@ -76,7 +73,7 @@ MEDIA_SURFACE_COVERAGE: list[Capability] = [
         poll_tier="warm",
     ),
     Capability(
-        href="/sec/networkaudio/playback",
+        href=HREF_PLAYBACK_STATUS,
         rt_filter="x.com.samsung.networkaudio.playback",
         poll_tier="hot",
     ),
@@ -536,19 +533,6 @@ SPEAKER_STATUS = Capability(
     ),
 )
 
-# Firmware status for update.py.
-SW_UPDATE = Capability(
-    href=HREF_SW_UPDATE,
-    poll_tier="cold",
-    entities=(
-        UpdateDesc(
-            key="firmware",
-            rep_fn=lambda rep: rep.get("x.com.samsung.networkaudio.updateStatus"),
-            entity_category="diagnostic",
-        ),
-    ),
-)
-
 VERSION_INFO = Capability(
     href="/sec/networkaudio/versionInfo",
     poll_tier="cold",
@@ -565,10 +549,46 @@ VERSION_INFO = Capability(
 )
 
 
+_SOURCE = MediaModeSurface(
+    href=HREF_MODE,
+    field="mode",
+    options_field="supportedModes",
+    # The network input with nothing streaming; selecting it works (HW-Q950T).
+    labels={"wifiidle": "Wi-Fi"},
+)
+_SOUND_MODE = MediaModeSurface(
+    href=HREF_SOUNDMODE,
+    field="x.com.samsung.networkaudio.soundmode",
+    options_field="x.com.samsung.networkaudio.supportedSoundmode",
+)
+# Inputs that never carry a network stream. The source goes empty while one
+# plays (HW-Q950T, S61B over BT).
+_WIRED_INPUTS = ("hdmi", "optical", "d.in", "aux", "arc")
+
+
+def _playback_status(resources: dict) -> str | None:
+    status = (resources.get(HREF_PLAYBACK_STATUS) or {}).get("x.com.samsung.networkaudio.status")
+    return status if isinstance(status, str) else None
+
+
+def _stream_active(resources: dict) -> bool:
+    """False on a wired input. The bar keeps the last stream's status, track
+    and next/previous after switching to HDMI, unchanged for over a minute
+    (HW-Q950T, #719)."""
+    source = (resources.get(HREF_MODE) or {}).get("mode")
+    return not (isinstance(source, str) and source.lower().startswith(_WIRED_INPUTS))
+
+
+def _advertised(surface: MediaModeSurface, value, resources) -> bool:
+    options = (resources or {}).get(surface.href, {}).get(surface.options_field)
+    return not isinstance(options, list) or value in options
+
+
 def _media_player_write(payload, rep, href=None, resources=None):
     """(kind, value) pairs from the media_player platform -> (path, body).
 
-    Each pair writes one field on the href that owns it.
+    Each pair writes one field on the href that owns it. Sources and sound
+    modes must be ones the bar advertises.
     """
     kind, value = payload
     if kind == "power":
@@ -578,33 +598,41 @@ def _media_player_write(payload, rep, href=None, resources=None):
     if kind == "mute":
         return ["sec", "networkaudio", "audio"], {"mute": bool(value)}
     if kind == "source":
+        if not _advertised(_SOURCE, value, resources):
+            return None
         return ["sec", "networkaudio", "mode"], {"mode": value}
     if kind == "sound_mode":
-        return ["sec", "networkaudio", "soundmode"], {"x.com.samsung.networkaudio.soundmode": value}
+        if not _advertised(_SOUND_MODE, value, resources):
+            return None
+        return ["sec", "networkaudio", "soundmode"], {_SOUND_MODE.field: value}
     return av.media_write(kind, value)
 
 
 # The media player reads its siblings from the snapshot, like climate.py.
 MEDIA_PLAYER = Capability(
-    href=HREF_MEDIA_PLAYBACK,
+    href=av.HREF_MEDIA_PLAYBACK,
     rt_filter="x.com.st.mediaplayer",
     poll_tier="hot",
     entities=(
         MediaPlayerDesc(
             key="media_player",
             rep_fn=av.first_mode,
+            device_class="speaker",
+            power_href=HREF_SWITCH,
+            audio_href=HREF_AUDIO,
+            source=_SOURCE,
+            sound_mode=_SOUND_MODE,
+            track_href=av.HREF_TRACK_DATA,
+            shuffle_href=av.HREF_SHUFFLE,
+            track_control_href=av.HREF_TRACK_CONTROL,
+            status_fn=_playback_status,
+            stream_active_fn=_stream_active,
             write_fn=_media_player_write,
+            resend_unsafe_fn=av.resend_unsafe,
+            cache_after_ack_fn=av.cache_after_ack,
         ),
     ),
 )
-
-# The media player's other resources: written (next/previous, repeat) or
-# empty on every capture so far (musicinfo).
-MEDIA_COVERAGE: list[Capability] = [
-    Capability(href="/capability/mediaTrackControl/main/0"),
-    Capability(href="/capability/mediaPlaybackRepeat/main/0"),
-    Capability(href="/sec/networkaudio/musicinfo"),
-]
 
 
 def _wifi_signal_pct(rep: dict):
@@ -636,6 +664,11 @@ NETWORK_INFO = Capability(
 
 # Nothing worth an entity; bound to keep the coverage repair quiet.
 COVERAGE: list[Capability] = [
+    # Firmware update status; only "noupdate" has been seen.
+    Capability(href="/sec/networkaudio/swUpdate"),
+    # Empty on every capture so far; its control flags don't follow the
+    # bar's real shuffle or seek support (HW-Q950T).
+    Capability(href="/sec/networkaudio/musicinfo"),
     # AutoEQ calibration counters with no known vocabulary.
     Capability(href="/sec/networkaudio/autoeq"),
     # Static identity strings (MACs) -- HA connections carry the same.

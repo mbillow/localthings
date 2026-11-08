@@ -11,10 +11,10 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.coordinator import LocalThingsCoordinator
-from custom_components.localthings.media_player import _PROFILES, LocalThingsMediaPlayer
+from custom_components.localthings.media_player import LocalThingsMediaPlayer
 from custom_components.localthings.registry.capabilities import soundbar
 from custom_components.localthings.registry.discovery import BoundEntity
-from tests.localthings.test_soundbar import ENTRY_DATA, FakeSoundbarSession
+from tests.localthings.test_soundbar import ENTRY_DATA, PROFILE, FakeSoundbarSession
 
 
 @pytest.fixture
@@ -22,17 +22,17 @@ def playback(hass, monkeypatch):
     coordinator = LocalThingsCoordinator(
         hass, MockConfigEntry(domain="localthings", data=ENTRY_DATA)
     )
-    profile = _PROFILES["soundbar"]
+    profile = PROFILE
     capability = soundbar.MEDIA_PLAYER
     bound = BoundEntity(
         href=profile.playback_href, capability=capability, desc=capability.entities[0]
     )
-    player = LocalThingsMediaPlayer(coordinator, bound, profile)
+    player = LocalThingsMediaPlayer(coordinator, bound)
     monkeypatch.setattr(coordinator, "async_request_refresh", AsyncMock())
     coordinator._write_settle_s = 0
     for href, rep in (
         (profile.power_href, {"value": True}),
-        (profile.track_hrefs[0], {"title": "Track"}),
+        (profile.track_href, {"title": "Track"}),
         (profile.playback_href, {"position": 120_000, "modes": ["pause"]}),
     ):
         coordinator._observe.apply(href, rep, source="poll")
@@ -42,7 +42,7 @@ def playback(hass, monkeypatch):
 async def test_lost_seek_reply_does_not_apply_delta_twice(playback, monkeypatch):
     player, coordinator, _ = playback
     session = FakeSoundbarSession()
-    device_position = 120
+    device_position = 120_000
     writes = []
 
     def write(path, body, timeout=None):
@@ -61,8 +61,8 @@ async def test_lost_seek_reply_does_not_apply_delta_twice(playback, monkeypatch)
         await player.async_media_seek(180)
 
     assert err.value.translation_key == "command_failed"
-    assert writes == [{"modes": ["seek"], "position": 60}]
-    assert device_position == 180
+    assert writes == [{"modes": ["seek"], "position": 60_000}]
+    assert device_position == 180_000
     assert coordinator._session is None
     reconnect.assert_not_called()
     assert player.media_position == 120  # no fabricated confirmation
@@ -155,7 +155,7 @@ async def test_seek_rechecks_position_after_waiting_for_a_poll(playback, monkeyp
     coordinator._observe.apply(profile.playback_href, {"modes": [initial_mode]}, source="poll")
     now = dt_util.utcnow()
     player._position_updated_at = now
-    device_position = 120
+    device_position = 120_000
     session = FakeSoundbarSession()
     writes = []
 
@@ -183,7 +183,7 @@ async def test_seek_rechecks_position_after_waiting_for_a_poll(playback, monkeyp
         try:
             await entered.wait()
             if mode == "play":
-                device_position += 20
+                device_position += 20_000
             elif mode == "stop":
                 coordinator._observe.apply(
                     profile.playback_href, {"modes": ["stop"]}, source="poll"
@@ -197,8 +197,8 @@ async def test_seek_rechecks_position_after_waiting_for_a_poll(playback, monkeyp
         assert player._position_updated_at == now
         assert coordinator.resource(profile.playback_href)["position"] == 120_000
     else:
-        assert device_position == 180
-        assert writes == [{"modes": ["seek"], "position": 40 if mode == "play" else 60}]
+        assert device_position == 180_000
+        assert writes == [{"modes": ["seek"], "position": 40_000 if mode == "play" else 60_000}]
         assert player.media_position == 180
         assert player.media_position_updated_at == now + timedelta(seconds=20)
 
@@ -221,4 +221,4 @@ async def test_seek_is_prepared_after_reconnecting(playback, monkeypatch):
 
         monkeypatch.setattr(coordinator, "_connect_session", reconnect)
         await player.async_media_seek(180)
-    assert write.call_args.args[1] == {"modes": ["seek"], "position": 50}
+    assert write.call_args.args[1] == {"modes": ["seek"], "position": 50_000}

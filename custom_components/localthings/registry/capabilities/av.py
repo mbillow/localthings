@@ -7,10 +7,25 @@ provisioning, network and the /capability/* media resources.
 from ..capability import Capability
 from ..entities import SensorDesc
 
-# Coverage and poll tier only; the media_player entity reads these reps.
-MEDIA_TRACK_DATA = Capability(href="/capability/audioTrackData/main/0", poll_tier="hot")
+HREF_MEDIA_PLAYBACK = "/capability/mediaPlayback/main/0"
+HREF_TRACK_DATA = "/capability/audioTrackData/main/0"
+HREF_SHUFFLE = "/capability/mediaPlaybackShuffle/main/0"
+HREF_TRACK_CONTROL = "/capability/mediaTrackControl/main/0"
 
-MEDIA_SHUFFLE = Capability(href="/capability/mediaPlaybackShuffle/main/0")
+
+def _path(href: str) -> list[str]:
+    return [str(s) for s in href.strip("/").split("/")]
+
+
+# SmartThings' generic media resources. No entities of their own: a family's
+# MediaPlayerDesc names them, and media_player.py reads their reps.
+MEDIA_RESOURCES: list[Capability] = [
+    Capability(href=HREF_TRACK_DATA, poll_tier="hot"),
+    Capability(href=HREF_SHUFFLE, poll_tier="warm"),
+    Capability(href=HREF_TRACK_CONTROL, poll_tier="warm"),
+    # No repeat write has been seen to take effect (HW-Q950T, #719).
+    Capability(href="/capability/mediaPlaybackRepeat/main/0", poll_tier="never"),
+]
 
 
 def first_mode(rep: dict):
@@ -19,26 +34,35 @@ def first_mode(rep: dict):
 
 
 def media_write(kind: str, value) -> tuple[list[str], dict] | None:
-    """Commands with identical wire formats on TV and soundbar boards."""
+    """The /capability/* commands, the same on every AV board seen so far."""
     if kind == "playback":
         # playpause resumes BT/AirPlay where a bare play may do nothing.
-        return ["capability", "mediaPlayback", "main", "0"], {"modes": [value]}
+        return _path(HREF_MEDIA_PLAYBACK), {"modes": [value]}
     if kind == "shuffle":
-        return ["capability", "mediaPlaybackShuffle", "main", "0"], {
-            "mode": "enabled" if value else "disabled"
-        }
+        return _path(HREF_SHUFFLE), {"mode": "enabled" if value else "disabled"}
     if kind in ("next_track", "previous_track"):
-        # These are supported by the plugin even when absent from supportedModes.
-        return ["capability", "mediaTrackControl", "main", "0"], {
+        return _path(HREF_TRACK_CONTROL), {
             "modes": ["next" if kind == "next_track" else "previous"]
         }
     if kind == "seek":
-        # Seek uses a delta in seconds, as the plugin's ±15 s buttons send.
-        return ["capability", "mediaPlayback", "main", "0"], {
-            "modes": ["seek"],
-            "position": int(value),
-        }
+        # A relative offset in milliseconds, clamped by the device to the
+        # track (HW-Q950T, #719).
+        return _path(HREF_MEDIA_PLAYBACK), {"modes": ["seek"], "position": int(value)}
     return None
+
+
+def resend_unsafe(payload) -> bool:
+    """Commands that act relative to the current state, so a resend after a
+    lost reply could apply them twice."""
+    return isinstance(payload, tuple) and (
+        payload[0] in ("seek", "next_track", "previous_track")
+        or payload == ("playback", "playpause")
+    )
+
+
+def cache_after_ack(payload) -> bool:
+    # A failed relative seek must not become the next seek's baseline.
+    return isinstance(payload, tuple) and payload[0] == "seek"
 
 
 def _connection_kind(rep: dict):
@@ -63,19 +87,6 @@ NETWORK = Capability(
         ),
     ),
 )
-
-# SmartThings' media capabilities: playback, track data, shuffle, repeat and
-# next/previous. No entity of their own yet.
-MEDIA_COVERAGE: list[Capability] = [
-    Capability(href=f"/capability/{name}/main/0")
-    for name in (
-        "mediaPlayback",
-        "audioTrackData",
-        "mediaPlaybackShuffle",
-        "mediaPlaybackRepeat",
-        "mediaTrackControl",
-    )
-]
 
 # Onboarding resources that carry account tokens, a paired phone or nearby
 # networks. Never read live (registry/flat.py); bound for captures that

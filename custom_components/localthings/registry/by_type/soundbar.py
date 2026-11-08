@@ -14,7 +14,6 @@ REGISTRY = DeviceRegistry(
         [
             *unpolled(
                 av.IGNORED,
-                soundbar.MEDIA_COVERAGE,
                 soundbar.COVERAGE,
                 # Voice-assistant negotiation state (Alexa account linkage,
                 # locale lists) -- cloud plumbing, not device state.
@@ -25,8 +24,7 @@ REGISTRY = DeviceRegistry(
             ),
             av.NETWORK,
             *soundbar.MEDIA_SURFACE_COVERAGE,
-            av.MEDIA_TRACK_DATA,
-            av.MEDIA_SHUFFLE,
+            *av.MEDIA_RESOURCES,
             soundbar.MEDIA_PLAYER,
             soundbar.TONE,
             soundbar.WOOFER,
@@ -47,7 +45,6 @@ REGISTRY = DeviceRegistry(
             soundbar.INSTALLATION_TYPE,
             soundbar.SOUND_FROM,
             soundbar.SPEAKER_STATUS,
-            soundbar.SW_UPDATE,
             soundbar.VERSION_INFO,
             # PROBE_HREFS are read on every appliance whatever its type, so
             # every registry carries them (issue #301); both answer 4.04 here.
