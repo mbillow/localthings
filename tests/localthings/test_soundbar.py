@@ -246,10 +246,18 @@ async def test_media_player_state_and_controls(hass: HomeAssistant) -> None:
     await call("volume_mute", {"is_volume_muted": True})
     await call("select_source", {"source": "bt"})
     await call("select_sound_mode", {"sound_mode": "music"})
+    # Playback commands need something to act on: a paused BT track, on the
+    # fake too so sub-polls keep it.
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources["/capability/audioTrackData/main/0"]["title"] = "Track"
+    session.resources["/sec/networkaudio/mode"]["mode"] = "bt"
+    coordinator._observe.apply(
+        "/capability/audioTrackData/main/0", {"title": "Track"}, source="optimistic"
+    )
+    await hass.async_block_till_done()
     await call("media_play")
     await call("media_stop")
     await call("shuffle_set", {"shuffle": True})
-    coordinator = hass.data[DOMAIN][entry.entry_id]
     coordinator._observe.apply(
         "/capability/mediaTrackControl/main/0",
         {"supportedModes": ["next", "previous"]},
@@ -619,10 +627,64 @@ async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
     )
 
 
-async def test_a_wired_input_hides_the_last_streams_state(hass: HomeAssistant) -> None:
-    """The bar keeps a Spotify track, PAUSED and next/previous after
-    switching to HDMI (HW-Q950T, #719); none of it describes the input."""
-    from homeassistant.components.media_player import MediaPlayerEntityFeature
+# V4n1X's HW-Q950T state table (#719): what the bar reported in each state.
+_Q950T_STATES = {
+    "standby": {
+        "power": False,
+        "status": "IDLE",
+        "modes": ["stop"],
+        "mode": "hdmi1",
+        "title": "",
+        "skips": [],
+    },
+    "on_hdmi1": {
+        "power": True,
+        "status": "IDLE",
+        "modes": ["stop"],
+        "mode": "hdmi1",
+        "title": "",
+        "skips": [],
+    },
+    "spotify_playing": {
+        "power": True,
+        "status": "PLAYING",
+        "modes": ["play"],
+        "mode": "",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+    "spotify_paused": {
+        "power": True,
+        "status": "PAUSED",
+        "modes": ["pause"],
+        "mode": "",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+    # Spotify stopped and the input switched: the stream's state stays.
+    "hdmi1_after_spotify": {
+        "power": True,
+        "status": "PAUSED",
+        "modes": ["pause"],
+        "mode": "hdmi1",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("name", "state", "title", "playback_controls"),
+    [
+        ("standby", MediaPlayerState.OFF, None, False),
+        ("on_hdmi1", MediaPlayerState.ON, None, False),
+        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True),
+        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True),
+        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False),
+    ],
+)
+async def test_the_q950t_states(hass: HomeAssistant, name, state, title, playback_controls) -> None:
+    from homeassistant.components.media_player import MediaPlayerEntityFeature as F
 
     entry = _mock_entry(hass)
     await _setup_soundbar(hass, entry)
@@ -631,28 +693,28 @@ async def test_a_wired_input_hides_the_last_streams_state(hass: HomeAssistant) -
     _freeze_polls(coordinator)
     await hass.async_block_till_done()
 
+    row = _Q950T_STATES[name]
     for href, rep in (
-        ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": "PAUSED"}),
-        ("/capability/mediaPlayback/main/0", {"modes": ["pause"], "position": 61_000}),
-        ("/capability/audioTrackData/main/0", {"title": "Song", "appName": "Spotify"}),
-        ("/capability/mediaTrackControl/main/0", {"supportedModes": ["next", "previous"]}),
+        ("/sec/networkaudio/switch/binary", {"value": row["power"]}),
+        ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": row["status"]}),
+        (
+            "/capability/mediaPlayback/main/0",
+            {"modes": row["modes"], "position": 61_000 if row["title"] else 0},
+        ),
+        ("/capability/audioTrackData/main/0", {"title": row["title"], "duration": 200_000}),
+        ("/capability/mediaTrackControl/main/0", {"supportedModes": row["skips"]}),
+        ("/sec/networkaudio/mode", {"mode": row["mode"]}),
     ):
         coordinator._observe.apply(href, rep, source="poll")
-    _stream(coordinator)
     await hass.async_block_till_done()
-    assert player.state == MediaPlayerState.PAUSED
-    assert player.media_title == "Song"
-    assert player.supported_features & MediaPlayerEntityFeature.NEXT_TRACK
-    assert player.supported_features & MediaPlayerEntityFeature.SEEK
 
-    _stream(coordinator, "hdmi1")
-    await hass.async_block_till_done()
-    assert player.state == MediaPlayerState.ON
-    assert player.media_title is None
-    assert player.app_name is None
-    assert player.media_position is None
-    assert not player.supported_features & MediaPlayerEntityFeature.NEXT_TRACK
-    assert not player.supported_features & MediaPlayerEntityFeature.SEEK
+    assert player.state == state
+    assert player.media_title == title
+    controls = F.PAUSE | F.NEXT_TRACK | F.PREVIOUS_TRACK | F.SEEK
+    assert bool(player.supported_features & controls) is playback_controls
+    if playback_controls:
+        assert player.supported_features & controls == controls
+        assert player.media_position == 61
 
 
 async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None:
@@ -665,12 +727,30 @@ async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None
     _freeze_polls(coordinator)
     await hass.async_block_till_done()
 
-    # The S61B capture: optical, idle, nothing in mediaTrackControl.
+    # The S61B capture: optical, idle, nothing in mediaTrackControl. An idle
+    # bar acknowledges play and next and does nothing (HW-Q950T), so no
+    # playback control is offered.
     features = player.supported_features
-    for feature in (F.SELECT_SOURCE, F.SELECT_SOUND_MODE, F.PLAY, F.PAUSE, F.STOP, F.SHUFFLE_SET):
+    for feature in (F.SELECT_SOURCE, F.SELECT_SOUND_MODE, F.SHUFFLE_SET):
         assert features & feature
-    for feature in (F.NEXT_TRACK, F.PREVIOUS_TRACK, F.SEEK, F.REPEAT_SET):
+    for feature in (
+        F.PLAY,
+        F.PAUSE,
+        F.STOP,
+        F.NEXT_TRACK,
+        F.PREVIOUS_TRACK,
+        F.SEEK,
+        F.REPEAT_SET,
+    ):
         assert not features & feature
+
+    # A paused stream: play, pause and stop as the feed lists them.
+    _stream(coordinator)
+    coordinator._observe.apply(
+        "/capability/audioTrackData/main/0", {"title": "Track"}, source="poll"
+    )
+    await hass.async_block_till_done()
+    assert player.supported_features & (F.PLAY | F.PAUSE | F.STOP) == F.PLAY | F.PAUSE | F.STOP
 
     coordinator._observe.apply(
         "/capability/mediaPlayback/main/0", {"supportedModes": ["play"]}, source="poll"

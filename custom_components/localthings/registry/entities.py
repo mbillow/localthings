@@ -16,6 +16,8 @@ from datetime import time as dt_time
 from typing import Any, Literal
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
+# ((kind, value), rep) -> (path_segs, body), for the composite media player.
+MediaWriteFn = Callable[[tuple[str, Any], dict], "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
 # write. resources is the coordinator's full href->rep snapshot, for the same
 # cross-resource lookups exists_fn needs (e.g. reading a sibling href's live
@@ -91,6 +93,9 @@ class SamsungEntityDescription:
     # skip): treated as write_only, so nothing is cached and polls of its
     # href aren't held back.
     command_fn: PayloadPredicate = None
+    # The device can refuse a command inside a 2.04 and say so in the body,
+    # {"controlResponse": {"result": false}} (AV boards).
+    control_response: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -260,7 +265,7 @@ class MediaPlayerDesc(SamsungEntityDescription):
     # resources -> False when the generic playback and track feeds are stale,
     # e.g. a soundbar keeps its last stream's track on an HDMI input.
     stream_active_fn: Callable[[dict], bool] | None = None
-    write_fn: WriteFn = None
+    write_fn: MediaWriteFn = None
     validate_fn: ValidateFn = None
 
 

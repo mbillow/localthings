@@ -3004,6 +3004,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 retry=retry,
                 prepare_body=_prepare_body if prepare_payload is not None else None,
                 confirm_on_refusal=desc.confirm_on_refusal and not write_only,
+                control_response=desc.control_response,
             )
             if not sent:
                 if not write_only and not cache_after_ack:
@@ -3069,6 +3070,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         retry: bool = True,
         prepare_body: Callable[[], dict | None] | None = None,
         confirm_on_refusal: bool = False,
+        control_response: bool = False,
     ) -> bool:
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too.
@@ -3180,7 +3182,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         code, response = result
         # An opted-in control may apply a write while replying 4.00 (#714).
         # A failed GET cannot overturn an explicit refusal.
-        control_refused = _coap_accepted(code) and _control_refused(response)
+        control_refused = control_response and _coap_accepted(code) and _control_refused(response)
         if (
             (code == _COAP_BAD_REQUEST or control_refused)
             and confirm_on_refusal

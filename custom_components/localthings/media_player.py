@@ -116,6 +116,22 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     def _track(self) -> dict:
         return self._rep(self._desc.track_href) if self._stream_active() else {}
 
+    def _has_media(self) -> bool:
+        """Whether there is anything for playback commands to act on. An
+        idle bar acknowledges play and next and does nothing (HW-Q950T)."""
+        if not self._stream_active():
+            return False
+        if self._track().get("title") or self._track().get("appName"):
+            return True
+        if _PLAYBACK_STATES.get(str(first_mode(self._playback()))) not in (
+            None,
+            MediaPlayerState.IDLE,
+        ):
+            return True
+        status_fn = self._desc.status_fn
+        status = status_fn(self._resources) if status_fn is not None else None
+        return _STATUS_STATES.get(status or "") not in (None, MediaPlayerState.IDLE)
+
     def _mode_options(self, surface: MediaModeSurface | None) -> list[str]:
         return _strings(self._rep(surface.href).get(surface.options_field)) if surface else []
 
@@ -143,20 +159,21 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             features |= MediaPlayerEntityFeature.SELECT_SOURCE
         if self._mode_options(self._desc.sound_mode):
             features |= MediaPlayerEntityFeature.SELECT_SOUND_MODE
+        if "mode" in self._rep(self._desc.shuffle_href):
+            features |= MediaPlayerEntityFeature.SHUFFLE_SET
+        if not self._has_media():
+            return features
         supported = self._playback().get("supportedModes")
         for mode, feature in _PLAYBACK_FEATURES:
             if not isinstance(supported, list) or mode in supported:
                 features |= feature
-        if "mode" in self._rep(self._desc.shuffle_href):
-            features |= MediaPlayerEntityFeature.SHUFFLE_SET
-        if self._stream_active():
-            # Not in mediaPlayback's supportedModes; the track control
-            # resource lists them while a stream is active (HW-Q950T).
-            skips = _strings(self._rep(self._desc.track_control_href).get("supportedModes"))
-            if "next" in skips:
-                features |= MediaPlayerEntityFeature.NEXT_TRACK
-            if "previous" in skips:
-                features |= MediaPlayerEntityFeature.PREVIOUS_TRACK
+        # Not in mediaPlayback's supportedModes; the track control resource
+        # lists them while a stream is active (HW-Q950T).
+        skips = _strings(self._rep(self._desc.track_control_href).get("supportedModes"))
+        if "next" in skips:
+            features |= MediaPlayerEntityFeature.NEXT_TRACK
+        if "previous" in skips:
+            features |= MediaPlayerEntityFeature.PREVIOUS_TRACK
         if self._playback_position_ms() is not None:
             features |= MediaPlayerEntityFeature.SEEK
         return features
@@ -395,7 +412,11 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     async def _async_seek(self, position: float) -> None:
         if self._playback_position_ms() is None:
             return
-        target_ms = round(position * 1000)
+        target_ms = max(0, round(position * 1000))
+        duration = self._track().get("duration")
+        if isinstance(duration, int) and duration > 0:
+            # The device clamps a seek past either end the same way.
+            target_ms = min(target_ms, duration)
         sent_at: list[tuple[datetime, bool]] = []
 
         def prepare_payload():

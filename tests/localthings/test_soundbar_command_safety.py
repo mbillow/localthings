@@ -244,3 +244,20 @@ async def test_play_pause_toggles_from_the_state_the_previous_command_left(playb
     monkeypatch.setattr(coordinator, "_async_put", AsyncMock(return_value=True))
     await asyncio.gather(player.async_media_play_pause(), player.async_media_play_pause())
     assert coordinator.resource(profile.playback_href)["modes"] == ["play"]
+
+
+@pytest.mark.parametrize(("target", "expected_ms"), [(500, 200_000), (-5, 0)])
+async def test_a_seek_past_either_end_is_clamped_to_the_track(
+    playback, monkeypatch, target, expected_ms
+):
+    """The bar clamps a seek past either end to 0 or the duration (HW-Q950T),
+    so the optimistic position must agree."""
+    player, coordinator, profile = playback
+    coordinator._observe.apply(profile.track_href, {"duration": 200_000}, source="poll")
+    session = FakeSoundbarSession()
+    write = Mock(return_value=(0x44, None))
+    monkeypatch.setattr(session, "write", write)
+    coordinator._session = session
+    await player.async_media_seek(target)
+    assert write.call_args.args[1] == {"modes": ["seek"], "position": expected_ms - 120_000}
+    assert coordinator.resource(profile.playback_href)["position"] == expected_ms

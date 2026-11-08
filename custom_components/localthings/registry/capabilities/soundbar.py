@@ -640,6 +640,7 @@ MEDIA_PLAYER = Capability(
             resend_unsafe_fn=av.resend_unsafe,
             cache_after_ack_fn=av.cache_after_ack,
             command_fn=av.is_skip,
+            control_response=True,
         ),
     ),
 )

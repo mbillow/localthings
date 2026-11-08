@@ -59,7 +59,7 @@ async def test_control_response_false_is_a_refusal(coordinator, control, error):
     coordinator, session = coordinator
     session.write.return_value = (0x44, {"controlResponse": control})
     with pytest.raises(HomeAssistantError) as err:
-        await coordinator._async_put(PATH, {"modes": ["pause"]}, HREF)
+        await coordinator._async_put(PATH, {"modes": ["pause"]}, HREF, control_response=True)
     assert err.value.translation_key == "command_refused"
     assert err.value.translation_placeholders == {"href": HREF, "error": error}
     session.write.assert_called_once()  # an answer, not a dead session
@@ -69,8 +69,15 @@ async def test_control_response_false_is_a_refusal(coordinator, control, error):
 async def test_other_acknowledgements_stay_successful(coordinator, response):
     coordinator, session = coordinator
     session.write.return_value = (0x44, response)
-    assert await coordinator._async_put(PATH, {"modes": ["play"]}, HREF) is True
+    assert await coordinator._async_put(PATH, {"modes": ["play"]}, HREF, control_response=True)
     session.read.assert_not_called()
+
+
+async def test_other_appliances_read_write_responses_as_before(coordinator):
+    """Only a descriptor that declares control_response reads the body."""
+    coordinator, session = coordinator
+    session.write.return_value = (0x44, {"controlResponse": {"result": False}})
+    assert await coordinator._async_put(PATH, {"modes": ["pause"]}, HREF) is True
 
 
 @pytest.mark.parametrize(("readback", "accepted"), [("modeGame", True), ("modeStandard", False)])
@@ -78,7 +85,9 @@ async def test_an_opted_in_refusal_needs_a_matching_read(coordinator, readback, 
     coordinator, session = coordinator
     session.write.return_value = (0x44, {"controlResponse": {"result": False}})
     session.read.return_value = (0x45, {"mode": readback})
-    call = coordinator._async_put(PATH, {"mode": "modeGame"}, HREF, confirm_on_refusal=True)
+    call = coordinator._async_put(
+        PATH, {"mode": "modeGame"}, HREF, confirm_on_refusal=True, control_response=True
+    )
     if accepted:
         await call
     else:
