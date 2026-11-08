@@ -975,6 +975,9 @@
           "mute": "Muet"
         }
       },
+      "sound_tone": {
+        "name": "Tonalité sonore"
+      },
       "energy_saving_mode": {
         "name": "Mode d'économie d'énergie"
       },

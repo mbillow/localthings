@@ -1370,6 +1370,9 @@
           "mute": "Silencio"
         }
       },
+      "sound_tone": {
+        "name": "Tono de sonido"
+      },
       "energy_saving_mode": {
         "name": "Modo de ahorro de energía"
       },

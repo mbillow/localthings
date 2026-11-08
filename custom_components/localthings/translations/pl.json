@@ -975,6 +975,9 @@
           "mute": "Wyciszenie"
         }
       },
+      "sound_tone": {
+        "name": "Sygnał dźwiękowy"
+      },
       "energy_saving_mode": {
         "name": "Tryb oszczędzania energii"
       },

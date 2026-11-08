@@ -975,6 +975,9 @@
           "mute": "Mute"
         }
       },
+      "sound_tone": {
+        "name": "Sound tone"
+      },
       "energy_saving_mode": {
         "name": "Energy saving mode"
       },

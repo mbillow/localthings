@@ -144,6 +144,10 @@ IGNORED: list[Capability] = [
     # empty/zero on the only dump seen (device idle). Same "don't guess"
     # treatment as the microwave family's /recipe/cook/vs/0.
     Capability(href="/cooktop/recipe/status/vs/0"),
+    # Samsung's own diagnostic-log upload state (logRequestState/logState)
+    # and cloud-report availability flag (issue #784) -- service plumbing.
+    Capability(href="/logtrigger/vs/0"),
+    Capability(href="/report/vs/0"),
 ]
 
 

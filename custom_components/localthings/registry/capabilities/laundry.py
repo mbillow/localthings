@@ -10,7 +10,7 @@ control, energy meter) live in common.py, not here.
 
 Resource hrefs seen across laundry dumps:
   /doorled/light/vs/0   -> DOOR_LED (door LED brightness / night light)
-  /settings/sound/*/vs/0-> SOUND_MODE / SOUND_VOLUME
+  /settings/sound/*/vs/0-> SOUND_MODE / SOUND_TONE / SOUND_VOLUME
   /buzzersound/vs/0     -> BUZZER_SOUND (buzzer + optional finish chime)
   /course/vs/0          -> the cycle select + per-family course options
   /wm/editcourse/vs/0   -> live editCourseList that drives the cycle options
@@ -56,7 +56,7 @@ def _parse_hm(v):
 
 
 def _sound_mode_write(p, rep, href=None):
-    if p not in _SOUND_MODES:
+    if p not in ((rep or {}).get("supportedModes") or _SOUND_MODES):
         return None
     return ["settings", "sound", "mode", "vs", "0"], {"mode": p}
 
@@ -124,8 +124,33 @@ SOUND_MODE = Capability(
             field="mode",
             icon="mdi:volume-high",
             entity_category="config",
-            options=_SOUND_MODES,
+            options_field="supportedModes",
             write_fn=_sound_mode_write,
+        ),
+    ),
+)
+
+
+def _sound_tone_write(p, rep, href=None):
+    if p not in ((rep or {}).get("supportedTones") or ()):
+        return None
+    return ["settings", "sound", "tone", "vs", "0"], {"tone": p}
+
+
+# Which of the device's numbered tones plays in "tone" sound mode. The write
+# mirrors SOUND_MODE's {field: value} shape, inferred from the read alone on
+# the AWM-US-M64-24-WD80 (issue #784) -- needs live confirmation.
+SOUND_TONE = Capability(
+    href="/settings/sound/tone/vs/0",
+    poll_tier="cold",
+    entities=(
+        SelectDesc(
+            key="sound_tone",
+            field="tone",
+            icon="mdi:music-note",
+            entity_category="config",
+            options_field="supportedTones",
+            write_fn=_sound_tone_write,
         ),
     ),
 )

@@ -232,6 +232,22 @@ def test_registry_reproduces_golden_state_keys_for_dryer_dv6800n():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64():
+    """AWM-US-M64-24-WD80 washer-dryer (issue #784): sound settings bound."""
+    from tests.conftest import _load_device
+
+    name = "washer_dryer_awm_m64"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_airconditioner():
     from tests.conftest import _load_device
 

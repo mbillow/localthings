@@ -975,6 +975,9 @@
           "mute": "Stlmené"
         }
       },
+      "sound_tone": {
+        "name": "Zvukový tón"
+      },
       "energy_saving_mode": {
         "name": "Režim úspory energie"
       },
