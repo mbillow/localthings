@@ -172,6 +172,8 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         for mode, feature in _PLAYBACK_FEATURES:
             if not isinstance(supported, list) or mode in supported:
                 features |= feature
+        if not self._desc.stop_when_paused and self.state is MediaPlayerState.PAUSED:
+            features &= ~MediaPlayerEntityFeature.STOP
         # Not in mediaPlayback's supportedModes; the track control resource
         # lists them while a stream is active (HW-Q950T).
         skips = _strings(self._rep(self._desc.track_control_href).get("supportedModes"))

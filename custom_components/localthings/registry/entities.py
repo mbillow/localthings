@@ -266,6 +266,8 @@ class MediaPlayerDesc(SamsungEntityDescription):
     # resources -> False when the generic playback and track feeds are stale,
     # e.g. a soundbar keeps its last stream's track on an HDMI input.
     stream_active_fn: Callable[[dict], bool] | None = None
+    # False where the device refuses stop while paused, so it isn't offered.
+    stop_when_paused: bool = True
     write_fn: MediaWriteFn = None
     validate_fn: ValidateFn = None
 

@@ -640,6 +640,9 @@ MEDIA_PLAYER = Capability(
             track_control_href=av.HREF_TRACK_CONTROL,
             status_fn=_playback_status,
             stream_active_fn=_stream_active,
+            # A paused HW-Q950T answers stop with controlResponse.result=false
+            # though it lists stop in supportedModes (#775).
+            stop_when_paused=False,
             write_fn=_media_player_write,
             validate_fn=_validate_media,
             resend_unsafe_fn=av.resend_unsafe,

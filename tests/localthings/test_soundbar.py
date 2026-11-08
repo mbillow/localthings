@@ -677,16 +677,19 @@ _Q950T_STATES = {
 
 
 @pytest.mark.parametrize(
-    ("name", "state", "title", "playback_controls"),
+    ("name", "state", "title", "playback_controls", "stop"),
     [
-        ("standby", MediaPlayerState.OFF, None, False),
-        ("on_hdmi1", MediaPlayerState.ON, None, False),
-        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True),
-        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True),
-        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False),
+        ("standby", MediaPlayerState.OFF, None, False, False),
+        ("on_hdmi1", MediaPlayerState.ON, None, False, False),
+        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True, True),
+        # The paused bar refuses stop (#775).
+        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True, False),
+        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False, False),
     ],
 )
-async def test_the_q950t_states(hass: HomeAssistant, name, state, title, playback_controls) -> None:
+async def test_the_q950t_states(
+    hass: HomeAssistant, name, state, title, playback_controls, stop
+) -> None:
     from homeassistant.components.media_player import MediaPlayerEntityFeature as F
 
     entry = _mock_entry(hass)
@@ -718,6 +721,7 @@ async def test_the_q950t_states(hass: HomeAssistant, name, state, title, playbac
     if playback_controls:
         assert player.supported_features & controls == controls
         assert player.media_position == 61
+    assert bool(player.supported_features & F.STOP) is stop
 
 
 async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None:
