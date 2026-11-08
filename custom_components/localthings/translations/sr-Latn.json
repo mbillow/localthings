@@ -61,6 +61,18 @@
       "door_open": {
         "name": "Vrata"
       },
+      "door_1_open": {
+        "name": "Vrata 1"
+      },
+      "door_2_open": {
+        "name": "Vrata 2"
+      },
+      "door_3_open": {
+        "name": "Vrata 3"
+      },
+      "door_4_open": {
+        "name": "Vrata 4"
+      },
       "filter_blockage": {
         "name": "Blokada filtera"
       },
@@ -174,6 +186,12 @@
       },
       "woofer_connection": {
         "name": "Povezivanje vufera"
+      },
+      "lamp": {
+        "name": "Lampa"
+      },
+      "energy_saving": {
+        "name": "Ušteda energije"
       }
     },
     "button": {
@@ -708,7 +726,15 @@
           "cv_fdr_soft_freezer": "Blagi zamrzivač",
           "fconvert_freezer": "Zamrzavanje",
           "fconvert_fridge": "Frižider",
-          "fconvert_off": "Isključeno"
+          "fconvert_off": "Isključeno",
+          "cv_ttype_freezer": "Zamrzivač",
+          "cv_ttype_soft_freezer": "Blagi zamrzivač",
+          "cv_ttype_chill": "Rashlađivanje",
+          "cv_ttype_cool": "Hlađenje",
+          "cv_ttype_ferment": "Fermentacija",
+          "cv_ttype_kimchi_warm": "Kimči, slabo",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, jako"
         }
       },
       "heated_dry": {
@@ -981,6 +1007,8 @@
         "name": "Ciklus",
         "state": {
           "01": "Normalno",
+          "50": "Sušenje pamuka",
+          "51": "Sušenje sintetike",
           "55": "Beli veš",
           "57": "Samočišćenje+",
           "5b": "Pamuk",
@@ -1020,6 +1048,8 @@
           "ab": "Eko hladno pranje",
           "b1": "Samočišćenje+",
           "ba": "Ispuštanje vode/Centrifuga",
+          "c7": "Eko čišćenje bubnja",
+          "ca": "Osvežavanje vazduhom",
           "d0": "Pamuk",
           "d1": "Eko pamuk",
           "d2": "Sintetika",
@@ -1032,7 +1062,9 @@
           "da": "Super eko pranje",
           "db": "Super brzina",
           "dc": "Brzo pranje 15'",
-          "e4": "Antialergijski program"
+          "e3": "Svakodnevno pranje",
+          "e4": "Antialergijski program",
+          "e7": "Brzo pranje+Sušenje"
         }
       },
       "washer_cycle_table_02": {
@@ -1939,6 +1971,9 @@
       },
       "robot_movement": {
         "name": "Kretanje"
+      },
+      "oven_setpoint": {
+        "name": "Zadana vrednost"
       }
     },
     "switch": {
@@ -2691,6 +2726,7 @@
         "winecellar_bottom": "Donja zona za vino",
         "door_freezer": "Vrata zamrzivača",
         "door_cooler": "Vrata frižidera",
+        "door_fridge": "Vrata frižidera",
         "door_cvroom": "Vrata fleksibilne zone",
         "door_winecellar": "Vrata vinskog vitrina",
         "door_onedoorfreezer": "Glavna vrata",
