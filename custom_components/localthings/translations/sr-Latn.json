@@ -1,0 +1,2819 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "auto_clean_running": {
+        "name": "Automatsko čišćenje u toku"
+      },
+      "after_run_active": {
+        "name": "Naknadni rad aktivan"
+      },
+      "any_burner_active": {
+        "name": "Bilo koji gorionik aktivan"
+      },
+      "automatic_operation": {
+        "name": "Automatski rad"
+      },
+      "battery_charging": {
+        "name": "Punjenje"
+      },
+      "burner_hot_surface": {
+        "name": "Vruća površina gorionika {number}"
+      },
+      "burner_pan_detected": {
+        "name": "Detektovana posuda na gorioniku {number}"
+      },
+      "child_lock": {
+        "name": "Zaštita za decu"
+      },
+      "cloud_connected": {
+        "name": "Povezan na cloud"
+      },
+      "dustbag_full": {
+        "name": "Kesa za prašinu je puna"
+      },
+      "cooktop_power": {
+        "name": "Napajanje ploče za kuvanje"
+      },
+      "cooktop_safety_shutoff_enabled": {
+        "name": "Automatsko isključivanje vruće površine omogućeno"
+      },
+      "current_limit_enabled": {
+        "name": "Ograničenje struje omogućeno"
+      },
+      "overload_protection_active": {
+        "name": "Zaštita od preopterećenja aktivna"
+      },
+      "odor_controller_active": {
+        "name": "Kontrola mirisa aktivna"
+      },
+      "cycle_active": {
+        "name": "U radu"
+      },
+      "defrost_active": {
+        "name": "Odmrzavanje aktivno"
+      },
+      "detergent_low": {
+        "name": "Nivo deterdženta nizak"
+      },
+      "device_active": {
+        "name": "Uređaj aktivan"
+      },
+      "door_open": {
+        "name": "Vrata"
+      },
+      "door_1_open": {
+        "name": "Vrata 1"
+      },
+      "door_2_open": {
+        "name": "Vrata 2"
+      },
+      "door_3_open": {
+        "name": "Vrata 3"
+      },
+      "door_4_open": {
+        "name": "Vrata 4"
+      },
+      "filter_blockage": {
+        "name": "Blokada filtera"
+      },
+      "filter_door_status": {
+        "name": "Vratanca filtera"
+      },
+      "firmware_update": {
+        "name": "Dostupno ažuriranje firmvera"
+      },
+      "instance_open": {
+        "name": "{instance_name} - otvoreno"
+      },
+      "paired_hood_connected": {
+        "name": "Upareni aspirator povezan"
+      },
+      "paired_hood_light": {
+        "name": "Svetlo uparenog aspiratora"
+      },
+      "paired_hood_power": {
+        "name": "Napajanje uparenog aspiratora"
+      },
+      "periodic_air_sensing": {
+        "name": "Periodično uzorkovanje vazduha"
+      },
+      "pouring": {
+        "name": "Sipanje"
+      },
+      "alarm_in_mute": {
+        "name": "Alarm utišan"
+      },
+      "power_state": {
+        "name": "Status napajanja"
+      },
+      "probe_connected": {
+        "name": "Sonda povezana"
+      },
+      "power_switch": {
+        "name": "Napajanje"
+      },
+      "rapid_freezing": {
+        "name": "Brzo zamrzavanje"
+      },
+      "rapid_fridge": {
+        "name": "Brzo hlađenje"
+      },
+      "remote_control": {
+        "name": "Pametna kontrola"
+      },
+      "softener_low": {
+        "name": "Nivo omekšivača nizak"
+      },
+      "add_wash_available": {
+        "name": "Dodavanje veša dozvoljeno"
+      },
+      "add_wash_indicator": {
+        "name": "Spreman za dodavanje veša"
+      },
+      "pre_wash_selected": {
+        "name": "Pretpranje izabrano"
+      },
+      "delay_wash_set": {
+        "name": "Odložen start podešen"
+      },
+      "stick_ble_connected": {
+        "name": "BLE modul povezan"
+      },
+      "cooktop_burner": {
+        "name": "Gorionik {number}"
+      },
+      "beep": {
+        "name": "Zvučni signal"
+      },
+      "remind_beep": {
+        "name": "Podsetnik za završni signal"
+      },
+      "display_time_auto_sync": {
+        "name": "Automatska sinhronizacija vremena ekrana"
+      },
+      "grease_filter_alarm": {
+        "name": "Alarm filtera za masnoću"
+      },
+      "front_vent_open": {
+        "name": "Prednji ventilator"
+      },
+      "dual_setpoint_enabled": {
+        "name": "Dvostruka zadana tačka omogućena"
+      },
+      "divider": {
+        "name": "Pregrada"
+      },
+      "reservoir_open": {
+        "name": "Rezervoar"
+      },
+      "wrinkle_prevent_active": {
+        "name": "Sprečavanje gužvanja aktivno"
+      },
+      "cooktop_sync_control": {
+        "name": "Sinhronizovana kontrola"
+      },
+      "cooktop_paused": {
+        "name": "Pauzirano"
+      },
+      "booster_heater": {
+        "name": "Pomoćni grejač"
+      },
+      "bluetooth_pairing": {
+        "name": "Bluetooth uparivanje"
+      },
+      "rear_speakers": {
+        "name": "Zadnji zvučnici"
+      },
+      "woofer_connection": {
+        "name": "Povezivanje vufera"
+      },
+      "lamp": {
+        "name": "Lampa"
+      },
+      "energy_saving": {
+        "name": "Ušteda energije"
+      }
+    },
+    "button": {
+      "after_run_cancel": {
+        "name": "Otkaži naknadni rad"
+      },
+      "diagnosis_start": {
+        "name": "Pokreni dijagnostiku"
+      },
+      "auto_clean_stop": {
+        "name": "Zaustavi automatsko čišćenje"
+      },
+      "air_filter_reset": {
+        "name": "Resetuj filter vazduha"
+      },
+      "air_filter_pm1_reset": {
+        "name": "Resetuj PM1.0 filter"
+      },
+      "hepa_filter_reset": {
+        "name": "Resetuj HEPA filter"
+      },
+      "deodor_filter_reset": {
+        "name": "Resetuj filter za dezodorizaciju"
+      },
+      "hood_filter_reset": {
+        "name": "Resetuj filter aspiratora"
+      },
+      "filter_reset": {
+        "name": "Resetuj filter za vodu"
+      },
+      "filter_time_reset": {
+        "name": "Resetuj vreme filtera"
+      },
+      "pause": {
+        "name": "Pauza"
+      },
+      "selfcheck_start": {
+        "name": "Pokreni samoproveru"
+      },
+      "start": {
+        "name": "Pokreni"
+      },
+      "sync_clock": {
+        "name": "Sinhronizuj sat"
+      },
+      "stop": {
+        "name": "Zaustavi"
+      },
+      "start_cooking": {
+        "name": "Pokreni kuvanje"
+      },
+      "pair_bluetooth": {
+        "name": "Upari Bluetooth"
+      }
+    },
+    "climate": {
+      "airconditioner": {
+        "state_attributes": {
+          "fan_mode": {
+            "state": {
+              "turbo": "Turbo",
+              "max": "Maks."
+            }
+          },
+          "preset_mode": {
+            "state": {
+              "ai_comfort": "AI Comfort",
+              "quiet": "Tiho",
+              "smart": "Pametno",
+              "speed": "Brzo",
+              "nano": "WindFree",
+              "sleep": "Spavanje",
+              "nanosleep": "WindFree spavanje",
+              "longwind": "Dug protok vazduha",
+              "motionindirect": "Indirektno kretanje",
+              "motiondirect": "Direktno kretanje",
+              "drycomfort": "Suvi komfor",
+              "dlightcool": "d'light hlađenje",
+              "2step": "U 2 koraka"
+            }
+          }
+        }
+      },
+      "zone_climate": {
+        "name": "Zona 1"
+      },
+      "zone2_climate": {
+        "name": "Zona 2"
+      }
+    },
+    "fan": {
+      "air_purifier_fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "auto": "Automatski",
+              "smart": "Pametno",
+              "max": "Maks.",
+              "mid": "Srednje",
+              "windfree": "WindFree",
+              "sleep": "Spavanje"
+            }
+          }
+        }
+      }
+    },
+    "light": {
+      "lamp": {
+        "name": "Lampa"
+      },
+      "paired_hood_light": {
+        "name": "Svetlo uparenog aspiratora"
+      }
+    },
+    "number": {
+      "cook_time": {
+        "name": "Vreme kuvanja"
+      },
+      "delay_start_hours": {
+        "name": "Odložen start"
+      },
+      "dispense_capacity": {
+        "name": "Kapacitet doziranja"
+      },
+      "freezer_setpoint": {
+        "name": "Zadana temperatura zamrzivača"
+      },
+      "fridge_setpoint": {
+        "name": "Zadana temperatura frižidera"
+      },
+      "good_sleep": {
+        "name": "Prijatno spavanje"
+      },
+      "instance_setpoint": {
+        "name": "{instance_name} - zadana vrednost"
+      },
+      "oven_setpoint": {
+        "name": "Zadana vrednost"
+      },
+      "paired_hood_shutoff_timer": {
+        "name": "Tajmer za isključivanje uparenog aspiratora"
+      },
+      "sensing_interval": {
+        "name": "AI Purify interval"
+      },
+      "setpoint": {
+        "name": "Zadana vrednost"
+      },
+      "sound_volume": {
+        "name": "Jačina zvuka"
+      },
+      "target_humidity": {
+        "name": "Ciljna vlažnost"
+      },
+      "tropical_night_mode": {
+        "name": "Režim tropske noći"
+      },
+      "zone_target_temperature": {
+        "name": "Ciljna temperatura zone"
+      },
+      "audio_sync": {
+        "name": "Audio sinhronizacija"
+      },
+      "bass": {
+        "name": "Bas"
+      },
+      "channel_level_center": {
+        "name": "Nivo centralnog kanala"
+      },
+      "channel_level_front_top": {
+        "name": "Nivo prednjeg gornjeg kanala"
+      },
+      "channel_level_rear": {
+        "name": "Nivo zadnjeg kanala"
+      },
+      "channel_level_rear_side": {
+        "name": "Nivo zadnjeg bočnog kanala"
+      },
+      "channel_level_rear_top": {
+        "name": "Nivo zadnjeg gornjeg kanala"
+      },
+      "channel_level_side": {
+        "name": "Nivo bočnog kanala"
+      },
+      "channel_level_wide": {
+        "name": "Nivo širokog kanala"
+      },
+      "eq_band_1": {
+        "name": "EQ 150 Hz"
+      },
+      "eq_band_2": {
+        "name": "EQ 300 Hz"
+      },
+      "eq_band_3": {
+        "name": "EQ 600 Hz"
+      },
+      "eq_band_4": {
+        "name": "EQ 1.2 kHz"
+      },
+      "eq_band_5": {
+        "name": "EQ 2.5 kHz"
+      },
+      "eq_band_6": {
+        "name": "EQ 5 kHz"
+      },
+      "eq_band_7": {
+        "name": "EQ 10 kHz"
+      },
+      "treble": {
+        "name": "Visoki tonovi"
+      },
+      "woofer_level": {
+        "name": "Nivo vufera"
+      }
+    },
+    "select": {
+      "north_flap": {
+        "name": "Severna klapna",
+        "state": {
+          "stop": "Fiksirano",
+          "vertical": "Njišući režim"
+        }
+      },
+      "east_flap": {
+        "name": "Istočna klapna",
+        "state": {
+          "stop": "Fiksirano",
+          "vertical": "Njišući režim"
+        }
+      },
+      "south_flap": {
+        "name": "Južna klapna",
+        "state": {
+          "stop": "Fiksirano",
+          "vertical": "Njišući režim"
+        }
+      },
+      "west_flap": {
+        "name": "Zapadna klapna",
+        "state": {
+          "stop": "Fiksirano",
+          "vertical": "Njišući režim"
+        }
+      },
+      "welcome_lighting_proximity": {
+        "name": "Blizina za svetlo dobrodošlice",
+        "state": {
+          "nearest": "Najbliže",
+          "near": "Blizu",
+          "middle": "Srednje",
+          "far": "Daleko"
+        }
+      },
+      "ai_energy_level": {
+        "name": "Nivo AI Energy režima"
+      },
+      "air_filter_threshold": {
+        "name": "Prag alarma filtera"
+      },
+      "auto_door_timer": {
+        "name": "Tajmer za automatsko otvaranje vrata"
+      },
+      "auto_door_mode": {
+        "name": "Režim automatskog otvaranja vrata",
+        "state": {
+          "easy_open": "Lako otvaranje",
+          "wide_open": "Široko otvaranje"
+        }
+      },
+      "beverage_zone_mode": {
+        "name": "Režim zone za osveženje",
+        "state": {
+          "sp_ttype_beer_drinks": "Piće",
+          "sp_ttype_wine_dessert": "Vino i dezert"
+        }
+      },
+      "brightness_level": {
+        "name": "Noćno osvetljenje",
+        "state": {
+          "33": "Slabo",
+          "66": "Srednje",
+          "100": "Jako"
+        }
+      },
+      "cooler_temperature_setpoint": {
+        "name": "Temperatura frižidera"
+      },
+      "day_brightness": {
+        "name": "Osvetljenje vitrine",
+        "state": {
+          "33": "Slabo",
+          "66": "Srednje",
+          "100": "Jako"
+        }
+      },
+      "buzzer_sound": {
+        "name": "Zvuk zujalice",
+        "state": {
+          "off": "Isključeno",
+          "on": "Uključeno",
+          "volume_off": "Isključeno",
+          "volume_low": "Slabo",
+          "volume_med": "Srednje",
+          "volume_high": "Jako"
+        }
+      },
+      "discharging_time": {
+        "name": "Vreme pražnjenja",
+        "state": {
+          "1": "1 minut",
+          "3": "3 minuta"
+        }
+      },
+      "cycle": {
+        "name": "Ciklus"
+      },
+      "detergent_quantity": {
+        "name": "Količina deterdženta",
+        "state": {
+          "00": "Nema",
+          "01": "Malo",
+          "02": "Srednje",
+          "03": "Mnogo"
+        }
+      },
+      "detergent_water_hardness": {
+        "name": "Tvrdoća vode za deterdžent",
+        "state": {
+          "01": "Meka",
+          "02": "Srednja",
+          "03": "Tvrda"
+        }
+      },
+      "dishwasher_cycle": {
+        "name": "Ciklus",
+        "state": {
+          "80": "Osetljivo",
+          "83": "Normalno",
+          "84": "Intenzivno",
+          "86": "Brzi 60",
+          "90": "Samočišćenje",
+          "0e": "AI Pranje",
+          "07": "Prethodno ispiranje pod pritiskom",
+          "8d": "Šerpe i tiganji",
+          "85": "Osetljivo",
+          "0c": "Brzi",
+          "0d": "Samočišćenje",
+          "8e": "Plastika",
+          "8f": "Nega beba",
+          "82": "Automatski",
+          "8a": "Normalno",
+          "a7": "Intenzivno",
+          "a8": "Brzi",
+          "8c": "Ekstra tiho",
+          "88": "Samočišćenje",
+          "87": "Samo ispiranje"
+        }
+      },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Ciklus",
+        "state": {
+          "80": "Osetljivo",
+          "83": "Normalno",
+          "84": "Intenzivno",
+          "86": "Brzi 60",
+          "90": "Samočišćenje",
+          "0e": "AI Pranje",
+          "07": "Prethodno ispiranje pod pritiskom",
+          "8d": "Šerpe i tiganji",
+          "85": "Osetljivo",
+          "0c": "Brzi",
+          "0d": "Samočišćenje",
+          "8e": "Plastika",
+          "8f": "Nega beba",
+          "82": "Automatski",
+          "8a": "Eko",
+          "a7": "Intenzivno",
+          "a8": "Brzi",
+          "8c": "Ekstra tiho",
+          "88": "Samočišćenje",
+          "87": "Samo ispiranje",
+          "01": "Pretpranje"
+        }
+      },
+      "dispense_type": {
+        "name": "Tip doziranja"
+      },
+      "door_alert": {
+        "name": "Alarm za vrata",
+        "state": {
+          "1": "Alarm 1",
+          "2": "Alarm 2",
+          "3": "Alarm 3",
+          "4": "Alarm 4"
+        }
+      },
+      "dryer_cycle_table_00": {
+        "name": "Ciklus",
+        "state": {
+          "01": "Normalno",
+          "9c": "Intenzivno",
+          "a5": "Posteljina",
+          "9e": "Lako održavanje",
+          "9b": "Sanitizacija parom+",
+          "27": "Osvežavanje",
+          "a0": "Provetravanje hladnim vazduhom",
+          "a4": "Vremensko sušenje",
+          "a6": "Brzo sušenje",
+          "a3": "Sportska odeća",
+          "a2": "Osetljivo",
+          "9a": "Pamuk",
+          "ca": "Osvežavanje vazduhom",
+          "db": "Super brzina",
+          "99": "Mešovito",
+          "93": "Suvo za peglanje",
+          "b5": "Vuna",
+          "d7": "Odeća za spoljne aktivnosti",
+          "96": "Hladan vazduh",
+          "97": "Topao vazduh",
+          "7f": "Vremensko sušenje",
+          "98": "Brzo sušenje 35",
+          "eb": "Osetljivo",
+          "b6": "Sintetika"
+        }
+      },
+      "dryer_cycle_table_03": {
+        "name": "Ciklus",
+        "state": {
+          "01": "Normalno",
+          "06": "Vremensko sušenje",
+          "16": "Pamuk",
+          "17": "Super brzina",
+          "18": "Sintetika",
+          "19": "Osetljivo",
+          "20": "Suvo za peglanje",
+          "21": "Higijenska nega",
+          "22": "Tiho sušenje",
+          "23": "Brzo sušenje 35'",
+          "24": "Hladan vazduh",
+          "25": "Topao vazduh",
+          "26": "Osvežavanje vazduhom",
+          "27": "Vremensko sušenje",
+          "29": "AI Sušenje",
+          "2a": "Higijenska nega+",
+          "1a": "Vuna",
+          "1b": "Posteljina",
+          "1c": "Košulje",
+          "43": "Košulje",
+          "1d": "Peškiri",
+          "1e": "Odeća za spoljne aktivnosti",
+          "1f": "Mešovito",
+          "2b": "Sušenje bubnja",
+          "4c": "Osvežavanje vazduhom",
+          "51": "Eko pamuk",
+          "53": "AI Sušenje+",
+          "4e": "Samosušenje",
+          "02": "AI Sušenje",
+          "03": "Super brzina",
+          "05": "Posteljina",
+          "07": "Osetljivo",
+          "09": "Košulje",
+          "0b": "Nega punjenih jakni",
+          "0c": "Nega vodoodbojne odeće",
+          "0e": "Peškiri",
+          "0f": "Vuna",
+          "11": "Hladan vazduh",
+          "28": "Sanitizacija unutrašnjosti toplim vazduhom",
+          "37": "Bluze",
+          "38": "Suvo za peglanje",
+          "39": "Odvlaživanje prostorije",
+          "3a": "Higijenska nega",
+          "3b": "Posteljina/Uklanjanje prašine",
+          "3c": "Sportska odeća",
+          "3d": "Džins",
+          "2f": "Intenzivno",
+          "30": "Sportska odeća",
+          "32": "Lako održavanje",
+          "33": "Sanitizacija parom+",
+          "34": "Osvežavanje parom",
+          "35": "Uklanjanje nabora",
+          "36": "Provetravanje hladnim vazduhom",
+          "3e": "Mala količina veša",
+          "2e": "Eko normalno"
+        }
+      },
+      "dryer_dry_level": {
+        "name": "Nivo sušenja",
+        "state": {
+          "none": "Isključeno",
+          "damp": "Vlažno",
+          "less": "Manje",
+          "normal": "Normalno",
+          "more": "Više",
+          "very": "Veoma"
+        }
+      },
+      "favorite_capacity": {
+        "name": "Omiljeni kapacitet"
+      },
+      "favorite_hotwater_temperature": {
+        "name": "Omiljena temperatura tople vode"
+      },
+      "filter_alarm_time": {
+        "name": "Interval alarma filtera",
+        "state": {
+          "180": "180 sati",
+          "300": "300 sati",
+          "500": "500 sati",
+          "700": "700 sati"
+        }
+      },
+      "finish_sound": {
+        "name": "Zvuk završetka",
+        "state": {
+          "off": "Isključeno",
+          "on": "Uključeno"
+        }
+      },
+      "flex_zone_mode": {
+        "name": "Režim fleksibilne zone",
+        "state": {
+          "cv_ttype_rf9000a_fridge": "Frižider",
+          "cv_ttype_rf9000a_freeze": "Zamrzavanje",
+          "cv_ttype_rf9000a_softfreeze": "Blago zamrzavanje",
+          "cv_ttype_rf9000a_meat_fish": "Meso/Riba",
+          "cv_ttype_rf9000a_fruit_veggies": "Voće i povrće",
+          "cv_ttype_rf9000a_beverage": "Piće",
+          "cv_fdr_wine": "Vino",
+          "cv_fdr_deli": "Delikates",
+          "cv_fdr_beverage": "Piće",
+          "cv_fdr_meat": "Meso",
+          "cv_fdr_soft_freezer": "Blagi zamrzivač",
+          "fconvert_freezer": "Zamrzavanje",
+          "fconvert_fridge": "Frižider",
+          "fconvert_off": "Isključeno",
+          "cv_ttype_freezer": "Zamrzivač",
+          "cv_ttype_soft_freezer": "Blagi zamrzivač",
+          "cv_ttype_chill": "Rashlađivanje",
+          "cv_ttype_cool": "Hlađenje",
+          "cv_ttype_ferment": "Fermentacija",
+          "cv_ttype_kimchi_warm": "Kimči, slabo",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, jako"
+        }
+      },
+      "heated_dry": {
+        "name": "Pametno sušenje",
+        "state": {
+          "off": "Isključeno",
+          "low": "Nisko",
+          "high": "Visoko",
+          "extra_high": "Veoma visoko"
+        }
+      },
+      "hot_water_temperature": {
+        "name": "Temperatura tople vode"
+      },
+      "ice_type": {
+        "name": "{instance_name} - tip leda",
+        "state": {
+          "off": "Isključeno",
+          "whiskey_iceball_3": "3 kugle/dan",
+          "whiskey_iceball_6": "6 kugli/dan",
+          "whiskey_iceball_9": "9 kugli/dan"
+        }
+      },
+      "led_brightness": {
+        "name": "Osvetljenje LED lampi na vratima",
+        "state": {
+          "low": "Slabo",
+          "high": "Jako"
+        }
+      },
+      "led_night_brightness": {
+        "name": "Noćno osvetljenje LED lampi na vratima",
+        "state": {
+          "low": "Slabo",
+          "high": "Jako"
+        }
+      },
+      "cooking_mode": {
+        "name": "Režim kuvanja",
+        "state": {
+          "no_operation": "Nema aktivnosti",
+          "micro_wave": "Mikrotalasna",
+          "micro_wave_grill": "Mikrotalasna + roštilj",
+          "micro_wave_convection": "Mikrotalasna + konvekcija",
+          "convection": "Konvekcija",
+          "air_fryer": "Prženje na vazduhu",
+          "grill": "Roštilj",
+          "autocook": "Automatsko kuvanje",
+          "autocook_custom": "Automatsko kuvanje (prilagođeno)",
+          "deodorization": "Uklanjanje mirisa",
+          "keep_warm": "Održavanje toplote"
+        }
+      },
+      "oven_mode": {
+        "name": "Režim pripreme hrane",
+        "state": {
+          "no_operation": "Bez operacije",
+          "bake": "Pečenje",
+          "broil": "Grilovanje",
+          "convection": "Konvekcija (Ventilator)",
+          "convection_bake": "Pečenje sa ventilatorom",
+          "convection_broil": "Grilovanje sa ventilatorom",
+          "frozen_pizza_plus": "Zamrznuta pica+",
+          "slow_cook": "Sporo kuvanje",
+          "plate_warm": "Zagrevanje tanjira",
+          "air_fry": "Prženje na vazduhu",
+          "convection_roast": "Pečenje mesa sa ventilatorom",
+          "keep_warm": "Održavanje toplote",
+          "bread_proof": "Narastanje testa",
+          "dehydrate": "Dehidratacija (Sušenje)",
+          "self_clean": "Samočišćenje",
+          "air_fryer": "Prženje na vazduhu",
+          "upper_broil": "Gornji gril",
+          "upper_convection_bake": "Gornje pečenje sa ventilatorom",
+          "upper_convection_roast": "Gornje pečenje mesa sa ventilatorom",
+          "lower_bake": "Donje pečenje",
+          "lower_convection_bake": "Donje pečenje sa ventilatorom",
+          "steam_bake": "Pečenje sa parom",
+          "steam_roast": "Pečenje mesa sa parom",
+          "upper_steam_bake": "Gornje pečenje sa parom",
+          "descale": "Uklanjanje kamenca",
+          "drain": "Ispuštanje vode",
+          "healthycook1": "Zdravo kuvanje 1",
+          "healthycook2": "Zdravo kuvanje 2",
+          "healthycook3": "Zdravo kuvanje 3",
+          "healthycook4": "Zdravo kuvanje 4",
+          "healthycook5": "Zdravo kuvanje 5",
+          "healthycook6": "Zdravo kuvanje 6",
+          "upper_healthycook1": "Gornje zdravo kuvanje 1",
+          "upper_healthycook2": "Gornje zdravo kuvanje 2",
+          "upper_healthycook3": "Gornje zdravo kuvanje 3",
+          "upper_healthycook4": "Gornje zdravo kuvanje 4",
+          "lower_healthycook1": "Donje zdravo kuvanje 1",
+          "lower_healthycook2": "Donje zdravo kuvanje 2",
+          "lower_healthycook3": "Donje zdravo kuvanje 3",
+          "lower_healthycook4": "Donje zdravo kuvanje 4"
+        }
+      },
+      "operating_mode": {
+        "name": "Režim rada"
+      },
+      "kimchi_zone_mode": {
+        "name": "{instance_name} - režim skladištenja",
+        "state": {
+          "off": "Isključeno",
+          "kimchi_storage_normal": "Kimči",
+          "kimchi_storage_cold": "Kimči, jako",
+          "kimchi_storage_warm": "Kimči, slabo",
+          "kimchi_storage_low_salt_normal": "Kimči sa manje soli",
+          "kimchi_storage_low_salt_cold": "Kimči sa manje soli, jako",
+          "kimchi_storage_low_salt_warm": "Kimči sa manje soli, slabo",
+          "kimchi_storage_crunfch": "Hrskavi kimči",
+          "kimchi_storage_buy": "Kupljeni kimči",
+          "storage_fridge_normal": "Frižider",
+          "storage_fridge_cold": "Frižider, jako",
+          "storage_fridge_warm": "Frižider, slabo",
+          "storage_fridge": "Frižider",
+          "storage_freezer_normal": "Zamrzivač",
+          "storage_freezer_cold": "Zamrzivač, jako",
+          "storage_freezer_warm": "Zamrzivač, slabo",
+          "storage_freezer": "Zamrzivač",
+          "kimchi_ripe_low_temp": "Sazrevanje kimčija, niska temperatura",
+          "kimchi_ripe_normal_temp": "Sazrevanje kimčija, sobna temperatura",
+          "kimchi_ripe_kkakdugi": "Sazrevanje kkakdugija",
+          "kimchi_ripe_dongchimi": "Sazrevanje dongčimija",
+          "meat_ripe_normal": "Sazrevanje mesa",
+          "storage_meat": "Meso i riba",
+          "storage_fridge_vegetables_fruit": "Voće i povrće",
+          "storage_fresh_cereal": "Žitarice",
+          "storage_fridge_drink": "Pića",
+          "storage_fresh_wine": "Vino",
+          "storage_fresh_potato_banana": "Krompir i banane",
+          "newmode_kimchi_0000": "Novi režim"
+        }
+      },
+      "pantry_zone_mode": {
+        "name": "Režim zone ostave",
+        "state": {
+          "fdr_wine": "Vino",
+          "fdr_deli": "Delikates",
+          "fdr_drinks": "Pića",
+          "ttype_meat_fish": "Meso/Riba",
+          "ttype_rf9000a_fridge": "Frižider"
+        }
+      },
+      "winecellar_pantry_zone_mode": {
+        "name": "Režim zone ostave",
+        "state": {
+          "processed_meat": "Prerađeno meso",
+          "cheese": "Sir",
+          "nuts": "Orašasti plodovi",
+          "fruit": "Voće",
+          "wine": "Vino"
+        }
+      },
+      "range_burner_power_level": {
+        "name": "Nivo snage gorionika {number}",
+        "state": {
+          "0": "Isključeno",
+          "boost": "Pojačano (Boost)",
+          "simmer": "Krčkanje"
+        }
+      },
+      "range_hood_lamp_brightness": {
+        "name": "Osvetljenje lampe",
+        "state": {
+          "1": "Nivo 1",
+          "2": "Nivo 2"
+        }
+      },
+      "rinse_cycles": {
+        "name": "Ciklusi ispiranja"
+      },
+      "laundry_out_time": {
+        "name": "Podsetnik za vađenje veša",
+        "state": {
+          "0": "Isključeno",
+          "30": "Na svakih 30 min",
+          "60": "Na svakih 60 min",
+          "90": "Na svakih 90 min"
+        }
+      },
+      "sensing_mode": {
+        "name": "Akcija AI Purify",
+        "state": {
+          "off": "Samo uzorkovanje",
+          "airpurify": "Automatsko čišćenje",
+          "alarm": "Pošalji obaveštenje"
+        }
+      },
+      "softener_concentration": {
+        "name": "Koncentracija omekšivača",
+        "state": {
+          "01": "1x",
+          "02": "2x",
+          "03": "3x"
+        }
+      },
+      "softener_quantity": {
+        "name": "Količina omekšivača",
+        "state": {
+          "00": "Nema",
+          "01": "Malo",
+          "02": "Srednje",
+          "03": "Mnogo"
+        }
+      },
+      "soil_level": {
+        "name": "Nivo zaprljanosti",
+        "state": {
+          "none": "Nema",
+          "extra_light": "Veoma lagano",
+          "light": "Lagano",
+          "normal": "Normalno",
+          "heavy": "Intenzivno",
+          "extra_heavy": "Veoma intenzivno"
+        }
+      },
+      "sound_mode": {
+        "name": "Režim zvuka",
+        "state": {
+          "voice": "Glas",
+          "tone": "Ton",
+          "mute": "Utišano"
+        }
+      },
+      "energy_saving_mode": {
+        "name": "Režim uštede energije"
+      },
+      "air_purifier_sound_mode": {
+        "name": "Režim zvuka",
+        "state": {
+          "mute": "Utišano",
+          "buzzer": "Zujalica"
+        }
+      },
+      "water_purifier_sound_mode": {
+        "name": "Režim zvuka",
+        "state": {
+          "voice": "Glas",
+          "fixedtone": "Fiksni ton",
+          "mute": "Utišano"
+        }
+      },
+      "spin_speed": {
+        "name": "Brzina centrifuge",
+        "state": {
+          "rinse_hold": "Zadržavanje ispiranja",
+          "no_spin": "Bez centrifuge",
+          "low": "Niska",
+          "medium": "Srednja",
+          "high": "Visoka",
+          "extra_low": "Veoma niska",
+          "extra_high": "Veoma visoka"
+        }
+      },
+      "wash_temperature": {
+        "name": "Temperatura pranja",
+        "state": {
+          "none": "Nema",
+          "cold": "Hladno",
+          "cool": "Hladnjikavo",
+          "warm": "Toplo",
+          "hot": "Vruće",
+          "extra_hot": "Veoma vruće",
+          "tap_cold": "Hladna voda iz slavine"
+        }
+      },
+      "washer_cycle_table_00": {
+        "name": "Ciklus",
+        "state": {
+          "01": "Normalno",
+          "50": "Sušenje pamuka",
+          "51": "Sušenje sintetike",
+          "55": "Beli veš",
+          "57": "Samočišćenje+",
+          "5b": "Pamuk",
+          "5c": "Dodatna brzina",
+          "5d": "Super eko pranje",
+          "5e": "Osetljivo",
+          "5f": "Nega beba",
+          "60": "Odeća za spoljne aktivnosti",
+          "61": "Tamni veš",
+          "63": "Čišćenje bubnja",
+          "64": "Ispiranje + Centrifuga",
+          "65": "Vuna",
+          "66": "Posteljina",
+          "67": "Sintetika",
+          "68": "Eko pamuk",
+          "6b": "Samo centrifuga",
+          "6c": "Džins",
+          "70": "Intenzivno pranje",
+          "71": "Posteljina",
+          "72": "Sanitizacija",
+          "73": "Ispiranje + Centrifuga",
+          "74": "Sportska odeća",
+          "75": "Osetljivo",
+          "77": "Lako održavanje",
+          "78": "Brzo pranje",
+          "91": "Samočišćenje",
+          "94": "Peškiri",
+          "9c": "Intenzivno pranje",
+          "9d": "Ispiranje + Centrifuga",
+          "9e": "Lako održavanje",
+          "9f": "Brzo pranje",
+          "a2": "Osetljivo",
+          "a3": "Sportska odeća",
+          "a5": "Posteljina",
+          "a9": "Sanitizacija",
+          "aa": "Beli veš",
+          "ab": "Eko hladno pranje",
+          "b1": "Samočišćenje+",
+          "ba": "Ispuštanje vode/Centrifuga",
+          "c7": "Eko čišćenje bubnja",
+          "ca": "Osvežavanje vazduhom",
+          "d0": "Pamuk",
+          "d1": "Eko pamuk",
+          "d2": "Sintetika",
+          "d3": "Osetljivo",
+          "d4": "Ispiranje + Centrifuga",
+          "d5": "Čišćenje bubnja",
+          "d6": "Posteljina",
+          "d7": "Odeća za spoljne aktivnosti",
+          "d8": "Vuna",
+          "da": "Super eko pranje",
+          "db": "Super brzina",
+          "dc": "Brzo pranje 15'",
+          "e3": "Svakodnevno pranje",
+          "e4": "Antialergijski program",
+          "e7": "Brzo pranje+Sušenje"
+        }
+      },
+      "washer_cycle_table_02": {
+        "name": "Ciklus",
+        "state": {
+          "01": "Normalno",
+          "02": "Ekstra intenzivno pranje",
+          "03": "Super eko pranje",
+          "04": "Brzo pranje",
+          "05": "Vuna/Fini veš",
+          "06": "Posteljina",
+          "07": "Odeća za spoljne aktivnosti",
+          "08": "Ispiranje+Centrifuga",
+          "09": "Čišćenje bubnja",
+          "0a": "Peškiri",
+          "0b": "Pranje na visokoj temperaturi (Okuvavanje)",
+          "0c": "Nega beba",
+          "0d": "Samo centrifuga",
+          "0e": "Oblačan dan",
+          "0f": "Čisto pranje",
+          "10": "Sušenje centrifugom",
+          "11": "Letnja posteljina",
+          "12": "Pamuk",
+          "13": "Crni pamuk",
+          "14": "Osetljiv donji veš",
+          "15": "Sportska odeća",
+          "16": "Bluze",
+          "17": "Preuzeto",
+          "18": "Blagi mehurići",
+          "19": "AI Pranje",
+          "1a": "Košulje",
+          "1b": "Pamuk",
+          "1c": "Eko 40-60",
+          "1d": "Super brzina",
+          "1e": "Brzo pranje 15'",
+          "1f": "Intenzivno hladno pranje",
+          "20": "Higijenska para",
+          "21": "Obojeni veš",
+          "22": "Vuna",
+          "23": "Odeća za spoljne aktivnosti",
+          "24": "Posteljina",
+          "25": "Sintetika",
+          "26": "Osetljivo",
+          "27": "Ispiranje+Centrifuga",
+          "28": "Ispuštanje vode/Centrifuga",
+          "29": "Čišćenje bubnja+",
+          "2a": "Džins",
+          "2b": "AI Pranje",
+          "2d": "Tiho pranje",
+          "2e": "Nega beba",
+          "2f": "Sportska odeća",
+          "30": "Oblačan dan",
+          "32": "Košulje",
+          "33": "Peškiri",
+          "34": "Mešovito",
+          "35": "Eko pamuk",
+          "36": "Pranje+Sušenje",
+          "37": "Osvežavanje vazduhom",
+          "38": "Sušenje pamuka",
+          "39": "Sušenje sintetike",
+          "3a": "Čišćenje bubnja",
+          "51": "Super brzina",
+          "52": "Eko hladno pranje",
+          "53": "Intenzivno pranje",
+          "54": "Peškiri",
+          "55": "Sportska odeća",
+          "56": "Posteljina",
+          "57": "Osetljivo",
+          "5a": "Sanitizacija parom",
+          "5b": "Mala količina veša",
+          "5e": "Ispiranje+Centrifuga",
+          "60": "Samočišćenje+",
+          "64": "Beli veš sa parom",
+          "65": "Obojeni veš",
+          "66": "Džins",
+          "69": "AI Pranje",
+          "6a": "Vuna",
+          "6b": "Džins",
+          "6c": "Bluze",
+          "6d": "Osetljivo",
+          "6e": "Sportska odeća",
+          "6f": "Posteljina",
+          "70": "Peškiri",
+          "71": "Brzo pranje",
+          "72": "Košulje",
+          "73": "Sanitizacija",
+          "74": "Čišćenje bubnja",
+          "75": "Odeća za spoljne aktivnosti",
+          "76": "Nega beba",
+          "77": "Pamuk",
+          "78": "Ispiranje + Centrifuga",
+          "79": "Samo centrifuga",
+          "7c": "Beli veš",
+          "7d": "Posteljina/Vodootporno",
+          "7e": "Samočišćenje",
+          "7f": "Vuna/Osetljivo",
+          "85": "Normalno sa parom",
+          "86": "Duboko pranje",
+          "87": "Preuzmi program",
+          "88": "Nega kućnih ljubimaca",
+          "8b": "Brzo pranje",
+          "8c": "AI OptiWash",
+          "8f": "Intenzivno hladno pranje",
+          "96": "Manje mikrovlakana",
+          "a0": "Brzo pranje 15'",
+          "b0": "Mešoviti veš",
+          "58": "Vuna",
+          "5c": "Odeća za spoljne aktivnosti",
+          "5d": "Snažno ispiranje",
+          "5f": "Samo centrifuga",
+          "63": "Snažna para",
+          "67": "Antialergijska para",
+          "68": "Kabasti veš sa parom"
+        }
+      },
+      "washer_dry_level": {
+        "name": "Nivo sušenja",
+        "state": {
+          "30": "30 min",
+          "60": "1 sat",
+          "90": "1 sat 30 min",
+          "120": "2 sata",
+          "180": "3 sata",
+          "240": "4 sata",
+          "none": "Isključeno",
+          "cupboard": "Suvo za ormar"
+        }
+      },
+      "zone_mode": {
+        "name": "Režim zone"
+      },
+      "watertank_light_color": {
+        "name": "Boja svetla rezervoara za vodu",
+        "state": {
+          "warmwhite": "Toplo bela",
+          "naturalwhite": "Prirodno bela",
+          "coolwhite": "Hladno bela",
+          "green": "Zelena",
+          "purple": "Ljubičasta",
+          "blue": "Plava",
+          "orange": "Narandžasta",
+          "pink": "Roze"
+        }
+      },
+      "watertank_light_brightness": {
+        "name": "Osvetljenje svetla rezervoara za vodu"
+      },
+      "air_filter_pm1_threshold": {
+        "name": "Prag alarma PM1 filtera"
+      },
+      "freezer_temperature_setpoint": {
+        "name": "Temperatura zamrzivača"
+      },
+      "edge_lighting_mode": {
+        "name": "Režim konturnog osvetljenja",
+        "state": {
+          "smart": "Pametno",
+          "high": "Jako",
+          "low": "Slabo"
+        }
+      },
+      "edge_lighting_color": {
+        "name": "Boja konturnog osvetljenja",
+        "state": {
+          "3000k": "3000 K",
+          "4000k": "4000 K",
+          "6500k": "6500 K"
+        }
+      },
+      "indicator_light_mode": {
+        "name": "Režim indikatorskog svetla",
+        "state": {
+          "smart": "Pametno",
+          "high": "Jako",
+          "low": "Slabo"
+        }
+      },
+      "ventilation_mode": {
+        "name": "Režim",
+        "state": {
+          "purification": "Prečišćavanje",
+          "ventilation": "Ventilacija",
+          "smartventilation": "Pametna ventilacija",
+          "aicomfort": "AI Comfort",
+          "autoventilation": "Automatska ventilacija",
+          "freshairintake": "Usisavanje svežeg vazduha",
+          "indoorpurification": "Unutrašnje prečišćavanje",
+          "indoordehumidification": "Unutrašnje odvlaživanje"
+        }
+      },
+      "dry_time": {
+        "name": "Vreme sušenja"
+      },
+      "booster_fan_mode": {
+        "name": "Režim booster ventilatora",
+        "state": {
+          "off": "Isključeno",
+          "auto": "Automatski",
+          "high": "Jako",
+          "medium": "Srednje"
+        }
+      },
+      "booster_light_color_temperature": {
+        "name": "Temperatura boje booster svetla",
+        "state": {
+          "3000k": "3000 K",
+          "4000k": "4000 K",
+          "6500k": "6500 K"
+        }
+      },
+      "booster_light_brightness": {
+        "name": "Osvetljenje booster svetla",
+        "state": {
+          "smart": "Pametno",
+          "high": "Jako",
+          "low": "Slabo"
+        }
+      },
+      "booster_oscillation_angle": {
+        "name": "Ugao oscilacije boostera",
+        "state": {
+          "normal": "Normalno",
+          "circulation": "Cirkulacija",
+          "right_narrow": "Desno usko",
+          "right_wide": "Desno široko",
+          "left_narrow": "Levo usko",
+          "left_wide": "Levo široko"
+        }
+      },
+      "ai_motion_wind": {
+        "name": "AI Motion Wind",
+        "state": {
+          "off": "Isključeno",
+          "surround": "Ambijentalno (Surround)",
+          "longreach": "Dug domet",
+          "down": "Nadole",
+          "power": "Snažno",
+          "windfree": "Wind-Free",
+          "aidirect": "AI direktno",
+          "aiindirect": "AI indirektno"
+        }
+      },
+      "wash_zone": {
+        "name": "Zona pranja",
+        "state": {
+          "on_on": "Obe korpe",
+          "off_on": "Samo donja korpa",
+          "on_off": "Samo gornja korpa"
+        }
+      },
+      "lamp_level": {
+        "name": "Nivo lampe",
+        "state": {
+          "off": "Isključeno",
+          "low": "Slabo",
+          "high": "Jako"
+        }
+      },
+      "audio_prompt_language": {
+        "name": "Jezik glasovnih obaveštenja",
+        "state": {
+          "eng": "Engleski",
+          "deu": "Nemački",
+          "fra": "Francuski",
+          "kor": "Korejski",
+          "spa": "Španski",
+          "eng_uk": "Engleski (UK)",
+          "ita": "Italijanski"
+        }
+      },
+      "equalizer": {
+        "name": "Ekvilajzer",
+        "state": {
+          "none": "Bez efekta",
+          "pop": "Pop",
+          "jazz": "Džez",
+          "classic": "Klasika",
+          "custom": "Prilagođeno"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Režim čišćenja",
+        "state": {
+          "auto": "Automatski",
+          "part": "Lokalno",
+          "repeat": "Ponovljeno",
+          "manual": "Ručno",
+          "stop": "Zaustavljeno",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Zvuk",
+        "state": {
+          "soundeffect": "Zvučni efekti",
+          "mute": "Utišano",
+          "voice": "Glas"
+        }
+      }
+    },
+    "sensor": {
+      "welcome_lighting_sense_level": {
+        "name": "Nivo osetljivosti svetla dobrodošlice",
+        "state": {
+          "nearest": "Najbliže",
+          "near": "Blizu",
+          "middle": "Srednje",
+          "far": "Daleko"
+        }
+      },
+      "auto_clean_progress": {
+        "name": "Napredak automatskog čišćenja"
+      },
+      "after_run_progress": {
+        "name": "Napredak naknadnog rada"
+      },
+      "air_filter_usage": {
+        "name": "Iskorišćenost filtera"
+      },
+      "air_filter_usage_hours": {
+        "name": "Sati korišćenja filtera"
+      },
+      "deodor_filter_usage": {
+        "name": "Iskorišćenost filtera"
+      },
+      "air_quality_standard": {
+        "name": "Standard kvaliteta vazduha"
+      },
+      "air_sensing_state": {
+        "name": "Status uzorkovanja vazduha"
+      },
+      "alarm_code": {
+        "name": "Kod alarma"
+      },
+      "auto_ventilation_action": {
+        "name": "Akcija automatske ventilacije"
+      },
+      "automatic_ventilation_state": {
+        "name": "Status automatske ventilacije"
+      },
+      "battery": {
+        "name": "Baterija"
+      },
+      "burner_state": {
+        "name": "Status gorionika {number}"
+      },
+      "burner_power_level": {
+        "name": "Nivo snage gorionika {number}"
+      },
+      "clean_level": {
+        "name": "Nivo čistoće"
+      },
+      "co2": {
+        "name": "CO2"
+      },
+      "coffee_brew_status": {
+        "name": "Status kuvanja kafe"
+      },
+      "connection_mode": {
+        "name": "Režim povezivanja",
+        "state": {
+          "observe": "Guranje (observe)",
+          "poll": "Prozivanje (polling)"
+        }
+      },
+      "last_response": {
+        "name": "Poslednji odgovor"
+      },
+      "filter_activity": {
+        "name": "Aktivnost filtera",
+        "state": {
+          "none": "Mirovanje",
+          "filtering": "Filtriranje",
+          "bypassing": "Premošćavanje (bypassing)",
+          "waiting": "Čekanje",
+          "stopping": "Zaustavljanje",
+          "sensing": "Uzorkovanje"
+        }
+      },
+      "cooktop_running_state": {
+        "name": "Status rada ploče za kuvanje"
+      },
+      "cooktop_state": {
+        "name": "Status ploče za kuvanje"
+      },
+      "current_limit_level": {
+        "name": "Nivo ograničenja struje"
+      },
+      "filter_time": {
+        "name": "Vreme filtera"
+      },
+      "hepa_filter_usage": {
+        "name": "Iskorišćenost HEPA filtera"
+      },
+      "outdoor_temperature": {
+        "name": "Spoljašnja temperatura"
+      },
+      "odor_controller_progress": {
+        "name": "Napredak kontrole mirisa"
+      },
+      "panel_status": {
+        "name": "Status panela"
+      },
+      "sound_output": {
+        "name": "Zvučni izlaz"
+      },
+      "dustbag_usage": {
+        "name": "Iskorišćenost kese za prašinu"
+      },
+      "cleanstation_status": {
+        "name": "Status stanice za čišćenje"
+      },
+      "stick_status": {
+        "name": "Status štapnog usisivača"
+      },
+      "stick_operation_mode": {
+        "name": "Režim rada štapnog usisivača"
+      },
+      "stick_cleaning_status": {
+        "name": "Status čišćenja štapnog usisivača"
+      },
+      "uvc_operation_time": {
+        "name": "Vreme rada UV-C svetla"
+      },
+      "uvc_total_operation_time": {
+        "name": "Ukupno vreme rada UV-C svetla"
+      },
+      "uvc_finished_time": {
+        "name": "Vreme završetka UV-C ciklusa"
+      },
+      "uvc_emitted_time": {
+        "name": "Vreme emitovanja UV-C svetla"
+      },
+      "overload_protection_mode": {
+        "name": "Režim zaštite od preopterećenja",
+        "state": {
+          "alarm": "Alarm",
+          "powersaving": "Ušteda energije"
+        }
+      },
+      "absence_power_saving_mode": {
+        "name": "Režim uštede energije tokom odsustva",
+        "state": {
+          "eco": "Eko",
+          "normal": "Normalno",
+          "comfort": "Komfor"
+        }
+      },
+      "motion_detect_wind_mode": {
+        "name": "Režim strujanja vazduha pri detekciji pokreta",
+        "state": {
+          "direct": "Direktno",
+          "indirect": "Indirektno"
+        }
+      },
+      "energy_saving_state": {
+        "name": "Status uštede energije"
+      },
+      "energy_saving_operating_status": {
+        "name": "Radni status uštede energije"
+      },
+      "current_temp_c": {
+        "name": "Temperatura"
+      },
+      "food_probe_temp": {
+        "name": "Sonda za hranu"
+      },
+      "food_probe_setpoint": {
+        "name": "Ciljna temperatura sonde za hranu"
+      },
+      "current_temperature_c": {
+        "name": "Temperatura"
+      },
+      "diagnosis": {
+        "name": "Dijagnostika",
+        "state": {
+          "ready": "Spremno"
+        }
+      },
+      "diagnosis_status": {
+        "name": "Status dijagnostike",
+        "state": {
+          "ready": "Spremno"
+        }
+      },
+      "drum_clean_cycles_remaining": {
+        "name": "Čišćenje bubnja potrebno za"
+      },
+      "drum_clean_last_cleaned": {
+        "name": "Bubanj je poslednji put očišćen"
+      },
+      "quick_wash": {
+        "name": "Brzo pranje",
+        "state": {
+          "not_used": "Nije dostupno",
+          "off": "Isključeno",
+          "on": "Uključeno"
+        }
+      },
+      "dryer_type": {
+        "name": "Tip sušare",
+        "state": {
+          "electricity": "Električna",
+          "gas": "Gasna"
+        }
+      },
+      "dust": {
+        "name": "Prašina"
+      },
+      "energy_kwh": {
+        "name": "Potrošnja energije"
+      },
+      "usage_runtime_hours": {
+        "name": "Vreme rada"
+      },
+      "energy_last_month_kwh": {
+        "name": "Potrošnja energije (prošli mesec)"
+      },
+      "energy_saved_kwh": {
+        "name": "Ušteda energije"
+      },
+      "energy_this_month_kwh": {
+        "name": "Potrošnja energije (ovaj mesec)"
+      },
+      "fan_direction": {
+        "name": "Smer ventilatora"
+      },
+      "fan_speed_level": {
+        "name": "Nivo brzine ventilatora"
+      },
+      "filter_clean_remain_time": {
+        "name": "Preostalo vreme do čišćenja filtera"
+      },
+      "filter_progress": {
+        "name": "Napredak filtera"
+      },
+      "filter_usage": {
+        "name": "Iskorišćenost filtera"
+      },
+      "fine_dust": {
+        "name": "Sitna prašina"
+      },
+      "finish_time": {
+        "name": "Procenjeno vreme završetka"
+      },
+      "completion_minutes": {
+        "name": "Preostalo vreme rada"
+      },
+      "freezer_temperature": {
+        "name": "Temperatura zamrzivača"
+      },
+      "fridge_temperature": {
+        "name": "Temperatura frižidera"
+      },
+      "kimchi_ripening_status": {
+        "name": "{instance_name} - status sazrevanja"
+      },
+      "kimchi_ripening_remaining": {
+        "name": "{instance_name} - preostalo vreme sazrevanja"
+      },
+      "kimchi_rack_count": {
+        "name": "{instance_name} - broj polica"
+      },
+      "hood_filter_capacity": {
+        "name": "Kapacitet filtera"
+      },
+      "humidity": {
+        "name": "Vlažnost vazduha"
+      },
+      "hood_filter_usage": {
+        "name": "Iskorišćenost filtera"
+      },
+      "instance_temperature": {
+        "name": "{instance_name} - temperatura"
+      },
+      "job_beginning_status": {
+        "name": "Status početka zadatka"
+      },
+      "last_air_sensing_level": {
+        "name": "Poslednji nivo uzorkovanja vazduha"
+      },
+      "last_air_sensing_time": {
+        "name": "Poslednje vreme uzorkovanja vazduha"
+      },
+      "main_timer_current": {
+        "name": "Trenutna vrednost tajmera"
+      },
+      "main_timer_state": {
+        "name": "Status tajmera"
+      },
+      "odor": {
+        "name": "Miris"
+      },
+      "operating_mode": {
+        "name": "Režim rada"
+      },
+      "operation_origin": {
+        "name": "Izvor poslednje operacije"
+      },
+      "operation_time_minutes": {
+        "name": "Vreme rada"
+      },
+      "oven_state": {
+        "name": "Status unutrašnjosti rerne",
+        "state": {
+          "ready": "Spremno",
+          "preheat": "Predgrevanje",
+          "cooking": "Kuvanje u toku",
+          "finish": "Završeno"
+        }
+      },
+      "cavity_state": {
+        "name": "Status unutrašnjosti rerne",
+        "state": {
+          "ready": "Spremno",
+          "preheat": "Predgrevanje",
+          "cooking": "Kuvanje u toku",
+          "finish": "Završeno"
+        }
+      },
+      "power_level": {
+        "name": "Nivo snage"
+      },
+      "paired_hood_fan_setting": {
+        "name": "Podešavanje ventilatora uparenog aspiratora",
+        "state": {
+          "off": "Isključeno",
+          "low": "Slabo",
+          "medium": "Srednje",
+          "high": "Jako",
+          "boost": "Pojačano"
+        }
+      },
+      "paired_hood_fan_speed": {
+        "name": "Brzina ventilatora uparenog aspiratora"
+      },
+      "paired_hood_firmware": {
+        "name": "Firmver uparenog aspiratora"
+      },
+      "paired_hood_model": {
+        "name": "Model uparenog aspiratora"
+      },
+      "paired_hood_shutoff_timer_set": {
+        "name": "Podešen tajmer za isključivanje uparenog aspiratora"
+      },
+      "paired_hood_shutoff_timer_state": {
+        "name": "Status tajmera za isključivanje uparenog aspiratora"
+      },
+      "power_energy_kwh": {
+        "name": "Utrošena električna energija"
+      },
+      "power_watts": {
+        "name": "Trenutna snaga"
+      },
+      "probe_battery": {
+        "name": "Baterija sonde"
+      },
+      "probe_target_temperature": {
+        "name": "Ciljna temperatura sonde"
+      },
+      "probe_temperature": {
+        "name": "Temperatura sonde"
+      },
+      "progress": {
+        "name": "Napredak",
+        "state": {
+          "idle": "Mirovanje",
+          "delaywash": "Odložen start",
+          "weightsensing": "Uzorkovanje težine veša",
+          "wash": "Pranje",
+          "rinse": "Ispiranje",
+          "spin": "Centrifuga",
+          "finish": "Završeno",
+          "steaming": "Tretman parom",
+          "airwashing": "Osvežavanje vazduhom",
+          "drying": "Sušenje",
+          "dryingwithdooropen": "Provetravanje",
+          "cooling": "Hlađenje",
+          "predrain": "Prethodno ispuštanje vode",
+          "prewash": "Pretpranje",
+          "sanitizing": "Sanitizacija"
+        }
+      },
+      "progress_percentage": {
+        "name": "Procenat napretka"
+      },
+      "selfcheck_error": {
+        "name": "Greška pri samoproveri"
+      },
+      "selfcheck_result": {
+        "name": "Rezultat samoprovere"
+      },
+      "selfcheck_status": {
+        "name": "Status samoprovere"
+      },
+      "sterilize_last_time": {
+        "name": "Vreme poslednje sterilizacije"
+      },
+      "sterilize_period": {
+        "name": "Period sterilizacije"
+      },
+      "sterilize_plan_time": {
+        "name": "Planirano vreme sterilizacije"
+      },
+      "sterilize_run_time": {
+        "name": "Vreme trajanja sterilizacije"
+      },
+      "super_fine_dust": {
+        "name": "Veoma sitna prašina"
+      },
+      "warming_center_state": {
+        "name": "Status zone za održavanje toplote"
+      },
+      "water_liters": {
+        "name": "Potrošnja vode"
+      },
+      "waterpurifier_status": {
+        "name": "Status prečišćivača vode"
+      },
+      "cup_state": {
+        "name": "Status šolje"
+      },
+      "last_pour_type": {
+        "name": "Tip poslednjeg sipanja"
+      },
+      "last_pour_capacity": {
+        "name": "Količina poslednjeg sipanja"
+      },
+      "machine_state": {
+        "name": "Status mašine",
+        "state": {
+          "idle": "Mirovanje",
+          "active": "Aktivno",
+          "pause": "Pauzirano"
+        }
+      },
+      "filter_status": {
+        "name": "Status filtera",
+        "state": {
+          "normal": "Normalno",
+          "wash": "Operite",
+          "replace": "Zamenite"
+        }
+      },
+      "ice_making_status": {
+        "name": "{instance_name} - status pravljenja leda",
+        "state": {
+          "icestatus_stop": "Mirovanje",
+          "icestatus_run": "Pravljenje leda"
+        }
+      },
+      "zone_temperature": {
+        "name": "Temperatura zone"
+      },
+      "zone2_temperature": {
+        "name": "Temperatura zone 2"
+      },
+      "watertank_full_alarm_status": {
+        "name": "Status alarma za pun rezervoar vode"
+      },
+      "air_filter_pm1_usage": {
+        "name": "Iskorišćenost PM1 filtera"
+      },
+      "air_filter_pm1_usage_hours": {
+        "name": "Sati korišćenja PM1 filtera"
+      },
+      "active_burners": {
+        "name": "Aktivni gorionici"
+      },
+      "cooktop_monitoring": {
+        "name": "Nadgledanje ploče za kuvanje"
+      },
+      "booster_angle_location": {
+        "name": "Pozicija ugla boostera"
+      },
+      "cooking_mode": {
+        "name": "Režim kuvanja",
+        "state": {
+          "no_operation": "Nema aktivnosti",
+          "micro_wave": "Mikrotalasna",
+          "autocook": "Automatsko kuvanje",
+          "keep_warm": "Održavanje toplote"
+        }
+      },
+      "cook_time": {
+        "name": "Vreme kuvanja"
+      },
+      "cook_time_remaining": {
+        "name": "Preostalo vreme kuvanja"
+      },
+      "cook_finish_time": {
+        "name": "Vreme završetka kuvanja"
+      },
+      "sub_operation": {
+        "name": "Pod-operacija"
+      },
+      "hood_fan_speed": {
+        "name": "Brzina ventilatora",
+        "state": {
+          "off": "Isključeno",
+          "low": "Mala",
+          "medium": "Srednja",
+          "high": "Visoka",
+          "boost": "Pojačana"
+        }
+      },
+      "hood_lamp": {
+        "name": "Lampa",
+        "state": {
+          "off": "Isključeno",
+          "medium": "Srednje",
+          "on": "Uključeno"
+        }
+      },
+      "dual_setpoint_cooling": {
+        "name": "Hlađenje sa dvostrukom zadanom tačkom"
+      },
+      "dual_setpoint_heating": {
+        "name": "Grejanje sa dvostrukom zadanom tačkom"
+      },
+      "auto_changeover_cool_primary_offset": {
+        "name": "Primarno odstupanje hlađenja pri automatskom prebacivanju"
+      },
+      "auto_changeover_cool_secondary_offset": {
+        "name": "Sekundarno odstupanje hlađenja pri automatskom prebacivanju"
+      },
+      "auto_changeover_heat_primary_offset": {
+        "name": "Primarno odstupanje grejanja pri automatskom prebacivanju"
+      },
+      "auto_changeover_heat_secondary_offset": {
+        "name": "Sekundarno odstupanje grejanja pri automatskom prebacivanju"
+      },
+      "cooktop_device_type": {
+        "name": "Kod tipa uređaja"
+      },
+      "cooktop_flex_coil": {
+        "name": "Kod fleksibilne indukcione zone"
+      },
+      "main_timer_set": {
+        "name": "Podešavanje glavnog tajmera"
+      },
+      "burner_pan_size": {
+        "name": "Veličina posude na gorioniku {number}"
+      },
+      "cooktop_timer_remaining": {
+        "name": "Preostalo vreme na tajmeru"
+      },
+      "cooktop_timer_status": {
+        "name": "Status tajmera"
+      },
+      "cooktop_ring_size": {
+        "name": "Veličina prstena gorionika {number}",
+        "state": {
+          "idle": "Mirovanje",
+          "single": "Jednostruki",
+          "dual": "Dvostruki",
+          "triple": "Trostruki"
+        }
+      },
+      "heat_generated_kwh": {
+        "name": "Proizvedena toplota"
+      },
+      "three_way_valve": {
+        "name": "Trokraki ventil"
+      },
+      "current_eq_mode": {
+        "name": "Trenutni EQ režim"
+      },
+      "installation_type": {
+        "name": "Tip instalacije"
+      },
+      "micom_version": {
+        "name": "Verzija mikrokontrolera (Micom)"
+      },
+      "network_connection": {
+        "name": "Veze",
+        "state": {
+          "ethernet": "Ethernet",
+          "wifi": "Wi-Fi"
+        }
+      },
+      "sound_from": {
+        "name": "Zvuk iz"
+      },
+      "speaker_status": {
+        "name": "Status zvučnika"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signal"
+      },
+      "robot_status": {
+        "name": "Status robota",
+        "state": {
+          "cleaning": "Čišćenje",
+          "point": "Lokalno čišćenje",
+          "homing": "Povratak na bazu",
+          "charging": "Punjenje",
+          "idle": "Mirovanje",
+          "pause": "Pauzirano",
+          "alarm": "Alarm",
+          "reserve": "Zakazano",
+          "poweroff": "Isključen"
+        }
+      },
+      "robot_movement": {
+        "name": "Kretanje"
+      },
+      "oven_setpoint": {
+        "name": "Zadana vrednost"
+      }
+    },
+    "switch": {
+      "night_lighting_schedule": {
+        "name": "Raspored noćnog osvetljenja"
+      },
+      "ai_energy_level": {
+        "name": "AI Energy režim"
+      },
+      "air_monitoring": {
+        "name": "Praćenje kvaliteta vazduha"
+      },
+      "air_purify": {
+        "name": "Prečišćavanje vazduha"
+      },
+      "auto_clean": {
+        "name": "Automatsko čišćenje"
+      },
+      "absence_power_saving_active": {
+        "name": "Ušteda energije tokom odsustva aktivna"
+      },
+      "absence_clean": {
+        "name": "Čišćenje tokom odsustva"
+      },
+      "motion_detect_wind_active": {
+        "name": "Izbegavanje strujanja vazduha pri detekciji pokreta aktivno"
+      },
+      "beep": {
+        "name": "Zvučni signal"
+      },
+      "display": {
+        "name": "Ekran"
+      },
+      "periodic_air_sensing": {
+        "name": "AI Purify prečišćavanje"
+      },
+      "periodic_sensing_skip_status": {
+        "name": "Preskakanje AI Purify uzorkovanja"
+      },
+      "pet_filter_activation": {
+        "name": "Aktivacija filtera za dlake kućnih ljubimaca"
+      },
+      "auto_empty": {
+        "name": "Automatsko pražnjenje"
+      },
+      "dustbin_auto_close": {
+        "name": "Automatsko zatvaranje posude za prašinu"
+      },
+      "spi": {
+        "name": "Jonizator vazduha"
+      },
+      "uvc_intensive_mode": {
+        "name": "Intenzivni UV-C režim"
+      },
+      "auto_door_opener": {
+        "name": "Automatsko otvaranje vrata"
+      },
+      "auto_door_sound_control": {
+        "name": "Zvuk automatskog otvaranja vrata"
+      },
+      "auto_door_voice_control": {
+        "name": "Glasovna kontrola automatskog otvaranja vrata"
+      },
+      "auto_release_dry": {
+        "name": "Automatsko otvaranje vrata radi sušenja"
+      },
+      "autofill": {
+        "name": "Automatsko dopunjavanje bokala"
+      },
+      "bubble_soak": {
+        "name": "Natapanje mehurićima"
+      },
+      "buzz_lock": {
+        "name": "Zaključavanje zujalice"
+      },
+      "cabinet_light_dim": {
+        "name": "Postepeno pojačavanje osvetljenja"
+      },
+      "cabinet_light_switch": {
+        "name": "Svetlo vitrine"
+      },
+      "child_lock": {
+        "name": "Zaštita za decu"
+      },
+      "coldwater_lock": {
+        "name": "Zaključavanje hladne vode"
+      },
+      "cooktop_child_lock": {
+        "name": "Zaštita za decu"
+      },
+      "defrost_delay": {
+        "name": "Odlaganje odmrzavanja"
+      },
+      "display_light": {
+        "name": "Svetlo ekrana"
+      },
+      "dnd": {
+        "name": "Ne uznemiravaj (Do not disturb)"
+      },
+      "fast_preheat": {
+        "name": "Brzo predgrevanje"
+      },
+      "favorite_capacity_enabled": {
+        "name": "Omiljeni kapacitet"
+      },
+      "favorite_coffee_enabled": {
+        "name": "Omiljena kafa"
+      },
+      "filter_remind": {
+        "name": "Podsetnik za filter"
+      },
+      "fridge_sound": {
+        "name": "Zvuk"
+      },
+      "hotwater_lock": {
+        "name": "Zaključavanje tople vode"
+      },
+      "ice_maker_enabled": {
+        "name": "Ledomat"
+      },
+      "ice_night_mode": {
+        "name": "Tihi noćni režim ledomata"
+      },
+      "ai_precise_cooling": {
+        "name": "AI precizno hlađenje"
+      },
+      "instance_enabled": {
+        "name": "{instance_name} - omogućen"
+      },
+      "intensive": {
+        "name": "Intenzivno"
+      },
+      "add_wash_alarm": {
+        "name": "AddWash alarm"
+      },
+      "add_wash_alarm_rinse": {
+        "name": "AddWash ispiranje"
+      },
+      "add_wash_alarm_final_rinse": {
+        "name": "AddWash završno ispiranje"
+      },
+      "add_wash_alarm_spin": {
+        "name": "AddWash centrifuga"
+      },
+      "lamp": {
+        "name": "Lampa"
+      },
+      "led_night_light": {
+        "name": "Noćno LED svetlo na vratima"
+      },
+      "mute_once": {
+        "name": "Utišaj jednom"
+      },
+      "natural_steam": {
+        "name": "Prirodna para"
+      },
+      "energy_saving": {
+        "name": "Ušteda energije"
+      },
+      "cooktop_on_alert": {
+        "name": "Upozorenje da je ploča uključena"
+      },
+      "power_switch": {
+        "name": "Napajanje"
+      },
+      "pre_wash": {
+        "name": "Pretpranje"
+      },
+      "rapid_freezing": {
+        "name": "Brzo zamrzavanje"
+      },
+      "rapid_fridge": {
+        "name": "Brzo hlađenje"
+      },
+      "remind_beep": {
+        "name": "Podsetnik za završni signal"
+      },
+      "sabbath_mode": {
+        "name": "Šabat režim (Sabbath mode)"
+      },
+      "sanitize": {
+        "name": "Sanitizacija"
+      },
+      "sound": {
+        "name": "Zvuk"
+      },
+      "station_light": {
+        "name": "Svetlo stanice"
+      },
+      "storm_wash": {
+        "name": "Storm Wash+"
+      },
+      "vacation_mode": {
+        "name": "Režim odmora"
+      },
+      "welcome_lighting": {
+        "name": "Svetlo dobrodošlice"
+      },
+      "wrinkle_prevent": {
+        "name": "Sprečavanje gužvanja"
+      },
+      "zone_power": {
+        "name": "Napajanje zone"
+      },
+      "away_mode": {
+        "name": "Režim odsutnosti"
+      },
+      "watertank_light": {
+        "name": "Svetlo rezervoara za vodu"
+      },
+      "uv_led": {
+        "name": "UV LED"
+      },
+      "ventilation_alarm": {
+        "name": "Alarm za ventilaciju"
+      },
+      "edge_lighting": {
+        "name": "Konturno osvetljenje"
+      },
+      "indicator_light": {
+        "name": "Indikatorsko svetlo"
+      },
+      "windfree": {
+        "name": "Wind-Free režim"
+      },
+      "windsleep": {
+        "name": "Režim spavanja"
+      },
+      "auto_detergent": {
+        "name": "Automatsko doziranje deterdženta"
+      },
+      "auto_softener": {
+        "name": "Automatsko doziranje omekšivača"
+      },
+      "booster_light": {
+        "name": "Booster svetlo"
+      },
+      "booster_light_manual_brightness": {
+        "name": "Ručno podešavanje osvetljenja boostera"
+      },
+      "booster_oscillation": {
+        "name": "Oscilacija boostera"
+      },
+      "auto_changeover": {
+        "name": "Automatsko prebacivanje"
+      },
+      "interlock": {
+        "name": "Međusobno zaključavanje (Interlock)"
+      },
+      "speed_booster": {
+        "name": "Brzi booster (Speed Booster)"
+      },
+      "damp_alert": {
+        "name": "Upozorenje na vlagu"
+      },
+      "extra_rinse": {
+        "name": "Dodatno ispiranje"
+      },
+      "active_voice_amplifier": {
+        "name": "Aktivno pojačalo glasa (Active Voice Amplifier)"
+      },
+      "audio_prompt": {
+        "name": "Glasovno obaveštenje"
+      },
+      "auto_power_down": {
+        "name": "Automatsko isključivanje"
+      },
+      "auto_update": {
+        "name": "Automatsko ažuriranje"
+      },
+      "bass_boost": {
+        "name": "Pojačanje basa"
+      },
+      "night_mode": {
+        "name": "Noćni režim"
+      },
+      "pass_through": {
+        "name": "Direktan prolaz signala (Pass-through)"
+      },
+      "q_symphony": {
+        "name": "Q-Symphony"
+      },
+      "spacefit_sound": {
+        "name": "SpaceFit zvuk"
+      },
+      "voice_amplifier": {
+        "name": "Pojačavač glasa"
+      },
+      "repeated_cleaning": {
+        "name": "Ponovi čišćenje"
+      }
+    },
+    "time": {
+      "delay_finish_at": {
+        "name": "Završi do"
+      },
+      "dnd_end": {
+        "name": "Kraj režima \"Ne uznemiravaj\""
+      },
+      "dnd_start": {
+        "name": "Početak režima \"Ne uznemiravaj\""
+      },
+      "led_night_end": {
+        "name": "Kraj noćnog LED svetla na vratima"
+      },
+      "led_night_start": {
+        "name": "Početak noćnog LED svetla na vratima"
+      },
+      "ice_night_end": {
+        "name": "Kraj tihog noćnog režima ledomata"
+      },
+      "ice_night_start": {
+        "name": "Početak tihog noćnog režima ledomata"
+      },
+      "night_end": {
+        "name": "Kraj noćnog svetla"
+      },
+      "night_start": {
+        "name": "Početak noćnog svetla"
+      },
+      "sensing_skip_end": {
+        "name": "Kraj preskakanja AI Purify uzorkovanja"
+      },
+      "sensing_skip_start": {
+        "name": "Početak preskakanja AI Purify uzorkovanja"
+      }
+    },
+    "water_heater": {
+      "dhw": {
+        "name": "Topla voda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normalno",
+              "turbo": "Turbo",
+              "quiet": "Tiho",
+              "extra_quiet": "Veoma tiho"
+            }
+          }
+        }
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dodajte Samsung uređaj",
+        "description": "Unesite IP adresu vašeg Samsung uređaja. LocalThings ga automatski podešava pomoću samopotpisanog sertifikata — većini uređaja ništa drugo nije potrebno.",
+        "data": {
+          "host": "IP adresa"
+        },
+        "data_description": {
+          "host": "Lokalna IP adresa vašeg Samsung uređaja (npr. 192.168.1.50)."
+        }
+      },
+      "user_reuse": {
+        "title": "Dodajte Samsung uređaj",
+        "description": "Unesite IP adresu vašeg Samsung uređaja. Akreditivi sertifikacionog tela (CA) sa postojećeg LocalThings uređaja će biti ponovo iskorišćeni.",
+        "data": {
+          "host": "IP adresa"
+        },
+        "data_description": {
+          "host": "Lokalna IP adresa vašeg Samsung uređaja (npr. 192.168.1.50)."
+        }
+      },
+      "credential": {
+        "title": "Sertifikat je odbijen",
+        "description": "{host} je odbio automatski sertifikat. Neki uređaji zahtevaju unapred deljeni ključ (PSK) umesto sertifikata. LocalThings ne može samostalno da pribavi taj ključ, pa uvezite onaj koji već posedujete. Takođe je ponuđen i AC14K_M CA sertifikat, ali do sada nije prijavljeno da ga je prihvatio nijedan uređaj koji je odbio automatski sertifikat.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "menu_options": {
+          "psk_owner": "Uvezite unapred deljeni ključ vlasnika",
+          "psk_peer": "Uvezite unapred deljeni ključ klijenta",
+          "fallback_ca": "Isprobajte AC14K_M CA sertifikat"
+        }
+      },
+      "credential_psk": {
+        "title": "Ovaj uređaj verovatno koristi unapred deljeni ključ",
+        "description": "{host} je odbio automatski sertifikat, a njegovi nešifrovani bezbednosni metapodaci pokazuju da se umesto toga autentifikuje pomoću unapred deljenog ključa (PSK). LocalThings ne može samostalno da pribavi taj ključ, pa uvezite onaj koji već posedujete. Takođe je ponuđen i AC14K_M CA sertifikat, ali do sada nije prijavljeno da ga je prihvatio nijedan uređaj koji je odbio automatski sertifikat.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "menu_options": {
+          "psk_owner": "Uvezite unapred deljeni ključ vlasnika (owner PSK)",
+          "psk_peer": "Uvezite unapred deljeni ključ klijenta (peer PSK)",
+          "fallback_ca": "Isprobajte AC14K_M CA sertifikat"
+        }
+      },
+      "ca_rejected": {
+        "title": "Sertifikat je i dalje odbijen",
+        "description": "{host} je takođe odbio sertifikat koji je potpisalo to sertifikaciono telo (CA). To se poklapa sa svim dosadašnjim izveštajima: nijedan uređaj koji je odbio automatski sertifikat nije prihvatio AC14K_M CA. Moguće je da umesto toga koristi unapred deljeni ključ. Dnevnik (log) Home Assistant-a beleži tačno upozorenje.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "menu_options": {
+          "psk_owner": "Uvezite unapred deljeni ključ vlasnika (owner PSK)",
+          "psk_peer": "Uvezite unapred deljeni ključ klijenta (peer PSK)",
+          "fallback_ca": "Ponovo unesite CA"
+        }
+      },
+      "fallback_ca": {
+        "title": "AC14K_M CA sertifikat",
+        "description": "Nalepite AC14K_M CA sertifikat i privatni ključ. LocalThings ih koristi za potpisivanje sertifikata uređaja za {host}.",
+        "data": {
+          "ca_cert_pem": "CA sertifikat (PEM)",
+          "ca_key_pem": "CA privatni ključ (PEM)"
+        },
+        "data_description": {
+          "ca_cert_pem": "PEM-kodirani lanac AC14K_M CA sertifikata. Nalepite kompletan sadržaj vašeg fullchain PEM fajla, uključujući sve BEGIN/END CERTIFICATE blokove.",
+          "ca_key_pem": "PEM-kodirani AC14K_M privatni ključ. Nalepite kompletan sadržaj, uključujući BEGIN/END PRIVATE KEY zaglavlje i podnožje."
+        }
+      },
+      "psk_owner": {
+        "title": "Unapred deljeni ključ vlasnika",
+        "description": "Unesite unapred deljeni ključ vlasnika koji se čuva za {host}. Identitet je OCF vlasnički UUID, koji se automatski popunjava kada ga uređaj prijavi. LocalThings proverava ključ sa uređajem i beleži koji je uređaj odgovorio pre nego što ga doda.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "data": {
+          "psk_identity": "Identitet (vlasnički UUID)",
+          "psk_key": "Ključ"
+        },
+        "data_description": {
+          "psk_key": "32 ili 64 heksadecimalna karaktera."
+        }
+      },
+      "psk_peer": {
+        "title": "Unapred deljeni ključ klijenta",
+        "description": "Unesite upareni kredencijal klijenta koji je instaliran na {host} uporedo sa Samsungovim vlasništvom, tačno onako kako je prijavio alat koji ga je instalirao. Ni identitet ni ključ se ne mogu pročitati sa uređaja. LocalThings proverava ključ sa uređajem i beleži koji je uređaj odgovorio pre nego što ga doda.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "data": {
+          "psk_identity": "Identitet (peer UUID)",
+          "psk_key": "Ključ"
+        },
+        "data_description": {
+          "psk_key": "32 ili 64 heksadecimalna karaktera."
+        }
+      },
+      "reconfigure": {
+        "title": "Promenite adresu uređaja",
+        "description": "Unesite trenutnu IP adresu uređaja. Sve ostalo u vezi sa ovim uređajem ostaje nepromenjeno — njegovi entiteti, istorija i automatizacije se zadržavaju.",
+        "data": {
+          "host": "IP adresa"
+        },
+        "data_description": {
+          "host": "Lokalna IP adresa vašeg Samsung uređaja (npr. 192.168.1.50)."
+        }
+      },
+      "confirm_unknown_type": {
+        "title": "Tip uređaja nije prepoznat",
+        "description": "Ovaj uređaj je prijavio model „{model}“, što je tip koji LocalThings još uvek ne prepoznaje. Ipak će biti dodat, ali samo sa zajedničkim funkcijama (napajanje, alarmi itd. gde postoje), a ne sa punim kompletom za njegovu porodicu uređaja. Možete pomoći u dodavanju pune podrške nakon toga tako što ćete preuzeti dijagnostiku za ovaj uređaj (Podešavanja > Uređaji i usluge > ovaj uređaj > meni > Preuzmi dijagnostiku) i poslati je u novom „issue“ tiketu. Potvrdite da biste ga ipak dodali."
+      },
+      "legacy_token": {
+        "title": "Token uređaja",
+        "description": "Ovaj uređaj ({host}) koristi Samsungov stariji lokalni API, koji zahteva token uređaja kao i sertifikat.\n\nOstavite ovo prazno i potvrdite da bi uređaj izdao token: od uređaja će se tražiti token i on će ga poslati nazad u Home Assistant na port 8889. Najpre uključite daljinsko upravljanje (Smart Control) na uređaju sa zatvorenim vratima, inače će se prekinuti Wi-Fi veza u roku od nekoliko minuta i uređaj nikada neće odgovoriti. Ovo traje do minut i po.\n\nAko uređaj ne može da pristupi Home Assistant-u na portu 8889, pribavite token na drugi način i umesto toga ga nalepite ovde.",
+        "data": {
+          "device_token": "Token uređaja (ostavite prazno da biste zatražili novi)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Token uređaja je odbijen",
+        "description": "{host} više ne prihvata svoj token uređaja. Ostavite ovo prazno i potvrdite da bi uređaj izdao novi (daljinsko upravljanje uključeno, vrata zatvorena i port 8889 dostupan na Home Assistant-u), ili nalepite token koji ste pribavili na drugi način.",
+        "data": {
+          "device_token": "Token uređaja (ostavite prazno da biste zatražili novi)"
+        }
+      }
+    },
+    "error": {
+      "no_response": "Nema odgovora sa te IP adrese — ništa nije vraćeno ni na jednom portu u lokalnom API opsegu uređaja (UDP 49152-49160). Proverite da li je IP adresa tačna, da li je uređaj uključen i na istoj mreži kao i Home Assistant, i da li zaštitni zid (firewall) odbacuje UDP saobraćaj ka njemu.",
+      "ports_closed": "Ta IP adresa je dostupna, ali je aktivno odbila svaki port u lokalnom API opsegu (UDP 49152-49160) i nije odgovorila ništa na kanalu za otkrivanje. Najverovatnije nije u pitanju Samsung uređaj, ili to nije uređaj sa omogućenim lokalnim API-jem.",
+      "no_dtls_server": "Portovi u lokalnom API opsegu su dostupni na toj adresi, ali ništa tamo nije odgovorilo na DTLS rukovanje (handshake). Proverite da li IP adresa pripada uređaju, a ne nekom drugom uređaju na vašoj mreži.",
+      "appliance_no_dtls": "Ta adresa jeste Samsung uređaj — identifikovao se kao {model} preko nešifrovanog kanala za otkrivanje i oglasio svoj bezbedni port kao {port} — ali nikada nije završio DTLS rukovanje na njemu. Adresa nije problem. Proverite da li je na panelu uređaja isključeno daljinsko upravljanje (Remote Control) ili slična postavka, i pogledajte dnevnik (log) Home Assistant-a za tačan uzrok neuspeha.",
+      "non_appliance_stack": "Nešto na toj IP adresi je odgovorilo, ali se identifikovalo kao OCF usluga koja nije kućni aparat. Neki Samsung uređaji pokreću takvu uslugu uporedo sa sopstvenom, a LocalThings može pronaći aparat iza nje samo kada je Home Assistant na istom mrežnom segmentu. Stavite Home Assistant i uređaj na isti subnet i VLAN, pa pokušajte ponovo.",
+      "multiple_appliances": "Više od jednog Samsung uređaja odgovara na toj IP adresi, a LocalThings još uvek ne može da izabere između njih. Molimo vas da to prijavite na LocalThings sistemu za praćenje grešaka i priložite dnevnik (log) Home Assistant-a.",
+      "handshake_timeout": "Uređaj je odgovorio na svom lokalnom API portu, ali nikada nije završio DTLS rukovanje, čak ni nakon ponovnog pokušaja. Pokušajte ponovo. Ako i dalje ne uspeva, ponovno pokretanje (restart) uređaja će očistiti veze koje još uvek drži; dnevnik (log) Home Assistant-a sadrži tačan uzrok neuspeha.",
+      "cert_rejected": "Uređaj je odbio sertifikat. CA sertifikat i ključ najverovatnije nisu AC14K_M CA kojem ovaj uređaj veruje, ili nisu upareni. Dnevnik (log) Home Assistant-a beleži tačno upozorenje koje je uređaj poslao.",
+      "psk_rejected": "Uređaj je odbio unapred deljeni ključ (PSK). Identitet ili ključ su pogrešni, ili pripadaju drugom uređaju ili vlasniku koji se u međuvremenu promenio. Dnevnik (log) Home Assistant-a beleži tačno upozorenje.",
+      "identity_unproven": "Ključ je proradio, ali uređaj nije prijavio svoj OCF ID uređaja preko šifrovane veze, tako da LocalThings ne može da potvrdi koji uređaj drži ključ i neće ga dodati. Pokušajte ponovo dok je uređaj budan (aktivan). Ako se ovo i dalje dešava, obavestite nas u [tiketu #435]({issue_url}) i priložite dnevnik (log) Home Assistant-a.",
+      "invalid_psk_identity": "Unesite identitet kao UUID, na primer 12345678-1234-1234-1234-123456789abc.",
+      "psk_identity_zero_byte": "Ovaj UUID sadrži nulti bajt koji instalirani transport ne može da pošalje. Zadržite pronađeni identitet nepromenjen.",
+      "invalid_psk_key": "Unesite ključ kao 32 ili 64 heksadecimalna karaktera.",
+      "handshake_failed": "Uređaj je odbio DTLS rukovanje iz razloga koji nije povezan sa sertifikatom, najverovatnije zbog nepodudaranja protokola ili šifarskog skupa (cipher suite). Dnevnik (log) Home Assistant-a beleži tačno upozorenje koje je poslao.",
+      "cloud_unreachable": "Nije moguće pristupiti Samsungovom cloud mrežnom prolazu (gateway) radi preuzimanja UUID-a potrebnog za izradu sertifikata ovog uređaja. Proverite pristup internetu za Home Assistant i pokušajte ponovo.",
+      "unexpected_response": "Povezivanje sa uređajem je uspešno, ali on nije vratio upotrebljiv opis uređaja. Možda to nije uređaj koji ova integracija podržava. Dnevnik (log) Home Assistant-a beleži šta je uređaj poslao.",
+      "cannot_connect": "Nije moguće povezivanje sa uređajem. Proverite da li je IP adresa tačna i da li je uređaj uključen i povezan na vašu mrežu.",
+      "invalid_ca": "CA sertifikat ili privatni ključ se ne mogu učitati. Proverite da li je PEM sadržaj ispravan i da li ključ odgovara sertifikatu.",
+      "unknown": "Neočekivana greška. Pogledajte dnevnike (logs) Home Assistant-a za više detalja.",
+      "wrong_device": "Samsung uređaj je odgovorio na toj adresi, ali to nije ovaj — prijavio je drugačiji identitet. Proverite da li adresa pripada ovom uređaju. Da biste dodali onaj drugi, umesto toga koristite \"Dodaj uređaj\".",
+      "token_not_received": "Token uređaja nije stigao. Proverite da li je na uređaju uključeno daljinsko upravljanje (Remote Control) sa zatvorenim vratima, i da li uređaj može da pristupi Home Assistant-u na portu 8889 - ili nalepite token koji ste pribavili na drugi način.",
+      "invalid_token": "Uređaj je odbio taj token uređaja. Ostavite polje prazno da biste zatražili novi.",
+      "callback_port_in_use": "Port 8889 je već u upotrebi na Home Assistant-u, obično zbog zahteva za tokenom koji još uvek čeka. Pokušajte ponovo za minut i po.",
+      "callback_cert_rejected": "Uređaj je uzvratio poziv na portu 8889, ali je odbio samopotpisani sertifikat Home Assistant-a. Nalepite AC14K_M CA sertifikat i ključ kako bi LocalThings mogao da potpiše onaj koji uređaj prihvata; zahtev za tokenom će se tada ponovo pokrenuti.",
+      "callback_ca_rejected": "Uređaj je uzvratio poziv na portu 8889, ali je odbio i sertifikat potpisan od strane AC14K_M. Nalepite token koji ste pribavili na drugi način, i pogledajte dnevnik (log) Home Assistant-a za grešku pri rukovanju."
+    },
+    "abort": {
+      "already_configured": "Uređaj je već konfigurisan",
+      "already_in_progress": "Proces konfiguracije je već u toku",
+      "reconfigure_successful": "Adresa je ažurirana",
+      "no_entry_for_mac": "Nijedan konfigurisani uređaj ne čuva tu MAC adresu",
+      "reauth_successful": "Novi token uređaja radi; uređaj se ponovo povezuje.",
+      "reauth_unsupported": "Ovaj uređaj nema kredencijal koji se ovde može obnoviti. Ako je prestao da odgovara, uklonite ga i ponovo ga dodajte."
+    },
+    "progress": {
+      "legacy_token": "Čeka se da {host} pošalje token uređaja u Home Assistant na port 8889. Ovo traje do minut i po."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "LocalThings opcije",
+        "menu_options": {
+          "settings": "Podešavanja uređaja",
+          "subdevices": "Poduređaji",
+          "cloud_courses": "Preuzmi cikluse",
+          "forget_learned_modes": "Zaboravi zapamćene režime",
+          "debug_write": "Otklanjanje grešaka: upisivanje u resurs"
+        }
+      },
+      "settings": {
+        "title": "Podešavanja uređaja",
+        "description": "Neki uređaji prihvataju određene komande upisa (npr. podrazumevano doziranje deterdženta/omekšivača na veš mašini) čak i kada prijavljuju da je daljinsko upravljanje isključeno. LocalThings podrazumevano blokira svaki upis uz jasnu poruku o grešci kad god uređaj javi da je daljinsko upravljanje isključeno, umesto da dozvoli uređaju da to tiho odbaci. Omogućite ovo samo ako ste potvrdili da upisi zaista rade na ovom uređaju kada je daljinsko upravljanje isključeno — u suprotnom ćete jasnu poruku o grešci zameniti za tihi neuspeh.\n\nProcenjeno vreme završetka se ponovo izračunava na osnovu procene preostalog vremena uređaja prilikom svakog uzorkovanja, što može da varira ili da se koriguje za minut ili dva između ažuriranja. Povećajte minimalnu vrednost promene ispod da biste zadržali senzor na poslednjoj prijavljenoj vrednosti sve dok se procena ne pomeri za najmanje toliko minuta, čime se smanjuje šum u istoriji/dnevniku. Postavite na 0 da biste prijavili svaku izračunatu promenu.\n\nNeki modeli prijavljuju režim koji nikada ne navode kao podržan — na primer, klima uređaj koji je postavljen na Tihi režim (Quiet), a nudi samo Off/Sleep/Speed. LocalThings pamti svaki takav režim koji uoči i nastavlja da ga nudi, tako da ostaje dostupan za izbor nakon što je uređaj bio u njemu barem jednom. Isključite ovo da biste nudili samo ono što uređaj oglašava; koristite „Zaboravi zapamćene režime“ na prethodnom ekranu da biste obrisali ono što je već zapamćeno.\n\nUređaj za pranje veša sa ciklusima preuzetim sa oblaka ovde dobija podsetnik kada prijavi ciklus koji Home Assistant još uvek ne može da ponudi — neki uređaji ga prijavljuju čak i ako sami nikada niste otvorili ekran „Preuzmi cikluse“ u aplikaciji SmartThings. Isključite ovo da biste zaustavili taj podsetnik i sakrili već imenovane preuzete cikluse sa liste ciklusa; ništa što je već podešeno neće biti izgubljeno, a ponovno uključivanje vraća sve nazad.",
+        "data": {
+          "bypass_remote_control_lock": "Dozvoli upise čak i kada je prijavljeno da je daljinsko upravljanje isključeno",
+          "finish_time_hysteresis_minutes": "Procenjen završetak -- minimalna promena (minuti)",
+          "learn_device_modes": "Zapamti režime koje uređaj prijavljuje ali ih ne oglašava",
+          "cloud_courses_enabled": "Ponudi preuzete cikluse"
+        }
+      },
+      "subdevices": {
+        "title": "Poduređaji",
+        "description": "Neki kućni aparati izlažu više od jednog uređaja: svaka unutrašnja jedinica multi-split sistema ili svaka rerna kod dvostruke pećnice. Drugi prijavljuju dodatni slot koji nije stvarni hardver, što se prikazuje kao duplirani ili prazan uređaj. Odoznačite bilo koji poduređaj koji ne odgovara nečemu na vašem aparatu. Taj uređaj će biti uklonjen i integracija će se ponovo učitati bez njega; označite ga ponovo da biste ga vratili.",
+        "data": {
+          "enabled_subdevices": "Zadrži ove poduređaje"
+        }
+      },
+      "forget_learned_modes": {
+        "title": "Zaboravi zapamćene režime",
+        "description": "Trenutno zapamćeno: {codes}\n\nOvo su režimi u kojima je uređaj sam sebe prijavio bez navođenja da su podržani, a čuvaju se kako bi ostali dostupni za izbor. Zaboravljanje ovih režima je rešenje ako se ispostavi da je neki od njih lažan — sve što uređaj ponovo zaista prijavi biće jednostavno ponovo zapamćeno, osim ako ne isključite opciju „Zapamti režime koje uređaj prijavljuje ali ih ne oglašava“ u podešavanjima uređaja."
+      },
+      "debug_write": {
+        "title": "Otklanjanje grešaka: upisivanje u resurs",
+        "description": "Alat za napredne korisnike za precizno utvrđivanje ponašanja upisa specifičnog za uređaj. Izaberite resurs (href) u koji želite da pišete ili upišite prilagođeni koji nije na listi. Ovo zaobilazi blokadu isključenog daljinskog upravljanja i šalje tačno ona polja koja navedete — može poremetiti konfiguraciju vašeg aparata, pa ga koristite pažljivo i svesno.",
+        "data": {
+          "href": "Href resursa"
+        }
+      },
+      "debug_edit": {
+        "title": "Upis za otklanjanje grešaka: {href}",
+        "description": "Trenutna vrednost za `{href}`:\n```\n{current_value}\n```\nIspod unesite SAMO polje(a) koja želite da promenite. Ono što unesete šalje se uređaju u izvornom obliku (delimično ažuriranje); to se NE spaja sa poljima prikazanim iznad, tako da nemojte ponovo lepiti celu vrednost. Vodite računa o tipovima podataka: numerički string poput \"1\" mora ostati pod navodnicima — obično 1 se šalje kao ceo broj (integer), što neki uređaji odbijaju.",
+        "data": {
+          "payload": "Korisni teret (payload) za upis"
+        }
+      },
+      "debug_result": {
+        "title": "Rezultat upisa za otklanjanje grešaka",
+        "description": "Uređaj je vratio CoAP kod {code}. Klasa 2.xx znači da je upis prihvaćen; 4.xx/5.xx znači da je odbijen. Resurs sada glasi:\n```\n{new_value}\n```\nAko je vrednost nepromenjena, uređaj je verovatno odbacio upis. Izaberite šta dalje da uradite:",
+        "menu_options": {
+          "debug_write": "Upišite u drugi resurs",
+          "finish": "Završi"
+        }
+      },
+      "cloud_manual": {
+        "title": "Preuzmi cikluse",
+        "description": "Ovaj aparat prijavljuje {total} preuzetih ciklusa; {found} je uočeno do sada.\n\nPodešavanja preuzetog ciklusa su vidljiva samo dok je taj ciklus učitan, a aparat nikada ne prijavljuje njihova imena. Da biste dodali one koji nedostaju ({pending}): u aplikaciji SmartThings (ne na samom aparatu), otvorite ovaj aparat i dodirnite „Preuzmi cikluse“ — poseban red u odnosu na „Ciklus“, niže na ekranu, i onaj koji je ovde važan. Prođite kroz svaki preuzeti program redom, zastajući nekoliko sekundi na svakom kako bi LocalThings mogao da ga uoči, a zatim se vratite ovde.\n\nDajte svakom od njih ime koje želite da vidite u Home Assistant-u. Ostavite ime prazno da taj ciklus ne bi bio na listi ciklusa. Imena moraju biti jedinstvena.\n\nCiklus preuzimanja (Download cycle) je program na ovom aparatu koji pokreće preuzeti program. Detektuje se automatski, ali ga potvrdite ovde pre upotrebe: izbor preuzetog ciklusa upisuje ovaj kod programa u aparat.",
+        "data": {
+          "download_course": "Kod programa preuzetog ciklusa"
+        }
+      },
+      "cloud_courses": {
+        "title": "Preuzmi cikluse",
+        "description": "Vođeno podešavanje vas vodi kroz proces: u aplikaciji SmartThings (ne na samom aparatu), otvorite ovaj aparat i dodirnite „Preuzmi cikluse“ — poseban red u odnosu na „Ciklus“, niže na ekranu, i onaj koji je ovde važan. Tamo izaberite ciklus, a zatim se vratite i imenujte ga kako bude pronađen, jedan po jedan.\n\nOpcija „Izmeni imena“ prikazuje sve što je do sada pronađeno odjednom — koristite je da kasnije preimenujete ili ispravite nešto. Imenovanje radi na oba načina, ali preuzeti ciklus se nudi kao ciklus koji se može izabrati samo dok je opcija „Ponudi preuzete cikluse“ uključena u podešavanjima uređaja.",
+        "menu_options": {
+          "cloud_guided": "Vođeno podešavanje",
+          "cloud_manual": "Izmeni imena"
+        }
+      },
+      "cloud_wait": {
+        "title": "Preuzmi cikluse"
+      },
+      "cloud_name": {
+        "title": "Imenujte ovaj ciklus",
+        "description": "Slot „Preuzmi cikluse“ na aparatu sada sadrži novi ciklus (slot {slot}) i prijavljuje da je preostalo još {remaining}.\n\nDajte mu ime koje želite da vidite u Home Assistant-u, a zatim na ekranu „Preuzmi cikluse“ u aplikaciji SmartThings izaberite sledeći koji već nije označen kao „Preuzet“. Ostavite prazno da biste ovaj ciklus izostavili sa liste.\n\nDo sada imenovano ({named} od {total}): {named_list}\n\nImena moraju biti jedinstvena. Možete zatvoriti ovaj prozor kad god želite — imena se čuvaju u hodu.",
+        "data": {
+          "name": "Ime",
+          "download_course": "Kod programa preuzetog ciklusa"
+        }
+      },
+      "cloud_timeout": {
+        "title": "Nijedan ciklus nije izabran",
+        "description": "Ništa se nije promenilo na aparatu. Uverite se da ste dodirnuli „Preuzmi cikluse“ u aplikaciji SmartThings — poseban red u odnosu na „Ciklus“, niže na ekranu — i izabrali onaj koji već nije označen kao „Preuzet“, a zatim dodirnuli Gotovo (Done).\n\nDo sada imenovano ({named} od {total}): {named_list}\n\nSve što je do sada imenovano je već sačuvano.",
+        "menu_options": {
+          "cloud_guided": "Čekaj ponovo",
+          "cloud_finish": "Završi"
+        }
+      }
+    },
+    "error": {
+      "empty_payload": "Unesite najmanje jedno polje za upis.",
+      "write_failed": "Upis nije uspeo. Proverite dnevnike (logs) Home Assistant-a za više detalja.",
+      "cloud_course_name_duplicate": "Dva ciklusa imaju isto ime. Imena moraju biti jedinstvena.",
+      "cloud_course_unknown_course": "Taj program nije među onima koje ovaj aparat nudi. Izaberite neki sa liste."
+    },
+    "abort": {
+      "not_loaded": "Ovaj uređaj još uvek nije povezan. Pokušajte ponovo kada se učita."
+    },
+    "progress": {
+      "cloud_wait": "U aplikaciji SmartThings (ne na samom aparatu), otvorite ovaj aparat i dodirnite „Preuzmi cikluse“ — poseban red u odnosu na „Ciklus“, niže na ekranu, koji navodi samo cikluse koje ovaj sistem može da detektuje. Izaberite onaj koji već nije označen kao „Preuzet“, a zatim dodirnite Gotovo (Done).\n\nAparat ne mora biti u blizini niti pokretati ciklus — dovoljno je da bude uključen i povezan.\n\nDo sada imenovano ({named} od {total}): {named_list}\n\nMožete zatvoriti ovaj prozor u bilo kom trenutku — imena se čuvaju u hodu."
+    }
+  },
+  "issues": {
+    "device_gap": {
+      "title": "Nepotpuna podrška za funkcije uređaja {device_name}",
+      "description": "Ovom uređaju nedostaje potpuna podrška za sve funkcije. Ili tip aparata nije prepoznat, ili neki od resursa koje izlaže još uvek nisu modelovani. Nastaviće da radi sa funkcijama koje su već podržane. Možete pomoći u proširenju podrške tako što ćete otići na Podešavanja > Uređaji i usluge > {device_name} > meni (gore desno) > Preuzmi dijagnostiku, a zatim je poslati koristeći priloženi šablon za tiket (issue template)."
+    },
+    "cloud_courses_undiscovered": {
+      "title": "Preuzeti ciklusi nisu podešeni za {device_name}",
+      "description": "{device_name} ima {pending} od ukupno {total} preuzetih ciklusa koje Home Assistant još uvek ne može da ponudi. Preuzeti ciklus se može koristiti tek kada aparat bude uočen sa učitanim tim ciklusom — na ekranu „Preuzmi cikluse“ u aplikaciji SmartThings, a ne na ekranu „Ciklus“ — i nakon što mu dodelite ime.\n\nDa biste ih podesili, idite na Podešavanja > Uređaji i usluge > LocalThings > {device_name} > Konfiguriši > Preuzmi cikluse i pratite uputstva tamo.\n\nNe koristite preuzete cikluse? Idite na Konfiguriši > Podešavanja uređaja i isključite opciju „Ponudi preuzete cikluse“ da biste trajno isključili ovaj podsetnik."
+    }
+  },
+  "exceptions": {
+    "remote_control_disabled": {
+      "message": "Daljinsko upravljanje je isključeno na ovom uređaju. Proverite priručnik za aparat kako biste omogućili daljinsko upravljanje pre nego što Home Assistant bude mogao da ga kontroliše."
+    },
+    "oven_mode_idle_not_selectable": {
+      "message": "Uređaj prijavljuje stanje mirovanja (NoOperation) dok rerna ne radi. Ono se ne može izabrati kao režim; umesto toga otkažite pečenje na panelu rerne."
+    },
+    "debug_payload_empty": {
+      "message": "Korisni teret (payload) upisa za otklanjanje grešaka ne sme biti prazan objekat."
+    },
+    "debug_batch_too_many_elements": {
+      "message": "Korisni teret za grupni upis (batch payload) mora imati između 1 i {max} elemenata."
+    },
+    "debug_batch_element_invalid": {
+      "message": "Svaki grupni element mora biti objekat sa href parametrom i rep parametrom koji je objekat, ukoliko postoji."
+    },
+    "resource_href_required": {
+      "message": "Href resursa je obavezan."
+    },
+    "bubble_soak_unavailable_for_cycle": {
+      "message": "Natapanje mehurićima (Bubble Soak) nije dostupno na izabranom ciklusu."
+    },
+    "pre_wash_unavailable_for_cycle": {
+      "message": "Pretpranje nije dostupno na izabranom ciklusu."
+    },
+    "intensive_unavailable_for_cycle": {
+      "message": "Intenzivno pranje nije dostupno na izabranom ciklusu."
+    },
+    "command_failed": {
+      "message": "Komanda za {href} nije uspela čak ni nakon ponovnog povezivanja: {error}"
+    },
+    "cook_start_unconfirmed": {
+      "message": "Početak kuvanja nije mogao biti potvrđen i pokušaj nije ponovljen. Proverite uređaj pre nego što pokušate ponovo. Detalji: {error}"
+    },
+    "command_refused": {
+      "message": "Aparat je odbio komandu za {href}: {error}"
+    },
+    "command_not_confirmed": {
+      "message": "Komanda za {href} je poslata dok je daljinsko upravljanje isključeno, ali je aparat još uvek ne prikazuje. Ako je ne izvrši, uključite daljinsko upravljanje na samom aparatu."
+    },
+    "debug_read_failed": {
+      "message": "Čitanje sa {href} nije uspelo: {error}"
+    },
+    "observe_duration_out_of_range": {
+      "message": "Trajanje mora biti veće od 0 i najviše {max} sekundi."
+    },
+    "observe_not_supported": {
+      "message": "Interfejs ovog aparata ne podržava nadgledanje (observing) resursa."
+    },
+    "observe_query_while_observed": {
+      "message": "Ova integracija već nadgleda resurs {href}, tako da se ne može ponovo nadgledati pomoću upita."
+    },
+    "observe_in_progress": {
+      "message": "Resurs {href} se već nadgleda putem drugog poziva. Sačekajte da se završi."
+    },
+    "debug_observe_failed": {
+      "message": "Nadgledanje resursa {href} nije uspelo: {error}"
+    },
+    "debug_too_many_writes": {
+      "message": "Navedite između 1 i 10 komandi upisa."
+    },
+    "debug_settle_out_of_range": {
+      "message": "Vreme smirivanja (settle) mora biti između 0 i 30 sekundi."
+    },
+    "debug_verify_after_out_of_range": {
+      "message": "Vreme provere (verify_after) mora biti između 0 i 60 sekundi."
+    },
+    "service_device_target_invalid": {
+      "message": "Ova usluga zahteva tačno jedan ciljni uređaj."
+    },
+    "service_device_not_found": {
+      "message": "Nije pronađen nijedan odgovarajući uređaj za taj cilj."
+    },
+    "service_device_not_loaded": {
+      "message": "Ovaj uređaj još uvek nije povezan. Pokušajte ponovo kada se učita."
+    },
+    "cook_start_not_supported": {
+      "message": "Ovaj aparat ne prijavljuje nijedan režim kuvanja koji se može pokrenuti daljinski, pa se ne može pokrenuti iz Home Assistant-a."
+    },
+    "cook_start_not_idle": {
+      "message": "Aparat već kuva. Prvo ga zaustavite, ili promenite zadanu temperaturu i vreme kuvanja tokom rada."
+    },
+    "cook_mode_required": {
+      "message": "Prvo izaberite režim kuvanja. Ovaj aparat se može pokrenuti u sledećim režimima: {startable}."
+    },
+    "cook_mode_not_startable": {
+      "message": "Režim {mode} se ne može pokrenuti daljinski na ovom aparatu. Može se pokrenuti u: {startable}."
+    },
+    "cook_mode_unavailable": {
+      "message": "Režim {mode} trenutno nije dostupan na ovoj zoni rerne. Može se pokrenuti: {startable}."
+    },
+    "cook_temperature_not_supported": {
+      "message": "Režim {mode} ne zahteva temperaturu."
+    },
+    "cook_temperature_required": {
+      "message": "Za režim {mode} je potrebna temperatura."
+    },
+    "cook_temperature_not_a_choice": {
+      "message": "Za režim {mode} se mogu izabrati samo sledeće vrednosti: {choices}."
+    },
+    "cook_temperature_out_of_range": {
+      "message": "Za režim {mode} temperatura mora biti od {min} do {max}."
+    },
+    "cook_duration_not_supported": {
+      "message": "Režim {mode} ne zahteva vreme kuvanja."
+    },
+    "cook_duration_required": {
+      "message": "Za režim {mode} je potrebno vreme kuvanja."
+    },
+    "cook_duration_out_of_range": {
+      "message": "Za režim {mode} vreme kuvanja mora biti od {min} do {max}."
+    },
+    "extra_rinse_unavailable_for_cycle": {
+      "message": "Dodatno ispiranje nije dostupno na izabranom ciklusu."
+    },
+    "paired_hood_fan_off": {
+      "message": "Uključite ventilator aspiratora pre nego što podesite tajmer za njegovo isključivanje."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ovaj robot usisivač ne podržava brzinu ventilatora {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ovaj robot usisivač nema {command} na listi podržanih komandi."
+    },
+    "vacuum_command_params": {
+      "message": "Komande za robot usisivač ne primaju parametre."
+    }
+  },
+  "selector": {
+    "instance_name": {
+      "options": {
+        "freezer": "Zamrzivač",
+        "cooler": "Frižider",
+        "top": "Gornji odeljak",
+        "middle": "Srednji odeljak",
+        "bottom": "Donji odeljak",
+        "onedoor": "Kimči odeljak",
+        "winecellar_top": "Gornja zona za vino",
+        "winecellar_bottom": "Donja zona za vino",
+        "door_freezer": "Vrata zamrzivača",
+        "door_cooler": "Vrata frižidera",
+        "door_fridge": "Vrata frižidera",
+        "door_cvroom": "Vrata fleksibilne zone",
+        "door_winecellar": "Vrata vinskog vitrina",
+        "door_onedoorfreezer": "Glavna vrata",
+        "door_onedoorkimchi": "Glavna vrata",
+        "ice_maker": "Ledomat",
+        "cubed_ice": "Kockice leda",
+        "ice_bites": "Drobljeni led (Ice Bites)",
+        "whiskey_ice_ball": "Kugle od leda"
+      }
+    }
+  },
+  "services": {
+    "start_cooking": {
+      "name": "Pokreni kuvanje",
+      "description": "Pokrenite kuvanje u rerni, na šporetu ili u mikrotalasnoj. Mogu se koristiti samo režimi za koje sam aparat navodi da se mogu pokrenuti daljinski, uz sopstvena ograničenja temperature i vremena za taj režim. Daljinsko upravljanje mora biti uključeno na aparatu, a aparat mora biti u stanju mirovanja. Ostavite sva polja prazna da biste pokrenuli ono što trenutno zadržavaju entiteti za režim, zadanu vrednost i vreme kuvanja; u suprotnom, sve što je izostavljeno koristiće sopstvenu podrazumevanu vrednost režima.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Rerna, šporet ili mikrotalasna koju treba pokrenuti."
+        },
+        "mode": {
+          "name": "Režim",
+          "description": "Režim kuvanja, onako kako ga aparat naziva (na primer Bake ili ConvectionBake). Podrazumeva se sopstveni podrazumevani režim aparata."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "U jedinici temperature Home Assistant-a. Zaokružuje se na korak promene režima. Podrazumeva se sopstvena podrazumevana vrednost režima. Izostavite za režim koji ne zahteva temperaturu."
+        },
+        "duration": {
+          "name": "Vreme kuvanja",
+          "description": "Koliko dugo treba kuvati/peći, uključujući predgrevanje. Podrazumeva se sopstvena podrazumevana vrednost režima."
+        }
+      }
+    },
+    "write_resource": {
+      "name": "Upiši resurs",
+      "description": "Pošaljite jedan ili više sirovih delimičnih upisa (partial-rep) direktno u OCF resurse uređaja, po redosledu, sa opcionim odlaganjem smirivanja između koraka i odloženim ponovnim čitanjem na kraju — za obrnuti inženjering protokola upisa uređaja (tiket #300), a ne za svakodnevnu kontrolu. Ovo zaobilazi blokadu isključenog daljinskog upravljanja i svaku funkciju write_fn/validate_fn kroz koju prolazi uobičajeni upis entiteta, i šalje tačno ona polja koja navedete u izvornom obliku: može poremetiti konfiguraciju vašeg aparata. Dajte prednost stvarnom entitetu ili panelu za otklanjanje grešaka (Debug write) u meniju integracije za sve što ova integracija već modeluje.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Aparat u koji se vrši upis ili jedan od njegovih poduređaja."
+        },
+        "writes": {
+          "name": "Upisi",
+          "description": "1-10 upisa koje treba izvršiti po redosledu. Svaka stavka zahteva href (kanonski resurs, npr. /mode/vs/0) i korisni teret (payload) (neprazan objekat poslat u izvornom obliku kao partial-rep POST, ili listu elemenata koji sadrže href i opciono rep poslat u izvornom obliku kao OCF Collection grupni upis — format u kojem /device/0 odgovara na čitanje i koji se koristi za pokretanje kuvanja u rerni; element može izostaviti rep, a unutrašnji href parametri grupnog upisa se nikada ne prepisuju, čak ni za poduređaj); settle je broj sekundi koliko treba sačekati nakon tog upisa pre početka sledećeg (0-30, podrazumevano 0); readback (podrazumevano true) označava da li treba odmah ponovo pročitati resurs za polja „nakon“/„promenjeno“. Postavite na false na ploči gde se upis prihvata a zatim poništava — na nekim firmverima taj trenutni GET zahtev sam po sebi pokreće poništavanje, pa njegovo ostavljanje uključenim čini čitanje delom eksperimenta. Bez toga, polje „promenjeno“ se vraća kao null, a verify_after je jedina provera."
+        },
+        "hold_session_lock": {
+          "name": "Zadrži zaključavanje sesije tokom celog niza",
+          "description": "Zadržite sesiju uređaja tokom celog niza komandi, uključujući i odlaganja smirivanja, tako da se ništa drugo — rutinsko uzorkovanje, upis drugog entiteta — ne može umetnuti između dva koraka i zamagliti na koji upis je aparat zapravo reagovao. Uključeno je po podrazumevanim podešavanjima. Isključivanjem ove opcije sesija se preuzima po pojedinačnom upisu i oslobađa tokom čekanja, što omogućava entitetima da nastave sa ažuriranjem tokom dugog niza komandi, po cenu te sigurnosti."
+        },
+        "verify_after": {
+          "name": "Proveri nakon",
+          "description": "Broj sekundi koliko treba sačekati nakon završetka celog niza komandi pre ponovnog čitanja svakog izmenjenog href resursa, kako bi se videlo da li su vrednosti zadržane ili ih je ploča poništila. Vrednost 0 (podrazumevano) preskače proveru."
+        }
+      }
+    },
+    "read_resource": {
+      "name": "Pročitaj resurs",
+      "description": "Pročitajte OCF resurse uređaja direktno, zaobilazeći model entiteta ove integracije. Navedite href za direktan GET zahtev u realnom vremenu sa uređaja — namerno ne iz keš memorije, koja može biti zastarela do intervala uzorkovanja — ili ga izostavite da biste dobili keširani snimak svakog resursa koji ova integracija trenutno prati na tom uređaju.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Aparat sa kojeg se vrši čitanje ili jedan od njegovih poduređaja."
+        },
+        "href": {
+          "name": "Href resursa",
+          "description": "Kanonski href resursa za čitanje (npr. /mode/vs/0). Dodajte upit nakon znaka ? da biste ga poslali uz GET zahtev, npr. /device/1?if=oic.if.b, sa znakom & između parametara. Izostavite da biste dobili keširani snimak svih praćenih resursa umesto GET zahteva u realnom vremenu."
+        }
+      }
+    },
+    "observe_resource": {
+      "name": "Nadgledaj resurs",
+      "description": "Pretplatite se na jedan od OCF resursa uređaja pomoću CoAP OBSERVE protokola na određeno vreme, i preuzmite svako obaveštenje koje je uređaj poslao uporedo sa običnim GET zahtevom tog istog resursa. Služi za pronalaženje polja koja uređaj šalje samo u obaveštenjima, a ne za svakodnevnu upotrebu. Uzorkovanje i upisi se nastavljaju dok sistem sluša. Nije dostupno na aparatima koji koriste TCP 8888.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Aparat koji se nadgleda ili jedan od njegovih poduređaja."
+        },
+        "href": {
+          "name": "Href resursa",
+          "description": "Kanonski href resursa za nadgledanje (npr. /energy/consumption/vs/0). Dodajte upit nakon znaka ? da biste ga poslali uz pretplatu, na isti način kao i kod opcije Pročitaj resurs."
+        },
+        "duration": {
+          "name": "Trajanje",
+          "description": "Broj sekundi tokom kojih se slušaju obaveštenja, najviše do 120."
+        }
+      }
+    }
+  }
+}
