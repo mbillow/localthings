@@ -688,6 +688,17 @@
           "very": "Sehr"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatur",
+        "state": {
+          "none": "Keine Wärme",
+          "extra_low": "Extra niedrig",
+          "low": "Niedrig",
+          "medium_low": "Mittel-niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
       "favorite_capacity": {
         "name": "Favoritenmenge"
       },
@@ -1728,12 +1739,14 @@
           "idle": "Leerlauf",
           "delaywash": "Startverzögerung",
           "weightsensing": "Beladungserkennung",
+          "laundrysensing": "Wäscheerkennung",
           "wash": "Waschen",
           "rinse": "Spülen",
           "spin": "Schleudern",
           "finish": "Fertig",
           "steaming": "Dämpfen",
           "airwashing": "Luftreinigung",
+          "aidrying": "Trocknen",
           "drying": "Trocknen",
           "dryingwithdooropen": "Lüften",
           "cooling": "Abkühlen",

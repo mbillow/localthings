@@ -789,7 +789,7 @@ OVEN_CONNECTED = Capability(
             field="x.com.samsung.da.connected",
             icon="mdi:view-split-horizontal",
             exists_fn=_is_lower_cavity,
-            value_fn=lambda v: v == "On",
+            value_fn=lambda v: {"On": True, "Off": False}.get(v),
         ),
     ),
 )

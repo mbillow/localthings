@@ -688,6 +688,17 @@
           "very": "Molto"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Senza calore",
+          "extra_low": "Molto bassa",
+          "low": "Bassa",
+          "medium_low": "Medio-bassa",
+          "medium": "Media",
+          "high": "Alta"
+        }
+      },
       "favorite_capacity": {
         "name": "Capacità preferita"
       },
@@ -1734,12 +1745,14 @@
           "idle": "Inattivo",
           "delaywash": "Ritardo di avvio",
           "weightsensing": "Rilevamento del carico",
+          "laundrysensing": "Rilevamento del bucato",
           "wash": "Lavaggio",
           "rinse": "Risciacquo",
           "spin": "Centrifuga",
           "finish": "Completato",
           "steaming": "Vapore",
           "airwashing": "Lavaggio ad aria",
+          "aidrying": "Asciugatura",
           "drying": "Asciugatura",
           "dryingwithdooropen": "Ventilazione",
           "cooling": "Raffreddamento",

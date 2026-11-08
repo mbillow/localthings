@@ -688,6 +688,17 @@
           "very": "매우 많이"
         }
       },
+      "drying_temperature": {
+        "name": "건조 온도",
+        "state": {
+          "none": "열 없음",
+          "extra_low": "매우 낮음",
+          "low": "낮음",
+          "medium_low": "중간 낮음",
+          "medium": "중간",
+          "high": "높음"
+        }
+      },
       "favorite_capacity": {
         "name": "즐겨찾기 출수량"
       },
@@ -1733,13 +1744,15 @@
         "state": {
           "idle": "대기",
           "delaywash": "예약 시작",
-          "weightsensing": "세탁물 감지",
+          "weightsensing": "무게 감지",
+          "laundrysensing": "세탁물 감지",
           "wash": "세탁",
           "rinse": "헹굼",
           "spin": "탈수",
           "finish": "완료",
           "steaming": "스팀",
           "airwashing": "에어워시",
+          "aidrying": "건조",
           "drying": "건조",
           "dryingwithdooropen": "환기",
           "cooling": "냉각",

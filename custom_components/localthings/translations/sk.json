@@ -688,6 +688,17 @@
           "very": "Veľmi"
         }
       },
+      "drying_temperature": {
+        "name": "Teplota",
+        "state": {
+          "none": "Bez ohrevu",
+          "extra_low": "Extra nízka",
+          "low": "Nízka",
+          "medium_low": "Stredne nízka",
+          "medium": "Stredná",
+          "high": "Vysoká"
+        }
+      },
       "favorite_capacity": {
         "name": "Obľúbené množstvo"
       },
@@ -1734,12 +1745,14 @@
           "idle": "Nečinnosť",
           "delaywash": "Odložený štart",
           "weightsensing": "Zisťovanie hmotnosti",
+          "laundrysensing": "Rozpoznávanie bielizne",
           "wash": "Pranie",
           "rinse": "Plákanie",
           "spin": "Odstreďovanie",
           "finish": "Dokončené",
           "steaming": "Naparovanie",
           "airwashing": "Čistenie vzduchom",
+          "aidrying": "Sušenie",
           "drying": "Sušenie",
           "dryingwithdooropen": "Odvetrávanie",
           "cooling": "Chladenie",
