@@ -272,10 +272,11 @@ def with_cavity_modes(bodies: dict[str, Any], lower: bool, divided: bool | None)
 
 
 # Record types that stand in for a missing `deviceSubType`. The DONGLE_0281
-# fridge bridge reports only `type: Refrigerator` (#698). Other types stay
-# out: a hood slot's record says `Cooktop` (#676), and as a subtype that
-# would outrank the board token that types it.
-_RECORD_TYPE_AS_SUBTYPE = frozenset({"Refrigerator"})
+# fridge (#698), DONGLE_DRY dryer (#761) and DONGLE_WM washer (#762) report
+# only their record's `type`. Other types stay out: a hood slot's record says
+# `Cooktop` (#676), and as a subtype that would outrank the board token that
+# types it.
+_RECORD_TYPE_AS_SUBTYPE = frozenset({"Dryer", "Refrigerator", "Washer"})
 
 
 def with_record_type(bodies: Mapping[str, Any], device_type: str | None) -> dict[str, Any]:

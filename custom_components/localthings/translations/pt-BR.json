@@ -688,6 +688,17 @@
           "very": "Muito"
         }
       },
+      "drying_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Sem calor",
+          "extra_low": "Extra baixa",
+          "low": "Baixa",
+          "medium_low": "Média baixa",
+          "medium": "Média",
+          "high": "Alta"
+        }
+      },
       "favorite_capacity": {
         "name": "Volume favorito"
       },

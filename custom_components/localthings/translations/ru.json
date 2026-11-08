@@ -688,6 +688,17 @@
           "very": "Очень сильный"
         }
       },
+      "drying_temperature": {
+        "name": "Нагрев",
+        "state": {
+          "none": "Без нагрева",
+          "extra_low": "Очень низкий",
+          "low": "Низкий",
+          "medium_low": "Ниже среднего",
+          "medium": "Средний",
+          "high": "Высокий"
+        }
+      },
       "favorite_capacity": {
         "name": "Объём для избранного"
       },
