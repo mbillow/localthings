@@ -25,8 +25,10 @@ from .coordinator import (
     snapshot_store,
 )
 from .entity import LocalThingsEntity, _is_included, async_load_instance_names
+from .registry.batch import is_stub_rep
 from .registry.by_type import WASHER_ONLY_ENTITIES, registry_for, resolve
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
+from .registry.capabilities.range import _burner_mask
 from .registry.entities import BinarySensorDesc, SwitchDesc
 from .registry.identity import resolve_serial
 from .registry.subdevices import MAIN
@@ -287,6 +289,36 @@ def _drop_duplicate_cooktop_timer(
 
 
 @callback
+def _drop_raw_burner_mask(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove the raw burner mask only where the decoded burners replace it (#767)."""
+    resources = coordinator.discovery_resources
+    # A stub passes _mask_decoded's optimistic gate, even on an electric board.
+    if (
+        is_stub_rep(resources.get("/mode/vs/0") or {})
+        or _burner_mask(resources.get("/cooktopmonitoring/vs/0") or {}) is None
+        or not any(
+            bound.desc.key == "active_burners" and _is_included(bound, coordinator)
+            for bound in coordinator.bound
+        )
+    ):
+        return
+    ent_reg = er.async_get(hass)
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_cooktop_monitoring"
+    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
+    old = ent_reg.async_get(entity_id) if entity_id else None
+    if old is None or old.config_entry_id != entry.entry_id:
+        return
+    _LOGGER.info(
+        "Removing %s, superseded by the decoded burner entities on the same range; "
+        "update any automation or dashboard that referenced it",
+        old.entity_id,
+    )
+    ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_read_only_power_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -536,6 +568,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
+    _drop_raw_burner_mask(hass, entry, coordinator)
     _drop_read_only_power_switches(hass, entry, coordinator)
     _drop_unsupported_sound_switches(hass, entry, coordinator)
     _drop_misidentified_washer_entities(hass, entry, coordinator)
