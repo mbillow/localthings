@@ -13,7 +13,7 @@ HREF_SHUFFLE = "/capability/mediaPlaybackShuffle/main/0"
 HREF_TRACK_CONTROL = "/capability/mediaTrackControl/main/0"
 
 
-def _path(href: str) -> list[str]:
+def path_of(href: str) -> list[str]:
     return [str(s) for s in href.strip("/").split("/")]
 
 
@@ -37,17 +37,17 @@ def media_write(kind: str, value) -> tuple[list[str], dict] | None:
     """The /capability/* commands, the same on every AV board seen so far."""
     if kind == "playback":
         # playpause resumes BT/AirPlay where a bare play may do nothing.
-        return _path(HREF_MEDIA_PLAYBACK), {"modes": [value]}
+        return path_of(HREF_MEDIA_PLAYBACK), {"modes": [value]}
     if kind == "shuffle":
-        return _path(HREF_SHUFFLE), {"mode": "enabled" if value else "disabled"}
+        return path_of(HREF_SHUFFLE), {"mode": "enabled" if value else "disabled"}
     if kind in ("next_track", "previous_track"):
-        return _path(HREF_TRACK_CONTROL), {
+        return path_of(HREF_TRACK_CONTROL), {
             "modes": ["next" if kind == "next_track" else "previous"]
         }
     if kind == "seek":
         # A relative offset in milliseconds, clamped by the device to the
         # track (HW-Q950T, #719).
-        return _path(HREF_MEDIA_PLAYBACK), {"modes": ["seek"], "position": int(value)}
+        return path_of(HREF_MEDIA_PLAYBACK), {"modes": ["seek"], "position": int(value)}
     return None
 
 
@@ -58,6 +58,12 @@ def resend_unsafe(payload) -> bool:
         payload[0] in ("seek", "next_track", "previous_track")
         or payload == ("playback", "playpause")
     )
+
+
+def is_skip(payload) -> bool:
+    # Next/previous change the track, which the track data reports; their
+    # own resource has no state to show for them.
+    return isinstance(payload, tuple) and payload[0] in ("next_track", "previous_track")
 
 
 def cache_after_ack(payload) -> bool:

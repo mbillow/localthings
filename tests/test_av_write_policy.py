@@ -153,3 +153,45 @@ async def test_a_prepared_payload_is_what_goes_out(coordinator):
     session.write.assert_called_once_with(
         PATH, {"position": 5}, timeout=coordinator._POST_TIMEOUT_S
     )
+
+
+async def test_a_resend_unsafe_write_replaces_a_dead_session_before_sending(
+    coordinator, monkeypatch
+):
+    """A session the firmware closed between polls is found by one GET, so
+    the first skip after an idle gap reconnects instead of failing."""
+    coordinator, dead = coordinator
+    dead.read.side_effect = TimeoutError("closed by the device")
+    fresh = MagicMock()
+    fresh.read.return_value = (0x45, {})
+    fresh.write.return_value = (0x44, None)
+    coordinator._RECONNECT_PAUSE_S = 0
+
+    def connect():
+        coordinator._session = cast(Transport, fresh)
+
+    monkeypatch.setattr(coordinator, "_connect_session", connect)
+    await coordinator.async_send_command(_bound(resend_unsafe_fn=lambda payload: True), 1)
+    dead.write.assert_not_called()
+    fresh.write.assert_called_once()
+
+
+async def test_a_failing_prepare_is_not_a_dead_session(coordinator):
+    coordinator, session = coordinator
+
+    def prepare():
+        raise ValueError("bad payload")
+
+    with pytest.raises(ValueError, match="bad payload"):
+        await coordinator.async_send_command(_bound(), 0, prepare_payload=prepare)
+    assert coordinator._session is session
+    session.write.assert_not_called()
+
+
+async def test_a_command_payload_caches_nothing(coordinator):
+    coordinator, session = coordinator
+    coordinator._observe.apply(HREF, {"supportedModes": ["next"]}, source="poll")
+    await coordinator.async_send_command(_bound(command_fn=lambda payload: True), 1)
+    session.write.assert_called_once()
+    assert coordinator.resource(HREF) == {"supportedModes": ["next"]}
+    assert coordinator._observe.settle_deadline(HREF) is None

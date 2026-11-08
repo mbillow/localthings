@@ -9,6 +9,7 @@ to one family; a feature is offered only while the device reports it.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime
 from typing import cast
 
@@ -27,6 +28,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, _is_included
+from .registry.capabilities.av import first_mode
 from .registry.entities import MediaModeSurface, MediaPlayerDesc
 
 # /capability/mediaPlayback's modes.
@@ -66,12 +68,6 @@ async def async_setup_entry(
     )
 
 
-def _first(value):
-    if isinstance(value, (list, tuple)):
-        return value[0] if value else None
-    return value
-
-
 def _strings(value) -> list[str]:
     return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
 
@@ -106,10 +102,12 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     # -- resource helpers ---------------------------------------------------
 
     def _rep(self, href: str | None) -> dict:
-        return self.coordinator.resource(href) if href else {}
+        if not href:
+            return {}
+        return self.coordinator.resource(self._bound.subdevice.to_actual(href))
 
     def _playback(self) -> dict:
-        return self._rep(self._bound.href)
+        return self.coordinator.resource(self._bound.href or "")
 
     def _stream_active(self) -> bool:
         fn = self._desc.stream_active_fn
@@ -174,15 +172,15 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             return MediaPlayerState.OFF
         if not self._stream_active():
             return MediaPlayerState.ON
+        feed = _PLAYBACK_STATES.get(str(first_mode(self._playback())))
+        if feed not in (None, MediaPlayerState.IDLE):
+            return feed
+        # The generic feed can say stop while an AirPlay or BT stream plays;
+        # the family's own status, where it has one, knows better.
         status_fn = self._desc.status_fn
         status = status_fn(self._resources) if status_fn is not None else None
-        # The family's status wins while it reports activity; an idle one
-        # leaves the generic feed to say whether something plays.
         mapped = _STATUS_STATES.get(status) if status is not None else None
-        if mapped is not None and mapped is not MediaPlayerState.IDLE:
-            return mapped
-        mode = _first(self._playback().get("modes"))
-        return _PLAYBACK_STATES.get(str(mode), MediaPlayerState.ON)
+        return mapped or feed or MediaPlayerState.ON
 
     @property
     def volume_level(self) -> float | None:
@@ -275,7 +273,7 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         if not self._stream_active():
             return None
         playback = self._playback()
-        if _first(playback.get("modes")) == "stop":
+        if first_mode(playback) == "stop":
             return None
         position = playback.get("position")
         if (
@@ -293,7 +291,7 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
 
     def _feed_playing(self) -> bool:
         """Whether the playback feed itself says play, so its position advances."""
-        return _first(self._playback().get("modes")) == "play"
+        return first_mode(self._playback()) == "play"
 
     def _position_evidence(self) -> tuple:
         """What media_position reads from, for change detection.
@@ -321,10 +319,16 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
 
     # -- commands -----------------------------------------------------------
 
-    async def _send(self, kind: str, value=None, *, optimistic_body: dict | None = None) -> None:
+    async def _send(
+        self, kind: str, value=None, *, optimistic: Callable[[], dict] | None = None
+    ) -> None:
+        # The optimistic body is worked out inside the lock, against the
+        # state the previous command left.
         async with self._command_lock:
             await self.coordinator.async_send_command(
-                self._bound, (kind, value), optimistic_body=optimistic_body
+                self._bound,
+                (kind, value),
+                optimistic_body=optimistic() if optimistic is not None else None,
             )
 
     def _playback_optimistic_body(self, mode: str) -> dict:
@@ -354,11 +358,13 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         await self._send("sound_mode", self._wire_value(self._desc.sound_mode, sound_mode))
 
     async def async_media_play(self) -> None:
-        await self._send("playback", "play", optimistic_body=self._playback_optimistic_body("play"))
+        await self._send(
+            "playback", "play", optimistic=lambda: self._playback_optimistic_body("play")
+        )
 
     async def async_media_pause(self) -> None:
         await self._send(
-            "playback", "pause", optimistic_body=self._playback_optimistic_body("pause")
+            "playback", "pause", optimistic=lambda: self._playback_optimistic_body("pause")
         )
 
     async def async_media_stop(self) -> None:
@@ -367,10 +373,11 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     async def async_media_play_pause(self) -> None:
         # A paused AirPlay/BT stream ignores "play" but resumes on "playpause".
         # The cache gets the mode it toggles to: "playpause" is no state.
-        toggled = "pause" if self.state == MediaPlayerState.PLAYING else "play"
-        await self._send(
-            "playback", "playpause", optimistic_body=self._playback_optimistic_body(toggled)
-        )
+        def optimistic() -> dict:
+            toggled = "pause" if self.state == MediaPlayerState.PLAYING else "play"
+            return self._playback_optimistic_body(toggled)
+
+        await self._send("playback", "playpause", optimistic=optimistic)
 
     async def async_media_next_track(self) -> None:
         await self._send("next_track")
@@ -389,12 +396,12 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         if self._playback_position_ms() is None:
             return
         target_ms = round(position * 1000)
-        previous = None
+        sent_at: list[tuple[datetime, bool]] = []
 
         def prepare_payload():
-            nonlocal previous
             # Polls and reconnects can hold the session while playback
-            # advances, so the offset is worked out once it is ready.
+            # advances, so the offset is worked out once it is ready, and
+            # again from the same stamp if it has to be sent again.
             position_ms = self._playback_position_ms()
             if position_ms is None:
                 return None
@@ -403,20 +410,18 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             playing = self._feed_playing()
             if playing and self._position_updated_at is not None:
                 current_ms += round((now - self._position_updated_at).total_seconds() * 1000)
-            if previous is None:
-                previous = self._position_updated_at, self._last_position_evidence
-            self._position_updated_at = now
-            self._last_position_evidence = (target_ms, playing)
+            sent_at[:] = [(now, playing)]
             return "seek", target_ms - current_ms
 
-        try:
-            await self.coordinator.async_send_command(
-                self._bound,
-                ("seek", 0),
-                optimistic_body={"position": target_ms},
-                prepare_payload=prepare_payload,
-            )
-        except BaseException:
-            if previous is not None:
-                self._position_updated_at, self._last_position_evidence = previous
-            raise
+        await self.coordinator.async_send_command(
+            self._bound,
+            ("seek", 0),
+            optimistic_body={"position": target_ms},
+            prepare_payload=prepare_payload,
+        )
+        if sent_at:
+            # The device is at the target as of the send, whatever the
+            # cache's own update stamped.
+            ((now, playing),) = sent_at
+            self._position_updated_at = now
+            self._last_position_evidence = (target_ms, playing)

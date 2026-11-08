@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from homeassistant.components.media_player import MediaPlayerEntityFeature
+from homeassistant.components.media_player import MediaPlayerEntityFeature, MediaPlayerState
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -222,3 +222,25 @@ async def test_seek_is_prepared_after_reconnecting(playback, monkeypatch):
         monkeypatch.setattr(coordinator, "_connect_session", reconnect)
         await player.async_media_seek(180)
     assert write.call_args.args[1] == {"modes": ["seek"], "position": 50_000}
+
+
+async def test_an_optimistic_pause_shows_while_the_bar_still_says_playing(playback, monkeypatch):
+    player, coordinator, profile = playback
+    coordinator._observe.apply(profile.playback_href, {"modes": ["play"]}, source="poll")
+    coordinator._observe.apply(
+        "/sec/networkaudio/playback",
+        {"x.com.samsung.networkaudio.status": "PLAYING"},
+        source="poll",
+    )
+    monkeypatch.setattr(coordinator, "_async_put", AsyncMock(return_value=True))
+    assert player.state == MediaPlayerState.PLAYING
+    await player.async_media_pause()
+    assert player.state == MediaPlayerState.PAUSED
+
+
+async def test_play_pause_toggles_from_the_state_the_previous_command_left(playback, monkeypatch):
+    player, coordinator, profile = playback
+    coordinator._observe.apply(profile.playback_href, {"modes": ["play"]}, source="poll")
+    monkeypatch.setattr(coordinator, "_async_put", AsyncMock(return_value=True))
+    await asyncio.gather(player.async_media_play_pause(), player.async_media_play_pause())
+    assert coordinator.resource(profile.playback_href)["modes"] == ["play"]

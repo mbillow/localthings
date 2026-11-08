@@ -87,6 +87,10 @@ class SamsungEntityDescription:
     # Cache the optimistic value only once the device acknowledged the
     # write, so a failed one can't become the next write's baseline.
     cache_after_ack_fn: PayloadPredicate = None
+    # A payload that is a command, with no readable state behind it (a
+    # skip): treated as write_only, so nothing is cached and polls of its
+    # href aren't held back.
+    command_fn: PayloadPredicate = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -257,6 +261,7 @@ class MediaPlayerDesc(SamsungEntityDescription):
     # e.g. a soundbar keeps its last stream's track on an HDMI input.
     stream_active_fn: Callable[[dict], bool] | None = None
     write_fn: WriteFn = None
+    validate_fn: ValidateFn = None
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -12,8 +12,10 @@ import json
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
 from homeassistant.components.media_player import MediaPlayerState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
@@ -696,5 +698,7 @@ async def test_only_advertised_sources_are_written(hass: HomeAssistant) -> None:
     await select("Wi-Fi")
     assert session.writes[-1] == (["sec", "networkaudio", "mode"], {"mode": "wifiidle"})
     writes = len(session.writes)
-    await select("hdmi2")
+    with pytest.raises(ServiceValidationError) as err:
+        await select("hdmi2")
+    assert err.value.translation_key == "media_option_not_supported"
     assert len(session.writes) == writes

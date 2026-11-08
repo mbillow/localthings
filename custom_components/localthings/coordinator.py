@@ -234,6 +234,14 @@ def _coap_accepted(code: int) -> bool:
     return (code >> 5) == 2
 
 
+class _PrepareFailed(Exception):
+    """A prepare_body callback raised; `error` is re-raised as is."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(error)
+        self.error = error
+
+
 def _control_refused(response: Any) -> bool:
     """AV boards can answer 2.04 to a command they refused, saying so in
     controlResponse (HW-Q950T, QN90A; #719, #755)."""
@@ -2920,7 +2928,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # option/item for the settle window. Pre-merge here the way the
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
-        write_only = getattr(desc, "write_only", False)
+        write_only = getattr(desc, "write_only", False) or bool(
+            desc.command_fn and desc.command_fn(payload)
+        )
         previous_settle = self._observe.settle_deadline(write_href)
         armed_settle = 0.0
         cache_after_ack = bool(desc.cache_after_ack_fn and desc.cache_after_ack_fn(payload))
@@ -2973,7 +2983,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
         def _prepare_body() -> dict | None:
-            prepared = prepare_payload() if prepare_payload is not None else None
+            assert prepare_payload is not None
+            prepared = prepare_payload()
             result = _resolve(prepared) if prepared is not None else None
             if result is None:
                 return None
@@ -3060,8 +3071,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         confirm_on_refusal: bool = False,
     ) -> bool:
         """PUT `body`, reconnecting and retrying once on a dead session.
-        Raises HomeAssistantError if the retry fails too. With retry=False,
-        a write that may have reached the device is not resent.
+        Raises HomeAssistantError if the retry fails too.
+
+        With retry=False the session is proven live with one GET first, so
+        a session the firmware closed between polls is replaced before the
+        write rather than after it; a write that may then have reached the
+        device is not resent.
 
         prepare_body, when given, replaces `body` once the session is up, and
         again before a retry; None means the command no longer applies, and
@@ -3080,19 +3095,39 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._log.info("PUT %s → code %#04x", write_href, code)
             return code, response
 
+        def _ready_session():
+            if self._session is None:
+                self._connect_session()
+            sess = self._session
+            if sess is None:
+                raise RuntimeError("no session")
+            if not retry:
+                # Any answer will do; no answer means a dead session.
+                sess.read(_LIVENESS_PATH, timeout=FLAT_TIMEOUT_S)
+
+        async def _attempt() -> tuple[int, Any] | None:
+            nonlocal body
+            if prepare_body is not None or not retry:
+                await self.hass.async_add_executor_job(_ready_session)
+            if prepare_body is not None:
+                try:
+                    prepared = prepare_body()
+                except Exception as err:
+                    raise _PrepareFailed(err) from err
+                if prepared is None:
+                    return None
+                body = prepared
+            return await self.hass.async_add_executor_job(_do_put)
+
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
-                if prepare_body is not None:
-                    if self._session is None:
-                        await self.hass.async_add_executor_job(self._connect_session)
-                    prepared = prepare_body()
-                    if prepared is None:
-                        return False
-                    body = prepared
-                code, response = await self.hass.async_add_executor_job(_do_put)
+                result = await _attempt()
+            except _PrepareFailed as e:
+                # A bug in the payload, not a dead session.
+                raise e.error from None
             except Exception as e:
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
@@ -3111,7 +3146,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         translation_placeholders={"error": str(e)},
                     ) from e
                 # Only a write that went out is ambiguous: one that failed
-                # to connect is retried like any other.
+                # before it was sent is retried like any other.
                 if not retry and sent:
                     self._log.warning("command failed for %s, not resent: %s", write_href, e)
                     raise HomeAssistantError(
@@ -3122,13 +3157,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
-                    if prepare_body is not None:
-                        await self.hass.async_add_executor_job(self._connect_session)
-                        prepared = prepare_body()
-                        if prepared is None:
-                            return False
-                        body = prepared
-                    code, response = await self.hass.async_add_executor_job(_do_put)
+                    result = await _attempt()
+                except _PrepareFailed as e2:
+                    raise e2.error from None
                 except Exception as e2:
                     if isinstance(e2, OvenStartUnconfirmed):
                         raise HomeAssistantError(
@@ -3142,8 +3173,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         translation_key="command_failed",
                         translation_placeholders={"href": write_href, "error": str(e2)},
                     ) from e2
-                if on_retry is not None:
+                if on_retry is not None and result is not None:
                     on_retry()
+        if result is None:
+            return False
+        code, response = result
         # An opted-in control may apply a write while replying 4.00 (#714).
         # A failed GET cannot overturn an explicit refusal.
         control_refused = _coap_accepted(code) and _control_refused(response)

@@ -2711,6 +2711,9 @@
     },
     "vacuum_command_params": {
       "message": "Robot vacuum commands take no parameters."
+    },
+    "media_option_not_supported": {
+      "message": "This device doesn't offer that option right now."
     }
   },
   "selector": {

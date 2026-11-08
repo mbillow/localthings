@@ -2711,6 +2711,9 @@
     },
     "vacuum_command_params": {
       "message": "Príkazy robotického vysávača nemajú žiadne parametre."
+    },
+    "media_option_not_supported": {
+      "message": "Zariadenie túto možnosť práve neponúka."
     }
   },
   "selector": {

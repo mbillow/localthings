@@ -2711,6 +2711,9 @@
     },
     "vacuum_command_params": {
       "message": "Opdrachten voor de robotstofzuiger hebben geen parameters."
+    },
+    "media_option_not_supported": {
+      "message": "Het apparaat biedt deze optie nu niet aan."
     }
   },
   "selector": {

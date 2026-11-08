@@ -2711,6 +2711,9 @@
     },
     "vacuum_command_params": {
       "message": "Befehle für den Saugroboter haben keine Parameter."
+    },
+    "media_option_not_supported": {
+      "message": "Das Gerät bietet diese Option gerade nicht an."
     }
   },
   "selector": {

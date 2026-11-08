@@ -584,6 +584,14 @@ def _advertised(surface: MediaModeSurface, value, resources) -> bool:
     return not isinstance(options, list) or value in options
 
 
+def _validate_media(payload, rep, resources) -> str | None:
+    kind, value = payload
+    surface = {"source": _SOURCE, "sound_mode": _SOUND_MODE}.get(kind)
+    if surface is not None and not _advertised(surface, value, resources):
+        return "media_option_not_supported"
+    return None
+
+
 def _media_player_write(payload, rep, href=None, resources=None):
     """(kind, value) pairs from the media_player platform -> (path, body).
 
@@ -592,19 +600,19 @@ def _media_player_write(payload, rep, href=None, resources=None):
     """
     kind, value = payload
     if kind == "power":
-        return ["sec", "networkaudio", "switch", "binary"], {"value": bool(value)}
+        return av.path_of(HREF_SWITCH), {"value": bool(value)}
     if kind == "volume":
-        return ["sec", "networkaudio", "audio"], {"volume": _number(value)}
+        return av.path_of(HREF_AUDIO), {"volume": _number(value)}
     if kind == "mute":
-        return ["sec", "networkaudio", "audio"], {"mute": bool(value)}
+        return av.path_of(HREF_AUDIO), {"mute": bool(value)}
     if kind == "source":
         if not _advertised(_SOURCE, value, resources):
             return None
-        return ["sec", "networkaudio", "mode"], {"mode": value}
+        return av.path_of(HREF_MODE), {_SOURCE.field: value}
     if kind == "sound_mode":
         if not _advertised(_SOUND_MODE, value, resources):
             return None
-        return ["sec", "networkaudio", "soundmode"], {_SOUND_MODE.field: value}
+        return av.path_of(HREF_SOUNDMODE), {_SOUND_MODE.field: value}
     return av.media_write(kind, value)
 
 
@@ -628,8 +636,10 @@ MEDIA_PLAYER = Capability(
             status_fn=_playback_status,
             stream_active_fn=_stream_active,
             write_fn=_media_player_write,
+            validate_fn=_validate_media,
             resend_unsafe_fn=av.resend_unsafe,
             cache_after_ack_fn=av.cache_after_ack,
+            command_fn=av.is_skip,
         ),
     ),
 )
