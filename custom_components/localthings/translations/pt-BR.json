@@ -674,7 +674,10 @@
           "35": "Remover amassados",
           "36": "Arejar sem aquecer",
           "3e": "Carga pequena",
-          "2e": "Normal econômico"
+          "2e": "Normal econômico",
+          "42": "Refrescar",
+          "44": "Secagem rápida",
+          "47": "Secagem roupas de pets"
         }
       },
       "dryer_dry_level": {

@@ -674,7 +674,10 @@
           "35": "Wrinkle Away",
           "36": "Air Fluff",
           "3e": "Small Load",
-          "2e": "Eco Normal"
+          "2e": "Eco Normal",
+          "42": "Refresh",
+          "44": "Quick Dry",
+          "47": "Pet Care Dry"
         }
       },
       "dryer_dry_level": {

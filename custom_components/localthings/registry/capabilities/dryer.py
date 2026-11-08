@@ -144,7 +144,8 @@ DRYER_SETTINGS = Capability(
 # '06' Time dry were confirmed on a DVE50A8600V/A3 by selecting each cycle
 # on the appliance and reading back the raw code (issue #80); '51' Eco
 # Cotton, '53' AI Dry+, and '4e' Self Dry the same way on a DV90DG6845LHU5
-# (issue #244). /st/dryercourse/vs/0 re-encodes the same selected course
+# (issue #244); '42' Refresh, '44' Quick Dry and '47' Pet Care Dry named by
+# a DVE54CG7150DA3 owner (issue #781). /st/dryercourse/vs/0 re-encodes the same selected course
 # and is ignored (ignored.py), mirroring /st/washercourse/vs/0 for washers.
 #
 # dryer_cycle_table_00 is a separate, older course-code family reported by
