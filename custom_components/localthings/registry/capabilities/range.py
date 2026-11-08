@@ -277,8 +277,9 @@ PROBE_STATUS = Capability(
 # a 0/1 cooktop-in-use flag instead: one element or two both read 1 (issue
 # #450). So the decoded entities (a count plus one binary sensor per bit) are
 # gated on the `Fuel_Gas` token in /mode/vs/0 options[], which no electric NE
-# board reports, and every other board gets the raw value as a diagnostic
-# sensor, kept so other electric models can show whether theirs differs.
+# board reports, or on `_fuel_is_gas`'s NY exception, and every other board
+# gets the raw value as a diagnostic sensor, kept so other electric models can
+# show whether theirs differs.
 #
 # The mask can't say how many burners exist (a four-burner board just never
 # sets bit 4), so the width is the layout it was verified on. A board that
@@ -313,12 +314,19 @@ def _mask_present(rep):
 
 
 def _fuel_is_gas(resources):
-    """`Fuel_Gas` in /mode/vs/0 options[]. A not-yet-fetched stub gets the
-    same optimistic carve-out every exists_fn gives its own rep."""
+    """`Fuel_Gas` in /mode/vs/0 options[], or no Fuel_ token on an NY model. A
+    not-yet-fetched stub gets the same optimistic carve-out every exists_fn
+    gives its own rep."""
     rep = resources.get("/mode/vs/0") or {}
     if is_stub_rep(rep):
         return True
-    return option_value(rep.get("x.com.samsung.da.options"), "Fuel") == "Gas"
+    options = rep.get("x.com.samsung.da.options")
+    fuel = option_value(options, "Fuel")
+    if fuel is not None:
+        return fuel == "Gas"
+    # The NY9100DW reports no Fuel_ token, yet lighting each burner alone
+    # produced the gas bit map above (issue #767).
+    return (option_value(options, "DeviceType") or "").startswith("NY")
 
 
 def _mask_decoded(rep, resources):
