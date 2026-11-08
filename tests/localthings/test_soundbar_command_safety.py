@@ -261,3 +261,63 @@ async def test_a_seek_past_either_end_is_clamped_to_the_track(
     await player.async_media_seek(target)
     assert write.call_args.args[1] == {"modes": ["seek"], "position": expected_ms - 120_000}
     assert coordinator.resource(profile.playback_href)["position"] == expected_ms
+
+
+async def test_an_optimistic_stop_shows_while_the_bar_still_says_playing(playback, monkeypatch):
+    player, coordinator, profile = playback
+    coordinator._write_settle_s = 30
+    coordinator._observe.apply(profile.playback_href, {"modes": ["play"]}, source="poll")
+    coordinator._observe.apply(
+        "/sec/networkaudio/playback",
+        {"x.com.samsung.networkaudio.status": "PLAYING"},
+        source="poll",
+    )
+    session = FakeSoundbarSession()
+    monkeypatch.setattr(session, "write", Mock(return_value=(0x44, None)))
+    coordinator._session = session
+    await player.async_media_stop()
+    assert player.state == MediaPlayerState.IDLE
+
+
+async def test_play_pause_while_buffering_caches_a_pause(playback, monkeypatch):
+    player, coordinator, profile = playback
+    coordinator._observe.apply(profile.playback_href, {"modes": ["buffering"]}, source="poll")
+    session = FakeSoundbarSession()
+    monkeypatch.setattr(session, "write", Mock(return_value=(0x44, None)))
+    coordinator._session = session
+    await player.async_media_play_pause()
+    assert coordinator.resource(profile.playback_href)["modes"] == ["pause"]
+
+
+async def test_the_lock_is_released_before_the_confirming_refresh(playback, monkeypatch):
+    """A second command must not wait for the first command's poll."""
+    player, coordinator, _ = playback
+    session = FakeSoundbarSession()
+    write = Mock(return_value=(0x44, None))
+    monkeypatch.setattr(session, "write", write)
+    coordinator._session = session
+    refreshing, finish = asyncio.Event(), asyncio.Event()
+
+    async def slow_refresh():
+        refreshing.set()
+        await finish.wait()
+
+    monkeypatch.setattr(coordinator, "async_request_refresh", slow_refresh)
+    first = asyncio.create_task(player.async_set_volume_level(0.2))
+    await refreshing.wait()
+    second = asyncio.create_task(player.async_set_volume_level(0.3))
+    for _ in range(20):
+        if write.call_count == 2:
+            break
+        await asyncio.sleep(0)
+    assert write.call_count == 2
+    finish.set()
+    await asyncio.gather(first, second)
+
+
+async def test_a_seek_that_was_not_sent_leaves_the_position_alone(playback, monkeypatch):
+    player, coordinator, _ = playback
+    stamp, evidence = player._position_updated_at, player._last_position_evidence
+    monkeypatch.setattr(coordinator, "async_send_command", AsyncMock(return_value=False))
+    await player.async_media_seek(150)
+    assert (player._position_updated_at, player._last_position_evidence) == (stamp, evidence)

@@ -204,3 +204,54 @@ async def test_a_command_payload_caches_nothing(coordinator):
     session.write.assert_called_once()
     assert coordinator.resource(HREF) == {"supportedModes": ["next"]}
     assert coordinator._observe.settle_deadline(HREF) is None
+
+
+async def test_the_pre_send_check_counts_an_undecodable_answer(coordinator, monkeypatch):
+    """The same rule as the poll path's liveness probe: any answer, even
+    one that fails to decode, proves the session."""
+    from custom_components.localthings.coordinator import DecodeError
+
+    coordinator, session = coordinator
+    session.read.side_effect = DecodeError("bad cbor", code=0x45, payload=b"\xff")
+    reconnect = MagicMock()
+    monkeypatch.setattr(coordinator, "_connect_session", reconnect)
+    await coordinator.async_send_command(_bound(resend_unsafe_fn=lambda payload: True), 1)
+    reconnect.assert_not_called()
+    session.write.assert_called_once()
+
+
+async def test_a_fresh_session_is_not_probed(coordinator, monkeypatch):
+    coordinator, session = coordinator
+    coordinator._session = None
+
+    def connect():
+        coordinator._session = cast(Transport, session)
+
+    monkeypatch.setattr(coordinator, "_connect_session", connect)
+    await coordinator.async_send_command(_bound(resend_unsafe_fn=lambda payload: True), 1)
+    session.read.assert_not_called()
+    session.write.assert_called_once()
+
+
+async def test_a_prepared_body_is_what_gets_cached(coordinator):
+    """With no explicit optimistic body, the cache gets what went out, once
+    acknowledged, not the placeholder the first resolve produced."""
+    coordinator, _session = coordinator
+    coordinator._observe.apply(HREF, {"position": 1}, source="poll")
+    assert await coordinator.async_send_command(_bound(), 0, prepare_payload=lambda: 7)
+    assert coordinator.resource(HREF)["position"] == 7
+
+
+async def test_send_reports_whether_anything_went_out(coordinator):
+    coordinator, session = coordinator
+    assert await coordinator.async_send_command(_bound(), 1) is True
+    assert await coordinator.async_send_command(_bound(), 0, prepare_payload=lambda: None) is False
+    session.write.assert_called_once()
+
+
+async def test_refresh_can_be_left_to_the_caller(coordinator):
+    coordinator, _session = coordinator
+    await coordinator.async_send_command(_bound(), 1, refresh=False)
+    coordinator.async_request_refresh.assert_not_called()
+    await coordinator.async_send_command(_bound(), 1)
+    coordinator.async_request_refresh.assert_awaited_once()

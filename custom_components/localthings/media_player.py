@@ -116,21 +116,26 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     def _track(self) -> dict:
         return self._rep(self._desc.track_href) if self._stream_active() else {}
 
+    def _feed_state(self) -> MediaPlayerState | None:
+        return _PLAYBACK_STATES.get(str(first_mode(self._playback())))
+
+    def _family_state(self) -> MediaPlayerState | None:
+        status_fn = self._desc.status_fn
+        status = status_fn(self._resources) if status_fn is not None else None
+        return _STATUS_STATES.get(status) if status is not None else None
+
     def _has_media(self) -> bool:
         """Whether there is anything for playback commands to act on. An
         idle bar acknowledges play and next and does nothing (HW-Q950T)."""
         if not self._stream_active():
             return False
-        if self._track().get("title") or self._track().get("appName"):
+        track = self._track()
+        if track.get("title") or track.get("appName"):
             return True
-        if _PLAYBACK_STATES.get(str(first_mode(self._playback()))) not in (
-            None,
-            MediaPlayerState.IDLE,
-        ):
-            return True
-        status_fn = self._desc.status_fn
-        status = status_fn(self._resources) if status_fn is not None else None
-        return _STATUS_STATES.get(status or "") not in (None, MediaPlayerState.IDLE)
+        return any(
+            state not in (None, MediaPlayerState.IDLE)
+            for state in (self._feed_state(), self._family_state())
+        )
 
     def _mode_options(self, surface: MediaModeSurface | None) -> list[str]:
         return _strings(self._rep(surface.href).get(surface.options_field)) if surface else []
@@ -189,15 +194,18 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             return MediaPlayerState.OFF
         if not self._stream_active():
             return MediaPlayerState.ON
-        feed = _PLAYBACK_STATES.get(str(first_mode(self._playback())))
+        feed = self._feed_state()
         if feed not in (None, MediaPlayerState.IDLE):
+            return feed
+        # Our own stop, not yet polled: the family's status still says what
+        # played before it.
+        if feed is MediaPlayerState.IDLE and self.coordinator.write_settling(
+            self._bound.href or ""
+        ):
             return feed
         # The generic feed can say stop while an AirPlay or BT stream plays;
         # the family's own status, where it has one, knows better.
-        status_fn = self._desc.status_fn
-        status = status_fn(self._resources) if status_fn is not None else None
-        mapped = _STATUS_STATES.get(status) if status is not None else None
-        return mapped or feed or MediaPlayerState.ON
+        return self._family_state() or feed or MediaPlayerState.ON
 
     @property
     def volume_level(self) -> float | None:
@@ -340,13 +348,17 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         self, kind: str, value=None, *, optimistic: Callable[[], dict] | None = None
     ) -> None:
         # The optimistic body is worked out inside the lock, against the
-        # state the previous command left.
+        # state the previous command left. The confirming refresh runs after
+        # it, so the next command needn't wait for a poll.
         async with self._command_lock:
-            await self.coordinator.async_send_command(
+            sent = await self.coordinator.async_send_command(
                 self._bound,
                 (kind, value),
                 optimistic_body=optimistic() if optimistic is not None else None,
+                refresh=False,
             )
+        if sent:
+            await self.coordinator.async_request_refresh()
 
     def _playback_optimistic_body(self, mode: str) -> dict:
         body: dict = {"modes": [mode]}
@@ -391,7 +403,8 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         # A paused AirPlay/BT stream ignores "play" but resumes on "playpause".
         # The cache gets the mode it toggles to: "playpause" is no state.
         def optimistic() -> dict:
-            toggled = "pause" if self.state == MediaPlayerState.PLAYING else "play"
+            playing = self.state in (MediaPlayerState.PLAYING, MediaPlayerState.BUFFERING)
+            toggled = "pause" if playing else "play"
             return self._playback_optimistic_body(toggled)
 
         await self._send("playback", "playpause", optimistic=optimistic)
@@ -407,22 +420,22 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
 
     async def async_media_seek(self, position: float) -> None:
         async with self._command_lock:
-            await self._async_seek(position)
+            sent = await self._async_seek(position)
+        if sent:
+            await self.coordinator.async_request_refresh()
 
-    async def _async_seek(self, position: float) -> None:
-        if self._playback_position_ms() is None:
-            return
+    async def _async_seek(self, position: float) -> bool:
         target_ms = max(0, round(position * 1000))
         duration = self._track().get("duration")
         if isinstance(duration, int) and duration > 0:
             # The device clamps a seek past either end the same way.
             target_ms = min(target_ms, duration)
-        sent_at: list[tuple[datetime, bool]] = []
+        prepared_at: list[tuple[datetime, bool]] = []
 
         def prepare_payload():
             # Polls and reconnects can hold the session while playback
-            # advances, so the offset is worked out once it is ready, and
-            # again from the same stamp if it has to be sent again.
+            # advances, so the offset is worked out again once it is ready,
+            # always from the same stamp.
             position_ms = self._playback_position_ms()
             if position_ms is None:
                 return None
@@ -431,18 +444,23 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             playing = self._feed_playing()
             if playing and self._position_updated_at is not None:
                 current_ms += round((now - self._position_updated_at).total_seconds() * 1000)
-            sent_at[:] = [(now, playing)]
+            prepared_at[:] = [(now, playing)]
             return "seek", target_ms - current_ms
 
-        await self.coordinator.async_send_command(
+        payload = prepare_payload()
+        if payload is None:
+            return False
+        sent = await self.coordinator.async_send_command(
             self._bound,
-            ("seek", 0),
+            payload,
             optimistic_body={"position": target_ms},
             prepare_payload=prepare_payload,
+            refresh=False,
         )
-        if sent_at:
+        if sent:
             # The device is at the target as of the send, whatever the
             # cache's own update stamped.
-            ((now, playing),) = sent_at
+            ((now, playing),) = prepared_at
             self._position_updated_at = now
             self._last_position_evidence = (target_ms, playing)
+        return sent
