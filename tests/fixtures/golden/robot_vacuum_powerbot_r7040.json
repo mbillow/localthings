@@ -1,0 +1,15 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "battery",
+    "battery_charging",
+    "child_lock",
+    "cleaning_mode",
+    "power_switch",
+    "repeated_cleaning",
+    "robot_movement",
+    "robot_sound",
+    "robot_status",
+    "vacuum"
+  ]
+}

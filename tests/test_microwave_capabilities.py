@@ -36,6 +36,44 @@ def test_microwave_fixture_resolves_and_has_no_unbound_hrefs():
     assert unbound == []
 
 
+def test_ocf_cook_temperatures_bind_beside_the_vendor_array():
+    """#709: the LCD_R18_SCO board reports /temperature/{current,desired}/
+    cook/0 with the same reading as /temperatures/vs/0; they bind without
+    adding or changing an entity."""
+    from custom_components.localthings.registry.adapter import flatten
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    reg = resolve(resources)
+    assert reg is not None
+    before = flatten(discover(resources, reg.capabilities), resources)
+    resources = {
+        **resources,
+        "/temperature/current/cook/0": {"temperature": 0.0},
+        "/temperature/desired/cook/0": {"temperature": 0.0},
+    }
+
+    unbound: list[str] = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+
+    assert unbound == []
+    assert flatten(bound, resources) == before
+
+
+def test_cavity_state_is_the_ovens_lower_case_enum():
+    """#703: the oven's cavity state has been a lower-case enum since
+    v0.35.0; the microwave's now reads the same."""
+    from custom_components.localthings.registry.entities import SensorDesc
+
+    desc = next(d for d in microwave.MICROWAVE_CAVITY.entities if d.key == "cavity_state")
+    oven_desc = next(d for d in oven.OVEN_CAVITY.entities if d.key == "oven_state")
+    assert isinstance(desc, SensorDesc) and isinstance(oven_desc, SensorDesc)
+
+    assert desc.value_fn("Ready") == "ready"
+    assert desc.value_fn("Finish") == "finish"
+    assert (desc.device_class, desc.options) == (oven_desc.device_class, oven_desc.options)
+
+
 def test_microwave_hood_fan_fixture_resolves_and_has_no_unbound_hrefs():
     """Issues #137/#142: `/hood/fanspeed/vs/0` (the combi unit's built-in
     vent fan) was previously unbound on this family."""
@@ -911,3 +949,50 @@ def test_progress_reads_unknown_for_the_fixed_201_a_running_cook_reports():
     assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "201"}) is None
     assert desc.rep_fn({**running, "x.com.samsung.da.progressPercentage": "40"}) == 40
     assert desc.rep_fn({"x.com.samsung.da.state": "Ready"}) == 0
+
+
+def _no_modes_spell(resources, mode_spec="[]"):
+    """The LCD_R18 microwave after a Wi-Fi board restart (#600): only
+    HOMECARE_WIZARD_V2 listed, and an empty modeSpec."""
+    mode = {
+        **resources["/mode/vs/0"],
+        "x.com.samsung.da.supportedModes": ["HOMECARE_WIZARD_V2"],
+        "x.com.samsung.da.modeSpec": mode_spec,
+    }
+    return {**resources, "/mode/vs/0": mode}
+
+
+def test_microwave_keeps_its_type_from_a_remembered_mode_spec():
+    """#744: without its modes the microwave resolved as an oven, and the
+    Sound sweep then judged its own Sound switch by the oven's check. The
+    coordinator fills in the remembered modeSpec, which still names the
+    MicroWave modes."""
+    from custom_components.localthings.registry.capabilities import cook
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    spec = resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"]
+    oic = ("oic.wk.d", "oic.d.oven")
+    spell = _no_modes_spell(resources)
+
+    reg = resolve(spell, device_types=oic)
+    assert reg is not None and reg.name != "microwave"
+
+    remembered = cook.with_cached_specs(spell, {"/mode/vs/0": spec})
+    reg = resolve(remembered, device_types=oic)
+    assert reg is not None and reg.name == "microwave"
+
+
+def test_an_empty_mode_list_does_not_type_from_the_mode_spec():
+    """Only the #600 shape (HOMECARE flags alone) falls back to modeSpec."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("microwave_mw7300b")
+    spec = resources["/mode/vs/0"]["x.com.samsung.da.modeSpec"]
+    mode = {
+        **resources["/mode/vs/0"],
+        "x.com.samsung.da.supportedModes": [],
+        "x.com.samsung.da.modeSpec": spec,
+    }
+    reg = resolve({**resources, "/mode/vs/0": mode}, device_types=("oic.wk.d", "oic.d.oven"))
+    assert reg is not None and reg.name != "microwave"

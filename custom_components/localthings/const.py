@@ -13,6 +13,7 @@ PLATFORMS = [
     "fan",
     "update",
     "water_heater",
+    "vacuum",
     "media_player",
 ]
 

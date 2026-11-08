@@ -8,7 +8,7 @@ import functools
 import logging
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -112,6 +112,7 @@ from .rekey import rekey_entry
 from .transport import (
     AuthRejected,
     DecodeError,
+    OvenStartUnconfirmed,
     Transport,
     create_transport,
 )
@@ -186,6 +187,8 @@ _DEBUG_MAX_VERIFY_AFTER_S = 60.0
 _DEBUG_MAX_BATCH_ELEMENTS = 16
 
 
+_MODES_FIELD = "x.com.samsung.da.modes"
+
 # Row lists a write may send only the changed row of, and the field each row
 # is matched by (common.merge_items_field).
 _MERGED_ROWS = (
@@ -222,6 +225,9 @@ def _coap_code_str(code: int) -> str:
     alongside it in every debug response so a caller can format it
     differently."""
     return f"{code >> 5}.{code & 0x1F:02d}"
+
+
+_COAP_BAD_REQUEST = 0x80
 
 
 def _coap_accepted(code: int) -> bool:
@@ -282,6 +288,15 @@ def _cavity_label(resources: dict[str, dict]) -> str | None:
     """'Upper oven'/'Lower oven' when this subdevice says which cavity it is."""
     cavity = cook.cavity(resources)
     return f"{cavity} oven" if cavity else None
+
+
+def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dict]]) -> str | None:
+    """The main cavity also operates the whole oven without the divider."""
+    if device_type != "microwave" and any(
+        cook.cavity(resources) == "Lower" for resources in siblings
+    ):
+        return "Main oven"
+    return None
 
 
 # Write errors after which the session is fine and a re-poll shows the
@@ -517,6 +532,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # live poll -- see async_rehydrate.
         self._rehydrate_resources: dict[str, dict] | None = None
         self._rehydrated_keys: frozenset[tuple[str, str]] | None = None
+        self._rehydrated_included: frozenset[tuple[str, str]] | None = None
         # What a flat board's discovery took from the last snapshot because
         # the href didn't answer this time -- see _with_remembered_resources.
         self._discovery_extra: dict[str, dict] = {}
@@ -1057,7 +1073,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
+        base_name = self.device_info.get("name") or "Samsung Appliance"
         if subdevice.kind == "main":
+            if label := _main_cavity_label(
+                self.device_type_name,
+                (self.discovery_canonical(child) for child in self.subdevices),
+            ):
+                return {**self.device_info, "name": f"{base_name} {label}"}
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1068,8 +1090,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model_num.split("|", 1)[0] if model_num else ""
         )
         serial = display_serial(info.get("x.com.samsung.da.serialNum"))
-        base_name = self.device_info.get("name") or "Samsung Appliance"
-        if cavity := _cavity_label(resources):
+        # Discovery includes saved snapshots so cavity labels survive offline startup.
+        if cavity := _cavity_label(self.discovery_canonical(subdevice)):
             # A dual-cavity oven reports the same modelNum on both cavities
             # (issue #490), so the model label below names them identically
             # and the two are indistinguishable in HA. The cavity says which
@@ -1927,6 +1949,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         agree here would register byte-identical entities."""
         return frozenset((b.subdevice.key, _key(b)) for b in self.bound)
 
+    def _included_keys(self) -> frozenset[tuple[str, str]]:
+        """The subset of `_bound_keys` that platforms actually register:
+        bound entities that also pass entity._is_included (exists_fn or the
+        field gate), judged against `discovery_resources`."""
+        # entity.py imports this module, so this one can't import it at the top.
+        from .entity import _is_included
+
+        return frozenset((b.subdevice.key, _key(b)) for b in self.bound if _is_included(b, self))
+
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]
     ) -> None:
@@ -2068,38 +2099,59 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._discovered = False
         self._rehydrate_resources = resources
         self._rehydrated_keys = self._bound_keys()
+        self._rehydrated_included = self._included_keys()
         if not self.bound:
             return False
         self._log.info(
-            "device unreachable; restored %d entities from the last discovery "
-            "snapshot and will keep retrying every %ds",
+            "restored %d entities from the last discovery snapshot; "
+            "connecting to the device every %ds until it answers",
             len(self.bound),
             SUMMARY_INTERVAL_S,
         )
         return True
 
     @callback
-    def _reconcile_rehydrated(self) -> None:
+    def _reconcile_rehydrated(self, resources: dict[str, dict]) -> None:
         """Reload the entry when a live discovery disagrees with the snapshot
-        this load registered from.
+        this load registered from, and stop judging anything against that
+        snapshot from here on.
 
         Platforms enumerate `bound` exactly once, at forward time, so a
         firmware update, a newly-answering sibling subdevice or a different
         appliance at the same IP can't be picked up in place -- the entry has
         to come back up against the live set.
+
+        Both the bound set and the included set are compared: an entity can
+        stay bound while its exists_fn flips (an options token appearing
+        after a firmware update, say), and that changes what the platforms
+        would register just as much. `resources` is what the first live
+        cycle handed `_run_discovery`; the state cache doesn't hold it yet,
+        so the included set is judged against it directly.
         """
         if self._rehydrated_keys is None:
             return
-        stale = self._rehydrated_keys
+        stale_bound = self._rehydrated_keys
+        stale_included = self._rehydrated_included or frozenset()
         self._rehydrated_keys = None
-        live = self._bound_keys()
-        if live == stale:
+        self._rehydrated_included = None
+        live_bound = self._bound_keys()
+        self._rehydrate_resources = resources
+        try:
+            live_included = self._included_keys()
+        finally:
+            self._rehydrate_resources = None
+        if live_bound == stale_bound and live_included == stale_included:
             return
+        # An entity counts once whether it changed in the bound set, the
+        # included set or both, so a bound-only change doesn't log "0 gone,
+        # 0 new".
+        gone = (stale_bound - live_bound) | (stale_included - live_included)
+        new = (live_bound - stale_bound) | (live_included - stale_included)
         self._log.info(
             "live discovery differs from the snapshot this entry loaded from "
             "(%d entities gone, %d new); reloading",
-            len(stale - live),
-            len(live - stale),
+            len(gone),
+            len(new),
         )
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
@@ -2135,14 +2187,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # with no candidates behaves exactly like the old single discover()
         # call.
         self.disabled_subdevices = [s for s in self.subdevices if s.key in self.disabled_keys]
+        enabled_resources = self._without_disabled(resources)
         bound, device_type_name, materialized, skipped = discover_partitioned(
-            self._without_disabled(resources),
+            enabled_resources,
             [s for s in self.subdevices if s.key not in self.disabled_keys],
             resolve_registry,
             CAPABILITIES,
             log=unbound.append,
             tier_log=_tier_log,
             oic_device_types=self._identity.device_types if self._identity else (),
+            # Remembered specs are keyed by real href, so they go in before
+            # each subdevice's canonical view is taken, as in _cook_view.
+            type_resources=cook.with_cached_specs(enabled_resources, self._mode_specs),
         )
         self.subdevices = materialized
         self._skipped_subdevices = skipped
@@ -2496,7 +2552,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         self._failed_cycles += 1
         if self._failed_cycles == 1:
-            self._log.error("%s: %s", what, e)
+            self._log.info("%s: %s", what, e)
         else:
             self._log.debug("%s (%d cycles): %s", what, self._failed_cycles, e)
         # Without this, a fully unreachable device left the connection-mode
@@ -2684,7 +2740,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # comes up against this discovery rather than the one that is
             # being replaced.
             await self._async_save_snapshot(found, candidates)
-            self._reconcile_rehydrated()
+            self._reconcile_rehydrated(found)
             resources = self._live_subdevice_resources(resources)
         sweep_mismatch = False
         if self._observe.mode == MODE_OBSERVE:
@@ -2870,6 +2926,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     **optimistic_body,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
                 }
+            new_modes = optimistic_body.get(_MODES_FIELD)
+            if getattr(desc, "merges_modes", False) and isinstance(new_modes, list):
+                cached_modes = (self._cache.get(write_href) or {}).get(_MODES_FIELD)
+                optimistic_body = {
+                    **optimistic_body,
+                    _MODES_FIELD: merge_options_field(cached_modes, new_modes),
+                }
             # Same fact for row lists (see airconditioner._climate_write's
             # vendor temperature write, soundbar.CHANNEL_LEVEL).
             for rows, key in _MERGED_ROWS:
@@ -2926,11 +2989,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     on_retry=_rearm,
                     retry=retry,
                     prepare_body=_prepare_body,
+                    confirm_on_refusal=desc.confirm_on_refusal and not write_only,
                 )
                 if sent is False:
                     return
             else:
-                await self._async_put(path_segs, body, write_href, on_retry=_rearm, retry=retry)
+                await self._async_put(
+                    path_segs,
+                    body,
+                    write_href,
+                    on_retry=_rearm,
+                    retry=retry,
+                    confirm_on_refusal=desc.confirm_on_refusal and not write_only,
+                )
             if (
                 remote_control_off
                 and not write_only
@@ -2960,9 +3031,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._observe.mark_write_pending(write_href, settle_s=self._write_settle_s)
         await self.async_request_refresh()
 
-    async def _took_effect(self, path_segs: list[str], body: dict | list) -> bool:
-        """Whether a fresh read shows `body`. A read that fails proves
-        nothing, so it counts as taken."""
+    async def _took_effect(
+        self, path_segs: list[str], body: dict | list, *, strict: bool = False
+    ) -> bool:
+        """Whether a fresh read shows `body`; strict confirmation requires a successful read."""
         await asyncio.sleep(self._CONFIRM_DELAY_S)
 
         def _read() -> Any:
@@ -2977,8 +3049,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 rep = await self.hass.async_add_executor_job(_read)
             except Exception as err:
                 self._log.debug("confirming read of %s failed: %s", path_segs, err)
-                return True
-        return rep is None or _payload_present_in(body, rep)
+                return not strict
+        return (not strict) if rep is None else _payload_present_in(body, rep)
 
     async def _async_put(
         self,
@@ -2989,6 +3061,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         *,
         retry: bool = True,
         prepare_body: Callable[[], dict | None] | None = None,
+        confirm_on_refusal: bool = False,
     ) -> bool:
         """PUT `body`; prepare time-sensitive commands after acquiring the session."""
 
@@ -3016,7 +3089,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     body = prepared
                 code, response = await self.hass.async_add_executor_job(_do_put)
             except Exception as e:
-                self._log.warning("command failed for %s: %s", write_href, e)
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
                 # subscriptions on it are too -- downgrade here, before the
@@ -3027,6 +3099,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._observe.mode == MODE_OBSERVE:
                     self._observe.downgrade_to_poll()
                     self._resubscribe_due = True
+                if isinstance(e, OvenStartUnconfirmed):
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="cook_start_unconfirmed",
+                        translation_placeholders={"error": str(e)},
+                    ) from e
                 # A lost reply may follow a successful relative seek or toggle;
                 # resending it would apply the action twice.
                 if not retry:
@@ -3035,10 +3113,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         translation_key="command_failed",
                         translation_placeholders={"href": write_href, "error": str(e)},
                     ) from e
+                self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     code, response = await self.hass.async_add_executor_job(_do_put)
                 except Exception as e2:
+                    if isinstance(e2, OvenStartUnconfirmed):
+                        raise HomeAssistantError(
+                            translation_domain=DOMAIN,
+                            translation_key="cook_start_unconfirmed",
+                            translation_placeholders={"error": str(e2)},
+                        ) from e2
                     self._log.error("command failed for %s after reconnect: %s", write_href, e2)
                     raise HomeAssistantError(
                         translation_domain=DOMAIN,
@@ -3047,6 +3132,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ) from e2
                 if on_retry is not None:
                     on_retry()
+        # An opted-in control may apply a write while replying 4.00 (#714).
+        # A failed GET cannot overturn an explicit refusal.
+        if (
+            code == _COAP_BAD_REQUEST
+            and confirm_on_refusal
+            and await self._took_effect(path_segs, body, strict=True)
+        ):
+            self._log.debug("PUT %s refused, but confirmed by live GET", write_href)
+            return True
+
         if not _coap_accepted(code):
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.

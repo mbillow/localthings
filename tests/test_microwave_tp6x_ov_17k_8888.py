@@ -11,7 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.localthings.legacy_http import PREFIX, table_for, to_resources
+from custom_components.localthings.legacy_http import (
+    CLOCK_HREF,
+    PREFIX,
+    table_for,
+    to_resources,
+)
 from custom_components.localthings.legacy_http_transport import LegacyHttpTransport
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.discovery import discover
@@ -30,7 +35,7 @@ FIXTURE = json.loads(
 
 def test_the_fixture_is_the_translation_of_its_bodies():
     device0 = {e["href"]: e["rep"] for e in FIXTURE["device0"]}
-    assert device0 == to_resources(FIXTURE["bodies"], OVEN)
+    assert device0 == to_resources(FIXTURE["bodies"], OVEN) | {CLOCK_HREF: {}}
     for index, bodies in FIXTURE["device_bodies"].items():
         sibling = Subdevice(kind="indexed", key=index, seed_path=("device", index))
         seed = {
@@ -83,15 +88,15 @@ def _controls(bound):
     }
 
 
-def test_no_control_binds_on_either_cavity():
+def test_no_control_but_the_clock_binds_on_either_cavity():
     """Live on an NQ70M6650DS, every write was answered 204, but a remote start
     only loaded the cook for Start at the panel, and a setpoint written while
-    idle cleared the mode (#675)."""
+    idle cleared the mode (#675). The panel did take the clock (#674)."""
     resources, oic_res, seeds = _load_device_full(NAME)
 
     bound, _materialized, _skipped, _full, _name = _discover_full(resources, oic_res, seeds)
 
-    assert _controls(bound) == set()
+    assert _controls(bound) == {("", "sync_clock")}
 
 
 def test_the_same_cavities_on_another_board_keep_their_controls():
@@ -138,10 +143,9 @@ def test_a_slot_that_differs_from_the_blank_one_is_not_filtered(href, field, val
     assert [s.key for s in materialized] == ["1", "2"]
 
 
-# The oven's Information names only the board it shares with the microwave, so
-# with no record name it was named "<microwave> Tp6X Ov 17K". The reporter's
-# /devices lists the oven with no name but type "Oven" (2026-10-29).
-def test_an_unnamed_sibling_is_named_by_its_record_type(monkeypatch):
+@pytest.fixture
+def bridge(monkeypatch):
+    """Connects a TP6X_OV transport to a fake bridge serving `routes`."""
     monkeypatch.setattr("custom_components.localthings.legacy_http_transport._STATE", {})
     monkeypatch.setattr(
         "custom_components.localthings.legacy_http_transport.http.client.HTTPSConnection",
@@ -151,23 +155,77 @@ def test_an_unnamed_sibling_is_named_by_its_record_type(monkeypatch):
         "custom_components.localthings.legacy_http_transport.client_context",
         lambda cert_pem, key_pem: object(),
     )
+
+    def connect(routes):
+        _FakeConnection.log = []
+        _FakeConnection.routes = routes
+        transport = LegacyHttpTransport(
+            "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_OV"
+        )
+        transport.connect()
+        return transport
+
+    return connect
+
+
+# The oven's Information names only the board it shares with the microwave, so
+# with no record name it was named "<microwave> Tp6X Ov 17K". The reporter's
+# /devices lists the oven with no name but type "Oven" (2026-10-29).
+def test_an_unnamed_sibling_is_named_by_its_record_type(bridge):
     body = FIXTURE["device_bodies"]["2"]
     record = {
         key: value for key, value in body.items() if key not in ("Configuration", "Information")
     }
-    _FakeConnection.log = []
-    _FakeConnection.routes = {
-        "/devices": (200, {"Devices": [{**record, "id": "2"}]}),
-        "/devices/2/configuration": (200, {"Configuration": body["Configuration"]}),
-        "/devices/2/information": (200, {"Information": body["Information"]}),
-    }
-    transport = LegacyHttpTransport(
-        "10.0.0.7", 8888, cert_pem="CERT", key_pem="KEY", token="tok123456", family="TP6X_OV"
+    transport = bridge(
+        {
+            "/devices": (200, {"Devices": [{**record, "id": "2"}]}),
+            "/devices/2/configuration": (200, {"Configuration": body["Configuration"]}),
+            "/devices/2/information": (200, {"Information": body["Information"]}),
+        }
     )
-    transport.connect()
 
     code, seed = transport.read(["device", "2"], timeout=10.0)
 
     assert code == 0x45
     view = {OVEN_SLOT.to_canonical(e["href"]): e["rep"] for e in seed}
     assert view["/information/vs/0"][PREFIX + "deviceName"] == "Oven"
+
+
+def _hot_oven_routes(microwave_unit):
+    microwave = copy.deepcopy(FIXTURE["bodies"])
+    microwave["Temperatures"][0]["unit"] = microwave_unit
+    oven = copy.deepcopy(FIXTURE["device_bodies"]["2"])
+    oven["Temperatures"][0].update(current=350.0, desired=350.0)
+    return {
+        "/devices/0": (200, {"Device": {**microwave, "id": "0"}}),
+        "/devices": (200, {"Devices": [{**oven, "id": "2"}]}),
+        "/devices/2/temperatures": (200, {"Temperatures": oven["Temperatures"]}),
+    }
+
+
+def _oven_unit(seed):
+    view = {OVEN_SLOT.to_canonical(e["href"]): e["rep"] for e in seed}
+    return view["/temperatures/vs/0"][PREFIX + "items"][0][PREFIX + "unit"]
+
+
+# The oven labels its Temperatures "Celsius" whatever the panel shows. Preheating
+# to 350 F, the reporter's HA read 662 F, 350 taken as C (2026-10-30). The
+# microwave on the same panel labels its own right, so its unit stands in.
+@pytest.mark.parametrize("microwave_unit", ["Fahrenheit", "Celsius"])
+def test_the_oven_reads_in_the_microwaves_unit(bridge, microwave_unit):
+    transport = bridge(_hot_oven_routes(microwave_unit))
+    transport.read(["device", "0"], timeout=10.0)
+
+    _code, seed = transport.read(["device", "2"], timeout=10.0)
+    _code, rep = transport.read(["temperatures", "vs", "2"], timeout=10.0)
+
+    assert _oven_unit(seed) == microwave_unit
+    assert rep[PREFIX + "items"][0][PREFIX + "unit"] == microwave_unit
+
+
+def test_the_oven_keeps_its_own_label_before_the_microwave_is_read(bridge):
+    transport = bridge(_hot_oven_routes("Fahrenheit"))
+
+    _code, seed = transport.read(["device", "2"], timeout=10.0)
+
+    assert _oven_unit(seed) == "Celsius"

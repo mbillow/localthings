@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from .entities import SamsungEntityDescription
@@ -35,3 +35,7 @@ class Capability:
     # hood slot reports the cooktop's board): its resources -> its own
     # model, or None when it doesn't apply.
     model_fn: Callable[[dict], str | None] | None = None
+    # rep -> (key prefix, entity) pairs bound alongside `entities`, for one
+    # href that lists several instances of a thing (/doors/vs/0's items).
+    # Read once at discovery, like a pattern cap's href-derived prefix.
+    expand_fn: Callable[[dict], Iterable[tuple[str, SamsungEntityDescription]]] | None = None

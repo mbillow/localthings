@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 from string import Formatter
 
+import pytest
 import yaml
 from homeassistant.helpers.translation import async_get_translations, recursive_flatten
 
@@ -506,6 +507,31 @@ def test_confirmed_wv9900_table_00_course_names():
         assert t00["91"] == self_clean, language
 
 
+def test_confirmed_wd80n645_table_00_course_names():
+    """A WD80N645OOW/EU washer-dryer (DA_WM_A51_20_COMMON) owner read six
+    more Table_00 courses out of the SmartThings app (issue #736). The three
+    drying and Air Wash courses reuse their washer_cycle_table_02 wording.
+    """
+    shared = {"ca": "37", "50": "38", "51": "39"}
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t00 = select["washer_cycle_table_00"]["state"]
+        t02 = select["washer_cycle_table_02"]["state"]
+        for code, twin in shared.items():
+            assert t00[code] == t02[twin], (language, code, twin)
+        assert {"e3", "e7", "c7"} <= set(t00), language
+
+    english = _load("en")["entity"]["select"]["washer_cycle_table_00"]["state"]
+    assert {code: english[code] for code in ("e7", "ca", "51", "50", "e3", "c7")} == {
+        "e7": "Speed Wash+Dry",
+        "ca": "Air Wash",
+        "51": "Synthetics Dry",
+        "50": "Cotton Dry",
+        "e3": "Daily Wash",
+        "c7": "Eco Drum Clean",
+    }
+
+
 def test_confirmed_dryer_dry_level_labels():
     """dryer_dry_level's word vocabulary (None/Damp/Less/Normal/More/Very),
     confirmed across the TP1_21 dryer fixtures. The numeric vocabulary
@@ -888,3 +914,19 @@ def test_instance_name_templates_lead_with_the_placeholder():
         for platform, key in keys:
             name = entity[platform][key]["name"]
             assert name.startswith("{instance_name}"), (language, platform, key, name)
+
+
+@pytest.mark.parametrize("lang", _languages())
+def test_the_dw8700b_dishwasher_table_differs_only_where_its_owner_said(lang):
+    """Home Assistant can't layer one catalog table on another, so the
+    DW8700B's (#718) is a full copy; this keeps it in step with the shared
+    table everywhere but its own two courses."""
+    select = _load(lang)["entity"]["select"]
+    shared, variant = select["dishwasher_cycle"], select["dishwasher_cycle_dw8700b"]
+    own = {"8a", "01"}
+
+    assert variant["name"] == shared["name"]
+    assert {k: v for k, v in variant["state"].items() if k not in own} == {
+        k: v for k, v in shared["state"].items() if k not in own
+    }
+    assert own <= variant["state"].keys()

@@ -15,6 +15,7 @@ segments.
 """
 
 import datetime
+import re
 from dataclasses import dataclass
 
 from ..batch import is_stub_rep
@@ -70,6 +71,21 @@ TEMP_CURRENT_GENERIC = Capability(
 )
 
 
+def _temperatures_item_write(item_id, p):
+    """One compartment's setpoint as a /temperatures/vs/0 items write."""
+    return (
+        ["temperatures", "vs", "0"],
+        {
+            "x.com.samsung.da.items": [
+                {
+                    "x.com.samsung.da.id": item_id,
+                    "x.com.samsung.da.desired": str(round(float(p))),
+                }
+            ]
+        },
+    )
+
+
 def _temp_setpoint_write(p, rep, href=None, resources=None):
     """Prefer vendor /temperatures/vs/0 when present, else the direct OCF
     /temperature/desired/ write -- on some models only the vendor path
@@ -84,17 +100,7 @@ def _temp_setpoint_write(p, rep, href=None, resources=None):
             item_id = "0"
         else:
             return None
-        return (
-            ["temperatures", "vs", "0"],
-            {
-                "x.com.samsung.da.items": [
-                    {
-                        "x.com.samsung.da.id": item_id,
-                        "x.com.samsung.da.desired": str(round(float(p))),
-                    }
-                ]
-            },
-        )
+        return _temperatures_item_write(item_id, p)
     return ([s for s in href.strip("/").split("/") if s], {"temperature": round(float(p))})
 
 
@@ -554,6 +560,8 @@ def _refrigeration_write(field_name):
     return _write
 
 
+# The DONGLE_0281 bridge reports rapidFridge alone (#698), so each switch
+# needs its own field.
 REFRIGERATION = Capability(
     href="/refrigeration/vs/0",
     poll_tier="warm",
@@ -561,6 +569,9 @@ REFRIGERATION = Capability(
         SwitchDesc(
             key="rapid_fridge",
             field="x.com.samsung.da.rapidFridge",
+            exists_fn=lambda rep, resources: (
+                is_stub_rep(rep) or "x.com.samsung.da.rapidFridge" in rep
+            ),
             icon="mdi:fridge-industrial",
             entity_category="config",
             value_fn=lambda v: v == "On",
@@ -569,10 +580,37 @@ REFRIGERATION = Capability(
         SwitchDesc(
             key="rapid_freezing",
             field="x.com.samsung.da.rapidFreezing",
+            exists_fn=lambda rep, resources: (
+                is_stub_rep(rep) or "x.com.samsung.da.rapidFreezing" in rep
+            ),
             icon="mdi:snowflake",
             entity_category="config",
             value_fn=lambda v: v == "On",
             write_fn=_refrigeration_write("x.com.samsung.da.rapidFreezing"),
+        ),
+        # #749's TP6X_REF_16K keeps these two here, under the keys the CoAP
+        # boards give them on hrefs of their own; those win where present.
+        SwitchDesc(
+            key="defrost_delay",
+            field="x.com.samsung.da.delayDefrost",
+            exists_fn=lambda rep, resources: (
+                "x.com.samsung.da.delayDefrost" in rep and "/defrost/delay/vs/0" not in resources
+            ),
+            icon="mdi:snowflake-off",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=_refrigeration_write("x.com.samsung.da.delayDefrost"),
+        ),
+        SwitchDesc(
+            key="ice_maker_enabled",
+            field="x.com.samsung.da.iceMaker",
+            exists_fn=lambda rep, resources: (
+                "x.com.samsung.da.iceMaker" in rep
+                and not any(h.startswith("/icemaker/") for h in resources)
+            ),
+            icon="mdi:cube-outline",
+            value_fn=lambda v: v == "On",
+            write_fn=_refrigeration_write("x.com.samsung.da.iceMaker"),
         ),
     ),
 )
@@ -1012,7 +1050,7 @@ def _flex_zone_supported(rep):
     return set(rep.get("x.com.samsung.da.supportedOptions") or ())
 
 
-def _flex_zone_current(rep):
+def _flex_zone_option(rep):
     # Every dump seen has at most one modes/supportedOptions overlap; a
     # future device reporting two would read the first and the write below
     # would drop both.
@@ -1021,11 +1059,97 @@ def _flex_zone_current(rep):
     return next((m for m in modes if m in supported), None)
 
 
+# Boards with no supportedOptions (#749's TP6X_REF_16K over 8888) keep the
+# zone's mode as a CV_<family>_<mode> token, and list every family's tokens
+# in supportedModes; the zone offers its own family's. CVN_* names the zone
+# type, not its mode.
+_CV_TOKEN = re.compile(r"CV_[A-Z0-9]+_")
+
+
+def _cv_family(token):
+    match = _CV_TOKEN.match(token) if isinstance(token, str) else None
+    return match.group() if match else None
+
+
+def _cv_current(rep):
+    return next(
+        (m for m in rep.get("x.com.samsung.da.modes") or [] if _cv_family(m) is not None), None
+    )
+
+
+def _cv_options(rep):
+    family = _cv_family(_cv_current(rep))
+    if family is None:
+        return []
+    return [m for m in rep.get("x.com.samsung.da.supportedModes") or [] if _cv_family(m) == family]
+
+
+def _flex_zone_current(rep):
+    if _flex_zone_supported(rep):
+        return _flex_zone_option(rep)
+    current = _cv_current(rep)
+    return current if current in _cv_options(rep) else None
+
+
+def _flex_zone_options(resources):
+    rep = resources.get("/mode/vs/0") or {}
+    if _flex_zone_supported(rep):
+        return list(rep.get("x.com.samsung.da.supportedOptions") or [])
+    return _cv_options(rep)
+
+
 def _flex_zone_write(p, rep, href=None):
     supported = _flex_zone_supported(rep)
+    if not supported:
+        # The token alone, as _vacation_write sends it; unconfirmed on hardware.
+        if p not in _cv_options(rep):
+            return None
+        return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [p]}
     modes = [m for m in (rep.get("x.com.samsung.da.modes") or []) if m not in supported]
     modes.append(p)
     return ["mode", "vs", "0"], {"x.com.samsung.da.modes": modes}
+
+
+# Fridges without /filter/waterfilter/vs/0 (#749) report the replacement
+# alert as a WATERFILTER_* token: every capture with both has ENABLE beside
+# filterStatus "replace" (at 100% usage) and DISABLE beside "normal".
+_WATER_FILTER_STATUS = {"WATERFILTER_ENABLE": "replace", "WATERFILTER_DISABLE": "normal"}
+
+
+def _water_filter_token_status(rep):
+    modes = rep.get("x.com.samsung.da.modes") or []
+    return next((_WATER_FILTER_STATUS[m] for m in modes if m in _WATER_FILTER_STATUS), None)
+
+
+def _water_filter_token_reported(rep, resources):
+    return (
+        "/filter/waterfilter/vs/0" not in resources and _water_filter_token_status(rep) is not None
+    )
+
+
+# Vacation mode is a token in the same modes list (#698's DONGLE_0281 and
+# #78's RR40M7165WW advertise RVACATION_ON/OFF; newer boards list only a
+# VACATION_MODE_CONTROL flag and stay out). Never seen on. The write sends
+# the token alone, as the AC mode writes do, so the read-only status tokens
+# beside it (KIMCHIT_RIPE_REMAIN_255:255, ...) are never echoed back as
+# commands; unconfirmed on hardware.
+_VACATION_PREFIX = "RVACATION_"
+
+
+def _vacation_supported(rep, resources):
+    return is_stub_rep(rep) or "RVACATION_ON" in (rep.get("x.com.samsung.da.supportedModes") or ())
+
+
+def _vacation_on(rep):
+    modes = rep.get("x.com.samsung.da.modes") or []
+    token = next((m for m in modes if m.startswith(_VACATION_PREFIX)), None)
+    return None if token is None else token == "RVACATION_ON"
+
+
+def _vacation_write(p, rep, href=None):
+    if p not in ("On", "Off"):
+        return None
+    return ["mode", "vs", "0"], {"x.com.samsung.da.modes": [_VACATION_PREFIX + p.upper()]}
 
 
 FLEX_ZONE = Capability(
@@ -1037,7 +1161,7 @@ FLEX_ZONE = Capability(
             icon="mdi:thermostat",
             translation_key="flex_zone_mode",
             entity_category="config",
-            options_field="x.com.samsung.da.supportedOptions",
+            options=_flex_zone_options,
             # A nonempty supportedOptions alone isn't sufficient: the
             # kimchi-refrigerator family (issue #26) also populates both
             # fields, but its tokens carry a "_[n]:[n]" suffix on
@@ -1047,6 +1171,22 @@ FLEX_ZONE = Capability(
             exists_fn=lambda rep, resources: _flex_zone_current(rep) is not None,
             rep_fn=_flex_zone_current,
             write_fn=_flex_zone_write,
+        ),
+        SensorDesc(
+            key="filter_status",
+            icon="mdi:filter-check",
+            device_class="enum",
+            options=("normal", "replace"),
+            exists_fn=_water_filter_token_reported,
+            rep_fn=_water_filter_token_status,
+        ),
+        SwitchDesc(
+            key="vacation_mode",
+            icon="mdi:beach",
+            entity_category="config",
+            exists_fn=_vacation_supported,
+            rep_fn=_vacation_on,
+            write_fn=_vacation_write,
         ),
     ),
 )
@@ -1192,6 +1332,96 @@ def _any_door_generic(resources):
     return any(h.startswith("/door/") for h in resources)
 
 
+def _reporting_doors(items):
+    return [i for i in items or [] if i.get("x.com.samsung.da.openState") is not None]
+
+
+def _door_slug(item):
+    raw = item.get("x.com.samsung.da.description")
+    return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_") if isinstance(raw, str) else ""
+
+
+def _named_doors(items):
+    """{slug: item} when every reporting door has a description of its own,
+    else None: one id-only item (#728's DONGLE_0260) or two alike would
+    leave a door without a stable key, so the doors are numbered instead."""
+    doors = _reporting_doors(items)
+    slugs = [_door_slug(i) for i in doors]
+    if not all(slugs) or len(set(slugs)) != len(slugs):
+        return None
+    return dict(zip(slugs, doors, strict=True))
+
+
+def _separate_doors(rep):
+    """Two or more reporting doors: on a single-door fridge the aggregate
+    door_open is the same switch. A not-yet-fetched stub binds nothing, as
+    binary sensors aren't re-checked at runtime; a later reload adds them."""
+    return not is_stub_rep(rep) and len(_reporting_doors(rep.get("x.com.samsung.da.items"))) >= 2
+
+
+def _door_is_open(door):
+    """None (unknown) for a missing door rather than a false Closed."""
+    if door is None:
+        return None
+    return door.get("x.com.samsung.da.openState") == "Open"
+
+
+def _named_door(slug):
+    def _door(rep):
+        return (_named_doors(rep.get("x.com.samsung.da.items")) or {}).get(slug)
+
+    return BinarySensorDesc(
+        key="open",
+        rep_fn=lambda rep: _door_is_open(_door(rep)),
+        translation_key="instance_open",
+        use_instance_name=True,
+        device_class="door",
+    )
+
+
+def _door_entities(rep):
+    """One sensor per door, keyed and named by the device's own description
+    ("door_freezer_open", as DOOR_GENERIC keys /door/freezer/0)."""
+    if not _separate_doors(rep):
+        return ()
+    named = _named_doors(rep.get("x.com.samsung.da.items")) or {}
+    return tuple((f"door_{slug}", _named_door(slug)) for slug in named)
+
+
+def _nth_reporting_door(items, n):
+    """The n-th (1-based) door item that reports a state, in the bridge's
+    order, for doors with no usable description.
+
+    Assumes the bridge keeps every door's openState in every poll: if one
+    item dropped it for a poll, the doors after it would shift down a
+    number. No capture so far does this. None when there's no n-th door."""
+    doors = _reporting_doors(items)
+    return doors[n - 1] if len(doors) >= n else None
+
+
+# Enough for the four-compartment models; positions beyond what the fridge
+# reports simply don't bind.
+MAX_NUMBERED_DOORS = 4
+
+
+def _numbered_door(n):
+    def _exists(rep, resources):
+        items = rep.get("x.com.samsung.da.items")
+        return (
+            _separate_doors(rep)
+            and _named_doors(items) is None
+            and len(_reporting_doors(items)) >= n
+        )
+
+    return BinarySensorDesc(
+        key=f"door_{n}_open",
+        field="x.com.samsung.da.items",
+        device_class="door",
+        exists_fn=_exists,
+        value_fn=lambda items: _door_is_open(_nth_reporting_door(items, n)),
+    )
+
+
 DOORS_FALLBACK = Capability(
     href="/doors/vs/0",
     match_fn=lambda rep, resources: not _any_door_generic(resources),
@@ -1205,7 +1435,9 @@ DOORS_FALLBACK = Capability(
                 i.get("x.com.samsung.da.openState") == "Open" for i in (items or [])
             ),
         ),
+        *(_numbered_door(n) for n in range(1, MAX_NUMBERED_DOORS + 1)),
     ),
+    expand_fn=_door_entities,
 )
 
 
@@ -1213,18 +1445,79 @@ def _any_temperature_generic(resources):
     return any(h.startswith("/temperature/") for h in resources)
 
 
-def _temp_item_value(items, keyword):
+def _temp_item(items, keyword):
     for item in items or []:
         if keyword.lower() in (item.get("x.com.samsung.da.description") or "").lower():
-            return _int(item.get("x.com.samsung.da.current"))
-    return None
+            return item
+    return {}
+
+
+def _temp_item_value(items, keyword):
+    return _int(_temp_item(items, keyword).get("x.com.samsung.da.current"))
 
 
 def _temp_item_unit(items, keyword):
-    for item in items or []:
-        if keyword.lower() in (item.get("x.com.samsung.da.description") or "").lower():
-            return normalize_temp_unit(item.get("x.com.samsung.da.unit"))
-    return "°F"
+    item = _temp_item(items, keyword)
+    return normalize_temp_unit(item.get("x.com.samsung.da.unit")) if item else "°F"
+
+
+def _temp_item_reports(keyword, *fields):
+    """exists_fn for one compartment's fields. The DONGLE_0281 bridge (#698)
+    lists Freezer and CVRoom items with only an id and a unit on a
+    fridge-only RR40M7165WW. A stub passes, as in common's gates."""
+
+    def _exists(rep, resources):
+        item = _temp_item(rep.get("x.com.samsung.da.items"), keyword)
+        return is_stub_rep(rep) or all(item.get(f) is not None for f in fields)
+
+    return _exists
+
+
+def _temp_item_bound(keyword, field, default):
+    def _bound(rep):
+        value = _int(_temp_item(rep.get("x.com.samsung.da.items"), keyword).get(field))
+        return float(value) if value is not None else default
+
+    return _bound
+
+
+_SETPOINT_FIELDS = (
+    "x.com.samsung.da.desired",
+    "x.com.samsung.da.minimum",
+    "x.com.samsung.da.maximum",
+)
+
+
+def _temp_item_write(keyword):
+    """_temp_setpoint_write's items write, addressed by the compartment's
+    own item id rather than the Samsung 0/1 convention."""
+
+    def _write(p, rep, href=None):
+        item_id = _temp_item(rep.get("x.com.samsung.da.items"), keyword).get("x.com.samsung.da.id")
+        if item_id is None:
+            return None
+        return _temperatures_item_write(item_id, p)
+
+    return _write
+
+
+def _temp_item_setpoint(key, keyword, default_min, default_max):
+    return NumberDesc(
+        key=key,
+        field="x.com.samsung.da.items",
+        icon="mdi:thermometer",
+        device_class="temperature",
+        entity_category="config",
+        step=1.0,
+        native_min=default_min,
+        native_max=default_max,
+        native_min_fn=_temp_item_bound(keyword, "x.com.samsung.da.minimum", default_min),
+        native_max_fn=_temp_item_bound(keyword, "x.com.samsung.da.maximum", default_max),
+        unit_fn=lambda rep: _temp_item_unit(rep.get("x.com.samsung.da.items"), keyword),
+        exists_fn=_temp_item_reports(keyword, *_SETPOINT_FIELDS),
+        value_fn=lambda items: _int(_temp_item(items, keyword).get("x.com.samsung.da.desired")),
+        write_fn=_temp_item_write(keyword),
+    )
 
 
 TEMPERATURES_FALLBACK = Capability(
@@ -1239,6 +1532,7 @@ TEMPERATURES_FALLBACK = Capability(
             device_class="temperature",
             state_class="measurement",
             unit_fn=lambda rep: _temp_item_unit(rep.get("x.com.samsung.da.items"), "Freezer"),
+            exists_fn=_temp_item_reports("Freezer", "x.com.samsung.da.current"),
             value_fn=lambda items: _temp_item_value(items, "Freezer"),
         ),
         SensorDesc(
@@ -1248,8 +1542,14 @@ TEMPERATURES_FALLBACK = Capability(
             device_class="temperature",
             state_class="measurement",
             unit_fn=lambda rep: _temp_item_unit(rep.get("x.com.samsung.da.items"), "Fridge"),
+            exists_fn=_temp_item_reports("Fridge", "x.com.samsung.da.current"),
             value_fn=lambda items: _temp_item_value(items, "Fridge"),
         ),
+        # Bound by the item's own minimum and maximum, which it must report;
+        # the defaults only cover a stub. Over 8888 this is the TP6X ACs'
+        # Temperatures write, unconfirmed on a fridge yet (#698).
+        _temp_item_setpoint("fridge_setpoint", "Fridge", 1.0, 7.0),
+        _temp_item_setpoint("freezer_setpoint", "Freezer", -23.0, -15.0),
     ),
 )
 

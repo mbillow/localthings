@@ -66,6 +66,18 @@
       "door_open": {
         "name": "Drzwi"
       },
+      "door_1_open": {
+        "name": "Drzwi 1"
+      },
+      "door_2_open": {
+        "name": "Drzwi 2"
+      },
+      "door_3_open": {
+        "name": "Drzwi 3"
+      },
+      "door_4_open": {
+        "name": "Drzwi 4"
+      },
       "filter_blockage": {
         "name": "Zatkany filtr"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "Połączenie woofera"
+      },
+      "lamp": {
+        "name": "Oświetlenie"
+      },
+      "energy_saving": {
+        "name": "Oszczędzanie energii"
       }
     },
     "button": {
@@ -303,6 +321,12 @@
       "dispense_capacity": {
         "name": "Ilość nalewania"
       },
+      "freezer_setpoint": {
+        "name": "Zamrażarka — temperatura zadana"
+      },
+      "fridge_setpoint": {
+        "name": "Chłodziarka — temperatura zadana"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Żaluzja północna",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "east_flap": {
+        "name": "Żaluzja wschodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "south_flap": {
+        "name": "Żaluzja południowa",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
+      "west_flap": {
+        "name": "Żaluzja zachodnia",
+        "state": {
+          "stop": "Stała",
+          "vertical": "Ruch wahadłowy"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Zasięg oświetlenia powitalnego",
         "state": {
@@ -503,6 +555,32 @@
           "87": "Tylko płukanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cykl",
+        "state": {
+          "80": "Delikatne",
+          "83": "Normalny",
+          "84": "Intensywny",
+          "86": "Express 60",
+          "90": "Samoczyszczenie",
+          "0e": "AI Wash",
+          "07": "Wstępne spłukiwanie",
+          "8d": "Garnki i patelnie",
+          "85": "Delikatne",
+          "0c": "Ekspresowy",
+          "0d": "Samoczyszczenie",
+          "8e": "Tworzywa sztuczne",
+          "8f": "Dziecięce",
+          "82": "Automatyczny",
+          "8a": "Eko",
+          "a7": "Intensywny",
+          "a8": "Ekspresowy",
+          "8c": "Wyjątkowo cichy",
+          "88": "Samoczyszczenie",
+          "87": "Tylko płukanie",
+          "01": "Płukanie wstępne"
+        }
+      },
       "dispense_type": {
         "name": "Rodzaj nalewania"
       },
@@ -566,6 +644,7 @@
           "1a": "Wełna",
           "1b": "Pościel",
           "1c": "Koszule",
+          "43": "Koszule",
           "1d": "Ręczniki",
           "1e": "Odzież wierzchnia",
           "1f": "Pranie mieszane",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "Lekkie mrożenie",
           "fconvert_freezer": "Zamrażanie",
           "fconvert_fridge": "Chłodzenie",
-          "fconvert_off": "Wył."
+          "fconvert_off": "Wył.",
+          "cv_ttype_freezer": "Zamrażarka",
+          "cv_ttype_soft_freezer": "Lekkie mrożenie",
+          "cv_ttype_chill": "Schładzanie",
+          "cv_ttype_cool": "Chłodzenie",
+          "cv_ttype_ferment": "Fermentacja",
+          "cv_ttype_kimchi_warm": "Kimchi, łagodne",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, mocne"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "Pieczenie mięs z parą",
           "upper_steam_bake": "Pieczenie z parą (górna)",
           "descale": "Odkamienianie",
-          "drain": "Opróżnianie wody"
+          "drain": "Opróżnianie wody",
+          "healthycook1": "Zdrowe gotowanie 1",
+          "healthycook2": "Zdrowe gotowanie 2",
+          "healthycook3": "Zdrowe gotowanie 3",
+          "healthycook4": "Zdrowe gotowanie 4",
+          "healthycook5": "Zdrowe gotowanie 5",
+          "healthycook6": "Zdrowe gotowanie 6",
+          "upper_healthycook1": "Zdrowe gotowanie 1 (górna)",
+          "upper_healthycook2": "Zdrowe gotowanie 2 (górna)",
+          "upper_healthycook3": "Zdrowe gotowanie 3 (górna)",
+          "upper_healthycook4": "Zdrowe gotowanie 4 (górna)",
+          "lower_healthycook1": "Zdrowe gotowanie 1 (dolna)",
+          "lower_healthycook2": "Zdrowe gotowanie 2 (dolna)",
+          "lower_healthycook3": "Zdrowe gotowanie 3 (dolna)",
+          "lower_healthycook4": "Zdrowe gotowanie 4 (dolna)"
         }
       },
       "operating_mode": {
@@ -911,6 +1012,8 @@
         "name": "Cykl",
         "state": {
           "01": "Normalny",
+          "50": "Suszenie bawełny",
+          "51": "Suszenie syntetyków",
           "55": "Tkaniny białe",
           "57": "Samoczyszczenie+",
           "5b": "Bawełna",
@@ -950,6 +1053,8 @@
           "ab": "Eko na zimno",
           "b1": "Samoczyszczenie+",
           "ba": "Odpompowanie/wirowanie",
+          "c7": "Eco czyszczenie bębna",
+          "ca": "Air Wash",
           "d0": "Bawełna",
           "d1": "Eko bawełna",
           "d2": "Syntetyki",
@@ -962,7 +1067,9 @@
           "da": "Super Eco",
           "db": "Super szybki",
           "dc": "Szybkie pranie 15'",
-          "e4": "Antyalergiczny"
+          "e3": "Pranie codzienne",
+          "e4": "Antyalergiczny",
+          "e7": "Szybkie pranie + suszenie"
         }
       },
       "washer_cycle_table_02": {
@@ -1241,6 +1348,25 @@
           "jazz": "Jazz",
           "classic": "Klasyczny",
           "custom": "Niestandardowy"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Tryb sprzątania",
+        "state": {
+          "auto": "Automatyczny",
+          "part": "Miejscowy",
+          "repeat": "Powtarzanie",
+          "manual": "Ręczny",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Dźwięk",
+        "state": {
+          "soundeffect": "Efekty dźwiękowe",
+          "mute": "Wyciszony",
+          "voice": "Głos"
         }
       }
     },
@@ -1556,7 +1682,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stan komory"
+        "name": "Stan komory",
+        "state": {
+          "ready": "Gotowe",
+          "preheat": "Nagrzewanie wstępne",
+          "cooking": "Gotowanie",
+          "finish": "Zakończono"
+        }
       },
       "power_level": {
         "name": "Poziom mocy"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "Sygnał Wi-Fi"
+      },
+      "robot_status": {
+        "name": "Stan robota",
+        "state": {
+          "cleaning": "Sprzątanie",
+          "point": "Sprzątanie miejscowe",
+          "homing": "Powrót do stacji",
+          "charging": "Ładowanie",
+          "idle": "Bezczynny",
+          "pause": "Wstrzymany",
+          "alarm": "Alarm",
+          "reserve": "Zaplanowany",
+          "poweroff": "Wyłączony"
+        }
+      },
+      "robot_movement": {
+        "name": "Ruch"
+      },
+      "oven_setpoint": {
+        "name": "Temperatura zadana"
       }
     },
     "switch": {
@@ -2019,6 +2171,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Tryb wakacyjny"
+      },
       "welcome_lighting": {
         "name": "Oświetlenie powitalne"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "Wzmacniacz głosu"
+      },
+      "repeated_cleaning": {
+        "name": "Powtarzanie sprzątania"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "Gorąca woda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normalna",
+              "turbo": "Turbo",
+              "quiet": "Cicha",
+              "extra_quiet": "Bardzo cicha"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "Polecenie do {href} nie powiodło się nawet po ponownym połączeniu: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Nie udało się potwierdzić rozpoczęcia gotowania i nie ponowiono próby. Sprawdź urządzenie przed ponowną próbą. Szczegóły: {error}"
+    },
     "command_refused": {
       "message": "Urządzenie odrzuciło polecenie do {href}: {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Włącz wentylator okapu przed ustawieniem wyłącznika czasowego."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ten robot sprzątający nie obsługuje mocy ssania {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ten robot sprzątający nie wymienia {command} wśród obsługiwanych poleceń."
+    },
+    "vacuum_command_params": {
+      "message": "Polecenia robota sprzątającego nie przyjmują parametrów."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "Dolna strefa wina",
         "door_freezer": "Drzwi zamrażarki",
         "door_cooler": "Drzwi chłodziarki",
+        "door_fridge": "Drzwi chłodziarki",
         "door_cvroom": "Drzwi strefy Flex",
         "door_winecellar": "Drzwi winiarki",
         "door_onedoorfreezer": "Drzwi główne",

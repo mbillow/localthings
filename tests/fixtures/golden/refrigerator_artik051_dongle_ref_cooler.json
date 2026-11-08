@@ -10,8 +10,8 @@
     "door_onedoorfreezer_open",
     "firmware_update",
     "ice_maker_enabled",
-    "rapid_freezing",
     "rapid_fridge",
-    "sabbath_mode"
+    "sabbath_mode",
+    "vacation_mode"
   ]
 }

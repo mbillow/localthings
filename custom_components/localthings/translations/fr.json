@@ -66,6 +66,18 @@
       "door_open": {
         "name": "Porte"
       },
+      "door_1_open": {
+        "name": "Porte 1"
+      },
+      "door_2_open": {
+        "name": "Porte 2"
+      },
+      "door_3_open": {
+        "name": "Porte 3"
+      },
+      "door_4_open": {
+        "name": "Porte 4"
+      },
       "filter_blockage": {
         "name": "Filtre obstrué"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "Connexion du caisson de basses"
+      },
+      "lamp": {
+        "name": "Lampe"
+      },
+      "energy_saving": {
+        "name": "Économie d'énergie"
       }
     },
     "button": {
@@ -303,6 +321,12 @@
       "dispense_capacity": {
         "name": "Quantité distribuée"
       },
+      "freezer_setpoint": {
+        "name": "Congélateur : consigne"
+      },
+      "fridge_setpoint": {
+        "name": "Réfrigérateur : consigne"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Volet nord",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "east_flap": {
+        "name": "Volet est",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "south_flap": {
+        "name": "Volet sud",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
+      "west_flap": {
+        "name": "Volet ouest",
+        "state": {
+          "stop": "Fixe",
+          "vertical": "Oscillation"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Proximité de l'éclairage d'accueil",
         "state": {
@@ -503,6 +555,32 @@
           "87": "Rinçage seul"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programme",
+        "state": {
+          "80": "Délicat",
+          "83": "Normal",
+          "84": "Intensif",
+          "86": "Express 60",
+          "90": "Autonettoyage",
+          "0e": "Lavage IA",
+          "07": "Prélavage intensif",
+          "8d": "Casseroles et poêles",
+          "85": "Délicat",
+          "0c": "Express",
+          "0d": "Autonettoyage",
+          "8e": "Plastique",
+          "8f": "Spécial bébé",
+          "82": "Auto",
+          "8a": "Éco",
+          "a7": "Intensif",
+          "a8": "Express",
+          "8c": "Extra silencieux",
+          "88": "Autonettoyage",
+          "87": "Rinçage seul",
+          "01": "Prélavage"
+        }
+      },
       "dispense_type": {
         "name": "Type de distribution"
       },
@@ -566,6 +644,7 @@
           "1a": "Laine",
           "1b": "Draps",
           "1c": "Chemises",
+          "43": "Chemises",
           "1d": "Serviettes",
           "1e": "Vêtements d'extérieur",
           "1f": "Charge mixte",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "Congélation douce",
           "fconvert_freezer": "Congélation",
           "fconvert_fridge": "Réfrigérateur",
-          "fconvert_off": "Désactivé"
+          "fconvert_off": "Désactivé",
+          "cv_ttype_freezer": "Congélateur",
+          "cv_ttype_soft_freezer": "Congélation douce",
+          "cv_ttype_chill": "Refroidissement",
+          "cv_ttype_cool": "Fraîcheur",
+          "cv_ttype_ferment": "Fermentation",
+          "cv_ttype_kimchi_warm": "Kimchi, faible",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, fort"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "Rôtissage vapeur",
           "upper_steam_bake": "Cuisson vapeur (cavité supérieure)",
           "descale": "Détartrage",
-          "drain": "Vidange"
+          "drain": "Vidange",
+          "healthycook1": "Cuisson saine 1",
+          "healthycook2": "Cuisson saine 2",
+          "healthycook3": "Cuisson saine 3",
+          "healthycook4": "Cuisson saine 4",
+          "healthycook5": "Cuisson saine 5",
+          "healthycook6": "Cuisson saine 6",
+          "upper_healthycook1": "Cuisson saine 1 (cavité supérieure)",
+          "upper_healthycook2": "Cuisson saine 2 (cavité supérieure)",
+          "upper_healthycook3": "Cuisson saine 3 (cavité supérieure)",
+          "upper_healthycook4": "Cuisson saine 4 (cavité supérieure)",
+          "lower_healthycook1": "Cuisson saine 1 (cavité inférieure)",
+          "lower_healthycook2": "Cuisson saine 2 (cavité inférieure)",
+          "lower_healthycook3": "Cuisson saine 3 (cavité inférieure)",
+          "lower_healthycook4": "Cuisson saine 4 (cavité inférieure)"
         }
       },
       "operating_mode": {
@@ -911,6 +1012,8 @@
         "name": "Programme",
         "state": {
           "01": "Normal",
+          "50": "Séchage coton",
+          "51": "Séchage synthétiques",
           "55": "Blancs",
           "57": "Autonettoyage+",
           "5b": "Coton",
@@ -950,6 +1053,8 @@
           "ab": "Éco - froid",
           "b1": "Auto-nettoyage+",
           "ba": "Vidange/Essorage",
+          "c7": "Nettoyage du tambour Eco",
+          "ca": "Lavage à l'air",
           "d0": "Coton",
           "d1": "Coton Éco",
           "d2": "Synthétiques",
@@ -962,7 +1067,9 @@
           "da": "Super Éco",
           "db": "Super rapide",
           "dc": "Rapide 15'",
-          "e4": "Anti-allergènes"
+          "e3": "Lavage quotidien",
+          "e4": "Anti-allergènes",
+          "e7": "Lavage + séchage rapide"
         }
       },
       "washer_cycle_table_02": {
@@ -1241,6 +1348,25 @@
           "jazz": "Jazz",
           "classic": "Classique",
           "custom": "Personnalisé"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Mode de nettoyage",
+        "state": {
+          "auto": "Auto",
+          "part": "Localisé",
+          "repeat": "Répéter",
+          "manual": "Manuel",
+          "stop": "Arrêt",
+          "map": "Carte"
+        }
+      },
+      "robot_sound": {
+        "name": "Son",
+        "state": {
+          "soundeffect": "Effets sonores",
+          "mute": "Muet",
+          "voice": "Voix"
         }
       }
     },
@@ -1556,7 +1682,13 @@
         }
       },
       "cavity_state": {
-        "name": "État de la cavité"
+        "name": "État de la cavité",
+        "state": {
+          "ready": "Prêt",
+          "preheat": "Préchauffage",
+          "cooking": "Cuisson",
+          "finish": "Terminé"
+        }
       },
       "power_level": {
         "name": "Niveau de puissance"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "Signal Wi-Fi"
+      },
+      "robot_status": {
+        "name": "État du robot",
+        "state": {
+          "cleaning": "Nettoyage",
+          "point": "Nettoyage localisé",
+          "homing": "Retour à la base",
+          "charging": "En charge",
+          "idle": "Inactif",
+          "pause": "En pause",
+          "alarm": "Alarme",
+          "reserve": "Programmé",
+          "poweroff": "Éteint"
+        }
+      },
+      "robot_movement": {
+        "name": "Mouvement"
+      },
+      "oven_setpoint": {
+        "name": "Consigne"
       }
     },
     "switch": {
@@ -2019,6 +2171,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Mode vacances"
+      },
       "welcome_lighting": {
         "name": "Éclairage d'accueil"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "Amplificateur vocal"
+      },
+      "repeated_cleaning": {
+        "name": "Répéter le nettoyage"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "Eau chaude sanitaire"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Silencieux",
+              "extra_quiet": "Très silencieux"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "La commande vers {href} a échoué même après reconnexion : {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Le démarrage de la cuisson n’a pas pu être confirmé et n’a pas été réessayé. Vérifiez l’appareil avant de réessayer. Détails : {error}"
+    },
     "command_refused": {
       "message": "L'appareil a refusé la commande vers {href} : {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Allumez le ventilateur de la hotte avant de régler sa minuterie d'arrêt."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Ce robot aspirateur ne prend pas en charge la puissance d'aspiration {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Ce robot aspirateur ne compte pas {command} parmi ses commandes prises en charge."
+    },
+    "vacuum_command_params": {
+      "message": "Les commandes du robot aspirateur ne prennent pas de paramètres."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "Zone à vin inférieure",
         "door_freezer": "Porte du congélateur",
         "door_cooler": "Porte du réfrigérateur",
+        "door_fridge": "Porte du réfrigérateur",
         "door_cvroom": "Porte de la zone flexible",
         "door_winecellar": "Porte de la cave à vin",
         "door_onedoorfreezer": "Porte principale",

@@ -66,6 +66,18 @@
       "door_open": {
         "name": "문"
       },
+      "door_1_open": {
+        "name": "문 1"
+      },
+      "door_2_open": {
+        "name": "문 2"
+      },
+      "door_3_open": {
+        "name": "문 3"
+      },
+      "door_4_open": {
+        "name": "문 4"
+      },
       "filter_blockage": {
         "name": "필터 막힘"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "우퍼 연결"
+      },
+      "lamp": {
+        "name": "램프"
+      },
+      "energy_saving": {
+        "name": "절전"
       }
     },
     "button": {
@@ -303,6 +321,12 @@
       "dispense_capacity": {
         "name": "출수량"
       },
+      "freezer_setpoint": {
+        "name": "냉동실 설정값"
+      },
+      "fridge_setpoint": {
+        "name": "냉장실 설정값"
+      },
       "good_sleep": {
         "name": "쾌면 시간"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "북쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "east_flap": {
+        "name": "동쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "south_flap": {
+        "name": "남쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
+      "west_flap": {
+        "name": "서쪽 날개",
+        "state": {
+          "stop": "고정",
+          "vertical": "상하 회전"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "웰컴 라이팅 감지 거리",
         "state": {
@@ -503,6 +555,32 @@
           "87": "헹굼단독"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "코스",
+        "state": {
+          "80": "섬세",
+          "83": "표준",
+          "84": "강력",
+          "86": "급속 60분",
+          "90": "내부 세척",
+          "0e": "AI 맞춤 세척",
+          "07": "애벌 세척",
+          "8d": "냄비 및 팬",
+          "8e": "플라스틱",
+          "8f": "젖병 살균",
+          "82": "자동",
+          "8a": "에코",
+          "a7": "강력",
+          "a8": "급속",
+          "8c": "저소음",
+          "88": "내부 세척",
+          "85": "섬세",
+          "0c": "급속",
+          "0d": "내부 세척",
+          "87": "헹굼단독",
+          "01": "애벌세척"
+        }
+      },
       "dispense_type": {
         "name": "출수 종류"
       },
@@ -564,6 +642,7 @@
           "1a": "울",
           "1b": "이불",
           "1c": "셔츠",
+          "43": "셔츠",
           "1d": "타월",
           "1e": "아웃도어",
           "1f": "혼합",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "소프트 냉동",
           "fconvert_freezer": "냉동",
           "fconvert_fridge": "냉장",
-          "fconvert_off": "끄기"
+          "fconvert_off": "끄기",
+          "cv_ttype_freezer": "냉동",
+          "cv_ttype_soft_freezer": "소프트 냉동",
+          "cv_ttype_chill": "칠",
+          "cv_ttype_cool": "냉장",
+          "cv_ttype_ferment": "숙성",
+          "cv_ttype_kimchi_warm": "김치 약",
+          "cv_ttype_kimchi_normal": "김치",
+          "cv_ttype_kimchi_cold": "김치 강"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "스팀 로스트",
           "upper_steam_bake": "스팀 베이크 (상단)",
           "descale": "석회 제거",
-          "drain": "배수"
+          "drain": "배수",
+          "healthycook1": "건강 요리 1",
+          "healthycook2": "건강 요리 2",
+          "healthycook3": "건강 요리 3",
+          "healthycook4": "건강 요리 4",
+          "healthycook5": "건강 요리 5",
+          "healthycook6": "건강 요리 6",
+          "upper_healthycook1": "건강 요리 1 (상단)",
+          "upper_healthycook2": "건강 요리 2 (상단)",
+          "upper_healthycook3": "건강 요리 3 (상단)",
+          "upper_healthycook4": "건강 요리 4 (상단)",
+          "lower_healthycook1": "건강 요리 1 (하단)",
+          "lower_healthycook2": "건강 요리 2 (하단)",
+          "lower_healthycook3": "건강 요리 3 (하단)",
+          "lower_healthycook4": "건강 요리 4 (하단)"
         }
       },
       "operating_mode": {
@@ -911,6 +1012,8 @@
         "name": "코스",
         "state": {
           "01": "표준세탁",
+          "50": "면 건조",
+          "51": "합성섬유 건조",
           "55": "흰옷",
           "57": "통세척+",
           "5b": "면",
@@ -950,6 +1053,8 @@
           "ab": "에코 냉수 세탁",
           "b1": "통세척+",
           "ba": "배수/탈수",
+          "c7": "에코 통세척",
+          "ca": "에어워시",
           "d0": "면",
           "d1": "에코 면",
           "d2": "합성섬유",
@@ -962,7 +1067,9 @@
           "da": "초절약세탁",
           "db": "쾌속세탁",
           "dc": "15분 쾌속세탁",
-          "e4": "알레르기 케어"
+          "e3": "데일리 세탁",
+          "e4": "알레르기 케어",
+          "e7": "스피드 세탁+건조"
         }
       },
       "washer_cycle_table_02": {
@@ -1241,6 +1348,25 @@
           "jazz": "Jazz",
           "classic": "클래식",
           "custom": "사용자 정의"
+        }
+      },
+      "cleaning_mode": {
+        "name": "청소 모드",
+        "state": {
+          "auto": "자동",
+          "part": "집중",
+          "repeat": "반복",
+          "manual": "수동",
+          "stop": "정지",
+          "map": "지도"
+        }
+      },
+      "robot_sound": {
+        "name": "소리",
+        "state": {
+          "soundeffect": "효과음",
+          "mute": "음소거",
+          "voice": "음성"
         }
       }
     },
@@ -1556,7 +1682,13 @@
         }
       },
       "cavity_state": {
-        "name": "조리실 상태"
+        "name": "조리실 상태",
+        "state": {
+          "ready": "준비됨",
+          "preheat": "예열",
+          "cooking": "조리 중",
+          "finish": "완료"
+        }
       },
       "power_level": {
         "name": "출력 단계"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi 신호"
+      },
+      "robot_status": {
+        "name": "로봇 상태",
+        "state": {
+          "cleaning": "청소 중",
+          "point": "집중 청소",
+          "homing": "충전대로 복귀 중",
+          "charging": "충전 중",
+          "idle": "대기",
+          "pause": "일시정지",
+          "alarm": "알람",
+          "reserve": "예약",
+          "poweroff": "전원 꺼짐"
+        }
+      },
+      "robot_movement": {
+        "name": "이동"
+      },
+      "oven_setpoint": {
+        "name": "설정 온도"
       }
     },
     "switch": {
@@ -2019,6 +2171,9 @@
       "storm_wash": {
         "name": "스톰 워시+"
       },
+      "vacation_mode": {
+        "name": "휴가 모드"
+      },
       "welcome_lighting": {
         "name": "웰컴 라이팅"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "음성 증폭"
+      },
+      "repeated_cleaning": {
+        "name": "반복 청소"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "온수"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "보통",
+              "turbo": "터보",
+              "quiet": "조용히",
+              "extra_quiet": "매우 조용히"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "재연결 후에도 {href} 명령이 실패했습니다: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "조리 시작을 확인할 수 없어 다시 시도하지 않았습니다. 다시 시도하기 전에 기기를 확인하세요. 세부 정보: {error}"
+    },
     "command_refused": {
       "message": "가전제품이 {href} 명령을 거부했습니다: {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "자동 꺼짐 타이머를 설정하기 전에 레인지 후드 팬을 켜세요."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "이 로봇청소기는 흡입력 {fan_speed}을(를) 지원하지 않습니다."
+    },
+    "vacuum_unsupported_command": {
+      "message": "이 로봇청소기는 지원 명령에 {command}이(가) 없습니다."
+    },
+    "vacuum_command_params": {
+      "message": "로봇청소기 명령에는 매개변수가 없습니다."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "하단 와인 구역",
         "door_freezer": "냉동실 문",
         "door_cooler": "냉장실 문",
+        "door_fridge": "냉장실 문",
         "door_cvroom": "맞춤 보관실 문",
         "door_winecellar": "와인셀러 문",
         "door_onedoorfreezer": "메인 문",

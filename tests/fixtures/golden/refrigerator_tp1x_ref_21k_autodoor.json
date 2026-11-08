@@ -16,7 +16,6 @@
     "power_energy_kwh",
     "power_watts",
     "rapid_freezing",
-    "rapid_fridge",
     "selfcheck_error",
     "selfcheck_result",
     "selfcheck_status"

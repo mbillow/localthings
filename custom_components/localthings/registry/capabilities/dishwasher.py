@@ -7,6 +7,8 @@ washer and dryer in laundry.py; only the dishwasher-specific options (storm
 wash, auto release dry) are read locally here.
 """
 
+import re
+
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
@@ -105,10 +107,27 @@ DISHWASHER_SETTINGS = Capability(
 # had already finished -- unlike the washer/dryer reports this reader was
 # built from (issues #9, #258), it never settles on a value worth showing.
 
+# The consumer model in /information/vs/0's description
+# (`DA_DW_TP1_21_COMMON_DW8700B/DD92-0008041_0001`). Course labels differ by
+# model: #251's owner confirmed 8A as Normal, while the DW8700B
+# (DW60BG850B00ET, #718) names it Eco in SmartThings, in English and Italian.
+_CONSUMER_MODEL = re.compile(r"_([A-Z0-9]+)/DD\d")
+
+
+def consumer_model(resources):
+    info = resources.get("/information/vs/0") or {}
+    match = _CONSUMER_MODEL.search(info.get("x.com.samsung.da.description") or "")
+    return match.group(1) if match else None
+
+
 CYCLE_OPTIONS = Capability(
     href="/course/vs/0",
     entities=(
-        cycle_select(translation_key="dishwasher_cycle", icon="mdi:dishwasher"),
+        cycle_select(
+            translation_key="dishwasher_cycle",
+            icon="mdi:dishwasher",
+            variant_fn=consumer_model,
+        ),
         bool_option_switch("storm_wash", "mdi:weather-lightning-rainy", "StormWashZone"),
         bool_option_switch(
             "auto_release_dry", "mdi:door-open", "AutoDoorRelease", gate_on_presence=True

@@ -66,6 +66,18 @@
       "door_open": {
         "name": "Tür"
       },
+      "door_1_open": {
+        "name": "Tür 1"
+      },
+      "door_2_open": {
+        "name": "Tür 2"
+      },
+      "door_3_open": {
+        "name": "Tür 3"
+      },
+      "door_4_open": {
+        "name": "Tür 4"
+      },
       "filter_blockage": {
         "name": "Filterverstopfung"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "Woofer-Verbindung"
+      },
+      "lamp": {
+        "name": "Lampe"
+      },
+      "energy_saving": {
+        "name": "Energiesparen"
       }
     },
     "button": {
@@ -330,6 +348,12 @@
       "zone_target_temperature": {
         "name": "Zonen-Zieltemperatur"
       },
+      "freezer_setpoint": {
+        "name": "Gefrierschrank Sollwert"
+      },
+      "fridge_setpoint": {
+        "name": "Kühlschrank Sollwert"
+      },
       "good_sleep": {
         "name": "Guter Schlaf"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamelle Nord",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "east_flap": {
+        "name": "Lamelle Ost",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "south_flap": {
+        "name": "Lamelle Süd",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
+      "west_flap": {
+        "name": "Lamelle West",
+        "state": {
+          "stop": "Fest",
+          "vertical": "Schwenken"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Empfindlichkeit der Willkommensbeleuchtung",
         "state": {
@@ -503,6 +555,32 @@
           "87": "Nur Spülen"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programm",
+        "state": {
+          "80": "Schonprogramm",
+          "83": "Normal",
+          "84": "Intensiv",
+          "86": "Express 60",
+          "90": "Selbstreinigung",
+          "0e": "KI-Spülen",
+          "07": "Vorspülen",
+          "8d": "Töpfe und Pfannen",
+          "8e": "Plastik",
+          "8f": "Babypflege",
+          "82": "Automatik",
+          "8a": "Eco",
+          "a7": "Intensiv",
+          "a8": "Express",
+          "8c": "Extra leise",
+          "88": "Selbstreinigung",
+          "85": "Schonprogramm",
+          "0c": "Express",
+          "0d": "Selbstreinigung",
+          "87": "Nur Spülen",
+          "01": "Vorspülen"
+        }
+      },
       "dispense_type": {
         "name": "Ausgabetyp"
       },
@@ -563,6 +641,7 @@
           "1a": "Wolle",
           "1b": "Bettwäsche",
           "1c": "Hemden",
+          "43": "Hemden",
           "1d": "Handtücher",
           "1e": "Outdoor",
           "1f": "Mischwäsche",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "Sanftgefrierfach",
           "fconvert_freezer": "Gefrieren",
           "fconvert_fridge": "Kühlen",
-          "fconvert_off": "Aus"
+          "fconvert_off": "Aus",
+          "cv_ttype_freezer": "Gefrierschrank",
+          "cv_ttype_soft_freezer": "Sanftgefrierfach",
+          "cv_ttype_chill": "Kaltlagerung",
+          "cv_ttype_cool": "Kühlen",
+          "cv_ttype_ferment": "Fermentieren",
+          "cv_ttype_kimchi_warm": "Kimchi, schwach",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, stark"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "Dampfbraten",
           "upper_steam_bake": "Dampfbacken (oben)",
           "descale": "Entkalken",
-          "drain": "Wasser ablassen"
+          "drain": "Wasser ablassen",
+          "healthycook1": "Gesundes Garen 1",
+          "healthycook2": "Gesundes Garen 2",
+          "healthycook3": "Gesundes Garen 3",
+          "healthycook4": "Gesundes Garen 4",
+          "healthycook5": "Gesundes Garen 5",
+          "healthycook6": "Gesundes Garen 6",
+          "upper_healthycook1": "Gesundes Garen 1 (oben)",
+          "upper_healthycook2": "Gesundes Garen 2 (oben)",
+          "upper_healthycook3": "Gesundes Garen 3 (oben)",
+          "upper_healthycook4": "Gesundes Garen 4 (oben)",
+          "lower_healthycook1": "Gesundes Garen 1 (unten)",
+          "lower_healthycook2": "Gesundes Garen 2 (unten)",
+          "lower_healthycook3": "Gesundes Garen 3 (unten)",
+          "lower_healthycook4": "Gesundes Garen 4 (unten)"
         }
       },
       "operating_mode": {
@@ -874,6 +975,8 @@
         "name": "Programm",
         "state": {
           "01": "Normal",
+          "50": "Trocknen Baumwolle",
+          "51": "Trocknen Pflegeleicht",
           "55": "Weißwäsche",
           "57": "Selbstreinigung+",
           "5b": "Baumwolle",
@@ -913,6 +1016,8 @@
           "ab": "Eco Kalt",
           "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
+          "c7": "Eco-Trommelreinigung",
+          "ca": "Air Wash",
           "d0": "Baumwolle",
           "d1": "Eco Baumwolle",
           "d2": "Pflegeleicht",
@@ -925,7 +1030,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "Schnelle Wäsche 15'",
-          "e4": "Anti-Allergie"
+          "e3": "Tägliche Wäsche",
+          "e4": "Anti-Allergie",
+          "e7": "Schnell Waschen + Trocknen"
         }
       },
       "washer_cycle_table_02": {
@@ -1242,6 +1349,25 @@
           "classic": "Klassik",
           "custom": "Benutzerdefiniert"
         }
+      },
+      "cleaning_mode": {
+        "name": "Reinigungsmodus",
+        "state": {
+          "auto": "Auto",
+          "part": "Punktreinigung",
+          "repeat": "Wiederholen",
+          "manual": "Manuell",
+          "stop": "Stopp",
+          "map": "Karte"
+        }
+      },
+      "robot_sound": {
+        "name": "Ton",
+        "state": {
+          "soundeffect": "Toneffekte",
+          "mute": "Stumm",
+          "voice": "Sprache"
+        }
       }
     },
     "sensor": {
@@ -1550,7 +1676,13 @@
         }
       },
       "cavity_state": {
-        "name": "Garraumzustand"
+        "name": "Garraumzustand",
+        "state": {
+          "ready": "Bereit",
+          "preheat": "Vorheizen",
+          "cooking": "Garen",
+          "finish": "Fertig"
+        }
       },
       "power_level": {
         "name": "Leistungsstufe"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "WLAN-Signal"
+      },
+      "robot_status": {
+        "name": "Roboterstatus",
+        "state": {
+          "cleaning": "Reinigt",
+          "point": "Punktreinigung",
+          "homing": "Kehrt zur Station zurück",
+          "charging": "Lädt",
+          "idle": "Bereit",
+          "pause": "Pausiert",
+          "alarm": "Alarm",
+          "reserve": "Geplant",
+          "poweroff": "Ausgeschaltet"
+        }
+      },
+      "robot_movement": {
+        "name": "Bewegung"
+      },
+      "oven_setpoint": {
+        "name": "Sollwert"
       }
     },
     "switch": {
@@ -2007,6 +2159,9 @@
       "sound": {
         "name": "Ton"
       },
+      "vacation_mode": {
+        "name": "Urlaubsmodus"
+      },
       "welcome_lighting": {
         "name": "Willkommensbeleuchtung"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "Stimmverstärker"
+      },
+      "repeated_cleaning": {
+        "name": "Reinigung wiederholen"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "Warmwasser"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normal",
+              "turbo": "Turbo",
+              "quiet": "Leise",
+              "extra_quiet": "Extra leise"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "Der Befehl an {href} ist auch nach erneutem Verbinden fehlgeschlagen: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Der Garstart konnte nicht bestätigt werden und wurde nicht wiederholt. Prüfen Sie das Gerät, bevor Sie es erneut versuchen. Details: {error}"
+    },
     "command_refused": {
       "message": "Das Gerät hat den Befehl an {href} abgelehnt: {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Schalten Sie den Lüfter der Dunstabzugshaube ein, bevor Sie den Abschalttimer einstellen."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Dieser Saugroboter unterstützt die Saugstufe {fan_speed} nicht."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Dieser Saugroboter führt {command} nicht unter seinen unterstützten Befehlen."
+    },
+    "vacuum_command_params": {
+      "message": "Befehle für den Saugroboter haben keine Parameter."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "Untere Weinzone",
         "door_freezer": "Gefrierschranktür",
         "door_cooler": "Kühlschranktür",
+        "door_fridge": "Kühlschranktür",
         "door_cvroom": "Flex-Zonen-Tür",
         "door_winecellar": "Weinkühlschranktür",
         "door_onedoorfreezer": "Haupttür",

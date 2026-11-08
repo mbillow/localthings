@@ -131,6 +131,36 @@ def test_registry_reproduces_golden_state_keys_for_dryer_tp6x_8888():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_refrigerator_dongle_0281_8888():
+    """RR40M7165WW behind a DONGLE_0281 bridge (#698), typed by its record's
+    `type` since it reports no `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_dongle_0281_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_refrigerator_tp6x_ref_16k_8888():
+    """RF28K9380SR/AA over 8888 (#749): named doors, the CVRoom's mode, and
+    the switches and filter alert its board keeps on shared resources."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_tp6x_ref_16k_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
     """DVE50A8600V/A3 (issue #79) -- description pairs two model numbers
     ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
@@ -197,6 +227,23 @@ def test_registry_reproduces_golden_state_keys_for_airconditioner_ailp_fac():
     golden = json.loads((GOLDEN / "airconditioner_ailp_fac.json").read_text())
     state_keys = _new_state_keys(
         "airconditioner_ailp_fac", resources, device_types=("oic.wk.d", "oic.d.airconditioner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_airconditioner_tp1x_sac_fourway():
+    """TP1X_DA-AC-SAC-01001 4-way cassette (issue #704), typed by /oic/d;
+    its /fourwayflaps/vs/0 vanes bind as one select per side."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_tp1x_sac_fourway"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.airconditioner")
     )
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
@@ -1103,6 +1150,38 @@ def test_registry_reproduces_golden_state_keys_for_vacuum_station():
     resources = _load_device("vacuum_station")
     golden = json.loads((GOLDEN / "vacuum_station.json").read_text())
     state_keys = _new_state_keys("vacuum_station", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_robot_vacuum_powerbot_r7040():
+    """POWERbot R7040 robot vacuum (issue #659): empty modelNum, typed by
+    /oic/d alone."""
+    from tests.conftest import _load_device
+
+    name = "robot_vacuum_powerbot_r7040"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.robotcleaner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_range_os70h30e():
+    """OS70H30E range (issue #726): the DAWIT 3.0 oven half is one bare-field
+    /oven/status/vs/0, typed by /oic/d."""
+    from tests.conftest import _load_device
+
+    name = "range_os70h30e"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.range"))
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"

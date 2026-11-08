@@ -732,7 +732,7 @@ def _table_id(resources, table_href):
     return rep.get("x.com.samsung.da.st.courseTable")
 
 
-def cycle_select(*, translation_key, icon, table_href=None, display_fn=None):
+def cycle_select(*, translation_key, icon, table_href=None, display_fn=None, variant_fn=None):
     """A 'Cycle' select over /course/vs/0, labelled from `translation_key`.
 
     The option list, current value, and write path are shared across
@@ -756,8 +756,9 @@ def cycle_select(*, translation_key, icon, table_href=None, display_fn=None):
     select.py applies it after catalog lookup to both state and options.
 
     Left at its default for dishwasher, which has no equivalent table-id
-    resource and no evidence its codes vary by table the way washer/
-    dryer's do.
+    resource. variant_fn names a model instead: its catalog entry
+    (`dishwasher_cycle_dw8700b`) is used where one exists, the shared
+    translation_key otherwise.
 
     Any cloud "Download" programs the user has discovered and named join the
     same option list, after the local courses -- see the cloud section above.
@@ -773,6 +774,15 @@ def cycle_select(*, translation_key, icon, table_href=None, display_fn=None):
                 return "cycle"
             candidate = f"{translation_key}_{table.lower()}"
             return candidate if has_entity_translation("select", candidate) else "cycle"
+
+    elif variant_fn is not None:
+
+        def key(resources):
+            variant = variant_fn(resources)
+            if not isinstance(variant, str) or not variant:
+                return translation_key
+            candidate = f"{translation_key}_{variant.lower()}"
+            return candidate if has_entity_translation("select", candidate) else translation_key
 
     def options(resources):
         rep = resources.get(cloudcourse.COURSE_HREF) or {}

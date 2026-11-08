@@ -35,11 +35,11 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 | Air dresser | Oven |
 | Air monitor | Range and range hood |
 | Air purifier | Refrigerator, kimchi refrigerator, wine cellar |
-| Cooktop, gas, radiant electric and induction; some models read-only | Soundbar, media player, settings and firmware status |
-| Dehumidifier | Vacuum clean station |
-| Dishwasher | Washer and washer-dryer |
-| Dryer | Water purifier |
-| EHS heat pump | |
+| Cooktop, gas, radiant electric and induction; some models read-only | Robot vacuum, early support |
+| Dehumidifier | Soundbar, media player, settings and firmware status |
+| Dishwasher | Vacuum clean station |
+| Dryer | Washer and washer-dryer |
+| EHS heat pump | Water purifier |
 
 What you see depends on what each appliance reports. Typical controls and sensors include power, program or mode selection, start, pause and stop, temperatures and setpoints, time remaining and finish time, door and child-lock state, energy use, filter status and alarms.
 
@@ -112,7 +112,9 @@ About half of Samsung's appliances report their Wi-Fi MAC address. For those, Ho
 
 ### Older appliances on TCP 8888
 
-Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven, an NQ70M6650DS microwave/oven combo, and NZ36K7570R and NZ30K7570RS cooktops. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+Some appliances from about 2018 to 2022 have a different local interface, HTTPS on TCP port 8888. So far this covers a WW6500 washer, TP6X air conditioners, an NV51K777OS Flex Duo wall oven, an NQ70M6650DS microwave/oven combo, NZ36K7570R and NZ30K7570RS cooktops, and an RF28K9380SR refrigerator. Setup detects the interface from the IP address and then asks for a **device token**. Leave the field empty and the appliance issues a token, sending it back to Home Assistant on port 8889. For that to work, switch Remote Control on at the appliance with the door closed, and make sure the appliance can reach Home Assistant on port 8889. If the appliance later rejects its token, Home Assistant asks for a new one.
+
+On the RF28K9380SR refrigerator, when setup asks for the token, hold **Lighting / Control Lock** for about 5 seconds, until "on" shows in the freezer temperature display. It refuses the automatic certificate, so setup then asks for an AC14K_M CA certificate and key, and it needs both to finish.
 
 For the tested NZ36K7570R and NZ30K7570RS cooktops, NV51K777OS oven and NQ70M6650DS combo, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
 

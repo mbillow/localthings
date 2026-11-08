@@ -66,6 +66,18 @@
       "door_open": {
         "name": "Deur"
       },
+      "door_1_open": {
+        "name": "Deur 1"
+      },
+      "door_2_open": {
+        "name": "Deur 2"
+      },
+      "door_3_open": {
+        "name": "Deur 3"
+      },
+      "door_4_open": {
+        "name": "Deur 4"
+      },
       "filter_blockage": {
         "name": "Filterverstopping"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "Woofer-verbinding"
+      },
+      "lamp": {
+        "name": "Lamp"
+      },
+      "energy_saving": {
+        "name": "Energiebesparing"
       }
     },
     "button": {
@@ -303,6 +321,12 @@
       "dispense_capacity": {
         "name": "Schenkhoeveelheid"
       },
+      "freezer_setpoint": {
+        "name": "Vriezer instelpunt"
+      },
+      "fridge_setpoint": {
+        "name": "Koelkast instelpunt"
+      },
       "good_sleep": {
         "name": "Good Sleep"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamel noord",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "east_flap": {
+        "name": "Lamel oost",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "south_flap": {
+        "name": "Lamel zuid",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
+      "west_flap": {
+        "name": "Lamel west",
+        "state": {
+          "stop": "Vast",
+          "vertical": "Zwaaien"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Nabijheidsniveau welkomstverlichting",
         "state": {
@@ -503,6 +555,32 @@
           "87": "Alleen spoelen"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Programma",
+        "state": {
+          "80": "Delicaat",
+          "83": "Normaal",
+          "84": "Intensief",
+          "86": "Express 60",
+          "90": "Zelfreiniging",
+          "0e": "AI Wash",
+          "07": "Voorspoelen",
+          "8d": "Potten en pannen",
+          "8e": "Kunststof",
+          "8f": "Babyverzorging",
+          "82": "Auto",
+          "8a": "Eco",
+          "a7": "Intensief",
+          "a8": "Express",
+          "8c": "Extra stil",
+          "88": "Zelfreiniging",
+          "85": "Delicaat",
+          "0c": "Express",
+          "0d": "Zelfreiniging",
+          "87": "Alleen spoelen",
+          "01": "Voorspoelen"
+        }
+      },
       "dispense_type": {
         "name": "Type dispenser"
       },
@@ -564,6 +642,7 @@
           "1a": "Wol",
           "1b": "Beddengoed",
           "1c": "Overhemden",
+          "43": "Overhemden",
           "1d": "Handdoeken",
           "1e": "Outdoor",
           "1f": "Gemengde was",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "Zachtvriezer",
           "fconvert_freezer": "Vriezen",
           "fconvert_fridge": "Koelen",
-          "fconvert_off": "Uit"
+          "fconvert_off": "Uit",
+          "cv_ttype_freezer": "Vriezer",
+          "cv_ttype_soft_freezer": "Zachtvriezer",
+          "cv_ttype_chill": "Koelen op laag",
+          "cv_ttype_cool": "Koel",
+          "cv_ttype_ferment": "Fermenteren",
+          "cv_ttype_kimchi_warm": "Kimchi, zwak",
+          "cv_ttype_kimchi_normal": "Kimchi",
+          "cv_ttype_kimchi_cold": "Kimchi, sterk"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "Stoombraden",
           "upper_steam_bake": "Stoombakken (boven)",
           "descale": "Ontkalken",
-          "drain": "Water aftappen"
+          "drain": "Water aftappen",
+          "healthycook1": "Gezond koken 1",
+          "healthycook2": "Gezond koken 2",
+          "healthycook3": "Gezond koken 3",
+          "healthycook4": "Gezond koken 4",
+          "healthycook5": "Gezond koken 5",
+          "healthycook6": "Gezond koken 6",
+          "upper_healthycook1": "Gezond koken 1 (boven)",
+          "upper_healthycook2": "Gezond koken 2 (boven)",
+          "upper_healthycook3": "Gezond koken 3 (boven)",
+          "upper_healthycook4": "Gezond koken 4 (boven)",
+          "lower_healthycook1": "Gezond koken 1 (onder)",
+          "lower_healthycook2": "Gezond koken 2 (onder)",
+          "lower_healthycook3": "Gezond koken 3 (onder)",
+          "lower_healthycook4": "Gezond koken 4 (onder)"
         }
       },
       "operating_mode": {
@@ -911,6 +1012,8 @@
         "name": "Programma",
         "state": {
           "01": "Normaal",
+          "50": "Katoen drogen",
+          "51": "Synthetisch drogen",
           "55": "Witte was",
           "57": "Self Clean+",
           "5b": "Katoen",
@@ -950,6 +1053,8 @@
           "ab": "Eco koud",
           "b1": "Self Clean+",
           "ba": "Afpompen/centrifugeren",
+          "c7": "Eco trommelreiniging",
+          "ca": "Air Wash",
           "d0": "Katoen",
           "d1": "Eco katoen",
           "d2": "Synthetisch",
@@ -962,7 +1067,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "15' Snelle was",
-          "e4": "Anti-allergie"
+          "e3": "Dagelijkse was",
+          "e4": "Anti-allergie",
+          "e7": "Snel wassen+drogen"
         }
       },
       "washer_cycle_table_02": {
@@ -1241,6 +1348,25 @@
           "jazz": "Jazz",
           "classic": "Klassiek",
           "custom": "Aangepast"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Reinigingsmodus",
+        "state": {
+          "auto": "Auto",
+          "part": "Plaatselijk",
+          "repeat": "Herhalen",
+          "manual": "Handmatig",
+          "stop": "Stop",
+          "map": "Kaart"
+        }
+      },
+      "robot_sound": {
+        "name": "Geluid",
+        "state": {
+          "soundeffect": "Geluidseffecten",
+          "mute": "Gedempt",
+          "voice": "Stem"
         }
       }
     },
@@ -1556,7 +1682,13 @@
         }
       },
       "cavity_state": {
-        "name": "Status ovenruimte"
+        "name": "Status ovenruimte",
+        "state": {
+          "ready": "Gereed",
+          "preheat": "Voorverwarmen",
+          "cooking": "Bereiden",
+          "finish": "Voltooid"
+        }
       },
       "power_level": {
         "name": "Vermogensniveau"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "Wifi-signaal"
+      },
+      "robot_status": {
+        "name": "Robotstatus",
+        "state": {
+          "cleaning": "Reinigen",
+          "point": "Plaatselijk reinigen",
+          "homing": "Terug naar basis",
+          "charging": "Opladen",
+          "idle": "Inactief",
+          "pause": "Gepauzeerd",
+          "alarm": "Alarm",
+          "reserve": "Gepland",
+          "poweroff": "Uitgeschakeld"
+        }
+      },
+      "robot_movement": {
+        "name": "Beweging"
+      },
+      "oven_setpoint": {
+        "name": "Instelpunt"
       }
     },
     "switch": {
@@ -2019,6 +2171,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Vakantiemodus"
+      },
       "welcome_lighting": {
         "name": "Welkomstverlichting"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "Stemversterker"
+      },
+      "repeated_cleaning": {
+        "name": "Reiniging herhalen"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "Warm water"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normaal",
+              "turbo": "Turbo",
+              "quiet": "Stil",
+              "extra_quiet": "Extra stil"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "Het commando naar {href} is ook na opnieuw verbinden mislukt: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Het starten van de bereiding kon niet worden bevestigd en is niet opnieuw geprobeerd. Controleer het apparaat voordat u het opnieuw probeert. Details: {error}"
+    },
     "command_refused": {
       "message": "Het apparaat heeft het commando naar {href} geweigerd: {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Zet de ventilator van de afzuigkap aan voordat u de uitschakeltimer instelt."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Deze robotstofzuiger ondersteunt zuigkracht {fan_speed} niet."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Deze robotstofzuiger vermeldt {command} niet bij zijn ondersteunde opdrachten."
+    },
+    "vacuum_command_params": {
+      "message": "Opdrachten voor de robotstofzuiger hebben geen parameters."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "Onderste wijnzone",
         "door_freezer": "Vriezerdeur",
         "door_cooler": "Koelkastdeur",
+        "door_fridge": "Koelkastdeur",
         "door_cvroom": "Flexzonedeur",
         "door_winecellar": "Wijnkoelerdeur",
         "door_onedoorfreezer": "Hoofddeur",

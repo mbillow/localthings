@@ -25,10 +25,11 @@ from .coordinator import (
     snapshot_store,
 )
 from .entity import LocalThingsEntity, _is_included, async_load_instance_names
-from .registry.by_type.microfiber_filter import WASHER_ONLY_ENTITIES
+from .registry.by_type import WASHER_ONLY_ENTITIES, registry_for, resolve
 from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
-from .registry.entities import BinarySensorDesc
+from .registry.entities import BinarySensorDesc, SwitchDesc
 from .registry.identity import resolve_serial
+from .registry.subdevices import MAIN
 from .rekey import rekey_entry
 from .services import async_setup_services
 
@@ -314,28 +315,70 @@ def _drop_read_only_power_switches(
         ent_reg.async_remove(old.entity_id)
 
 
+_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing"})
+
+
 @callback
-def _drop_washer_entities_from_filters(
+def _drop_unsupported_sound_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
-    """Drop the washer rows a microfiber filter kept from #475's routing.
+    """Remove old switches that no longer pass their descriptor's existence
+    check: Sound, and the rapid switches older releases gave fridges whose
+    /refrigeration/vs/0 reports only the other field (#698)."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            not isinstance(bound.desc, SwitchDesc)
+            or bound.desc.key not in _GATED_SWITCH_KEYS
+            or bound.desc.exists_fn is None
+            or _is_included(bound, coordinator)
+        ):
+            continue
+        unique_id = LocalThingsEntity(coordinator, bound).unique_id
+        assert unique_id is not None
+        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info(
+            "Removing %s: the device does not report it; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
 
-    Runs on every setup for the same reason as
-    _drop_sensors_superseded_by_selects: idempotent, and a version bump would
-    fail the whole entry on a downgrade. Gated on the device type, since
-    every key here is real on a washer. The keys are derived from the two
-    registries, so a washer entity added later is covered too.
+
+@callback
+def _drop_misidentified_washer_entities(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Drop washer-only rows left by earlier routing (#475, #681).
+
+    Repeat on setup, as in _drop_sensors_superseded_by_selects, so a
+    downgrade does not prevent the next upgrade from cleaning up again.
     """
-    if coordinator.device_type_name != "microfiber_filter":
+    main_registry = registry_for(coordinator.device_type_name)
+    obsolete = set()
+    for subdevice in (MAIN, *coordinator.subdevices):
+        registry = main_registry
+        if subdevice != MAIN:
+            registry = resolve(coordinator.discovery_canonical(subdevice)) or main_registry
+        obsolete.update(
+            (platform, f"{subdevice.key_prefix}{key}")
+            for platform, key in WASHER_ONLY_ENTITIES.get(registry.name, ())
+        )
+    if not obsolete:
         return
     ent_reg = er.async_get(hass)
     prefix = f"{DOMAIN}_{coordinator.device_key}_"
     for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if registry_entry.platform != DOMAIN or not registry_entry.unique_id.startswith(prefix):
+            continue
         key = registry_entry.unique_id.removeprefix(prefix)
-        if (registry_entry.domain, key) not in WASHER_ONLY_ENTITIES:
+        if (registry_entry.domain, key) not in obsolete:
             continue
         _LOGGER.info(
-            "Removing %s, which a microfiber filter has no hardware for; "
+            "Removing %s, left by an earlier washer misidentification; "
             "update any automation or dashboard that referenced it",
             registry_entry.entity_id,
         )
@@ -427,19 +470,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(coordinator.async_add_listener(lambda: None))
     await coordinator.async_load_mode_specs()
 
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryNotReady:
-        # An entry that has polled successfully before comes up on its last
-        # known entity set and keeps retrying on the normal poll interval,
-        # rather than sitting in setup-retry with a device that reads as
-        # broken and entities that exist only as registry rows (issue #295).
-        #
-        # An entry that has never reached the device has no snapshot, so
-        # there is nothing to show and no device metadata to name it with --
-        # that case still fails, which is also what keeps the door open for
-        # setup flows that need to interact with the device (issue #168).
-        if not await coordinator.async_rehydrate():
+    # An entry that has polled before comes up straight from its discovery
+    # snapshot and makes its first connection in the background. Waiting
+    # for that connection here held up Home Assistant's startup by the full
+    # handshake and poll timeouts whenever the appliance was switched off,
+    # only to end up on the same snapshot anyway.
+    if await coordinator.async_rehydrate():
+        # Start out as an offline load always has: entities unavailable until
+        # the device answers, and no "Error fetching" from the base class
+        # when an appliance that is simply switched off fails that first poll.
+        coordinator.last_update_success = False
+        # This refresh starts before the platforms are forwarded, so a device
+        # that answers quickly can finish its live discovery while setup is
+        # still going. The platforms then register from the live set instead
+        # of the snapshot; either way, a live set that differs from the
+        # snapshot schedules a reload (LocalThingsCoordinator._reconcile_rehydrated).
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh(), f"{DOMAIN} first refresh {entry.entry_id}"
+        )
+    else:
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except ConfigEntryNotReady:
+            # An entry that has never reached the device has no snapshot, so
+            # there is nothing to show and no device metadata to name it with
+            # -- that case still fails, which is also what keeps the door open
+            # for setup flows that need to interact with the device (issue
+            # #168).
             await coordinator.async_close()
             raise
 
@@ -480,7 +537,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
     _drop_read_only_power_switches(hass, entry, coordinator)
-    _drop_washer_entities_from_filters(hass, entry, coordinator)
+    _drop_unsupported_sound_switches(hass, entry, coordinator)
+    _drop_misidentified_washer_entities(hass, entry, coordinator)
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

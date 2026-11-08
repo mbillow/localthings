@@ -3,6 +3,8 @@
 import re
 from collections.abc import Sequence
 
+from ..capabilities.cook import MODE_HREF, MODE_SPEC, mode_specs, selectable_modes
+from ..entities import PLATFORM_OF
 from . import (
     air_dresser,
     air_monitor,
@@ -18,6 +20,7 @@ from . import (
     oven,
     range_hood,
     refrigerator,
+    robot_vacuum,
     soundbar,
     vacuum_station,
     washer,
@@ -29,6 +32,7 @@ from . import (
 from ._base import DeviceRegistry
 
 __all__ = [
+    "WASHER_ONLY_ENTITIES",
     "DeviceRegistry",
     "_board_tokens",
     "for_device_by_model",
@@ -57,10 +61,24 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
+    "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
+}
+
+
+def _entity_keys(registry: DeviceRegistry) -> set[tuple[str, str]]:
+    caps = [c for cs in registry.capabilities.values() for c in cs]
+    caps += registry.pattern_capabilities
+    return {(PLATFORM_OF[type(desc)], desc.key) for cap in caps for desc in cap.entities}
+
+
+# Old routing gave filters (#475) and oven/microwave cavities (#681) washer entities.
+WASHER_ONLY_ENTITIES = {
+    name: frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(_REGISTRY_BY_KEY[name]))
+    for name in ("microfiber_filter", "oven", "microwave")
 }
 
 
@@ -113,6 +131,7 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "DHM": "dehumidifier",  # issue #88 -- target humidity, no climate
     "EHS": "ehs",  # heat pump: zone1 heating/cooling + domestic hot water
     "TVTL": "air_purifier",  # issue #56 (ARTIK051)
+    "VTL": "air_purifier",  # issue #608 (TP6X_VTL_16K, 8888)
     "VTWW": "air_purifier",  # issue #151 (BESPOKE Cube Air)
     # issue #190: same lineage as VTWW, but the '-WW-' delimiter falls one
     # letter left ('A-VTWW-' -> 'AVT-WW-'), splitting into a different token.
@@ -231,6 +250,8 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.oven": "oven",
     "oic.d.range": "range",  # issue #324 -- oven+cooktop combo, no /information/vs/0
     "oic.d.refrigerator": "refrigerator",
+    # POWERbot R7040 (issue #659): empty modelNum, so /oic/d is its only route.
+    "oic.d.robotcleaner": "robot_vacuum",
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",
@@ -270,6 +291,7 @@ def for_device_by_oic_type(device_types: Sequence[str]) -> DeviceRegistry | None
 _DEVICE_SUBTYPE_TO_KEY: dict[str, str] = {
     "Cooktop": "cooktop",
     "Dryer": "dryer",  # TP6X_DRYER, DV80M8214AW (#636, #646)
+    "Refrigerator": "refrigerator",  # DONGLE_0281, from the record's `type` (#698)
     "Room_Air_Conditioner": "airconditioner",
     "WallOven": "oven",
     "Washer": "washer",  # TP6X_WASHER, WW6500
@@ -359,6 +381,13 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     supported_modes = mode.get("x.com.samsung.da.supportedModes") or ()
     if not isinstance(supported_modes, (list, tuple)):
         supported_modes = ()
+    # After a Wi-Fi board restart an LCD_R18 microwave lists only
+    # HOMECARE_WIZARD_V2 until its power is cut (#600), and would come up as
+    # an oven (#744). Its modeSpec, live or remembered by the coordinator,
+    # still names the modes. Only that shape: an empty list means something
+    # else on other boards.
+    if supported_modes and not selectable_modes(list(supported_modes)):
+        supported_modes = tuple(mode_specs({MODE_HREF: {MODE_SPEC: mode.get(MODE_SPEC, "[]")}}))
     cavity = resources.get("/oven/vs/0")
     if isinstance(cavity, dict):
         if any(

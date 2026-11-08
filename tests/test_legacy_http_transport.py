@@ -168,7 +168,7 @@ class TestSeed:
 
         assert code == 0x45
         assert reps["/st/washercourse/vs/0"] == {PREFIX + "st.courseTable": "Table_00"}
-        assert len(_FakeConnection.log) - before == 3
+        assert len(_FakeConnection.log) - before == 4  # with the clock probe
 
     def test_the_seed_carries_the_power_flag_from_the_model_id(self, transport, monkeypatch):
         """A WW6500 refuses remote power, and says so in its modelID, so the
@@ -193,7 +193,10 @@ class TestSeed:
 
     def test_the_seed_costs_three_requests(self, transport):
         """The aggregate carries five resources; only the two it links to
-        need fetching."""
+        need fetching, and the clock is probed on the first sweep alone."""
+        transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+
         transport.read(["device", "0"], timeout=10.0)
 
         assert [path for _, path, _, _ in _FakeConnection.log] == [
@@ -730,16 +733,126 @@ class TestHeldCourseDefaults:
         assert self._washer(body)[PREFIX + "waterTemperature"] == "40"
 
 
+class TestClockSync:
+    """The clock (#674): served unlisted at its own endpoint on the TP6X_OV
+    combo, found by a probe, and taken by the panel from a plain PUT."""
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "microwave_tp6x_ov_17k_8888_device.json"
+    SYNC: ClassVar[dict] = {PREFIX + "currentTime": "2026-10-29T12:49:24"}
+    ENDPOINT = "/devices/0/configuration/time"
+
+    @pytest.fixture
+    def combo(self, transport):
+        bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (200, {})
+        _FakeConnection.routes[("PUT", self.ENDPOINT)] = (204, None)
+        device = LegacyHttpTransport(
+            "10.0.0.10", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_OV_17K"
+        )
+        device.connect()
+        return device
+
+    def test_the_seed_offers_the_clock(self, combo):
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+
+        assert {"href": "/configuration/vs/0", "rep": {}} in seed
+
+    def test_the_clock_is_probed_once(self, combo):
+        combo.read(["device", "0"], timeout=10.0)
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+
+        probes = [e for e in _FakeConnection.log if e[:2] == ("GET", self.ENDPOINT)]
+        assert len(probes) == 1
+        assert {"href": "/configuration/vs/0", "rep": {}} in seed
+
+    def test_a_failed_probe_is_asked_again(self, combo):
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (503, None)
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (200, {})
+
+        _, again = combo.read(["device", "0"], timeout=10.0)
+
+        assert "/configuration/vs/0" not in {e["href"] for e in seed}
+        assert {"href": "/configuration/vs/0", "rep": {}} in again
+
+    def test_a_refused_probe_is_not_asked_again(self, combo):
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (400, None)
+        combo.read(["device", "0"], timeout=10.0)
+        _, seed = combo.read(["device", "0"], timeout=10.0)
+
+        probes = [e for e in _FakeConnection.log if e[:2] == ("GET", self.ENDPOINT)]
+        assert len(probes) == 1
+        assert "/configuration/vs/0" not in {e["href"] for e in seed}
+
+    def test_a_sync_before_any_sweep_probes_first(self, combo):
+        code, _ = combo.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:2] for entry in _FakeConnection.log] == [
+            ("GET", self.ENDPOINT),
+            ("PUT", self.ENDPOINT),
+        ]
+
+    def test_a_sync_goes_to_the_clock_endpoint(self, combo):
+        combo.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+
+        code, _ = combo.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert code == 0x44
+        assert [entry[:3] for entry in _FakeConnection.log] == [
+            ("PUT", self.ENDPOINT, {"Time": {"currentTime": "2026-10-29T12:49:24"}})
+        ]
+
+    def test_a_board_without_the_endpoint_has_no_clock(self, transport):
+        _, seed = transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+
+        code, _ = transport.write(["configuration", "vs", "0"], self.SYNC, timeout=8.0)
+
+        assert "/configuration/vs/0" not in {e["href"] for e in seed}
+        assert code == 0x84
+        assert _FakeConnection.log == []
+
+    def test_an_air_conditioner_keeps_its_region(self, transport):
+        fixture = Path(__file__).parent / "fixtures" / "airconditioner_tp6x_rac_17k_8888.json"
+        bodies = json.loads(fixture.read_text(encoding="utf-8"))["bodies"]
+        _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        _FakeConnection.routes["/devices/0/configuration"] = (
+            200,
+            {"Configuration": bodies["Configuration"]},
+        )
+        _FakeConnection.routes[("GET", self.ENDPOINT)] = (200, {})
+        rac = LegacyHttpTransport(
+            "10.0.0.9", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="TP6X_RAC_17K"
+        )
+        rac.connect()
+
+        _, seed = rac.read(["device", "0"], timeout=10.0)
+
+        region = [e["rep"] for e in seed if e["href"] == "/configuration/vs/0"]
+        assert region == [{PREFIX + "region": "105"}]
+        assert ("GET", self.ENDPOINT) not in [e[:2] for e in _FakeConnection.log]
+
+
 class TestWallOvenStart:
-    """The cook start's Collection batch over 8888 (#572): this firmware has no
-    Collections, so the batch goes as one aggregate PUT."""
+    """NV51K7770S requires settings and Run in separate aggregate writes (#572)."""
 
     FIXTURE = Path(__file__).parent / "fixtures" / "oven_lcd_ov_wall_16k_8888.json"
 
     @pytest.fixture
-    def oven(self, transport):
+    def oven(self, transport, monkeypatch):
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", lambda _: None
+        )
         bodies = json.loads(self.FIXTURE.read_text(encoding="utf-8"))["bodies"]
         _FakeConnection.routes["/devices/0"] = (200, {"Device": bodies})
+        for wrapper in ("Information", "Configuration"):
+            _FakeConnection.routes[f"/devices/0/{wrapper.lower()}"] = (
+                200,
+                {wrapper: bodies[wrapper]},
+            )
         _FakeConnection.routes[("PUT", "/devices/0")] = (204, None)
         device = LegacyHttpTransport(
             "10.0.0.8", 8888, cert_pem="CERT", key_pem="KEY", token="tok", family="LCD_OV_WALL_16K"
@@ -748,7 +861,7 @@ class TestWallOvenStart:
         _swept_as(device, "Oven")
         return device
 
-    def test_a_start_goes_as_one_aggregate_body(self, oven):
+    def test_a_start_loads_settings_before_run(self, oven):
         _, seed = oven.read(["device", "0"], timeout=10.0)
         resources = {e["href"]: e["rep"] for e in seed}
         batch = cook.plan_start(resources, "UpperConvectionBake", 350, 5400).batch()
@@ -765,10 +878,11 @@ class TestWallOvenStart:
                     "Device": {
                         "Mode": {"modes": ["UpperConvectionBake"]},
                         "Temperatures": [{"id": "0", "desired": 350, "unit": "Fahrenheit"}],
-                        "Operation": {"operationTime": "01:30:00", "state": "Run"},
+                        "Operation": {"operationTime": "01:30:00"},
                     }
                 },
-            )
+            ),
+            ("PUT", "/devices/0", {"Device": {"Operation": {"state": "Run"}}}),
         ]
 
     def test_a_batch_anywhere_else_is_refused(self, oven):
@@ -802,3 +916,44 @@ class TestWallOvenStart:
 
         assert code == 0x85
         assert _FakeConnection.log == []
+
+
+class TestRecordType:
+    """The DONGLE_0281 fridge bridge (#698) names its type only in its
+    record's `type`; both read paths carry it as the subtype routing reads."""
+
+    FRIDGE: ClassVar[dict] = {
+        "Device": {
+            "Fridge": {"rapidFridge": "Off"},
+            "InformationLink": {"href": "/devices/0/information"},
+            "id": "0",
+            "type": "Refrigerator",
+        }
+    }
+    INFORMATION: ClassVar[dict] = {
+        "Information": {"description": "DONGLE_0281", "modelID": "DONGLE_0281|0"}
+    }
+
+    @pytest.fixture
+    def fridge(self, transport):
+        _FakeConnection.routes = {
+            "/devices/0": (200, self.FRIDGE),
+            "/devices/0/information": (200, self.INFORMATION),
+        }
+        transport._state_at(0).typed = False
+        return transport
+
+    def test_the_seed_names_the_subtype(self, fridge):
+        _, body = fridge.read(["device", "0"], timeout=10.0)
+        reps = {entry["href"]: entry["rep"] for entry in body}
+
+        assert reps["/information/vs/0"][PREFIX + "deviceSubType"] == "Refrigerator"
+        assert reps["/refrigeration/vs/0"] == {PREFIX + "rapidFridge": "Off"}
+
+    def test_a_single_read_names_the_subtype(self, fridge):
+        fridge.read(["device", "0"], timeout=10.0)
+
+        code, rep = fridge.read(["information", "vs", "0"], timeout=10.0)
+
+        assert code == 0x45
+        assert rep[PREFIX + "deviceSubType"] == "Refrigerator"

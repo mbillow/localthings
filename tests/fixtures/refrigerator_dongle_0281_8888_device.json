@@ -1,0 +1,119 @@
+{
+  "seeds_note": "Canonical hrefs generated with legacy_http.to_resources from the real issue #698 capture in refrigerator_dongle_0281_8888.json; these hrefs are bridge mappings, not appliance-served OCF resources.",
+  "device0": [
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": [
+          "RVACATION_OFF",
+          "KIMCHIT_RIPE_REMAIN_255:255",
+          "KIMCHIB_RIPE_REMAIN_255:255",
+          "KIMCHIM_RIPE_REMAIN_255:255",
+          "BAR_FRIDGE_TEMP_0",
+          "BAR_FRIDGE_MAXTEMP_0",
+          "BAR_FREEZER_TEMP_0",
+          "BAR_FREEZER_MAXTEMP_0"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "RVACATION_ON",
+          "RVACATION_OFF"
+        ]
+      }
+    },
+    {
+      "href": "/refrigeration/vs/0",
+      "rep": {
+        "x.com.samsung.da.rapidFridge": "Off"
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.unit": "Celsius"
+          },
+          {
+            "x.com.samsung.da.current": 5.0,
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.desired": 5.0,
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.maximum": 7,
+            "x.com.samsung.da.minimum": 1,
+            "x.com.samsung.da.name": "Fridge",
+            "x.com.samsung.da.unit": "Celsius"
+          },
+          {
+            "x.com.samsung.da.description": "CVRoom",
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.id": "0"
+          },
+          {
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.id": "1"
+          },
+          {
+            "x.com.samsung.da.description": "CVRoom",
+            "x.com.samsung.da.id": "2"
+          },
+          {
+            "x.com.samsung.da.description": "Single",
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.name": "Single",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiT",
+            "x.com.samsung.da.id": "4"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiB",
+            "x.com.samsung.da.id": "5"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiM",
+            "x.com.samsung.da.id": "6"
+          },
+          {
+            "x.com.samsung.da.description": "Homebar",
+            "x.com.samsung.da.id": "7"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "000"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "DONGLE_0281",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "DONGLE_0281|00090741|00090028001130300100000000000000",
+        "x.com.samsung.da.deviceSubType": "Refrigerator"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    }
+  ]
+}

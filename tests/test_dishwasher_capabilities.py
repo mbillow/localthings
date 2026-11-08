@@ -19,7 +19,28 @@ class TestCycleOptions:
         desc = self._cycle()
         live = {"/wm/editcourse/vs/0": {"x.com.samsung.da.editCourseList": "EditCourseList_0E82"}}
         assert desc.options(live) == ["0E", "82"]
-        assert desc.translation_key == "dishwasher_cycle"
+        assert desc.translation_key(live) == "dishwasher_cycle"
+
+    @staticmethod
+    def _described(description):
+        return {"/information/vs/0": {"x.com.samsung.da.description": description}}
+
+    def test_the_dw8700b_takes_its_own_labels(self):
+        """#718: its owner reads 8A as Eco in SmartThings, where #251's
+        model reads Normal."""
+        desc = self._cycle()
+
+        key = desc.translation_key(self._described("DA_DW_TP1_21_COMMON_DW8700B/DD92-0008041_0001"))
+
+        assert key == "dishwasher_cycle_dw8700b"
+
+    def test_a_model_without_its_own_labels_keeps_the_shared_ones(self):
+        desc = self._cycle()
+
+        assert (
+            desc.translation_key(self._described("DA_DW_TP1_21_COMMON_DW5000C/DD92-0010741_0001"))
+            == "dishwasher_cycle"
+        )
 
     def test_exists_only_when_edit_course_list_is_live(self):
         desc = self._cycle()

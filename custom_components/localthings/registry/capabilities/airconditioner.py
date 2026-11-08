@@ -12,6 +12,7 @@ capabilities/__init__.py) -- AC-only, by_type registry only.
 import math
 from dataclasses import replace
 
+from .. import usagedb
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -373,6 +374,23 @@ ENERGY_METER_GENERIC = replace(
     match_fn=lambda rep, resources: not is_legacy_board(resources),
 )
 
+# The usage file's energy field is plain Wh on every AC measured, not the
+# tenths of a kWh the shared capability assumes (see
+# usagedb.cumulative_energy_kwh_from_wh).
+FILE_TRANSFER = replace(
+    common.FILE_TRANSFER,
+    entities=tuple(
+        replace(
+            e,
+            rep_fn=usagedb.cumulative_energy_kwh_from_wh,
+            exists_fn=common.usage_energy_exists(usagedb.cumulative_energy_kwh_from_wh),
+        )
+        if e.key == "energy_kwh"
+        else e
+        for e in common.FILE_TRANSFER.entities
+    ),
+)
+
 
 def _has_option_token(prefix):
     return lambda rep, resources: (
@@ -660,6 +678,7 @@ CLIMATE = Capability(
             translation_key="airconditioner",
             rep_fn=_first_mode,
             write_fn=_climate_write,
+            confirm_on_refusal=True,
         ),
         # Purification/Ventilation/SmartVentilation mode select (PR #316) --
         # _is_ventilation_mode_device gates this to devices using that
@@ -1871,3 +1890,40 @@ COVERAGE = [
     for h in CLIMATE_CONSUMED_HREFS
     if h not in (HREF_TEMP_CURRENT, HREF_TEMPS_VS)
 ] + [Capability(href=h) for h in _AC_IGNORED]
+
+
+# A 4-way cassette's per-side vanes (#704, TP1X_DA-AC-SAC-01001): one field
+# per side, each taking a value from the shared supportedModes list
+# (Stop/Vertical). The reporter confirmed each moves on its own from the
+# SmartThings app. The write sends one side's field alone; unconfirmed on
+# hardware.
+_FLAP_SIDES = ("north", "east", "south", "west")
+
+
+def _flap_write(field):
+    def _write(p, rep, href=None):
+        if p not in (rep.get("x.com.samsung.da.supportedModes") or ()):
+            return None
+        return ["fourwayflaps", "vs", "0"], {field: p}
+
+    return _write
+
+
+FOUR_WAY_FLAPS = Capability(
+    href="/fourwayflaps/vs/0",
+    poll_tier="warm",
+    entities=tuple(
+        SelectDesc(
+            key=f"{side}_flap",
+            field=f"x.com.samsung.da.{side}Flap",
+            icon="mdi:arrow-oscillating",
+            options_field="x.com.samsung.da.supportedModes",
+            exists_fn=lambda rep, resources, side=side: (
+                f"x.com.samsung.da.{side}Flap" in rep
+                and bool(rep.get("x.com.samsung.da.supportedModes"))
+            ),
+            write_fn=_flap_write(f"x.com.samsung.da.{side}Flap"),
+        )
+        for side in _FLAP_SIDES
+    ),
+)

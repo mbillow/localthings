@@ -539,7 +539,7 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         return _temps_vs_item(self._rep(TEMPS_VS_HREF))
 
     @property
-    def temperature_unit(self) -> str:
+    def native_temperature_unit(self) -> str:
         raw = self._rep(TEMP_DESIRED_HREF).get("units")
         if raw is None:
             raw = self._temps_vs().get("x.com.samsung.da.unit")
@@ -550,14 +550,14 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         v = _num(self._rep(TEMP_CURRENT_HREF).get("temperature"))
         if v is None:
             v = _num(self._temps_vs().get("x.com.samsung.da.current"))
         return v
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         # Read from the same channel writes go to (see async_set_temperature):
         # OCF /temperature/desired/0 on boards with the full OCF pair, vendor
         # /temperatures/vs/0 otherwise -- with the other as fallback.
@@ -566,6 +566,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         if self._ocf_temp_authoritative():
             return ocf if ocf is not None else vs
         return vs if vs is not None else ocf
+
+    # Older cores need aliases; newer cores must not see deprecated members.
+    if not hasattr(ClimateEntity, "native_temperature_unit"):
+        temperature_unit = native_temperature_unit
+        current_temperature = native_current_temperature
+        target_temperature = native_target_temperature
 
     def _range(self) -> list | None:
         r = self._rep(TEMP_DESIRED_HREF).get("range")

@@ -215,10 +215,10 @@ outcomes:
 - **Only add a row once there's a real registry key on the right** (a key in
   `_REGISTRY_BY_KEY`). A type naming a product this integration has no
   registry for stays unmapped rather than getting coerced onto the
-  nearest-sounding one — `oic.d.robotcleaner` names an actual robot vacuum,
-  a different product from the clean/auto-empty *station* `vacuum_station`
-  covers (no vacuum-body capabilities at all; see that registry's own module
-  docstring), so it's deliberately absent even though the string is known.
+  nearest-sounding one. `oic.d.robotcleaner` stayed unmapped until issue
+  #659 brought a real robot-vacuum dump and its own `robot_vacuum` registry,
+  rather than being pointed at `vacuum_station`, which covers a stick
+  vacuum's clean *station* and has no vacuum body to drive.
 - Falls through to `for_device_by_model`/`for_device_by_resources` when
   `device_types` is empty or maps to nothing — most hardware still doesn't
   populate `/oic/d` usefully, so those two stages stay load-bearing for

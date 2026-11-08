@@ -66,6 +66,18 @@
       "door_open": {
         "name": "Dvierka"
       },
+      "door_1_open": {
+        "name": "Dvierka 1"
+      },
+      "door_2_open": {
+        "name": "Dvierka 2"
+      },
+      "door_3_open": {
+        "name": "Dvierka 3"
+      },
+      "door_4_open": {
+        "name": "Dvierka 4"
+      },
       "filter_blockage": {
         "name": "Upchatie filtra"
       },
@@ -179,6 +191,12 @@
       },
       "woofer_connection": {
         "name": "Pripojenie woofera"
+      },
+      "lamp": {
+        "name": "Svetlo"
+      },
+      "energy_saving": {
+        "name": "Úspora energie"
       }
     },
     "button": {
@@ -303,6 +321,12 @@
       "dispense_capacity": {
         "name": "Dávkované množstvo"
       },
+      "freezer_setpoint": {
+        "name": "Mraznička – požadovaná teplota"
+      },
+      "fridge_setpoint": {
+        "name": "Chladnička – požadovaná teplota"
+      },
       "good_sleep": {
         "name": "Pokojný spánok"
       },
@@ -389,6 +413,34 @@
       }
     },
     "select": {
+      "north_flap": {
+        "name": "Lamela sever",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "east_flap": {
+        "name": "Lamela východ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "south_flap": {
+        "name": "Lamela juh",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
+      "west_flap": {
+        "name": "Lamela západ",
+        "state": {
+          "stop": "Pevná",
+          "vertical": "Kývanie"
+        }
+      },
       "welcome_lighting_proximity": {
         "name": "Citlivosť uvítacieho osvetlenia",
         "state": {
@@ -503,6 +555,32 @@
           "87": "Iba plákanie"
         }
       },
+      "dishwasher_cycle_dw8700b": {
+        "name": "Cyklus",
+        "state": {
+          "80": "Jemný",
+          "83": "Normálny",
+          "84": "Intenzívny",
+          "86": "Express 60",
+          "90": "Samočistenie",
+          "0e": "AI umývanie",
+          "07": "Predoplach",
+          "8d": "Hrnce a panvice",
+          "85": "Jemný",
+          "0c": "Expresný",
+          "0d": "Samočistenie",
+          "8e": "Plast",
+          "8f": "Detské potreby",
+          "82": "Automatický",
+          "8a": "Eko",
+          "a7": "Intenzívny",
+          "a8": "Expresný",
+          "8c": "Extra tichý",
+          "88": "Samočistenie",
+          "87": "Iba plákanie",
+          "01": "Predumytie"
+        }
+      },
       "dispense_type": {
         "name": "Typ dávkovania"
       },
@@ -566,6 +644,7 @@
           "1a": "Vlna",
           "1b": "Posteľná bielizeň",
           "1c": "Košele",
+          "43": "Košele",
           "1d": "Uteráky",
           "1e": "Outdoor",
           "1f": "Zmiešaná náplň",
@@ -652,7 +731,15 @@
           "cv_fdr_soft_freezer": "Mierne mrazenie",
           "fconvert_freezer": "Mrazenie",
           "fconvert_fridge": "Chladenie",
-          "fconvert_off": "Vypnuté"
+          "fconvert_off": "Vypnuté",
+          "cv_ttype_freezer": "Mraznička",
+          "cv_ttype_soft_freezer": "Mierne mrazenie",
+          "cv_ttype_chill": "Vychladenie",
+          "cv_ttype_cool": "Chladenie",
+          "cv_ttype_ferment": "Kvasenie",
+          "cv_ttype_kimchi_warm": "Kimči, slabé",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, silné"
         }
       },
       "heated_dry": {
@@ -734,7 +821,21 @@
           "steam_roast": "Opekanie s parou",
           "upper_steam_bake": "Pečenie s parou (horná)",
           "descale": "Odvápnenie",
-          "drain": "Vypustenie vody"
+          "drain": "Vypustenie vody",
+          "healthycook1": "Zdravé varenie 1",
+          "healthycook2": "Zdravé varenie 2",
+          "healthycook3": "Zdravé varenie 3",
+          "healthycook4": "Zdravé varenie 4",
+          "healthycook5": "Zdravé varenie 5",
+          "healthycook6": "Zdravé varenie 6",
+          "upper_healthycook1": "Zdravé varenie 1 (horná)",
+          "upper_healthycook2": "Zdravé varenie 2 (horná)",
+          "upper_healthycook3": "Zdravé varenie 3 (horná)",
+          "upper_healthycook4": "Zdravé varenie 4 (horná)",
+          "lower_healthycook1": "Zdravé varenie 1 (dolná)",
+          "lower_healthycook2": "Zdravé varenie 2 (dolná)",
+          "lower_healthycook3": "Zdravé varenie 3 (dolná)",
+          "lower_healthycook4": "Zdravé varenie 4 (dolná)"
         }
       },
       "operating_mode": {
@@ -911,6 +1012,8 @@
         "name": "Cyklus",
         "state": {
           "01": "Normálny",
+          "50": "Sušenie bavlny",
+          "51": "Sušenie syntetiky",
           "55": "Biela bielizeň",
           "57": "Samočistenie+",
           "5b": "Bavlna",
@@ -950,6 +1053,8 @@
           "ab": "Eko pranie v studenej vode",
           "b1": "Samočistenie+",
           "ba": "Vypustenie/odstreďovanie",
+          "c7": "Eco čistenie bubna",
+          "ca": "Prevetranie",
           "d0": "Bavlna",
           "d1": "Eko bavlna",
           "d2": "Syntetika",
@@ -962,7 +1067,9 @@
           "da": "Super Eco",
           "db": "Super Speed",
           "dc": "15-minútové rýchle pranie",
-          "e4": "Antialergénny"
+          "e3": "Denné pranie",
+          "e4": "Antialergénny",
+          "e7": "Rýchle pranie + sušenie"
         }
       },
       "washer_cycle_table_02": {
@@ -1241,6 +1348,25 @@
           "jazz": "Jazz",
           "classic": "Klasika",
           "custom": "Vlastný"
+        }
+      },
+      "cleaning_mode": {
+        "name": "Režim upratovania",
+        "state": {
+          "auto": "Automatický",
+          "part": "Bodový",
+          "repeat": "Opakovať",
+          "manual": "Ručný",
+          "stop": "Stop",
+          "map": "Mapa"
+        }
+      },
+      "robot_sound": {
+        "name": "Zvuk",
+        "state": {
+          "soundeffect": "Zvukové efekty",
+          "mute": "Stlmené",
+          "voice": "Hlas"
         }
       }
     },
@@ -1556,7 +1682,13 @@
         }
       },
       "cavity_state": {
-        "name": "Stav vnútorného priestoru"
+        "name": "Stav vnútorného priestoru",
+        "state": {
+          "ready": "Pripravené",
+          "preheat": "Predhrievanie",
+          "cooking": "Varenie",
+          "finish": "Dokončené"
+        }
       },
       "power_level": {
         "name": "Úroveň výkonu"
@@ -1827,6 +1959,26 @@
       },
       "wifi_signal": {
         "name": "Wi-Fi signál"
+      },
+      "robot_status": {
+        "name": "Stav robota",
+        "state": {
+          "cleaning": "Upratuje",
+          "point": "Bodové upratovanie",
+          "homing": "Návrat na základňu",
+          "charging": "Nabíja sa",
+          "idle": "Nečinný",
+          "pause": "Pozastavené",
+          "alarm": "Alarm",
+          "reserve": "Naplánované",
+          "poweroff": "Vypnuté"
+        }
+      },
+      "robot_movement": {
+        "name": "Pohyb"
+      },
+      "oven_setpoint": {
+        "name": "Požadovaná teplota"
       }
     },
     "switch": {
@@ -2019,6 +2171,9 @@
       "storm_wash": {
         "name": "Storm Wash+"
       },
+      "vacation_mode": {
+        "name": "Režim dovolenky"
+      },
       "welcome_lighting": {
         "name": "Uvítacie osvetlenie"
       },
@@ -2111,6 +2266,9 @@
       },
       "voice_amplifier": {
         "name": "Zosilnenie hlasu"
+      },
+      "repeated_cleaning": {
+        "name": "Opakovať upratovanie"
       }
     },
     "time": {
@@ -2151,6 +2309,20 @@
     "water_heater": {
       "dhw": {
         "name": "Teplá voda"
+      }
+    },
+    "vacuum": {
+      "robot_vacuum": {
+        "state_attributes": {
+          "fan_speed": {
+            "state": {
+              "normal": "Normálny",
+              "turbo": "Turbo",
+              "quiet": "Tichý",
+              "extra_quiet": "Veľmi tichý"
+            }
+          }
+        }
       }
     }
   },
@@ -2449,6 +2621,9 @@
     "command_failed": {
       "message": "Príkaz pre {href} zlyhal aj po opätovnom pripojení: {error}"
     },
+    "cook_start_unconfirmed": {
+      "message": "Spustenie varenia sa nepodarilo potvrdiť a nebolo zopakované. Pred ďalším pokusom skontrolujte spotrebič. Podrobnosti: {error}"
+    },
     "command_refused": {
       "message": "Spotrebič odmietol príkaz pre {href}: {error}"
     },
@@ -2532,6 +2707,15 @@
     },
     "paired_hood_fan_off": {
       "message": "Pred nastavením časovača vypnutia zapnite ventilátor digestora."
+    },
+    "vacuum_unsupported_fan_speed": {
+      "message": "Tento robotický vysávač nepodporuje sací výkon {fan_speed}."
+    },
+    "vacuum_unsupported_command": {
+      "message": "Tento robotický vysávač neuvádza {command} medzi podporovanými príkazmi."
+    },
+    "vacuum_command_params": {
+      "message": "Príkazy robotického vysávača nemajú žiadne parametre."
     }
   },
   "selector": {
@@ -2547,6 +2731,7 @@
         "winecellar_bottom": "Dolná zóna na víno",
         "door_freezer": "Dvierka mrazničky",
         "door_cooler": "Dvierka chladničky",
+        "door_fridge": "Dvierka chladničky",
         "door_cvroom": "Dvierka flexibilnej zóny",
         "door_winecellar": "Dvierka vinotéky",
         "door_onedoorfreezer": "Hlavné dvierka",
