@@ -674,7 +674,10 @@
           "35": "Proti pomačkání",
           "36": "Provětrání",
           "3e": "Malá náplň",
-          "2e": "Eco normální"
+          "2e": "Eco normální",
+          "42": "Osvěžení",
+          "44": "Rychlé sušení",
+          "47": "Sušení pro domácí mazlíčky"
         }
       },
       "dryer_dry_level": {

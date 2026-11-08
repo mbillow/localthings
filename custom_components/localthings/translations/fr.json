@@ -674,7 +674,10 @@
           "35": "Anti-froissage",
           "36": "Aération",
           "3e": "Petite charge",
-          "2e": "Éco normal"
+          "2e": "Éco normal",
+          "42": "Rafraîchissement",
+          "44": "Séchage rapide",
+          "47": "Séchage spécial animaux"
         }
       },
       "dryer_dry_level": {

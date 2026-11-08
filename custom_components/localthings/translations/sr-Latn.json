@@ -674,7 +674,10 @@
           "35": "Uklanjanje nabora",
           "36": "Provetravanje hladnim vazduhom",
           "3e": "Mala količina veša",
-          "2e": "Eko normalno"
+          "2e": "Eko normalno",
+          "42": "Osvežavanje",
+          "44": "Brzo sušenje",
+          "47": "Sušenje za kućne ljubimce"
         }
       },
       "dryer_dry_level": {

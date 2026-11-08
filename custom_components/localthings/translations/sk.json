@@ -674,7 +674,10 @@
           "35": "Proti pokrčeniu",
           "36": "Prevetranie",
           "3e": "Malá náplň",
-          "2e": "Eko Normálny"
+          "2e": "Eko Normálny",
+          "42": "Osvieženie",
+          "44": "Rýchle sušenie",
+          "47": "Sušenie pre domáce zvieratá"
         }
       },
       "dryer_dry_level": {

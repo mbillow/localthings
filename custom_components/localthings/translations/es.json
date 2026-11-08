@@ -1069,7 +1069,10 @@
           "35": "Antiarrugas",
           "36": "Aireación",
           "3e": "Carga pequeña",
-          "2e": "Eco normal"
+          "2e": "Eco normal",
+          "42": "Renovar",
+          "44": "Secado rápido",
+          "47": "Secado cuidado de mascotas"
         }
       },
       "dryer_dry_level": {

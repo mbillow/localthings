@@ -674,7 +674,10 @@
           "35": "Knitterschutz",
           "36": "Lüften",
           "3e": "Kleine Beladung",
-          "2e": "Eco Normal"
+          "2e": "Eco Normal",
+          "42": "Auffrischen",
+          "44": "Schnelltrocknen",
+          "47": "Tierpflege Trocknen"
         }
       },
       "dryer_dry_level": {

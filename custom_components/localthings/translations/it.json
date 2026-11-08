@@ -674,7 +674,10 @@
           "35": "Antipiega",
           "36": "Arieggiatura",
           "3e": "Carico ridotto",
-          "2e": "Eco Normale"
+          "2e": "Eco Normale",
+          "42": "Rinfresca",
+          "44": "Asciugatura rapida",
+          "47": "Asciugatura cura animali"
         }
       },
       "dryer_dry_level": {

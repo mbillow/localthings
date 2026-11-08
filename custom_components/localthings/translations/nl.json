@@ -674,7 +674,10 @@
           "35": "Kreukvrij",
           "36": "Luchtdrogen",
           "3e": "Kleine lading",
-          "2e": "Eco Normaal"
+          "2e": "Eco Normaal",
+          "42": "Opfrissen",
+          "44": "Snel drogen",
+          "47": "Huisdierverzorging drogen"
         }
       },
       "dryer_dry_level": {
