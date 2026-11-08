@@ -13,10 +13,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import cbor2
 import pytest
+from homeassistant.auth.permissions import PermissionLookup
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import (
     HomeAssistantError,
@@ -25,7 +27,8 @@ from homeassistant.exceptions import (
     UnknownUser,
 )
 from homeassistant.helpers import device_registry as dr
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.helpers import entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 
 from custom_components.localthings.config_flow import LocalThingsOptionsFlow
 from custom_components.localthings.const import (
@@ -41,9 +44,13 @@ from custom_components.localthings.const import (
     TRANSPORT_LEGACY_HTTP,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.entity import LocalThingsEntity
+from custom_components.localthings.registry.capabilities import cook
 from custom_components.localthings.registry.encode import TYPE_KEY, from_json_safe
 from custom_components.localthings.registry.subdevices import MAIN, Subdevice
 from custom_components.localthings.services import async_setup_services
+from tests.test_cook_start import _idle
+from tests.test_coordinator_cook_start import _load
 
 ENTRY_DATA = {
     CONF_HOST: "10.0.0.199",
@@ -1564,3 +1571,176 @@ async def test_notifications_past_the_cap_are_counted_not_kept(hass, coordinator
 
     assert [n["rep"] for n in response["notifications"]] == [{"n": 0}, {"n": 1}]
     assert response["truncated"] is True
+
+
+@pytest.fixture
+def hass_user(hass, hass_read_only_user):
+    user = MockUser().add_to_hass(hass)
+    user.perm_lookup = PermissionLookup(er.async_get(hass), dr.async_get(hass))
+    user.mock_policy({"entities": True})
+    return user
+
+
+@pytest.fixture
+def cooking_button(hass, coordinator, device_id):
+    _load(coordinator, _idle("range_ne63a6111ss"))
+    coordinator.async_start_cooking = AsyncMock()
+    bound = next(b for b in coordinator.bound if b.desc.cook_param == cook.PARAM_START)
+    unique_id = LocalThingsEntity(coordinator, bound).unique_id
+    assert unique_id is not None
+    return er.async_get(hass).async_get_or_create(
+        "button",
+        DOMAIN,
+        unique_id,
+        config_entry=coordinator._entry,
+        device_id=device_id,
+    )
+
+
+async def _call_cooking(hass, device_id, user_id=None):
+    await hass.services.async_call(
+        DOMAIN,
+        "start_cooking",
+        {},
+        target={"device_id": device_id},
+        blocking=True,
+        context=Context(user_id=user_id),
+    )
+
+
+@pytest.mark.parametrize("user_kind", ["regular", "admin", "owner"])
+async def test_cooking_allows_authorized_users(
+    hass,
+    coordinator,
+    device_id,
+    cooking_button,
+    hass_user,
+    hass_admin_user,
+    hass_owner_user,
+    user_kind,
+):
+    user = {"regular": hass_user, "admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
+    await _call_cooking(hass, device_id, user.id)
+    coordinator.async_start_cooking.assert_awaited_once_with(
+        MAIN, mode=None, temperature=None, duration=None
+    )
+
+
+async def test_cooking_refuses_read_only_user(
+    hass, coordinator, device_id, cooking_button, hass_read_only_user
+):
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, device_id, hass_read_only_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_refuses_unknown_user(hass, coordinator, device_id, cooking_button):
+    with pytest.raises(UnknownUser):
+        await _call_cooking(hass, device_id, "unknown-user")
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_allows_internal_automation(hass, coordinator, device_id, cooking_button):
+    await _call_cooking(hass, device_id)
+    coordinator.async_start_cooking.assert_awaited_once()
+
+
+@pytest.mark.parametrize("allowed", [True, False])
+async def test_cooking_checks_target_entity_permission(
+    hass, coordinator, device_id, cooking_button, hass_user, allowed
+):
+    hass_user.mock_policy(
+        {"entities": {"entity_ids": {cooking_button.entity_id: {"control": allowed}}}}
+    )
+    if allowed:
+        await _call_cooking(hass, device_id, hass_user.id)
+        coordinator.async_start_cooking.assert_awaited_once()
+    else:
+        with pytest.raises(Unauthorized):
+            await _call_cooking(hass, device_id, hass_user.id)
+        coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_target_denial_overrides_general_control(
+    hass, coordinator, device_id, cooking_button, hass_user
+):
+    hass_user.mock_policy(
+        {
+            "entities": {
+                "all": {"control": True},
+                "entity_ids": {cooking_button.entity_id: {"control": False}},
+            }
+        }
+    )
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, device_id, hass_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_allows_device_control_permission(
+    hass, coordinator, device_id, cooking_button, hass_user
+):
+    hass_user.mock_policy({"entities": {"device_ids": {device_id: {"control": True}}}})
+    await _call_cooking(hass, device_id, hass_user.id)
+    coordinator.async_start_cooking.assert_awaited_once()
+
+
+async def test_cooking_refuses_when_start_entity_is_missing(
+    hass, coordinator, device_id, cooking_button, hass_user
+):
+    er.async_get(hass).async_remove(cooking_button.entity_id)
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, device_id, hass_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_refuses_inactive_user(
+    hass, coordinator, device_id, cooking_button, hass_user
+):
+    hass_user.is_active = False
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, device_id, hass_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+@pytest.mark.parametrize("target_sibling", [False, True])
+async def test_cooking_cannot_use_another_cavity_permission(
+    hass, coordinator, device_id, cooking_button, hass_user, target_sibling
+):
+    subdevice = Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
+    coordinator.subdevices = [subdevice]
+    sibling_bound = replace(
+        next(b for b in coordinator.bound if b.desc.cook_param == cook.PARAM_START),
+        subdevice=subdevice,
+    )
+    coordinator.bound.append(sibling_bound)
+    sibling_device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=coordinator._entry.entry_id,
+        identifiers=coordinator.device_info_for(subdevice)["identifiers"],
+    )
+    sibling_unique_id = LocalThingsEntity(coordinator, sibling_bound).unique_id
+    assert sibling_unique_id is not None
+    sibling_button = er.async_get(hass).async_get_or_create(
+        "button",
+        DOMAIN,
+        sibling_unique_id,
+        config_entry=coordinator._entry,
+        device_id=sibling_device.id,
+    )
+    permitted_button = cooking_button if target_sibling else sibling_button
+    hass_user.mock_policy(
+        {"entities": {"entity_ids": {permitted_button.entity_id: {"control": True}}}}
+    )
+    target = sibling_device.id if target_sibling else device_id
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, target, hass_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+    target_button = sibling_button if target_sibling else cooking_button
+    hass_user.mock_policy(
+        {"entities": {"entity_ids": {target_button.entity_id: {"control": True}}}}
+    )
+    await _call_cooking(hass, target, hass_user.id)
+    coordinator.async_start_cooking.assert_awaited_once_with(
+        subdevice if target_sibling else MAIN, mode=None, temperature=None, duration=None
+    )
