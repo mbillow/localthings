@@ -234,6 +234,13 @@ def _coap_accepted(code: int) -> bool:
     return (code >> 5) == 2
 
 
+def _control_refused(response: Any) -> bool:
+    """AV boards can answer 2.04 to a command they refused, saying so in
+    controlResponse (HW-Q950T, QN90A; #719, #755)."""
+    control = response.get("controlResponse") if isinstance(response, dict) else None
+    return isinstance(control, dict) and control.get("result") is False
+
+
 def _validate_debug_batch_payload(payload: list) -> None:
     """Shape checks for a Collection batch payload (issue #473).
 
@@ -307,6 +314,9 @@ def _refusal(code: int, response: Any) -> str:
     """A refused write's CoAP code, with the appliance's own reason when it
     gave one (`Control fail, <...>`; see transport.Transport)."""
     text = _coap_code_str(code)
+    if _control_refused(response):
+        reason = response["controlResponse"].get("errorCode")
+        return f"{text} controlResponse.result=false" + (f" ({reason})" if reason else "")
     return f"{text} {response}" if isinstance(response, str) and response else text
 
 
@@ -3136,15 +3146,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     on_retry()
         # An opted-in control may apply a write while replying 4.00 (#714).
         # A failed GET cannot overturn an explicit refusal.
+        control_refused = _coap_accepted(code) and _control_refused(response)
         if (
-            code == _COAP_BAD_REQUEST
+            (code == _COAP_BAD_REQUEST or control_refused)
             and confirm_on_refusal
             and await self._took_effect(path_segs, body, strict=True)
         ):
             self._log.debug("PUT %s refused, but confirmed by live GET", write_href)
             return True
 
-        if not _coap_accepted(code):
+        if not _coap_accepted(code) or control_refused:
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.
             raise HomeAssistantError(

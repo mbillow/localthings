@@ -1,6 +1,7 @@
 """The coordinator's write policy for AV boards, with no platform named.
 
-Commands that must not be resent after a lost reply, and prepared payloads.
+controlResponse refusals inside a 2.04 (HW-Q950T, QN90A), commands that
+must not be resent after a lost reply, and prepared payloads.
 """
 
 from typing import cast
@@ -42,6 +43,48 @@ def _bound(**desc_fields) -> BoundEntity:
         **desc_fields,
     )
     return BoundEntity(href=HREF, capability=Capability(href=HREF, entities=(desc,)), desc=desc)
+
+
+@pytest.mark.parametrize(
+    ("control", "error"),
+    [
+        (
+            {"result": False, "errorCode": "unavailable"},
+            "2.04 controlResponse.result=false (unavailable)",
+        ),
+        ({"result": False}, "2.04 controlResponse.result=false"),
+    ],
+)
+async def test_control_response_false_is_a_refusal(coordinator, control, error):
+    coordinator, session = coordinator
+    session.write.return_value = (0x44, {"controlResponse": control})
+    with pytest.raises(HomeAssistantError) as err:
+        await coordinator._async_put(PATH, {"modes": ["pause"]}, HREF)
+    assert err.value.translation_key == "command_refused"
+    assert err.value.translation_placeholders == {"href": HREF, "error": error}
+    session.write.assert_called_once()  # an answer, not a dead session
+
+
+@pytest.mark.parametrize("response", [None, {}, {"controlResponse": {"result": True}}, "ok"])
+async def test_other_acknowledgements_stay_successful(coordinator, response):
+    coordinator, session = coordinator
+    session.write.return_value = (0x44, response)
+    assert await coordinator._async_put(PATH, {"modes": ["play"]}, HREF) is True
+    session.read.assert_not_called()
+
+
+@pytest.mark.parametrize(("readback", "accepted"), [("modeGame", True), ("modeStandard", False)])
+async def test_an_opted_in_refusal_needs_a_matching_read(coordinator, readback, accepted):
+    coordinator, session = coordinator
+    session.write.return_value = (0x44, {"controlResponse": {"result": False}})
+    session.read.return_value = (0x45, {"mode": readback})
+    call = coordinator._async_put(PATH, {"mode": "modeGame"}, HREF, confirm_on_refusal=True)
+    if accepted:
+        await call
+    else:
+        with pytest.raises(HomeAssistantError, match="refused"):
+            await call
+    session.read.assert_called_once()
 
 
 async def test_a_resend_unsafe_write_is_not_resent_after_a_lost_reply(coordinator, monkeypatch):
