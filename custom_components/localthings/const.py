@@ -13,6 +13,7 @@ PLATFORMS = [
     "fan",
     "water_heater",
     "vacuum",
+    "media_player",
 ]
 
 CONF_HOST = "host"

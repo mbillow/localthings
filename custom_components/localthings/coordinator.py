@@ -234,6 +234,21 @@ def _coap_accepted(code: int) -> bool:
     return (code >> 5) == 2
 
 
+class _PrepareFailed(Exception):
+    """A prepare_body callback raised; `error` is re-raised as is."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__(error)
+        self.error = error
+
+
+def _control_refused(response: Any) -> bool:
+    """AV boards can answer 2.04 to a command they refused, saying so in
+    controlResponse (HW-Q950T, QN90A; #719, #755)."""
+    control = response.get("controlResponse") if isinstance(response, dict) else None
+    return isinstance(control, dict) and control.get("result") is False
+
+
 def _validate_debug_batch_payload(payload: list) -> None:
     """Shape checks for a Collection batch payload (issue #473).
 
@@ -307,6 +322,9 @@ def _refusal(code: int, response: Any) -> str:
     """A refused write's CoAP code, with the appliance's own reason when it
     gave one (`Control fail, <...>`; see transport.Transport)."""
     text = _coap_code_str(code)
+    if _control_refused(response):
+        reason = response["controlResponse"].get("errorCode")
+        return f"{text} controlResponse.result=false" + (f" ({reason})" if reason else "")
     return f"{text} {response}" if isinstance(response, str) and response else text
 
 
@@ -659,6 +677,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def last_resources(self) -> dict:
         return self._cache.snapshot()
+
+    def write_settling(self, href: str) -> bool:
+        """Whether an optimistic write to `href` is still inside its settle
+        window, so the cache holds what was written rather than a poll."""
+        return self._observe._is_settling(href)
 
     def resource(self, href: str) -> dict:
         """A single href's rep. Cheaper than `last_resources.get(href)`,
@@ -2781,9 +2804,27 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Command dispatch (called by entity platforms in Task 5)
     # ------------------------------------------------------------------
 
-    async def async_send_command(self, bound_entity: BoundEntity, payload: Any) -> None:
+    async def async_send_command(
+        self,
+        bound_entity: BoundEntity,
+        payload: Any,
+        *,
+        optimistic_body: dict | None = None,
+        prepare_payload: Callable[[], Any | None] | None = None,
+        refresh: bool = True,
+    ) -> bool:
         """Write a value to the device. Retries once on a dead session
         (issue #294); raises HomeAssistantError if that retry fails too.
+        Returns whether a write was sent (or a cook parameter held).
+
+        refresh=False leaves the confirming refresh to the caller, for one
+        that serializes its commands and shouldn't hold its lock for a poll.
+
+        optimistic_body overrides the cache update when the command payload
+        differs from readable state; it is never sent to the device.
+        prepare_payload recalculates the payload once the session is ready,
+        for a command relative to fast-moving state (a seek), or returns None
+        if it no longer applies. It must resolve to the same path.
 
         A description-level validate_fn (SwitchDesc and SelectDesc) rejects
         a write with a user-facing message ahead of write_fn's silent
@@ -2796,15 +2837,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         cook_param = getattr(desc, "cook_param", None)
         if cook_param == cook.PARAM_START:
             await self.async_start_cooking(bound_entity.subdevice)
-            return
+            return True
         if cook_param is not None and self._holds_cook(bound_entity.subdevice):
             # Nothing reaches the appliance, so Remote Control is only
             # checked at the start.
             self._hold_cook(bound_entity.subdevice, desc, cook_param, payload)
-            return
+            return True
         write_fn = getattr(desc, "write_fn", None)
         if write_fn is None:
-            return
+            return False
         href = bound_entity.href
         # Through entity_rep(), not the bare cache: write_fn must see the
         # same rep exists_fn/rep_fn were handed, including the merged
@@ -2842,14 +2883,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     translation_domain=DOMAIN,
                     translation_key=error,
                 )
-        try:
-            result = write_fn(payload, rep, href, resources)
-        except TypeError:
-            result = write_fn(payload, rep, href)
+
+        def _resolve(payload: Any) -> tuple[list[str], dict] | None:
+            current_rep = self.entity_rep(href or "")
+            current_resources = self.canonical_resources(bound_entity.subdevice)
+            try:
+                return write_fn(payload, current_rep, href, current_resources)
+            except TypeError:
+                return write_fn(payload, current_rep, href)
+
+        result = _resolve(payload)
         if result is None:
             self._log.warning("write_fn rejected payload %r for %s", payload, href)
-            return
+            return False
         path_segs, body = result
+        canonical_path = list(path_segs)
 
         # The write's actual target, not necessarily bound_entity.href -- a
         # composite entity (the AC's ClimateDesc) drives writes to sibling
@@ -2890,38 +2938,56 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # option/item for the settle window. Pre-merge here the way the
         # device does, so the optimistic cache entry stays complete; the
         # wire `body` stays minimal.
-        write_only = getattr(desc, "write_only", False)
+        write_only = getattr(desc, "write_only", False) or bool(
+            desc.command_fn and desc.command_fn(payload)
+        )
         previous_settle = self._observe.settle_deadline(write_href)
         armed_settle = 0.0
-        if not write_only:
-            optimistic_fn = getattr(desc, "optimistic_fn", None)
-            optimistic_body = optimistic_fn(body) if optimistic_fn else body
+        # A prepared payload is only known once sent, so its cache update
+        # waits for the acknowledgement, built from the body that went out.
+        cache_after_ack = prepare_payload is not None or bool(
+            desc.cache_after_ack_fn and desc.cache_after_ack_fn(payload)
+        )
+        cache_before_send = not write_only and not cache_after_ack
+        retry = not (desc.resend_unsafe_fn and desc.resend_unsafe_fn(payload))
+        explicit_optimistic = optimistic_body
+
+        def _optimistic(body: dict) -> dict:
+            optimistic: dict
+            if explicit_optimistic is not None:
+                optimistic = explicit_optimistic
+            else:
+                optimistic_fn = getattr(desc, "optimistic_fn", None)
+                optimistic = optimistic_fn(body) if optimistic_fn else body
             # From optimistic_body, or the merge drops what optimistic_fn added.
-            new_options = optimistic_body.get("x.com.samsung.da.options")
+            new_options = optimistic.get("x.com.samsung.da.options")
             if isinstance(new_options, list):
                 cached_options = (self._cache.get(write_href) or {}).get("x.com.samsung.da.options")
-                optimistic_body = {
-                    **optimistic_body,
+                optimistic = {
+                    **optimistic,
                     "x.com.samsung.da.options": merge_options_field(cached_options, new_options),
                 }
-            new_modes = optimistic_body.get(_MODES_FIELD)
+            new_modes = optimistic.get(_MODES_FIELD)
             if getattr(desc, "merges_modes", False) and isinstance(new_modes, list):
                 cached_modes = (self._cache.get(write_href) or {}).get(_MODES_FIELD)
-                optimistic_body = {
-                    **optimistic_body,
+                optimistic = {
+                    **optimistic,
                     _MODES_FIELD: merge_options_field(cached_modes, new_modes),
                 }
             # Same fact for row lists (see airconditioner._climate_write's
             # vendor temperature write, soundbar.CHANNEL_LEVEL).
             for rows, key in _MERGED_ROWS:
-                new_rows = optimistic_body.get(rows)
+                new_rows = optimistic.get(rows)
                 if isinstance(new_rows, list):
                     cached_rows = (self._cache.get(write_href) or {}).get(rows)
-                    optimistic_body = {
-                        **optimistic_body,
+                    optimistic = {
+                        **optimistic,
                         rows: merge_items_field(cached_rows, new_rows, key),
                     }
-            self._observe.apply(write_href, optimistic_body, source="optimistic")
+            return optimistic
+
+        if cache_before_send:
+            self._observe.apply(write_href, _optimistic(body), source="optimistic")
             armed_settle = self._observe.mark_write_pending(
                 write_href, settle_s=self._write_settle_s
             )
@@ -2933,19 +2999,42 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # for the confirming poll below and reviving the
             # revert-then-reapply symptom settle_s exists to prevent (issue
             # #9). Re-arm it fresh now that the write actually landed.
-            if not write_only:
+            if cache_before_send:
                 armed_settle = self._observe.mark_write_pending(
                     write_href, settle_s=self._write_settle_s
                 )
 
+        def _prepare_body() -> dict | None:
+            nonlocal body
+            assert prepare_payload is not None
+            prepared = prepare_payload()
+            result = _resolve(prepared) if prepared is not None else None
+            if result is None:
+                return None
+            if result[0] != canonical_path:
+                self._log.error(
+                    "prepared %r for %s resolved to %s instead", prepared, write_href, result[0]
+                )
+                return None
+            # What actually goes out, for the confirming read and the cache.
+            body = result[1]
+            return body
+
         try:
-            await self._async_put(
+            sent = await self._async_put(
                 path_segs,
                 body,
                 write_href,
                 on_retry=_rearm,
+                retry=retry,
+                prepare_body=_prepare_body if prepare_payload is not None else None,
                 confirm_on_refusal=desc.confirm_on_refusal and not write_only,
+                control_response=desc.control_response,
             )
+            if not sent:
+                if cache_before_send:
+                    self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
+                return False
             if (
                 remote_control_off
                 and not write_only
@@ -2965,12 +3054,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except (HomeAssistantError, asyncio.CancelledError) as err:
             # Not known to have landed: let the next poll replace the
             # optimistic value instead of holding it for the settle window.
-            if not write_only:
+            if cache_before_send:
                 self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
             if getattr(err, "translation_key", None) in _APPLIANCE_ANSWERED:
                 await self.async_request_refresh()
             raise
-        await self.async_request_refresh()
+        if cache_after_ack and not write_only:
+            self._observe.apply(write_href, _optimistic(body), source="optimistic")
+            self._observe.mark_write_pending(write_href, settle_s=self._write_settle_s)
+        if refresh:
+            await self.async_request_refresh()
+        return True
 
     async def _took_effect(
         self, path_segs: list[str], body: dict | list, *, strict: bool = False
@@ -3000,27 +3094,70 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         write_href: str,
         on_retry: Callable[[], None] | None = None,
         *,
+        retry: bool = True,
+        prepare_body: Callable[[], dict | None] | None = None,
         confirm_on_refusal: bool = False,
-    ) -> None:
+        control_response: bool = False,
+    ) -> bool:
         """PUT `body`, reconnecting and retrying once on a dead session.
-        Raises HomeAssistantError if the retry fails too."""
+        Raises HomeAssistantError if the retry fails too.
+
+        With retry=False the session is proven live with one GET first, so
+        a session the firmware closed between polls is replaced before the
+        write rather than after it; a write that may then have reached the
+        device is not resent.
+
+        prepare_body, when given, replaces `body` once the session is up, and
+        again before a retry; None means the command no longer applies, and
+        nothing is sent (returns False)."""
+        sent = False
 
         def _do_put():
+            nonlocal sent
             if self._session is None:
                 self._connect_session()
             sess = self._session
             if sess is None:
                 raise RuntimeError("no session")
+            sent = True
             code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
             self._log.info("PUT %s → code %#04x", write_href, code)
             return code, response
+
+        def _ready_session():
+            fresh = self._session is None
+            if fresh:
+                self._connect_session()
+            sess = self._session
+            if sess is None:
+                raise RuntimeError("no session")
+            # A session that just finished its handshake needs no proof.
+            if not retry and not fresh and not self._session_answers(sess):
+                raise RuntimeError("session did not answer before a resend-unsafe write")
+
+        async def _attempt() -> tuple[int, Any] | None:
+            nonlocal body
+            if prepare_body is not None or not retry:
+                await self.hass.async_add_executor_job(_ready_session)
+            if prepare_body is not None:
+                try:
+                    prepared = prepare_body()
+                except Exception as err:
+                    raise _PrepareFailed(err) from err
+                if prepared is None:
+                    return None
+                body = prepared
+            return await self.hass.async_add_executor_job(_do_put)
 
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
         async with self._session_lock:
             try:
-                code, response = await self.hass.async_add_executor_job(_do_put)
+                result = await _attempt()
+            except _PrepareFailed as e:
+                # A bug in the payload, not a dead session.
+                raise e.error from None
             except Exception as e:
                 await self.hass.async_add_executor_job(self._close_session)
                 # The session is dead the moment it's closed, so any OBSERVE
@@ -3038,10 +3175,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         translation_key="cook_start_unconfirmed",
                         translation_placeholders={"error": str(e)},
                     ) from e
+                # Only a write that went out is ambiguous: one that failed
+                # before it was sent is retried like any other.
+                if not retry and sent:
+                    self._log.warning("command failed for %s, not resent: %s", write_href, e)
+                    raise HomeAssistantError(
+                        translation_domain=DOMAIN,
+                        translation_key="command_failed",
+                        translation_placeholders={"href": write_href, "error": str(e)},
+                    ) from e
                 self._log.warning("command failed for %s, reconnecting: %s", write_href, e)
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
-                    code, response = await self.hass.async_add_executor_job(_do_put)
+                    result = await _attempt()
+                except _PrepareFailed as e2:
+                    raise e2.error from None
                 except Exception as e2:
                     if isinstance(e2, OvenStartUnconfirmed):
                         raise HomeAssistantError(
@@ -3055,19 +3203,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         translation_key="command_failed",
                         translation_placeholders={"href": write_href, "error": str(e2)},
                     ) from e2
-                if on_retry is not None:
+                if on_retry is not None and result is not None:
                     on_retry()
+        if result is None:
+            return False
+        code, response = result
         # An opted-in control may apply a write while replying 4.00 (#714).
         # A failed GET cannot overturn an explicit refusal.
+        control_refused = control_response and _coap_accepted(code) and _control_refused(response)
         if (
-            code == _COAP_BAD_REQUEST
+            (code == _COAP_BAD_REQUEST or control_refused)
             and confirm_on_refusal
             and await self._took_effect(path_segs, body, strict=True)
         ):
             self._log.debug("PUT %s refused, but confirmed by live GET", write_href)
-            return
+            return True
 
-        if not _coap_accepted(code):
+        if not _coap_accepted(code) or control_refused:
             # A refusal is the appliance's answer, not a dead session, so it
             # is reported rather than retried.
             raise HomeAssistantError(
@@ -3075,6 +3227,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 translation_key="command_refused",
                 translation_placeholders={"href": write_href, "error": _refusal(code, response)},
             )
+        return True
 
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.

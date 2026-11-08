@@ -2724,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Команде за робот усисивач не примају параметре."
+    },
+    "media_option_not_supported": {
+      "message": "Уређај тренутно не нуди ову опцију."
     }
   },
   "selector": {

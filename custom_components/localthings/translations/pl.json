@@ -2724,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Polecenia robota sprzątającego nie przyjmują parametrów."
+    },
+    "media_option_not_supported": {
+      "message": "Urządzenie nie oferuje teraz tej opcji."
     }
   },
   "selector": {

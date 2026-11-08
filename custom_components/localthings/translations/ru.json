@@ -2724,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Команды робота-пылесоса не принимают параметров."
+    },
+    "media_option_not_supported": {
+      "message": "Устройство сейчас не предлагает этот вариант."
     }
   },
   "selector": {

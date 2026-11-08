@@ -745,6 +745,8 @@ def test_confirmed_course_names_are_localized():
 UNNAMED_DESCRIPTORS = {
     ("fan", "fan"),
     ("fan", "paired_hood_fan"),
+    # Named after the device, like the fan; HA core translates its states.
+    ("media_player", "media_player"),
 }
 
 

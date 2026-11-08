@@ -389,6 +389,9 @@
     },
     "vacuum_command_params": {
       "message": "Los comandos del robot aspirador no admiten parámetros."
+    },
+    "media_option_not_supported": {
+      "message": "El dispositivo no ofrece esa opción en este momento."
     }
   },
   "entity": {

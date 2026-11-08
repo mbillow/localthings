@@ -2724,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "로봇청소기 명령에는 매개변수가 없습니다."
+    },
+    "media_option_not_supported": {
+      "message": "기기에서 지금은 이 옵션을 제공하지 않습니다."
     }
   },
   "selector": {

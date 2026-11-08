@@ -2724,6 +2724,9 @@
     },
     "vacuum_command_params": {
       "message": "Příkazy robotického vysavače nemají žádné parametry."
+    },
+    "media_option_not_supported": {
+      "message": "Zařízení tuto možnost právě nenabízí."
     }
   },
   "selector": {

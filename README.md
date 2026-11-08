@@ -36,7 +36,7 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 | Air monitor | Range and range hood |
 | Air purifier | Refrigerator, kimchi refrigerator, wine cellar |
 | Cooktop, gas, radiant electric and induction; some models read-only | Robot vacuum, early support |
-| Dehumidifier | Soundbar, settings and status |
+| Dehumidifier | Soundbar, media player, settings and status |
 | Dishwasher | Vacuum clean station |
 | Dryer | Washer and washer-dryer |
 | EHS heat pump | Water purifier |
