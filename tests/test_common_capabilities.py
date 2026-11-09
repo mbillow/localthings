@@ -833,3 +833,105 @@ def test_filter_reset_survives_the_resources_aware_write_call(capability, key, h
         [s for s in href.strip("/").split("/") if s],
         {"x.com.samsung.da.filterReset": "On"},
     )
+
+
+# -- kit-subdevice zero-energy suppression (issue #789) --------------------
+#
+# A multi-split's indoor units sit behind a Wi-Fi kit (AIM-H04N) as
+# /subdevice/vs/0 heads. Lifetime energy there belongs to the shared outdoor
+# unit, so each head reports cumulativePower/cumulativeConsumption as a flat
+# "0.0" it never advances. Without the guard that yields a permanently-unknown
+# "energy" sensor and a flat-0 "consumed energy" sensor on every head -- Energy
+# dashboard noise for a meter that measures nothing. These call the capability
+# contract directly (no HA), like the rest of the suite.
+
+
+def _energy_entity(key):
+    return next(e for e in common.ENERGY_METER.entities if e.key == key)
+
+
+# A single AIM-H04N indoor head's resource map: the /subdevice/vs/0 kit record
+# plus an energy resource whose lifetime fields are the flat-zero placeholder.
+_KIT_HEAD_RESOURCES = {
+    "/subdevice/vs/0": {"x.com.samsung.da.subDeviceType": "ac"},
+    "/energy/consumption/vs/0": {
+        "x.com.samsung.da.cumulativePower": "0.0",
+        "x.com.samsung.da.cumulativeConsumption": "0.0",
+        "x.com.samsung.da.instantaneousPower": "0.000000",
+        "x.com.samsung.da.instantaneousPowerUnit": "KW",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+    },
+}
+
+
+def test_kit_head_zero_lifetime_energy_suppressed():
+    """energy_kwh (cumulativePower) is dropped on a kit head that only reports
+    the flat-zero placeholder."""
+    rep = _KIT_HEAD_RESOURCES["/energy/consumption/vs/0"]
+    assert _energy_entity("energy_kwh").exists_fn(rep, _KIT_HEAD_RESOURCES) is False
+
+
+def test_kit_head_zero_consumed_energy_suppressed():
+    """power_energy_kwh (cumulativeConsumption) is dropped on the same head, so
+    the pair stays consistent rather than one unknown + one flat 0."""
+    rep = _KIT_HEAD_RESOURCES["/energy/consumption/vs/0"]
+    assert _energy_entity("power_energy_kwh").exists_fn(rep, _KIT_HEAD_RESOURCES) is False
+
+
+def test_kit_head_keeps_instantaneous_power():
+    """power_watts is a live reading (0 while idle, real while running), not a
+    dead lifetime placeholder, so the guard leaves it alone."""
+    rep = _KIT_HEAD_RESOURCES["/energy/consumption/vs/0"]
+    assert _energy_entity("power_watts").exists_fn(rep, _KIT_HEAD_RESOURCES) is True
+
+
+def test_kit_head_with_real_total_keeps_energy():
+    """A head that ever reports a real (> 0) total is a genuine meter and keeps
+    its sensor -- only the all-zero placeholder is dropped."""
+    resources = {
+        "/subdevice/vs/0": {"x.com.samsung.da.subDeviceType": "ac"},
+        "/energy/consumption/vs/0": {
+            "x.com.samsung.da.cumulativePower": "1771403.0",
+            "x.com.samsung.da.cumulativeConsumption": "1771403.0",
+        },
+    }
+    rep = resources["/energy/consumption/vs/0"]
+    assert _energy_entity("energy_kwh").exists_fn(rep, resources) is True
+    assert _energy_entity("power_energy_kwh").exists_fn(rep, resources) is True
+
+
+def test_standalone_zero_meter_unaffected():
+    """A standalone appliance (no /subdevice/vs/0) sitting at 0 keeps its
+    sensor exactly as before -- lifetime_wh_to_kwh's own 0->unknown guard
+    still handles the transient-zero case the suppression must not touch."""
+    resources = {
+        "/energy/consumption/vs/0": {
+            "x.com.samsung.da.cumulativePower": "0",
+            "x.com.samsung.da.cumulativeConsumption": "0",
+        }
+    }
+    rep = resources["/energy/consumption/vs/0"]
+    assert _energy_entity("energy_kwh").exists_fn(rep, resources) is True
+    assert _energy_entity("power_energy_kwh").exists_fn(rep, resources) is True
+
+
+def test_kit_head_stub_still_created():
+    """The not-yet-fetched stub carve-out is preserved: an href-only rep still
+    creates the entity so it does not blink out during the first poll."""
+    resources = {"/subdevice/vs/0": {"x.com.samsung.da.subDeviceType": "ac"}}
+    stub = {"href": "/energy/consumption/vs/0"}
+    assert _energy_entity("energy_kwh").exists_fn(stub, resources) is True
+    assert _energy_entity("power_energy_kwh").exists_fn(stub, resources) is True
+
+
+def test_kit_subdevice_zero_helper():
+    """_kit_subdevice_zero: only a subdevice resource map with a zero/absent
+    field is a placeholder; a positive value, or no subdevice record, is not."""
+    field = "x.com.samsung.da.cumulativePower"
+    subdev = {"/subdevice/vs/0": {}}
+    assert common._kit_subdevice_zero({field: "0.0"}, subdev, field) is True
+    assert common._kit_subdevice_zero({field: "-1"}, subdev, field) is True
+    assert common._kit_subdevice_zero({}, subdev, field) is True
+    assert common._kit_subdevice_zero({field: "1771403.0"}, subdev, field) is False
+    # No kit record -> never a kit-head placeholder, whatever the value.
+    assert common._kit_subdevice_zero({field: "0.0"}, {}, field) is False

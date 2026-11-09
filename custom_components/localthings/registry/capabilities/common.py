@@ -542,6 +542,29 @@ def _instantaneous_power_unit(rep):
 
 HREF_ENERGY_CONSUMPTION = "/energy/consumption/vs/0"
 
+
+def _kit_subdevice_zero(rep, resources, field) -> bool:
+    """True when this is a Wi-Fi-kit-fronted subdevice whose lifetime-energy
+    ``field`` is a zero/absent placeholder rather than a real total.
+
+    ``/subdevice/vs/0`` is the kit's per-unit registration record (#682): it
+    marks an AIM-H04N air-conditioner indoor unit or an MIM-H04EN heat-pump
+    head, where the lifetime meter belongs to the shared outdoor unit and the
+    head has no per-unit total of its own. Those heads report
+    ``cumulativePower``/``cumulativeConsumption`` as a flat ``"0.0"`` they
+    never advance (issue #789). The resulting sensor is either permanently
+    ``unknown`` (``lifetime_wh_to_kwh`` books 0 as unknown) or a flat ``0`` --
+    a meter that looks tracked-but-idle on the Energy dashboard yet measures
+    nothing. A head that ever reports a real (> 0) total keeps its sensor;
+    only the all-zero placeholder is dropped, and no non-subdevice meter is
+    affected (a standalone appliance legitimately sitting at 0 is left alone,
+    exactly as ``lifetime_wh_to_kwh``'s own 0->unknown guard intends)."""
+    if "/subdevice/vs/0" not in resources:
+        return False
+    n = _num(rep.get(field))
+    return n is None or n <= 0
+
+
 ENERGY_METER = Capability(
     href=HREF_ENERGY_CONSUMPTION,
     entities=(
@@ -574,7 +597,13 @@ ENERGY_METER = Capability(
             unit="kWh",
             value_fn=lifetime_wh_to_kwh,
             exists_fn=lambda rep, resources: (
-                is_stub_rep(rep) or "x.com.samsung.da.cumulativePower" in rep
+                is_stub_rep(rep)
+                or (
+                    "x.com.samsung.da.cumulativePower" in rep
+                    and not _kit_subdevice_zero(
+                        rep, resources, "x.com.samsung.da.cumulativePower"
+                    )
+                )
             ),
         ),
         # cumulativeConsumption is a second, independently-varying running
@@ -587,7 +616,13 @@ ENERGY_METER = Capability(
             unit="kWh",
             value_fn=wh_to_kwh,
             exists_fn=lambda rep, resources: (
-                is_stub_rep(rep) or "x.com.samsung.da.cumulativeConsumption" in rep
+                is_stub_rep(rep)
+                or (
+                    "x.com.samsung.da.cumulativeConsumption" in rep
+                    and not _kit_subdevice_zero(
+                        rep, resources, "x.com.samsung.da.cumulativeConsumption"
+                    )
+                )
             ),
         ),
         # AI Energy Mode's lifetime savings estimate vs. an unoptimized
