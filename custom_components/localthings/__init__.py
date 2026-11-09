@@ -315,7 +315,7 @@ def _drop_read_only_power_switches(
         ent_reg.async_remove(old.entity_id)
 
 
-_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing"})
+_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing", "air_purify"})
 
 
 @callback
@@ -323,8 +323,9 @@ def _drop_unsupported_sound_switches(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
     """Remove old switches that no longer pass their descriptor's existence
-    check: Sound, and the rapid switches older releases gave fridges whose
-    /refrigeration/vs/0 reports only the other field (#698)."""
+    check: Sound, the rapid switches older releases gave fridges whose
+    /refrigeration/vs/0 reports only the other field (#698), and ARTIK051
+    air conditioners' air purify (#747)."""
     ent_reg = er.async_get(hass)
     for bound in coordinator.bound:
         if (

@@ -95,8 +95,8 @@ def test_power_and_convenient_folded_into_climate():
 
 
 def test_air_purify_switch_only_on_non_artik051_boards():
-    """ARTIK051 reports /option/airpurify/vs/0 but refuses every write to it
-    (#747), so the switch is left off there. The newer boards keep it."""
+    """ARTIK051_PRAC reports /option/airpurify/vs/0 but refuses every write to
+    it (#747), so the switch is left off there. Other boards keep it."""
     assert "air_purify" not in _state()
     reg, resources = _ac_tp1x()
     state = flatten(discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
