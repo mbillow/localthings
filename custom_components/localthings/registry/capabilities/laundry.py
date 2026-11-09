@@ -247,10 +247,10 @@ def cycle_options(resources):
 # WashingTimes_<N> is the count since the last one -- their difference is
 # the "N cycles until due" figure the app shows (verified: 40 - 3 == 37,
 # matching a live app screenshot).
-def drum_clean_cycles_remaining(rep):
+def drum_clean_cycles_remaining(rep, proposal_key="DrumCleanProposal", count_key="WashingTimes"):
     opts = rep.get("x.com.samsung.da.options") or []
-    proposal = option_value(opts, "DrumCleanProposal")
-    washed = option_value(opts, "WashingTimes")
+    proposal = option_value(opts, proposal_key)
+    washed = option_value(opts, count_key)
     if proposal is None or washed is None:
         return None
     try:
@@ -264,8 +264,8 @@ def drum_clean_cycles_remaining(rep):
 # '|'-joined history of every past clean in increasing order. Splitting on
 # '|' and taking the last element handles both shapes identically. No
 # timezone accompanies either shape, so it's treated as UTC.
-def drum_clean_last_cleaned(rep):
-    raw = option_value(rep.get("x.com.samsung.da.options"), "DrumCleanLog")
+def drum_clean_last_cleaned(rep, log_key="DrumCleanLog"):
+    raw = option_value(rep.get("x.com.samsung.da.options"), log_key)
     if not raw:
         return None
     last = raw.rsplit("|", 1)[-1]

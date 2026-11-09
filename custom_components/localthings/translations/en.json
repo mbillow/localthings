@@ -1207,7 +1207,12 @@
           "180": "3 hr",
           "240": "4 hr",
           "none": "Off",
-          "cupboard": "Cupboard"
+          "cupboard": "Cupboard",
+          "damp": "Damp",
+          "less": "Less",
+          "normal": "Normal",
+          "more": "More",
+          "very": "Very"
         }
       },
       "zone_mode": {
@@ -1573,6 +1578,12 @@
       "drum_clean_last_cleaned": {
         "name": "Drum last cleaned"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Drum clean (drying) due in"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Drum last cleaned (drying)"
+      },
       "quick_wash": {
         "name": "Quick wash",
         "state": {
@@ -1769,6 +1780,15 @@
       },
       "progress_percentage": {
         "name": "Progress percent"
+      },
+      "wash_progress_percentage": {
+        "name": "Wash progress percent"
+      },
+      "dry_progress_percentage": {
+        "name": "Dry progress percent"
+      },
+      "wash_remaining_minutes": {
+        "name": "Wash time remaining"
       },
       "selfcheck_error": {
         "name": "Self-check error"

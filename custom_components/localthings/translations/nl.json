@@ -1207,7 +1207,12 @@
           "180": "3 uur",
           "240": "4 uur",
           "none": "Uit",
-          "cupboard": "Kastdroog"
+          "cupboard": "Kastdroog",
+          "damp": "Vochtig",
+          "less": "Minder",
+          "normal": "Normaal",
+          "more": "Meer",
+          "very": "Zeer"
         }
       },
       "zone_mode": {
@@ -1573,6 +1578,12 @@
       "drum_clean_last_cleaned": {
         "name": "Trommel laatst gereinigd"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Trommelreiniging (drogen) over"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Trommel laatst gereinigd (drogen)"
+      },
       "quick_wash": {
         "name": "Snelwas",
         "state": {
@@ -1769,6 +1780,15 @@
       },
       "progress_percentage": {
         "name": "Voortgangspercentage"
+      },
+      "wash_progress_percentage": {
+        "name": "Voortgangspercentage wassen"
+      },
+      "dry_progress_percentage": {
+        "name": "Voortgangspercentage drogen"
+      },
+      "wash_remaining_minutes": {
+        "name": "Resterende wastijd"
       },
       "selfcheck_error": {
         "name": "Fout zelfcontrole"

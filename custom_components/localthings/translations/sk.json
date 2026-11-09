@@ -1207,7 +1207,12 @@
           "180": "3 h",
           "240": "4 h",
           "none": "Vypnuté",
-          "cupboard": "Do skrine"
+          "cupboard": "Do skrine",
+          "damp": "Vlhké",
+          "less": "Menej",
+          "normal": "Normálne",
+          "more": "Viac",
+          "very": "Veľmi"
         }
       },
       "zone_mode": {
@@ -1573,6 +1578,12 @@
       "drum_clean_last_cleaned": {
         "name": "Posledné čistenie bubna"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Čistenie bubna (sušenie) o"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Posledné čistenie bubna (sušenie)"
+      },
       "quick_wash": {
         "name": "Rýchle pranie",
         "state": {
@@ -1769,6 +1780,15 @@
       },
       "progress_percentage": {
         "name": "Priebeh v percentách"
+      },
+      "wash_progress_percentage": {
+        "name": "Priebeh prania v percentách"
+      },
+      "dry_progress_percentage": {
+        "name": "Priebeh sušenia v percentách"
+      },
+      "wash_remaining_minutes": {
+        "name": "Zostávajúci čas prania"
       },
       "selfcheck_error": {
         "name": "Chyba vlastnej kontroly"

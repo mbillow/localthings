@@ -1207,7 +1207,12 @@
           "180": "3 h",
           "240": "4 h",
           "none": "Spento",
-          "cupboard": "Pronto da riporre"
+          "cupboard": "Pronto da riporre",
+          "damp": "Umido",
+          "less": "Meno",
+          "normal": "Normale",
+          "more": "Più",
+          "very": "Molto"
         }
       },
       "zone_mode": {
@@ -1573,6 +1578,12 @@
       "drum_clean_last_cleaned": {
         "name": "Ultima pulizia cestello"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Pulizia cestello (asciugatura) fra"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Ultima pulizia cestello (asciugatura)"
+      },
       "quick_wash": {
         "name": "Lavaggio rapido",
         "state": {
@@ -1769,6 +1780,15 @@
       },
       "progress_percentage": {
         "name": "Avanzamento percentuale"
+      },
+      "wash_progress_percentage": {
+        "name": "Avanzamento percentuale lavaggio"
+      },
+      "dry_progress_percentage": {
+        "name": "Avanzamento percentuale asciugatura"
+      },
+      "wash_remaining_minutes": {
+        "name": "Tempo di lavaggio rimanente"
       },
       "selfcheck_error": {
         "name": "Errore autodiagnosi"
