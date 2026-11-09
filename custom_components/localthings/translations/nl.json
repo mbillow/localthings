@@ -975,6 +975,9 @@
           "mute": "Stil"
         }
       },
+      "sound_tone": {
+        "name": "Geluidstoon"
+      },
       "energy_saving_mode": {
         "name": "Energiebesparingsmodus"
       },

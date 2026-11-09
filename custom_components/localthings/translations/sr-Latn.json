@@ -975,6 +975,9 @@
           "mute": "Utišano"
         }
       },
+      "sound_tone": {
+        "name": "Ton zvuka"
+      },
       "energy_saving_mode": {
         "name": "Režim uštede energije"
       },

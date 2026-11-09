@@ -941,6 +941,9 @@
           "mute": "Stumm"
         }
       },
+      "sound_tone": {
+        "name": "Signalton"
+      },
       "air_purifier_sound_mode": {
         "name": "Tonmodus",
         "state": {

@@ -975,6 +975,9 @@
           "mute": "음소거"
         }
       },
+      "sound_tone": {
+        "name": "알림음 종류"
+      },
       "energy_saving_mode": {
         "name": "절전 모드"
       },
