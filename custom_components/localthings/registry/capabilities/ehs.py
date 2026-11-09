@@ -171,6 +171,16 @@ ZONE_TEMPERATURE = Capability(
     entities=(
         _zone_temperature_sensor("zone_temperature"),
         _zone_climate("zone_climate", HREF_ZONE1_POWER, HREF_ZONE1_TEMPERATURE),
+        # The weather-compensation offset added to the water-law flow setpoint.
+        SensorDesc(
+            key="zone_water_law_offset",
+            field="x.com.samsung.da.offset",
+            device_class="temperature",
+            unit_fn=_temp_unit,
+            state_class="measurement",
+            entity_category="diagnostic",
+            value_fn=_num,
+        ),
         NumberDesc(
             key="zone_target_temperature",
             field="x.com.samsung.da.desired",
@@ -335,7 +345,6 @@ _EHS_IGNORED = [
     "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
-    "/ehsfsv/vs/0",  # opaque hex-encoded factory setting values
     "/option/dhwdisplay/vs/0",  # front-panel DHW-display show/hide, cosmetic only
     "/reserverulesets/vs/0",  # opaque hex-encoded schedule reservation blob
     "/sac/installationinfo/vs/0",  # static outdoor/indoor installation info, diagnostic only
