@@ -25,7 +25,7 @@ REGISTRY = DeviceRegistry(
             av.NETWORK,
             *soundbar.MEDIA_SURFACE_COVERAGE,
             *av.MEDIA_RESOURCES,
-            soundbar.MEDIA_PLAYER,
+            *soundbar.MEDIA_PLAYERS,
             soundbar.TONE,
             soundbar.WOOFER,
             soundbar.AUDIO_SYNC,

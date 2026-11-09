@@ -8,6 +8,8 @@ wide and top levels, so those are untested; they send the same writes as
 their checked neighbours.
 """
 
+import functools
+
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -599,7 +601,7 @@ def _validate_media(payload, rep, resources) -> str | None:
     return None
 
 
-def _media_player_write(payload, rep, href=None, resources=None):
+def _media_player_write(payload, rep, href=None, resources=None, media=av.CAPABILITY_MEDIA):
     """(kind, value) pairs from the media_player platform -> (path, body).
 
     Each pair writes one field on the href that owns it. Sources and sound
@@ -620,40 +622,46 @@ def _media_player_write(payload, rep, href=None, resources=None):
         if not _advertised(_SOUND_MODE, value, resources):
             return None
         return av.path_of(HREF_SOUNDMODE), {_SOUND_MODE.field: value}
-    return av.media_write(kind, value)
+    return av.media_write(kind, value, media)
 
 
-# The media player reads its siblings from the snapshot, like climate.py.
-MEDIA_PLAYER = Capability(
-    href=av.HREF_MEDIA_PLAYBACK,
-    rt_filter="x.com.st.mediaplayer",
-    poll_tier="hot",
-    entities=(
-        MediaPlayerDesc(
-            key="media_player",
-            rep_fn=av.first_mode,
-            device_class="speaker",
-            power_href=HREF_SWITCH,
-            audio_href=HREF_AUDIO,
-            source=_SOURCE,
-            sound_mode=_SOUND_MODE,
-            track_href=av.HREF_TRACK_DATA,
-            shuffle_href=av.HREF_SHUFFLE,
-            track_control_href=av.HREF_TRACK_CONTROL,
-            status_fn=_playback_status,
-            stream_active_fn=_stream_active,
-            # A paused HW-Q950T answers stop with controlResponse.result=false
-            # though it lists stop in supportedModes (#775).
-            stop_when_paused=False,
-            write_fn=_media_player_write,
-            validate_fn=_validate_media,
-            resend_unsafe_fn=av.resend_unsafe,
-            cache_after_ack_fn=av.cache_after_ack,
-            command_fn=av.is_skip,
-            control_response=True,
+def _media_player(media: av.MediaHrefs) -> Capability:
+    """The media player reads its siblings from the snapshot, like climate.py."""
+    return Capability(
+        href=media.playback,
+        rt_filter="x.com.st.mediaplayer",
+        poll_tier="hot",
+        entities=(
+            MediaPlayerDesc(
+                key="media_player",
+                rep_fn=av.first_mode,
+                device_class="speaker",
+                power_href=HREF_SWITCH,
+                audio_href=HREF_AUDIO,
+                source=_SOURCE,
+                sound_mode=_SOUND_MODE,
+                track_href=media.track_data,
+                shuffle_href=media.shuffle,
+                track_control_href=media.track_control,
+                status_fn=_playback_status,
+                stream_active_fn=_stream_active,
+                # A paused HW-Q950T answers stop with controlResponse.result=false
+                # though it lists stop in supportedModes (#775).
+                stop_when_paused=False,
+                write_fn=functools.partial(_media_player_write, media=media),
+                validate_fn=_validate_media,
+                resend_unsafe_fn=av.resend_unsafe,
+                cache_after_ack_fn=av.cache_after_ack,
+                command_fn=av.is_skip,
+                control_response=True,
+            ),
         ),
-    ),
-)
+    )
+
+
+# One per layout; a bar serves only one, so only one binds.
+MEDIA_PLAYERS = [_media_player(media) for media in av.MEDIA_LAYOUTS]
+MEDIA_PLAYER = MEDIA_PLAYERS[0]
 
 
 def _wifi_signal_pct(rep: dict):
@@ -706,4 +714,16 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/vfd"),
     # Relative volume steps, command-only.
     Capability(href="/sec/networkaudio/volumeUpDown"),
+    # Multiroom grouping state and nearby speakers (HW-Q700C, #796).
+    Capability(href="/sec/networkaudio/av/groupconf"),
+    Capability(href="/sec/networkaudio/av/groupdiscovery"),
+    Capability(href="/sec/networkaudio/av/groupinfo"),
+    # Installed app versions, info-link server, SES updater state and the
+    # built-in SmartThings hub's onboarding: cloud plumbing.
+    Capability(href="/sec/networkaudio/downloadableApp"),
+    Capability(href="/sec/networkaudio/infoLink"),
+    Capability(href="/sec/networkaudio/sesInfo"),
+    Capability(href="/sec/networkaudio/smartThingsHub"),
+    # Cloud-session self-healing timer.
+    Capability(href="/selfhealing/session"),
 ]

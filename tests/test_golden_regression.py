@@ -2235,3 +2235,19 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_s61b():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q700c():
+    """Media resources under /sec/networkaudio/av/ (#796)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q700c")
+    golden = json.loads((GOLDEN / "soundbar_q700c.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_q700c", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
