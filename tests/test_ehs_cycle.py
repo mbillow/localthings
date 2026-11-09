@@ -1,6 +1,7 @@
 """EHS /ehscycle/vs/0 cycle-log decoding (registry/capabilities/ehs_cycle.py)."""
 
 from datetime import timedelta
+from typing import Any
 
 import pytest
 
@@ -17,7 +18,7 @@ _MIM_H04EN_HEAT_PUMP = "/0a1b2c3d-0000-4000-8000-000001200000/device/0"
 
 # S905D3_SAC_EHS_24 samples and the same dump's /overview/vs/0 readings, as
 # posted in #697.
-_S905D3_REP = {
+_S905D3_REP: dict[str, Any] = {
     "unit": "Celsius",
     "indoor": [
         {
@@ -106,7 +107,8 @@ def test_outdoor_byte_8_matches_the_wifi_kits_outside_temperature(monkeypatch):
     # The kit's own 0.1 °C reading is bound, so the cycle-log copy isn't.
     assert state["outdoor_temperature"] == outside
     assert "cycle_outdoor_temperature" not in state
-    assert state["cycle_flow_rate"] == 9.6
+    # Bytes 6-7 read 0x6D60, a rescaled value rather than a flow rate.
+    assert state["cycle_flow_rate"] is None
 
 
 def test_36_byte_s905d3_record_matches_its_overview(monkeypatch):
@@ -119,6 +121,24 @@ def test_36_byte_s905d3_record_matches_its_overview(monkeypatch):
     assert abs(read("cycle_return_temperature") - _S905D3_OVERVIEW["compwaterintemp"]) <= 0.5
     assert abs(read("cycle_flow_rate") - _S905D3_OVERVIEW["lpm"]) <= 0.5
     assert read("cycle_outdoor_temperature") == _S905D3_OVERVIEW["outsidetemp"]
+
+
+@pytest.mark.parametrize(
+    ("high", "low", "lpm"),
+    [
+        (0x00, 0x9F, 15.9),
+        (0x01, 0x04, 26.0),
+        (0x03, 0xE8, 100.0),
+        (0x2A, 0xF8, None),
+        (0x80, 0x00, None),
+    ],
+)
+def test_flow_rate_spans_bytes_6_and_7(monkeypatch, high, low, lpm):
+    record = bytearray.fromhex(_S905D3_REP["indoor"][0]["cycledata"])
+    record[6:8] = bytes((high, low))
+    rep = {**_S905D3_REP, "indoor": [{**_S905D3_REP["indoor"][0], "cycledata": record.hex()}]}
+    _at(monkeypatch, _newest_time(rep))
+    assert _desc("cycle_flow_rate").rep_fn(rep) == lpm
 
 
 def test_the_newest_sample_is_read(monkeypatch):

@@ -8,7 +8,7 @@ from https://www.dwellsee.com/decoding-guide/ (0-indexed, temperatures are
     indoor, 31 bytes (TP1X, MIM-H04EN) or 36 bytes (S905D3)
       2     return water temperature
       3     flow water temperature
-      7     flow rate, b / 10 L/min
+      6-7   flow rate, uint16 BE / 10 L/min
       8     water pump speed, %
       27    DHW tank temperature (not bound, duplicates /temperatures/dhw/vs/0)
     outdoor, 28 bytes
@@ -36,6 +36,7 @@ from ..entities import SensorDesc
 from .common import normalize_temp_unit, parse_iso_utc
 
 _INDOOR_LENGTHS = (31, 36)
+_MAX_FLOW_LPM = 100
 _OUTDOOR_LENGTHS = (28,)
 
 # The log stops advancing while the unit is switched off (decoding guide,
@@ -95,6 +96,15 @@ def _i16(offset: int):
     return lambda b: float(int.from_bytes(b[offset : offset + 2], "big", signed=True))
 
 
+def _flow_rate(b: bytes) -> float | None:
+    # Byte 6 is the high byte, not a flag: flows above 25.5 L/min set it.
+    # Some boards also report the value scaled up by further powers of ten
+    # (the MIM-H04EN dump in #682 reads 0x6D60) or 0x8000, so anything past
+    # 100 L/min reads as unknown.
+    lpm = int.from_bytes(b[6:8], "big") / 10
+    return lpm if lpm <= _MAX_FLOW_LPM else None
+
+
 def _cycle_temp_unit(rep):
     return normalize_temp_unit(rep.get("unit") if isinstance(rep, dict) else None, "°C")
 
@@ -127,7 +137,7 @@ EHS_CYCLE = Capability(
         _temperature("cycle_return_temperature", _indoor(_temp(2))),
         SensorDesc(
             key="cycle_flow_rate",
-            rep_fn=_indoor(lambda b: b[7] / 10),
+            rep_fn=_indoor(_flow_rate),
             unit="L/min",
             device_class="volume_flow_rate",
             state_class="measurement",
