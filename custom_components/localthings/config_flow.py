@@ -14,6 +14,7 @@ import socket
 import ssl
 import time
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -303,6 +304,55 @@ def _normalize_pem(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [line for line in text.split("\n") if line.strip()]
     return "\n".join(lines)
+
+
+# An AC14K_M CA dropped next to the integration, so the 8888 token exchange
+# can sign with it without the user pasting it into the fallback form.
+# Note that a HACS update replaces this directory, files and all.
+LOCAL_CA_DIR = Path(__file__).parent / "certs"
+LOCAL_CA_CERT_FILE = "ac14k_m.pem"
+LOCAL_CA_KEY_FILE = "ac14k_m.key"
+
+
+def _load_local_ca(directory: Path | None = None) -> tuple[str, str] | None:
+    """The AC14K_M CA cert and key from `LOCAL_CA_DIR`, or None.
+
+    Both files or neither: half a pair is logged and ignored rather than
+    guessed around. Blocking; run in an executor.
+    """
+    directory = directory or LOCAL_CA_DIR
+    cert_path = directory / LOCAL_CA_CERT_FILE
+    key_path = directory / LOCAL_CA_KEY_FILE
+    has_cert, has_key = cert_path.is_file(), key_path.is_file()
+    if not has_cert and not has_key:
+        _LOGGER.debug("No local AC14K_M CA in %s", directory)
+        return None
+    if not (has_cert and has_key):
+        present, missing = (cert_path, key_path) if has_cert else (key_path, cert_path)
+        _LOGGER.warning(
+            "Found %s but not %s; ignoring the local AC14K_M CA until both are present",
+            present,
+            missing,
+        )
+        return None
+    try:
+        cert_pem = _normalize_pem(cert_path.read_text(encoding="utf-8"))
+        key_pem = _normalize_pem(key_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError) as err:
+        _LOGGER.warning("Could not read the local AC14K_M CA in %s: %s", directory, err)
+        return None
+    return cert_pem, key_pem
+
+
+def _describe_cert(pem: str) -> str:
+    """Subject and issuer of the first certificate in `pem`, for logging."""
+    from cryptography import x509
+
+    try:
+        cert = x509.load_pem_x509_certificate(pem.encode())
+    except Exception:  # a log line must not break the flow
+        return "an unparseable certificate"
+    return f"subject '{cert.subject.rfc4514_string()}', issuer '{cert.issuer.rfc4514_string()}'"
 
 
 def _uuid_subject_name(uuid: str):
@@ -1183,13 +1233,31 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # TP6X_WW6500 answers any leaf 200), so the token step comes
                 # first; fallback_ca is offered only if the token callback
                 # refuses the leaf, as the TP6X_RAC appears to (#524).
+                # A CA dropped in LOCAL_CA_DIR skips that round trip: it
+                # signs the first leaf, and the token exchange falls back to
+                # the CA's own identity if the appliance refuses that leaf.
+                local_ca = await self.hass.async_add_executor_job(_load_local_ca)
+                if local_ca is not None:
+                    self._ca_cert_pem, self._ca_key_pem = local_ca
+                    existing_leaf = None
+                    _LOGGER.info(
+                        "Using the AC14K_M CA from %s for %s (%s); "
+                        "the token exchange will present a leaf signed by it",
+                        LOCAL_CA_DIR,
+                        self._host,
+                        _describe_cert(self._ca_cert_pem),
+                    )
                 try:
                     self._legacy_leaf = existing_leaf or await self.hass.async_add_executor_job(
                         _mint_preferred, self._ca_cert_pem, self._ca_key_pem
                     )
                 except (CannotConnect, InvalidCA) as exc:
                     _LOGGER.warning(
-                        "Minting for %s failed [%s]: %s", self._host, exc.error_key, exc
+                        "Minting for %s failed [%s]: %s%s",
+                        self._host,
+                        exc.error_key,
+                        exc,
+                        f" (CA from {LOCAL_CA_DIR})" if local_ca is not None else "",
                     )
                     errors["base"] = exc.error_key
                 else:
@@ -1546,6 +1614,11 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_progress_done(next_step_id="legacy_token_received")
 
     async def _request_token(self, cert_pem: str, key_pem: str) -> str | None:
+        _LOGGER.info(
+            "Requesting a device token from %s, presenting %s on the callback",
+            self._host,
+            _describe_cert(cert_pem),
+        )
         try:
             return await self.hass.async_add_executor_job(
                 obtain_device_token, self._host, LEGACY_HTTP_PORT, cert_pem, key_pem
@@ -1555,6 +1628,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             identity = (self._ca_cert_pem, self._ca_key_pem)
             if not all(identity) or self._legacy_leaf == identity:
                 raise
+            _LOGGER.info(
+                "%s refused the minted leaf; retrying with the AC14K_M CA certificate "
+                "itself (%s)",
+                self._host,
+                _describe_cert(identity[0]),
+            )
             self._legacy_leaf = identity
             return await self.hass.async_add_executor_job(
                 obtain_device_token, self._host, LEGACY_HTTP_PORT, *identity
