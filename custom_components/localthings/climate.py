@@ -65,6 +65,9 @@ from .registry.capabilities.airconditioner import (
     HREF_TEMP_DESIRED as TEMP_DESIRED_HREF,
 )
 from .registry.capabilities.airconditioner import (
+    HREF_TEMPS_INDOOR_VS as TEMPS_INDOOR_VS_HREF,
+)
+from .registry.capabilities.airconditioner import (
     HREF_TEMPS_VS as TEMPS_VS_HREF,
 )
 from .registry.capabilities.airconditioner import (
@@ -535,8 +538,31 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         return bool(self._rep(TEMP_CURRENT_HREF))
 
     def _temps_vs(self) -> dict:
-        """Vendor `/temperatures/vs/0` items[0] (empty {} when absent)."""
-        return _temps_vs_item(self._rep(TEMPS_VS_HREF))
+        """Vendor temperature item: /temperatures/vs/0's items[0], or a
+        multi-indoor system AC's flat /temperatures/indoor/vs/0 (same field
+        names, no items[] wrapper) when the former is absent. {} when neither."""
+        item = _temps_vs_item(self._rep(TEMPS_VS_HREF))
+        if item:
+            return item
+        indoor = self._rep(TEMPS_INDOOR_VS_HREF)
+        if (
+            indoor.get("x.com.samsung.da.current") is not None
+            or indoor.get("x.com.samsung.da.desired") is not None
+        ):
+            return indoor
+        return {}
+
+    def _uses_indoor_vendor(self) -> bool:
+        """True when the writable setpoint lives on the flat
+        /temperatures/indoor/vs/0 (system AC) rather than /temperatures/vs/0's
+        items[] array -- selects the write channel in async_set_temperature."""
+        if _temps_vs_item(self._rep(TEMPS_VS_HREF)):
+            return False
+        indoor = self._rep(TEMPS_INDOOR_VS_HREF)
+        return (
+            indoor.get("x.com.samsung.da.current") is not None
+            or indoor.get("x.com.samsung.da.desired") is not None
+        )
 
     @property
     def native_temperature_unit(self) -> str:
@@ -734,7 +760,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
             return
         # OCF-pair boards write /temperature/desired/0; vendor boards write
         # /temperatures/vs/0 (see airconditioner._climate_write).
-        kind = "temperature_ocf" if self._ocf_temp_authoritative() else "temperature"
+        if self._ocf_temp_authoritative():
+            kind = "temperature_ocf"
+        elif self._uses_indoor_vendor():
+            kind = "temperature_indoor"
+        else:
+            kind = "temperature"
         await self.coordinator.async_send_command(self._bound, (kind, temp))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
