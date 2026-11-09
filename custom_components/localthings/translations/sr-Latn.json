@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Ponovi čišćenje"
+      },
+      "drum_light": {
+        "name": "Svetlo bubnja"
+      },
+      "buzzer_sound": {
+        "name": "Zvučni signal"
       }
     },
     "time": {

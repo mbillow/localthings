@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Reiniging herhalen"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
+      },
+      "buzzer_sound": {
+        "name": "Zoemergeluid"
       }
     },
     "time": {

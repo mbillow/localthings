@@ -2678,6 +2678,12 @@
       },
       "repeated_cleaning": {
         "name": "Repetir limpieza"
+      },
+      "drum_light": {
+        "name": "Luz del tambor"
+      },
+      "buzzer_sound": {
+        "name": "Sonido del zumbador"
       }
     },
     "time": {

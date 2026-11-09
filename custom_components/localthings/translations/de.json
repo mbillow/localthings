@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Reinigung wiederholen"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
+      },
+      "buzzer_sound": {
+        "name": "Signalton"
       }
     },
     "time": {

@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Повторная уборка"
+      },
+      "drum_light": {
+        "name": "Подсветка барабана"
+      },
+      "buzzer_sound": {
+        "name": "Звуковой сигнал"
       }
     },
     "time": {

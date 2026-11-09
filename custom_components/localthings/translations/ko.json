@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "반복 청소"
+      },
+      "drum_light": {
+        "name": "통 조명"
+      },
+      "buzzer_sound": {
+        "name": "부저음"
       }
     },
     "time": {

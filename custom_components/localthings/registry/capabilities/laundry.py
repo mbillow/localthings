@@ -182,6 +182,17 @@ SOUND_VOLUME = Capability(
 # (no supportedFinishSound), so finish_sound self-gates off there.
 # ---------------------------------------------------------------------------
 
+
+def _boolean_buzzer(rep):
+    return set(rep.get("supportedBuzzerSound") or ()) == {"On", "Off"}
+
+
+def _buzzer_switch_write(value, rep, href=None):
+    if value not in ("On", "Off"):
+        return None
+    return ["buzzersound", "vs", "0"], {"setBuzzerSound": value}
+
+
 BUZZER_SOUND = Capability(
     href="/buzzersound/vs/0",
     entities=(
@@ -190,8 +201,19 @@ BUZZER_SOUND = Capability(
             field="setBuzzerSound",
             icon="mdi:volume-high",
             entity_category="config",
+            # Older boards expose volume levels; only the On/Off vocabulary is Boolean.
+            exists_fn=lambda rep, resources: not _boolean_buzzer(rep),
             options_field="supportedBuzzerSound",
             write_fn=lambda p, rep, href=None: (["buzzersound", "vs", "0"], {"setBuzzerSound": p}),
+        ),
+        SwitchDesc(
+            key="buzzer_sound",
+            field="setBuzzerSound",
+            icon="mdi:volume-high",
+            entity_category="config",
+            exists_fn=lambda rep, resources: _boolean_buzzer(rep),
+            value_fn=lambda value: {"On": True, "Off": False}.get(value),
+            write_fn=_buzzer_switch_write,
         ),
         SelectDesc(
             key="finish_sound",

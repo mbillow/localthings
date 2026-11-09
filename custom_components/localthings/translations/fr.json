@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Répéter le nettoyage"
+      },
+      "drum_light": {
+        "name": "Éclairage du tambour"
+      },
+      "buzzer_sound": {
+        "name": "Signal sonore"
       }
     },
     "time": {

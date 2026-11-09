@@ -18,6 +18,7 @@ from .laundry import (
     OPTION_KIND_DRY_TIME,
     OPTION_KIND_WATER_TEMPERATURE,
     bool_option_exists,
+    bool_option_switch,
     course_narrowed_options,
     cycle_select,
     drum_clean_cycles_remaining,
@@ -198,6 +199,8 @@ DRYER_COURSE = Capability(
             # into select._display's cosmetic camel-split (`3E` → `3 E`).
             display_fn=lambda value, resources: value,
         ),
+        # DVE53BB8900TA3 reports door/panel lamp changes and accepts this while off.
+        bool_option_switch("drum_light", "mdi:lightbulb", "DrumLight", gate_on_presence=True),
         SwitchDesc(
             key="damp_alert",
             icon="mdi:bell-ring-outline",

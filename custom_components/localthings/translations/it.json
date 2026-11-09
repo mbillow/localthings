@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Ripeti pulizia"
+      },
+      "drum_light": {
+        "name": "Luce cestello"
+      },
+      "buzzer_sound": {
+        "name": "Suono cicalino"
       }
     },
     "time": {

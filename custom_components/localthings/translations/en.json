@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Repeat cleaning"
+      },
+      "drum_light": {
+        "name": "Drum light"
+      },
+      "buzzer_sound": {
+        "name": "Buzzer sound"
       }
     },
     "time": {

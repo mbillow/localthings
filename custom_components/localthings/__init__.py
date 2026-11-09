@@ -259,6 +259,33 @@ def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry)
 
 
 @callback
+def _drop_boolean_buzzer_selects(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
+) -> None:
+    """Remove legacy selects only where discovery proves a Boolean replacement."""
+    ent_reg = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            bound.desc.key != "buzzer_sound"
+            or not isinstance(bound.desc, SwitchDesc)
+            or not _is_included(bound, coordinator)
+        ):
+            continue
+        unique_id = LocalThingsEntity(coordinator, bound).unique_id
+        assert unique_id is not None
+        entity_id = ent_reg.async_get_entity_id("select", DOMAIN, unique_id)
+        old = ent_reg.async_get(entity_id) if entity_id else None
+        if old is None or old.config_entry_id != entry.entry_id:
+            continue
+        _LOGGER.info(
+            "Removing %s, superseded by a Buzzer sound switch; "
+            "update any automation or dashboard that referenced it",
+            old.entity_id,
+        )
+        ent_reg.async_remove(old.entity_id)
+
+
+@callback
 def _drop_duplicate_cooktop_timer(
     hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
 ) -> None:
@@ -535,6 +562,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # on a plain callback's None.
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
+    _drop_boolean_buzzer_selects(hass, entry, coordinator)
     _drop_duplicate_cooktop_timer(hass, entry, coordinator)
     _drop_read_only_power_switches(hass, entry, coordinator)
     _drop_unsupported_sound_switches(hass, entry, coordinator)

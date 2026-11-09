@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Powtarzanie sprzątania"
+      },
+      "drum_light": {
+        "name": "Oświetlenie bębna"
+      },
+      "buzzer_sound": {
+        "name": "Dźwięk brzęczyka"
       }
     },
     "time": {

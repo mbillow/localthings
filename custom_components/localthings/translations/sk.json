@@ -2283,6 +2283,12 @@
       },
       "repeated_cleaning": {
         "name": "Opakovať upratovanie"
+      },
+      "drum_light": {
+        "name": "Osvetlenie bubna"
+      },
+      "buzzer_sound": {
+        "name": "Zvuk bzučiaka"
       }
     },
     "time": {
