@@ -76,7 +76,6 @@ def test_expected_state_keys_present():
     state = _state()
     for key in (
         "climate",
-        "air_purify",
         "auto_clean",
         "air_filter_status",
         "air_filter_usage",
@@ -93,6 +92,15 @@ def test_power_and_convenient_folded_into_climate():
     state = _state()
     assert "power_switch" not in state
     assert "convenient_mode" not in state
+
+
+def test_air_purify_switch_only_on_non_artik051_boards():
+    """ARTIK051 reports /option/airpurify/vs/0 but refuses every write to it
+    (#747), so the switch is left off there. The newer boards keep it."""
+    assert "air_purify" not in _state()
+    reg, resources = _ac_tp1x()
+    state = flatten(discover(resources, reg.capabilities, reg.pattern_capabilities), resources)
+    assert "air_purify" in state
 
 
 def test_air_filter_usage_is_already_a_percentage():
