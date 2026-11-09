@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Temperatura zona"
       },
+      "zone_water_law_offset": {
+        "name": "Offset della curva climatica della zona"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Curva climatica, punto freddo della temperatura esterna (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Curva climatica, punto caldo della temperatura esterna (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Curva climatica 1, temperatura obiettivo con temperatura esterna fredda (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Curva climatica 1, temperatura obiettivo con temperatura esterna mite (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Curva climatica 2, temperatura obiettivo con temperatura esterna fredda (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Curva climatica 2, temperatura obiettivo con temperatura esterna mite (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Limite massimo della temperatura obiettivo ACS (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Limite minimo della temperatura obiettivo ACS (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Modalità di funzionamento ACS (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorità tra riscaldamento e ACS (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura esterna di cambio priorità riscaldamento/ACS (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Uso della resistenza integrativa (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Limite massimo della temperatura di mandata del riscaldamento (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Limite minimo della temperatura di mandata del riscaldamento (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Controllo delle zone (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura zona 2"
       },

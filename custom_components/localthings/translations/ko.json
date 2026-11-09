@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "구역 온도"
       },
+      "zone_water_law_offset": {
+        "name": "구역 외기 보상 오프셋"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "외기 보상 곡선, 저온 외기 기준점 (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "외기 보상 곡선, 고온 외기 기준점 (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "외기 보상 곡선 1, 저온 외기 시 목표 온도 (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "외기 보상 곡선 1, 고온 외기 시 목표 온도 (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "외기 보상 곡선 2, 저온 외기 시 목표 온도 (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "외기 보상 곡선 2, 고온 외기 시 목표 온도 (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "온수 목표 온도 상한 (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "온수 목표 온도 하한 (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "온수 운전 모드 (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "난방 및 온수 우선순위 (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "난방/온수 우선순위 전환 외기 온도 (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "보조 히터 사용 (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "난방 출수 온도 상한 (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "난방 출수 온도 하한 (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "구역 제어 (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "구역 2 온도"
       },

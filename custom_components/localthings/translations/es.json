@@ -2233,6 +2233,54 @@
       "zone_temperature": {
         "name": "Temperatura de zona"
       },
+      "zone_water_law_offset": {
+        "name": "Desplazamiento de la curva climática de la zona"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Curva climática, punto frío de temperatura exterior (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Curva climática, punto cálido de temperatura exterior (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Curva climática 1, temperatura objetivo con temperatura exterior fría (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Curva climática 1, temperatura objetivo con temperatura exterior cálida (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Curva climática 2, temperatura objetivo con temperatura exterior fría (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Curva climática 2, temperatura objetivo con temperatura exterior cálida (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Límite máximo de la temperatura objetivo de ACS (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Límite mínimo de la temperatura objetivo de ACS (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Modo de funcionamiento de ACS (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioridad entre calefacción y ACS (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura exterior de cambio de prioridad calefacción/ACS (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Uso de la resistencia de apoyo (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Límite máximo de la temperatura de impulsión de calefacción (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Límite mínimo de la temperatura de impulsión de calefacción (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Control de zonas (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura de zona 2"
       },

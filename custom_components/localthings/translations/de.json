@@ -1832,6 +1832,54 @@
       "zone_temperature": {
         "name": "Zonentemperatur"
       },
+      "zone_water_law_offset": {
+        "name": "Heizkurven-Verschiebung der Zone"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Heizkurve, kalter Außentemperaturpunkt (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Heizkurve, warmer Außentemperaturpunkt (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Heizkurve 1, Solltemperatur bei kalter Außentemperatur (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Heizkurve 1, Solltemperatur bei warmer Außentemperatur (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Heizkurve 2, Solltemperatur bei kalter Außentemperatur (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Heizkurve 2, Solltemperatur bei warmer Außentemperatur (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Obergrenze der Warmwasser-Solltemperatur (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Untergrenze der Warmwasser-Solltemperatur (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Warmwasser-Betriebsart (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorität Heizung und Warmwasser (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Außentemperatur für Prioritätswechsel Heizung/Warmwasser (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Einsatz der Zusatzheizung (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Obergrenze der Heizungs-Vorlauftemperatur (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Untergrenze der Heizungs-Vorlauftemperatur (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zonensteuerung (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatur Zone 2"
       },

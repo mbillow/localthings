@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Zonetemperatuur"
       },
+      "zone_water_law_offset": {
+        "name": "Verschuiving stooklijn zone"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Stooklijn, koud buitentemperatuurpunt (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Stooklijn, warm buitentemperatuurpunt (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Stooklijn 1, doeltemperatuur bij koude buitentemperatuur (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Stooklijn 1, doeltemperatuur bij warme buitentemperatuur (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Stooklijn 2, doeltemperatuur bij koude buitentemperatuur (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Stooklijn 2, doeltemperatuur bij warme buitentemperatuur (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Bovengrens doeltemperatuur warm tapwater (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Ondergrens doeltemperatuur warm tapwater (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Bedrijfsmodus warm tapwater (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioriteit verwarming en warm tapwater (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Buitentemperatuur voor prioriteitswissel verwarming/warm tapwater (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Gebruik bijverwarming (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Bovengrens aanvoertemperatuur verwarming (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Ondergrens aanvoertemperatuur verwarming (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zoneregeling (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatuur zone 2"
       },

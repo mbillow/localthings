@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Temperatura zone"
       },
+      "zone_water_law_offset": {
+        "name": "Pomak klimatske krive zone"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Klimatska kriva, hladna tačka spoljašnje temperature (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Klimatska kriva, topla tačka spoljašnje temperature (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Klimatska kriva 1, ciljna temperatura pri niskoj spoljašnjoj temperaturi (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Klimatska kriva 1, ciljna temperatura pri visokoj spoljašnjoj temperaturi (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Klimatska kriva 2, ciljna temperatura pri niskoj spoljašnjoj temperaturi (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Klimatska kriva 2, ciljna temperatura pri visokoj spoljašnjoj temperaturi (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Gornja granica ciljne temperature tople vode (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Donja granica ciljne temperature tople vode (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Režim rada tople vode (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioritet grejanja i tople vode (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Spoljašnja temperatura promene prioriteta grejanje/topla voda (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Upotreba pomoćnog grejača (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Gornja granica temperature polazne vode grejanja (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Donja granica temperature polazne vode grejanja (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Upravljanje zonama (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura zone 2"
       },

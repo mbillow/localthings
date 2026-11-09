@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Temperatura strefy"
       },
+      "zone_water_law_offset": {
+        "name": "Przesunięcie krzywej grzewczej strefy"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Krzywa grzewcza, zimny punkt temperatury zewnętrznej (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Krzywa grzewcza, ciepły punkt temperatury zewnętrznej (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Krzywa grzewcza 1, temperatura docelowa przy niskiej temperaturze zewnętrznej (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Krzywa grzewcza 1, temperatura docelowa przy wysokiej temperaturze zewnętrznej (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Krzywa grzewcza 2, temperatura docelowa przy niskiej temperaturze zewnętrznej (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Krzywa grzewcza 2, temperatura docelowa przy wysokiej temperaturze zewnętrznej (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Górny limit temperatury docelowej CWU (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Dolny limit temperatury docelowej CWU (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Tryb pracy CWU (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorytet ogrzewania i CWU (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura zewnętrzna zmiany priorytetu ogrzewanie/CWU (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Użycie grzałki wspomagającej (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Górny limit temperatury zasilania ogrzewania (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Dolny limit temperatury zasilania ogrzewania (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Sterowanie strefami (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura strefy 2"
       },

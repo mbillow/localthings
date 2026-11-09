@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Température de la zone"
       },
+      "zone_water_law_offset": {
+        "name": "Décalage de la loi d'eau de la zone"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Loi d'eau, point froid de température extérieure (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Loi d'eau, point chaud de température extérieure (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Loi d'eau 1, température cible par température extérieure froide (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Loi d'eau 1, température cible par température extérieure douce (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Loi d'eau 2, température cible par température extérieure froide (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Loi d'eau 2, température cible par température extérieure douce (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Limite maximale de la température cible d'ECS (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Limite minimale de la température cible d'ECS (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Mode de fonctionnement de l'ECS (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorité chauffage et ECS (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Température extérieure de basculement de priorité chauffage/ECS (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Utilisation de la résistance d'appoint (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Limite maximale de la température de départ chauffage (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Limite minimale de la température de départ chauffage (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Gestion des zones (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Température de la zone 2"
       },

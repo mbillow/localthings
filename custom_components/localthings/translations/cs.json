@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Teplota zóny"
       },
+      "zone_water_law_offset": {
+        "name": "Posun ekvitermní křivky zóny"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Ekvitermní křivka, studený bod venkovní teploty (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Ekvitermní křivka, teplý bod venkovní teploty (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Ekvitermní křivka 1, cílová teplota při nízké venkovní teplotě (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Ekvitermní křivka 1, cílová teplota při vysoké venkovní teplotě (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Ekvitermní křivka 2, cílová teplota při nízké venkovní teplotě (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Ekvitermní křivka 2, cílová teplota při vysoké venkovní teplotě (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Horní mez cílové teploty teplé vody (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Dolní mez cílové teploty teplé vody (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Režim ohřevu teplé vody (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorita vytápění a teplé vody (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Venkovní teplota přepnutí priority vytápění/teplé vody (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Použití záložního topného tělesa (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Horní mez teploty výstupní vody pro vytápění (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Dolní mez teploty výstupní vody pro vytápění (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Řízení zón (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Teplota zóny 2"
       },

@@ -1838,6 +1838,54 @@
       "zone_temperature": {
         "name": "Temperatura da zona"
       },
+      "zone_water_law_offset": {
+        "name": "Deslocamento da curva climática da zona"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Curva climática, ponto frio da temperatura externa (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Curva climática, ponto quente da temperatura externa (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Curva climática 1, temperatura alvo com temperatura externa fria (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Curva climática 1, temperatura alvo com temperatura externa quente (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Curva climática 2, temperatura alvo com temperatura externa fria (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Curva climática 2, temperatura alvo com temperatura externa quente (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Limite máximo da temperatura alvo da água quente (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Limite mínimo da temperatura alvo da água quente (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Modo de operação da água quente (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioridade entre aquecimento e água quente (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura externa de troca de prioridade aquecimento/água quente (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Uso do aquecedor auxiliar (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Limite máximo da temperatura de saída da água do aquecimento (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Limite mínimo da temperatura de saída da água do aquecimento (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Controle de zonas (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura da zona 2"
       },
