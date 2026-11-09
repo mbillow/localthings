@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Vyrobené teplo"
       },
+      "cycle_flow_temperature": {
+        "name": "Teplota výstupní vody (cyklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Teplota vratné vody (cyklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Průtok (cyklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Otáčky čerpadla (cyklus)"
+      },
+      "compressor_frequency": {
+        "name": "Frekvence kompresoru"
+      },
+      "compressor_target_frequency": {
+        "name": "Cílová frekvence kompresoru"
+      },
+      "discharge_temperature": {
+        "name": "Teplota na výtlaku"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Saturační teplota výparníku"
+      },
+      "suction_temperature": {
+        "name": "Teplota sání"
+      },
+      "cycle_updated": {
+        "name": "Data cyklu aktualizována"
+      },
       "three_way_valve": {
         "name": "Trojcestný ventil"
       },

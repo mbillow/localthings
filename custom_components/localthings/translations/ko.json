@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "생산 열량"
       },
+      "cycle_flow_temperature": {
+        "name": "사이클 출수 온도"
+      },
+      "cycle_return_temperature": {
+        "name": "사이클 환수 온도"
+      },
+      "cycle_flow_rate": {
+        "name": "사이클 유량"
+      },
+      "cycle_pump_speed": {
+        "name": "사이클 펌프 속도"
+      },
+      "compressor_frequency": {
+        "name": "압축기 주파수"
+      },
+      "compressor_target_frequency": {
+        "name": "압축기 목표 주파수"
+      },
+      "discharge_temperature": {
+        "name": "토출 온도"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "증발 포화 온도"
+      },
+      "suction_temperature": {
+        "name": "흡입 온도"
+      },
+      "cycle_updated": {
+        "name": "사이클 데이터 갱신 시각"
+      },
       "three_way_valve": {
         "name": "3방 밸브"
       },

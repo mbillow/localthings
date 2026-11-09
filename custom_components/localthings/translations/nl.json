@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Opgewekte warmte"
       },
+      "cycle_flow_temperature": {
+        "name": "Aanvoertemperatuur (cyclus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Retourtemperatuur (cyclus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Debiet (cyclus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Pompsnelheid (cyclus)"
+      },
+      "compressor_frequency": {
+        "name": "Compressorfrequentie"
+      },
+      "compressor_target_frequency": {
+        "name": "Doelfrequentie compressor"
+      },
+      "discharge_temperature": {
+        "name": "Persgastemperatuur"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Verzadigingstemperatuur verdamper"
+      },
+      "suction_temperature": {
+        "name": "Zuiggastemperatuur"
+      },
+      "cycle_updated": {
+        "name": "Cyclusgegevens bijgewerkt"
+      },
       "three_way_valve": {
         "name": "Driewegklep"
       },
