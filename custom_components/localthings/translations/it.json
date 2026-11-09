@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Calore prodotto"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura di mandata (ciclo)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura di ritorno (ciclo)"
+      },
+      "cycle_flow_rate": {
+        "name": "Portata (ciclo)"
+      },
+      "cycle_pump_speed": {
+        "name": "Velocità della pompa (ciclo)"
+      },
+      "compressor_frequency": {
+        "name": "Frequenza del compressore"
+      },
+      "compressor_target_frequency": {
+        "name": "Frequenza obiettivo del compressore"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura di scarico"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura di saturazione dell'evaporatore"
+      },
+      "suction_temperature": {
+        "name": "Temperatura di aspirazione"
+      },
+      "cycle_updated": {
+        "name": "Dati del ciclo aggiornati"
+      },
       "three_way_valve": {
         "name": "Valvola a 3 vie"
       },

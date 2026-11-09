@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Wytworzone ciepło"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura zasilania (cykl)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura powrotu (cykl)"
+      },
+      "cycle_flow_rate": {
+        "name": "Przepływ (cykl)"
+      },
+      "cycle_pump_speed": {
+        "name": "Prędkość pompy (cykl)"
+      },
+      "compressor_frequency": {
+        "name": "Częstotliwość sprężarki"
+      },
+      "compressor_target_frequency": {
+        "name": "Docelowa częstotliwość sprężarki"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura tłoczenia"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura nasycenia parownika"
+      },
+      "suction_temperature": {
+        "name": "Temperatura ssania"
+      },
+      "cycle_updated": {
+        "name": "Aktualizacja danych cyklu"
+      },
       "three_way_valve": {
         "name": "Zawór trójdrogowy"
       },

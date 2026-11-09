@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Выработанное тепло"
       },
+      "cycle_flow_temperature": {
+        "name": "Температура подачи (цикл)"
+      },
+      "cycle_return_temperature": {
+        "name": "Температура обратной линии (цикл)"
+      },
+      "cycle_flow_rate": {
+        "name": "Расход (цикл)"
+      },
+      "cycle_pump_speed": {
+        "name": "Скорость насоса (цикл)"
+      },
+      "compressor_frequency": {
+        "name": "Частота компрессора"
+      },
+      "compressor_target_frequency": {
+        "name": "Целевая частота компрессора"
+      },
+      "discharge_temperature": {
+        "name": "Температура нагнетания"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Температура насыщения испарителя"
+      },
+      "suction_temperature": {
+        "name": "Температура всасывания"
+      },
+      "cycle_updated": {
+        "name": "Данные цикла обновлены"
+      },
       "three_way_valve": {
         "name": "Трёхходовой клапан"
       },

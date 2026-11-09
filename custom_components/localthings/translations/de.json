@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Erzeugte Wärme"
       },
+      "cycle_flow_temperature": {
+        "name": "Vorlauftemperatur (Zyklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Rücklauftemperatur (Zyklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Durchfluss (Zyklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Pumpendrehzahl (Zyklus)"
+      },
+      "compressor_frequency": {
+        "name": "Verdichterfrequenz"
+      },
+      "compressor_target_frequency": {
+        "name": "Soll-Verdichterfrequenz"
+      },
+      "discharge_temperature": {
+        "name": "Heißgastemperatur"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Verdampfungs-Sättigungstemperatur"
+      },
+      "suction_temperature": {
+        "name": "Sauggastemperatur"
+      },
+      "cycle_updated": {
+        "name": "Zyklusdaten aktualisiert"
+      },
       "three_way_valve": {
         "name": "3-Wege-Ventil"
       },

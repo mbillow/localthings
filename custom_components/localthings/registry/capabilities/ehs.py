@@ -335,7 +335,6 @@ _EHS_IGNORED = [
     "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
-    "/ehscycle/vs/0",  # opaque hex-encoded indoor/outdoor cycle log
     "/ehsfsv/vs/0",  # opaque hex-encoded factory setting values
     "/option/dhwdisplay/vs/0",  # front-panel DHW-display show/hide, cosmetic only
     "/reserverulesets/vs/0",  # opaque hex-encoded schedule reservation blob

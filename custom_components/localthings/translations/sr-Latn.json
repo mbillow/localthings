@@ -1946,6 +1946,36 @@
       "heat_generated_kwh": {
         "name": "Proizvedena toplota"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura polazne vode (ciklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura povratne vode (ciklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Protok (ciklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Brzina pumpe (ciklus)"
+      },
+      "compressor_frequency": {
+        "name": "Frekvencija kompresora"
+      },
+      "compressor_target_frequency": {
+        "name": "Ciljna frekvencija kompresora"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura potisa"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura zasićenja isparivača"
+      },
+      "suction_temperature": {
+        "name": "Temperatura usisavanja"
+      },
+      "cycle_updated": {
+        "name": "Podaci ciklusa ažurirani"
+      },
       "three_way_valve": {
         "name": "Trokraki ventil"
       },
