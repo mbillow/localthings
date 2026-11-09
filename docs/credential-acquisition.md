@@ -186,6 +186,17 @@ made. This proves local credential access for one appliance, not that every
 washer control works or that every SmartThings version stores credentials in
 the same format.
 
+## Samsung AF18DX936WFN AC with rooted Android 13
+
+An owner recovered a PSK for an `AF18DX936WFN` air conditioner
+(`R18_BIXBY_FAC_TIME_23K`, MAIN and RAC subdevices) from the running
+SmartThings app's native credential list after two inspected persisted SVR
+stores contained no type-1 PSK records. The PSK identity was the app's own
+owner UUID, matching the appliance's `devowneruuid` and `rowneruuid`.
+Importing it as **Owner** worked on LocalThings 0.33.0. The
+[hardware report in #435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
+records the tested environment, recovery details and verification limits.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)
