@@ -59,10 +59,15 @@ HOOD_ALARMS = Capability(
     entities=(
         SensorDesc(
             key="alarm_code",
-            field="x.com.samsung.da.items",
             icon="mdi:alert",
             entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
+            # Clear TP1X_REF_21K responses carry metadata without items;
+            # empty answers and unfetched stubs do not establish a clear state.
+            rep_fn=lambda rep: (
+                None
+                if not rep or is_stub_rep(rep)
+                else _active_alarm_codes(rep.get("x.com.samsung.da.items"))
+            ),
         ),
     ),
 )
