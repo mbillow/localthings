@@ -1,0 +1,344 @@
+{
+  "seeds_note": "One indoor subdevice of a Samsung multi-indoor system AC fronted by an AIM-H04N Wi-Fi kit (issue #177 shape). Captured from a redacted diagnostics download; this is the per-subdevice canonical /device/0 view. The subdevice reports temperature via the flat vendor /temperatures/indoor/vs/0 (same fields as /temperatures/vs/0's items[0], no items[] wrapper) and omits the OCF /temperature/current+desired pair from the batch.",
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/actions/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.actions"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/airflow/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.wind"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.speedLevel": "1",
+        "x.com.samsung.da.direction": "Up_And_Low",
+        "x.com.samsung.da.supportedDirections": [
+          "Up_And_Low",
+          "Fix"
+        ],
+        "x.com.samsung.da.supportedSpeedLevels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "x.com.samsung.da.displaycondition.speedLevel": "Enable",
+        "x.com.samsung.da.displaycondition.direction": "Enable"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "DA_SAC_E_E000",
+            "x.com.samsung.da.state": "Created",
+            "x.com.samsung.da.triggeredTime": "2026-11-09 20:49:03"
+          },
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.state": "Created",
+            "x.com.samsung.da.code": "FilterAlarm_Off",
+            "x.com.samsung.da.triggeredTime": "2026-11-09 20:49:03"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.configuration"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.region": "",
+        "x.com.samsung.da.countryCode": "KR",
+        "x.com.samsung.da.airconOptionList": [
+          "ENERGY_2.0"
+        ]
+      }
+    },
+    {
+      "href": "/da/softreset/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.softreset"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.softreset": "false"
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.energyconsumption"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.cumulativeConsumption": "0.0",
+        "x.com.samsung.da.instantaneousPower": "0.000000",
+        "x.com.samsung.da.instantaneousPowerUnit": "KW",
+        "x.com.samsung.da.cumulativePower": "0.0",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.capacity": "5_2700",
+        "x.com.samsung.da.saveLocation": "/opt/usr/home/owner/apps_rw/com.samsung.sac-service/data/powerusage/append_1132041"
+      }
+    },
+    {
+      "href": "/file/transfer/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.file.transfer"
+        ],
+        "if": [
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/filter/airdustfilter/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.filter.airdust"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.filterUsage": 0,
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.filterResetType": [
+          "washable"
+        ],
+        "x.com.samsung.da.filterCapacity": "2000",
+        "x.com.samsung.da.filterCapacityUnit": "Hour",
+        "x.com.samsung.da.displaycondition": "Disable",
+        "x.com.samsung.da.filterResetable": "false"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.information"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.modelNum": "SAC_SLIM1WAY|180502|61041F00001200800400010000000000",
+        "x.com.samsung.da.description": "1WAY",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.versionId": "Samsung Electronics",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.number": "DB91-02102A 2026-03-20",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.newVersionAvailable": "false",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version"
+          },
+          {
+            "x.com.samsung.da.number": "DB91-02100A 2019-02-07",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.newVersionAvailable": "false",
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version"
+          },
+          {
+            "x.com.samsung.da.number": "DB91-01888C 2018-05-02",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.newVersionAvailable": "false",
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": ""
+          },
+          {
+            "x.com.samsung.da.number": "DB91-01901A 2017-07-04",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.newVersionAvailable": "false",
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.description": "DVM HOME"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "Auto",
+          "Cool",
+          "Dry",
+          "Wind"
+        ],
+        "x.com.samsung.da.modes": [
+          "Cool"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "WelcomeCooling"
+        ],
+        "x.com.samsung.da.options": [
+          "Defrost_Off",
+          "Control_Enable",
+          "ComfortAICooling_Off",
+          "DurationOn_5"
+        ]
+      }
+    },
+    {
+      "href": "/option/autoclean/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.option.autoclean"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.settingStatus": "On",
+        "x.com.samsung.da.supportedSettingStatus": [
+          "On",
+          "Off"
+        ],
+        "x.com.samsung.da.displaycondition": "Enable"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.power": "On",
+        "x.com.samsung.da.displaycondition": "Enable"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.configuration"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.remoteControlEnabled": "true"
+      }
+    },
+    {
+      "href": "/reserverulesets/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.reserverulesets"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.sets": "3EFFFF121E121E121EFFFF101E000001000F0001000E000F0000",
+        "x.com.samsung.da.id": "1WAY",
+        "x.com.samsung.da.version": "1.0"
+      }
+    },
+    {
+      "href": "/subdevice/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.subdevice"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.registerState": "Registered",
+        "x.com.samsung.da.connectState": "Connected",
+        "x.com.samsung.da.deviceId": "**REDACTED**",
+        "x.com.samsung.da.masterUuid": "**REDACTED**",
+        "x.com.samsung.da.name": "에어컨 5",
+        "x.com.samsung.da.description": "1WAY",
+        "x.com.samsung.da.aiVersion": "SAC_19K"
+      }
+    },
+    {
+      "href": "/temperatures/indoor/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.temperatures"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.current": 20.7,
+        "x.com.samsung.da.desired": 26.0,
+        "x.com.samsung.da.minimum": 18.0,
+        "x.com.samsung.da.maximum": 30.0,
+        "x.com.samsung.da.increment": 1.0,
+        "x.com.samsung.da.unit": "Celsius",
+        "x.com.samsung.da.type": "Air",
+        "x.com.samsung.da.displaycondition.text": "Enable",
+        "x.com.samsung.da.displaycondition.button": "Enable"
+      }
+    },
+    {
+      "href": "/temperatures/outside/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.temperatures"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.current": 10.4,
+        "x.com.samsung.da.desired": 24.0,
+        "x.com.samsung.da.minimum": 18.0,
+        "x.com.samsung.da.maximum": 30.0,
+        "x.com.samsung.da.increment": 1.0,
+        "x.com.samsung.da.unit": "Celsius",
+        "x.com.samsung.da.type": "Air",
+        "x.com.samsung.da.displaycondition.text": "Hide",
+        "x.com.samsung.da.displaycondition.button": "Hide"
+      }
+    }
+  ]
+}
