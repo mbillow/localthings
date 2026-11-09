@@ -116,6 +116,10 @@ Some appliances from about 2018 to 2022 have a different local interface, HTTPS 
 
 On the RF28K9380SR refrigerator, when setup asks for the token, hold **Lighting / Control Lock** for about 5 seconds, until "on" shows in the freezer temperature display. It refuses the automatic certificate, so setup then asks for an AC14K_M CA certificate and key, and it needs both to finish.
 
+If not receiving token on washer model WW8* do not enable Smart Control until the config flow is in process of getting the device token (after it prompts on a token and continuing), if enabled before, it never sends back the token.
+
+Instead of pasting the AC14K_M CA, you can put it in `custom_components/localthings/certs/` as `ac14k_m.pem` and `ac14k_m.key`. When both files are there, setup for an appliance on TCP 8888 uses them from the start: it presents a certificate signed by that CA, then the CA certificate itself if the appliance refuses the first one. The Home Assistant log at info level names the files and certificates used. A HACS update replaces that folder, so keep a copy of the files somewhere else.
+
 For the tested NZ36K7570R and NZ30K7570RS cooktops, NV51K777OS oven and NQ70M6650DS combo, **if Smart Connect is already on, no token will be returned**. Turn it off, request a token in LocalThings, then turn it on.
 
 On these appliances, a chosen cycle, temperature, rinse count or spin speed takes effect only when the cycle starts. The selects hold your choice, and the **Start** button sends it. If you turn the dial on the appliance, the dial's setting replaces the held choice.
