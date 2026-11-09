@@ -22,7 +22,6 @@ NOT used for the same purpose -- unreliable on both units in the same
 round (collided Low/Medium on one, stuck at 0 on the other).
 """
 
-import datetime
 import re
 
 from ..capability import Capability
@@ -34,6 +33,12 @@ from ..entities import (
     SensorDesc,
     SwitchDesc,
     TimeDesc,
+)
+from .air_sensing import (
+    periodic_sensing_write,
+    skip_status_write,
+    skip_time_read,
+    skip_time_write,
 )
 from .common import (
     epoch_to_utc,
@@ -586,11 +591,9 @@ SOUND_VOLUME = Capability(
 # "Off" keeps sampling but doesn't act on it (the app calls that
 # "sensing only").
 #
-# range_hood.AIR_LEVEL_CHECK models the same href's read-only fields
-# (reused verbatim below) but is deliberately not imported: it exposes
-# periodic_air_sensing as a read-only BinarySensorDesc where this board
-# needs it writable, and reusing it would migrate every hood user's entity
-# to a different platform.
+# Hood controls were formerly read-only to avoid silently moving their platforms.
+# They now migrate intentionally via __init__._drop_read_only_hood_controls;
+# shared partial writes preserve each family's separate modes and clock semantics.
 #
 # Every write below was exercised on AVT-WW-TP1-23-AXX500 hardware and
 # verified by surviving a reconnect (this board 2.04s writes it silently
@@ -628,60 +631,6 @@ def _interval_write(payload, rep, href=None):
     }
 
 
-def _periodic_sensing_write(payload, rep, href=None):
-    # Master on/off; leaves autoExeState alone so the configured action
-    # survives the feature being toggled off -- the select can't do that,
-    # since every option write sets an action too.
-    return ["airlevelcheck", "vs", "0"], {
-        "x.com.samsung.da.periodicSensingActivationState": ("On" if payload == "On" else "Off")
-    }
-
-
-def _skip_status_write(payload, rep, href=None):
-    return ["airlevelcheck", "vs", "0"], {
-        "x.com.samsung.da.periodicSensingSkipStatus": ("On" if payload == "On" else "Off")
-    }
-
-
-# Daily skip window, stored as one HHMMHHMM string
-# (periodicSensingSkipTime). Cross-confirmed on two units (inert
-# '00000000' vs a real '03002300'). Split into two HA time entities; each
-# write reads the other half back out of the live rep so the pair
-# round-trips -- confirmed in both directions on hardware.
-def _skip_time_read(part):
-    def _read(value):
-        raw = str(value or "")
-        chunk = raw[0:4] if part == "start" else raw[4:8]
-        if len(chunk) == 4 and chunk.isdigit():
-            try:
-                return datetime.time(int(chunk[:2]), int(chunk[2:]))
-            except ValueError:
-                return None
-        return None
-
-    return _read
-
-
-def _skip_half(raw, part):
-    """The half this write isn't setting, normalized. An unparseable half
-    becomes '0000' rather than carrying a malformed value back to the
-    device."""
-    chunk = (str(raw or "") + "00000000")[:8]
-    other = chunk[4:8] if part == "start" else chunk[0:4]
-    return other if _skip_time_read("end" if part == "start" else "start")(chunk) else "0000"
-
-
-def _skip_time_write(part):
-    def _write(value, rep, href=None):
-        raw = rep.get("x.com.samsung.da.periodicSensingSkipTime", "")
-        hhmm = f"{value.hour:02d}{value.minute:02d}"
-        other = _skip_half(raw, part)
-        new = hhmm + other if part == "start" else other + hhmm
-        return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.periodicSensingSkipTime": new}
-
-    return _write
-
-
 AIR_LEVEL_CHECK = Capability(
     href="/airlevelcheck/vs/0",
     poll_tier="warm",
@@ -692,7 +641,7 @@ AIR_LEVEL_CHECK = Capability(
             icon="mdi:radar",
             entity_category="config",
             value_fn=lambda v: str(v).lower() == "on",
-            write_fn=_periodic_sensing_write,
+            write_fn=periodic_sensing_write,
         ),
         # Options come off supportedAutoExeState rather than a typed table,
         # so an unrecognized fourth value still reaches the user.
@@ -730,23 +679,23 @@ AIR_LEVEL_CHECK = Capability(
             icon="mdi:sleep",
             entity_category="config",
             value_fn=lambda v: str(v).lower() == "on",
-            write_fn=_skip_status_write,
+            write_fn=skip_status_write,
         ),
         TimeDesc(
             key="sensing_skip_start",
             field="x.com.samsung.da.periodicSensingSkipTime",
             icon="mdi:clock-start",
             entity_category="config",
-            value_fn=_skip_time_read("start"),
-            write_fn=_skip_time_write("start"),
+            value_fn=skip_time_read("start"),
+            write_fn=skip_time_write("start"),
         ),
         TimeDesc(
             key="sensing_skip_end",
             field="x.com.samsung.da.periodicSensingSkipTime",
             icon="mdi:clock-end",
             entity_category="config",
-            value_fn=_skip_time_read("end"),
-            write_fn=_skip_time_write("end"),
+            value_fn=skip_time_read("end"),
+            write_fn=skip_time_write("end"),
         ),
         # Read-only status, same keys as range_hood.AIR_LEVEL_CHECK.
         SensorDesc(

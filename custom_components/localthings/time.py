@@ -36,10 +36,9 @@ class LocalThingsTime(LocalThingsEntity, TimeEntity):
     @property
     def native_value(self) -> datetime.time | None:
         value = (self.coordinator.data or {}).get(self._state_key)
-        # A descriptor projecting a device-reported *duration* onto the clock
-        # has no timezone to do it in, so it hands over a UTC instant and the
-        # conversion lands here (operational.delay_finish_at). Every other
-        # time entity reads a wall-clock field straight off the device.
+        # UTC-backed descriptors (hood DND and delay-finish projections)
+        # hand over an aware instant for localization. Wall-clock fields
+        # already supply a time and need no timezone conversion.
         if isinstance(value, datetime.datetime):
             return dt_util.as_local(value).time()
         return value

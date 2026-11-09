@@ -1388,6 +1388,14 @@
           "mute": "Без звука",
           "voice": "Голос"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Режим умной вентиляции",
+        "state": {
+          "sensing": "Только проверка",
+          "alarm": "Получать уведомления",
+          "airpurify": "Тихая вентиляция"
+        }
       }
     },
     "sensor": {
@@ -2082,6 +2090,57 @@
       },
       "oven_setpoint": {
         "name": "Уставка"
+      },
+      "air_sensing_interval": {
+        "name": "Интервал проверки качества воздуха"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "Качество воздуха PM10",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "Качество воздуха PM2.5",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "Качество воздуха PM1.0",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Последняя оценка качества воздуха",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Уровень качества воздуха",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое"
+        }
       }
     },
     "switch": {
@@ -2372,6 +2431,12 @@
       },
       "repeated_cleaning": {
         "name": "Повторная уборка"
+      },
+      "smart_ventilate": {
+        "name": "Умная вентиляция"
+      },
+      "hood_do_not_disturb": {
+        "name": "Не беспокоить"
       }
     },
     "time": {
@@ -2407,6 +2472,12 @@
       },
       "sensing_skip_start": {
         "name": "Начало пропуска измерений AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Начало режима «Не беспокоить»"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Окончание режима «Не беспокоить»"
       }
     },
     "water_heater": {
