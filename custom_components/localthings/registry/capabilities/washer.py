@@ -79,7 +79,7 @@ from .operational import OPERATIONAL_STATE
 # instance) still renders that code raw rather than borrowing a Table_02
 # label -- the two tables are unrelated code spaces despite a handful of
 # overlapping hex values. A WD80N645OOW/EU washer-dryer's owner read six more
-# out of the app (issue #736).
+# out of the app (issue #736), and a WW10M86INOA/EN's owner named BD (#798).
 # ---------------------------------------------------------------------------
 
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count, soil level.
