@@ -14,8 +14,10 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.components.media_player import MediaPlayerState
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
@@ -38,6 +40,7 @@ from custom_components.localthings.const import (
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.observe import MODE_OBSERVE
+from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.capabilities import av
 from custom_components.localthings.registry.capabilities import soundbar as soundbar_caps
@@ -674,16 +677,19 @@ _Q950T_STATES = {
 
 
 @pytest.mark.parametrize(
-    ("name", "state", "title", "playback_controls"),
+    ("name", "state", "title", "playback_controls", "stop"),
     [
-        ("standby", MediaPlayerState.OFF, None, False),
-        ("on_hdmi1", MediaPlayerState.ON, None, False),
-        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True),
-        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True),
-        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False),
+        ("standby", MediaPlayerState.OFF, None, False, False),
+        ("on_hdmi1", MediaPlayerState.ON, None, False, False),
+        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True, True),
+        # The paused bar refuses stop (#775).
+        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True, False),
+        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False, False),
     ],
 )
-async def test_the_q950t_states(hass: HomeAssistant, name, state, title, playback_controls) -> None:
+async def test_the_q950t_states(
+    hass: HomeAssistant, name, state, title, playback_controls, stop
+) -> None:
     from homeassistant.components.media_player import MediaPlayerEntityFeature as F
 
     entry = _mock_entry(hass)
@@ -715,6 +721,7 @@ async def test_the_q950t_states(hass: HomeAssistant, name, state, title, playbac
     if playback_controls:
         assert player.supported_features & controls == controls
         assert player.media_position == 61
+    assert bool(player.supported_features & F.STOP) is stop
 
 
 async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None:
@@ -782,3 +789,95 @@ async def test_only_advertised_sources_are_written(hass: HomeAssistant) -> None:
         await select("hdmi2")
     assert err.value.translation_key == "media_option_not_supported"
     assert len(session.writes) == writes
+
+
+def _push(coordinator, href: str, fields: dict) -> None:
+    coordinator._observe.apply(href, {**coordinator.resource(href), **fields}, source="poll")
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+
+
+@pytest.mark.parametrize(
+    ("domain", "key", "href", "present", "absent"),
+    [
+        # A restart while the bar is in standby, which drops the sub (#775).
+        (
+            "number",
+            "woofer_level",
+            "/sec/networkaudio/woofer",
+            {"x.com.samsung.networkaudio.connection": "on"},
+            {"x.com.samsung.networkaudio.connection": "off"},
+        ),
+        # Bass boost reads -1 in a sound mode without it.
+        (
+            "switch",
+            "bass_boost",
+            "/sec/networkaudio/advancedaudio",
+            {"x.com.samsung.networkaudio.bassboost": 0},
+            {"x.com.samsung.networkaudio.bassboost": -1},
+        ),
+    ],
+)
+async def test_state_gated_entities_follow_the_live_state(
+    hass: HomeAssistant, domain, key, href, present, absent
+) -> None:
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = _coordinator(hass, entry)
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_{key}"
+    registry = er.async_get(hass)
+
+    assert registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+
+    def state(entity_id):
+        current = hass.states.get(entity_id)
+        assert current is not None
+        return current.state
+
+    _push(coordinator, href, present)
+    await hass.async_block_till_done()
+    entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
+    assert entity_id is not None
+    assert state(entity_id) != STATE_UNAVAILABLE
+
+    _push(coordinator, href, absent)
+    await hass.async_block_till_done()
+    assert state(entity_id) == STATE_UNAVAILABLE
+
+    # Coming back reuses the same entity rather than adding a second one.
+    _push(coordinator, href, present)
+    await hass.async_block_till_done()
+    assert registry.async_get_entity_id(domain, DOMAIN, unique_id) == entity_id
+    assert state(entity_id) != STATE_UNAVAILABLE
+    assert (
+        len(
+            [
+                e
+                for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+                if e.unique_id == unique_id
+            ]
+        )
+        == 1
+    )
+
+
+async def test_a_state_gated_entity_never_reloads_the_entry(hass: HomeAssistant) -> None:
+    """A snapshot saved with the sub connected, then a first live poll in
+    standby: the platform handles woofer_level itself, so no reload."""
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = _coordinator(hass, entry)
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+    href = "/sec/networkaudio/woofer"
+
+    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "on"})
+    coordinator._rehydrated_keys = coordinator._bound_keys()
+    coordinator._rehydrated_included = coordinator._included_keys()
+    assert all(key != "woofer_level" for _, key in coordinator._rehydrated_included)
+
+    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "off"})
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        coordinator._reconcile_rehydrated(coordinator.last_resources)
+    reload.assert_not_called()

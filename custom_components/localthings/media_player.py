@@ -172,6 +172,14 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         for mode, feature in _PLAYBACK_FEATURES:
             if not isinstance(supported, list) or mode in supported:
                 features |= feature
+        # _stream_state, not state: _has_media above already ruled out a
+        # stale stream, so this skips re-reading power and the stream check.
+        if (
+            not self._desc.stop_when_paused
+            and features & MediaPlayerEntityFeature.STOP
+            and self._stream_state() is MediaPlayerState.PAUSED
+        ):
+            features &= ~MediaPlayerEntityFeature.STOP
         # Not in mediaPlayback's supportedModes; the track control resource
         # lists them while a stream is active (HW-Q950T).
         skips = _strings(self._rep(self._desc.track_control_href).get("supportedModes"))
@@ -194,6 +202,10 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             return MediaPlayerState.OFF
         if not self._stream_active():
             return MediaPlayerState.ON
+        return self._stream_state()
+
+    def _stream_state(self) -> MediaPlayerState:
+        """`state` for a powered-on player whose stream feeds are current."""
         feed = self._feed_state()
         if feed not in (None, MediaPlayerState.IDLE):
             return feed

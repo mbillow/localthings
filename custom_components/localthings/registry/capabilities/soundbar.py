@@ -120,9 +120,12 @@ WOOFER = Capability(
             key="woofer_level",
             field="x.com.samsung.networkaudio.woofer",
             # Only with a paired sub, as the plugin gates its woofer page.
+            # Standby drops the sub's connection, so a restart then would
+            # leave the entity out for good without dynamic presence (#775).
             exists_fn=lambda rep, resources: (
                 rep.get("x.com.samsung.networkaudio.connection") == "on"
             ),
+            dynamic_presence=True,
             native_min=-12,
             native_max=6,
             step=1,
@@ -331,13 +334,17 @@ ADVANCED_AUDIO = Capability(
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.voiceamplifier", _int_on),
         ),
-        # -1 means not applicable in the current sound mode.
+        # -1 means not applicable in the current sound mode, which can change
+        # after setup, hence dynamic presence.
         SwitchDesc(
             key="bass_boost",
             field="x.com.samsung.networkaudio.bassboost",
             value_fn=lambda v: v == 1,
             entity_category="config",
-            exists_fn=lambda rep, resources: rep.get("x.com.samsung.networkaudio.bassboost") != -1,
+            exists_fn=lambda rep, resources: (
+                rep.get("x.com.samsung.networkaudio.bassboost") not in (None, -1)
+            ),
+            dynamic_presence=True,
             write_fn=_write("x.com.samsung.networkaudio.bassboost", _int_on),
         ),
     ),
@@ -635,6 +642,9 @@ MEDIA_PLAYER = Capability(
             track_control_href=av.HREF_TRACK_CONTROL,
             status_fn=_playback_status,
             stream_active_fn=_stream_active,
+            # A paused HW-Q950T answers stop with controlResponse.result=false
+            # though it lists stop in supportedModes (#775).
+            stop_when_paused=False,
             write_fn=_media_player_write,
             validate_fn=_validate_media,
             resend_unsafe_fn=av.resend_unsafe,

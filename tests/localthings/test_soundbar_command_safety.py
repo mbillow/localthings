@@ -293,7 +293,17 @@ async def test_the_lock_is_released_before_the_confirming_refresh(playback, monk
     """A second command must not wait for the first command's poll."""
     player, coordinator, _ = playback
     session = FakeSoundbarSession()
-    write = Mock(return_value=(0x44, None))
+    loop = asyncio.get_running_loop()
+    second_sent = asyncio.Event()
+
+    # The write runs on an executor thread, so wait for it rather than for a
+    # fixed number of loop iterations.
+    def _write(*_args, **_kwargs):
+        if write.call_count == 2:
+            loop.call_soon_threadsafe(second_sent.set)
+        return 0x44, None
+
+    write = Mock(side_effect=_write)
     monkeypatch.setattr(session, "write", write)
     coordinator._session = session
     refreshing, finish = asyncio.Event(), asyncio.Event()
@@ -304,12 +314,9 @@ async def test_the_lock_is_released_before_the_confirming_refresh(playback, monk
 
     monkeypatch.setattr(coordinator, "async_request_refresh", slow_refresh)
     first = asyncio.create_task(player.async_set_volume_level(0.2))
-    await refreshing.wait()
+    await asyncio.wait_for(refreshing.wait(), timeout=5)
     second = asyncio.create_task(player.async_set_volume_level(0.3))
-    for _ in range(20):
-        if write.call_count == 2:
-            break
-        await asyncio.sleep(0)
+    await asyncio.wait_for(second_sent.wait(), timeout=5)
     assert write.call_count == 2
     finish.set()
     await asyncio.gather(first, second)

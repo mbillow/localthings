@@ -63,6 +63,11 @@ class SamsungEntityDescription:
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
+    # Recheck exists_fn after setup: add when present, unavailable when
+    # absent. For presence that follows live state, not the model. Only the
+    # platforms that use entity.async_add_bound_entities add a late entity:
+    # sensor, binary_sensor, number, switch, select, button, time and light.
+    dynamic_presence: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -100,8 +105,6 @@ class SamsungEntityDescription:
 
 @dataclass(frozen=True, kw_only=True)
 class SensorDesc(SamsungEntityDescription):
-    # Recheck inclusion after setup: add when present, unavailable when absent.
-    dynamic_presence: bool = False
     device_class: str | None = None
     state_class: str | None = None
     unit: str | None = None
@@ -265,6 +268,8 @@ class MediaPlayerDesc(SamsungEntityDescription):
     # resources -> False when the generic playback and track feeds are stale,
     # e.g. a soundbar keeps its last stream's track on an HDMI input.
     stream_active_fn: Callable[[dict], bool] | None = None
+    # False where the device refuses stop while paused, so it isn't offered.
+    stop_when_paused: bool = True
     write_fn: MediaWriteFn = None
     validate_fn: ValidateFn = None
 
