@@ -81,6 +81,7 @@ from .registry.capabilities.airconditioner import (
 )
 from .registry.capabilities.airconditioner import (
     _temperature_step,
+    _temps_indoor_item,
     extend_option_code_bit,
     has_extend_option_code,
     has_heating_capacity,
@@ -541,27 +542,16 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         """Vendor temperature item: /temperatures/vs/0's items[0], or a
         multi-indoor system AC's flat /temperatures/indoor/vs/0 (same field
         names, no items[] wrapper) when the former is absent. {} when neither."""
-        item = _temps_vs_item(self._rep(TEMPS_VS_HREF))
-        if item:
-            return item
-        indoor = self._rep(TEMPS_INDOOR_VS_HREF)
-        if (
-            indoor.get("x.com.samsung.da.current") is not None
-            or indoor.get("x.com.samsung.da.desired") is not None
-        ):
-            return indoor
-        return {}
+        return _temps_vs_item(self._rep(TEMPS_VS_HREF)) or _temps_indoor_item(
+            self._rep(TEMPS_INDOOR_VS_HREF)
+        )
 
     def _uses_indoor_vendor(self) -> bool:
         """True when the writable setpoint lives on the flat
         /temperatures/indoor/vs/0 (system AC) rather than /temperatures/vs/0's
         items[] array -- selects the write channel in async_set_temperature."""
-        if _temps_vs_item(self._rep(TEMPS_VS_HREF)):
-            return False
-        indoor = self._rep(TEMPS_INDOOR_VS_HREF)
-        return (
-            indoor.get("x.com.samsung.da.current") is not None
-            or indoor.get("x.com.samsung.da.desired") is not None
+        return not _temps_vs_item(self._rep(TEMPS_VS_HREF)) and bool(
+            _temps_indoor_item(self._rep(TEMPS_INDOOR_VS_HREF))
         )
 
     @property
