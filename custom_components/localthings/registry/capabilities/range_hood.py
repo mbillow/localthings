@@ -29,6 +29,7 @@ from ..entities import (
     SwitchDesc,
     TimeDesc,
 )
+from .air_purifier import _AIR_QUALITY_SENSORS
 from .air_sensing import (
     periodic_sensing_write,
     skip_status_write,
@@ -245,28 +246,31 @@ AFTER_RUN = Capability(
 )
 
 
-# Each reading is gated on the hood listing that sensor type, the same guard
-# air_purifier.AIR_QUALITY needed for a board that reports only some of them
-# (issue #414). No hood dump has been short one yet; this is the guard, not a
-# fix for anything observed here.
+_HOOD_GRADES = {1: "good", 2: "normal", 3: "poor", 4: "very_poor"}
+_HOOD_GRADE_OPTIONS = tuple(_HOOD_GRADES.values())
+_HOOD_PARTICLE_GRADES = {**_HOOD_GRADES, 10: "processing"}
+_HOOD_PM_SENSORS = tuple(row for row in _AIR_QUALITY_SENSORS if row[4] in {"pm10", "pm25", "pm1"})
+_HOOD_LAST_GRADES = {f"Kr{code}": grade for code, grade in _HOOD_GRADES.items()}
+
+
 def _particle_grade(items, sensor_type):
     # The hood's second value matches SmartThings' four-level display;
     # other Samsung families use different grade floors, so keep this local.
     grade = sensor_item_value(items, sensor_type, 1)
     # Direct sensing captures show all three grades become 10 until readings settle.
-    return {1: "good", 2: "normal", 3: "poor", 4: "very_poor", 10: "processing"}.get(
-        grade, str(grade) if grade is not None else None
-    )
+    return _HOOD_PARTICLE_GRADES.get(grade, str(grade) if grade is not None else None)
 
 
 def _clean_level(items):
     # CleanLevel 1-4 tracks this hood's Kr1-Kr4 stored air-quality assessment.
     level = sensor_item_value(items, "CleanLevel")
-    return {1: "good", 2: "normal", 3: "poor", 4: "very_poor"}.get(
-        level, str(level) if level is not None else None
-    )
+    return _HOOD_GRADES.get(level, str(level) if level is not None else None)
 
 
+# Each reading is gated on the hood listing that sensor type, the same guard
+# air_purifier.AIR_QUALITY needed for a board that reports only some of them
+# (issue #414). No hood dump has been short one yet; this is the guard, not a
+# fix for anything observed here.
 AIR_QUALITY = Capability(
     href="/sensors/vs/0",
     poll_tier="warm",
@@ -275,7 +279,7 @@ AIR_QUALITY = Capability(
             key="clean_level",
             translation_key="range_hood_clean_level",
             device_class="enum",
-            options=("good", "normal", "poor", "very_poor"),
+            options=_HOOD_GRADE_OPTIONS,
             field="x.com.samsung.da.items",
             icon="mdi:air-filter",
             exists_fn=has_sensor_type("CleanLevel"),
@@ -285,18 +289,14 @@ AIR_QUALITY = Capability(
             SensorDesc(
                 key=key,
                 device_class=device_class,
-                state_class="measurement",
-                unit="μg/m³",
-                icon="mdi:blur",
+                state_class=state_class,
+                unit=unit,
+                icon=icon,
                 field="x.com.samsung.da.items",
                 exists_fn=has_sensor_type(type_),
                 value_fn=lambda items, t=type_: sensor_item_value(items, t),
             )
-            for key, type_, device_class in (
-                ("dust", "Dust", "pm10"),
-                ("fine_dust", "FineDust", "pm25"),
-                ("super_fine_dust", "SuperFineDust", "pm1"),
-            )
+            for key, icon, type_, state_class, device_class, unit in _HOOD_PM_SENSORS
         ),
         *(
             SensorDesc(
@@ -304,16 +304,12 @@ AIR_QUALITY = Capability(
                 translation_key=f"range_hood_{device_class}_air_quality",
                 field="x.com.samsung.da.items",
                 device_class="enum",
-                options=("good", "normal", "poor", "very_poor", "processing"),
+                options=tuple(_HOOD_PARTICLE_GRADES.values()),
                 icon="mdi:air-filter",
                 exists_fn=has_sensor_type(type_),
                 value_fn=lambda items, t=type_: _particle_grade(items, t),
             )
-            for key, type_, device_class in (
-                ("dust", "Dust", "pm10"),
-                ("fine_dust", "FineDust", "pm25"),
-                ("super_fine_dust", "SuperFineDust", "pm1"),
-            )
+            for key, icon, type_, state_class, device_class, unit in _HOOD_PM_SENSORS
         ),
     ),
 )
@@ -381,6 +377,7 @@ def _hood_dnd_write(part):
             if anchor < utc_now:
                 anchor += datetime.timedelta(days=1)
             offset = anchor.astimezone(now.tzinfo).utcoffset()
+            assert offset is not None
 
             # Decode both halves with the start's offset, not two occurrence dates.
             def local_time(clock):
@@ -394,7 +391,9 @@ def _hood_dnd_write(part):
         anchor = datetime.datetime.combine(now.date(), start, now.tzinfo)
         if anchor < now:
             anchor += datetime.timedelta(days=1)
-        fixed_zone = datetime.timezone(anchor.utcoffset())
+        anchor_offset = anchor.utcoffset()
+        assert anchor_offset is not None
+        fixed_zone = datetime.timezone(anchor_offset)
         clocks = [
             datetime.datetime.combine(now.date(), clock, fixed_zone).astimezone(datetime.UTC)
             for clock in (start, end)
@@ -487,14 +486,9 @@ AIR_LEVEL_CHECK = Capability(
             key="last_air_sensing_level",
             translation_key="range_hood_last_air_sensing_level",
             device_class="enum",
-            options=("good", "normal", "poor", "very_poor"),
+            options=_HOOD_GRADE_OPTIONS,
             # Kr1-Kr4 track CleanLevel 1-4 in this hood's recorded last results.
-            value_fn=lambda value: {
-                "Kr1": "good",
-                "Kr2": "normal",
-                "Kr3": "poor",
-                "Kr4": "very_poor",
-            }.get(value, value),
+            value_fn=lambda value: _HOOD_LAST_GRADES.get(value, value),
             field="x.com.samsung.da.lastSensingLevel",
             icon="mdi:air-filter",
             entity_category="diagnostic",

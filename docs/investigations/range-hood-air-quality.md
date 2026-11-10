@@ -37,3 +37,9 @@ This hood stores the daily do-not-disturb window in UTC. If the app/device
 leaves it unchanged across daylight saving, the local hours shift. Re-entering
 the desired hours updates the UTC window; integration reload does not.
 App/device seasonal adjustment has not been verified.
+
+Review revision (#794): the unadvertised Sensing option is restricted to the
+verified board or advertised/reported support. An unset DND window
+(`00000000`) shows unknown. Edits use one offset from the next local start
+date for both endpoints, preserving window length through a DST change;
+this does not remove seasonal drift of a previously stored UTC schedule.

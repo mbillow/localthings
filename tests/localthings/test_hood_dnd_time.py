@@ -11,6 +11,7 @@ from homeassistant.util import dt as dt_util
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from tests.conftest import _load_device
+
 from .test_offline_setup import _reachable
 
 HREF = "/airlevelcheck/vs/0"

@@ -283,32 +283,11 @@ def diagnosis_status(value):
 
 
 def sensor_item_value(items, sensor_type, index=0):
-    """Pull one reading out of a `/sensors/vs/0`-style items[] list -- each
-    item is `{type, value: [...]}`; `index` picks which slot to read
-    (index 0 is the raw measurement on every family seen so far). Shared
-    by range_hood.AIR_QUALITY, air_purifier.AIR_QUALITY, and
-    air_monitor.SENSORS, which all read the same resource shape.
+    """Read a numeric slot from a Samsung sensor-items list.
 
-    value[] is 2-element on the fields that carry a magnitude
-    (Dust/FineDust/SuperFineDust/CO2) and 1-element on Odor/CleanLevel.
-    That asymmetry is what index 1 means: it is the device's own graded
-    air-quality level for that reading -- the same kind of value Odor and
-    CleanLevel already *are*, which is why those two have no second slot.
-    It reads 0-2 against index 0's observed 0-31, tracks index 0 within a
-    device, and CleanLevel equals the highest per-field grade on 9 of the
-    11 fixtures reporting this resource (the range hood and one RAC report
-    a higher CleanLevel than any dust grade, so they fold in something
-    else).
-
-    Index 1 is deliberately left unbound rather than exposed as an entity:
-    its floor is not portable. ARTIK051_TVTL grades good air as 0, while
-    AVT-WW-TP1 / A-VTWW-TP2 / TP1X / ASM-KR-TP1 / AHD-WW-TP1 all grade it
-    as 1, so a shared descriptor would need a per-family offset to mean
-    anything, and CleanLevel already carries the aggregate. The grade is
-    still load-bearing as *evidence*: it is what confirms the three dust
-    fields are three different scales rather than one repeated reading --
-    see air_purifier._AIR_QUALITY_SENSORS and
-    tests/test_air_quality_grade_column.py.
+    Index 0 holds the concentration or aggregate level; index 1 holds a
+    family-specific grade. Hood descriptors interpret grades 1-4 and the
+    transient processing code 10; other families need their own mapping.
     """
     for item in items or ():
         if not isinstance(item, dict):
