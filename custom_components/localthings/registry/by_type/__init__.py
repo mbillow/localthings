@@ -32,6 +32,7 @@ from . import (
 from ._base import DeviceRegistry
 
 __all__ = [
+    "KEY_PLATFORMS",
     "WASHER_ONLY_ENTITIES",
     "DeviceRegistry",
     "_board_tokens",
@@ -80,6 +81,18 @@ WASHER_ONLY_ENTITIES = {
     name: frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(_REGISTRY_BY_KEY[name]))
     for name in ("microfiber_filter", "oven", "microwave")
 }
+
+
+def _key_platforms() -> dict[str, frozenset[str]]:
+    platforms: dict[str, set[str]] = {}
+    for registry in _REGISTRY_BY_KEY.values():
+        for platform, key in _entity_keys(registry):
+            platforms.setdefault(key, set()).add(platform)
+    return {key: frozenset(found) for key, found in platforms.items()}
+
+
+# Descriptor key -> every platform any registry binds it on, for cleanup.py.
+KEY_PLATFORMS = _key_platforms()
 
 
 # Consumer-model prefix (first two letters of the '_'-delimited token in

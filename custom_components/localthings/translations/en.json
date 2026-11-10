@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Downloaded cycles not set up for {device_name}",
       "description": "{device_name} has {pending} of {total} downloaded cycle(s) that Home Assistant can't offer yet. A downloaded cycle can only be used once the appliance has been seen with it loaded -- in the SmartThings app's \"Download cycles\" screen, not the \"Cycle\" one -- and you've given it a name.\n\nTo set them up, go to Settings > Devices & Services > LocalThings > {device_name} > Configure > Download cycles and follow the instructions there.\n\nDon't use downloaded cycles? Go to Configure > Device settings instead and turn off \"Offer downloaded cycles\" to silence this reminder for good."
+    },
+    "removed_entities": {
+      "title": "Entities removed from {device_name}",
+      "description": "LocalThings removed entities from {device_name} that it no longer provides, usually because they became a different kind of entity in this release. These automations and scripts still refer to them:\n\n{entities}\n\nUpdate them to use the replacement entities on the device page, then dismiss this notice."
     }
   },
   "exceptions": {

@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Ciclos baixados não configurados para {device_name}",
       "description": "{device_name} tem {pending} de {total} ciclo(s) baixado(s) que o Home Assistant ainda não pode oferecer. Um ciclo baixado só pode ser usado depois que o aparelho tiver sido detectado com ele carregado — na tela \"Baixar ciclos\" do aplicativo SmartThings, não na tela \"Ciclo\" — e você tiver dado um nome a ele.\n\nPara configurá-los, acesse Configurações > Dispositivos e serviços > LocalThings > {device_name} > Configurar > Baixar ciclos e siga as instruções.\n\nNão usa ciclos baixados? Acesse Configurar > Configurações do dispositivo e desative \"Oferecer ciclos baixados\" para silenciar este lembrete permanentemente."
+    },
+    "removed_entities": {
+      "title": "Entidades removidas de {device_name}",
+      "description": "O LocalThings removeu de {device_name} entidades que não fornece mais, geralmente porque nesta versão elas passaram a ser outro tipo de entidade. Estas automações e scripts ainda fazem referência a elas:\n\n{entities}\n\nAtualize-os para usar as entidades substitutas na página do dispositivo e depois dispense este aviso."
     }
   },
   "exceptions": {

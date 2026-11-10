@@ -951,6 +951,7 @@ AIR_PURIFY = Capability(
             # to it (#747), and #166's AR09TXFCAWKNEU manual says Purify isn't
             # available. The app's Purify mode on these boards is Wind.
             exists_fn=lambda rep, resources: not _is_artik051_prac(resources),
+            prune_when_excluded=True,
             icon="mdi:air-purifier",
             entity_category="config",
             value_fn=lambda v: v == "On",

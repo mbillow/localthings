@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Cicli scaricati non configurati per {device_name}",
       "description": "{device_name} ha {pending} cicli scaricati su {total} che Home Assistant non può ancora offrire. Un ciclo scaricato può essere usato solo dopo che il dispositivo è stato rilevato con quel ciclo caricato -- nella schermata \"Cicli scaricati\" dell'app SmartThings, non in quella \"Ciclo\" -- ed è stato assegnato un nome.\n\nPer configurarli, andare su Impostazioni > Dispositivi e servizi > LocalThings > {device_name} > Configura > Cicli scaricati e seguire le istruzioni presenti lì.\n\nNon si usano cicli scaricati? Andare invece su Configura > Impostazioni dispositivo e disattivare \"Offri cicli scaricati\" per silenziare questo promemoria definitivamente."
+    },
+    "removed_entities": {
+      "title": "Entità rimosse da {device_name}",
+      "description": "LocalThings ha rimosso da {device_name} entità che non fornisce più, di solito perché in questa versione sono diventate un altro tipo di entità. Queste automazioni e questi script vi fanno ancora riferimento:\n\n{entities}\n\nAggiornali per usare le entità sostitutive nella pagina del dispositivo, quindi ignora questo avviso."
     }
   },
   "exceptions": {

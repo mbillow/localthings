@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Heruntergeladene Programme für {device_name} nicht eingerichtet",
       "description": "{device_name} hat {pending} von {total} heruntergeladenen Programmen, die Home Assistant noch nicht anbieten kann. Ein heruntergeladenes Programm kann erst verwendet werden, sobald das Gerät damit geladen gesehen wurde -- im Bildschirm \"Download-Programme\" der SmartThings-App, nicht im Bildschirm \"Programm\" -- und Sie ihm einen Namen gegeben haben.\n\nUm sie einzurichten, gehen Sie zu Einstellungen > Geräte & Dienste > LocalThings > {device_name} > Konfigurieren > Download-Programme und folgen Sie den dortigen Anweisungen.\n\nNutzen Sie keine heruntergeladenen Programme? Gehen Sie stattdessen zu Konfigurieren > Geräteeinstellungen und schalten Sie \"Heruntergeladene Programme anbieten\" aus, um diese Erinnerung dauerhaft zu stoppen."
+    },
+    "removed_entities": {
+      "title": "Entitäten von {device_name} entfernt",
+      "description": "LocalThings hat Entitäten von {device_name} entfernt, die es nicht mehr bereitstellt, meist weil sie in dieser Version zu einer anderen Art von Entität geworden sind. Diese Automationen und Skripte verweisen noch auf sie:\n\n{entities}\n\nStelle sie auf die Ersatzentitäten auf der Geräteseite um und schließe dann diesen Hinweis."
     }
   },
   "exceptions": {

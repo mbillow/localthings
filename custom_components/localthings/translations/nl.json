@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Gedownloade programma's niet ingesteld voor {device_name}",
       "description": "{device_name} heeft {pending} van de {total} gedownloade programma's die Home Assistant nog niet kan aanbieden. Een gedownload programma kan pas worden gebruikt zodra het apparaat ermee geladen is gezien -- in het scherm \"Gedownloade programma's\" van de SmartThings-app, niet in \"Programma\" -- en je het een naam hebt gegeven.\n\nGa om ze in te stellen naar Instellingen > Apparaten & diensten > LocalThings > {device_name} > Configureren > Gedownloade programma's en volg de instructies daar.\n\nGebruik je geen gedownloade programma's? Ga dan naar Configureren > Apparaatinstellingen en zet \"Gedownloade programma's aanbieden\" uit om deze herinnering voorgoed te stoppen."
+    },
+    "removed_entities": {
+      "title": "Entiteiten verwijderd van {device_name}",
+      "description": "LocalThings heeft entiteiten van {device_name} verwijderd die het niet meer levert, meestal omdat ze in deze versie een ander soort entiteit zijn geworden. Deze automatiseringen en scripts verwijzen er nog naar:\n\n{entities}\n\nWerk ze bij zodat ze de vervangende entiteiten op de apparaatpagina gebruiken en sluit daarna deze melding."
     }
   },
   "exceptions": {

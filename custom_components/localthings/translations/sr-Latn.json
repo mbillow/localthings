@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "Preuzeti ciklusi nisu podešeni za {device_name}",
       "description": "{device_name} ima {pending} od ukupno {total} preuzetih ciklusa koje Home Assistant još uvek ne može da ponudi. Preuzeti ciklus se može koristiti tek kada aparat bude uočen sa učitanim tim ciklusom — na ekranu „Preuzmi cikluse“ u aplikaciji SmartThings, a ne na ekranu „Ciklus“ — i nakon što mu dodelite ime.\n\nDa biste ih podesili, idite na Podešavanja > Uređaji i usluge > LocalThings > {device_name} > Konfiguriši > Preuzmi cikluse i pratite uputstva tamo.\n\nNe koristite preuzete cikluse? Idite na Konfiguriši > Podešavanja uređaja i isključite opciju „Ponudi preuzete cikluse“ da biste trajno isključili ovaj podsetnik."
+    },
+    "removed_entities": {
+      "title": "Entiteti uklonjeni sa {device_name}",
+      "description": "LocalThings je sa {device_name} uklonio entitete koje više ne pruža, obično zato što su u ovoj verziji postali druga vrsta entiteta. Ove automatizacije i skripte i dalje upućuju na njih:\n\n{entities}\n\nAžurirajte ih da koriste zamenske entitete sa stranice uređaja, a zatim odbacite ovo obaveštenje."
     }
   },
   "exceptions": {

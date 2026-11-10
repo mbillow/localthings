@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_unsupported_sound_switches
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities import airconditioner
@@ -33,7 +33,8 @@ def _coordinator(model: str) -> LocalThingsCoordinator:
             discovery_resources=resources,
             discovery_canonical=lambda subdevice: resources,
             device_key=MOCK_SERIAL,
-            instance_names={},
+            device_type_name="airconditioner",
+            subdevices=[],
         ),
     )
 
@@ -54,7 +55,7 @@ def _row(hass: HomeAssistant) -> tuple[MockConfigEntry, str]:
 async def test_the_artik051_prac_switch_is_removed(hass: HomeAssistant) -> None:
     entry, entity_id = _row(hass)
 
-    _drop_unsupported_sound_switches(hass, entry, _coordinator("ARTIK051_PRAC_20K|10217841|6001"))
+    async_reconcile_entities(hass, entry, _coordinator("ARTIK051_PRAC_20K|10217841|6001"))
 
     assert er.async_get(hass).async_get(entity_id) is None
 
@@ -62,6 +63,6 @@ async def test_the_artik051_prac_switch_is_removed(hass: HomeAssistant) -> None:
 async def test_other_boards_keep_it(hass: HomeAssistant) -> None:
     entry, entity_id = _row(hass)
 
-    _drop_unsupported_sound_switches(hass, entry, _coordinator("ARTIK051_KRAC_18K|10217841|6001"))
+    async_reconcile_entities(hass, entry, _coordinator("ARTIK051_KRAC_18K|10217841|6001"))
 
     assert er.async_get(hass).async_get(entity_id) is not None

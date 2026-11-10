@@ -2634,6 +2634,10 @@
     "cloud_courses_undiscovered": {
       "title": "{device_name}의 다운로드 코스가 설정되지 않음",
       "description": "{device_name}에는 Home Assistant가 아직 제공할 수 없는 다운로드한 코스가 {total}개 중 {pending}개 있습니다. 다운로드한 코스는 SmartThings 앱의 \"다운로드 코스\" 화면(\"코스\" 화면이 아님)에서 기기가 해당 코스로 로드된 상태로 확인되고 이름을 지정한 후에만 사용할 수 있습니다.\n\n설정하려면 설정 > 기기 및 서비스 > LocalThings > {device_name} > 구성 > 다운로드 코스로 이동하여 안내를 따르세요.\n\n다운로드 코스를 사용하지 않나요? 대신 구성 > 기기 설정으로 이동하여 \"다운로드 코스 제공\"을 꺼서 이 알림을 완전히 중지하세요."
+    },
+    "removed_entities": {
+      "title": "{device_name}에서 엔티티가 제거됨",
+      "description": "LocalThings가 더 이상 제공하지 않는 엔티티를 {device_name}에서 제거했습니다. 대개 이번 버전에서 다른 종류의 엔티티로 바뀌었기 때문입니다. 다음 자동화와 스크립트가 아직 이 엔티티를 참조합니다:\n\n{entities}\n\n기기 페이지의 대체 엔티티를 사용하도록 수정한 다음 이 알림을 닫으세요."
     }
   },
   "exceptions": {
