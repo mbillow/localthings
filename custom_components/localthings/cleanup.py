@@ -7,8 +7,10 @@ downgrade costs only the removed rows instead of failing the whole entry
 (`entry.version > 4` in async_migrate_entry).
 
 A row is removed only for a code change (a platform move, a superseded or
-retired key) or a model fact its descriptor vouches for (`prune_when_excluded`).
-An entity the device doesn't report right now is unavailable, never removed.
+retired key) or a model fact its descriptor vouches for (`prune_when_excluded`,
+`replaces_siblings`). A `dynamic_presence` entity is never removed for being
+absent. A `prune_when_excluded` one is removed whenever its exists_fn excludes
+it, including on a confirmed-empty {} rep, as the switches it replaced were.
 """
 
 from __future__ import annotations
@@ -49,6 +51,10 @@ RETIRED_KEYS: tuple[tuple[str, str], ...] = (
 )
 
 REMOVED_ISSUE = "removed_entities"
+# entry_id -> removed entity_ids not yet checked for automation use. Outside
+# the entry, so a reload before Home Assistant has started doesn't lose them:
+# its own pass finds nothing left to remove.
+_PENDING = f"{DOMAIN}_removed_pending"
 
 
 def _retired_patterns() -> dict[str, re.Pattern[str]]:
@@ -74,9 +80,7 @@ def _populated(rep: dict | None) -> bool:
 
 def _decides(bound: BoundEntity, rep: dict | None) -> bool:
     """Whether this rep is complete enough for the descriptor's choice to stand."""
-    if rep is None or not _populated(rep):
-        return False
-    return not bound.desc.field or bound.desc.field in rep
+    return rep is not None and _populated(rep) and (not bound.desc.field or bound.desc.field in rep)
 
 
 def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, str, str]]:
@@ -101,32 +105,31 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
                 known = set(PLATFORMS)
                 break
             known |= KEY_PLATFORMS[bound.desc.key]
+            # A prefixed binding shares its unique_id with any descriptor
+            # keyed on the whole prefixed key.
+            known |= KEY_PLATFORMS.get(bound.key_override or "", frozenset())
         for platform in PLATFORMS:
             if platform not in known:
                 yield platform, uid, "no longer provided on this platform"
 
         included = [b for b in siblings if _is_included(b, coordinator)]
-        included_ids = {id(b) for b in included}
         kept = {_platform(b) for b in included}
-        # Same key on several platforms, chosen by exists_fn: the included
-        # one replaces the rest, unless presence can still change or the
-        # deciding rep is a stub, empty, or missing the winner's field.
+        # Opt-in and one-way: only a descriptor whose inclusion is a model
+        # fact replaces its siblings, and never while presence can still
+        # change or a rep is a stub, empty, or missing the winner's field.
+        winners = [b for b in included if b.desc.replaces_siblings]
         if (
-            included
-            and len(platforms) > 1
+            winners
             and not any(b.desc.dynamic_presence for b in siblings)
-            and all(_decides(b, resources.get(b.href)) for b in included)
+            and all(_decides(b, resources.get(b.href)) for b in winners)
             and all(_populated(resources.get(b.href)) for b in siblings)
         ):
+            replaced_by = ", ".join(sorted({_platform(b) for b in winners}))
             for platform in platforms - kept:
-                yield platform, uid, f"replaced by its {', '.join(sorted(kept))} entity"
+                yield platform, uid, f"replaced by its {replaced_by} entity"
 
         for bound in siblings:
-            if (
-                bound.desc.prune_when_excluded
-                and id(bound) not in included_ids
-                and _platform(bound) not in kept
-            ):
+            if bound.desc.prune_when_excluded and _platform(bound) not in kept:
                 yield _platform(bound), uid, "not reported by this device"
 
     for bound in coordinator.bound:
@@ -134,7 +137,8 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
             continue
         for platform, key in bound.desc.supersedes:
             uid = f"{prefix}{bound.subdevice.key_prefix}{key}{bound.instance}"
-            if platform not in {_platform(b) for b in by_uid.get(uid, ())}:
+            still_bound = {_platform(b) for b in by_uid.get(uid, ())}
+            if platform not in still_bound:
                 yield platform, uid, f"replaced by {_key(bound)}"
 
 
@@ -230,11 +234,14 @@ def async_notify_removed(hass: HomeAssistant, entry: ConfigEntry, removed: list[
     keyed on the removed set, so a later removal is a new issue rather than
     one the user already dismissed.
     """
-    if not removed:
+    pending: list[str] = hass.data.setdefault(_PENDING, {}).setdefault(entry.entry_id, [])
+    pending.extend(entity_id for entity_id in removed if entity_id not in pending)
+    if not pending:
         return
 
     @callback
     def _check(hass: HomeAssistant) -> None:
+        removed = hass.data[_PENDING].pop(entry.entry_id, [])
         lines = [
             f"- `{entity_id}`: {', '.join(users)}"
             for entity_id in removed
@@ -260,6 +267,7 @@ def async_notify_removed(hass: HomeAssistant, entry: ConfigEntry, removed: list[
 @callback
 def async_delete_removed_issues(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Drop this entry's removal Repairs when the entry itself is deleted."""
+    hass.data.get(_PENDING, {}).pop(entry.entry_id, None)
     prefix = f"{REMOVED_ISSUE}_{entry.entry_id}_"
     for domain, issue_id in list(ir.async_get(hass).issues):
         if domain == DOMAIN and issue_id.startswith(prefix):

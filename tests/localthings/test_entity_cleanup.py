@@ -6,12 +6,14 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.localthings import cleanup
 from custom_components.localthings.cleanup import (
     REMOVED_ISSUE,
     RETIRED_KEYS,
@@ -24,9 +26,9 @@ from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY, resolve
-from custom_components.localthings.registry.capabilities import fridge
+from custom_components.localthings.registry.capabilities import common, fridge
 from custom_components.localthings.registry.capability import Capability
-from custom_components.localthings.registry.discovery import discover
+from custom_components.localthings.registry.discovery import BoundEntity, discover
 from custom_components.localthings.registry.entities import (
     PLATFORM_OF,
     BinarySensorDesc,
@@ -88,6 +90,7 @@ def _all_descriptors():
         {"dynamic_presence": True, "prune_when_excluded": True, "exists_fn": lambda r, s: True},
         {"dynamic_presence": True, "supersedes": (("sensor", "old"),)},
         {"prune_when_excluded": True},
+        {"dynamic_presence": True, "replaces_siblings": True},
     ],
 )
 def test_descriptors_reject_removal_flags_that_could_drop_a_live_entity(kwargs):
@@ -157,6 +160,19 @@ async def test_a_platform_no_registry_binds_the_key_on_is_removed(hass):
     assert _alive(hass, live)
 
 
+async def test_a_key_only_expand_fn_creates_is_never_judged(hass):
+    """No static descriptor lists its platforms, so none can be ruled out."""
+    entry = _entry(hass)
+    capability = Capability(href="/x/vs/0", entities=(SensorDesc(key="expanded_only", field="a"),))
+    row = _row(hass, entry, "switch", "expanded_only")
+
+    async_reconcile_entities(
+        hass, entry, _coordinator({"/x/vs/0": {"a": 1}}, {"/x/vs/0": [capability]})
+    )
+
+    assert _alive(hass, row)
+
+
 async def test_an_unbound_key_is_never_judged(hass):
     """A resource missing from this discovery is not a platform move."""
     entry = _entry(hass)
@@ -168,77 +184,140 @@ async def test_an_unbound_key_is_never_judged(hass):
 
 # --- one key, several platforms ----------------------------------------------
 
-BOTH = {
-    "/refrigeration/vs/0": [fridge.REFRIGERATION],
-    "/refrigeration/0": [fridge.REFRIGERATION_FALLBACK],
-}
-SWITCH_REP = {"x.com.samsung.da.rapidFridge": "Off", "x.com.samsung.da.rapidFreezing": "Off"}
-FALLBACK_REP = {"rapidCool": False, "rapidFreeze": False}
+
+def _pair(*, replaces: bool, dynamic: bool = False, split: bool = False):
+    """`lamp` is bound as both a switch and a binary sensor elsewhere, so the
+    platform-move rule leaves both alone and only the sibling rule acts. With
+    `split`, each descriptor sits on its own href."""
+    switch = SwitchDesc(
+        key="lamp", field="a", exists_fn=lambda rep, resources: False, dynamic_presence=dynamic
+    )
+    sensor = BinarySensorDesc(
+        key="lamp",
+        field="a",
+        exists_fn=lambda rep, resources: True,
+        replaces_siblings=replaces,
+    )
+    if split:
+        return {
+            "/x/vs/0": [Capability(href="/x/vs/0", entities=(switch,))],
+            "/x/0": [Capability(href="/x/0", entities=(sensor,))],
+        }
+    return {"/x/vs/0": [Capability(href="/x/vs/0", entities=(switch, sensor))]}
 
 
-async def test_the_included_platform_replaces_its_siblings(hass):
+@pytest.mark.parametrize("replaces", [False, True])
+async def test_only_an_opted_in_descriptor_replaces_its_siblings(hass, replaces):
+    """Without the flag, an exclusion may be live state (a cooktop's hood
+    lamp, an AC's AI energy levels), so the excluded row stays."""
     entry = _entry(hass)
-    resources = {"/refrigeration/vs/0": SWITCH_REP, "/refrigeration/0": FALLBACK_REP}
-    old = _row(hass, entry, "binary_sensor", "rapid_fridge")
-    live = _row(hass, entry, "switch", "rapid_fridge")
+    switch = _row(hass, entry, "switch", "lamp")
+    sensor = _row(hass, entry, "binary_sensor", "lamp")
 
-    assert old in async_reconcile_entities(hass, entry, _coordinator(resources, BOTH))
-    assert not _alive(hass, old)
-    assert _alive(hass, live)
+    async_reconcile_entities(
+        hass, entry, _coordinator({"/x/vs/0": {"a": "On"}}, _pair(replaces=replaces))
+    )
+
+    assert _alive(hass, switch) is not replaces
+    assert _alive(hass, sensor)
+
+
+async def test_a_dynamic_sibling_is_never_replaced(hass):
+    entry = _entry(hass)
+    switch = _row(hass, entry, "switch", "lamp")
+    capabilities = _pair(replaces=True, dynamic=True)
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": {"a": "On"}}, capabilities))
+
+    assert _alive(hass, switch)
+
+
+@pytest.mark.parametrize("rep", [{"href": "/x/vs/0"}, {}, {"b": 1}])
+async def test_a_stub_empty_or_fieldless_rep_decides_nothing(hass, rep):
+    entry = _entry(hass)
+    switch = _row(hass, entry, "switch", "lamp")
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": rep}, _pair(replaces=True)))
+
+    assert _alive(hass, switch)
 
 
 async def test_a_sibling_missing_from_discovery_keeps_its_row(hass):
-    """The switch's resource is absent, so the binary sensor wins only by
-    default; its row and the switch's must both survive."""
-    entry = _entry(hass)
-    rows = [_row(hass, entry, p, "rapid_fridge") for p in ("switch", "binary_sensor")]
-
-    async_reconcile_entities(hass, entry, _coordinator({"/refrigeration/0": FALLBACK_REP}, BOTH))
-
-    assert all(_alive(hass, row) for row in rows)
-
-
-@pytest.mark.parametrize("winner", [{"href": "/refrigeration/vs/0"}, {}])
-async def test_a_stub_or_empty_rep_decides_nothing(hass, winner):
-    entry = _entry(hass)
-    resources = {"/refrigeration/vs/0": winner, "/refrigeration/0": FALLBACK_REP}
-    old = _row(hass, entry, "binary_sensor", "rapid_fridge")
-
-    async_reconcile_entities(hass, entry, _coordinator(resources, BOTH))
-
-    assert _alive(hass, old)
-
-
-def _lamp(*, dynamic: bool) -> dict[str, list[Capability]]:
-    """`lamp` is bound as both a switch and a binary sensor elsewhere, so
-    the platform-move rule leaves both alone and only the sibling rule acts."""
-    return {
-        "/x/vs/0": [
-            Capability(
-                href="/x/vs/0",
-                entities=(
-                    SwitchDesc(
-                        key="lamp",
-                        field="a",
-                        exists_fn=lambda rep, resources: False,
-                        dynamic_presence=dynamic,
-                    ),
-                    BinarySensorDesc(key="lamp", field="a", exists_fn=lambda rep, resources: True),
-                ),
-            )
-        ]
-    }
-
-
-@pytest.mark.parametrize("dynamic", [False, True])
-async def test_a_dynamic_sibling_is_never_replaced(hass, dynamic):
     entry = _entry(hass)
     switch = _row(hass, entry, "switch", "lamp")
-    coordinator = _coordinator({"/x/vs/0": {"a": "On"}}, _lamp(dynamic=dynamic))
+    capabilities = _pair(replaces=True, split=True)
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/0": {"a": "On"}}, capabilities))
+
+    assert _alive(hass, switch)
+
+
+@pytest.mark.parametrize("sibling", [{"href": "/x/vs/0"}, {}])
+async def test_a_sibling_on_a_stub_or_empty_rep_keeps_its_row(hass, sibling):
+    entry = _entry(hass)
+    switch = _row(hass, entry, "switch", "lamp")
+    resources = {"/x/0": {"a": "On"}, "/x/vs/0": sibling}
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, _pair(replaces=True, split=True)))
+
+    assert _alive(hass, switch)
+
+
+@pytest.mark.parametrize(
+    "setinfo,removed",
+    [(None, None), ({}, None), ({"false": "x"}, None), ({"FIELD": "false"}, "switch")],
+)
+async def test_power_replaces_the_switch_only_on_the_models_own_flag(hass, setinfo, removed):
+    """A discovery without setinfo makes the switch look writable; that must
+    not remove the read-only sensor a laundry board really has."""
+    entry = _entry(hass)
+    resources: dict[str, dict] = {"/power/0": {"value": True}}
+    if setinfo is not None:
+        resources[common._SETINFO_HREF] = {
+            common._POWER_ON_OFF_FIELD if k == "FIELD" else k: v for k, v in setinfo.items()
+        }
+    rows = {p: _row(hass, entry, p, "power_switch") for p in ("switch", "binary_sensor")}
+
+    async_reconcile_entities(
+        hass, entry, _coordinator(resources, {"/power/0": [common.POWER_GENERIC]})
+    )
+
+    assert {p for p, row in rows.items() if not _alive(hass, row)} == (
+        {removed} if removed else set()
+    )
+
+
+async def test_a_prefixed_binding_counts_its_whole_keys_platforms(hass, monkeypatch):
+    """A pattern binding's unique_id ends in its prefixed key, which another
+    descriptor may bind on a different platform."""
+    monkeypatch.setattr(
+        cleanup, "KEY_PLATFORMS", {"open": frozenset({"sensor"}), "door_x_open": {"binary_sensor"}}
+    )
+    entry = _entry(hass)
+    row = _row(hass, entry, "binary_sensor", "door_x_open")
+    capability = Capability(href="/x/vs/0", entities=(SensorDesc(key="open", field="a"),))
+    bound = BoundEntity(
+        href="/x/vs/0",
+        capability=capability,
+        desc=capability.entities[0],
+        key_override="door_x_open",
+    )
+    resources = {"/x/vs/0": {"a": 1}}
+    coordinator = cast(
+        LocalThingsCoordinator,
+        SimpleNamespace(
+            bound=[bound],
+            discovery_resources=resources,
+            discovery_canonical=lambda subdevice: resources,
+            device_key=MOCK_SERIAL,
+            device_type_name=None,
+            subdevices=[],
+        ),
+    )
 
     async_reconcile_entities(hass, entry, coordinator)
 
-    assert _alive(hass, switch) is dynamic
+    assert _alive(hass, row)
 
 
 # --- supersedes --------------------------------------------------------------
@@ -315,3 +394,33 @@ async def test_no_repair_when_nothing_used_the_removed_entities(hass):
     await hass.async_block_till_done()
 
     assert not _issues(hass)
+
+
+async def test_a_reload_before_startup_keeps_the_pending_check(hass):
+    """The rows are gone after the first pass, so the reloaded entry's own
+    pass removes nothing; the earlier removals must still be checked."""
+    entry = _entry(hass)
+    assert await async_setup_component(
+        hass,
+        "script",
+        {
+            "script": {
+                "dry_check": {
+                    "sequence": [{"condition": "state", "entity_id": "sensor.old", "state": "x"}]
+                }
+            }
+        },
+    )
+    await hass.async_block_till_done()
+    hass.set_state(CoreState.starting)
+
+    async_notify_removed(hass, entry, ["sensor.old"])
+    await entry._async_process_on_unload(hass)
+    async_notify_removed(hass, entry, [])
+    hass.set_state(CoreState.running)
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+    await hass.async_block_till_done()
+
+    (issue,) = _issues(hass).values()
+    assert issue.translation_placeholders is not None
+    assert "/config/script/edit/dry_check" in issue.translation_placeholders["entities"]

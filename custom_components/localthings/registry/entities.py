@@ -62,9 +62,6 @@ class SamsungEntityDescription:
     # (rep, resources): rep is this entity's own href's representation;
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
-    # Where descriptors on different platforms share a key, setup removes the
-    # excluded ones' registry rows (cleanup.py), so a rep that can't decide
-    # yet must exclude every one of them.
     exists_fn: Callable[[dict, dict], bool] | None = None
     # Recheck exists_fn after setup: add when present, unavailable when
     # absent. For presence that follows live state, not the model. Only the
@@ -76,6 +73,10 @@ class SamsungEntityDescription:
     prune_when_excluded: bool = False
     # (platform, key) rows this entity replaces, removed once it is included.
     supersedes: tuple[tuple[str, str], ...] = ()
+    # Once included, remove this key's rows on its siblings' platforms. Only
+    # where inclusion is a model fact, never live state, and where a rep that
+    # can't decide yet excludes this descriptor.
+    replaces_siblings: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -113,7 +114,9 @@ class SamsungEntityDescription:
     def __post_init__(self) -> None:
         # Excluded is the normal state of a dynamic entity, so neither
         # registry removal may act on one.
-        if self.dynamic_presence and (self.prune_when_excluded or self.supersedes):
+        if self.dynamic_presence and (
+            self.prune_when_excluded or self.supersedes or self.replaces_siblings
+        ):
             raise ValueError(f"{self.key}: registry removal can't apply to dynamic_presence")
         if self.prune_when_excluded and self.exists_fn is None:
             raise ValueError(f"{self.key}: prune_when_excluded needs an exists_fn")
