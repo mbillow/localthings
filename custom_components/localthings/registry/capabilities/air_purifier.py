@@ -592,7 +592,7 @@ SOUND_VOLUME = Capability(
 # "sensing only").
 #
 # Hood controls were formerly read-only to avoid silently moving their platforms.
-# They now migrate intentionally via __init__._drop_read_only_hood_controls;
+# They now migrate intentionally via cleanup.async_reconcile_entities;
 # shared partial writes preserve each family's separate modes and clock semantics.
 #
 # Every write below was exercised on AVT-WW-TP1-23-AXX500 hardware and

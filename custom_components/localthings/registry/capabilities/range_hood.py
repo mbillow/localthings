@@ -317,12 +317,16 @@ AIR_QUALITY = Capability(
 
 def _sensing_modes(resources):
     rep = resources.get("/airlevelcheck/vs/0") or {}
+    if not _mode_present(rep):
+        return []
     supported = rep.get("x.com.samsung.da.supportedAutoExeState")
     modes = supported if isinstance(supported, list) else []
     modes = [m for m in modes if isinstance(m, str) and m.strip()]
     current = rep.get("x.com.samsung.da.autoExeState")
     if isinstance(current, str) and current.strip():
         modes.append(current)
+    if rep.get(SENSING_OBSERVED):
+        modes.append("Sensing")
     info = resources.get("/information/vs/0") or {}
     board = info.get("x.com.samsung.da.modelNum")
     # Only this verified board gets the unadvertised Sensing option (#794).
@@ -332,74 +336,114 @@ def _sensing_modes(resources):
 
 
 def _sensing_mode_write(payload, rep, href=None, resources=None):
+    if not _mode_present(rep, resources):
+        return None
     view = {**(resources or {}), "/airlevelcheck/vs/0": rep}
     if payload not in _sensing_modes(view):
         return None
     return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.autoExeState": payload}
 
 
+SENSING_OBSERVED = "_localthings_sensing_observed"
+_DND_FIELD = "x.com.samsung.da.periodicSensingSkipTime"
+
+
+def _mode_present(rep, resources=None):
+    value = rep.get("x.com.samsung.da.autoExeState")
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _on_off_present(field):
+    return lambda rep, resources=None: (
+        isinstance(rep.get(field), str) and rep[field].casefold() in {"on", "off"}
+    )
+
+
+def _hood_switch_write(field, writer):
+    def write(payload, rep, href=None):
+        if not _on_off_present(field)(rep) or payload not in {"On", "Off"}:
+            return None
+        return writer(payload, rep, href)
+
+    return write
+
+
+def _window_clocks(raw):
+    if not isinstance(raw, str) or len(raw) != 8 or not raw.isascii() or not raw.isdigit():
+        return None
+    start, end = skip_time_read("start")(raw), skip_time_read("end")(raw)
+    return (start, end) if start is not None and end is not None else None
+
+
+def _local_window(raw, now):
+    clocks = _window_clocks(raw)
+    if clocks is None or raw == "00000000":
+        return None
+    start, end = clocks
+    utc_now = now.astimezone(datetime.UTC)
+    anchor = datetime.datetime.combine(utc_now.date(), start, datetime.UTC)
+    if anchor < utc_now:
+        anchor += datetime.timedelta(days=1)
+    offset = anchor.astimezone(now.tzinfo).utcoffset()
+    assert offset is not None
+    return tuple(
+        (datetime.datetime.combine(now.date(), clock) + offset).time() for clock in (start, end)
+    )
+
+
 def _hood_dnd_read(part):
-    def read(raw):
-        if not isinstance(raw, str) or len(raw) != 8 or raw == "00000000":
-            return None
-        start, end = skip_time_read("start")(raw), skip_time_read("end")(raw)
-        if start is None or end is None:
-            return None
-        # App 22:00-05:00 in Los Angeles reports 06001300 locally: UTC,
-        # unlike the air-purifier's wall-clock field. TimeEntity localizes it.
-        now = datetime.datetime.now(datetime.UTC)
-        value = datetime.datetime.combine(
-            now.date(), start if part == "start" else end, datetime.UTC
-        )
-        return value if value >= now else value + datetime.timedelta(days=1)
+    def read(raw, now):
+        clocks = _local_window(raw, now)
+        return clocks[0 if part == "start" else 1] if clocks is not None else None
 
     return read
 
 
-# A fixed UTC window shifts local hours across DST; re-entering the desired
-# hours updates its offset. Reloading does not rewrite the device schedule.
+def _next_local_start(value, now):
+    utc_now = now.astimezone(datetime.UTC)
+    for days in (0, 1):
+        date = now.date() + datetime.timedelta(days=days)
+        requested = datetime.datetime.combine(date, value.replace(tzinfo=None))
+        candidates = []
+        for fold in (0, 1):
+            local = requested.replace(tzinfo=now.tzinfo, fold=fold)
+            utc = local.astimezone(datetime.UTC)
+            roundtrip = utc.astimezone(now.tzinfo)
+            # Gaps move forward by the gap; folds pick the next real occurrence.
+            if utc >= utc_now and roundtrip.replace(tzinfo=None) >= requested:
+                candidates.append((utc, roundtrip))
+        if candidates:
+            return min(candidates, key=lambda pair: pair[0])[1]
+    raise ValueError("No next local clock occurrence")
+
+
+# A stored UTC window still drifts seasonally; reload never rewrites it.
 def _hood_dnd_payload(value, now):
-    # Defer conversion until write_fn can read both halves of the window.
     return value, now
 
 
 def _hood_dnd_write(part):
     def write(payload, rep, href=None):
         value, now = payload
-        raw = rep.get("x.com.samsung.da.periodicSensingSkipTime")
-        start = skip_time_read("start")(raw)
-        end = skip_time_read("end")(raw)
-        if raw == "00000000" or start is None or end is None:
-            start = end = datetime.time(0)
-        else:
-            utc_now = now.astimezone(datetime.UTC)
-            anchor = datetime.datetime.combine(utc_now.date(), start, datetime.UTC)
-            if anchor < utc_now:
-                anchor += datetime.timedelta(days=1)
-            offset = anchor.astimezone(now.tzinfo).utcoffset()
-            assert offset is not None
-
-            # Decode both halves with the start's offset, not two occurrence dates.
-            def local_time(clock):
-                return (datetime.datetime.combine(now.date(), clock) + offset).time()
-
-            start, end = local_time(start), local_time(end)
+        raw = rep.get(_DND_FIELD)
+        if _window_clocks(raw) is None:
+            return None
+        start, end = _local_window(raw, now) or (datetime.time(0), datetime.time(0))
         if part == "start":
             start = value
         else:
             end = value
-        anchor = datetime.datetime.combine(now.date(), start, now.tzinfo)
-        if anchor < now:
-            anchor += datetime.timedelta(days=1)
-        anchor_offset = anchor.utcoffset()
-        assert anchor_offset is not None
-        fixed_zone = datetime.timezone(anchor_offset)
+        anchor = _next_local_start(start, now)
+        start = anchor.time()
+        offset = anchor.utcoffset()
+        assert offset is not None
+        fixed_zone = datetime.timezone(offset)
         clocks = [
             datetime.datetime.combine(now.date(), clock, fixed_zone).astimezone(datetime.UTC)
             for clock in (start, end)
         ]
         return ["airlevelcheck", "vs", "0"], {
-            "x.com.samsung.da.periodicSensingSkipTime": "".join(c.strftime("%H%M") for c in clocks)
+            _DND_FIELD: "".join(c.strftime("%H%M") for c in clocks)
         }
 
     return write
@@ -415,11 +459,12 @@ AIR_LEVEL_CHECK = Capability(
             field="x.com.samsung.da.periodicSensingActivationState",
             icon="mdi:fan-auto",
             entity_category="config",
-            exists_fn=lambda rep, resources: (
-                rep.get("x.com.samsung.da.periodicSensingActivationState") is not None
-            ),
+            exists_fn=_on_off_present("x.com.samsung.da.periodicSensingActivationState"),
+            dynamic_presence=True,
             value_fn=lambda value: str(value).lower() == "on",
-            write_fn=periodic_sensing_write,
+            write_fn=_hood_switch_write(
+                "x.com.samsung.da.periodicSensingActivationState", periodic_sensing_write
+            ),
         ),
         SelectDesc(
             key="automatic_ventilation_state",
@@ -428,7 +473,8 @@ AIR_LEVEL_CHECK = Capability(
             options=_sensing_modes,
             icon="mdi:fan-auto",
             entity_category="config",
-            exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.autoExeState")),
+            exists_fn=_mode_present,
+            dynamic_presence=True,
             write_fn=_sensing_mode_write,
         ),
         SwitchDesc(
@@ -436,11 +482,12 @@ AIR_LEVEL_CHECK = Capability(
             field="x.com.samsung.da.periodicSensingSkipStatus",
             icon="mdi:sleep",
             entity_category="config",
-            exists_fn=lambda rep, resources: (
-                rep.get("x.com.samsung.da.periodicSensingSkipStatus") is not None
-            ),
+            exists_fn=_on_off_present("x.com.samsung.da.periodicSensingSkipStatus"),
+            dynamic_presence=True,
             value_fn=lambda value: str(value).lower() == "on",
-            write_fn=skip_status_write,
+            write_fn=_hood_switch_write(
+                "x.com.samsung.da.periodicSensingSkipStatus", skip_status_write
+            ),
         ),
         *(
             TimeDesc(
@@ -448,10 +495,9 @@ AIR_LEVEL_CHECK = Capability(
                 field="x.com.samsung.da.periodicSensingSkipTime",
                 icon=f"mdi:clock-{part}",
                 entity_category="config",
-                exists_fn=lambda rep, resources: (
-                    rep.get("x.com.samsung.da.periodicSensingSkipTime") is not None
-                ),
-                value_fn=_hood_dnd_read(part),
+                exists_fn=lambda rep, resources: _window_clocks(rep.get(_DND_FIELD)) is not None,
+                dynamic_presence=True,
+                native_value_fn=_hood_dnd_read(part),
                 payload_fn=_hood_dnd_payload,
                 write_fn=_hood_dnd_write(part),
             )
@@ -488,7 +534,9 @@ AIR_LEVEL_CHECK = Capability(
             device_class="enum",
             options=_HOOD_GRADE_OPTIONS,
             # Kr1-Kr4 track CleanLevel 1-4 in this hood's recorded last results.
-            value_fn=lambda value: _HOOD_LAST_GRADES.get(value, value),
+            value_fn=lambda value: (
+                _HOOD_LAST_GRADES.get(value, value) if isinstance(value, str) else None
+            ),
             field="x.com.samsung.da.lastSensingLevel",
             icon="mdi:air-filter",
             entity_category="diagnostic",

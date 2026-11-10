@@ -60,11 +60,17 @@ def test_invalid_pm_reading_stays_unknown(values):
 def test_smart_ventilate_writes_do_not_overwrite_mode():
     desc = _desc("periodic_air_sensing")
     assert desc.write_fn is not None
-    assert desc.write_fn("Off", {"x.com.samsung.da.autoExeState": "Alarm"}) == (
+    assert desc.write_fn(
+        "Off",
+        {
+            "x.com.samsung.da.autoExeState": "Alarm",
+            "x.com.samsung.da.periodicSensingActivationState": "On",
+        },
+    ) == (
         ["airlevelcheck", "vs", "0"],
         {"x.com.samsung.da.periodicSensingActivationState": "Off"},
     )
-    assert desc.write_fn("On", {}) == (
+    assert desc.write_fn("On", {desc.field: "Off"}) == (
         ["airlevelcheck", "vs", "0"],
         {"x.com.samsung.da.periodicSensingActivationState": "On"},
     )
@@ -91,11 +97,11 @@ def test_modes_include_detection_only_and_future_advertised_values():
 
 def test_do_not_disturb_switch_uses_skip_status_only():
     desc = _desc("hood_do_not_disturb")
-    assert desc.write_fn("On", {}) == (
+    assert desc.write_fn("On", {desc.field: "Off"}) == (
         ["airlevelcheck", "vs", "0"],
         {"x.com.samsung.da.periodicSensingSkipStatus": "On"},
     )
-    assert desc.write_fn("Off", {}) == (
+    assert desc.write_fn("Off", {desc.field: "On"}) == (
         ["airlevelcheck", "vs", "0"],
         {"x.com.samsung.da.periodicSensingSkipStatus": "Off"},
     )
@@ -145,7 +151,12 @@ def test_dnd_utc_clock_is_presented_in_local_timezone(monkeypatch, date, start, 
 )
 def test_malformed_dnd_window_does_not_produce_a_clock(raw):
     for part in ("start", "end"):
-        assert _desc(f"hood_do_not_disturb_{part}").value_fn(raw) is None
+        assert (
+            _desc(f"hood_do_not_disturb_{part}").native_value_fn(
+                raw, datetime.datetime(2026, 11, 2, tzinfo=datetime.UTC)
+            )
+            is None
+        )
 
 
 def test_absent_setting_fields_do_not_create_phantom_controls():
@@ -363,7 +374,7 @@ def test_mode_options_and_writes_use_same_evidence(board, current, supported, wa
     if board is not None:
         resources["/information/vs/0"] = {"x.com.samsung.da.modelNum": board}
     expected = set(want)
-    if board == "AHD-WW-TP1-22-COMMON|firmware":
+    if board == "AHD-WW-TP1-22-COMMON|firmware" and isinstance(current, str) and current.strip():
         expected.add("Sensing")
     options = desc.options(resources)
     assert set(options) == expected
@@ -376,3 +387,42 @@ def test_mode_options_and_writes_use_same_evidence(board, current, supported, wa
     assert desc.write_fn("Bogus", rep, HREF, resources) is None
     if "Sensing" not in expected:
         assert desc.write_fn("Sensing", rep, HREF, resources) is None
+
+
+@pytest.mark.parametrize("value", [{}, [], 42, True])
+def test_malformed_last_grade_does_not_break_other_readings(value):
+    resources = {
+        HREF: {
+            "x.com.samsung.da.lastSensingLevel": value,
+            "x.com.samsung.da.sensingState": "NonProcessing",
+        }
+    }
+    bound = discover(resources, {HREF: [range_hood.AIR_LEVEL_CHECK]})
+    state = flatten(bound, resources)
+    assert state["last_air_sensing_level"] is None
+    assert state["air_sensing_state"] == "NonProcessing"
+
+
+@pytest.mark.parametrize(
+    "field,key,invalid,payload",
+    [
+        ("x.com.samsung.da.periodicSensingActivationState", "periodic_air_sensing", {}, "On"),
+        ("x.com.samsung.da.periodicSensingSkipStatus", "hood_do_not_disturb", "garbage", "On"),
+        ("x.com.samsung.da.autoExeState", "automatic_ventilation_state", [], "Airpurify"),
+        ("x.com.samsung.da.autoExeState", "automatic_ventilation_state", "   ", "Airpurify"),
+        (
+            "x.com.samsung.da.periodicSensingSkipTime",
+            "hood_do_not_disturb_start",
+            {},
+            (datetime.time(9), datetime.datetime(2026, 11, 2, tzinfo=datetime.UTC)),
+        ),
+    ],
+)
+def test_malformed_or_lost_control_evidence_is_not_writable(field, key, invalid, payload):
+    resources = _load_device("range_hood")
+    desc = _desc(key)
+    for value in (invalid, None):
+        rep = dict(resources[HREF])
+        rep[field] = value
+        assert not desc.exists_fn(rep, {**resources, HREF: rep})
+        assert desc.write_fn(payload, rep) is None
