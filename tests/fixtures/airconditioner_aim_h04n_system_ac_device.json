@@ -122,17 +122,6 @@
       }
     },
     {
-      "href": "/file/transfer/vs/0",
-      "rep": {
-        "rt": [
-          "x.com.samsung.file.transfer"
-        ],
-        "if": [
-          "oic.if.s"
-        ]
-      }
-    },
-    {
       "href": "/filter/airdustfilter/vs/0",
       "rep": {
         "rt": [

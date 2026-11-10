@@ -382,22 +382,17 @@ def _legacy_cumulative_power_kwh(v):
 
 
 def _declares_plain_wh(rep):
-    """True when /energy/consumption/vs/0 explicitly reports its cumulative
-    unit as Wh. The ARTIK051 boards that actually count centiwatt-hours
-    (#193) omit the unit field entirely, so an explicit "Wh" is a reliable
-    signal to use the plain Wh->kWh conversion instead of the airflow-topology
-    legacy guess -- which otherwise divides by 100000 and reads ~100x low on
-    the AIM-H04N multi-split, whose indoor units are airflow-legacy yet report
-    "Wh" (issue #789). A kit reporting any other unit, or none, is left to the
-    topology-based selection and #193's centiwatt-hour conversion."""
+    """True when /energy/consumption/vs/0 declares cumulativeUnit "Wh".
+    ARTIK051's centiwatt-hour boards (#193) omit the field, so an explicit "Wh"
+    selects plain Wh->kWh over the /100000 centiwatt-hour scale -- airflow-legacy
+    AIM-H04N multi-split reports "Wh" (#789)."""
     unit = rep.get("x.com.samsung.da.cumulativeUnit")
     return isinstance(unit, str) and unit.strip().lower() == "wh"
 
 
 ENERGY_METER_LEGACY = replace(
     common.ENERGY_METER,
-    match_fn=lambda rep, resources: is_legacy_board(resources)
-    and not _declares_plain_wh(rep),
+    match_fn=lambda rep, resources: is_legacy_board(resources) and not _declares_plain_wh(rep),
     entities=tuple(
         replace(e, value_fn=_legacy_cumulative_power_kwh) if e.key == "energy_kwh" else e
         for e in common.ENERGY_METER.entities
@@ -409,8 +404,7 @@ ENERGY_METER_LEGACY = replace(
 # legacy-by-airflow board that declares its Wh unit (issue #789).
 ENERGY_METER_GENERIC = replace(
     common.ENERGY_METER,
-    match_fn=lambda rep, resources: not is_legacy_board(resources)
-    or _declares_plain_wh(rep),
+    match_fn=lambda rep, resources: not is_legacy_board(resources) or _declares_plain_wh(rep),
 )
 
 # The usage file's energy field is plain Wh on every AC measured, not the
@@ -1453,14 +1447,11 @@ CURRENT_TEMPERATURE_VS = Capability(
     ),
 )
 
-# System AC (multi-indoor-subdevice, AIM-H04N etc.) exposes each indoor
-# unit's vendor temperature at /temperatures/indoor/vs/0 (flat fields, not
-# /temperatures/vs/0's items[] array) and omits the OCF pair from its
-# /device/0 batch, so current temperature never reached the climate card.
-# Guarded on /subdevice/vs/0 (present only on a UUID-prefixed indoor
-# subdevice) so it can't bind the MIM-H04EN EHS kit's fixed-24 placeholder
-# on a single-device MAIN (see _AC_IGNORED note). Writes go to the same flat
-# resource via _climate_write's temperature_indoor branch.
+# System AC (multi-indoor-subdevice, AIM-H04N) reports each indoor unit's
+# temperature at the flat /temperatures/indoor/vs/0 and omits the OCF pair, so
+# current temperature never reached the card (#789). Guarded on /subdevice/vs/0
+# so it binds only a real indoor subdevice, not the MIM-H04EN EHS kit's
+# single-device fixed-24 placeholder (#682).
 CURRENT_TEMPERATURE_INDOOR_VS = Capability(
     href=HREF_TEMPS_INDOOR_VS,
     poll_tier="warm",
@@ -1968,22 +1959,14 @@ _AC_IGNORED = [
     # Empty ({}) on a cool-only RAC (issue #569). Revisit if a heat-pump dump
     # populates it.
     "/auxiliaryheater/vs/0",
-    # System-AC per-indoor-subdevice records (AIM-H04N multi-indoor): the
-    # subdevice's own registration/identity (read by registry.subdevices, not a
-    # user entity), an empty action-trigger endpoint, the per-subdevice
-    # outdoor-unit temperature, and a long-wind mode option. The outdoor
-    # reading is real (x.com.samsung.da.current) and a candidate for its own
-    # sensor in a follow-up; /modeoption/windlong/vs/0 is an untested on/off
-    # control (issue #789). Acknowledged here so coverage stays complete.
+    # System-AC per-indoor-subdevice records (AIM-H04N): the subdevice identity
+    # (read by registry.subdevices), an empty action endpoint, the outdoor-unit
+    # temperature, and the windlong mode option -- none a user entity yet. The
+    # outdoor temp is a candidate follow-up sensor (#789).
     "/subdevice/vs/0",
     "/actions/vs/0",
     "/temperatures/outside/vs/0",
     "/modeoption/windlong/vs/0",
-    # The MIM-H04EN EHS Wi-Fi kit's (#682): a fixed 24/24 placeholder marked
-    # Hide. The heat pump behind the kit reports its real one. NOTE: multi-
-    # indoor system ACs (AIM-H04N) carry real per-subdevice temps here -- bound
-    # by CURRENT_TEMPERATURE_INDOOR_VS, guarded on /subdevice/vs/0 so this
-    # single-device EHS placeholder stays unbound.
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

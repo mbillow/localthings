@@ -42,9 +42,7 @@ from custom_components.localthings.registry.capabilities.airconditioner import (
 from custom_components.localthings.registry.discovery import discover
 
 FIXTURE = (
-    Path(__file__).resolve().parent
-    / "fixtures"
-    / "airconditioner_aim_h04n_system_ac_device.json"
+    Path(__file__).resolve().parent / "fixtures" / "airconditioner_aim_h04n_system_ac_device.json"
 )
 
 
@@ -139,6 +137,8 @@ def test_energy_meter_selects_wh_scale_when_declared():
     generic Wh->kWh meter claims it and the centiwatt-hour meter does not."""
     resources = _resources()
     rep = resources["/energy/consumption/vs/0"]
+    assert ENERGY_METER_GENERIC.match_fn is not None
+    assert ENERGY_METER_LEGACY.match_fn is not None
     assert ENERGY_METER_GENERIC.match_fn(rep, resources) is True
     assert ENERGY_METER_LEGACY.match_fn(rep, resources) is False
 
@@ -151,6 +151,8 @@ def test_energy_meter_stays_legacy_without_a_declared_unit():
         "/energy/consumption/vs/0": {"x.com.samsung.da.cumulativePower": "275239500"},
     }
     rep = resources["/energy/consumption/vs/0"]
+    assert ENERGY_METER_LEGACY.match_fn is not None
+    assert ENERGY_METER_GENERIC.match_fn is not None
     assert ENERGY_METER_LEGACY.match_fn(rep, resources) is True
     assert ENERGY_METER_GENERIC.match_fn(rep, resources) is False
 
