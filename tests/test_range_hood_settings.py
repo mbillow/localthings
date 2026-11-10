@@ -136,7 +136,9 @@ def test_dnd_utc_clock_is_presented_in_local_timezone(monkeypatch, date, start, 
             assert LocalThingsTime(coordinator, bound).native_value == want
 
 
-@pytest.mark.parametrize("raw", [None, "", "24601300", "06009999", "060013", "abcdef00"])
+@pytest.mark.parametrize(
+    "raw", [None, "", "00000000", "24601300", "06009999", "060013", "abcdef00"]
+)
 def test_malformed_dnd_window_does_not_produce_a_clock(raw):
     for part in ("start", "end"):
         assert _desc(f"hood_do_not_disturb_{part}").value_fn(raw) is None
@@ -308,4 +310,27 @@ def test_concentration_names_keep_existing_translation_keys(key):
 )
 def test_dnd_write_uses_target_offset_across_dst(now, local, want):
     desc = _desc("hood_do_not_disturb_start")
-    assert desc.payload_fn(local, now) == want
+    payload = desc.payload_fn(local, now)
+    _, body = desc.write_fn(payload, {"x.com.samsung.da.periodicSensingSkipTime": "06001300"})
+    assert body["x.com.samsung.da.periodicSensingSkipTime"][:4] == want.strftime("%H%M")
+
+
+def test_purifier_unset_window_remains_wall_clock_midnight():
+    from custom_components.localthings.registry.capabilities import air_purifier
+
+    times = [d for d in air_purifier.AIR_LEVEL_CHECK.entities if isinstance(d, TimeDesc)]
+    assert len(times) == 2
+    assert all(d.value_fn("00000000") == datetime.time(0) for d in times)
+
+
+@pytest.mark.parametrize(
+    "part,picked,want",
+    [("start", datetime.time(23), "07001300"), ("end", datetime.time(6), "06001400")],
+)
+def test_single_dnd_edit_preserves_other_half(part, picked, want):
+    desc = _desc(f"hood_do_not_disturb_{part}")
+    now = datetime.datetime(2026, 11, 2, 21, tzinfo=ZoneInfo("America/Los_Angeles"))
+    _, body = desc.write_fn(
+        desc.payload_fn(picked, now), {"x.com.samsung.da.periodicSensingSkipTime": "06001300"}
+    )
+    assert body == {"x.com.samsung.da.periodicSensingSkipTime": want}

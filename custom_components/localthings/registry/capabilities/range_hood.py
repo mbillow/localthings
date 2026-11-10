@@ -33,7 +33,6 @@ from .air_sensing import (
     periodic_sensing_write,
     skip_status_write,
     skip_time_read,
-    skip_time_write,
 )
 from .common import (
     epoch_to_utc,
@@ -337,7 +336,7 @@ def _sensing_mode_write(payload, rep, href=None):
 
 def _hood_dnd_read(part):
     def read(raw):
-        if not isinstance(raw, str) or len(raw) != 8:
+        if not isinstance(raw, str) or len(raw) != 8 or raw == "00000000":
             return None
         start, end = skip_time_read("start")(raw), skip_time_read("end")(raw)
         if start is None or end is None:
@@ -356,10 +355,47 @@ def _hood_dnd_read(part):
 # A fixed UTC window shifts local hours across DST; re-entering the desired
 # hours updates its offset. Reloading does not rewrite the device schedule.
 def _hood_dnd_payload(value, now):
-    local = datetime.datetime.combine(now.date(), value, now.tzinfo)
-    if local < now:
-        local += datetime.timedelta(days=1)
-    return local.astimezone(datetime.UTC).time()
+    # Defer conversion until write_fn can read both halves of the window.
+    return value, now
+
+
+def _hood_dnd_write(part):
+    def write(payload, rep, href=None):
+        value, now = payload
+        raw = rep.get("x.com.samsung.da.periodicSensingSkipTime")
+        start = skip_time_read("start")(raw)
+        end = skip_time_read("end")(raw)
+        if raw == "00000000" or start is None or end is None:
+            start = end = datetime.time(0)
+        else:
+            utc_now = now.astimezone(datetime.UTC)
+            anchor = datetime.datetime.combine(utc_now.date(), start, datetime.UTC)
+            if anchor < utc_now:
+                anchor += datetime.timedelta(days=1)
+            offset = anchor.astimezone(now.tzinfo).utcoffset()
+
+            # Decode both halves with the start's offset, not two occurrence dates.
+            def local_time(clock):
+                return (datetime.datetime.combine(now.date(), clock) + offset).time()
+
+            start, end = local_time(start), local_time(end)
+        if part == "start":
+            start = value
+        else:
+            end = value
+        anchor = datetime.datetime.combine(now.date(), start, now.tzinfo)
+        if anchor < now:
+            anchor += datetime.timedelta(days=1)
+        fixed_zone = datetime.timezone(anchor.utcoffset())
+        clocks = [
+            datetime.datetime.combine(now.date(), clock, fixed_zone).astimezone(datetime.UTC)
+            for clock in (start, end)
+        ]
+        return ["airlevelcheck", "vs", "0"], {
+            "x.com.samsung.da.periodicSensingSkipTime": "".join(c.strftime("%H%M") for c in clocks)
+        }
+
+    return write
 
 
 AIR_LEVEL_CHECK = Capability(
@@ -410,7 +446,7 @@ AIR_LEVEL_CHECK = Capability(
                 ),
                 value_fn=_hood_dnd_read(part),
                 payload_fn=_hood_dnd_payload,
-                write_fn=skip_time_write(part),
+                write_fn=_hood_dnd_write(part),
             )
             for part in ("start", "end")
         ),

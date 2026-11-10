@@ -116,7 +116,9 @@ async def test_setup_migrates_hood_controls(hass, mock_entry, offline):
 
 
 @pytest.mark.parametrize("missing", ["empty_mode", "missing_activation"])
-async def test_removes_old_platform_even_when_replacement_is_excluded(hass, mock_entry, missing, caplog):
+async def test_removes_old_platform_even_when_replacement_is_excluded(
+    hass, mock_entry, missing, caplog
+):
     resources = _load_device("range_hood")
     rep = resources["/airlevelcheck/vs/0"]
     if missing == "empty_mode":
