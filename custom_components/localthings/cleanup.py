@@ -83,6 +83,63 @@ def _decides(bound: BoundEntity, rep: dict | None) -> bool:
     return rep is not None and _populated(rep) and (not bound.desc.field or bound.desc.field in rep)
 
 
+class _ReadLog(dict):
+    """A resources view that records which hrefs an exists_fn looks up."""
+
+    def __init__(self, resources: dict) -> None:
+        super().__init__(resources)
+        self.read: set[str] = set()
+
+    def __getitem__(self, href):
+        self.read.add(href)
+        return super().__getitem__(href)
+
+    def get(self, href, default=None):
+        self.read.add(href)
+        return super().get(href, default)
+
+    def __contains__(self, href) -> bool:
+        self.read.add(href)
+        return super().__contains__(href)
+
+    # Scanning the view reads every href in it.
+    def __iter__(self):
+        self.read.update(dict.keys(self))
+        return super().__iter__()
+
+    def keys(self):
+        self.read.update(dict.keys(self))
+        return super().keys()
+
+    def items(self):
+        self.read.update(dict.keys(self))
+        return super().items()
+
+    def values(self):
+        self.read.update(dict.keys(self))
+        return super().values()
+
+
+def _judged_on_populated(bound: BoundEntity, coordinator: LocalThingsCoordinator) -> bool:
+    """Whether every other resource this descriptor's exists_fn read is populated.
+
+    An exists_fn may decide from any resource, and many are optimistic about
+    a stub. An absent href is still evidence (#785's burners rely on
+    /cooktop/status/vs/0 being absent); a stub or {} is not. The own rep is
+    left to each rule, since prune_when_excluded acts on its {} by design.
+    """
+    if bound.desc.exists_fn is None:
+        return True
+    view = _ReadLog(coordinator.discovery_canonical(bound.subdevice))
+    bound.desc.exists_fn(coordinator.discovery_resources.get(bound.href) or {}, view)
+    own = bound.subdevice.to_canonical(bound.href)
+    return all(
+        _populated(dict.get(view, href))
+        for href in view.read
+        if href != own and dict.__contains__(view, href)
+    )
+
+
 def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, str, str]]:
     """(platform, unique_id, reason) for rows the bound descriptors rule out."""
     # entity.py imports this module's caller, so this one can't import it at the top.
@@ -123,28 +180,41 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
             and not any(b.desc.dynamic_presence for b in siblings)
             and all(_decides(b, resources.get(b.href)) for b in winners)
             and all(_populated(resources.get(b.href)) for b in siblings)
+            and all(_judged_on_populated(b, coordinator) for b in siblings)
         ):
             replaced_by = ", ".join(sorted({_platform(b) for b in winners}))
             for platform in platforms - kept:
                 yield platform, uid, f"replaced by its {replaced_by} entity"
 
         for bound in siblings:
-            if bound.desc.prune_when_excluded and _platform(bound) not in kept:
+            if (
+                bound.desc.prune_when_excluded
+                and _platform(bound) not in kept
+                and _judged_on_populated(bound, coordinator)
+            ):
                 yield _platform(bound), uid, "not reported by this device"
 
     for bound in coordinator.bound:
-        # Same rep guard as replaces_siblings: an optimistic exists_fn
+        # Same evidence guards as replaces_siblings: an optimistic exists_fn
         # includes a stub, which says nothing about this model.
         if (
             not bound.desc.supersedes
             or not _is_included(bound, coordinator)
             or not _decides(bound, resources.get(bound.href))
+            or not _judged_on_populated(bound, coordinator)
         ):
             continue
         for platform, key in bound.desc.supersedes:
             uid = f"{prefix}{bound.subdevice.key_prefix}{key}{bound.instance}"
-            still_bound = {_platform(b) for b in by_uid.get(uid, ())}
-            if platform not in still_bound:
+            old = [b for b in by_uid.get(uid, ()) if _platform(b) == platform]
+            # An old descriptor bound in the same capability is dead once
+            # excluded, unless it can still appear.
+            if not any(
+                b.desc.dynamic_presence
+                or _is_included(b, coordinator)
+                or not _judged_on_populated(b, coordinator)
+                for b in old
+            ):
                 yield platform, uid, f"replaced by {_key(bound)}"
 
 
