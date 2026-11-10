@@ -25,6 +25,7 @@ from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import _key
+from custom_components.localthings.registry.batch import is_stub_rep
 from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY, resolve
 from custom_components.localthings.registry.capabilities import common, fridge
 from custom_components.localthings.registry.capability import Capability
@@ -370,6 +371,174 @@ async def test_supersedes_waits_for_a_rep_that_decides(hass, rep):
 
     async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": {"a": 1}}, capabilities))
     assert not _alive(hass, old)
+
+
+def _supersede(old_exists=None, old_dynamic=False, mode_gate=False):
+    """`new_timer` replaces `old_timer` in the same capability, like #785's
+    decoded burners and raw mask. With `mode_gate`, the replacement's
+    exists_fn reads /mode/vs/0 and is optimistic on a stub, as #785's is."""
+
+    def new_exists(rep, resources):
+        if not mode_gate:
+            return True
+        mode = resources.get("/mode/vs/0") or {}
+        return is_stub_rep(mode) or mode.get("fuel") == "Gas"
+
+    return {
+        "/x/vs/0": [
+            Capability(
+                href="/x/vs/0",
+                entities=(
+                    SensorDesc(
+                        key="new_timer",
+                        field="a",
+                        exists_fn=new_exists,
+                        supersedes=(("sensor", "old_timer"),),
+                    ),
+                    SensorDesc(
+                        key="old_timer",
+                        field="a",
+                        exists_fn=old_exists,
+                        dynamic_presence=old_dynamic,
+                    ),
+                ),
+            )
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "old_exists,old_dynamic,removed",
+    [
+        (lambda rep, resources: True, False, False),
+        (lambda rep, resources: False, False, True),
+        (lambda rep, resources: False, True, False),
+    ],
+    ids=["old_included", "old_excluded", "old_dynamic"],
+)
+async def test_supersedes_acts_on_an_excluded_key_in_the_same_capability(
+    hass, old_exists, old_dynamic, removed
+):
+    entry = _entry(hass)
+    old = _row(hass, entry, "sensor", "old_timer")
+    capabilities = _supersede(old_exists, old_dynamic)
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": {"a": 1}}, capabilities))
+
+    assert _alive(hass, old) is not removed
+
+
+async def test_supersedes_spares_an_old_key_excluded_on_a_stub(hass):
+    entry = _entry(hass)
+    old = _row(hass, entry, "sensor", "old_timer")
+    resources = {"/x/vs/0": {"a": 1}, "/info/vs/0": {"href": "/info/vs/0"}}
+    capabilities = _supersede(lambda rep, resources: _info_ok(resources))
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, capabilities))
+
+    assert _alive(hass, old)
+
+
+@pytest.mark.parametrize(
+    "mode,removed",
+    [({"href": "/mode/vs/0"}, False), ({}, False), (None, False), ({"fuel": "Gas"}, True)],
+    ids=["stub", "empty", "absent", "gas"],
+)
+async def test_supersedes_needs_every_resource_its_exists_fn_read(hass, mode, removed):
+    """#785: a stub /mode/vs/0 includes the decoded burners on any range."""
+    entry = _entry(hass)
+    old = _row(hass, entry, "sensor", "old_timer")
+    resources: dict[str, dict] = {"/x/vs/0": {"a": 1}}
+    if mode is not None:
+        resources["/mode/vs/0"] = mode
+    capabilities = _supersede(lambda rep, resources: False, mode_gate=True)
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, capabilities))
+
+    assert _alive(hass, old) is not removed
+
+
+def _probe(read):
+    return {
+        "/x/vs/0": [
+            Capability(
+                href="/x/vs/0",
+                entities=(
+                    SwitchDesc(
+                        key="probe",
+                        field="a",
+                        exists_fn=lambda rep, resources: read(resources),
+                        prune_when_excluded=True,
+                    ),
+                ),
+            )
+        ]
+    }
+
+
+def _info_ok(resources):
+    return (resources.get("/info/vs/0") or {}).get("ok") == 1
+
+
+@pytest.mark.parametrize(
+    "info,removed",
+    [({"href": "/info/vs/0"}, False), ({}, False), (None, True), ({"ok": 0}, True)],
+    ids=["stub", "empty", "absent", "reported"],
+)
+async def test_prune_counts_an_absent_resource_but_not_a_stub(hass, info, removed):
+    entry = _entry(hass)
+    row = _row(hass, entry, "switch", "probe")
+    resources: dict[str, dict] = {"/x/vs/0": {"a": 1}}
+    if info is not None:
+        resources["/info/vs/0"] = info
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, _probe(_info_ok)))
+
+    assert _alive(hass, row) is not removed
+
+
+async def test_prune_judges_its_own_empty_rep_as_before(hass):
+    """The own rep is not cross-resource evidence: an {} still prunes, as
+    the oven Sound switch's did, even when exists_fn reads it via resources."""
+    entry = _entry(hass)
+    row = _row(hass, entry, "switch", "probe")
+    own = _probe(lambda resources: bool((resources.get("/x/vs/0") or {}).get("a")))
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": {}}, own))
+
+    assert not _alive(hass, row)
+
+
+async def test_an_exists_fn_that_scans_resources_reads_all_of_them(hass):
+    entry = _entry(hass)
+    row = _row(hass, entry, "switch", "probe")
+    resources = {"/x/vs/0": {"a": 1}, "/other/vs/0": {"href": "/other/vs/0"}}
+    scan = _probe(lambda resources: any(h.startswith("/t/") for h in resources))
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, scan))
+
+    assert _alive(hass, row)
+
+
+async def test_replaces_siblings_needs_every_resource_its_exists_fn_read(hass):
+    entry = _entry(hass)
+    switch = _row(hass, entry, "switch", "lamp")
+    sensor = BinarySensorDesc(
+        key="lamp",
+        field="a",
+        exists_fn=lambda rep, resources: _info_ok(resources) or True,
+        replaces_siblings=True,
+    )
+    loser = SwitchDesc(key="lamp", field="a", exists_fn=lambda rep, resources: False)
+    capabilities = {"/x/vs/0": [Capability(href="/x/vs/0", entities=(loser, sensor))]}
+    resources = {"/x/vs/0": {"a": "On"}, "/info/vs/0": {"href": "/info/vs/0"}}
+
+    async_reconcile_entities(hass, entry, _coordinator(resources, capabilities))
+    assert _alive(hass, switch)
+
+    resources["/info/vs/0"] = {"ok": 1}
+    async_reconcile_entities(hass, entry, _coordinator(resources, capabilities))
+    assert not _alive(hass, switch)
 
 
 # --- the Repair --------------------------------------------------------------
