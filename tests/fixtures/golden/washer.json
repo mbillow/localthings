@@ -3,7 +3,7 @@
     "ai_energy_level",
     "alarm_code",
     "bubble_soak",
-    "buzzer_sound",
+    "buzzer_sound_enabled",
     "child_lock",
     "completion_minutes",
     "cycle",

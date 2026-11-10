@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Luz da coifa pareada"
+      },
+      "drum_light": {
+        "name": "Luz do tambor"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "Lavagem fria econômica",
           "b1": "Autolimpeza+",
           "ba": "Drenar/Centrifugar",
+          "bd": "Lavagem ideal automática",
           "c7": "Limpeza do tambor Eco",
           "ca": "Air Wash",
           "d0": "Algodão",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Calor gerado"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura de saída da água (ciclo)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura de retorno da água (ciclo)"
+      },
+      "cycle_flow_rate": {
+        "name": "Vazão (ciclo)"
+      },
+      "cycle_pump_speed": {
+        "name": "Velocidade da bomba (ciclo)"
+      },
+      "compressor_frequency": {
+        "name": "Frequência do compressor"
+      },
+      "compressor_target_frequency": {
+        "name": "Frequência alvo do compressor"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura de descarga"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura de saturação do evaporador"
+      },
+      "suction_temperature": {
+        "name": "Temperatura de sucção"
+      },
+      "cycle_updated": {
+        "name": "Dados do ciclo atualizados"
+      },
       "three_way_valve": {
         "name": "Válvula de 3 vias"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Repetir limpeza"
       },
-      "drum_light": {
-        "name": "Luz do tambor"
-      },
       "buzzer_sound": {
         "name": "Sinal sonoro"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "Nenhuma resposta desse endereço IP — não houve retorno em nenhuma porta da faixa da API local do aparelho (UDP 49152-49160). Verifique se o endereço IP está correto, se o aparelho está ligado e na mesma rede do Home Assistant e se nenhum firewall está bloqueando o tráfego UDP até ele.",
       "ports_closed": "Esse endereço IP está acessível, mas recusou ativamente todas as portas da faixa da API local (UDP 49152-49160) e não respondeu no canal de descoberta. Provavelmente não é um aparelho Samsung ou não tem a API local ativada.",
       "no_dtls_server": "Há portas da faixa da API local acessíveis nesse endereço, mas nenhuma respondeu à negociação DTLS. Verifique se o endereço IP pertence ao aparelho e não a outro dispositivo da sua rede.",
+      "exec_memory_denied": "O Home Assistant não tem permissão para criar memória executável, que a biblioteca DTLS precisa para seus callbacks, então nenhum handshake pôde sequer começar. É uma configuração do host do Home Assistant, não um problema do aparelho. Em uma instalação com systemd, defina MemoryDenyWriteExecute=no (ou remova a linha) na unidade de serviço do Home Assistant e reinicie-o. A configuração deny_execmem do SELinux e kernels reforçados podem causar o mesmo. O log do Home Assistant tem o erro exato.",
       "appliance_no_dtls": "Esse endereço pertence a um aparelho Samsung — ele se identificou como {model} pelo canal de descoberta não criptografado e anunciou a porta segura {port} — mas nunca concluiu a negociação DTLS nela. O problema não é o endereço. Verifique se o controle remoto ou uma configuração semelhante está desativada no painel do aparelho e consulte o log do Home Assistant para saber a falha exata.",
       "non_appliance_stack": "Algo nesse endereço IP respondeu, mas se identificou como um serviço OCF que não é um eletrodoméstico. Alguns aparelhos Samsung executam um serviço assim junto ao seu próprio, e o LocalThings só consegue encontrar o aparelho por trás dele quando o Home Assistant está no mesmo segmento de rede. Coloque o Home Assistant e o aparelho na mesma sub-rede e VLAN e tente novamente.",
       "multiple_appliances": "Mais de um aparelho Samsung responde nesse endereço IP, e o LocalThings ainda não consegue escolher entre eles. Relate o problema no rastreador de issues do LocalThings e inclua o log do Home Assistant.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Ciclos baixados não configurados para {device_name}",
       "description": "{device_name} tem {pending} de {total} ciclo(s) baixado(s) que o Home Assistant ainda não pode oferecer. Um ciclo baixado só pode ser usado depois que o aparelho tiver sido detectado com ele carregado — na tela \"Baixar ciclos\" do aplicativo SmartThings, não na tela \"Ciclo\" — e você tiver dado um nome a ele.\n\nPara configurá-los, acesse Configurações > Dispositivos e serviços > LocalThings > {device_name} > Configurar > Baixar ciclos e siga as instruções.\n\nNão usa ciclos baixados? Acesse Configurar > Configurações do dispositivo e desative \"Oferecer ciclos baixados\" para silenciar este lembrete permanentemente."
+    },
+    "removed_entities": {
+      "title": "Entidades removidas de {device_name}",
+      "description": "O LocalThings removeu de {device_name} entidades que não fornece mais, geralmente porque nesta versão elas passaram a ser outro tipo de entidade. Estas automações e scripts ainda fazem referência a elas:\n\n{entities}\n\nAtualize-os para usar as entidades substitutas na página do dispositivo e depois dispense este aviso."
     }
   },
   "exceptions": {

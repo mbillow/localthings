@@ -81,7 +81,7 @@ from .registry.capabilities.common import (
     remote_control_enabled,
     remote_control_required_for_write,
 )
-from .registry.capabilities.laundry import cycle_options
+from .registry.capabilities.laundry import _buzzer_kind, cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc
@@ -537,6 +537,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._identity: DeviceIdentity | None = None
         self._discovered = False
         self.bound = []
+        self._buzzer_choices: dict[str, str | None] | None = None
+        self._buzzer_reload_pending = False
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
         # Loaded by async_load_mode_specs before the first refresh.
@@ -1968,6 +1970,43 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Discovery snapshot (issue #295)
     # ------------------------------------------------------------------
 
+    @callback
+    def async_watch_laundry_buzzer_choices(self) -> None:
+        """Reload after late model evidence changes a static buzzer platform."""
+        if not self._buzzer_choices:
+            return
+        self._entry.async_on_unload(self.async_add_listener(self._check_buzzer_choices))
+        self._check_buzzer_choices()
+
+    @callback
+    def _check_buzzer_choices(self) -> None:
+        if self._closed or self.rehydrated or self._buzzer_reload_pending:
+            return
+        for href, initial in (self._buzzer_choices or {}).items():
+            current = _buzzer_kind(self.cached_resource(href) or {})
+            if current is not None and current != initial:
+                self._buzzer_reload_pending = True
+                self._entry.async_create_background_task(
+                    self.hass,
+                    self._async_reload_buzzer_choice(
+                        {**self.discovery_resources, **self.last_resources}
+                    ),
+                    "localthings_buzzer_choice",
+                )
+                return
+
+    async def _async_reload_buzzer_choice(self, resources: dict[str, dict]) -> None:
+        # A reload may come up offline; bank the evidence before discarding
+        # the registration made from an incomplete or older representation.
+        saved = await self._async_save_snapshot(
+            resources,
+            [*self.subdevices, *self.disabled_subdevices],
+        )
+        if not saved:
+            self._buzzer_reload_pending = False
+        elif not self._closed:
+            self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
+
     def _bound_keys(self) -> frozenset[tuple[str, str]]:
         """This entity set's identity: one (subdevice, state key) pair per
         bound entity. `_key` is the unique_id suffix, so two discoveries that
@@ -1992,7 +2031,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]
-    ) -> None:
+    ) -> bool:
         """Record what this first cycle handed `_run_discovery`, so the next
         restart can replay it while the appliance is unreachable.
 
@@ -2027,6 +2066,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # polling outright. Worst case this entry can't load offline,
             # which is where it was before any of this existed.
             self._log.warning("could not write discovery snapshot: %s", e)
+            return False
+        return True
 
     async def _with_remembered_resources(self, live: dict[str, dict]) -> dict[str, dict]:
         """A flat board's discovery read, plus what the last snapshot holds
@@ -2185,6 +2226,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             len(gone),
             len(new),
         )
+        self._buzzer_reload_pending = True
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
     def _run_discovery(self, resources: dict[str, dict], from_snapshot: bool = False) -> None:
@@ -2274,6 +2316,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
         self.device_type_name = device_type_name
         self.bound = bound
+        if self._buzzer_choices is None:
+            self._buzzer_choices = {
+                b.href: _buzzer_kind(resources.get(b.href) or {})
+                for b in bound
+                if b.desc.key == "buzzer_sound_enabled"
+            }
         self._unbound_hrefs = unbound
         self._refresh_learnable_hrefs()
 
@@ -2767,6 +2815,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
             found = await self._with_remembered_resources(resources) if self._flat else resources
+            if self._rehydrate_resources is not None:
+                # An incomplete first answer cannot overturn a model choice
+                # already established by the offline snapshot. Keep it for
+                # registration only; the live cache still gets the real reply.
+                found = dict(found)
+                for href, kind in (self._buzzer_choices or {}).items():
+                    if kind is not None and _buzzer_kind(found.get(href) or {}) is None:
+                        found[href] = self._rehydrate_resources[href]
             self._run_discovery(found)
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is

@@ -283,3 +283,29 @@ def test_av_board_history_and_paired_phone_are_redacted():
         }
     )
     assert all(v == REDACTED for rep in redacted.values() for v in rep.values())
+
+
+def test_soundbar_group_and_alexa_identifiers_are_redacted():
+    """HW-Q700C (#796): nearby speakers' names and ids, the multiroom group's
+    names and master id, and the Alexa PKCE challenge."""
+    redacted = redact_resources(
+        {
+            "/sec/networkaudio/av/groupdiscovery": {
+                "candidateList": [
+                    {"di": "speaker-id", "nick": "Kitchen", "model": "SPK-6500", "role": "single"}
+                ]
+            },
+            "/sec/networkaudio/av/groupinfo": {"masterName": "Living room", "groupName": "Home"},
+            "/sec/networkaudio/av/groupconf": {"masterDi": "master-id", "slaveCount": 0},
+            "/sec/alexa/avsDeviceInfo": {"x.com.samsung.alexa.code_challenge": "abc"},
+            "/oic/d": {"di": "own-id"},
+        }
+    )
+    candidate = redacted["/sec/networkaudio/av/groupdiscovery"]["candidateList"][0]
+    assert candidate == {"di": REDACTED, "nick": REDACTED, "model": "SPK-6500", "role": "single"}
+    info = redacted["/sec/networkaudio/av/groupinfo"]
+    assert info == {"masterName": REDACTED, "groupName": REDACTED}
+    assert redacted["/sec/networkaudio/av/groupconf"] == {"masterDi": REDACTED, "slaveCount": 0}
+    assert redacted["/sec/alexa/avsDeviceInfo"] == {"x.com.samsung.alexa.code_challenge": REDACTED}
+    # Only a speaker row's di is someone else's; /oic/d's own stays.
+    assert redacted["/oic/d"] == {"di": "own-id"}

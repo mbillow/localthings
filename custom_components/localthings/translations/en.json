@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Paired hood light"
+      },
+      "drum_light": {
+        "name": "Drum light"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "Eco Cold",
           "b1": "Self Clean+",
           "ba": "Drain/Spin",
+          "bd": "Auto Optimal Wash",
           "c7": "Eco Drum Clean",
           "ca": "Air Wash",
           "d0": "Cotton",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Heat generated"
       },
+      "cycle_flow_temperature": {
+        "name": "Cycle flow temperature"
+      },
+      "cycle_return_temperature": {
+        "name": "Cycle return temperature"
+      },
+      "cycle_flow_rate": {
+        "name": "Cycle flow rate"
+      },
+      "cycle_pump_speed": {
+        "name": "Cycle pump speed"
+      },
+      "compressor_frequency": {
+        "name": "Compressor frequency"
+      },
+      "compressor_target_frequency": {
+        "name": "Compressor target frequency"
+      },
+      "discharge_temperature": {
+        "name": "Discharge temperature"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Evaporator saturation temperature"
+      },
+      "suction_temperature": {
+        "name": "Suction temperature"
+      },
+      "cycle_updated": {
+        "name": "Cycle updated"
+      },
       "three_way_valve": {
         "name": "3-way valve"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Repeat cleaning"
       },
-      "drum_light": {
-        "name": "Drum light"
-      },
       "buzzer_sound": {
         "name": "Buzzer sound"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "No response from that IP address — nothing came back on any port in the appliance's local API range (UDP 49152-49160). Check the IP address is correct, the appliance is powered on and on the same network as Home Assistant, and that no firewall is dropping UDP traffic to it.",
       "ports_closed": "That IP address is reachable, but it actively refused every port in the local API range (UDP 49152-49160) and answered nothing on the discovery channel. It is most likely not a Samsung appliance, or not one with the local API enabled.",
       "no_dtls_server": "Ports in the local API range are reachable at that address, but nothing there answered a DTLS handshake. Check that the IP address belongs to the appliance and not another device on your network.",
+      "exec_memory_denied": "Home Assistant isn't allowed to create executable memory, which the DTLS library needs for its callbacks, so no handshake could even start. This is a setting on the Home Assistant host, not a problem with the appliance. On a systemd install, set MemoryDenyWriteExecute=no (or remove the line) in the Home Assistant service unit and restart it. SELinux's deny_execmem setting and hardened kernels can cause the same. The Home Assistant log has the exact error.",
       "appliance_no_dtls": "That address is a Samsung appliance — it identified itself as {model} over the unencrypted discovery channel and advertised its secure port as {port} — but it never completed a DTLS handshake there. The address is not the problem. Check whether the appliance has Remote Control or a similar setting switched off at its panel, and see the Home Assistant log for the exact failure.",
       "non_appliance_stack": "Something at that IP address answered, but it identified itself as an OCF service that isn't an appliance. Some Samsung appliances run one alongside their own, and LocalThings can only find the appliance behind it when Home Assistant is on the same network segment. Put Home Assistant and the appliance on the same subnet and VLAN, then try again.",
       "multiple_appliances": "More than one Samsung appliance answers at that IP address, and LocalThings can't yet choose between them. Please report it on the LocalThings issue tracker and include the Home Assistant log.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Downloaded cycles not set up for {device_name}",
       "description": "{device_name} has {pending} of {total} downloaded cycle(s) that Home Assistant can't offer yet. A downloaded cycle can only be used once the appliance has been seen with it loaded -- in the SmartThings app's \"Download cycles\" screen, not the \"Cycle\" one -- and you've given it a name.\n\nTo set them up, go to Settings > Devices & Services > LocalThings > {device_name} > Configure > Download cycles and follow the instructions there.\n\nDon't use downloaded cycles? Go to Configure > Device settings instead and turn off \"Offer downloaded cycles\" to silence this reminder for good."
+    },
+    "removed_entities": {
+      "title": "Entities removed from {device_name}",
+      "description": "LocalThings removed entities from {device_name} that it no longer provides, usually because they became a different kind of entity in this release. These automations and scripts still refer to them:\n\n{entities}\n\nUpdate them to use the replacement entities on the device page, then dismiss this notice."
     }
   },
   "exceptions": {

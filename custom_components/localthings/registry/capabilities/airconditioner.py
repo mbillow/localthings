@@ -934,6 +934,12 @@ CLIMATE = Capability(
     ),
 )
 
+
+def _is_artik051_prac(resources):
+    info = resources.get("/information/vs/0") or {}
+    return str(info.get("x.com.samsung.da.modelNum") or "").upper().startswith("ARTIK051_PRAC")
+
+
 AIR_PURIFY = Capability(
     href="/option/airpurify/vs/0",
     poll_tier="warm",
@@ -941,6 +947,11 @@ AIR_PURIFY = Capability(
         SwitchDesc(
             key="air_purify",
             field="x.com.samsung.da.modes",
+            # ARTIK051_PRAC boards report this option but refuse every write
+            # to it (#747), and #166's AR09TXFCAWKNEU manual says Purify isn't
+            # available. The app's Purify mode on these boards is Wind.
+            exists_fn=lambda rep, resources: not _is_artik051_prac(resources),
+            prune_when_excluded=True,
             icon="mdi:air-purifier",
             entity_category="config",
             value_fn=lambda v: v == "On",

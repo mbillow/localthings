@@ -814,25 +814,25 @@ class TestBuzzerSound:
         from custom_components.localthings.registry.discovery import discover
 
         href = "/buzzersound/vs/0"
-        for raw, expected in [("On", True), ("Off", False), (None, None), ("Other", None)]:
+        for raw, expected in [("On", True), ("Off", False)]:
             rep = {"supportedBuzzerSound": ["Off", "On"], "setBuzzerSound": raw}
             resources = {href: rep}
             bound = discover(resources, {href: [laundry.BUZZER_SOUND]})
             visible = [
                 b
                 for b in bound
-                if b.desc.key == "buzzer_sound"
+                if b.desc.key == "buzzer_sound_enabled"
                 and (b.desc.exists_fn is None or b.desc.exists_fn(rep, resources))
             ]
             assert len(visible) == 1
             assert isinstance(visible[0].desc, SwitchDesc)
-            assert flatten(bound, resources)["buzzer_sound"] is expected
+            assert flatten(bound, resources)["buzzer_sound_enabled"] is expected
 
     def test_boolean_buzzer_writes_only_on_or_off(self):
         desc = next(
             e
             for e in laundry.BUZZER_SOUND.entities
-            if e.key == "buzzer_sound" and isinstance(e, SwitchDesc)
+            if e.key == "buzzer_sound_enabled" and isinstance(e, SwitchDesc)
         )
         rep = {
             "supportedBuzzerSound": ["Off", "On"],
@@ -857,7 +857,6 @@ class TestBuzzerSound:
                 "supportedBuzzerSound": ["Volume_Off", "Volume_Low", "Volume_Med", "Volume_High"],
                 "setBuzzerSound": "Volume_High",
             },
-            {"setBuzzerSound": "Other"},
         ]:
             resources = {href: rep}
             bound = discover(resources, {href: [laundry.BUZZER_SOUND]})

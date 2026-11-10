@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Oświetlenie sparowanego okapu"
+      },
+      "drum_light": {
+        "name": "Oświetlenie bębna"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "Eko na zimno",
           "b1": "Samoczyszczenie+",
           "ba": "Odpompowanie/wirowanie",
+          "bd": "Automatyczne pranie optymalne",
           "c7": "Eco czyszczenie bębna",
           "ca": "Air Wash",
           "d0": "Bawełna",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Wytworzone ciepło"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura zasilania (cykl)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura powrotu (cykl)"
+      },
+      "cycle_flow_rate": {
+        "name": "Przepływ (cykl)"
+      },
+      "cycle_pump_speed": {
+        "name": "Prędkość pompy (cykl)"
+      },
+      "compressor_frequency": {
+        "name": "Częstotliwość sprężarki"
+      },
+      "compressor_target_frequency": {
+        "name": "Docelowa częstotliwość sprężarki"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura tłoczenia"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura nasycenia parownika"
+      },
+      "suction_temperature": {
+        "name": "Temperatura ssania"
+      },
+      "cycle_updated": {
+        "name": "Aktualizacja danych cyklu"
+      },
       "three_way_valve": {
         "name": "Zawór trójdrogowy"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Powtarzanie sprzątania"
       },
-      "drum_light": {
-        "name": "Oświetlenie bębna"
-      },
       "buzzer_sound": {
         "name": "Dźwięk brzęczyka"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "Brak odpowiedzi spod tego adresu IP — żaden port z zakresu lokalnego API urządzenia (UDP 49152-49160) nie odpowiedział. Sprawdź, czy adres IP jest poprawny, czy urządzenie jest włączone i w tej samej sieci co Home Assistant oraz czy zapora nie blokuje ruchu UDP do niego.",
       "ports_closed": "Ten adres IP jest osiągalny, ale aktywnie odrzucił każdy port z zakresu lokalnego API (UDP 49152-49160) i nie odpowiedział na kanale wykrywania. Najprawdopodobniej nie jest to urządzenie Samsung albo nie ma włączonego lokalnego API.",
       "no_dtls_server": "Porty z zakresu lokalnego API są pod tym adresem osiągalne, ale nic nie odpowiedziało na uzgadnianie DTLS. Sprawdź, czy ten adres IP należy do urządzenia, a nie do innego sprzętu w sieci.",
+      "exec_memory_denied": "Home Assistant nie może tworzyć pamięci wykonywalnej, której biblioteka DTLS potrzebuje do swoich wywołań zwrotnych, więc żaden handshake nie mógł się nawet rozpocząć. To ustawienie hosta Home Assistant, a nie problem z urządzeniem. W instalacji z systemd ustaw MemoryDenyWriteExecute=no (lub usuń tę linię) w jednostce usługi Home Assistant i uruchom ją ponownie. To samo może powodować ustawienie deny_execmem w SELinux lub utwardzone jądra. Dokładny błąd jest w logu Home Assistant.",
       "appliance_no_dtls": "Pod tym adresem znajduje się urządzenie Samsung — przedstawiło się jako {model} na nieszyfrowanym kanale wykrywania i podało {port} jako swój bezpieczny port — ale nigdy nie ukończyło tam uzgadniania DTLS. Problemem nie jest adres. Sprawdź, czy w panelu urządzenia nie wyłączono Zdalnego sterowania lub podobnego ustawienia, i zajrzyj do dziennika Home Assistant po dokładną przyczynę błędu.",
       "non_appliance_stack": "Pod tym adresem IP coś odpowiedziało, ale przedstawiło się jako usługa OCF, która nie jest urządzeniem. Niektóre urządzenia Samsung uruchamiają taką usługę obok własnej, a LocalThings znajdzie urządzenie za nią tylko wtedy, gdy Home Assistant jest w tym samym segmencie sieci. Umieść Home Assistant i urządzenie w tej samej podsieci i sieci VLAN, a następnie spróbuj ponownie.",
       "multiple_appliances": "Pod tym adresem IP odpowiada więcej niż jedno urządzenie Samsung i LocalThings nie potrafi jeszcze wybrać spośród nich. Zgłoś to w systemie zgłoszeń LocalThings i dołącz log Home Assistant.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Pobrane cykle nieskonfigurowane dla {device_name}",
       "description": "Urządzenie {device_name} ma {pending} z {total} pobranych cykli, których Home Assistant nie potrafi jeszcze udostępnić. Pobrany cykl można wykorzystać dopiero wtedy, gdy urządzenie zostanie zauważone z tym cyklem załadowanym — na ekranie „Pobrane cykle” w aplikacji SmartThings, a nie na ekranie „Cykl” — i gdy nadasz mu nazwę.\n\nAby je skonfigurować, przejdź do Ustawienia > Urządzenia i usługi > LocalThings > {device_name} > Konfiguruj > Pobrane cykle i postępuj zgodnie z instrukcjami.\n\nNie używasz pobranych cykli? Przejdź zamiast tego do Konfiguruj > Ustawienia urządzenia i wyłącz „Udostępniaj pobrane cykle”, aby wyciszyć to przypomnienie na stałe."
+    },
+    "removed_entities": {
+      "title": "Usunięto encje z {device_name}",
+      "description": "LocalThings usunął z {device_name} encje, których już nie udostępnia, zwykle dlatego, że w tej wersji stały się innym rodzajem encji. Te automatyzacje i skrypty nadal się do nich odwołują:\n\n{entities}\n\nZaktualizuj je, aby używały encji zastępczych ze strony urządzenia, a następnie zamknij to powiadomienie."
     }
   },
   "exceptions": {

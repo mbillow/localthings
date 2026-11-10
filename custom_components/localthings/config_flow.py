@@ -205,6 +205,26 @@ class HandshakeTimeout(CannotConnect):
     error_key = "handshake_timeout"
 
 
+class ExecMemoryDenied(CannotConnect):
+    """Home Assistant's own process may not map write+execute memory, which
+    cffi needs for the DTLS library's callbacks (#740: systemd's
+    MemoryDenyWriteExecute). No port or credential can change that."""
+
+    error_key = "exec_memory_denied"
+
+
+def _exec_memory_denied(exc: BaseException) -> bool:
+    """Whether `exc`, or anything it wraps, is cffi refusing an ffi.callback()."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if "write+execute memory" in str(current):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 class CertRejected(CannotConnect):
     """The appliance broke off the handshake over our certificate."""
 
@@ -924,6 +944,10 @@ def _handshake_and_read(
                     raise
                 raise failure from err
             except Exception as exc:
+                if _exec_memory_denied(exc):
+                    raise ExecMemoryDenied(
+                        f"this host denies the write+execute memory cffi needs: {exc}"
+                    ) from exc
                 if not retried and _worth_retrying(exc, port in scan.confirmed, local_port):
                     retried = True
                     _LOGGER.debug("port %d failed (%s); retrying once", port, exc)

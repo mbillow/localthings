@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Éclairage de la hotte associée"
+      },
+      "drum_light": {
+        "name": "Éclairage du tambour"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "Éco - froid",
           "b1": "Auto-nettoyage+",
           "ba": "Vidange/Essorage",
+          "bd": "Lavage optimal auto",
           "c7": "Nettoyage du tambour Eco",
           "ca": "Lavage à l'air",
           "d0": "Coton",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Chaleur produite"
       },
+      "cycle_flow_temperature": {
+        "name": "Température de départ (cycle)"
+      },
+      "cycle_return_temperature": {
+        "name": "Température de retour (cycle)"
+      },
+      "cycle_flow_rate": {
+        "name": "Débit (cycle)"
+      },
+      "cycle_pump_speed": {
+        "name": "Vitesse de la pompe (cycle)"
+      },
+      "compressor_frequency": {
+        "name": "Fréquence du compresseur"
+      },
+      "compressor_target_frequency": {
+        "name": "Fréquence cible du compresseur"
+      },
+      "discharge_temperature": {
+        "name": "Température de refoulement"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Température de saturation de l'évaporateur"
+      },
+      "suction_temperature": {
+        "name": "Température d'aspiration"
+      },
+      "cycle_updated": {
+        "name": "Données du cycle mises à jour"
+      },
       "three_way_valve": {
         "name": "Vanne 3 voies"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Répéter le nettoyage"
       },
-      "drum_light": {
-        "name": "Éclairage du tambour"
-      },
       "buzzer_sound": {
         "name": "Signal sonore"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "Aucune réponse de cette adresse IP — rien n'est revenu sur aucun des ports de la plage de l'API locale de l'appareil (UDP 49152-49160). Vérifiez que l'adresse IP est correcte, que l'appareil est allumé et sur le même réseau que Home Assistant, et qu'aucun pare-feu ne bloque le trafic UDP vers lui.",
       "ports_closed": "Cette adresse IP est joignable, mais elle a activement refusé tous les ports de la plage de l'API locale (UDP 49152-49160) et n'a rien répondu sur le canal de découverte. Il ne s'agit très probablement pas d'un appareil Samsung, ou pas d'un appareil dont l'API locale est activée.",
       "no_dtls_server": "Des ports de la plage de l'API locale sont joignables à cette adresse, mais rien n'y a répondu à une négociation DTLS. Vérifiez que l'adresse IP appartient bien à l'appareil et non à un autre équipement de votre réseau.",
+      "exec_memory_denied": "Home Assistant n'est pas autorisé à créer de la mémoire exécutable, dont la bibliothèque DTLS a besoin pour ses callbacks, si bien qu'aucune négociation n'a pu commencer. C'est un réglage de l'hôte de Home Assistant, pas un problème de l'appareil. Sur une installation systemd, définissez MemoryDenyWriteExecute=no (ou supprimez la ligne) dans l'unité de service de Home Assistant, puis redémarrez-le. Le réglage deny_execmem de SELinux et les noyaux durcis peuvent provoquer la même chose. Le journal de Home Assistant contient l'erreur exacte.",
       "appliance_no_dtls": "Cette adresse est bien celle d'un appareil Samsung — il s'est identifié comme {model} sur le canal de découverte non chiffré et a annoncé {port} comme port sécurisé — mais il n'y a jamais terminé de négociation DTLS. L'adresse n'est pas en cause. Vérifiez si le contrôle à distance ou un réglage similaire est désactivé sur le panneau de l'appareil, et consultez le journal de Home Assistant pour connaître l'échec exact.",
       "non_appliance_stack": "Quelque chose a répondu à cette adresse IP, mais s'est identifié comme un service OCF qui n'est pas un appareil électroménager. Certains appareils Samsung en exécutent un en parallèle du leur, et LocalThings ne peut trouver l'appareil qui se trouve derrière que si Home Assistant est sur le même segment réseau. Placez Home Assistant et l'appareil sur le même sous-réseau et le même VLAN, puis réessayez.",
       "multiple_appliances": "Plusieurs appareils Samsung répondent à cette adresse IP, et LocalThings ne sait pas encore choisir entre eux. Merci de le signaler sur le suivi des tickets de LocalThings en joignant le journal de Home Assistant.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Programmes téléchargés non configurés pour {device_name}",
       "description": "{device_name} a {pending} programme(s) téléchargé(s) sur {total} que Home Assistant ne peut pas encore proposer. Un programme téléchargé ne peut être utilisé qu'une fois que l'appareil a été vu avec ce programme chargé — dans l'écran « Programmes téléchargés » de l'application SmartThings, et non dans l'écran « Programme » — et que vous lui avez donné un nom.\n\nPour les configurer, allez dans Paramètres > Appareils et services > LocalThings > {device_name} > Configurer > Programmes téléchargés et suivez les instructions.\n\nVous n'utilisez pas de programmes téléchargés ? Allez plutôt dans Configurer > Paramètres de l'appareil et désactivez « Proposer les programmes téléchargés » pour faire taire ce rappel définitivement."
+    },
+    "removed_entities": {
+      "title": "Entités supprimées de {device_name}",
+      "description": "LocalThings a supprimé de {device_name} des entités qu'il ne fournit plus, généralement parce qu'elles sont devenues un autre type d'entité dans cette version. Ces automatisations et scripts y font encore référence :\n\n{entities}\n\nMettez-les à jour pour utiliser les entités de remplacement de la page de l'appareil, puis ignorez cet avis."
     }
   },
   "exceptions": {

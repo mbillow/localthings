@@ -48,16 +48,17 @@ def test_buzzer_sound_present_and_writable():
     """Issue #208's actual coverage gap: /buzzersound/vs/0 was unbound on
     this board before laundry.BUZZER_SOUND was added to the registry."""
     state = _state()
-    assert state["buzzer_sound"] is True
+    assert state["buzzer_sound_enabled"] is True
     assert "finish_sound" not in state  # supportedFinishSound absent -- self-gated off
 
     desc = next(
         e
         for e in air_dresser.REGISTRY.capabilities["/buzzersound/vs/0"][0].entities
-        if e.key == "buzzer_sound" and isinstance(e, SwitchDesc)
+        if e.key == "buzzer_sound_enabled" and isinstance(e, SwitchDesc)
     )
     assert desc.write_fn is not None
-    result = desc.write_fn("Off", {})
+    _, resources = _air_dresser()
+    result = desc.write_fn("Off", resources["/buzzersound/vs/0"])
     assert result is not None
     path, body = result
     assert path == ["buzzersound", "vs", "0"]

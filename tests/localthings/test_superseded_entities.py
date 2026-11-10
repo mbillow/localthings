@@ -1,4 +1,4 @@
-"""The sweep that drops sensor rows a platform move has superseded.
+"""cleanup.RETIRED_KEYS: sensor rows a platform move has superseded.
 
 The dryer's dryLevel and dryTime became selects in #439. unique_ids are
 scoped by (integration, platform), so that move cannot rewrite the old rows
@@ -15,13 +15,16 @@ losing two entities.
 from __future__ import annotations
 
 import logging
+from types import SimpleNamespace
+from typing import cast
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_sensors_superseded_by_selects
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.coordinator import LocalThingsCoordinator
 
 from .conftest import LEGACY_ENTRY_DATA, MOCK_SERIAL
 
@@ -30,6 +33,20 @@ def _entry(hass: HomeAssistant) -> MockConfigEntry:
     entry = MockConfigEntry(domain=DOMAIN, data=LEGACY_ENTRY_DATA, version=4)
     entry.add_to_hass(hass)
     return entry
+
+
+def _coordinator() -> LocalThingsCoordinator:
+    """Retired keys need no discovery: nothing binds them on these platforms."""
+    return cast(
+        LocalThingsCoordinator,
+        SimpleNamespace(
+            bound=[],
+            discovery_resources={},
+            device_key=MOCK_SERIAL,
+            device_type_name="dryer",
+            subdevices=[],
+        ),
+    )
 
 
 def _row(hass: HomeAssistant, entry: MockConfigEntry, domain: str, unique_suffix: str):
@@ -46,7 +63,7 @@ async def test_drops_both_superseded_sensors(hass: HomeAssistant) -> None:
     level = _row(hass, entry, "sensor", "dry_level")
     time = _row(hass, entry, "sensor", "dry_time")
 
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
 
     ent_reg = er.async_get(hass)
     assert ent_reg.async_get(level.entity_id) is None
@@ -61,7 +78,7 @@ async def test_matches_a_subdevice_instanced_key(hass: HomeAssistant) -> None:
     entry = _entry(hass)
     instanced = _row(hass, entry, "sensor", "subdevice_uuid_dry_level_2")
 
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
 
     assert er.async_get(hass).async_get(instanced.entity_id) is None
 
@@ -75,7 +92,7 @@ async def test_leaves_the_replacement_and_unrelated_rows_alone(hass: HomeAssista
     # A key merely *ending* in something similar must not be swept.
     not_a_tail = _row(hass, entry, "sensor", "dry_level_remaining")
 
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
 
     ent_reg = er.async_get(hass)
     assert ent_reg.async_get(replacement.entity_id) is not None
@@ -93,7 +110,7 @@ async def test_leaves_another_entrys_rows_alone(hass: HomeAssistant) -> None:
         "sensor", DOMAIN, f"{DOMAIN}_OTHER-SERIAL_dry_level", config_entry=other
     )
 
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
 
     assert er.async_get(hass).async_get(theirs.entity_id) is not None
 
@@ -105,9 +122,9 @@ async def test_is_idempotent(hass: HomeAssistant) -> None:
     _row(hass, entry, "sensor", "dry_level")
     keep = _row(hass, entry, "select", "dry_level")
 
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
     before = set(er.async_get(hass).entities)
-    _drop_sensors_superseded_by_selects(hass, entry)
+    async_reconcile_entities(hass, entry, _coordinator())
 
     assert set(er.async_get(hass).entities) == before
     assert er.async_get(hass).async_get(keep.entity_id) is not None
@@ -131,7 +148,7 @@ async def test_logs_the_removal_without_guessing_the_replacement_id(
     assert renamed.entity_id == "sensor.basement_dryer_dryness"
 
     with caplog.at_level(logging.INFO, logger="custom_components.localthings"):
-        _drop_sensors_superseded_by_selects(hass, entry)
+        async_reconcile_entities(hass, entry, _coordinator())
 
     assert "sensor.basement_dryer_dryness" in caplog.text
     assert "select.basement_dryer_dryness" not in caplog.text

@@ -7,7 +7,7 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_boolean_buzzer_selects
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.by_type import resolve
@@ -33,6 +33,8 @@ def _coordinator(resources):
         LocalThingsCoordinator,
         SimpleNamespace(
             device_key=MOCK_DEVICE_KEY,
+            device_type_name="washer",
+            subdevices=[],
             discovery_resources=resources,
             discovery_canonical=lambda subdevice: resources,
             bound=discover(resources, registry.capabilities, registry.pattern_capabilities)
@@ -48,14 +50,19 @@ def _row(hass, entry, domain="select", key="buzzer_sound", **kwargs):
     )
 
 
+@pytest.mark.parametrize("old_domain", ["select", "switch"])
 @pytest.mark.parametrize("disabled_by", [None, er.RegistryEntryDisabler.USER])
-async def test_removes_renamed_boolean_select_idempotently(hass, mock_entry, disabled_by, caplog):
-    old = _row(hass, mock_entry, suggested_object_id="renamed_buzzer", disabled_by=disabled_by)
-    replacement = _row(hass, mock_entry, "switch")
+async def test_removes_renamed_boolean_select_idempotently(
+    hass, mock_entry, disabled_by, old_domain, caplog
+):
+    old = _row(
+        hass, mock_entry, old_domain, suggested_object_id="renamed_buzzer", disabled_by=disabled_by
+    )
+    replacement = _row(hass, mock_entry, "switch", key="buzzer_sound_enabled")
     unrelated = _row(hass, mock_entry, key="finish_sound")
     coordinator = _coordinator(_resources())
-    _drop_boolean_buzzer_selects(hass, mock_entry, coordinator)
-    _drop_boolean_buzzer_selects(hass, mock_entry, coordinator)
+    async_reconcile_entities(hass, mock_entry, coordinator)
+    async_reconcile_entities(hass, mock_entry, coordinator)
     registry = er.async_get(hass)
     assert registry.async_get(old.entity_id) is None
     assert registry.async_get(replacement.entity_id) == replacement
@@ -66,6 +73,9 @@ async def test_removes_renamed_boolean_select_idempotently(hass, mock_entry, dis
     "resources",
     [
         _resources(("Volume_Off", "Volume_High")),
+        {"/buzzersound/vs/0": {"setBuzzerSound": "Off"}},
+        {"/buzzersound/vs/0": {"supportedBuzzerSound": ["On", "Off"]}},
+        {"/buzzersound/vs/0": {"setBuzzerSound": "Other", "supportedBuzzerSound": ["On", "Off"]}},
         {},
         {"/buzzersound/vs/0": {}},
         {"/buzzersound/vs/0": {"href": "/buzzersound/vs/0"}},
@@ -73,7 +83,7 @@ async def test_removes_renamed_boolean_select_idempotently(hass, mock_entry, dis
 )
 async def test_keeps_select_without_boolean_replacement(hass, mock_entry, resources):
     old = _row(hass, mock_entry)
-    _drop_boolean_buzzer_selects(hass, mock_entry, _coordinator(resources))
+    async_reconcile_entities(hass, mock_entry, _coordinator(resources))
     assert er.async_get(hass).async_get(old.entity_id) == old
 
 
@@ -81,7 +91,7 @@ async def test_preserves_other_entry(hass, mock_entry):
     other = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, version=4)
     other.add_to_hass(hass)
     old = _row(hass, other)
-    _drop_boolean_buzzer_selects(hass, mock_entry, _coordinator(_resources()))
+    async_reconcile_entities(hass, mock_entry, _coordinator(_resources()))
     assert er.async_get(hass).async_get(old.entity_id) == old
 
 
@@ -100,4 +110,30 @@ async def test_setup_migrates_boolean_buzzer(hass, mock_entry, offline):
         await hass.async_block_till_done()
     registry = er.async_get(hass)
     assert registry.async_get(old.entity_id) is None
-    assert registry.async_get_entity_id("switch", DOMAIN, old.unique_id) is not None
+    assert registry.async_get_entity_id("switch", DOMAIN, old.unique_id + "_enabled") is not None
+
+
+@pytest.mark.parametrize("family", ["washer", "dryer"])
+@pytest.mark.parametrize("present", [True, False])
+async def test_retired_drum_switch_removed_but_dynamic_light_retained(
+    hass, mock_entry, family, present
+):
+    resources = _load_device(family)
+    resources["/course/vs/0"]["x.com.samsung.da.options"] = ["Course_16"] + (
+        ["DrumLight_Off"] if present else []
+    )
+    old = _row(
+        hass,
+        mock_entry,
+        "switch",
+        key="drum_light",
+        suggested_object_id="renamed_lamp",
+        disabled_by=er.RegistryEntryDisabler.USER,
+    )
+    light = _row(hass, mock_entry, "light", key="drum_light", suggested_object_id="custom_light")
+    coordinator = _coordinator(resources)
+    async_reconcile_entities(hass, mock_entry, coordinator)
+    async_reconcile_entities(hass, mock_entry, coordinator)
+    registry = er.async_get(hass)
+    assert registry.async_get(old.entity_id) is None
+    assert registry.async_get(light.entity_id) == light

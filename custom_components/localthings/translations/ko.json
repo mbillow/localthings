@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "연동 후드 조명"
+      },
+      "drum_light": {
+        "name": "통 조명"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "에코 냉수 세탁",
           "b1": "통세척+",
           "ba": "배수/탈수",
+          "bd": "자동 최적 세탁",
           "c7": "에코 통세척",
           "ca": "에어워시",
           "d0": "면",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "생산 열량"
       },
+      "cycle_flow_temperature": {
+        "name": "사이클 출수 온도"
+      },
+      "cycle_return_temperature": {
+        "name": "사이클 환수 온도"
+      },
+      "cycle_flow_rate": {
+        "name": "사이클 유량"
+      },
+      "cycle_pump_speed": {
+        "name": "사이클 펌프 속도"
+      },
+      "compressor_frequency": {
+        "name": "압축기 주파수"
+      },
+      "compressor_target_frequency": {
+        "name": "압축기 목표 주파수"
+      },
+      "discharge_temperature": {
+        "name": "토출 온도"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "증발 포화 온도"
+      },
+      "suction_temperature": {
+        "name": "흡입 온도"
+      },
+      "cycle_updated": {
+        "name": "사이클 데이터 갱신 시각"
+      },
       "three_way_valve": {
         "name": "3방 밸브"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "반복 청소"
       },
-      "drum_light": {
-        "name": "통 조명"
-      },
       "buzzer_sound": {
         "name": "부저음"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "해당 IP 주소에서 응답이 없습니다. 가전제품의 로컬 API 포트 범위(UDP 49152-49160)에 있는 어떤 포트에서도 응답하지 않았습니다. IP 주소가 올바른지, 가전제품의 전원이 켜져 있고 Home Assistant와 같은 네트워크에 연결되어 있는지, 방화벽이 가전제품으로 향하는 UDP 트래픽을 차단하고 있지 않은지 확인하세요.",
       "ports_closed": "해당 IP 주소에는 연결할 수 있지만, 로컬 API 포트 범위(UDP 49152-49160)의 모든 포트가 연결을 거부했고 검색 채널에서도 응답이 전혀 없었습니다. 삼성 가전제품이 아니거나, 로컬 API가 활성화되지 않은 기기일 가능성이 큽니다.",
       "no_dtls_server": "해당 주소의 로컬 API 포트 범위에는 연결할 수 있지만, DTLS 핸드셰이크에 응답하는 서버가 없습니다. IP 주소가 네트워크의 다른 기기가 아닌 해당 가전제품의 주소인지 확인하세요.",
+      "exec_memory_denied": "Home Assistant가 DTLS 라이브러리의 콜백에 필요한 실행 가능 메모리를 만들 수 없어 핸드셰이크를 시작조차 하지 못했습니다. 기기 문제가 아니라 Home Assistant 호스트의 설정 문제입니다. systemd로 설치했다면 Home Assistant 서비스 유닛에서 MemoryDenyWriteExecute=no로 설정하거나 해당 줄을 삭제한 뒤 다시 시작하세요. SELinux의 deny_execmem 설정이나 보안 강화 커널도 같은 문제를 일으킬 수 있습니다. 정확한 오류는 Home Assistant 로그에 있습니다.",
       "appliance_no_dtls": "해당 주소는 삼성 가전제품입니다. 암호화되지 않은 검색 채널을 통해 모델을 \"{model}\"(으)로 알리고 보안 포트를 {port}(으)로 알렸지만, 해당 포트에서 DTLS 핸드셰이크를 완료하지 못했습니다. 주소 자체는 문제가 아닙니다. 가전제품 조작부에서 스마트 컨트롤 등의 설정이 꺼져 있지 않은지 확인하고, 정확한 실패 원인은 Home Assistant 로그에서 확인하세요.",
       "non_appliance_stack": "해당 IP 주소에서 응답이 있었지만 가전제품이 아닌 OCF 서비스로 확인되었습니다. 일부 삼성 가전제품은 자체 서비스 외에 이런 서비스를 함께 실행하며, LocalThings는 Home Assistant가 같은 네트워크 세그먼트에 있을 때만 그 뒤의 가전제품을 찾을 수 있습니다. Home Assistant와 가전제품을 같은 서브넷과 VLAN에 둔 뒤 다시 시도하세요.",
       "multiple_appliances": "해당 IP 주소에서 둘 이상의 삼성 가전제품이 응답하며, LocalThings는 아직 그중 하나를 선택할 수 없습니다. LocalThings 이슈 트래커에 Home Assistant 로그와 함께 알려 주세요.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "{device_name}의 다운로드 코스가 설정되지 않음",
       "description": "{device_name}에는 Home Assistant가 아직 제공할 수 없는 다운로드한 코스가 {total}개 중 {pending}개 있습니다. 다운로드한 코스는 SmartThings 앱의 \"다운로드 코스\" 화면(\"코스\" 화면이 아님)에서 기기가 해당 코스로 로드된 상태로 확인되고 이름을 지정한 후에만 사용할 수 있습니다.\n\n설정하려면 설정 > 기기 및 서비스 > LocalThings > {device_name} > 구성 > 다운로드 코스로 이동하여 안내를 따르세요.\n\n다운로드 코스를 사용하지 않나요? 대신 구성 > 기기 설정으로 이동하여 \"다운로드 코스 제공\"을 꺼서 이 알림을 완전히 중지하세요."
+    },
+    "removed_entities": {
+      "title": "{device_name}에서 엔티티가 제거됨",
+      "description": "LocalThings가 더 이상 제공하지 않는 엔티티를 {device_name}에서 제거했습니다. 대개 이번 버전에서 다른 종류의 엔티티로 바뀌었기 때문입니다. 다음 자동화와 스크립트가 아직 이 엔티티를 참조합니다:\n\n{entities}\n\n기기 페이지의 대체 엔티티를 사용하도록 수정한 다음 이 알림을 닫으세요."
     }
   },
   "exceptions": {

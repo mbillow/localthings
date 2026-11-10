@@ -26,6 +26,7 @@ from .laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     _course_codes_from_supported_options,
     bool_option_exists,
+    bool_option_light,
     bool_option_switch,
     course_narrowed_options,
     cycle_options,
@@ -79,7 +80,7 @@ from .operational import OPERATIONAL_STATE
 # instance) still renders that code raw rather than borrowing a Table_02
 # label -- the two tables are unrelated code spaces despite a handful of
 # overlapping hex values. A WD80N645OOW/EU washer-dryer's owner read six more
-# out of the app (issue #736).
+# out of the app (issue #736), and a WW10M86INOA/EN's owner named BD (#798).
 # ---------------------------------------------------------------------------
 
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count, soil level.
@@ -618,11 +619,10 @@ WASHER_COURSE = Capability(
             display_fn=_washer_course_label,
         ),
         # Same lamp token and write contract as dryer.DRYER_COURSE.
-        bool_option_switch(
+        bool_option_light(
             "drum_light",
             "mdi:lightbulb",
             "DrumLight",
-            gate_on_presence=True,
         ),
         _bool_option_switch(
             "extra_rinse",

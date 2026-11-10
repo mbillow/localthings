@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Licht der gekoppelten Dunstabzugshaube"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -1028,6 +1031,7 @@
           "ab": "Eco Kalt",
           "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
+          "bd": "Automatische Optimalwäsche",
           "c7": "Eco-Trommelreinigung",
           "ca": "Air Wash",
           "d0": "Baumwolle",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Erzeugte Wärme"
       },
+      "cycle_flow_temperature": {
+        "name": "Vorlauftemperatur (Zyklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Rücklauftemperatur (Zyklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Durchfluss (Zyklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Pumpendrehzahl (Zyklus)"
+      },
+      "compressor_frequency": {
+        "name": "Verdichterfrequenz"
+      },
+      "compressor_target_frequency": {
+        "name": "Soll-Verdichterfrequenz"
+      },
+      "discharge_temperature": {
+        "name": "Heißgastemperatur"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Verdampfungs-Sättigungstemperatur"
+      },
+      "suction_temperature": {
+        "name": "Sauggastemperatur"
+      },
+      "cycle_updated": {
+        "name": "Zyklusdaten aktualisiert"
+      },
       "three_way_valve": {
         "name": "3-Wege-Ventil"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Reinigung wiederholen"
       },
-      "drum_light": {
-        "name": "Trommellicht"
-      },
       "buzzer_sound": {
         "name": "Signalton"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "Keine Antwort von dieser IP-Adresse — auf keinem Port im lokalen API-Bereich des Geräts (UDP 49152-49160) kam eine Rückmeldung. Prüfen Sie, ob die IP-Adresse korrekt ist, das Gerät eingeschaltet und im selben Netzwerk wie Home Assistant ist, und ob keine Firewall den UDP-Verkehr zu ihm blockiert.",
       "ports_closed": "Diese IP-Adresse ist erreichbar, hat aber jeden Port im lokalen API-Bereich (UDP 49152-49160) aktiv abgelehnt und auf dem Discovery-Kanal überhaupt nicht geantwortet. Es handelt sich höchstwahrscheinlich nicht um ein Samsung-Gerät, oder um eines ohne aktivierte lokale API.",
       "no_dtls_server": "Ports im lokalen API-Bereich sind unter dieser Adresse erreichbar, aber nichts hat auf einen DTLS-Handshake reagiert. Prüfen Sie, ob die IP-Adresse tatsächlich zum Gerät gehört und nicht zu einem anderen Gerät in Ihrem Netzwerk.",
+      "exec_memory_denied": "Home Assistant darf keinen ausführbaren Speicher anlegen, den die DTLS-Bibliothek für ihre Callbacks benötigt, daher konnte kein Handshake überhaupt beginnen. Das ist eine Einstellung auf dem Home-Assistant-Host, kein Problem des Geräts. Bei einer systemd-Installation setze MemoryDenyWriteExecute=no in der Service-Unit von Home Assistant (oder entferne die Zeile) und starte den Dienst neu. Die SELinux-Einstellung deny_execmem und gehärtete Kernel können dasselbe verursachen. Das Home-Assistant-Protokoll enthält den genauen Fehler.",
       "appliance_no_dtls": "Diese Adresse gehört zu einem Samsung-Gerät — es hat sich über den unverschlüsselten Discovery-Kanal als {model} identifiziert und {port} als seinen sicheren Port gemeldet — aber dort wurde nie ein DTLS-Handshake abgeschlossen. Die Adresse ist nicht das Problem. Prüfen Sie, ob am Gerät die Fernsteuerung oder eine ähnliche Einstellung am Bedienfeld ausgeschaltet ist, und schauen Sie für den genauen Fehler im Home Assistant-Log nach.",
       "non_appliance_stack": "An dieser IP-Adresse hat etwas geantwortet, sich aber als OCF-Dienst gemeldet, der kein Gerät ist. Manche Samsung-Geräte betreiben einen solchen neben ihrem eigenen, und LocalThings findet das Gerät dahinter nur, wenn Home Assistant im selben Netzwerksegment ist. Bring Home Assistant und das Gerät ins selbe Subnetz und VLAN und versuche es dann erneut.",
       "multiple_appliances": "An dieser IP-Adresse antwortet mehr als ein Samsung-Gerät, und LocalThings kann noch nicht zwischen ihnen wählen. Bitte melde das im Issue-Tracker von LocalThings und füge das Home-Assistant-Log bei.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Heruntergeladene Programme für {device_name} nicht eingerichtet",
       "description": "{device_name} hat {pending} von {total} heruntergeladenen Programmen, die Home Assistant noch nicht anbieten kann. Ein heruntergeladenes Programm kann erst verwendet werden, sobald das Gerät damit geladen gesehen wurde -- im Bildschirm \"Download-Programme\" der SmartThings-App, nicht im Bildschirm \"Programm\" -- und Sie ihm einen Namen gegeben haben.\n\nUm sie einzurichten, gehen Sie zu Einstellungen > Geräte & Dienste > LocalThings > {device_name} > Konfigurieren > Download-Programme und folgen Sie den dortigen Anweisungen.\n\nNutzen Sie keine heruntergeladenen Programme? Gehen Sie stattdessen zu Konfigurieren > Geräteeinstellungen und schalten Sie \"Heruntergeladene Programme anbieten\" aus, um diese Erinnerung dauerhaft zu stoppen."
+    },
+    "removed_entities": {
+      "title": "Entitäten von {device_name} entfernt",
+      "description": "LocalThings hat Entitäten von {device_name} entfernt, die es nicht mehr bereitstellt, meist weil sie in dieser Version zu einer anderen Art von Entität geworden sind. Diese Automationen und Skripte verweisen noch auf sie:\n\n{entities}\n\nStelle sie auf die Ersatzentitäten auf der Geräteseite um und schließe dann diesen Hinweis."
     }
   },
   "exceptions": {

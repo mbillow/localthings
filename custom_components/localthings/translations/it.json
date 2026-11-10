@@ -304,6 +304,9 @@
       },
       "paired_hood_light": {
         "name": "Luce cappa abbinata"
+      },
+      "drum_light": {
+        "name": "Luce cestello"
       }
     },
     "number": {
@@ -1065,6 +1068,7 @@
           "ab": "Eco freddo",
           "b1": "Self Clean+",
           "ba": "Scarico/Centrifuga",
+          "bd": "Lavaggio ottimale automatico",
           "c7": "Pulizia cestello Eco",
           "ca": "Lavaggio ad aria",
           "d0": "Cotone",
@@ -1946,6 +1950,36 @@
       "heat_generated_kwh": {
         "name": "Calore prodotto"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura di mandata (ciclo)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura di ritorno (ciclo)"
+      },
+      "cycle_flow_rate": {
+        "name": "Portata (ciclo)"
+      },
+      "cycle_pump_speed": {
+        "name": "Velocità della pompa (ciclo)"
+      },
+      "compressor_frequency": {
+        "name": "Frequenza del compressore"
+      },
+      "compressor_target_frequency": {
+        "name": "Frequenza obiettivo del compressore"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura di scarico"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura di saturazione dell'evaporatore"
+      },
+      "suction_temperature": {
+        "name": "Temperatura di aspirazione"
+      },
+      "cycle_updated": {
+        "name": "Dati del ciclo aggiornati"
+      },
       "three_way_valve": {
         "name": "Valvola a 3 vie"
       },
@@ -2284,9 +2318,6 @@
       "repeated_cleaning": {
         "name": "Ripeti pulizia"
       },
-      "drum_light": {
-        "name": "Luce cestello"
-      },
       "buzzer_sound": {
         "name": "Suono cicalino"
       }
@@ -2462,6 +2493,7 @@
       "no_response": "Nessuna risposta da quell'indirizzo IP: non è arrivato nulla su nessuna porta dell'intervallo dell'API locale dell'apparecchio (UDP 49152-49160). Verifica che l'indirizzo IP sia corretto, che l'apparecchio sia acceso e sulla stessa rete di Home Assistant e che nessun firewall stia scartando il traffico UDP diretto a esso.",
       "ports_closed": "Quell'indirizzo IP è raggiungibile, ma ha rifiutato attivamente tutte le porte dell'intervallo dell'API locale (UDP 49152-49160) e non ha risposto nulla sul canale discovery. Molto probabilmente non è un apparecchio Samsung, oppure è un apparecchio senza l'API locale attivata.",
       "no_dtls_server": "Le porte dell'intervallo dell'API locale sono raggiungibili a quell'indirizzo, ma nulla ha risposto a un handshake DTLS. Verifica che l'indirizzo IP appartenga all'apparecchio e non a un altro dispositivo della rete.",
+      "exec_memory_denied": "Home Assistant non ha il permesso di creare memoria eseguibile, che la libreria DTLS richiede per le sue callback, quindi nessun handshake è potuto nemmeno iniziare. È un'impostazione dell'host di Home Assistant, non un problema dell'elettrodomestico. Su un'installazione con systemd, imposta MemoryDenyWriteExecute=no (o rimuovi la riga) nell'unità di servizio di Home Assistant e riavvialo. L'impostazione deny_execmem di SELinux e i kernel rafforzati possono causare lo stesso effetto. Il log di Home Assistant riporta l'errore esatto.",
       "appliance_no_dtls": "Quell'indirizzo è un apparecchio Samsung: si è identificato come {model} sul canale discovery non cifrato e ha dichiarato {port} come sua porta sicura, ma non ha mai completato un handshake DTLS su di essa. L'indirizzo non è il problema. Verifica che il Controllo remoto o un'impostazione simile non sia disattivata sul pannello dell'apparecchio, e consulta il log di Home Assistant per l'errore esatto.",
       "non_appliance_stack": "Qualcosa ha risposto a quell'indirizzo IP, ma si è identificato come un servizio OCF che non è un elettrodomestico. Alcuni elettrodomestici Samsung ne eseguono uno accanto al proprio, e LocalThings trova l'elettrodomestico dietro di esso solo quando Home Assistant è nello stesso segmento di rete. Metti Home Assistant e l'elettrodomestico nella stessa sottorete e VLAN, poi riprova.",
       "multiple_appliances": "A quell'indirizzo IP risponde più di un elettrodomestico Samsung e LocalThings non sa ancora scegliere tra loro. Segnalalo nel tracker delle issue di LocalThings e allega il log di Home Assistant.",
@@ -2608,6 +2640,10 @@
     "cloud_courses_undiscovered": {
       "title": "Cicli scaricati non configurati per {device_name}",
       "description": "{device_name} ha {pending} cicli scaricati su {total} che Home Assistant non può ancora offrire. Un ciclo scaricato può essere usato solo dopo che il dispositivo è stato rilevato con quel ciclo caricato -- nella schermata \"Cicli scaricati\" dell'app SmartThings, non in quella \"Ciclo\" -- ed è stato assegnato un nome.\n\nPer configurarli, andare su Impostazioni > Dispositivi e servizi > LocalThings > {device_name} > Configura > Cicli scaricati e seguire le istruzioni presenti lì.\n\nNon si usano cicli scaricati? Andare invece su Configura > Impostazioni dispositivo e disattivare \"Offri cicli scaricati\" per silenziare questo promemoria definitivamente."
+    },
+    "removed_entities": {
+      "title": "Entità rimosse da {device_name}",
+      "description": "LocalThings ha rimosso da {device_name} entità che non fornisce più, di solito perché in questa versione sono diventate un altro tipo di entità. Queste automazioni e questi script vi fanno ancora riferimento:\n\n{entities}\n\nAggiornali per usare le entità sostitutive nella pagina del dispositivo, quindi ignora questo avviso."
     }
   },
   "exceptions": {
