@@ -2633,6 +2633,10 @@
     "cloud_courses_undiscovered": {
       "title": "Stiahnuté cykly nie sú nastavené pre {device_name}",
       "description": "{device_name} má {pending} z {total} stiahnutých cyklov, ktoré Home Assistant zatiaľ nedokáže ponúknuť. Stiahnutý cyklus možno použiť až po tom, čo bol na spotrebiči zaznamenaný ako načítaný – na obrazovke „Stiahnuté cykly“ v aplikácii SmartThings, nie na obrazovke „Cyklus“ – a dostal názov.\n\nAk ich chcete nastaviť, prejdite do Nastavenia > Zariadenia a služby > LocalThings > {device_name} > Konfigurovať > Stiahnuté cykly a postupujte podľa pokynov.\n\nAk stiahnuté cykly nepoužívate, prejdite do Konfigurovať > Nastavenia zariadenia a vypnite možnosť „Ponúkať stiahnuté cykly“, čím toto pripomenutie natrvalo vypnete."
+    },
+    "removed_entities": {
+      "title": "Z {device_name} boli odstránené entity",
+      "description": "LocalThings odstránil z {device_name} entity, ktoré už neposkytuje, zvyčajne preto, že sa v tejto verzii zmenili na iný druh entity. Tieto automatizácie a skripty na ne stále odkazujú:\n\n{entities}\n\nUpravte ich tak, aby používali náhradné entity na stránke zariadenia, a potom toto upozornenie zavrite."
     }
   },
   "exceptions": {

@@ -2633,6 +2633,10 @@
     "cloud_courses_undiscovered": {
       "title": "Programmes téléchargés non configurés pour {device_name}",
       "description": "{device_name} a {pending} programme(s) téléchargé(s) sur {total} que Home Assistant ne peut pas encore proposer. Un programme téléchargé ne peut être utilisé qu'une fois que l'appareil a été vu avec ce programme chargé — dans l'écran « Programmes téléchargés » de l'application SmartThings, et non dans l'écran « Programme » — et que vous lui avez donné un nom.\n\nPour les configurer, allez dans Paramètres > Appareils et services > LocalThings > {device_name} > Configurer > Programmes téléchargés et suivez les instructions.\n\nVous n'utilisez pas de programmes téléchargés ? Allez plutôt dans Configurer > Paramètres de l'appareil et désactivez « Proposer les programmes téléchargés » pour faire taire ce rappel définitivement."
+    },
+    "removed_entities": {
+      "title": "Entités supprimées de {device_name}",
+      "description": "LocalThings a supprimé de {device_name} des entités qu'il ne fournit plus, généralement parce qu'elles sont devenues un autre type d'entité dans cette version. Ces automatisations et scripts y font encore référence :\n\n{entities}\n\nMettez-les à jour pour utiliser les entités de remplacement de la page de l'appareil, puis ignorez cet avis."
     }
   },
   "exceptions": {

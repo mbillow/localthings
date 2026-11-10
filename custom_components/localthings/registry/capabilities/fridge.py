@@ -572,6 +572,7 @@ REFRIGERATION = Capability(
             exists_fn=lambda rep, resources: (
                 is_stub_rep(rep) or "x.com.samsung.da.rapidFridge" in rep
             ),
+            prune_when_excluded=True,
             icon="mdi:fridge-industrial",
             entity_category="config",
             value_fn=lambda v: v == "On",
@@ -583,6 +584,7 @@ REFRIGERATION = Capability(
             exists_fn=lambda rep, resources: (
                 is_stub_rep(rep) or "x.com.samsung.da.rapidFreezing" in rep
             ),
+            prune_when_excluded=True,
             icon="mdi:snowflake",
             entity_category="config",
             value_fn=lambda v: v == "On",

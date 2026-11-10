@@ -2633,6 +2633,10 @@
     "cloud_courses_undiscovered": {
       "title": "Stažené cykly nejsou nastaveny pro {device_name}",
       "description": "{device_name} má {pending} z {total} stažených cyklů, které Home Assistant zatím nemůže nabídnout. Stažený cyklus lze použít až poté, co byl na zařízení zjištěn načtený -- na obrazovce „Stažené cykly“ v aplikaci SmartThings, ne na obrazovce „Cyklus“ -- a co jste mu dali název.\n\nChcete-li je nastavit, přejděte do Nastavení > Zařízení a služby > LocalThings > {device_name} > Konfigurovat > Stažené cykly a postupujte podle pokynů.\n\nStažené cykly nepoužíváte? Přejděte místo toho do Konfigurovat > Nastavení zařízení a vypněte „Nabízet stažené cykly“, čímž toto připomenutí natrvalo umlčíte."
+    },
+    "removed_entities": {
+      "title": "Z {device_name} byly odebrány entity",
+      "description": "LocalThings odebral z {device_name} entity, které už neposkytuje, obvykle proto, že se v této verzi změnily na jiný druh entity. Tyto automatizace a skripty na ně stále odkazují:\n\n{entities}\n\nUpravte je tak, aby používaly náhradní entity na stránce zařízení, a pak toto upozornění zavřete."
     }
   },
   "exceptions": {

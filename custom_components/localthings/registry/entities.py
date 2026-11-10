@@ -62,12 +62,20 @@ class SamsungEntityDescription:
     # (rep, resources): rep is this entity's own href's representation;
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
+    # Where descriptors on different platforms share a key, setup removes the
+    # excluded ones' registry rows (cleanup.py), so a rep that can't decide
+    # yet must exclude every one of them.
     exists_fn: Callable[[dict, dict], bool] | None = None
     # Recheck exists_fn after setup: add when present, unavailable when
     # absent. For presence that follows live state, not the model. Only the
     # platforms that use entity.async_add_bound_entities add a late entity:
     # sensor, binary_sensor, number, switch, select, button, time and light.
     dynamic_presence: bool = False
+    # Remove this entity's registry row when exists_fn excludes it. Only for
+    # an exists_fn verified to mean "this model never has it" (#698, #747).
+    prune_when_excluded: bool = False
+    # (platform, key) rows this entity replaces, removed once it is included.
+    supersedes: tuple[tuple[str, str], ...] = ()
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -101,6 +109,14 @@ class SamsungEntityDescription:
     # The device can refuse a command inside a 2.04 and say so in the body,
     # {"controlResponse": {"result": false}} (AV boards).
     control_response: bool = False
+
+    def __post_init__(self) -> None:
+        # Excluded is the normal state of a dynamic entity, so neither
+        # registry removal may act on one.
+        if self.dynamic_presence and (self.prune_when_excluded or self.supersedes):
+            raise ValueError(f"{self.key}: registry removal can't apply to dynamic_presence")
+        if self.prune_when_excluded and self.exists_fn is None:
+            raise ValueError(f"{self.key}: prune_when_excluded needs an exists_fn")
 
 
 @dataclass(frozen=True, kw_only=True)

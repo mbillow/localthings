@@ -852,6 +852,7 @@ OVEN_MODE = Capability(
             icon="mdi:volume-high",
             entity_category="config",
             exists_fn=_has_option("Sound"),
+            prune_when_excluded=True,
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,

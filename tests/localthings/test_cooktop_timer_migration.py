@@ -7,7 +7,7 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_duplicate_cooktop_timer
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.by_type import resolve
@@ -31,6 +31,8 @@ def _coordinator(resources):
         LocalThingsCoordinator,
         SimpleNamespace(
             device_key=MOCK_DEVICE_KEY,
+            device_type_name="cooktop",
+            subdevices=[],
             discovery_resources=resources,
             discovery_canonical=lambda subdevice: resources,
             bound=bound,
@@ -58,8 +60,8 @@ async def test_removes_renamed_duplicate_and_preserves_remaining(hass, mock_entr
     unrelated = _row(hass, mock_entry, "main_timer_current_extra")
     coordinator = _coordinator(_load_device(NAME))
 
-    _drop_duplicate_cooktop_timer(hass, mock_entry, coordinator)
-    _drop_duplicate_cooktop_timer(hass, mock_entry, coordinator)
+    async_reconcile_entities(hass, mock_entry, coordinator)
+    async_reconcile_entities(hass, mock_entry, coordinator)
 
     registry = er.async_get(hass)
     assert registry.async_get(old.entity_id) is None
@@ -72,7 +74,7 @@ async def test_removes_renamed_duplicate_and_preserves_remaining(hass, mock_entr
 async def test_keeps_other_cooktop_families(hass, mock_entry, name):
     old = _row(hass, mock_entry, "main_timer_current")
 
-    _drop_duplicate_cooktop_timer(hass, mock_entry, _coordinator(_load_device(name)))
+    async_reconcile_entities(hass, mock_entry, _coordinator(_load_device(name)))
 
     assert er.async_get(hass).async_get(old.entity_id) == old
 
@@ -83,8 +85,8 @@ async def test_waits_for_replacement_evidence(hass, mock_entry):
     options = resources["/mode/vs/0"]["x.com.samsung.da.options"]
     options[:] = [option for option in options if not option.startswith("MainTimerSet_")]
 
-    _drop_duplicate_cooktop_timer(hass, mock_entry, _coordinator(resources))
-    _drop_duplicate_cooktop_timer(hass, mock_entry, _coordinator({}))
+    async_reconcile_entities(hass, mock_entry, _coordinator(resources))
+    async_reconcile_entities(hass, mock_entry, _coordinator({}))
 
     assert er.async_get(hass).async_get(old.entity_id) == old
 
@@ -94,7 +96,7 @@ async def test_keeps_row_owned_by_another_entry(hass, mock_entry):
     other.add_to_hass(hass)
     old = _row(hass, other, "main_timer_current")
 
-    _drop_duplicate_cooktop_timer(hass, mock_entry, _coordinator(_load_device(NAME)))
+    async_reconcile_entities(hass, mock_entry, _coordinator(_load_device(NAME)))
 
     assert er.async_get(hass).async_get(old.entity_id) == old
 

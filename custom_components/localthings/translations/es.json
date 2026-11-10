@@ -261,6 +261,10 @@
     "cloud_courses_undiscovered": {
       "title": "Ciclos descargados sin configurar para {device_name}",
       "description": "{device_name} tiene {pending} de {total} ciclos descargados que Home Assistant todavía no puede ofrecer. Un ciclo descargado solo se puede usar una vez que el dispositivo se ha visto con él cargado -- en la pantalla \"Descarga de Programas\" de la app SmartThings, no en la de \"Ciclo\" -- y le has dado un nombre.\n\nPara configurarlos, ve a Ajustes > Dispositivos y servicios > LocalThings > {device_name} > Configurar > Ciclos descargados y sigue las instrucciones que aparecen allí.\n\n¿No usas ciclos descargados? Ve a Configurar > Ajustes del dispositivo y desactiva \"Ofrecer ciclos descargados\" para silenciar este aviso definitivamente."
+    },
+    "removed_entities": {
+      "title": "Entidades eliminadas de {device_name}",
+      "description": "LocalThings ha eliminado de {device_name} entidades que ya no proporciona, normalmente porque en esta versión pasaron a ser otro tipo de entidad. Estas automatizaciones y scripts aún hacen referencia a ellas:\n\n{entities}\n\nActualízalos para usar las entidades de reemplazo de la página del dispositivo y luego descarta este aviso."
     }
   },
   "exceptions": {
