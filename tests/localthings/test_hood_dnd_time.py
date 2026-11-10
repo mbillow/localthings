@@ -74,3 +74,43 @@ async def test_dnd_services_keep_seven_hour_window(
                 )
             assert sent[-1] == want
             assert coordinator.entity_rep(HREF)[FIELD] == want
+
+
+@pytest.mark.parametrize("board,extra", [("AHD-WW-TP1-22-COMMON", True), ("UNVERIFIED", False)])
+async def test_mode_service_uses_board_evidence(hass, mock_entry, board, extra):
+    resources = _load_device("range_hood")
+    resources["/information/vs/0"]["x.com.samsung.da.modelNum"] = board
+    resources[HREF]["x.com.samsung.da.autoExeState"] = "Off"
+    written = []
+
+    async def send(self, path, body, *args, **kwargs):
+        written.append(body)
+        resources[HREF].update(body)
+        return True
+
+    with (
+        _reachable(resources),
+        patch.object(LocalThingsCoordinator, "_CONFIRM_DELAY_S", 0),
+        patch.object(LocalThingsCoordinator, "_async_put", send),
+    ):
+        assert await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        bound = next(b for b in coordinator.bound if b.desc.key == "automatic_ventilation_state")
+        entity_id = er.async_get(hass).async_get_entity_id(
+            "select", DOMAIN, f"{DOMAIN}_{coordinator.device_key}_{bound.desc.key}"
+        )
+        state = hass.states.get(entity_id)
+        assert state.state in state.attributes["options"]
+        assert ("sensing" in state.attributes["options"]) is extra
+        if extra:
+            await hass.services.async_call(
+                "select",
+                "select_option",
+                {"entity_id": entity_id, "option": "sensing"},
+                blocking=True,
+            )
+            assert written == [{"x.com.samsung.da.autoExeState": "Sensing"}]
+        else:
+            assert await coordinator.async_send_command(bound, "Sensing") is False
+            assert not written

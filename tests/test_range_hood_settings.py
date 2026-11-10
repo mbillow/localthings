@@ -76,13 +76,17 @@ def test_modes_include_detection_only_and_future_advertised_values():
         "x.com.samsung.da.autoExeState": "Airpurify",
         "x.com.samsung.da.supportedAutoExeState": ["Airpurify", "Alarm", "Future"],
     }
-    assert set(desc.options({HREF: rep})) == {"Sensing", "Airpurify", "Alarm", "Future"}
+    resources = {
+        HREF: rep,
+        "/information/vs/0": {"x.com.samsung.da.modelNum": "AHD-WW-TP1-22-COMMON|firmware"},
+    }
+    assert set(desc.options(resources)) == {"Sensing", "Airpurify", "Alarm", "Future"}
     for value in ("Sensing", "Airpurify", "Alarm", "Future"):
-        assert desc.write_fn(value, rep) == (
+        assert desc.write_fn(value, rep, HREF, resources) == (
             ["airlevelcheck", "vs", "0"],
             {"x.com.samsung.da.autoExeState": value},
         )
-    assert desc.write_fn("NotSupported", rep) is None
+    assert desc.write_fn("NotSupported", rep, HREF, resources) is None
 
 
 def test_do_not_disturb_switch_uses_skip_status_only():
@@ -334,3 +338,41 @@ def test_single_dnd_edit_preserves_other_half(part, picked, want):
         desc.payload_fn(picked, now), {"x.com.samsung.da.periodicSensingSkipTime": "06001300"}
     )
     assert body == {"x.com.samsung.da.periodicSensingSkipTime": want}
+
+
+@pytest.mark.parametrize("board", [None, "OTHER-BOARD", "AHD-WW-TP1-22-COMMON|firmware"])
+@pytest.mark.parametrize(
+    "current,supported,want",
+    [
+        ("Airpurify", ["Airpurify", "Alarm", "Airpurify", None, ""], ["Airpurify", "Alarm"]),
+        ("Off", ["Airpurify"], ["Airpurify", "Off"]),
+        ("Sensing", ["Alarm"], ["Alarm", "Sensing"]),
+        ("Alarm", ["Sensing", "Alarm"], ["Sensing", "Alarm"]),
+        ("Alarm", None, ["Alarm"]),
+        ("", "Alarm", []),
+        (None, {}, []),
+    ],
+)
+def test_mode_options_and_writes_use_same_evidence(board, current, supported, want):
+    desc = _desc("automatic_ventilation_state")
+    rep = {
+        "x.com.samsung.da.autoExeState": current,
+        "x.com.samsung.da.supportedAutoExeState": supported,
+    }
+    resources = {HREF: rep}
+    if board is not None:
+        resources["/information/vs/0"] = {"x.com.samsung.da.modelNum": board}
+    expected = set(want)
+    if board == "AHD-WW-TP1-22-COMMON|firmware":
+        expected.add("Sensing")
+    options = desc.options(resources)
+    assert set(options) == expected
+    assert len(options) == len(expected)
+    for mode in expected:
+        assert desc.write_fn(mode, rep, HREF, resources) == (
+            ["airlevelcheck", "vs", "0"],
+            {"x.com.samsung.da.autoExeState": mode},
+        )
+    assert desc.write_fn("Bogus", rep, HREF, resources) is None
+    if "Sensing" not in expected:
+        assert desc.write_fn("Sensing", rep, HREF, resources) is None

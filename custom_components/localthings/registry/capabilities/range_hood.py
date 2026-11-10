@@ -323,13 +323,21 @@ def _sensing_modes(resources):
     rep = resources.get("/airlevelcheck/vs/0") or {}
     supported = rep.get("x.com.samsung.da.supportedAutoExeState")
     modes = supported if isinstance(supported, list) else []
-    # AHD-WW-TP1-22-COMMON accepts Sensing despite omitting it from supportedAutoExeState;
-    # other boards have not been verified for this unadvertised option.
-    return list(dict.fromkeys(["Sensing", *(m for m in modes if isinstance(m, str) and m)]))
+    modes = [m for m in modes if isinstance(m, str) and m.strip()]
+    current = rep.get("x.com.samsung.da.autoExeState")
+    if isinstance(current, str) and current.strip():
+        modes.append(current)
+    info = resources.get("/information/vs/0") or {}
+    board = info.get("x.com.samsung.da.modelNum")
+    # Only this verified board gets the unadvertised Sensing option (#794).
+    if isinstance(board, str) and board.split("|", 1)[0].upper() == "AHD-WW-TP1-22-COMMON":
+        modes.insert(0, "Sensing")
+    return list(dict.fromkeys(modes))
 
 
-def _sensing_mode_write(payload, rep, href=None):
-    if payload not in _sensing_modes({"/airlevelcheck/vs/0": rep}):
+def _sensing_mode_write(payload, rep, href=None, resources=None):
+    view = {**(resources or {}), "/airlevelcheck/vs/0": rep}
+    if payload not in _sensing_modes(view):
         return None
     return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.autoExeState": payload}
 
