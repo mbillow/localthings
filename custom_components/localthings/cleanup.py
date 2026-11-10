@@ -133,7 +133,13 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
                 yield _platform(bound), uid, "not reported by this device"
 
     for bound in coordinator.bound:
-        if not bound.desc.supersedes or not _is_included(bound, coordinator):
+        # Same rep guard as replaces_siblings: an optimistic exists_fn
+        # includes a stub, which says nothing about this model.
+        if (
+            not bound.desc.supersedes
+            or not _is_included(bound, coordinator)
+            or not _decides(bound, resources.get(bound.href))
+        ):
             continue
         for platform, key in bound.desc.supersedes:
             uid = f"{prefix}{bound.subdevice.key_prefix}{key}{bound.instance}"

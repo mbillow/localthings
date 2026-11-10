@@ -343,6 +343,35 @@ async def test_supersedes_spares_a_key_that_is_still_bound_on_that_platform(hass
     assert _alive(hass, old)
 
 
+@pytest.mark.parametrize("rep", [{"href": "/x/vs/0"}, {}, {"b": 1}])
+async def test_supersedes_waits_for_a_rep_that_decides(hass, rep):
+    """An optimistic exists_fn includes a stub (#785's burners), which
+    proves nothing about the model the old row came from."""
+    entry = _entry(hass)
+    capabilities = {
+        "/x/vs/0": [
+            Capability(
+                href="/x/vs/0",
+                entities=(
+                    SensorDesc(
+                        key="new_timer",
+                        field="a",
+                        exists_fn=lambda rep, resources: True,
+                        supersedes=(("sensor", "old_timer"),),
+                    ),
+                ),
+            )
+        ]
+    }
+    old = _row(hass, entry, "sensor", "old_timer")
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": rep}, capabilities))
+    assert _alive(hass, old)
+
+    async_reconcile_entities(hass, entry, _coordinator({"/x/vs/0": {"a": 1}}, capabilities))
+    assert not _alive(hass, old)
+
+
 # --- the Repair --------------------------------------------------------------
 
 

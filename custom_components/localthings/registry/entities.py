@@ -71,7 +71,8 @@ class SamsungEntityDescription:
     # Remove this entity's registry row when exists_fn excludes it. Only for
     # an exists_fn verified to mean "this model never has it" (#698, #747).
     prune_when_excluded: bool = False
-    # (platform, key) rows this entity replaces, removed once it is included.
+    # (platform, key) rows this entity replaces, removed once it is included
+    # on a rep that carries its field (not a stub or {}).
     supersedes: tuple[tuple[str, str], ...] = ()
     # Once included, remove this key's rows on its siblings' platforms. Only
     # where inclusion is a model fact, never live state, and where a rep that
