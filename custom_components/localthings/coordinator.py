@@ -30,7 +30,7 @@ from homeassistant.util import dt as dt_util
 from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
-from . import cloudcourse, probing
+from . import cloudcourse, finish, probing
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
@@ -593,6 +593,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Cloud "Download" programs discovered on this device (issue #342).
         # Same restore-from-entry shape as _learned above; see cloudcourse.py.
         self._cloud = CloudCourses(entry.data.get(CONF_CLOUD_COURSES))
+        # When each running cycle's remainingTime arrived (issue #772).
+        self._finish = finish.FinishAnchors()
         # An oven cavity's mode/setpoint/cook time chosen while idle, held
         # until a start sends them (issue #473); see cook.HeldCook.
         self._held_cooks: dict[Subdevice, cook.HeldCook] = {}
@@ -719,6 +721,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         LearnedModes does, and migrating the persisted shape.
         """
         snapshot = self._with_held_cooks(self._cook_view(self.last_resources))
+        for href in self._finish.hrefs():
+            if (rep := snapshot.get(href)) and (field := self._finish.field(href)):
+                snapshot[href] = {**rep, finish.FIELD: field}
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
             return snapshot
@@ -743,6 +748,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         doesn't copy every tracked href to read one rep, which is the very
         thing `resource()` was added to avoid."""
         rep = self.resource(href)
+        if rep and (field := self._finish.field(href)):
+            rep = {**rep, finish.FIELD: field}
         if href != cloudcourse.COURSE_HREF or not rep:
             return rep
         view = self._cloud_view()
@@ -872,6 +879,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         one the device reported, so there is nothing to learn from it."""
         if source == "optimistic":
             return
+        if self._finish.observe(href, rep, source, dt_util.utcnow()):
+            # The view was rebuilt before this hook ran; drop it so the
+            # coming push carries the new finish.
+            self._canonical_cache.clear()
         if cook.MODE_SPEC in rep:
             self._remember_mode_spec(href, rep)
         if href == cloudcourse.COURSE_HREF:

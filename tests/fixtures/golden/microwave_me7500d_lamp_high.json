@@ -19,7 +19,6 @@
     "machine_state",
     "operation_time_minutes",
     "power_level",
-    "precise_finish_time",
     "progress_percentage",
     "remind_beep",
     "sound"

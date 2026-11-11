@@ -15,7 +15,6 @@
     "machine_state",
     "operation_time_minutes",
     "power_level",
-    "precise_finish_time",
     "progress_percentage",
     "remote_control",
     "setpoint",

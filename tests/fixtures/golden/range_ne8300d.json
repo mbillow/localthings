@@ -19,7 +19,6 @@
     "oven_setpoint",
     "oven_state",
     "power_switch",
-    "precise_finish_time",
     "progress_percentage",
     "remote_control",
     "sound",

@@ -7,6 +7,9 @@ import math
 from datetime import UTC, datetime, timedelta
 
 from ...catalog import translated_states
+from ...finish import FIELD as _FINISH_FIELD
+from ...finish import finish_at
+from ...finish import remaining_seconds as _remaining_seconds
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ButtonDesc, NumberDesc, SensorDesc, TimeDesc
 
@@ -82,25 +85,6 @@ def _new_cycle_running(rep):
     return _state_is_active(rep) and v is not None and v not in ("None", "Finish")
 
 
-def _remaining_seconds(raw):
-    """'HH:MM:SS' (or 'MM:SS') -> total seconds, or None."""
-    if not isinstance(raw, str):
-        return None
-    try:
-        parts = [int(p) for p in raw.split(":")]
-    except (ValueError, TypeError):
-        return None
-
-    if len(parts) == 3:
-        h, m, s = parts
-    elif len(parts) == 2:
-        h, m, s = 0, *parts
-    else:
-        return None
-
-    return h * 3600 + m * 60 + s
-
-
 def _delay_hours(v):
     """delayStartTime is a duration until the cycle starts, not a
     wall-clock time -- "01:00" means "1 hour from when you press start",
@@ -155,7 +139,7 @@ def _delay_finish_at(rep):
     total_s = _remaining_seconds(rep.get(_DELAY_END))
     if not total_s:
         return None
-    # Whole minutes, for the reason _finish_time rounds.
+    # Whole minutes, so the clock's seconds don't make a new state each poll.
     return (datetime.now(UTC) + timedelta(seconds=total_s)).replace(second=0, microsecond=0)
 
 
@@ -181,17 +165,13 @@ def _delay_until(target, now):
 
 
 def _finish_time(rep):
-    if not _is_active(rep):
-        return None
-    total_s = _remaining_seconds(rep.get("x.com.samsung.da.remainingTime"))
-    if not total_s:
-        return None
-    # Round to whole minutes -- remainingTime itself only has minute
-    # resolution, but datetime.now()'s fresh seconds/microseconds would
-    # otherwise change the result on nearly every poll, flooding the
-    # recorder with values that look identical once the UI rounds them.
-    finish = datetime.now(UTC) + timedelta(seconds=total_s)
-    return finish.replace(second=0, microsecond=0)
+    """Timed from when the reading arrived (see finish.py, #772); held at
+    the pre-pause finish while paused."""
+    if _is_active(rep) or (
+        _to_ocf(rep.get("x.com.samsung.da.state")) == "pause" and _FINISH_FIELD in rep
+    ):
+        return finish_at(rep)
+    return None
 
 
 def _completion_minutes(rep):

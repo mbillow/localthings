@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import cast
 
 from homeassistant.components.sensor import (
@@ -14,11 +14,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
+from . import finish
 from .const import (
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
@@ -29,6 +31,9 @@ from .entity import LocalThingsEntity, async_add_bound_entities
 from .observe import MODE_OBSERVE, MODE_POLL
 from .registry.entities import SensorDesc
 from .registry.subdevices import MAIN
+
+# finish_time's deadband as a share of what remains (#772).
+_DEADBAND_FRACTION = 0.05
 
 
 async def async_setup_entry(
@@ -42,18 +47,12 @@ async def async_setup_entry(
         coordinator,
         async_add_entities,
         (b for b in coordinator.bound if isinstance(b.desc, SensorDesc)),
-        lambda b: _sensor_for(coordinator, b),
+        lambda b: LocalThingsSensor(coordinator, b),
         extra=(
             LocalThingsConnectionModeSensor(coordinator),
             LocalThingsLastResponseSensor(coordinator),
         ),
     )
-
-
-def _sensor_for(coordinator: LocalThingsCoordinator, bound) -> SensorEntity:
-    if cast(SensorDesc, bound.desc).tracker_factory is not None:
-        return LocalThingsTrackedSensor(coordinator, bound)
-    return LocalThingsSensor(coordinator, bound)
 
 
 class LocalThingsSensor(LocalThingsEntity, SensorEntity):
@@ -170,69 +169,30 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
 
     def _apply_hysteresis(self, raw):
         """Hold the last value this entity actually reported until a new one
-        differs by at least the configured threshold, regardless of how long
-        that difference has been building up (this is a deadband, not a
-        time-based debounce).
+        differs by at least the threshold (a deadband, not a debounce).
 
-        Values like finish_time are `now() + remaining`, recomputed from
-        scratch every poll -- both wall-clock drift between the device's own
-        remaining-time updates and the device revising its own estimate mid-
-        cycle produce a stream of small, real changes that are individually
-        meaningless but each trigger a recorder/logbook entry. A cycle
-        ending (raw is None) or starting (cache empty) always passes through
-        immediately -- only in-between jitter while a value already exists
-        on both sides gets held back.
+        finish_time is timed from each reading's arrival (finish.py), so what
+        is left to absorb is the appliance revising its own estimate (#239).
+        The threshold scales with the cycle -- about 5% of what remains, at
+        least the board's resolution -- with the option as its ceiling, so a
+        two-hour wash still gets 3 minutes and a three-minute cook a few
+        seconds (#772). A cycle ending or starting always passes through.
         """
         assert self.coordinator.config_entry is not None
-        threshold_min = self.coordinator.config_entry.options.get(
+        ceiling_min = self.coordinator.config_entry.options.get(
             CONF_FINISH_TIME_HYSTERESIS_MINUTES, DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES
         )
-        if (
-            threshold_min
-            and raw is not None
-            and self._hysteresis_value is not None
-            and abs(raw - self._hysteresis_value) < timedelta(minutes=threshold_min)
-        ):
-            return self._hysteresis_value
+        if ceiling_min and raw is not None and self._hysteresis_value is not None:
+            rep = self._resources.get(self._bound.href) or {}
+            remaining = max(raw - dt_util.utcnow(), timedelta(0))
+            threshold = min(
+                timedelta(minutes=ceiling_min),
+                max(finish.resolution(rep), remaining * _DEADBAND_FRACTION),
+            )
+            if abs(raw - self._hysteresis_value) < threshold:
+                return self._hysteresis_value
         self._hysteresis_value = raw
         return raw
-
-
-class LocalThingsTrackedSensor(LocalThingsSensor, RestoreSensor):
-    """A LocalThingsSensor whose value comes from its descriptor's
-    tracker_factory instead of the flattened snapshot, restored across a
-    restart (oven.py's CookFinishTracker keeps the last cook's end)."""
-
-    def __init__(self, coordinator: LocalThingsCoordinator, bound) -> None:
-        super().__init__(coordinator, bound)
-        self._tracker = None
-
-    def _tracker_for(self, restored=None):
-        if self._tracker is None:
-            factory = cast(SensorDesc, self._bound.desc).tracker_factory
-            assert factory is not None
-            self._tracker = factory(restored)
-        return self._tracker
-
-    def _track(self) -> None:
-        rep = self._resources.get(self._bound.href) or {}
-        self._tracker_for().update(rep, datetime.now(UTC))
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        last = await self.async_get_last_sensor_data()
-        restored = last.native_value if last is not None else None
-        self._tracker_for(restored if isinstance(restored, datetime) else None)
-        self._track()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._track()
-        super()._handle_coordinator_update()
-
-    @property
-    def native_value(self):
-        return self._tracker_for().value
 
 
 class LocalThingsConnectionModeSensor(CoordinatorEntity[LocalThingsCoordinator], SensorEntity):

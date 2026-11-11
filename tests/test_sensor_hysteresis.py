@@ -1,10 +1,15 @@
-"""Unit tests for LocalThingsSensor's hysteresis gate (finish_time churn)."""
+"""Unit tests for LocalThingsSensor's hysteresis gate (finish_time churn).
+
+The threshold is min(option, max(resolution, 5% of what remains)) (#772), so
+these tests place the finish relative to now.
+"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
+from custom_components.localthings import finish
 from custom_components.localthings.const import CONF_FINISH_TIME_HYSTERESIS_MINUTES
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities.operational import OPERATIONAL_STATE
@@ -30,6 +35,14 @@ class _FakeCoordinator:
             }
         )
         self.data: dict = {}
+        self.rep: dict = {}
+
+    def canonical_resources(self, subdevice):
+        return {OPERATIONAL_STATE.href: self.rep}
+
+
+def _in(minutes: float, seconds: float = 0) -> datetime:
+    return datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=minutes, seconds=seconds)
 
 
 def _sensor(threshold_minutes=3):
@@ -47,7 +60,7 @@ def _sensor(threshold_minutes=3):
 
 def test_small_change_is_suppressed():
     sensor, coordinator = _sensor(threshold_minutes=3)
-    base = datetime(2026, 7, 31, 17, 0, tzinfo=UTC)
+    base = _in(120)
 
     coordinator.data = {"finish_time": base}
     assert sensor.native_value == base
@@ -58,7 +71,7 @@ def test_small_change_is_suppressed():
 
 def test_change_past_threshold_is_reported():
     sensor, coordinator = _sensor(threshold_minutes=3)
-    base = datetime(2026, 7, 31, 17, 0, tzinfo=UTC)
+    base = _in(120)
 
     coordinator.data = {"finish_time": base}
     assert sensor.native_value == base
@@ -70,7 +83,7 @@ def test_change_past_threshold_is_reported():
 
 def test_zero_threshold_disables_hysteresis():
     sensor, coordinator = _sensor(threshold_minutes=0)
-    base = datetime(2026, 7, 31, 17, 0, tzinfo=UTC)
+    base = _in(120)
 
     coordinator.data = {"finish_time": base}
     assert sensor.native_value == base
@@ -83,7 +96,7 @@ def test_zero_threshold_disables_hysteresis():
 def test_cycle_end_passes_through_immediately():
     """A cycle ending (finish_time -> None) must never be held back."""
     sensor, coordinator = _sensor(threshold_minutes=3)
-    base = datetime(2026, 7, 31, 17, 0, tzinfo=UTC)
+    base = _in(120)
 
     coordinator.data = {"finish_time": base}
     assert sensor.native_value == base
@@ -109,3 +122,41 @@ def test_non_hysteresis_sensor_is_unaffected():
     assert sensor.native_value == "active"
     coordinator.data = {"machine_state": "idle"}
     assert sensor.native_value == "idle"
+
+
+def test_a_short_cycle_gets_a_deadband_of_seconds():
+    """About 5% of three minutes is 9 s: a 10 s panel change shows, a 1 s
+    wobble between reads doesn't."""
+    sensor, coordinator = _sensor(threshold_minutes=3)
+    coordinator.rep = {finish.FIELD: {"finish": _in(3), "seconds": True}}
+    base = _in(3)
+    coordinator.data = {"finish_time": base}
+    assert sensor.native_value == base
+
+    coordinator.data = {"finish_time": base - timedelta(seconds=1)}
+    assert sensor.native_value == base
+    coordinator.data = {"finish_time": base + timedelta(seconds=10)}
+    assert sensor.native_value == base + timedelta(seconds=10)
+
+
+def test_a_minute_only_board_never_drops_below_a_minute():
+    sensor, coordinator = _sensor(threshold_minutes=3)
+    base = _in(3)
+    coordinator.data = {"finish_time": base}
+    assert sensor.native_value == base
+
+    coordinator.data = {"finish_time": base + timedelta(seconds=30)}
+    assert sensor.native_value == base
+    coordinator.data = {"finish_time": base + timedelta(minutes=1)}
+    assert sensor.native_value == base + timedelta(minutes=1)
+
+
+def test_the_option_caps_a_long_cycle():
+    """5% of two hours is 6 minutes; the 3-minute option is the ceiling."""
+    sensor, coordinator = _sensor(threshold_minutes=3)
+    base = _in(120)
+    coordinator.data = {"finish_time": base}
+    assert sensor.native_value == base
+
+    coordinator.data = {"finish_time": base + timedelta(minutes=3)}
+    assert sensor.native_value == base + timedelta(minutes=3)
