@@ -917,9 +917,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         both the persist and the Repairs refresh go through hass.add_job.
 
         Always records, regardless of cloud_courses_enabled: it records only
-        what the appliance itself reports about programs it itself
-        advertises, and nothing is offered in the UI until both the option
-        is on and the user has named it."""
+        payloads the appliance itself reports, and nothing is offered in the
+        UI until both the option is on and the user has named it."""
         if not self._cloud.observe(rep):
             return
         self.hass.add_job(self._persist_cloud_courses)
@@ -1063,7 +1062,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         record = self._cloud.snapshot()
         courses = cycle_options(self.canonical_resources(MAIN))
         pending = cloudcourse.undiscovered(rep, record, courses)
-        slots = cloudcourse.cloud_slots(rep, courses)
+        slots = cloudcourse.known_slots(rep, courses, record)
         needs_course = bool(slots) and not record["download_course"]
         if record["slots"] and (pending or needs_course):
             ir.async_create_issue(
