@@ -1388,6 +1388,9 @@
           "mute": "Muet",
           "voice": "Voix"
         }
+      },
+      "picture_mode": {
+        "name": "Mode image"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Consigne"
+      },
+      "illuminance": {
+        "name": "Éclairement"
       }
     },
     "switch": {

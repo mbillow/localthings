@@ -1388,6 +1388,9 @@
           "mute": "Utišano",
           "voice": "Glas"
         }
+      },
+      "picture_mode": {
+        "name": "Režim slike"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Zadana vrednost"
+      },
+      "illuminance": {
+        "name": "Osvetljenost"
       }
     },
     "switch": {

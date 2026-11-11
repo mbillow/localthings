@@ -1388,6 +1388,9 @@
           "mute": "Stumm",
           "voice": "Sprache"
         }
+      },
+      "picture_mode": {
+        "name": "Bildmodus"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Sollwert"
+      },
+      "illuminance": {
+        "name": "Beleuchtungsstärke"
       }
     },
     "switch": {

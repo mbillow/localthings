@@ -34,6 +34,10 @@ _SENSITIVE_SUBSTRINGS = (
     # DevConf's x.com.samsung.ssolist: embedded JSON holding the owner's
     # Samsung account e-mail. Its inner keys aren't walked, so drop it whole.
     "ssolist",
+    # A TV's appdata x.com.samsung.tv.tvtomobile: embedded JSON that can hold
+    # the Samsung account list or a remote token (#815). Dropped whole for
+    # the same reason.
+    "tvtomobile",
     # /wirelessinfo/vs/0's connectedApSsid -- the owner's WiFi network name.
     # Not an account credential, which is why it slipped past the rules
     # above, but it is a location identifier: public wardriving databases map

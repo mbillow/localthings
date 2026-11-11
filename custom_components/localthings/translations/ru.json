@@ -1388,6 +1388,9 @@
           "mute": "Без звука",
           "voice": "Голос"
         }
+      },
+      "picture_mode": {
+        "name": "Режим изображения"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Уставка"
+      },
+      "illuminance": {
+        "name": "Освещённость"
       }
     },
     "switch": {

@@ -1388,6 +1388,9 @@
           "mute": "Gedempt",
           "voice": "Stem"
         }
+      },
+      "picture_mode": {
+        "name": "Beeldmodus"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Instelpunt"
+      },
+      "illuminance": {
+        "name": "Verlichtingssterkte"
       }
     },
     "switch": {
