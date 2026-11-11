@@ -701,6 +701,9 @@
       },
       "paired_hood_light": {
         "name": "Luz de la campana emparejada"
+      },
+      "drum_light": {
+        "name": "Luz del tambor"
       }
     },
     "number": {
@@ -2831,6 +2834,9 @@
       },
       "repeated_cleaning": {
         "name": "Repetir limpieza"
+      },
+      "buzzer_sound": {
+        "name": "Sonido del zumbador"
       },
       "smart_ventilate": {
         "name": "Ventilación inteligente"

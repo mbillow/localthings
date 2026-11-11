@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Světlo spárovaného odsavače"
+      },
+      "drum_light": {
+        "name": "Osvětlení bubnu"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Opakovat úklid"
+      },
+      "buzzer_sound": {
+        "name": "Zvuk bzučáku"
       },
       "smart_ventilate": {
         "name": "Chytré větrání"

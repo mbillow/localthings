@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "연동 후드 조명"
+      },
+      "drum_light": {
+        "name": "통 조명"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "반복 청소"
+      },
+      "buzzer_sound": {
+        "name": "부저음"
       },
       "smart_ventilate": {
         "name": "스마트 환기"

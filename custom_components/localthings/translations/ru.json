@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Подсветка связанной вытяжки"
+      },
+      "drum_light": {
+        "name": "Подсветка барабана"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Повторная уборка"
+      },
+      "buzzer_sound": {
+        "name": "Звуковой сигнал"
       },
       "smart_ventilate": {
         "name": "Умная вентиляция"

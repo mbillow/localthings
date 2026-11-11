@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Oświetlenie sparowanego okapu"
+      },
+      "drum_light": {
+        "name": "Oświetlenie bębna"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Powtarzanie sprzątania"
+      },
+      "buzzer_sound": {
+        "name": "Dźwięk brzęczyka"
       },
       "smart_ventilate": {
         "name": "Inteligentna wentylacja"

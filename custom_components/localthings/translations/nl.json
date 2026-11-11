@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Verlichting gekoppelde afzuigkap"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Reiniging herhalen"
+      },
+      "buzzer_sound": {
+        "name": "Zoemergeluid"
       },
       "smart_ventilate": {
         "name": "Slim ventileren"

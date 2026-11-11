@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Luce cappa abbinata"
+      },
+      "drum_light": {
+        "name": "Luce cestello"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Ripeti pulizia"
+      },
+      "buzzer_sound": {
+        "name": "Suono cicalino"
       },
       "smart_ventilate": {
         "name": "Ventilazione intelligente"

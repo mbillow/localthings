@@ -26,6 +26,7 @@ from .laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     _course_codes_from_supported_options,
     bool_option_exists,
+    bool_option_light,
     bool_option_switch,
     course_narrowed_options,
     cycle_options,
@@ -618,6 +619,12 @@ WASHER_COURSE = Capability(
             icon="mdi:washing-machine",
             table_href="/st/washercourse/vs/0",
             display_fn=_washer_course_label,
+        ),
+        # Same lamp token and write contract as dryer.DRYER_COURSE.
+        bool_option_light(
+            "drum_light",
+            "mdi:lightbulb",
+            "DrumLight",
         ),
         _bool_option_switch(
             "extra_rinse",

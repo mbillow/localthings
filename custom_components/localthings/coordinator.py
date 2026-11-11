@@ -70,7 +70,7 @@ from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
-from .registry.batch import parse_device0_batch
+from .registry.batch import is_stub_rep, parse_device0_batch
 from .registry.by_type import registry_for
 from .registry.by_type import resolve as resolve_registry
 from .registry.capabilities import cook, range_hood
@@ -316,6 +316,8 @@ def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dic
 # Write errors after which the session is fine and a re-poll shows the
 # appliance's real state; a dead session isn't re-polled (see _async_put).
 _APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+# hass.data key: per entry, the included set the last inclusion reload aimed for.
+_INCLUSION_RELOADS = f"{DOMAIN}_inclusion_reloads"
 
 
 def _refusal(code: int, response: Any) -> str:
@@ -480,6 +482,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # How long a write sent with Remote Control off is given before it is
     # read back (_took_effect).
     _CONFIRM_DELAY_S: float = 3.0
+    _INCLUSION_RETRY_S: float = 300.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -537,6 +540,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._identity: DeviceIdentity | None = None
         self._discovered = False
         self.bound = []
+        self._registration_evidence: dict[str, dict] = {}
+        self._registered_included: frozenset[tuple[str, str]] | None = None
+        self._entity_reload_pending = False
+        self._inclusion_retry_at = 0.0
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
         # Loaded by async_load_mode_specs before the first refresh.
@@ -812,7 +819,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._rehydrate_resources is not None:
             return self._rehydrate_resources
         if self._discovery_extra:
-            return {**self._discovery_extra, **self.last_resources}
+            return {**self.last_resources, **self._discovery_extra}
         return self.last_resources
 
     def discovery_canonical(self, subdevice: Subdevice) -> dict[str, dict]:
@@ -1991,6 +1998,102 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Discovery snapshot (issue #295)
     # ------------------------------------------------------------------
 
+    @callback
+    def async_watch_entity_inclusion(self) -> None:
+        """Reload when late model evidence changes static registration."""
+        self._entry.async_on_unload(self.async_add_listener(self._check_entity_inclusion))
+        self._check_entity_inclusion()
+
+    def _late_bound(self) -> list[BoundEntity]:
+        return [
+            b
+            for b in self.bound
+            if b.desc.late_evidence and b.desc.exists_fn is not None and not b.desc.dynamic_presence
+        ]
+
+    def _registration_resources(
+        self, live: dict[str, dict], remembered: dict[str, dict]
+    ) -> dict[str, dict]:
+        """Stand in remembered evidence for a late_evidence gate that can't
+        decide yet: a stub, or a live state whose vocabulary is missing (a
+        partial /device/0 entry, issue #27) and fits the remembered one. `{}`
+        is a confirmed empty answer (#127), and a missing state field is never
+        filled, so a field the board stopped reporting can't keep its entity."""
+
+        found = dict(live)
+        for bound in self._late_bound():
+            desc = bound.desc
+            rep = live.get(bound.href)
+            previous = remembered.get(bound.href)
+            if rep is None or not previous or not desc.field or desc.field not in previous:
+                continue
+            options = getattr(desc, "options_field", None)
+            current = found[bound.href]
+            if is_stub_rep(rep):
+                found[bound.href] = {**previous, **current}
+            elif (
+                options
+                and desc.field in rep
+                and not rep.get(options)
+                and isinstance(previous.get(options), list)
+                and rep[desc.field] in previous[options]
+            ):
+                found[bound.href] = {**current, options: previous[options]}
+        return found
+
+    @callback
+    def _check_entity_inclusion(self) -> None:
+        if self._closed or self.rehydrated or self._entity_reload_pending:
+            return
+        late = self._late_bound()
+        if not late or self.hass.loop.time() < self._inclusion_retry_at:
+            return
+        # entity.py imports this module, so this one can't import it at the top.
+        from .entity import _is_included
+
+        resources = self._registration_resources(
+            {**self._registration_evidence, **self.last_resources}, self._registration_evidence
+        )
+        saved = self._rehydrate_resources
+        self._rehydrate_resources = resources
+        try:
+            current = frozenset((b.subdevice.key, _key(b)) for b in late if _is_included(b, self))
+        finally:
+            self._rehydrate_resources = saved
+        if self._registered_included is None:
+            return
+        gated = frozenset((b.subdevice.key, _key(b)) for b in late)
+        if current == self._registered_included & gated:
+            return
+        # A board whose first read never decides (always {} or partial)
+        # would otherwise reload on every start; one try per target per run.
+        tried = self.hass.data.setdefault(_INCLUSION_RELOADS, {})
+        if tried.get(self._entry.entry_id) == current:
+            return
+        tried[self._entry.entry_id] = current
+        self._entity_reload_pending = True
+        self._entry.async_create_background_task(
+            self.hass,
+            self._async_reload_entity_inclusion(resources),
+            "localthings_entity_inclusion",
+        )
+
+    async def _async_reload_entity_inclusion(self, resources: dict[str, dict]) -> None:
+        # A reload may come up offline; bank the evidence before discarding
+        # the registration made from an incomplete or older representation.
+        saved = await self._async_save_snapshot(
+            resources,
+            [*self.subdevices, *self.disabled_subdevices],
+        )
+        if not saved:
+            # Retry later, not on every update: the write and its warning
+            # would otherwise repeat for as long as the disk refuses it.
+            self.hass.data.get(_INCLUSION_RELOADS, {}).pop(self._entry.entry_id, None)
+            self._inclusion_retry_at = self.hass.loop.time() + self._INCLUSION_RETRY_S
+            self._entity_reload_pending = False
+        elif not self._closed:
+            self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
+
     def _bound_keys(self) -> frozenset[tuple[str, str]]:
         """This entity set's identity: one (subdevice, state key) pair per
         bound entity. `_key` is the unique_id suffix, so two discoveries that
@@ -2015,7 +2118,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]
-    ) -> None:
+    ) -> bool:
         """Record what this first cycle handed `_run_discovery`, so the next
         restart can replay it while the appliance is unreachable.
 
@@ -2050,6 +2153,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # polling outright. Worst case this entry can't load offline,
             # which is where it was before any of this existed.
             self._log.warning("could not write discovery snapshot: %s", e)
+            return False
+        return True
 
     async def _with_remembered_resources(self, live: dict[str, dict]) -> dict[str, dict]:
         """A flat board's discovery read, plus what the last snapshot holds
@@ -2136,6 +2241,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 for su in stored.get("subdevice_candidates") or ()
             ]
             self._run_discovery(resources, from_snapshot=True)
+            self._registration_evidence = resources
         except Exception as e:
             # A snapshot written by an older release can outlive both the
             # stored shape and the registry it was discovered against. This
@@ -2155,6 +2261,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._rehydrate_resources = resources
         self._rehydrated_keys = self._bound_keys()
         self._rehydrated_included = self._included_keys()
+        self._registered_included = self._rehydrated_included
         if not self.bound:
             return False
         self._log.info(
@@ -2208,6 +2315,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             len(gone),
             len(new),
         )
+        self._entity_reload_pending = True
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
     def _run_discovery(self, resources: dict[str, dict], from_snapshot: bool = False) -> None:
@@ -2790,7 +2898,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
             found = await self._with_remembered_resources(resources) if self._flat else resources
+            try:
+                stored = await self._snapshot_store.async_load()
+            except Exception:
+                stored = None
+            remembered = self._rehydrate_resources or (
+                from_json_safe(stored.get("resources", {})) if stored else {}
+            )
             self._run_discovery(found)
+            complete = self._registration_resources(found, remembered)
+            if complete != found:
+                found = complete
+                self._run_discovery(found)
+            self._registration_evidence = found
+            self._discovery_extra.update(
+                {href: rep for href, rep in found.items() if rep != resources.get(href)}
+            )
+            previous = self._rehydrate_resources
+            self._rehydrate_resources = found
+            try:
+                if self._registered_included is None:
+                    self._registered_included = self._included_keys()
+            finally:
+                self._rehydrate_resources = previous
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is
             # being replaced.

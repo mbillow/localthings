@@ -41,7 +41,7 @@ def test_no_unbound_hrefs():
 def test_expected_entities_present():
     state = _state()
     for key in (
-        "buzzer_sound",
+        "buzzer_sound_enabled",
         "cycle",
         "power_switch",
         "child_lock",

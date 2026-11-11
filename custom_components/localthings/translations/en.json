@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Paired hood light"
+      },
+      "drum_light": {
+        "name": "Drum light"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Repeat cleaning"
+      },
+      "buzzer_sound": {
+        "name": "Buzzer sound"
       },
       "smart_ventilate": {
         "name": "Smart ventilate"

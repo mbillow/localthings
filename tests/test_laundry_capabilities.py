@@ -3,7 +3,7 @@
 from typing import ClassVar
 
 from custom_components.localthings.registry.capabilities import laundry
-from custom_components.localthings.registry.entities import SelectDesc
+from custom_components.localthings.registry.entities import SelectDesc, SwitchDesc
 from tests.conftest import FIXTURES, _load_device
 
 
@@ -809,19 +809,72 @@ class TestBuzzerSound:
     def test_href(self):
         assert laundry.BUZZER_SOUND.href == "/buzzersound/vs/0"
 
-    def test_buzzer_sound_write(self):
+    def test_boolean_buzzer_is_a_switch(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.discovery import discover
+
+        href = "/buzzersound/vs/0"
+        for raw, expected in [("On", True), ("Off", False)]:
+            rep = {"supportedBuzzerSound": ["Off", "On"], "setBuzzerSound": raw}
+            resources = {href: rep}
+            bound = discover(resources, {href: [laundry.BUZZER_SOUND]})
+            visible = [
+                b
+                for b in bound
+                if b.desc.key == "buzzer_sound_enabled"
+                and (b.desc.exists_fn is None or b.desc.exists_fn(rep, resources))
+            ]
+            assert len(visible) == 1
+            assert isinstance(visible[0].desc, SwitchDesc)
+            assert flatten(bound, resources)["buzzer_sound_enabled"] is expected
+
+    def test_boolean_buzzer_writes_only_on_or_off(self):
         desc = next(
             e
             for e in laundry.BUZZER_SOUND.entities
-            if e.key == "buzzer_sound" and isinstance(e, SelectDesc)
+            if e.key == "buzzer_sound_enabled" and isinstance(e, SwitchDesc)
         )
-        assert desc.options_field == "supportedBuzzerSound"
+        rep = {
+            "supportedBuzzerSound": ["Off", "On"],
+            "setBuzzerSound": "Off",
+            "setFinishSound": "FinishSound_3",
+        }
         assert desc.write_fn is not None
-        result = desc.write_fn("On", {})
-        assert result is not None
-        path, body = result
-        assert path == ["buzzersound", "vs", "0"]
-        assert body == {"setBuzzerSound": "On"}
+        for value in ("On", "Off"):
+            assert desc.write_fn(value, rep) == (
+                ["buzzersound", "vs", "0"],
+                {"setBuzzerSound": value},
+            )
+        assert desc.write_fn("Volume_High", rep) is None
+
+    def test_volume_buzzer_keeps_select(self):
+        from custom_components.localthings.registry.adapter import flatten
+        from custom_components.localthings.registry.discovery import discover
+
+        href = "/buzzersound/vs/0"
+        for rep in [
+            {
+                "supportedBuzzerSound": ["Volume_Off", "Volume_Low", "Volume_Med", "Volume_High"],
+                "setBuzzerSound": "Volume_High",
+            },
+        ]:
+            resources = {href: rep}
+            bound = discover(resources, {href: [laundry.BUZZER_SOUND]})
+            visible = [
+                b
+                for b in bound
+                if b.desc.key == "buzzer_sound"
+                and (b.desc.exists_fn is None or b.desc.exists_fn(rep, resources))
+            ]
+            assert len(visible) == 1
+            desc = visible[0].desc
+            assert isinstance(desc, SelectDesc)
+            assert flatten(bound, resources)["buzzer_sound"] == rep["setBuzzerSound"]
+            assert desc.write_fn is not None
+            assert desc.write_fn("Volume_Low", rep) == (
+                ["buzzersound", "vs", "0"],
+                {"setBuzzerSound": "Volume_Low"},
+            )
 
     def test_finish_sound_exists_only_when_supported(self):
         desc = next(e for e in laundry.BUZZER_SOUND.entities if e.key == "finish_sound")

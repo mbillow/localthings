@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Licht der gekoppelten Dunstabzugshaube"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Reinigung wiederholen"
+      },
+      "buzzer_sound": {
+        "name": "Signalton"
       },
       "smart_ventilate": {
         "name": "Intelligente Lüftung"

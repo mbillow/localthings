@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Luz da coifa pareada"
+      },
+      "drum_light": {
+        "name": "Luz do tambor"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Repetir limpeza"
+      },
+      "buzzer_sound": {
+        "name": "Sinal sonoro"
       },
       "smart_ventilate": {
         "name": "Ventilação inteligente"

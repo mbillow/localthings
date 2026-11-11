@@ -301,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Светло упареног аспиратора"
+      },
+      "drum_light": {
+        "name": "Светло бубња"
       }
     },
     "number": {
@@ -2431,6 +2434,9 @@
       },
       "repeated_cleaning": {
         "name": "Понови чишћење"
+      },
+      "buzzer_sound": {
+        "name": "Звучни сигнал"
       },
       "smart_ventilate": {
         "name": "Паметна вентилација"
