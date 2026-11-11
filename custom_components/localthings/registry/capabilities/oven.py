@@ -17,8 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
-from ...finish import FIELD as _FINISH_FIELD
-from ...finish import finish_at
+from ...finish import running_finish
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
@@ -96,13 +95,9 @@ def _percent(v):
 
 
 def _finish_time(rep):
-    """While a cook runs, timed from when the reading arrived (finish.py,
-    #772); held at the pre-pause finish while paused. Gated on state alone:
-    some boards leave a stale remainingTime after the cook ends."""
-    state = _to_ocf(rep.get("x.com.samsung.da.state"))
-    if state == "active" or (state == "pause" and _FINISH_FIELD in rep):
-        return finish_at(rep)
-    return None
+    """Timed from when the reading arrived (finish.py, #772). Gated on state
+    alone: some boards leave a stale remainingTime after the cook ends."""
+    return running_finish(rep, _to_ocf(rep.get("x.com.samsung.da.state")) == "active")
 
 
 def _op_minutes(op_time):

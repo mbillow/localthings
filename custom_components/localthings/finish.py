@@ -7,10 +7,11 @@ so its finish crept up to 6 s late between reads (issue #772). This store
 records the finish when a new remainingTime value arrives, and the coordinator
 merges it onto the rep under FIELD for the finish_time descriptors.
 
-Two readings are not taken: the /device/0 sweep's value runs 2-3 s behind a
-push, so a sweep that would move the finish later is ignored; and a pause
-freezes the finish until the cycle resumes, when it is re-anchored. Rounding
-and the deadband belong to the reader (finish_at and the sensor's hysteresis).
+A /device/0 sweep's value runs 2-3 s behind a push, so a sweep that would move
+the finish later by no more than that lag is ignored. A pause freezes the
+finish and resuming re-anchors it; so does a countdown that stops moving while
+the cycle still runs (an oven preheating). Rounding and the deadband belong to
+the reader (finish_at and the sensor's hysteresis).
 """
 
 from __future__ import annotations
@@ -26,8 +27,14 @@ STATE = "x.com.samsung.da.state"
 # the device, or part of a diagnostics dump.
 FIELD = "x.localthings.finish"
 
-_PAUSED = ("Pause", "Paused")
-_IDLE = ("Ready", "End", "Stop")
+# Samsung's spellings and the OCF ones a board may report instead.
+_PAUSED = frozenset({"pause", "paused"})
+_IDLE = frozenset({"ready", "end", "stop", "idle"})
+
+# How far behind a push the sweep's reading runs, with margin (#772).
+_SWEEP_LAG = timedelta(seconds=5)
+# A reading unchanged for longer than one step plus this has stalled.
+_STALL_SLACK = timedelta(seconds=10)
 
 
 def remaining_seconds(raw) -> int | None:
@@ -51,9 +58,14 @@ def _has_seconds(total_s: int) -> bool:
     return total_s % 60 not in (0, 59)
 
 
+def _step(seconds: bool) -> timedelta:
+    return timedelta(seconds=1 if seconds else 60)
+
+
 @dataclass
 class _Anchor:
     raw: object = None
+    raw_at: datetime | None = None
     finish: datetime | None = None
     paused: bool = False
     seconds: bool = False
@@ -72,42 +84,61 @@ class FinishAnchors:
         if REMAINING not in rep:
             return False
         raw = rep.get(REMAINING)
-        state = rep.get(STATE)
+        state = str(rep.get(STATE) or "").lower()
         total_s = remaining_seconds(raw)
         with self._lock:
-            anchor = self._anchors.setdefault(href, _Anchor())
-            before = anchor.finish
+            a = self._anchors.setdefault(href, _Anchor())
+            before = a.finish
             if total_s and _has_seconds(total_s):
-                anchor.seconds = True
+                a.seconds = True
+            if raw != a.raw:
+                a.raw_at = now
             if state in _PAUSED:
-                anchor.paused = True
+                a.paused = True
+                # Held while it is still ahead; once the pause outlasts it,
+                # resuming now is the earliest it can finish.
+                if total_s and (a.finish is None or a.finish <= now):
+                    a.finish = now + timedelta(seconds=total_s)
             elif not total_s or state in _IDLE:
-                anchor.finish, anchor.paused = None, False
-            elif anchor.paused or anchor.finish is None or raw != anchor.raw:
+                a.finish, a.paused = None, False
+            else:
                 finish = now + timedelta(seconds=total_s)
-                stale = (
-                    source == "sweep"
-                    and not anchor.paused
-                    and anchor.finish is not None
-                    and finish > anchor.finish
+                stalled = (
+                    raw == a.raw
+                    and a.raw_at is not None
+                    and now - a.raw_at > _step(a.seconds) + _STALL_SLACK
                 )
-                if not stale:
-                    anchor.finish, anchor.paused = finish, False
+                if a.paused or a.finish is None or raw != a.raw or stalled:
+                    stale = (
+                        source == "sweep"
+                        and not a.paused
+                        and a.finish is not None
+                        and a.finish < finish <= a.finish + _step(a.seconds) + _SWEEP_LAG
+                    )
+                    if stale:
+                        # Not recorded, so the push carrying it still anchors.
+                        return False
+                    a.finish, a.paused = finish, False
             # Compared with the previous reading only: adding time on the
             # panel can bring back a value seen earlier in the cycle.
-            anchor.raw = raw
-            return anchor.finish != before
+            a.raw = raw
+            return a.finish != before
+
+    def fields(self) -> dict[str, dict]:
+        """{href: FIELD value} for every href with a running finish."""
+        with self._lock:
+            return {
+                href: {"finish": a.finish, "seconds": a.seconds}
+                for href, a in self._anchors.items()
+                if a.finish is not None
+            }
 
     def field(self, href: str) -> dict | None:
         with self._lock:
-            anchor = self._anchors.get(href)
-            if anchor is None or anchor.finish is None:
+            a = self._anchors.get(href)
+            if a is None or a.finish is None:
                 return None
-            return {"finish": anchor.finish, "seconds": anchor.seconds}
-
-    def hrefs(self) -> list[str]:
-        with self._lock:
-            return [href for href, anchor in self._anchors.items() if anchor.finish is not None]
+            return {"finish": a.finish, "seconds": a.seconds}
 
 
 def finish_at(rep: dict, now: datetime | None = None) -> datetime | None:
@@ -129,8 +160,15 @@ def finish_at(rep: dict, now: datetime | None = None) -> datetime | None:
     return (finish + timedelta(seconds=30)).replace(second=0, microsecond=0)
 
 
+def running_finish(rep: dict, active: bool) -> datetime | None:
+    """finish_time's value: the finish while `active`, the held one while
+    paused, else None. Shared by every family's descriptor."""
+    if active or (str(rep.get(STATE) or "").lower() in _PAUSED and FIELD in rep):
+        return finish_at(rep)
+    return None
+
+
 def resolution(rep: dict) -> timedelta:
     """The smallest step this rep's finish can move by."""
     anchor = rep.get(FIELD)
-    seconds = bool(anchor.get("seconds")) if isinstance(anchor, dict) else False
-    return timedelta(seconds=1 if seconds else 60)
+    return _step(bool(anchor.get("seconds")) if isinstance(anchor, dict) else False)

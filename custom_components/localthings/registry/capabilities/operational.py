@@ -7,9 +7,8 @@ import math
 from datetime import UTC, datetime, timedelta
 
 from ...catalog import translated_states
-from ...finish import FIELD as _FINISH_FIELD
-from ...finish import finish_at
 from ...finish import remaining_seconds as _remaining_seconds
+from ...finish import running_finish
 from ..capability import Capability
 from ..entities import BinarySensorDesc, ButtonDesc, NumberDesc, SensorDesc, TimeDesc
 
@@ -165,13 +164,8 @@ def _delay_until(target, now):
 
 
 def _finish_time(rep):
-    """Timed from when the reading arrived (see finish.py, #772); held at
-    the pre-pause finish while paused."""
-    if _is_active(rep) or (
-        _to_ocf(rep.get("x.com.samsung.da.state")) == "pause" and _FINISH_FIELD in rep
-    ):
-        return finish_at(rep)
-    return None
+    """Timed from when the reading arrived (see finish.py, #772)."""
+    return running_finish(rep, _is_active(rep))
 
 
 def _completion_minutes(rep):

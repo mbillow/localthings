@@ -721,8 +721,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         LearnedModes does, and migrating the persisted shape.
         """
         snapshot = self._with_held_cooks(self._cook_view(self.last_resources))
-        for href in self._finish.hrefs():
-            if (rep := snapshot.get(href)) and (field := self._finish.field(href)):
+        for href, field in self._finish.fields().items():
+            if rep := snapshot.get(href):
                 snapshot[href] = {**rep, finish.FIELD: field}
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
@@ -880,9 +880,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if source == "optimistic":
             return
         if self._finish.observe(href, rep, source, dt_util.utcnow()):
-            # The view was rebuilt before this hook ran; drop it so the
-            # coming push carries the new finish.
-            self._canonical_cache.clear()
+            # The cache-change push may already have run without it.
+            self._schedule_push()
         if cook.MODE_SPEC in rep:
             self._remember_mode_spec(href, rep)
         if href == cloudcourse.COURSE_HREF:
@@ -1373,8 +1372,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if source == "observe":
             # A notification is the device answering too (issue #648).
             self.last_response = dt_util.utcnow()
-        if not changed:
-            return
+        if changed:
+            self._schedule_push()
+
+    def _schedule_push(self) -> None:
+        """Drop the memoized view and push once, from any thread."""
         self._canonical_cache.clear()
         with self._push_pending_lock:
             if self._push_pending:

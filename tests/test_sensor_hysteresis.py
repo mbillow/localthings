@@ -40,6 +40,9 @@ class _FakeCoordinator:
     def canonical_resources(self, subdevice):
         return {OPERATIONAL_STATE.href: self.rep}
 
+    def entity_rep(self, href):
+        return self.rep
+
 
 def _in(minutes: float, seconds: float = 0) -> datetime:
     return datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=minutes, seconds=seconds)

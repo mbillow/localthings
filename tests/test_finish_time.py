@@ -67,6 +67,43 @@ def test_a_sweep_moving_the_finish_later_is_ignored():
     assert _finish(anchors) == _at(180)
 
 
+def test_a_sweep_seeing_a_real_revision_is_taken():
+    """More than one step plus the sweep's lag later is the appliance adding
+    time, not a stale reading -- seen first by a sweep when nothing pushes it."""
+    anchors = finish.FinishAnchors()
+    anchors.observe(HREF, _rep("00:20:59"), "observe", _at(0))
+    assert anchors.observe(HREF, _rep("00:24:59"), "sweep", _at(30))
+    assert _finish(anchors) == _at(30 + 24 * 60 + 59)
+
+
+def test_a_rejected_sweep_does_not_block_the_push_carrying_it():
+    anchors = finish.FinishAnchors()
+    anchors.observe(HREF, _rep("00:02:50"), "observe", _at(10))
+    anchors.observe(HREF, _rep("00:02:40"), "sweep", _at(22))  # 2 s behind
+    assert anchors.observe(HREF, _rep("00:02:40"), "observe", _at(25))
+    assert _finish(anchors) == _at(185)
+
+
+def test_a_stalled_countdown_re_anchors():
+    """An oven preheating holds remainingTime while it runs; the finish moves
+    on with the clock, as now() + remaining always did."""
+    anchors = finish.FinishAnchors()
+    anchors.observe(HREF, _rep("00:30:00"), "observe", _at(0))
+    assert not anchors.observe(HREF, _rep("00:30:00"), "observe", _at(60))
+    assert anchors.observe(HREF, _rep("00:30:00"), "observe", _at(120))
+    assert _finish(anchors) == _at(120 + 1800)
+
+
+def test_ocf_state_names_are_understood():
+    anchors = finish.FinishAnchors()
+    anchors.observe(HREF, _rep("00:02:00", "active"), "observe", _at(60))
+    anchors.observe(HREF, _rep("00:01:50", "pause"), "observe", _at(70))
+    assert anchors.observe(HREF, _rep("00:01:50", "active"), "observe", _at(100))
+    assert _finish(anchors) == _at(210)
+    assert anchors.observe(HREF, _rep("00:00:00", "idle"), "observe", _at(300))
+    assert anchors.field(HREF) is None
+
+
 def test_a_sweep_moving_the_finish_earlier_is_taken():
     anchors = finish.FinishAnchors()
     anchors.observe(HREF, _rep("00:02:50"), "observe", _at(10))
@@ -103,6 +140,17 @@ def test_pause_freezes_and_resume_re_anchors():
     assert _finish(anchors) == _at(211)
 
 
+def test_a_pause_that_outlasts_the_finish_moves_it_on():
+    """A frozen finish in the past would fire timestamp automations during
+    the pause; once it passes, resuming now is the earliest finish."""
+    anchors = finish.FinishAnchors()
+    anchors.observe(HREF, _rep("00:01:00"), "observe", _at(0))
+    anchors.observe(HREF, _rep("00:00:50", "Pause"), "observe", _at(10))
+    assert _finish(anchors) == _at(60)
+    assert anchors.observe(HREF, _rep("00:00:50", "Pause"), "observe", _at(90))
+    assert _finish(anchors) == _at(140)
+
+
 @pytest.mark.parametrize("ended", ["Ready", "End", "Stop"])
 def test_an_ended_cycle_clears_the_anchor(ended):
     anchors = finish.FinishAnchors()
@@ -114,7 +162,7 @@ def test_an_ended_cycle_clears_the_anchor(ended):
 def test_a_rep_without_remaining_time_is_not_tracked():
     anchors = finish.FinishAnchors()
     assert not anchors.observe(HREF, {"x.com.samsung.da.state": "Run"}, "observe", _at(0))
-    assert anchors.hrefs() == []
+    assert anchors.fields() == {}
 
 
 # --- precision ----------------------------------------------------------------
@@ -145,7 +193,7 @@ def test_the_finish_is_held_while_paused():
     assert oven._finish_time({**_rep("00:01:50", "Pause"), **frozen}) == _at(180).replace(
         microsecond=0
     )
-    # A pause with no anchor (seen first after a restart) stays unknown.
+    # A pause with nothing merged (no reading seen yet) stays unknown.
     assert oven._finish_time(_rep("00:01:50", "Pause")) is None
 
 
@@ -166,6 +214,9 @@ class _Coordinator:
 
     def canonical_resources(self, subdevice):
         return {HREF: self.rep}
+
+    def entity_rep(self, href):
+        return self.rep
 
 
 def _replay(monkeypatch, capability, readings, rep_fn, *, warm=None):
@@ -335,3 +386,45 @@ def test_a_washer_records_about_as_many_changes_as_before(monkeypatch):
     # Ends 00:37:36.2 the next day.
     assert states[-2:] == [datetime(2026, 11, 8, 0, 38, tzinfo=UTC), None]
     assert old[-2] == datetime(2026, 11, 8, 0, 39, tzinfo=UTC)
+
+
+def test_near_the_end_a_seconds_board_keeps_a_two_second_floor(monkeypatch):
+    """Under 40 s left, 5% is under 2 s; a 1 s arrival jitter stays held."""
+    readings = [
+        (0.0, "observe", "00:00:30"),
+        (10.0, "observe", "00:00:21"),  # finish 1 s later than the first
+        (20.0, "observe", "00:00:09"),  # 1 s earlier
+    ]
+    states = _replay(
+        monkeypatch, oven.OVEN_OPERATIONAL_STATE, readings, oven._finish_time, warm="00:01:37"
+    )
+    assert states == [_at(30).replace(microsecond=0)]
+
+
+async def test_the_coordinator_merges_the_finish_and_pushes_it(hass):
+    """Arrival-timed finish reaches the entity snapshot, and a change
+    schedules its own push: the cache-change push can run first."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.localthings.const import DOMAIN
+    from tests.test_subdevice_discovery import ENTRY_DATA
+
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id="localthings_FINISH")
+    entry.add_to_hass(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    pushes = []
+    real = coordinator._schedule_push
+
+    def counted() -> None:
+        pushes.append(1)
+        real()
+
+    setattr(coordinator, "_schedule_push", counted)  # noqa: B010
+
+    coordinator._observe.apply(HREF, _rep("00:02:53"), source="observe")
+    assert pushes
+    field = coordinator.entity_resources()[HREF][finish.FIELD]
+    assert field["seconds"] is True
+    assert finish.FIELD in coordinator.entity_rep(HREF)
+    # Never in what the device reported.
+    assert finish.FIELD not in coordinator.resource(HREF)

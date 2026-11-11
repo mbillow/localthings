@@ -32,8 +32,10 @@ from .observe import MODE_OBSERVE, MODE_POLL
 from .registry.entities import SensorDesc
 from .registry.subdevices import MAIN
 
-# finish_time's deadband as a share of what remains (#772).
+# finish_time's deadband as a share of what remains, and its floor, which
+# absorbs a seconds board's arrival jitter near the end (#772).
 _DEADBAND_FRACTION = 0.05
+_DEADBAND_FLOOR = timedelta(seconds=2)
 
 
 async def async_setup_entry(
@@ -183,11 +185,11 @@ class LocalThingsSensor(LocalThingsEntity, SensorEntity):
             CONF_FINISH_TIME_HYSTERESIS_MINUTES, DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES
         )
         if ceiling_min and raw is not None and self._hysteresis_value is not None:
-            rep = self._resources.get(self._bound.href) or {}
+            rep = self.coordinator.entity_rep(self._bound.href)
             remaining = max(raw - dt_util.utcnow(), timedelta(0))
+            floor = max(finish.resolution(rep), _DEADBAND_FLOOR)
             threshold = min(
-                timedelta(minutes=ceiling_min),
-                max(finish.resolution(rep), remaining * _DEADBAND_FRACTION),
+                timedelta(minutes=ceiling_min), max(floor, remaining * _DEADBAND_FRACTION)
             )
             if abs(raw - self._hysteresis_value) < threshold:
                 return self._hysteresis_value
