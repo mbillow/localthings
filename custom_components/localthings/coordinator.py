@@ -316,6 +316,8 @@ def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dic
 # Write errors after which the session is fine and a re-poll shows the
 # appliance's real state; a dead session isn't re-polled (see _async_put).
 _APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+# hass.data key: per entry, the included set the last inclusion reload aimed for.
+_INCLUSION_RELOADS = f"{DOMAIN}_inclusion_reloads"
 
 
 def _refusal(code: int, response: Any) -> str:
@@ -480,6 +482,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # How long a write sent with Remote Control off is given before it is
     # read back (_took_effect).
     _CONFIRM_DELAY_S: float = 3.0
+    _INCLUSION_RETRY_S: float = 300.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -540,6 +543,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._registration_evidence: dict[str, dict] = {}
         self._registered_included: frozenset[tuple[str, str]] | None = None
         self._entity_reload_pending = False
+        self._inclusion_retry_at = 0.0
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
         # Loaded by async_load_mode_specs before the first refresh.
@@ -1989,28 +1993,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._entry.async_on_unload(self.async_add_listener(self._check_entity_inclusion))
         self._check_entity_inclusion()
 
+    def _late_bound(self) -> list[BoundEntity]:
+        return [
+            b
+            for b in self.bound
+            if b.desc.late_evidence and b.desc.exists_fn is not None and not b.desc.dynamic_presence
+        ]
+
     def _registration_resources(
         self, live: dict[str, dict], remembered: dict[str, dict]
     ) -> dict[str, dict]:
-        """Stand in remembered evidence where a static gate can't decide yet:
-        a stub or `{}` rep, or a live state whose vocabulary is missing (a
-        partial /device/0 entry, issue #27) and fits the remembered one. A
-        missing state field is never filled, so a field the board stopped
-        reporting can't keep its entity alive."""
+        """Stand in remembered evidence for a late_evidence gate that can't
+        decide yet: a stub, or a live state whose vocabulary is missing (a
+        partial /device/0 entry, issue #27) and fits the remembered one. `{}`
+        is a confirmed empty answer (#127), and a missing state field is never
+        filled, so a field the board stopped reporting can't keep its entity."""
 
         found = dict(live)
-        for bound in self.bound:
+        for bound in self._late_bound():
             desc = bound.desc
-            if desc.dynamic_presence or desc.exists_fn is None or not desc.field:
-                continue
             rep = live.get(bound.href)
             previous = remembered.get(bound.href)
-            if rep is None or not previous or desc.field not in previous:
+            if rep is None or not previous or not desc.field or desc.field not in previous:
                 continue
             options = getattr(desc, "options_field", None)
             current = found[bound.href]
-            if not rep or is_stub_rep(rep):
-                # A stub or {} says nothing; the last complete rep stands in.
+            if is_stub_rep(rep):
                 found[bound.href] = {**previous, **current}
             elif (
                 options
@@ -2026,30 +2034,38 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _check_entity_inclusion(self) -> None:
         if self._closed or self.rehydrated or self._entity_reload_pending:
             return
+        late = self._late_bound()
+        if not late or self.hass.loop.time() < self._inclusion_retry_at:
+            return
+        # entity.py imports this module, so this one can't import it at the top.
+        from .entity import _is_included
+
         resources = self._registration_resources(
             {**self._registration_evidence, **self.last_resources}, self._registration_evidence
         )
         saved = self._rehydrate_resources
         self._rehydrate_resources = resources
         try:
-            current = self._included_keys()
+            current = frozenset((b.subdevice.key, _key(b)) for b in late if _is_included(b, self))
         finally:
             self._rehydrate_resources = saved
-        gated = frozenset(
-            (b.subdevice.key, _key(b))
-            for b in self.bound
-            if b.desc.exists_fn is not None and not b.desc.dynamic_presence
+        if self._registered_included is None:
+            return
+        gated = frozenset((b.subdevice.key, _key(b)) for b in late)
+        if current == self._registered_included & gated:
+            return
+        # A board whose first read never decides (always {} or partial)
+        # would otherwise reload on every start; one try per target per run.
+        tried = self.hass.data.setdefault(_INCLUSION_RELOADS, {})
+        if tried.get(self._entry.entry_id) == current:
+            return
+        tried[self._entry.entry_id] = current
+        self._entity_reload_pending = True
+        self._entry.async_create_background_task(
+            self.hass,
+            self._async_reload_entity_inclusion(resources),
+            "localthings_entity_inclusion",
         )
-        if (
-            self._registered_included is not None
-            and current & gated != self._registered_included & gated
-        ):
-            self._entity_reload_pending = True
-            self._entry.async_create_background_task(
-                self.hass,
-                self._async_reload_entity_inclusion(resources),
-                "localthings_entity_inclusion",
-            )
 
     async def _async_reload_entity_inclusion(self, resources: dict[str, dict]) -> None:
         # A reload may come up offline; bank the evidence before discarding
@@ -2059,6 +2075,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             [*self.subdevices, *self.disabled_subdevices],
         )
         if not saved:
+            # Retry later, not on every update: the write and its warning
+            # would otherwise repeat for as long as the disk refuses it.
+            self.hass.data.get(_INCLUSION_RELOADS, {}).pop(self._entry.entry_id, None)
+            self._inclusion_retry_at = self.hass.loop.time() + self._INCLUSION_RETRY_S
             self._entity_reload_pending = False
         elif not self._closed:
             self.hass.config_entries.async_schedule_reload(self._entry.entry_id)

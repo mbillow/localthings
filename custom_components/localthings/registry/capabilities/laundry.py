@@ -197,7 +197,8 @@ def _buzzer_kind(rep: dict) -> str | None:
     if len(set(normalized)) != len(normalized):
         return None
     if set(normalized) == {"on", "off"}:
-        return "boolean" if rep["setBuzzerSound"] in vocabulary else None
+        state = rep["setBuzzerSound"]
+        return "boolean" if isinstance(state, str) and state.casefold() in normalized else None
     return "select"
 
 
@@ -227,6 +228,7 @@ BUZZER_SOUND = Capability(
                 not rep or is_stub_rep(rep) or _buzzer_kind(rep) == "select"
             ),
             options_field="supportedBuzzerSound",
+            late_evidence=True,
             write_fn=lambda p, rep, href=None: (["buzzersound", "vs", "0"], {"setBuzzerSound": p}),
         ),
         SwitchDesc(
@@ -236,6 +238,7 @@ BUZZER_SOUND = Capability(
             icon="mdi:volume-high",
             entity_category="config",
             exists_fn=lambda rep, resources: _buzzer_kind(rep) == "boolean",
+            late_evidence=True,
             value_fn=_buzzer_switch_value,
             supersedes=(("select", "buzzer_sound"),),
             write_fn=_buzzer_switch_write,

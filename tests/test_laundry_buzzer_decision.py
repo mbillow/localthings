@@ -29,6 +29,8 @@ HREF = "/buzzersound/vs/0"
         ({"setBuzzerSound": "Other", "supportedBuzzerSound": ["On", "Off"]}, set()),
         ({"setBuzzerSound": "On", "supportedBuzzerSound": ["On", "ON", "Off"]}, set()),
         ({"setBuzzerSound": "On", "supportedBuzzerSound": ["On", "Off"]}, {"buzzer_sound_enabled"}),
+        # The vocabulary is compared ignoring case, so the state is too.
+        ({"setBuzzerSound": "on", "supportedBuzzerSound": ["On", "Off"]}, {"buzzer_sound_enabled"}),
         (
             {"setBuzzerSound": "Volume_Low", "supportedBuzzerSound": ["Volume_Low", "Volume_High"]},
             {"buzzer_sound"},

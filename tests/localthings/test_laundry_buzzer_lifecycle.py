@@ -134,8 +134,13 @@ async def test_failed_snapshot_defers_reload_until_evidence_can_be_saved(hass, m
                 coordinator._snapshot_store, "async_save", side_effect=OSError("disk unavailable")
             ):
                 coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-                await hass.async_block_till_done()
+                await hass.async_block_till_done(wait_background_tasks=True)
                 reload.assert_not_called()
+            # Backs off rather than retrying the failed write on every update.
+            coordinator._publish_data()
+            await hass.async_block_till_done()
+            reload.assert_not_called()
+            coordinator._inclusion_retry_at = 0.0
             coordinator._publish_data()
             await hass.async_block_till_done()
             reload.assert_called_once_with(mock_entry.entry_id)
@@ -189,7 +194,7 @@ async def test_partial_first_recovery_preserves_snapshot_platform(hass, mock_ent
         assert saved["resources"][HREF] == BOOLEAN
 
 
-@pytest.mark.parametrize("initial", [{}, {"href": HREF}, {"setBuzzerSound": "Off"}])
+@pytest.mark.parametrize("initial", [{"href": HREF}, {"setBuzzerSound": "Off"}])
 async def test_online_reload_retains_complete_evidence(hass, mock_entry, initial):
     resources = {**_load_device("washer"), HREF: dict(initial)}
     with _reachable(resources):
@@ -323,3 +328,43 @@ async def test_field_missing_from_a_populated_rep_is_not_filled_from_snapshot(ha
         assert not _is_included(switch, coordinator)
         saved = await coordinator._snapshot_store.async_load()
         assert "setBuzzerSound" not in saved["resources"][HREF]
+
+
+async def test_undecided_first_read_reloads_toward_a_target_once_per_run(hass, mock_entry):
+    """{} is a confirmed empty answer, so it borrows nothing from the
+    snapshot. A board whose first read is always {} would reload on every
+    start; the second attempt at the same target in one run is skipped."""
+    resources = {**_load_device("washer"), HREF: {}}
+    with _reachable(resources):
+        assert await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
+            coordinator._publish_data()
+            await hass.async_block_till_done()
+            reload.assert_called_once_with(mock_entry.entry_id)
+        assert await hass.config_entries.async_unload(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        resources[HREF] = {}
+        with (
+            patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False),
+            patch.object(hass.config_entries, "async_schedule_reload") as reload,
+        ):
+            assert await hass.config_entries.async_setup(mock_entry.entry_id)
+            await hass.async_block_till_done()
+            coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
+            coordinator._publish_data()
+            await hass.async_block_till_done()
+            reload.assert_not_called()
+
+
+async def test_watcher_ignores_gates_without_late_evidence(hass, mock_entry):
+    resources = {**_load_device("washer"), HREF: dict(VOLUME)}
+    with _reachable(resources):
+        assert await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        late = {b.desc.key for b in coordinator._late_bound()}
+        assert late == {"buzzer_sound", "buzzer_sound_enabled"}
