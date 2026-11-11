@@ -13,6 +13,21 @@
     "subdevice_0a1b2c3d000040008000000001200000_discharge_temperature",
     "subdevice_0a1b2c3d000040008000000001200000_energy_kwh",
     "subdevice_0a1b2c3d000040008000000001200000_evaporator_saturation_temperature",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_backup_heater_application",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_dhw_application_mode",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_dhw_temperature_maximum",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_dhw_temperature_minimum",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_heating_dhw_changeover_temperature",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_heating_dhw_priority",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_heating_outlet_temperature_maximum",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_heating_outlet_temperature_minimum",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_outdoor_curve_cold_point",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_outdoor_curve_warm_point",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_water_law_1_cold_target",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_water_law_1_warm_target",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_water_law_2_cold_target",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_water_law_2_warm_target",
+    "subdevice_0a1b2c3d000040008000000001200000_fsv_zone_control_application",
     "subdevice_0a1b2c3d000040008000000001200000_heat_generated_kwh",
     "subdevice_0a1b2c3d000040008000000001200000_outdoor_temperature",
     "subdevice_0a1b2c3d000040008000000001200000_power_watts",
@@ -24,6 +39,7 @@
     "subdevice_0a1b2c3d000040008000000001200000_zone_mode",
     "subdevice_0a1b2c3d000040008000000001200000_zone_power",
     "subdevice_0a1b2c3d000040008000000001200000_zone_target_temperature",
-    "subdevice_0a1b2c3d000040008000000001200000_zone_temperature"
+    "subdevice_0a1b2c3d000040008000000001200000_zone_temperature",
+    "subdevice_0a1b2c3d000040008000000001200000_zone_water_law_offset"
   ]
 }

@@ -162,6 +162,21 @@ ZONE_MODE = Capability(
     ),
 )
 
+
+def _water_law_offset(key):
+    """The weather-compensation offset added to the water-law flow setpoint.
+    A temperature *difference*: no device class, so Home Assistant doesn't
+    convert it like an absolute temperature for °F users (#795 review)."""
+    return SensorDesc(
+        key=key,
+        field="x.com.samsung.da.offset",
+        unit_fn=_temp_unit,
+        entity_category="diagnostic",
+        enabled_default=False,
+        value_fn=_num,
+    )
+
+
 # type=Water/unit=Celsius on this dump names the space-heating loop's flow/
 # room setpoint, not a literal water temperature -- EHS zone control is
 # leaving-water-temperature-based, same convention as the dhw loop below.
@@ -171,6 +186,7 @@ ZONE_TEMPERATURE = Capability(
     entities=(
         _zone_temperature_sensor("zone_temperature"),
         _zone_climate("zone_climate", HREF_ZONE1_POWER, HREF_ZONE1_TEMPERATURE),
+        _water_law_offset("zone_water_law_offset"),
         NumberDesc(
             key="zone_target_temperature",
             field="x.com.samsung.da.desired",
@@ -199,6 +215,7 @@ ZONE2_TEMPERATURE = Capability(
     entities=(
         _zone_temperature_sensor("zone2_temperature"),
         _zone_climate("zone2_climate", HREF_ZONE2_POWER, HREF_ZONE2_TEMPERATURE),
+        _water_law_offset("zone2_water_law_offset"),
     ),
 )
 ZONE2_POWER = Capability(href=HREF_ZONE2_POWER, poll_tier="warm")
@@ -335,7 +352,6 @@ _EHS_IGNORED = [
     "/availablecontrolsets/vs/0",  # opaque hex-encoded control-set bitmap (id: EHS)
     "/da/softreset/vs/0",  # soft-reset trigger plumbing
     "/diagnosis/vs/0",  # empty {} on this dump
-    "/ehsfsv/vs/0",  # opaque hex-encoded factory setting values
     "/option/dhwdisplay/vs/0",  # front-panel DHW-display show/hide, cosmetic only
     "/reserverulesets/vs/0",  # opaque hex-encoded schedule reservation blob
     "/sac/installationinfo/vs/0",  # static outdoor/indoor installation info, diagnostic only
