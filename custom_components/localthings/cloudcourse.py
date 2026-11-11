@@ -129,9 +129,8 @@ def _slot_and_loaded(blob) -> tuple[str | None, bool]:
 
 def advertised_slots(rep) -> list[str]:
     """Slot ids this device says it has downloaded programs in, from its own
-    CloudExtraCourse_ token. The authority on *which* programs exist -- this
-    is never inferred from what has been learned so far, so "3 of 9
-    discovered" is answerable."""
+    CloudExtraCourse_ token. Not always complete (issue #780) -- see
+    known_slots for the full set."""
     raw = option_value(rep.get("x.com.samsung.da.options"), EXTRA_PREFIX)
     if not isinstance(raw, str) or len(raw) % 2:
         return []
@@ -162,8 +161,15 @@ def cloud_slots(rep, courses) -> list[str]:
 
 def known_slots(rep, courses, record) -> list[str]:
     """``cloud_slots`` in the device's order, then any learned slot it
-    doesn't list (issue #780) -- every program there is to name."""
+    doesn't list (issue #780) -- every program there is to name.
+
+    Empty whenever ``cloud_slots`` is, so it never disagrees with
+    ``supports_cloud_courses``, which gates the options menu. Learned slots
+    skip cloud_slots' course-list subtraction: a payload proves a program,
+    and the WA54CG7150's Eco Cold slot 86 is also one of its course codes."""
     advertised = cloud_slots(rep, courses)
+    if not advertised:
+        return []
     learned = (record or {}).get("slots") or {}
     return advertised + [slot for slot in learned if slot not in advertised]
 

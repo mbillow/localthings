@@ -241,6 +241,23 @@ class TestStoreRules:
         store.set_name("86", "Eco Cold")
         assert cloudcourse.undiscovered(rep, store.snapshot(), []) == ["59", "58"]
 
+    def test_known_slots_need_an_advertised_list(self):
+        """Without one the options menu is hidden, so nothing may be counted
+        that only it could resolve."""
+        rep = _rep([f"CloudCourse_{WA54_ECO_COLD}"])
+        store = cloudcourse.CloudCourses()
+        store.observe(rep)
+        assert cloudcourse.known_slots(rep, [], store.snapshot()) == []
+        assert cloudcourse.undiscovered(rep, store.snapshot(), []) == []
+
+    def test_a_learned_slot_that_matches_a_course_code_still_counts(self):
+        """The WA54CG7150's course list includes 86 too; slots and course
+        codes are separate namespaces, and a payload proves the program."""
+        rep = _rep(["CloudExtraCourse_5958", f"CloudCourse_{WA54_ECO_COLD}"])
+        store = cloudcourse.CloudCourses()
+        store.observe(rep)
+        assert cloudcourse.known_slots(rep, ["01", "86"], store.snapshot()) == ["59", "58", "86"]
+
     def test_the_sentinel_is_still_not_learned_outside_the_list(self):
         store = cloudcourse.CloudCourses()
         store.observe(
