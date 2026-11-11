@@ -22,6 +22,7 @@ from . import (
     refrigerator,
     robot_vacuum,
     soundbar,
+    tv,
     vacuum_station,
     washer,
     water_purifier,
@@ -63,6 +64,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
     "robot_vacuum": robot_vacuum.REGISTRY,
+    "smart_monitor": tv.SMART_MONITOR,
     "soundbar": soundbar.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
@@ -275,6 +277,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     # Microfiber laundry-lint filter (AMF-WW-TP1-22-COMMON, issue #475). It
     # reports washer resources too, but nothing that runs a cycle (#626).
     "x.com.st.d.microfiberfilter": "microfiber_filter",
+    "x.com.st.d.monitor": "smart_monitor",  # issue #815
     "x.com.st.d.stickcleaner": "vacuum_station",
     "x.com.st.d.steamcloset": "air_dresser",
     "x.com.st.d.winecellar": "refrigerator",  # issue #328 -- same TP1X_REF_21K board

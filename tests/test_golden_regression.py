@@ -2268,3 +2268,19 @@ def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+@pytest.mark.parametrize("name", ["smart_monitor_ls32dm702", "smart_monitor_ls43dm703"])
+def test_registry_reproduces_golden_state_keys_for_smart_monitor(name):
+    """M7 Smart Monitors (#815): a flat Tizen TV board routed by /oic/d alone."""
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )

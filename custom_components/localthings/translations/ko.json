@@ -1388,6 +1388,9 @@
           "mute": "음소거",
           "voice": "음성"
         }
+      },
+      "picture_mode": {
+        "name": "화면 모드"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "설정 온도"
+      },
+      "illuminance": {
+        "name": "조도"
       }
     },
     "switch": {

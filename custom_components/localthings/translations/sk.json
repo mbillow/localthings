@@ -1388,6 +1388,9 @@
           "mute": "Stlmené",
           "voice": "Hlas"
         }
+      },
+      "picture_mode": {
+        "name": "Režim obrazu"
       }
     },
     "sensor": {
@@ -2082,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "illuminance": {
+        "name": "Osvetlenie"
       }
     },
     "switch": {
