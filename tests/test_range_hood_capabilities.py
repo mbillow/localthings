@@ -72,13 +72,13 @@ def test_range_hood_fixture_values():
     assert state["hood_filter_usage"] == 100
     assert state["hood_filter_status"] == "wash"
     assert state["energy_kwh"] == 165.62
-    assert state["clean_level"] == 2
+    assert state["clean_level"] == "normal"
     assert state["dust"] == 18
     assert state["fine_dust"] == 14
     assert state["super_fine_dust"] == 9
     assert state["periodic_air_sensing"] is False
     assert state["air_sensing_state"] == "NonProcessing"
-    assert state["last_air_sensing_level"] == "Kr2"
+    assert state["last_air_sensing_level"] == "normal"
     assert state["after_run_active"] is False
     assert state["after_run_progress"] == 0
 
