@@ -1396,6 +1396,9 @@
           "alarm": "Receber notificações",
           "airpurify": "Ventilar silenciosamente"
         }
+      },
+      "picture_mode": {
+        "name": "Modo de imagem"
       }
     },
     "sensor": {
@@ -2141,6 +2144,9 @@
           "poor": "Ruim",
           "very_poor": "Muito ruim"
         }
+      },
+      "illuminance": {
+        "name": "Iluminância"
       }
     },
     "switch": {

@@ -1396,6 +1396,9 @@
           "alarm": "Dostávat oznámení",
           "airpurify": "Tiché větrání"
         }
+      },
+      "picture_mode": {
+        "name": "Režim obrazu"
       }
     },
     "sensor": {
@@ -2141,6 +2144,9 @@
           "poor": "Špatná",
           "very_poor": "Velmi špatná"
         }
+      },
+      "illuminance": {
+        "name": "Osvětlení"
       }
     },
     "switch": {

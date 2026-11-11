@@ -1396,6 +1396,9 @@
           "alarm": "Primaj obaveštenja",
           "airpurify": "Tiha ventilacija"
         }
+      },
+      "picture_mode": {
+        "name": "Režim slike"
       }
     },
     "sensor": {
@@ -2141,6 +2144,9 @@
           "poor": "Loš",
           "very_poor": "Veoma loš"
         }
+      },
+      "illuminance": {
+        "name": "Osvetljenost"
       }
     },
     "switch": {

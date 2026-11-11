@@ -1396,6 +1396,9 @@
           "alarm": "Otrzymuj powiadomienia",
           "airpurify": "Cicha wentylacja"
         }
+      },
+      "picture_mode": {
+        "name": "Tryb obrazu"
       }
     },
     "sensor": {
@@ -2141,6 +2144,9 @@
           "poor": "Zła",
           "very_poor": "Bardzo zła"
         }
+      },
+      "illuminance": {
+        "name": "Natężenie oświetlenia"
       }
     },
     "switch": {
