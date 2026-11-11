@@ -70,7 +70,7 @@ from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .registry import CAPABILITIES
 from .registry.adapter import _key, flatten
-from .registry.batch import parse_device0_batch
+from .registry.batch import is_stub_rep, parse_device0_batch
 from .registry.by_type import registry_for
 from .registry.by_type import resolve as resolve_registry
 from .registry.capabilities import cook
@@ -1992,38 +1992,34 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _registration_resources(
         self, live: dict[str, dict], remembered: dict[str, dict]
     ) -> dict[str, dict]:
-        """Keep complete discovery evidence when a static gate cannot yet decide."""
+        """Stand in remembered evidence where a static gate can't decide yet:
+        a stub or `{}` rep, or a live state whose vocabulary is missing (a
+        partial /device/0 entry, issue #27) and fits the remembered one. A
+        missing state field is never filled, so a field the board stopped
+        reporting can't keep its entity alive."""
 
         found = dict(live)
         for bound in self.bound:
             desc = bound.desc
-            if desc.dynamic_presence or desc.exists_fn is None:
+            if desc.dynamic_presence or desc.exists_fn is None or not desc.field:
                 continue
             rep = live.get(bound.href)
             previous = remembered.get(bound.href)
-            if rep is None or not previous or not desc.field or desc.field not in previous:
+            if rep is None or not previous or desc.field not in previous:
                 continue
             options = getattr(desc, "options_field", None)
-            if options and not previous.get(options):
-                continue
-            missing_field = desc.field not in rep
-            missing_options = options and not rep.get(options)
-            if not missing_field and not missing_options:
-                continue
-            merged = dict(found[bound.href])
-            if missing_field:
-                merged[desc.field] = previous[desc.field]
-            if missing_options:
-                merged[options] = previous[options]
-            if options and (
-                (missing_field and rep.get(options) != previous[options])
-                or (missing_options and rep.get(desc.field) not in previous[options])
+            current = found[bound.href]
+            if not rep or is_stub_rep(rep):
+                # A stub or {} says nothing; the last complete rep stands in.
+                found[bound.href] = {**previous, **current}
+            elif (
+                options
+                and desc.field in rep
+                and not rep.get(options)
+                and isinstance(previous.get(options), list)
+                and rep[desc.field] in previous[options]
             ):
-                # Keep the last complete pair rather than combining a new
-                # vocabulary with a state from another model representation.
-                merged[desc.field] = previous[desc.field]
-                merged[options] = previous[options]
-            found[bound.href] = merged
+                found[bound.href] = {**current, options: previous[options]}
         return found
 
     @callback
