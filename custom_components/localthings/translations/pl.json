@@ -1198,7 +1198,14 @@
           "5f": "Tylko wirowanie",
           "63": "Mocna para",
           "67": "Antyalergiczny z parą",
-          "68": "Duże rzeczy z parą"
+          "68": "Duże rzeczy z parą",
+          "a1": "Normalny",
+          "a7": "Pielęgnacja produktu",
+          "a9": "Tide Pod na zimno",
+          "ad": "AI OptiWash + suszenie",
+          "59": "Tkaniny niemnące",
+          "a8": "Suszenie czasowe",
+          "aa": "Napowietrzanie"
         }
       },
       "washer_dry_level": {
@@ -1384,6 +1391,9 @@
           "mute": "Wyciszony",
           "voice": "Głos"
         }
+      },
+      "picture_mode": {
+        "name": "Tryb obrazu"
       }
     },
     "sensor": {
@@ -1842,6 +1852,57 @@
       "zone_temperature": {
         "name": "Temperatura strefy"
       },
+      "zone_water_law_offset": {
+        "name": "Przesunięcie krzywej grzewczej strefy"
+      },
+      "zone2_water_law_offset": {
+        "name": "Przesunięcie krzywej grzewczej strefy 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Krzywa grzewcza, zimny punkt temperatury zewnętrznej (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Krzywa grzewcza, ciepły punkt temperatury zewnętrznej (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Krzywa grzewcza 1, temperatura docelowa przy niskiej temperaturze zewnętrznej (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Krzywa grzewcza 1, temperatura docelowa przy wysokiej temperaturze zewnętrznej (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Krzywa grzewcza 2, temperatura docelowa przy niskiej temperaturze zewnętrznej (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Krzywa grzewcza 2, temperatura docelowa przy wysokiej temperaturze zewnętrznej (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Górny limit temperatury docelowej CWU (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Dolny limit temperatury docelowej CWU (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Tryb pracy CWU (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorytet ogrzewania i CWU (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura zewnętrzna zmiany priorytetu ogrzewanie/CWU (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Użycie grzałki wspomagającej (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Górny limit temperatury zasilania ogrzewania (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Dolny limit temperatury zasilania ogrzewania (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Sterowanie strefami (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura strefy 2"
       },
@@ -2027,6 +2088,9 @@
       },
       "oven_setpoint": {
         "name": "Temperatura zadana"
+      },
+      "illuminance": {
+        "name": "Natężenie oświetlenia"
       }
     },
     "switch": {
@@ -2543,7 +2607,7 @@
       },
       "settings": {
         "title": "Ustawienia urządzenia",
-        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/środka zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest przeliczany na podstawie szacunku pozostałego czasu podawanego przez urządzenie przy każdym odpytaniu, przez co między aktualizacjami może dryfować lub zmieniać się o minutę lub dwie. Zwiększ poniższą wartość minimalnej zmiany, aby sensor utrzymywał ostatnią zgłoszoną wartość, dopóki szacunek nie przesunie się o co najmniej tyle minut — ograniczy to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą obliczoną zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
+        "description": "Niektóre urządzenia przyjmują pewne zapisy (np. domyślne dozowanie detergentu/środka zmiękczającego w pralce) nawet wtedy, gdy zgłaszają wyłączone zdalne sterowanie. Domyślnie LocalThings blokuje każdy zapis z czytelnym komunikatem błędu, gdy urządzenie zgłasza wyłączone zdalne sterowanie, zamiast pozwolić, by urządzenie po cichu go odrzuciło. Włącz tę opcję tylko wtedy, gdy potwierdzono, że zapisy faktycznie działają na tym urządzeniu przy wyłączonym zdalnym sterowaniu — w przeciwnym razie zamienisz czytelny błąd na ciche niepowodzenie.\n\nSzacowany czas zakończenia jest liczony od chwili nadejścia każdego odczytu pozostałego czasu: z dokładnością do sekundy na urządzeniach, które podają sekundy, a na pozostałych do najbliższej minuty. Korekta mniejsza niż około 5% pozostałego czasu jest wstrzymywana, najwyżej do poniższej wartości minimalnej zmiany — ogranicza to szum w historii i dzienniku zdarzeń. Ustaw 0, aby zgłaszać każdą zmianę.\n\nNiektóre modele zgłaszają tryb, którego nigdy nie wymieniają jako obsługiwany — na przykład klimatyzator pracujący w trybie Cichym, który oferuje tylko Wył./Uśpienie/Prędkość. LocalThings zapamiętuje każdy taki zauważony tryb i nadal go udostępnia, dzięki czemu pozostaje wybieralny, gdy urządzenie znalazło się w nim choć raz. Wyłącz tę opcję, aby udostępniać tylko to, co urządzenie ogłasza; użyj „Zapomnij zapamiętane tryby” na poprzednim ekranie, aby wyczyścić to, co już zapamiętano.\n\nUrządzenie pralnicze z pobranymi z chmury cyklami otrzyma tutaj przypomnienie, gdy zgłosi cykl, którego Home Assistant nie potrafi jeszcze udostępnić — niektóre urządzenia zgłaszają taki cykl, nawet jeśli nigdy nie otwierano ekranu „Pobrane cykle” w aplikacji SmartThings. Wyłącz tę opcję, aby zatrzymać przypomnienie i ukryć już nazwane pobrane cykle na liście cykli; nic z tego, co zostało skonfigurowane, nie zostanie utracone, a ponowne włączenie przywróci wszystko z powrotem.",
         "data": {
           "bypass_remote_control_lock": "Zezwalaj na zapisy nawet wtedy, gdy zdalne sterowanie jest zgłaszane jako wyłączone",
           "finish_time_hysteresis_minutes": "Szacowane zakończenie — minimalna zmiana (minuty)",
@@ -2586,7 +2650,7 @@
       },
       "cloud_manual": {
         "title": "Pobrane cykle",
-        "description": "To urządzenie zgłasza {total} pobranych cykli; jak dotąd zauważono {found}.\n\nUstawienia pobranego cyklu są widoczne tylko wtedy, gdy dany cykl jest załadowany, a urządzenie nigdy nie zgłasza ich nazw. Aby dodać brakujące ({pending}): w aplikacji SmartThings (nie na samym urządzeniu) otwórz to urządzenie i dotknij „Pobrane cykle” — to osobna pozycja niż „Cykl”, niżej na ekranie, i to ona jest tutaj istotna. Przejdź kolejno przez każdy pobrany program, zatrzymując się na kilka sekund na każdym, aby LocalThings mógł go zauważyć, a następnie wróć tutaj.\n\nNadaj każdemu nazwę, którą chcesz widzieć w Home Assistant. Pozostaw nazwę pustą, aby nie umieszczać danego cyklu na liście cykli. Nazwy muszą być unikalne.\n\nPobrany cykl to program w tym urządzeniu, który uruchamia pobrany program. Jest wykrywany automatycznie, ale potwierdź go tutaj przed użyciem: wybranie pobranego cyklu zapisuje ten kod programu w urządzeniu.",
+        "description": "To urządzenie ma co najmniej tyle pobranych cykli: {total}; jak dotąd zauważono: {found}.\n\nUstawienia pobranego cyklu są widoczne tylko wtedy, gdy dany cykl jest załadowany, a urządzenie nigdy nie zgłasza ich nazw. Aby dodać brakujące ({pending}): w aplikacji SmartThings (nie na samym urządzeniu) otwórz to urządzenie i dotknij „Pobrane cykle” — to osobna pozycja niż „Cykl”, niżej na ekranie, i to ona jest tutaj istotna. Przejdź kolejno przez każdy pobrany program, zatrzymując się na kilka sekund na każdym, aby LocalThings mógł go zauważyć, a następnie wróć tutaj.\n\nNadaj każdemu nazwę, którą chcesz widzieć w Home Assistant. Pozostaw nazwę pustą, aby nie umieszczać danego cyklu na liście cykli. Nazwy muszą być unikalne.\n\nPobrany cykl to program w tym urządzeniu, który uruchamia pobrany program. Jest wykrywany automatycznie, ale potwierdź go tutaj przed użyciem: wybranie pobranego cyklu zapisuje ten kod programu w urządzeniu.",
         "data": {
           "download_course": "Kod programu pobranego cyklu"
         }

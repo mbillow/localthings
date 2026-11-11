@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from .capabilities.av import ONBOARDING_HREFS
+from .capabilities.tv import APPDATA_PREFIX
 from .subdevices import _iter_oic_res_hrefs
 
 if TYPE_CHECKING:
@@ -26,9 +27,10 @@ FLAT_ENUMERATION_BUDGET_S = 60.0
 
 # Never read: the onboarding resources (tokens, a paired phone, nearby
 # networks), /oic/sec/* (refused, no entities), identity (read_identity has
-# it) and /device/<n> Collections (owned by the subdevice code).
+# it), /device/<n> Collections (owned by the subdevice code) and a TV's
+# appdata mailboxes (an account list and a remote token, #815).
 _SKIP_EXACT = frozenset({"/oic/d", "/oic/p", "/oic/res", *ONBOARDING_HREFS})
-_SKIP_PREFIXES = ("/oic/sec/", "/device/")
+_SKIP_PREFIXES = ("/oic/sec/", "/device/", APPDATA_PREFIX)
 
 
 def flat_hrefs(links) -> list[str]:

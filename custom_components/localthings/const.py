@@ -156,13 +156,10 @@ CONF_DISABLED_SUBDEVICES = "disabled_subdevices"
 # (block stays on).
 CONF_BYPASS_REMOTE_CONTROL = "bypass_remote_control_lock"
 
-# Options-flow key: minimum change (in minutes) required before a
-# hysteresis-gated timestamp sensor (currently just finish_time) reports a
-# new value. Devices commonly revise their remaining-time estimate by a
-# minute or two throughout a cycle, and finish_time = now() + remaining
-# drifts with the poll interval between revisions -- both push a fresh
-# state far more often than the estimate is meaningfully different. 0
-# disables the gate.
+# Options-flow key: the ceiling, in minutes, on finish_time's deadband,
+# which otherwise scales with the time left (sensor.py's _apply_hysteresis,
+# #772). Devices revise their estimate by a minute or two through a cycle
+# (#239). 0 disables the gate.
 CONF_FINISH_TIME_HYSTERESIS_MINUTES = "finish_time_hysteresis_minutes"
 DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES = 3
 

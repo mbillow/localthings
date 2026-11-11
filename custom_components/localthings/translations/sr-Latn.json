@@ -1198,7 +1198,14 @@
           "5f": "Samo centrifuga",
           "63": "Snažna para",
           "67": "Antialergijska para",
-          "68": "Kabasti veš sa parom"
+          "68": "Kabasti veš sa parom",
+          "a1": "Normalno",
+          "a7": "Nega proizvoda",
+          "a9": "Tide Pod hladno",
+          "ad": "AI OptiWash+Sušenje",
+          "59": "Lako održavanje",
+          "a8": "Vremensko sušenje",
+          "aa": "Provetravanje hladnim vazduhom"
         }
       },
       "washer_dry_level": {
@@ -1384,6 +1391,9 @@
           "mute": "Utišano",
           "voice": "Glas"
         }
+      },
+      "picture_mode": {
+        "name": "Režim slike"
       }
     },
     "sensor": {
@@ -1842,6 +1852,57 @@
       "zone_temperature": {
         "name": "Temperatura zone"
       },
+      "zone_water_law_offset": {
+        "name": "Pomak klimatske krive zone"
+      },
+      "zone2_water_law_offset": {
+        "name": "Pomak klimatske krive zone 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Klimatska kriva, hladna tačka spoljašnje temperature (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Klimatska kriva, topla tačka spoljašnje temperature (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Klimatska kriva 1, ciljna temperatura pri niskoj spoljašnjoj temperaturi (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Klimatska kriva 1, ciljna temperatura pri visokoj spoljašnjoj temperaturi (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Klimatska kriva 2, ciljna temperatura pri niskoj spoljašnjoj temperaturi (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Klimatska kriva 2, ciljna temperatura pri visokoj spoljašnjoj temperaturi (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Gornja granica ciljne temperature tople vode (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Donja granica ciljne temperature tople vode (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Režim rada tople vode (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioritet grejanja i tople vode (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Spoljašnja temperatura promene prioriteta grejanje/topla voda (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Upotreba pomoćnog grejača (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Gornja granica temperature polazne vode grejanja (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Donja granica temperature polazne vode grejanja (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Upravljanje zonama (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura zone 2"
       },
@@ -2027,6 +2088,9 @@
       },
       "oven_setpoint": {
         "name": "Zadana vrednost"
+      },
+      "illuminance": {
+        "name": "Osvetljenost"
       }
     },
     "switch": {
@@ -2543,7 +2607,7 @@
       },
       "settings": {
         "title": "Podešavanja uređaja",
-        "description": "Neki uređaji prihvataju određene komande upisa (npr. podrazumevano doziranje deterdženta/omekšivača na veš mašini) čak i kada prijavljuju da je daljinsko upravljanje isključeno. LocalThings podrazumevano blokira svaki upis uz jasnu poruku o grešci kad god uređaj javi da je daljinsko upravljanje isključeno, umesto da dozvoli uređaju da to tiho odbaci. Omogućite ovo samo ako ste potvrdili da upisi zaista rade na ovom uređaju kada je daljinsko upravljanje isključeno — u suprotnom ćete jasnu poruku o grešci zameniti za tihi neuspeh.\n\nProcenjeno vreme završetka se ponovo izračunava na osnovu procene preostalog vremena uređaja prilikom svakog uzorkovanja, što može da varira ili da se koriguje za minut ili dva između ažuriranja. Povećajte minimalnu vrednost promene ispod da biste zadržali senzor na poslednjoj prijavljenoj vrednosti sve dok se procena ne pomeri za najmanje toliko minuta, čime se smanjuje šum u istoriji/dnevniku. Postavite na 0 da biste prijavili svaku izračunatu promenu.\n\nNeki modeli prijavljuju režim koji nikada ne navode kao podržan — na primer, klima uređaj koji je postavljen na Tihi režim (Quiet), a nudi samo Off/Sleep/Speed. LocalThings pamti svaki takav režim koji uoči i nastavlja da ga nudi, tako da ostaje dostupan za izbor nakon što je uređaj bio u njemu barem jednom. Isključite ovo da biste nudili samo ono što uređaj oglašava; koristite „Zaboravi zapamćene režime“ na prethodnom ekranu da biste obrisali ono što je već zapamćeno.\n\nUređaj za pranje veša sa ciklusima preuzetim sa oblaka ovde dobija podsetnik kada prijavi ciklus koji Home Assistant još uvek ne može da ponudi — neki uređaji ga prijavljuju čak i ako sami nikada niste otvorili ekran „Preuzmi cikluse“ u aplikaciji SmartThings. Isključite ovo da biste zaustavili taj podsetnik i sakrili već imenovane preuzete cikluse sa liste ciklusa; ništa što je već podešeno neće biti izgubljeno, a ponovno uključivanje vraća sve nazad.",
+        "description": "Neki uređaji prihvataju određene komande upisa (npr. podrazumevano doziranje deterdženta/omekšivača na veš mašini) čak i kada prijavljuju da je daljinsko upravljanje isključeno. LocalThings podrazumevano blokira svaki upis uz jasnu poruku o grešci kad god uređaj javi da je daljinsko upravljanje isključeno, umesto da dozvoli uređaju da to tiho odbaci. Omogućite ovo samo ako ste potvrdili da upisi zaista rade na ovom uređaju kada je daljinsko upravljanje isključeno — u suprotnom ćete jasnu poruku o grešci zameniti za tihi neuspeh.\n\nProcenjeno vreme završetka računa se od trenutka kada stigne svako očitavanje preostalog vremena: u sekundu na uređajima koji prijavljuju sekunde, a na ostalima na najbliži minut. Korekcija manja od oko 5% preostalog vremena se zadržava, najviše do minimalne vrednosti promene ispod, čime se smanjuje šum u istoriji/dnevniku. Postavite na 0 da biste prijavili svaku promenu.\n\nNeki modeli prijavljuju režim koji nikada ne navode kao podržan — na primer, klima uređaj koji je postavljen na Tihi režim (Quiet), a nudi samo Off/Sleep/Speed. LocalThings pamti svaki takav režim koji uoči i nastavlja da ga nudi, tako da ostaje dostupan za izbor nakon što je uređaj bio u njemu barem jednom. Isključite ovo da biste nudili samo ono što uređaj oglašava; koristite „Zaboravi zapamćene režime“ na prethodnom ekranu da biste obrisali ono što je već zapamćeno.\n\nUređaj za pranje veša sa ciklusima preuzetim sa oblaka ovde dobija podsetnik kada prijavi ciklus koji Home Assistant još uvek ne može da ponudi — neki uređaji ga prijavljuju čak i ako sami nikada niste otvorili ekran „Preuzmi cikluse“ u aplikaciji SmartThings. Isključite ovo da biste zaustavili taj podsetnik i sakrili već imenovane preuzete cikluse sa liste ciklusa; ništa što je već podešeno neće biti izgubljeno, a ponovno uključivanje vraća sve nazad.",
         "data": {
           "bypass_remote_control_lock": "Dozvoli upise čak i kada je prijavljeno da je daljinsko upravljanje isključeno",
           "finish_time_hysteresis_minutes": "Procenjen završetak -- minimalna promena (minuti)",
@@ -2586,7 +2650,7 @@
       },
       "cloud_manual": {
         "title": "Preuzmi cikluse",
-        "description": "Ovaj aparat prijavljuje {total} preuzetih ciklusa; {found} je uočeno do sada.\n\nPodešavanja preuzetog ciklusa su vidljiva samo dok je taj ciklus učitan, a aparat nikada ne prijavljuje njihova imena. Da biste dodali one koji nedostaju ({pending}): u aplikaciji SmartThings (ne na samom aparatu), otvorite ovaj aparat i dodirnite „Preuzmi cikluse“ — poseban red u odnosu na „Ciklus“, niže na ekranu, i onaj koji je ovde važan. Prođite kroz svaki preuzeti program redom, zastajući nekoliko sekundi na svakom kako bi LocalThings mogao da ga uoči, a zatim se vratite ovde.\n\nDajte svakom od njih ime koje želite da vidite u Home Assistant-u. Ostavite ime prazno da taj ciklus ne bi bio na listi ciklusa. Imena moraju biti jedinstvena.\n\nCiklus preuzimanja (Download cycle) je program na ovom aparatu koji pokreće preuzeti program. Detektuje se automatski, ali ga potvrdite ovde pre upotrebe: izbor preuzetog ciklusa upisuje ovaj kod programa u aparat.",
+        "description": "Ovaj aparat ima najmanje sledeći broj preuzetih ciklusa: {total}; do sada je uočeno: {found}.\n\nPodešavanja preuzetog ciklusa su vidljiva samo dok je taj ciklus učitan, a aparat nikada ne prijavljuje njihova imena. Da biste dodali one koji nedostaju ({pending}): u aplikaciji SmartThings (ne na samom aparatu), otvorite ovaj aparat i dodirnite „Preuzmi cikluse“ — poseban red u odnosu na „Ciklus“, niže na ekranu, i onaj koji je ovde važan. Prođite kroz svaki preuzeti program redom, zastajući nekoliko sekundi na svakom kako bi LocalThings mogao da ga uoči, a zatim se vratite ovde.\n\nDajte svakom od njih ime koje želite da vidite u Home Assistant-u. Ostavite ime prazno da taj ciklus ne bi bio na listi ciklusa. Imena moraju biti jedinstvena.\n\nCiklus preuzimanja (Download cycle) je program na ovom aparatu koji pokreće preuzeti program. Detektuje se automatski, ali ga potvrdite ovde pre upotrebe: izbor preuzetog ciklusa upisuje ovaj kod programa u aparat.",
         "data": {
           "download_course": "Kod programa preuzetog ciklusa"
         }

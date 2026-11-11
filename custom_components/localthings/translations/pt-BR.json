@@ -1198,7 +1198,14 @@
           "5f": "Somente centrifugação",
           "63": "Vapor potente",
           "67": "Antialérgico a vapor",
-          "68": "Peças volumosas a vapor"
+          "68": "Peças volumosas a vapor",
+          "a1": "Normal",
+          "a7": "Cuidado do produto",
+          "a9": "Tide Pod fria",
+          "ad": "AI OptiWash + secar",
+          "59": "Antirrugas",
+          "a8": "Secagem por tempo",
+          "aa": "Arejar sem aquecer"
         }
       },
       "washer_dry_level": {
@@ -1384,6 +1391,9 @@
           "mute": "Mudo",
           "voice": "Voz"
         }
+      },
+      "picture_mode": {
+        "name": "Modo de imagem"
       }
     },
     "sensor": {
@@ -1842,6 +1852,57 @@
       "zone_temperature": {
         "name": "Temperatura da zona"
       },
+      "zone_water_law_offset": {
+        "name": "Deslocamento da curva climática da zona"
+      },
+      "zone2_water_law_offset": {
+        "name": "Deslocamento da curva climática da zona 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Curva climática, ponto frio da temperatura externa (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Curva climática, ponto quente da temperatura externa (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Curva climática 1, temperatura alvo com temperatura externa fria (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Curva climática 1, temperatura alvo com temperatura externa quente (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Curva climática 2, temperatura alvo com temperatura externa fria (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Curva climática 2, temperatura alvo com temperatura externa quente (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Limite máximo da temperatura alvo da água quente (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Limite mínimo da temperatura alvo da água quente (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Modo de operação da água quente (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioridade entre aquecimento e água quente (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura externa de troca de prioridade aquecimento/água quente (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Uso do aquecedor auxiliar (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Limite máximo da temperatura de saída da água do aquecimento (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Limite mínimo da temperatura de saída da água do aquecimento (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Controle de zonas (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura da zona 2"
       },
@@ -2027,6 +2088,9 @@
       },
       "oven_setpoint": {
         "name": "Temperatura de ajuste"
+      },
+      "illuminance": {
+        "name": "Iluminância"
       }
     },
     "switch": {
@@ -2543,7 +2607,7 @@
       },
       "settings": {
         "title": "Configurações do dispositivo",
-        "description": "Alguns dispositivos aceitam certas gravações (por exemplo, a dosagem padrão de sabão/amaciante em uma lavadora) mesmo informando que o controle remoto está desativado. Por padrão, o LocalThings bloqueia toda gravação com um erro claro sempre que o dispositivo informa que o controle remoto está desativado, em vez de permitir que ele a rejeite silenciosamente. Ative esta opção somente se você confirmou que as gravações funcionam neste dispositivo com o controle remoto desativado — caso contrário, você trocará um erro claro por uma falha silenciosa.\n\nO horário estimado de conclusão é recalculado a partir da estimativa de tempo restante do dispositivo a cada consulta, que pode variar ou ser revisada em um ou dois minutos entre atualizações. Aumente o valor de alteração mínima abaixo para manter o sensor no último valor informado até a estimativa mudar pelo menos essa quantidade de minutos, reduzindo registros excessivos no histórico e no diário. Defina como 0 para informar toda alteração calculada.\n\nAlguns modelos informam um modo que nunca listam como compatível — por exemplo, um ar-condicionado no modo Silencioso que só oferece Desligado/Dormir/Rápido. O LocalThings memoriza qualquer modo assim que encontrar e continua oferecendo-o, para que ele possa ser selecionado depois que o dispositivo o tiver usado ao menos uma vez. Desative esta opção para oferecer apenas o que o dispositivo anuncia; use \"Esquecer modos memorizados\" na tela anterior para limpar o que já foi memorizado.\n\nUm aparelho de lavanderia com ciclos baixados da nuvem recebe um lembrete aqui quando informa um ciclo que o Home Assistant ainda não pode oferecer — alguns aparelhos informam um mesmo que você nunca tenha aberto a tela \"Baixar ciclos\" no aplicativo SmartThings. Desative esta opção para interromper o lembrete e ocultar da lista de ciclos os ciclos baixados já nomeados; nenhuma configuração existente será perdida, e reativar a opção restaura tudo.",
+        "description": "Alguns dispositivos aceitam certas gravações (por exemplo, a dosagem padrão de sabão/amaciante em uma lavadora) mesmo informando que o controle remoto está desativado. Por padrão, o LocalThings bloqueia toda gravação com um erro claro sempre que o dispositivo informa que o controle remoto está desativado, em vez de permitir que ele a rejeite silenciosamente. Ative esta opção somente se você confirmou que as gravações funcionam neste dispositivo com o controle remoto desativado — caso contrário, você trocará um erro claro por uma falha silenciosa.\n\nO horário estimado de conclusão é calculado a partir da chegada de cada leitura do tempo restante: ao segundo nos dispositivos que informam segundos e ao minuto mais próximo nos demais. Uma revisão menor que cerca de 5% do tempo restante é retida, no máximo até o valor de alteração mínima abaixo, reduzindo registros excessivos no histórico e no diário. Defina como 0 para informar toda alteração.\n\nAlguns modelos informam um modo que nunca listam como compatível — por exemplo, um ar-condicionado no modo Silencioso que só oferece Desligado/Dormir/Rápido. O LocalThings memoriza qualquer modo assim que encontrar e continua oferecendo-o, para que ele possa ser selecionado depois que o dispositivo o tiver usado ao menos uma vez. Desative esta opção para oferecer apenas o que o dispositivo anuncia; use \"Esquecer modos memorizados\" na tela anterior para limpar o que já foi memorizado.\n\nUm aparelho de lavanderia com ciclos baixados da nuvem recebe um lembrete aqui quando informa um ciclo que o Home Assistant ainda não pode oferecer — alguns aparelhos informam um mesmo que você nunca tenha aberto a tela \"Baixar ciclos\" no aplicativo SmartThings. Desative esta opção para interromper o lembrete e ocultar da lista de ciclos os ciclos baixados já nomeados; nenhuma configuração existente será perdida, e reativar a opção restaura tudo.",
         "data": {
           "bypass_remote_control_lock": "Permitir gravações mesmo quando o controle remoto for informado como desativado",
           "finish_time_hysteresis_minutes": "Conclusão estimada — alteração mínima (minutos)",
@@ -2586,7 +2650,7 @@
       },
       "cloud_manual": {
         "title": "Baixar ciclos",
-        "description": "Este aparelho informa {total} ciclo(s) baixado(s); {found} foram detectados até agora.\n\nAs configurações de um ciclo baixado só ficam visíveis enquanto ele está carregado, e o aparelho nunca informa seus nomes. Para adicionar os que faltam ({pending}): no aplicativo SmartThings (não no próprio aparelho), abra este aparelho e toque em \"Baixar ciclos\" — uma linha separada de \"Ciclo\", mais abaixo na tela, e a que importa aqui. Selecione cada programa baixado por vez, aguardando alguns segundos em cada um para que o LocalThings possa detectá-lo, e depois volte aqui.\n\nDê a cada um o nome que deseja ver no Home Assistant. Deixe um nome em branco para manter esse ciclo fora da lista de ciclos. Os nomes devem ser únicos.\n\nO ciclo Baixar é o programa deste aparelho que executa um programa baixado. Ele é detectado automaticamente, mas confirme-o aqui antes de usar: selecionar um ciclo baixado grava esse código de programa no aparelho.",
+        "description": "Este aparelho tem pelo menos {total} ciclo(s) baixado(s); {found} foram detectados até agora.\n\nAs configurações de um ciclo baixado só ficam visíveis enquanto ele está carregado, e o aparelho nunca informa seus nomes. Para adicionar os que faltam ({pending}): no aplicativo SmartThings (não no próprio aparelho), abra este aparelho e toque em \"Baixar ciclos\" — uma linha separada de \"Ciclo\", mais abaixo na tela, e a que importa aqui. Selecione cada programa baixado por vez, aguardando alguns segundos em cada um para que o LocalThings possa detectá-lo, e depois volte aqui.\n\nDê a cada um o nome que deseja ver no Home Assistant. Deixe um nome em branco para manter esse ciclo fora da lista de ciclos. Os nomes devem ser únicos.\n\nO ciclo Baixar é o programa deste aparelho que executa um programa baixado. Ele é detectado automaticamente, mas confirme-o aqui antes de usar: selecionar um ciclo baixado grava esse código de programa no aparelho.",
         "data": {
           "download_course": "Código do programa de ciclo baixado"
         }

@@ -2204,11 +2204,8 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         deadline = time.monotonic() + _CLOUD_WAIT_TIMEOUT_S
         while time.monotonic() < deadline:
             slot = await coord.async_probe_cloud_courses()
-            # Only a slot the store actually recorded. The probe reports
-            # whatever payload is loaded, while observe() declines one whose
-            # slot the device doesn't advertise -- offering to name that would
-            # take a name and silently discard it, since there is no record to
-            # hang it on and no payload to replay.
+            # Only a slot the store actually recorded: naming one with no
+            # payload to replay would silently discard the name.
             if (
                 slot is not None
                 and slot != self._cloud_baseline
@@ -2235,7 +2232,7 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         rep = coord.cloud_course_rep()
         courses = cycle_options(coord.canonical_resources(MAIN))
         record = coord.cloud_courses.snapshot()
-        slots = cloudcourse.cloud_slots(rep, courses)
+        slots = cloudcourse.known_slots(rep, courses, record)
         names = [n for s in slots if (n := (record["slots"].get(s) or {}).get("name"))]
         return {
             "named": str(len(names)),
@@ -2389,10 +2386,11 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         rep = coord.cloud_course_rep()
         record = store.snapshot()
         slots = record["slots"]
-        advertised = cloudcourse.cloud_slots(rep, cycle_options(coord.canonical_resources(MAIN)))
-        # Learned slots keep the appliance's own ordering; anything learned
-        # but no longer advertised still gets a row so a name isn't stranded.
-        known = [s for s in advertised if s in slots] + [s for s in slots if s not in advertised]
+        courses = cycle_options(coord.canonical_resources(MAIN))
+        advertised = cloudcourse.cloud_slots(rep, courses)
+        # Learned slots in the appliance's own order, then any it doesn't list
+        # (issue #780) or no longer lists, so a name isn't stranded.
+        known = [s for s in cloudcourse.known_slots(rep, courses, record) if s in slots]
 
         if user_input is not None:
             errors = self._apply_cloud_course_names(coord, known, user_input)
@@ -2498,7 +2496,7 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             errors=errors or {},
             description_placeholders={
                 "found": str(len(known)),
-                "total": str(len(advertised)) if advertised else str(len(known)),
+                "total": str(len(known) + len(pending)),
                 "pending": ", ".join(pending) if pending else "(none)",
             },
         )

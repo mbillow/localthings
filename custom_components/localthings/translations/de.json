@@ -1161,7 +1161,14 @@
           "5f": "Nur Schleudern",
           "63": "Power-Dampf",
           "67": "Dampf-Anti-Allergie",
-          "68": "Dampf-Großwäsche"
+          "68": "Dampf-Großwäsche",
+          "a1": "Normal",
+          "a7": "Produktpflege",
+          "a9": "Tide Pod Kalt",
+          "ad": "AI OptiWash + Trocknen",
+          "59": "Pflegeleicht",
+          "a8": "Zeittrocknen",
+          "aa": "Lüften"
         }
       },
       "washer_dry_level": {
@@ -1384,6 +1391,9 @@
           "mute": "Stumm",
           "voice": "Sprache"
         }
+      },
+      "picture_mode": {
+        "name": "Bildmodus"
       }
     },
     "sensor": {
@@ -1836,6 +1846,57 @@
       "zone_temperature": {
         "name": "Zonentemperatur"
       },
+      "zone_water_law_offset": {
+        "name": "Heizkurven-Verschiebung der Zone"
+      },
+      "zone2_water_law_offset": {
+        "name": "Heizkurven-Verschiebung Zone 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Heizkurve, kalter Außentemperaturpunkt (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Heizkurve, warmer Außentemperaturpunkt (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Heizkurve 1, Solltemperatur bei kalter Außentemperatur (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Heizkurve 1, Solltemperatur bei warmer Außentemperatur (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Heizkurve 2, Solltemperatur bei kalter Außentemperatur (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Heizkurve 2, Solltemperatur bei warmer Außentemperatur (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Obergrenze der Warmwasser-Solltemperatur (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Untergrenze der Warmwasser-Solltemperatur (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Warmwasser-Betriebsart (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorität Heizung und Warmwasser (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Außentemperatur für Prioritätswechsel Heizung/Warmwasser (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Einsatz der Zusatzheizung (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Obergrenze der Heizungs-Vorlauftemperatur (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Untergrenze der Heizungs-Vorlauftemperatur (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zonensteuerung (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatur Zone 2"
       },
@@ -2027,6 +2088,9 @@
       },
       "oven_setpoint": {
         "name": "Sollwert"
+      },
+      "illuminance": {
+        "name": "Beleuchtungsstärke"
       }
     },
     "switch": {
@@ -2543,7 +2607,7 @@
       },
       "settings": {
         "title": "Geräteeinstellungen",
-        "description": "Manche Geräte akzeptieren bestimmte Schreibvorgänge (z. B. die Standard-Dosierung von Waschmittel/Weichspüler bei einer Waschmaschine) auch dann, wenn sie melden, dass die Fernsteuerung ausgeschaltet ist. Standardmäßig blockiert LocalThings jeden Schreibvorgang mit einer klaren Fehlermeldung, sobald ein Gerät meldet, dass die Fernsteuerung ausgeschaltet ist, statt das Gerät den Vorgang stillschweigend ablehnen zu lassen. Aktivieren Sie dies nur, wenn Sie bestätigt haben, dass Schreibvorgänge bei diesem Gerät auch mit ausgeschalteter Fernsteuerung tatsächlich funktionieren -- andernfalls tauschen Sie die klare Fehlermeldung gegen ein stilles Fehlschlagen ein.\n\nDie voraussichtliche Fertigstellungszeit wird bei jeder Abfrage aus der verbleibenden Zeitschätzung des Geräts neu berechnet, die zwischen den Aktualisierungen um ein bis zwei Minuten schwanken oder korrigiert werden kann. Erhöhen Sie den unten stehenden Mindeständerungswert, um den Sensor bis zu einer Änderung der Schätzung um mindestens diese Anzahl an Minuten auf seinem zuletzt gemeldeten Wert zu halten und so das Rauschen in Verlauf/Logbuch zu verringern. Setzen Sie ihn auf 0, um jede berechnete Änderung zu melden.\n\nManche Modelle melden einen Modus, den sie nie als unterstützt angeben -- etwa eine Klimaanlage im Modus „Leise“, die nur Aus/Schlaf/Schnell anbietet. LocalThings merkt sich jeden solchen gemeldeten Modus und bietet ihn weiterhin an, sodass er auswählbar bleibt, sobald das Gerät mindestens einmal darin war. Schalten Sie dies aus, um nur das anzubieten, was das Gerät selbst angibt; verwenden Sie „Gemerkte Modi vergessen“ auf dem vorherigen Bildschirm, um bereits Gemerktes zu löschen. Ein Wäschegerät mit aus der Cloud heruntergeladenen Programmen erhält hier eine Erinnerung, sobald es eines gemeldet hat, das Home Assistant noch nicht anbieten kann -- manche Geräte melden eines, auch wenn Sie den Bildschirm \"Download-Programme\" in der SmartThings-App nie selbst geöffnet haben. Schalten Sie dies aus, um diese Erinnerung zu stoppen und bereits benannte heruntergeladene Programme aus der Programmliste auszublenden; bereits Eingerichtetes geht dabei nicht verloren, und beim erneuten Einschalten erscheint es sofort wieder.",
+        "description": "Manche Geräte akzeptieren bestimmte Schreibvorgänge (z. B. die Standard-Dosierung von Waschmittel/Weichspüler bei einer Waschmaschine) auch dann, wenn sie melden, dass die Fernsteuerung ausgeschaltet ist. Standardmäßig blockiert LocalThings jeden Schreibvorgang mit einer klaren Fehlermeldung, sobald ein Gerät meldet, dass die Fernsteuerung ausgeschaltet ist, statt das Gerät den Vorgang stillschweigend ablehnen zu lassen. Aktivieren Sie dies nur, wenn Sie bestätigt haben, dass Schreibvorgänge bei diesem Gerät auch mit ausgeschalteter Fernsteuerung tatsächlich funktionieren -- andernfalls tauschen Sie die klare Fehlermeldung gegen ein stilles Fehlschlagen ein.\n\nDie voraussichtliche Fertigstellungszeit wird ab dem Eintreffen jedes Restzeitwerts berechnet: sekundengenau bei Geräten, die Sekunden melden, sonst auf die nächste Minute gerundet. Eine Korrektur unter etwa 5 % der Restzeit wird zurückgehalten, höchstens bis zum unten stehenden Mindeständerungswert, um das Rauschen in Verlauf/Logbuch zu verringern. Setzen Sie ihn auf 0, um jede Änderung zu melden.\n\nManche Modelle melden einen Modus, den sie nie als unterstützt angeben -- etwa eine Klimaanlage im Modus „Leise“, die nur Aus/Schlaf/Schnell anbietet. LocalThings merkt sich jeden solchen gemeldeten Modus und bietet ihn weiterhin an, sodass er auswählbar bleibt, sobald das Gerät mindestens einmal darin war. Schalten Sie dies aus, um nur das anzubieten, was das Gerät selbst angibt; verwenden Sie „Gemerkte Modi vergessen“ auf dem vorherigen Bildschirm, um bereits Gemerktes zu löschen. Ein Wäschegerät mit aus der Cloud heruntergeladenen Programmen erhält hier eine Erinnerung, sobald es eines gemeldet hat, das Home Assistant noch nicht anbieten kann -- manche Geräte melden eines, auch wenn Sie den Bildschirm \"Download-Programme\" in der SmartThings-App nie selbst geöffnet haben. Schalten Sie dies aus, um diese Erinnerung zu stoppen und bereits benannte heruntergeladene Programme aus der Programmliste auszublenden; bereits Eingerichtetes geht dabei nicht verloren, und beim erneuten Einschalten erscheint es sofort wieder.",
         "data": {
           "bypass_remote_control_lock": "Schreibvorgänge auch bei ausgeschalteter Fernsteuerung zulassen",
           "finish_time_hysteresis_minutes": "Voraussichtliches Ende -- Mindeständerung (Minuten)",
@@ -2586,7 +2650,7 @@
       },
       "cloud_manual": {
         "title": "Download-Programme",
-        "description": "Dieses Gerät meldet {total} heruntergeladene Programme; {found} davon wurden bisher erkannt.\n\nDie Einstellungen eines heruntergeladenen Programms sind nur sichtbar, während dieses Programm geladen ist, und das Gerät meldet nie deren Namen. Um die fehlenden ({pending}) hinzuzufügen: Öffnen Sie in der SmartThings-App (nicht am Gerät selbst) dieses Gerät und tippen Sie auf \"Download-Programme\" -- eine eigene Zeile, getrennt von \"Programm\", weiter unten im Bildschirm, und die, auf die es hier ankommt. Gehen Sie dann nacheinander jedes heruntergeladene Programm durch, halten Sie bei jedem ein paar Sekunden inne, damit LocalThings es erkennen kann, und kommen Sie danach hierher zurück.\n\nGeben Sie jedem den Namen, den Sie in Home Assistant sehen möchten. Lassen Sie einen Namen leer, um das Programm aus der Programmliste auszuschließen. Namen müssen eindeutig sein.\n\nDas Download-Programm ist das Programm auf diesem Gerät, das ein heruntergeladenes Programm ausführt. Es wird automatisch erkannt, bestätigen Sie es aber hier vor der Verwendung: Die Auswahl eines heruntergeladenen Programms schreibt diesen Programmcode auf das Gerät.",
+        "description": "Dieses Gerät hat mindestens {total} heruntergeladene Programme; {found} davon wurden bisher erkannt.\n\nDie Einstellungen eines heruntergeladenen Programms sind nur sichtbar, während dieses Programm geladen ist, und das Gerät meldet nie deren Namen. Um die fehlenden ({pending}) hinzuzufügen: Öffnen Sie in der SmartThings-App (nicht am Gerät selbst) dieses Gerät und tippen Sie auf \"Download-Programme\" -- eine eigene Zeile, getrennt von \"Programm\", weiter unten im Bildschirm, und die, auf die es hier ankommt. Gehen Sie dann nacheinander jedes heruntergeladene Programm durch, halten Sie bei jedem ein paar Sekunden inne, damit LocalThings es erkennen kann, und kommen Sie danach hierher zurück.\n\nGeben Sie jedem den Namen, den Sie in Home Assistant sehen möchten. Lassen Sie einen Namen leer, um das Programm aus der Programmliste auszuschließen. Namen müssen eindeutig sein.\n\nDas Download-Programm ist das Programm auf diesem Gerät, das ein heruntergeladenes Programm ausführt. Es wird automatisch erkannt, bestätigen Sie es aber hier vor der Verwendung: Die Auswahl eines heruntergeladenen Programms schreibt diesen Programmcode auf das Gerät.",
         "data": {
           "download_course": "Programmcode des Download-Programms"
         }

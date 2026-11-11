@@ -1198,7 +1198,14 @@
           "5f": "Iba odstreďovanie",
           "63": "Výkonná para",
           "67": "Parný antialergénny",
-          "68": "Parná objemná bielizeň"
+          "68": "Parná objemná bielizeň",
+          "a1": "Normálny",
+          "a7": "Starostlivosť o výrobok",
+          "a9": "Tide Pod studená",
+          "ad": "AI OptiWash + sušenie",
+          "59": "Nekrčivá bielizeň",
+          "a8": "Časové sušenie",
+          "aa": "Prevetranie"
         }
       },
       "washer_dry_level": {
@@ -1384,6 +1391,9 @@
           "mute": "Stlmené",
           "voice": "Hlas"
         }
+      },
+      "picture_mode": {
+        "name": "Režim obrazu"
       }
     },
     "sensor": {
@@ -1842,6 +1852,57 @@
       "zone_temperature": {
         "name": "Teplota zóny"
       },
+      "zone_water_law_offset": {
+        "name": "Posun ekvitermickej krivky zóny"
+      },
+      "zone2_water_law_offset": {
+        "name": "Posun ekvitermickej krivky zóny 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Ekvitermická krivka, studený bod vonkajšej teploty (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Ekvitermická krivka, teplý bod vonkajšej teploty (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Ekvitermická krivka 1, cieľová teplota pri nízkej vonkajšej teplote (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Ekvitermická krivka 1, cieľová teplota pri vysokej vonkajšej teplote (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Ekvitermická krivka 2, cieľová teplota pri nízkej vonkajšej teplote (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Ekvitermická krivka 2, cieľová teplota pri vysokej vonkajšej teplote (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Horná hranica cieľovej teploty teplej vody (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Dolná hranica cieľovej teploty teplej vody (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Režim ohrevu teplej vody (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorita vykurovania a teplej vody (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Vonkajšia teplota prepnutia priority vykurovanie/teplá voda (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Použitie záložného vykurovacieho telesa (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Horná hranica teploty výstupnej vody pre vykurovanie (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Dolná hranica teploty výstupnej vody pre vykurovanie (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Riadenie zón (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Teplota zóny 2"
       },
@@ -2027,6 +2088,9 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "illuminance": {
+        "name": "Osvetlenie"
       }
     },
     "switch": {
@@ -2543,7 +2607,7 @@
       },
       "settings": {
         "title": "Nastavenia zariadenia",
-        "description": "Niektoré zariadenia prijímajú určité zápisy (napr. predvolené dávkovanie pracieho prostriedku alebo aviváže v práčke), aj keď hlásia vypnuté diaľkové ovládanie. LocalThings v predvolenom nastavení zablokuje každý zápis so zrozumiteľnou chybou, keď zariadenie hlási vypnuté diaľkové ovládanie, aby ho zariadenie neodmietlo bez upozornenia. Túto možnosť zapnite iba vtedy, ak ste overili, že zápisy na tomto zariadení skutočne fungujú aj s vypnutým diaľkovým ovládaním – inak zrozumiteľnú chybu nahradíte zlyhaním bez upozornenia.\n\nOdhadovaný čas dokončenia sa prepočítava z odhadu zostávajúceho času zariadenia pri každom načítaní údajov. Medzi aktualizáciami sa môže posunúť alebo upraviť o minútu či dve. Zvýšením minimálnej zmeny nižšie ponecháte senzor na poslednej nahlásenej hodnote, kým sa odhad neposunie aspoň o daný počet minút, čím obmedzíte množstvo záznamov v histórii a denníku. Nastavením na 0 sa nahlási každá vypočítaná zmena.\n\nNiektoré modely hlásia režim, ktorý nikdy neuvádzajú medzi podporovanými – napríklad klimatizácia v tichom režime (Quiet), ktorá ponúka iba Off/Sleep/Speed. LocalThings si každý takýto zistený režim zapamätá a naďalej ho ponúka, takže ho možno vybrať, keď v ňom zariadenie aspoň raz bolo. Vypnutím tejto možnosti sa budú ponúkať iba režimy, ktoré zariadenie uvádza ako podporované. Už zapamätané režimy vymažete pomocou možnosti „Zabudnúť zapamätané režimy“ na predchádzajúcej obrazovke.\n\nPri zariadení na pranie alebo sušenie s cyklami stiahnutými z cloudu sa tu zobrazí pripomenutie, keď nahlási cyklus, ktorý Home Assistant ešte nedokáže ponúknuť. Niektoré zariadenia ho nahlásia, aj keď ste obrazovku „Stiahnuté cykly“ v aplikácii SmartThings nikdy neotvorili. Vypnutím tejto možnosti zastavíte pripomenutie a skryjete už pomenované stiahnuté cykly zo zoznamu cyklov. Nič z nastaveného sa nestratí a po opätovnom zapnutí sa všetko znova zobrazí.",
+        "description": "Niektoré zariadenia prijímajú určité zápisy (napr. predvolené dávkovanie pracieho prostriedku alebo aviváže v práčke), aj keď hlásia vypnuté diaľkové ovládanie. LocalThings v predvolenom nastavení zablokuje každý zápis so zrozumiteľnou chybou, keď zariadenie hlási vypnuté diaľkové ovládanie, aby ho zariadenie neodmietlo bez upozornenia. Túto možnosť zapnite iba vtedy, ak ste overili, že zápisy na tomto zariadení skutočne fungujú aj s vypnutým diaľkovým ovládaním – inak zrozumiteľnú chybu nahradíte zlyhaním bez upozornenia.\n\nOdhadovaný čas dokončenia sa počíta od okamihu, keď príde každý údaj o zostávajúcom čase: na sekundy pri zariadeniach, ktoré sekundy hlásia, inak na najbližšiu minútu. Úprava menšia ako približne 5 % zostávajúceho času sa nezobrazí, najviac však do minimálnej zmeny nižšie, čím obmedzíte množstvo záznamov v histórii a denníku. Nastavením na 0 sa nahlási každá zmena.\n\nNiektoré modely hlásia režim, ktorý nikdy neuvádzajú medzi podporovanými – napríklad klimatizácia v tichom režime (Quiet), ktorá ponúka iba Off/Sleep/Speed. LocalThings si každý takýto zistený režim zapamätá a naďalej ho ponúka, takže ho možno vybrať, keď v ňom zariadenie aspoň raz bolo. Vypnutím tejto možnosti sa budú ponúkať iba režimy, ktoré zariadenie uvádza ako podporované. Už zapamätané režimy vymažete pomocou možnosti „Zabudnúť zapamätané režimy“ na predchádzajúcej obrazovke.\n\nPri zariadení na pranie alebo sušenie s cyklami stiahnutými z cloudu sa tu zobrazí pripomenutie, keď nahlási cyklus, ktorý Home Assistant ešte nedokáže ponúknuť. Niektoré zariadenia ho nahlásia, aj keď ste obrazovku „Stiahnuté cykly“ v aplikácii SmartThings nikdy neotvorili. Vypnutím tejto možnosti zastavíte pripomenutie a skryjete už pomenované stiahnuté cykly zo zoznamu cyklov. Nič z nastaveného sa nestratí a po opätovnom zapnutí sa všetko znova zobrazí.",
         "data": {
           "bypass_remote_control_lock": "Povoliť zápisy, aj keď zariadenie hlási vypnuté diaľkové ovládanie",
           "finish_time_hysteresis_minutes": "Odhadovaný koniec – minimálna zmena (minúty)",
@@ -2586,7 +2650,7 @@
       },
       "cloud_manual": {
         "title": "Stiahnuté cykly",
-        "description": "Spotrebič hlási tento počet stiahnutých cyklov: {total}; doteraz sa ich zistilo: {found}.\n\nNastavenia stiahnutého cyklu sú viditeľné iba vtedy, keď je daný cyklus načítaný, a spotrebič nikdy nehlási ich názvy. Ak chcete pridať chýbajúce cykly ({pending}), otvorte tento spotrebič v aplikácii SmartThings (nie na samotnom spotrebiči) a ťuknite na „Stiahnuté cykly“ – samostatný riadok odlišný od „Cyklus“, ktorý je nižšie na obrazovke a ktorý je pre tento postup dôležitý. Postupne vyberte každý stiahnutý program a pri každom počkajte niekoľko sekúnd, aby ho LocalThings zaznamenal. Potom sa vráťte sem.\n\nKaždému zadajte názov, ktorý chcete vidieť v Home Assistant. Ak názov necháte prázdny, daný cyklus sa v zozname cyklov nezobrazí. Názvy musia byť jedinečné.\n\nStiahnutý program je program tohto spotrebiča, ktorý spúšťa stiahnutý cyklus. Zisťuje sa automaticky, ale pred použitím ho tu potvrďte: výberom stiahnutého cyklu sa do spotrebiča zapíše tento kód programu.",
+        "description": "Spotrebič má najmenej tento počet stiahnutých cyklov: {total}; doteraz sa ich zistilo: {found}.\n\nNastavenia stiahnutého cyklu sú viditeľné iba vtedy, keď je daný cyklus načítaný, a spotrebič nikdy nehlási ich názvy. Ak chcete pridať chýbajúce cykly ({pending}), otvorte tento spotrebič v aplikácii SmartThings (nie na samotnom spotrebiči) a ťuknite na „Stiahnuté cykly“ – samostatný riadok odlišný od „Cyklus“, ktorý je nižšie na obrazovke a ktorý je pre tento postup dôležitý. Postupne vyberte každý stiahnutý program a pri každom počkajte niekoľko sekúnd, aby ho LocalThings zaznamenal. Potom sa vráťte sem.\n\nKaždému zadajte názov, ktorý chcete vidieť v Home Assistant. Ak názov necháte prázdny, daný cyklus sa v zozname cyklov nezobrazí. Názvy musia byť jedinečné.\n\nStiahnutý program je program tohto spotrebiča, ktorý spúšťa stiahnutý cyklus. Zisťuje sa automaticky, ale pred použitím ho tu potvrďte: výberom stiahnutého cyklu sa do spotrebiča zapíše tento kód programu.",
         "data": {
           "download_course": "Kód programu „Stiahnutý program“"
         }

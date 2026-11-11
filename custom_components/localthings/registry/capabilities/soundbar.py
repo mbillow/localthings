@@ -724,6 +724,4 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/infoLink"),
     Capability(href="/sec/networkaudio/sesInfo"),
     Capability(href="/sec/networkaudio/smartThingsHub"),
-    # Cloud-session self-healing timer.
-    Capability(href="/selfhealing/session"),
 ]
