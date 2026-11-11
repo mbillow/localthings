@@ -134,3 +134,38 @@ def test_every_fsv_sensor_is_a_disabled_diagnostic():
 @pytest.mark.parametrize(("name", "offset"), [("ehs", 0.0), ("ehs_01002", -1.0)])
 def test_zone_water_law_offset(name, offset):
     assert _state(name)["zone_water_law_offset"] == offset
+
+
+def test_zone_2_reports_its_own_offset():
+    assert _state("ehs_01002")["zone2_water_law_offset"] == -1.0
+    assert "zone2_water_law_offset" not in _state("ehs")
+
+
+def _offset_descs():
+    from custom_components.localthings.registry.capabilities import ehs
+
+    return [
+        e
+        for cap in (ehs.ZONE_TEMPERATURE, ehs.ZONE2_TEMPERATURE)
+        for e in cap.entities
+        if e.key.endswith("water_law_offset")
+    ]
+
+
+def test_the_offset_is_a_difference_ha_must_not_convert():
+    """With a temperature device class HA would show -1.0 °C as 30.2 °F."""
+    descs = _offset_descs()
+    assert len(descs) == 2
+    for desc in descs:
+        assert desc.device_class is None, desc.key
+        assert desc.state_class is None, desc.key
+        assert desc.enabled_default is False, desc.key
+        assert desc.entity_category == "diagnostic", desc.key
+
+
+@pytest.mark.parametrize("name", ["ehs", "ehs_01002", "ehs_mim_h04en"])
+def test_enum_codes_read_as_integers(name):
+    state = _state(name)
+    for key in _ENUM_KEYS:
+        value = next((v for k, v in state.items() if k.endswith(key)), None)
+        assert value is None or type(value) is int, (name, key, value)

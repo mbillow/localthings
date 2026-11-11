@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Pomak klimatske krive zone"
       },
+      "zone2_water_law_offset": {
+        "name": "Pomak klimatske krive zone 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Klimatska kriva, hladna tačka spoljašnje temperature (FSV 2011)"
       },

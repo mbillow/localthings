@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Przesunięcie krzywej grzewczej strefy"
       },
+      "zone2_water_law_offset": {
+        "name": "Przesunięcie krzywej grzewczej strefy 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Krzywa grzewcza, zimny punkt temperatury zewnętrznej (FSV 2011)"
       },

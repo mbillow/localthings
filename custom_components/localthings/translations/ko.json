@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "구역 외기 보상 오프셋"
       },
+      "zone2_water_law_offset": {
+        "name": "구역 2 외기 보상 오프셋"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "외기 보상 곡선, 저온 외기 기준점 (FSV 2011)"
       },

@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Помак климатске криве зоне"
       },
+      "zone2_water_law_offset": {
+        "name": "Помак климатске криве зоне 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Климатска крива, хладна тачка спољашње температуре (FSV 2011)"
       },

@@ -65,7 +65,7 @@ def _find_fsv(rep, code: int) -> FsvRecord | None:
 
 def _fsv(code: int, key: str, *, temperature: bool = False) -> SensorDesc:
     # Read-only until a write contract is confirmed. Enum-valued codes stay
-    # numeric until their labels are confirmed on a device.
+    # numeric, as integers, until their labels are confirmed on a device.
     extra: dict[str, Any] = {}
     if temperature:
         extra["device_class"] = "temperature"
@@ -73,7 +73,9 @@ def _fsv(code: int, key: str, *, temperature: bool = False) -> SensorDesc:
 
     def value(rep):
         record = _find_fsv(rep, code)
-        return None if record is None else record.value
+        if record is None:
+            return None
+        return record.value if temperature else round(record.value)
 
     return SensorDesc(
         key=key,

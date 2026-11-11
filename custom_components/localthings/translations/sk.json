@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Posun ekvitermickej krivky zóny"
       },
+      "zone2_water_law_offset": {
+        "name": "Posun ekvitermickej krivky zóny 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Ekvitermická krivka, studený bod vonkajšej teploty (FSV 2011)"
       },

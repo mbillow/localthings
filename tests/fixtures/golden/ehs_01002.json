@@ -35,6 +35,7 @@
     "water_heater",
     "zone2_climate",
     "zone2_temperature",
+    "zone2_water_law_offset",
     "zone_climate",
     "zone_mode",
     "zone_power",

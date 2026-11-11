@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Zone water law offset"
       },
+      "zone2_water_law_offset": {
+        "name": "Zone 2 water law offset"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Water law outdoor temperature curve, cold point (FSV 2011)"
       },

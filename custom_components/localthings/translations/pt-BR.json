@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Deslocamento da curva climática da zona"
       },
+      "zone2_water_law_offset": {
+        "name": "Deslocamento da curva climática da zona 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Curva climática, ponto frio da temperatura externa (FSV 2011)"
       },

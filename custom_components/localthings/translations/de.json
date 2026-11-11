@@ -1843,6 +1843,9 @@
       "zone_water_law_offset": {
         "name": "Heizkurven-Verschiebung der Zone"
       },
+      "zone2_water_law_offset": {
+        "name": "Heizkurven-Verschiebung Zone 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Heizkurve, kalter Außentemperaturpunkt (FSV 2011)"
       },

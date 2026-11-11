@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Décalage de la loi d'eau de la zone"
       },
+      "zone2_water_law_offset": {
+        "name": "Décalage de la loi d'eau de la zone 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Loi d'eau, point froid de température extérieure (FSV 2011)"
       },

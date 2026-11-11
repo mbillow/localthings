@@ -1849,6 +1849,9 @@
       "zone_water_law_offset": {
         "name": "Verschuiving stooklijn zone"
       },
+      "zone2_water_law_offset": {
+        "name": "Verschuiving stooklijn zone 2"
+      },
       "fsv_outdoor_curve_cold_point": {
         "name": "Stooklijn, koud buitentemperatuurpunt (FSV 2011)"
       },
