@@ -227,9 +227,9 @@ class ObserveManager:
         same way as everywhere else silently kept the stale `items`
         entry forever: an absent key merges as "unchanged" everywhere
         else, but on this href absent specifically means "cleared".
-        Every family that exposes an alarm sensor shares this href
-        (common.ALARMS, range_hood's own copy), so this is a full
-        replace for all of them, not a washer-specific carve-out.
+        Every family that exposes an alarm sensor binds this href through
+        common.ALARMS, so this is a full replace for all of them, not a
+        washer-specific carve-out.
 
         `apply()` is the sole path StateCache mutations flow through in
         this component (poll, sweep, and OBSERVE notify all funnel here),

@@ -16,10 +16,10 @@ from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
 from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.capabilities.common import ALARMS
-from custom_components.localthings.registry.capabilities.range_hood import HOOD_ALARMS
 from custom_components.localthings.registry.capability import Capability
 from custom_components.localthings.registry.discovery import BoundEntity
 from custom_components.localthings.registry.entities import SensorDesc
+from tests.conftest import _load_device
 
 
 class _FakeCoordinator:
@@ -112,24 +112,38 @@ class TestNoFieldEntities:
         assert _is_included(bound, coord) is True
 
 
-@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
-def test_metadata_only_alarm_resource_registers_healthy_sensor(capability):
-    """TP1X_REF_21K omits items when clear, but still returns OCF metadata."""
-    resources = {
-        "/alarms/vs/0": {
-            "rt": ["x.com.samsung.da.alarms"],
-            "if": ["oic.if.baseline", "oic.if.a"],
-        }
-    }
-    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
-    assert _is_included(bound, _coord(resources)) is True
-    assert flatten([bound], resources)["alarm_code"] == "none"
-    assert _is_included(bound, _coord({})) is False
+def _alarm_bound():
+    return BoundEntity(href="/alarms/vs/0", capability=ALARMS, desc=ALARMS.entities[0])
 
 
-@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
-def test_alarm_sensor_keeps_active_and_deleted_semantics(capability):
-    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
+@pytest.mark.parametrize(
+    "rep",
+    [
+        pytest.param({}, id="empty-clear"),
+        pytest.param({"href": "/alarms/vs/0"}, id="stub"),
+        pytest.param({"rt": ["x.com.samsung.da.alarms"]}, id="metadata-only-clear"),
+        pytest.param({"x.com.samsung.da.items": []}, id="no-items"),
+        pytest.param(
+            {
+                "x.com.samsung.da.items": [
+                    {"x.com.samsung.da.code": "ErrorCode_X", "x.com.samsung.da.state": "Deleted"}
+                ]
+            },
+            id="deleted",
+        ),
+        pytest.param(
+            {"x.com.samsung.da.items": [{"x.com.samsung.da.code": "ErrorCode_OFF"}]}, id="off"
+        ),
+    ],
+)
+def test_clear_alarm_shapes_read_none(rep):
+    bound = _alarm_bound()
+    assert _is_included(bound, _coord({"/alarms/vs/0": rep})) is True
+    assert flatten([bound], {"/alarms/vs/0": rep})["alarm_code"] == "none"
+
+
+def test_alarm_sensor_keeps_active_and_deleted_semantics():
+    bound = _alarm_bound()
     resources = {
         "/alarms/vs/0": {
             "x.com.samsung.da.items": [
@@ -139,6 +153,7 @@ def test_alarm_sensor_keeps_active_and_deleted_semantics(capability):
                     "x.com.samsung.da.state": "Deleted",
                 },
                 {"x.com.samsung.da.code": "ErrorCode_OFF"},
+                "not-a-row",
             ]
         }
     }
@@ -146,33 +161,21 @@ def test_alarm_sensor_keeps_active_and_deleted_semantics(capability):
     assert flatten([bound], resources)["alarm_code"] == "DoorA_Opened"
 
 
-@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
+def test_missing_alarm_resource_is_not_registered():
+    assert _is_included(_alarm_bound(), _coord({})) is False
+
+
 @pytest.mark.parametrize(
-    "rep, expected",
+    "fixture",
     [
-        ({}, None),
-        ({"href": "/alarms/vs/0"}, None),
-        ({"rt": ["x.com.samsung.da.alarms"]}, "none"),
-        ({"x.com.samsung.da.items": []}, "none"),
-        (
-            {
-                "x.com.samsung.da.items": [
-                    {"x.com.samsung.da.code": "ErrorCode_X", "x.com.samsung.da.state": "Deleted"}
-                ]
-            },
-            "none",
-        ),
-        ({"x.com.samsung.da.items": [{"x.com.samsung.da.code": "ErrorCode_OFF"}]}, "none"),
+        "refrigerator_tp1x_ref_21k_us",  # clear as {}
+        "refrigerator_tp1x_ref_21k_eu",  # clear as OCF metadata, no items
+        "refrigerator_tp1x_ref_21k_definite",
+        "range_hood",
     ],
 )
-def test_alarm_unknown_and_clear_responses(capability, rep, expected):
-    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
-    assert _is_included(bound, _coord({capability.href: rep}))
-    assert flatten([bound], {capability.href: rep})["alarm_code"] == expected
-
-
-@pytest.mark.parametrize("capability", [ALARMS, HOOD_ALARMS], ids=["common", "hood"])
-def test_missing_alarm_resource_has_no_value(capability):
-    bound = BoundEntity(href=capability.href, capability=capability, desc=capability.entities[0])
-    assert not _is_included(bound, _coord({}))
-    assert flatten([bound], {})["alarm_code"] is None
+def test_alarm_sensor_reads_none_on_clear_fixtures(fixture):
+    resources = _load_device(fixture)
+    bound = _alarm_bound()
+    assert _is_included(bound, _coord(resources)) is True
+    assert flatten([bound], resources)["alarm_code"] == "none"

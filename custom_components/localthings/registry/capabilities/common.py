@@ -147,7 +147,8 @@ def _active_alarm_codes(items):
     codes = [
         i.get("x.com.samsung.da.code")
         for i in items
-        if i.get("x.com.samsung.da.code")
+        if isinstance(i, dict)
+        and i.get("x.com.samsung.da.code")
         and str(i.get("x.com.samsung.da.state", "")).lower() != "deleted"
         and not str(i.get("x.com.samsung.da.code", "")).lower().endswith("_off")
     ]
@@ -525,13 +526,10 @@ ALARMS = Capability(
             key="alarm_code",
             icon="mdi:alert",
             entity_category="diagnostic",
-            # Clear TP1X_REF_21K responses carry metadata without items;
-            # empty answers and unfetched stubs do not establish a clear state.
-            rep_fn=lambda rep: (
-                None
-                if not rep or is_stub_rep(rep)
-                else _active_alarm_codes(rep.get("x.com.samsung.da.items"))
-            ),
+            # No field gate: a clear TP1X_REF_21K EU board answers with OCF
+            # metadata and no items, which the gate dropped. `{}` is the clear
+            # shape for most boards (observe.py, #348), so it reads "none".
+            rep_fn=lambda rep: _active_alarm_codes(rep.get("x.com.samsung.da.items")),
         ),
     ),
 )
