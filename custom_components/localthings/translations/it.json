@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Alimentazione cappa abbinata"
       },
-      "periodic_air_sensing": {
-        "name": "Rilevamento aria periodico"
-      },
       "pouring": {
         "name": "Erogazione in corso"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Azione ventilazione automatica"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stato ventilazione automatica"
       },
       "battery": {
         "name": "Batteria"

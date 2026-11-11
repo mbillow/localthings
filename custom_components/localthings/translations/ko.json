@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "연동 후드 전원"
       },
-      "periodic_air_sensing": {
-        "name": "주기적 공기 감지"
-      },
       "pouring": {
         "name": "출수 중"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "자동 환기 동작"
-      },
-      "automatic_ventilation_state": {
-        "name": "자동 환기 상태"
       },
       "battery": {
         "name": "배터리"

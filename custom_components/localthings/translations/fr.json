@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Alimentation de la hotte associée"
       },
-      "periodic_air_sensing": {
-        "name": "Analyse périodique de l'air"
-      },
       "pouring": {
         "name": "Distribution en cours"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Action de ventilation automatique"
-      },
-      "automatic_ventilation_state": {
-        "name": "État de la ventilation automatique"
       },
       "battery": {
         "name": "Batterie"

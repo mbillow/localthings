@@ -91,9 +91,6 @@
       "paired_hood_power": {
         "name": "Napájení spárovaného odsavače"
       },
-      "periodic_air_sensing": {
-        "name": "Pravidelné měření kvality vzduchu"
-      },
       "pouring": {
         "name": "Nalévání"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akce automatického větrání"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stav automatického větrání"
       },
       "battery": {
         "name": "Baterie"

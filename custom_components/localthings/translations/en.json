@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Paired hood power"
       },
-      "periodic_air_sensing": {
-        "name": "Periodic air sensing"
-      },
       "pouring": {
         "name": "Pouring"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Auto ventilation action"
-      },
-      "automatic_ventilation_state": {
-        "name": "Automatic ventilation state"
       },
       "battery": {
         "name": "Battery"

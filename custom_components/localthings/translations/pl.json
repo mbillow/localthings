@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Zasilanie sparowanego okapu"
       },
-      "periodic_air_sensing": {
-        "name": "Okresowy pomiar powietrza"
-      },
       "pouring": {
         "name": "Nalewanie"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Działanie automatycznej wentylacji"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stan automatycznej wentylacji"
       },
       "battery": {
         "name": "Bateria"

@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Питание связанной вытяжки"
       },
-      "periodic_air_sensing": {
-        "name": "Периодический анализ воздуха"
-      },
       "pouring": {
         "name": "Налив"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Действие автовентиляции"
-      },
-      "automatic_ventilation_state": {
-        "name": "Состояние автоматической вентиляции"
       },
       "battery": {
         "name": "Батарея"

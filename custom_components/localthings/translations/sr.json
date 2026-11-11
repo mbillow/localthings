@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Напајање упареног аспиратора"
       },
-      "periodic_air_sensing": {
-        "name": "Периодично узорковање ваздуха"
-      },
       "pouring": {
         "name": "Сипање"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Акција аутоматске вентилације"
-      },
-      "automatic_ventilation_state": {
-        "name": "Статус аутоматске вентилације"
       },
       "battery": {
         "name": "Батерија"

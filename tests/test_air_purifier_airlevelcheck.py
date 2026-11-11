@@ -223,8 +223,9 @@ def test_last_sensing_time_reads_as_utc():
 
 def test_read_only_keys_match_the_range_hood_capability():
     """The three read-only sensor keys are shared with the hood deliberately,
-    so both families read from one translation catalog entry each. If either
-    side renames one, this catches the drift.
+    so entity IDs line up across the two families. If either side renames
+    one, this catches the drift. The hood's last_air_sensing_level has its
+    own translation_key, since it maps the Kr1-Kr4 grades.
 
     periodic_air_sensing is excluded: it's a SwitchDesc here and a
     Smart ventilate on the hood, while this family keeps its AI Purify

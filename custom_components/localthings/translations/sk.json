@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Napájanie spárovaného digestora"
       },
-      "periodic_air_sensing": {
-        "name": "Pravidelné meranie kvality vzduchu"
-      },
       "pouring": {
         "name": "Nalievanie"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akcia automatického vetrania"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stav automatického vetrania"
       },
       "battery": {
         "name": "Batéria"

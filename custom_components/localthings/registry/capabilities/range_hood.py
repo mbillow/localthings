@@ -315,7 +315,7 @@ AIR_QUALITY = Capability(
 )
 
 
-def _sensing_modes(resources):
+def _sensing_modes(resources, *, writable=False):
     rep = resources.get("/airlevelcheck/vs/0") or {}
     if not _mode_present(rep):
         return []
@@ -323,7 +323,9 @@ def _sensing_modes(resources):
     modes = supported if isinstance(supported, list) else []
     modes = [m for m in modes if isinstance(m, str) and m.strip()]
     current = rep.get("x.com.samsung.da.autoExeState")
-    if isinstance(current, str) and current.strip():
+    # An unadvertised current mode is shown so the select isn't unknown, but
+    # only advertised modes and evidenced Sensing are written.
+    if isinstance(current, str) and (not writable or current == "Sensing"):
         modes.append(current)
     if rep.get(SENSING_OBSERVED):
         modes.append("Sensing")
@@ -339,12 +341,12 @@ def _sensing_mode_write(payload, rep, href=None, resources=None):
     if not _mode_present(rep, resources):
         return None
     view = {**(resources or {}), "/airlevelcheck/vs/0": rep}
-    if payload not in _sensing_modes(view):
+    if payload not in _sensing_modes(view, writable=True):
         return None
     return ["airlevelcheck", "vs", "0"], {"x.com.samsung.da.autoExeState": payload}
 
 
-SENSING_OBSERVED = "_localthings_sensing_observed"
+SENSING_OBSERVED = "x.localthings.sensingObserved"
 _DND_FIELD = "x.com.samsung.da.periodicSensingSkipTime"
 
 

@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Alimentação da coifa pareada"
       },
-      "periodic_air_sensing": {
-        "name": "Monitoramento periódico do ar"
-      },
       "pouring": {
         "name": "Servindo água"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Ação da ventilação automática"
-      },
-      "automatic_ventilation_state": {
-        "name": "Estado da ventilação automática"
       },
       "battery": {
         "name": "Bateria"

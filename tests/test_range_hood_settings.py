@@ -379,11 +379,16 @@ def test_mode_options_and_writes_use_same_evidence(board, current, supported, wa
     options = desc.options(resources)
     assert set(options) == expected
     assert len(options) == len(expected)
+    # An unadvertised current mode is shown, never written; Sensing is the
+    # one unadvertised mode with its own evidence.
+    advertised = set(supported) if isinstance(supported, list) else set()
     for mode in expected:
-        assert desc.write_fn(mode, rep, HREF, resources) == (
-            ["airlevelcheck", "vs", "0"],
-            {"x.com.samsung.da.autoExeState": mode},
+        want_write = (
+            (["airlevelcheck", "vs", "0"], {"x.com.samsung.da.autoExeState": mode})
+            if mode in advertised or mode == "Sensing"
+            else None
         )
+        assert desc.write_fn(mode, rep, HREF, resources) == want_write
     assert desc.write_fn("Bogus", rep, HREF, resources) is None
     if "Sensing" not in expected:
         assert desc.write_fn("Sensing", rep, HREF, resources) is None

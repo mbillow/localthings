@@ -491,9 +491,6 @@
       "paired_hood_power": {
         "name": "Energía de la campana emparejada"
       },
-      "periodic_air_sensing": {
-        "name": "Detección de aire periódica"
-      },
       "pouring": {
         "name": "Sirviendo"
       },
@@ -1834,9 +1831,6 @@
       },
       "auto_ventilation_action": {
         "name": "Acción de ventilación automática"
-      },
-      "automatic_ventilation_state": {
-        "name": "Estado de ventilación automática"
       },
       "battery": {
         "name": "Batería"

@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Gekoppelde afzuigkap actief"
       },
-      "periodic_air_sensing": {
-        "name": "Periodieke luchtmeting"
-      },
       "pouring": {
         "name": "Schenken"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Actie automatische ventilatie"
-      },
-      "automatic_ventilation_state": {
-        "name": "Status automatische ventilatie"
       },
       "battery": {
         "name": "Batterij"

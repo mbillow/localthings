@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Strom der gekoppelten Dunstabzugshaube"
       },
-      "periodic_air_sensing": {
-        "name": "Periodische Luftmessung"
-      },
       "alarm_in_mute": {
         "name": "Alarm stummgeschaltet"
       },
@@ -1437,9 +1434,6 @@
       },
       "auto_ventilation_action": {
         "name": "Automatische Lüftungsaktion"
-      },
-      "automatic_ventilation_state": {
-        "name": "Automatischer Lüftungszustand"
       },
       "battery": {
         "name": "Akku"
