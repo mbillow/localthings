@@ -18,6 +18,7 @@ from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator, _payload_present_in
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import BoundEntity
+from tests.conftest import _load_device
 
 _WAIVED = ("lamp", "sound", "energy_saving")
 _STILL_GATED = ("oven_mode", "fast_preheat", "natural_steam", "cooktop_on_alert")
@@ -60,17 +61,18 @@ def test_options_token_counts_as_taken_when_merged_into_the_array() -> None:
 
 
 async def _oven_with_remote_control_off(hass, mock_entry) -> LocalThingsCoordinator:
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    resources = _load_device("oven")
+    resources["/remotectrl/vs/0"] = {"x.com.samsung.da.remoteControlEnabled": "false"}
+    resources["/mode/vs/0"].update(
+        {
+            "x.com.samsung.da.modes": ["NoOperation"],
+            "x.com.samsung.da.options": list(_OPTIONS),
+        }
+    )
+    with patch.object(LocalThingsCoordinator, "_poll_once", return_value=resources):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
-    coordinator._cache.apply_rep(
-        "/remotectrl/vs/0", {"x.com.samsung.da.remoteControlEnabled": "false"}, source="test"
-    )
-    coordinator._cache.apply_rep(
-        "/mode/vs/0",
-        {"x.com.samsung.da.modes": ["NoOperation"], "x.com.samsung.da.options": list(_OPTIONS)},
-        source="test",
-    )
     return coordinator
 
 
@@ -84,11 +86,15 @@ async def test_waived_switch_is_sent_and_read_back_with_remote_control_off(
     token = f"{_PREFIX[key]}_On"
     after = [o for o in _OPTIONS if not o.startswith(_PREFIX[key] + "_")] + [token]
     written = []
+    mode_rep = dict(coordinator.cached_resource("/mode/vs/0") or {})
 
     with (
         patch.object(fake, "subscribe"),
         patch.object(
-            fake, "read", create=True, return_value=(0x45, {"x.com.samsung.da.options": after})
+            fake,
+            "read",
+            create=True,
+            return_value=(0x45, {**mode_rep, "x.com.samsung.da.options": after}),
         ) as read,
         patch.object(LocalThingsCoordinator, "_CONFIRM_DELAY_S", 0.0),
     ):
@@ -113,11 +119,15 @@ async def test_waived_switch_the_oven_dropped_is_reported(
     fake = mock_coordinator_observe_session
     coordinator = await _oven_with_remote_control_off(hass, mock_entry)
     bound = BoundEntity(href="/mode/vs/0", capability=oven.OVEN_MODE, desc=_mode_desc("lamp"))
+    mode_rep = dict(coordinator.cached_resource("/mode/vs/0") or {})
 
     with (
         patch.object(fake, "subscribe"),
         patch.object(
-            fake, "read", create=True, return_value=(0x45, {"x.com.samsung.da.options": _OPTIONS})
+            fake,
+            "read",
+            create=True,
+            return_value=(0x45, {**mode_rep, "x.com.samsung.da.options": _OPTIONS}),
         ),
         patch.object(LocalThingsCoordinator, "_CONFIRM_DELAY_S", 0.0),
     ):
@@ -133,6 +143,10 @@ async def test_cooking_commands_still_refused_with_remote_control_off(
 ) -> None:
     fake = mock_coordinator_observe_session
     coordinator = await _oven_with_remote_control_off(hass, mock_entry)
+    # An active cavity sends edits to the device instead of staging an idle cook.
+    coordinator._cache.apply_rep(
+        "/operational/state/vs/0", {"x.com.samsung.da.state": "Run"}, source="test"
+    )
     coordinator._cache.apply_rep(
         "/temperatures/vs/0",
         {"x.com.samsung.da.items": [{"x.com.samsung.da.id": "0", "x.com.samsung.da.desired": "0"}]},
