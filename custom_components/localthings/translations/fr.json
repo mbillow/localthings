@@ -2310,6 +2310,9 @@
       "windsleep": {
         "name": "Mode sommeil"
       },
+      "windlong": {
+        "name": "Mode vent long"
+      },
       "auto_detergent": {
         "name": "Dosage automatique de lessive"
       },

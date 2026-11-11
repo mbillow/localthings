@@ -1736,6 +1736,25 @@ WINDSLEEP = Capability(
     ),
 )
 
+# Long-wind reach option on system-AC indoor units (AIM-H04N, issue #789).
+WINDLONG = Capability(
+    href="/modeoption/windlong/vs/0",
+    poll_tier="warm",
+    entities=(
+        SwitchDesc(
+            key="windlong",
+            field="x.com.samsung.da.windlong",
+            icon="mdi:weather-windy",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["modeoption", "windlong", "vs", "0"],
+                {"x.com.samsung.da.windlong": "On" if p == "On" else "Off"},
+            ),
+        ),
+    ),
+)
+
 # /sensors/vs/0 items[] carry live air-quality readings. CleanLevel is
 # corroborated as numeric by a top-level x.com.samsung.da.cleanLevel scalar,
 # so it's a measurement. Dust/FineDust/SuperFineDust are PM10/PM2.5/PM1 in
@@ -1960,13 +1979,9 @@ _AC_IGNORED = [
     # populates it.
     "/auxiliaryheater/vs/0",
     # System-AC per-indoor-subdevice records (AIM-H04N): the subdevice identity
-    # (read by registry.subdevices), an empty action endpoint, the outdoor-unit
-    # temperature, and the windlong mode option -- none a user entity yet. The
-    # outdoor temp is a candidate follow-up sensor (#789).
+    # (read by registry.subdevices) and an empty action endpoint (#789).
     "/subdevice/vs/0",
     "/actions/vs/0",
-    "/temperatures/outside/vs/0",
-    "/modeoption/windlong/vs/0",
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

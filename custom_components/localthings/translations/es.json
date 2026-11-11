@@ -2710,6 +2710,9 @@
       "windsleep": {
         "name": "Modo nocturno"
       },
+      "windlong": {
+        "name": "Modo viento largo"
+      },
       "auto_detergent": {
         "name": "Detergente automático"
       },

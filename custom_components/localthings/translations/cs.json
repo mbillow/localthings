@@ -2310,6 +2310,9 @@
       "windsleep": {
         "name": "Noční režim"
       },
+      "windlong": {
+        "name": "Režim dlouhého dosahu"
+      },
       "auto_detergent": {
         "name": "Automatické dávkování pracího prostředku"
       },

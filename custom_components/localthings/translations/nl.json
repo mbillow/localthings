@@ -2310,6 +2310,9 @@
       "windsleep": {
         "name": "Slaapmodus"
       },
+      "windlong": {
+        "name": "Long-wind modus"
+      },
       "auto_detergent": {
         "name": "Automatisch wasmiddel"
       },
