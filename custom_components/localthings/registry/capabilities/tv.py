@@ -10,6 +10,7 @@ from collections import Counter
 
 from ..capability import Capability
 from ..entities import SelectDesc, SensorDesc
+from . import av
 
 PREFIX = "x.com.samsung.tv."
 CURRENT_MODE = PREFIX + "currentMode"
@@ -54,7 +55,7 @@ def _writable(rep: dict) -> bool:
 def _mode_write(value, rep, href=None):
     if not href or not _writable(rep) or value not in mode_options(rep):
         return None
-    return [s for s in href.strip("/").split("/") if s], {CURRENT_MODE: value}
+    return av.path_of(href), {CURRENT_MODE: value}
 
 
 def _mode_select(href: str, key: str, icon: str) -> SelectDesc:
@@ -70,6 +71,9 @@ def _mode_select(href: str, key: str, icon: str) -> SelectDesc:
         options=lambda resources: list(mode_options(resources.get(href) or {})),
         display_fn=lambda raw, resources: mode_options(resources.get(href) or {}).get(raw),
         exists_fn=lambda rep, resources: _writable(rep) and bool(mode_options(rep)),
+        # Mode lists can collapse to an empty row (the LS43DM703's input list
+        # on the tuner), so a monitor idle at startup must not lose it for good.
+        dynamic_presence=True,
         write_fn=_mode_write,
     )
 
@@ -160,7 +164,6 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/tv/plugin/first_launch"),
     Capability(href="/sec/tv/networkinfo"),
     Capability(href="/calmconnection/command"),
-    Capability(href="/selfhealing/session"),
     Capability(href="/capability/bixby/main/0"),
     Capability(href="/capability/bixbyCommand/main/0"),
     Capability(href="/capability/sec.diagnosticsInformation/main/0"),

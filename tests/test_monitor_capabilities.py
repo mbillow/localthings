@@ -62,6 +62,8 @@ def test_picture_mode_writes_only_advertised_ids():
     desc = tv.PICTURE_MODE.entities[0]
     assert isinstance(desc, SelectDesc) and desc.write_fn is not None
     assert desc.control_response
+    # A monitor idle at startup still gets the select once its modes appear.
+    assert desc.dynamic_presence
     write: Any = desc.write_fn
     assert write("modeStandardPC", rep, tv.HREF_PICTURE) == (
         ["sec", "tv", "mode", "picture"],

@@ -7,7 +7,7 @@ routes on /oic/d alone.
 from ..capabilities import av, common, tv
 from ._base import DeviceRegistry, _build, unpolled
 
-MONITOR = DeviceRegistry(
+REGISTRY = DeviceRegistry(
     name="monitor",
     capabilities=_build(
         [
@@ -25,5 +25,4 @@ MONITOR = DeviceRegistry(
     # As on the soundbar: OBSERVE has not been shown to leave the
     # SmartThings app's session alone.
     subscribe_tiers=(),
-    write_settle_s=6.0,
 )
