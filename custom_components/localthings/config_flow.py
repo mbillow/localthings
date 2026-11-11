@@ -1228,8 +1228,8 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_credential()
             except HandshakeTimeout as exc:
                 # Not every PSK appliance refuses the leaf the way a Family Hub
-                # does: the DA_WM_TP1_21 washer and dryer just stop answering
-                # (#822), so the credential step must be reachable from here too.
+                # does: some DA_WM_TP1_21 units (oxms [65282] only) just stop
+                # answering (#822), so the credential step must be reachable here.
                 _LOGGER.warning("Probe of %s: %s; offering the credential step", self._host, exc)
                 return await self.async_step_credential()
             except (CannotConnect, InvalidCA) as exc:

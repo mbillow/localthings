@@ -317,9 +317,9 @@ async def test_a_psk_entry_is_not_reused_for_the_next_appliance(
 
 
 class SilentAppliance(PskAppliance):
-    """A PSK appliance that never refuses the certificate (the DA_WM_TP1_21
-    washer and dryer, #822): the handshake just times out, unlike the
-    Family Hub's unknown_ca. A matching PSK completes as on PskAppliance."""
+    """A PSK appliance that never refuses the certificate (some DA_WM_TP1_21
+    units, #822): the handshake just times out, unlike the Family Hub's
+    unknown_ca. A matching PSK completes as on PskAppliance."""
 
     def connect(self):
         if self.auth is None:
