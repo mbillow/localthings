@@ -73,6 +73,9 @@ async def test_dnd_services_keep_seven_hour_window(
                     {"entity_id": entity_id, "time": "22:00:00" if part == "start" else "05:00:00"},
                     blocking=True,
                 )
+            # Read the device back under the patched clock: the post-write
+            # publish waits on real-time settle timers on older Home Assistant.
+            await coordinator.async_refresh()
             await hass.async_block_till_done()
             assert sent[-1] == want
             assert coordinator.entity_rep(HREF)[FIELD] == want
@@ -167,6 +170,9 @@ async def test_gap_and_fold_window_is_independent_of_edit_order(
                     {"entity_id": entity_id, "time": picked if part == "start" else "05:00:00"},
                     blocking=True,
                 )
+            # Read the device back under the patched clock: the post-write
+            # publish waits on real-time settle timers on older Home Assistant.
+            await coordinator.async_refresh()
             await hass.async_block_till_done()
             assert written[-1] == want
             for part, state in (("start", start_state), ("end", "05:00:00")):
