@@ -21,6 +21,7 @@ import cbor2
 from smartthings_local.ocf.observe_refresh import ObserveRefreshTask
 from smartthings_local.ocf.state_cache import StateCache
 
+from .registry.batch import is_stub_rep
 from .registry.capabilities.common import merge_options_field
 
 _LOGGER = logging.getLogger(__name__)
@@ -259,7 +260,11 @@ class ObserveManager:
             return False
         with self._cache_lock:
             prior = self.cache.get(href) or {}
-            merged = dict(rep) if _is_alarms_href(href) else {**prior, **rep}
+            # A stub ({"href"} only, as a /device/0 sweep sends on some
+            # fridges) carries no alarm state, so it mustn't wipe the items a
+            # sub-poll filled in.
+            replace = _is_alarms_href(href) and not is_stub_rep(rep)
+            merged = dict(rep) if replace else {**prior, **rep}
             # A notify's options[] carries only the tokens that changed (a
             # washer dial change pushes just ["AvailableDelayTime_87"], issue
             # #579), so merge it by prefix; polls and sweeps read the whole

@@ -35,8 +35,7 @@ def _is_included(
     sub-polls. A genuinely empty {} rep is included too by this default
     gate: whether empty means "not populated yet" or "permanently
     unsupported" needs per-field domain knowledge this generic gate
-    doesn't have (e.g. /alarms/vs/0's {} is fridge.py's documented normal
-    no-alarm state, not an absence signal). Only a capability whose author
+    doesn't have. Only a capability whose author
     has verified a field is genuinely never populated opts into stricter
     gating with its own exists_fn (see common.ENERGY_METER, issue #127).
 

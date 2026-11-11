@@ -2,10 +2,10 @@
 per platform at async_setup_entry (see sensor.py etc.), separate from
 adapter.flatten()'s per-poll state values. issue #127 review: this default
 gate has to stay permissive on a genuinely empty {} rep, not just a true
-is_stub_rep stub -- a resource like /alarms/vs/0 is validly empty in its
-normal, no-alarm state (fridge._active_alarm_codes), so excluding the
-entity there would silently drop working sensors on first-poll timing,
-not just fix phantom ones.
+is_stub_rep stub: whether {} means "empty for now" or "never populated"
+is per-field knowledge, so excluding it there would silently drop working
+sensors on first-poll timing, not just fix phantom ones. The alarm sensor
+has no field gate at all and reads every clear shape as "none".
 """
 
 from typing import cast
