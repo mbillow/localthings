@@ -73,7 +73,7 @@ from .registry.adapter import _key, flatten
 from .registry.batch import is_stub_rep, parse_device0_batch
 from .registry.by_type import registry_for
 from .registry.by_type import resolve as resolve_registry
-from .registry.capabilities import cook
+from .registry.capabilities import cook, range_hood
 from .registry.capabilities.common import (
     REMOTE_CONTROL_HREFS,
     merge_items_field,
@@ -590,6 +590,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Localized {instance_name} labels keyed by instance-name id, loaded
         # at setup by entity.async_load_instance_names (issue #533).
         self.instance_names: dict[str, str] = {}
+        self._observed_sensing: set[str] = set()
         self._cache = StateCache(_NoOpDescriptor())
         self._cache.set_on_change(self._on_cache_changed)
         self._observe = ObserveManager(self._cache, logger=self._log)
@@ -731,6 +732,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for href, field in self._finish.fields().items():
             if rep := snapshot.get(href):
                 snapshot[href] = {**rep, finish.FIELD: field}
+        for href in tuple(self._observed_sensing):
+            if rep := snapshot.get(href):
+                snapshot[href] = {**rep, range_hood.SENSING_OBSERVED: True}
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
             return snapshot
@@ -757,6 +761,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rep = self.resource(href)
         if rep and (field := self._finish.field(href)):
             rep = {**rep, finish.FIELD: field}
+        if href in self._observed_sensing and rep:
+            rep = {**rep, range_hood.SENSING_OBSERVED: True}
         if href != cloudcourse.COURSE_HREF or not rep:
             return rep
         view = self._cloud_view()
@@ -889,6 +895,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._finish.observe(href, rep, source, dt_util.utcnow()):
             # The cache-change push may already have run without it.
             self._schedule_push()
+        if (
+            href.endswith("/airlevelcheck/vs/0")
+            and rep.get("x.com.samsung.da.autoExeState") == "Sensing"
+        ):
+            self._observed_sensing.add(href)
         if cook.MODE_SPEC in rep:
             self._remember_mode_spec(href, rep)
         if href == cloudcourse.COURSE_HREF:

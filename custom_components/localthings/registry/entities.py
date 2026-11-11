@@ -225,6 +225,8 @@ class NumberDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class TimeDesc(SamsungEntityDescription):
+    # (raw value, local now) -> displayed clock for a daily UTC-backed window.
+    native_value_fn: Callable[[Any, datetime], dt_time | None] | None = None
     write_fn: WriteFn = None
     payload_fn: TimePayloadFn = None
 

@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Napajanje uparenog aspiratora"
       },
-      "periodic_air_sensing": {
-        "name": "Periodično uzorkovanje vazduha"
-      },
       "pouring": {
         "name": "Sipanje"
       },
@@ -1392,6 +1389,14 @@
           "voice": "Glas"
         }
       },
+      "smart_ventilate_mode": {
+        "name": "Režim pametne ventilacije",
+        "state": {
+          "sensing": "Samo provera",
+          "alarm": "Primaj obaveštenja",
+          "airpurify": "Tiha ventilacija"
+        }
+      },
       "picture_mode": {
         "name": "Režim slike"
       }
@@ -1432,9 +1437,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akcija automatske ventilacije"
-      },
-      "automatic_ventilation_state": {
-        "name": "Status automatske ventilacije"
       },
       "battery": {
         "name": "Baterija"
@@ -2089,6 +2091,57 @@
       "oven_setpoint": {
         "name": "Zadana vrednost"
       },
+      "air_sensing_interval": {
+        "name": "Interval provere kvaliteta vazduha"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "Kvalitet vazduha PM10",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "Kvalitet vazduha PM2.5",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "Kvalitet vazduha PM1.0",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Poslednja ocena kvaliteta vazduha",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Nivo kvaliteta vazduha",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš"
+        }
+      },
       "illuminance": {
         "name": "Osvetljenost"
       }
@@ -2384,6 +2437,12 @@
       },
       "buzzer_sound": {
         "name": "Zvučni signal"
+      },
+      "smart_ventilate": {
+        "name": "Pametna ventilacija"
+      },
+      "hood_do_not_disturb": {
+        "name": "Ne uznemiravaj"
       }
     },
     "time": {
@@ -2419,6 +2478,12 @@
       },
       "sensing_skip_start": {
         "name": "Početak preskakanja AI Purify uzorkovanja"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Početak režima „Ne uznemiravaj“"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Kraj režima „Ne uznemiravaj“"
       }
     },
     "water_heater": {
