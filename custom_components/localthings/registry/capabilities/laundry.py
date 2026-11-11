@@ -237,7 +237,7 @@ BUZZER_SOUND = Capability(
             entity_category="config",
             exists_fn=lambda rep, resources: _buzzer_kind(rep) == "boolean",
             value_fn=_buzzer_switch_value,
-            supersedes=(("select", "buzzer_sound"), ("switch", "buzzer_sound")),
+            supersedes=(("select", "buzzer_sound"),),
             write_fn=_buzzer_switch_write,
         ),
         SelectDesc(

@@ -356,7 +356,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_notify_removed(hass, entry, async_reconcile_entities(hass, entry, coordinator))
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    coordinator.async_watch_laundry_buzzer_choices()
+    coordinator.async_watch_entity_inclusion()
     return True
 
 

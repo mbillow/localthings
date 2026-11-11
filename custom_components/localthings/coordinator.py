@@ -81,7 +81,7 @@ from .registry.capabilities.common import (
     remote_control_enabled,
     remote_control_required_for_write,
 )
-from .registry.capabilities.laundry import _buzzer_kind, cycle_options
+from .registry.capabilities.laundry import cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc
@@ -537,8 +537,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._identity: DeviceIdentity | None = None
         self._discovered = False
         self.bound = []
-        self._buzzer_choices: dict[str, str | None] | None = None
-        self._buzzer_reload_pending = False
+        self._registration_evidence: dict[str, dict] = {}
+        self._registered_included: frozenset[tuple[str, str]] | None = None
+        self._entity_reload_pending = False
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
         # Loaded by async_load_mode_specs before the first refresh.
@@ -801,7 +802,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._rehydrate_resources is not None:
             return self._rehydrate_resources
         if self._discovery_extra:
-            return {**self._discovery_extra, **self.last_resources}
+            return {**self.last_resources, **self._discovery_extra}
         return self.last_resources
 
     def discovery_canonical(self, subdevice: Subdevice) -> dict[str, dict]:
@@ -1971,31 +1972,78 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ------------------------------------------------------------------
 
     @callback
-    def async_watch_laundry_buzzer_choices(self) -> None:
-        """Reload after late model evidence changes a static buzzer platform."""
-        if not self._buzzer_choices:
-            return
-        self._entry.async_on_unload(self.async_add_listener(self._check_buzzer_choices))
-        self._check_buzzer_choices()
+    def async_watch_entity_inclusion(self) -> None:
+        """Reload when late model evidence changes static registration."""
+        self._entry.async_on_unload(self.async_add_listener(self._check_entity_inclusion))
+        self._check_entity_inclusion()
+
+    def _registration_resources(
+        self, live: dict[str, dict], remembered: dict[str, dict]
+    ) -> dict[str, dict]:
+        """Keep complete discovery evidence when a static gate cannot yet decide."""
+
+        found = dict(live)
+        for bound in self.bound:
+            desc = bound.desc
+            if desc.dynamic_presence or desc.exists_fn is None:
+                continue
+            rep = live.get(bound.href)
+            previous = remembered.get(bound.href)
+            if rep is None or not previous or not desc.field or desc.field not in previous:
+                continue
+            options = getattr(desc, "options_field", None)
+            if options and not previous.get(options):
+                continue
+            missing_field = desc.field not in rep
+            missing_options = options and not rep.get(options)
+            if not missing_field and not missing_options:
+                continue
+            merged = dict(found[bound.href])
+            if missing_field:
+                merged[desc.field] = previous[desc.field]
+            if missing_options:
+                merged[options] = previous[options]
+            if options and (
+                (missing_field and rep.get(options) != previous[options])
+                or (missing_options and rep.get(desc.field) not in previous[options])
+            ):
+                # Keep the last complete pair rather than combining a new
+                # vocabulary with a state from another model representation.
+                merged[desc.field] = previous[desc.field]
+                merged[options] = previous[options]
+            found[bound.href] = merged
+        return found
 
     @callback
-    def _check_buzzer_choices(self) -> None:
-        if self._closed or self.rehydrated or self._buzzer_reload_pending:
+    def _check_entity_inclusion(self) -> None:
+        if self._closed or self.rehydrated or self._entity_reload_pending:
             return
-        for href, initial in (self._buzzer_choices or {}).items():
-            current = _buzzer_kind(self.cached_resource(href) or {})
-            if current is not None and current != initial:
-                self._buzzer_reload_pending = True
-                self._entry.async_create_background_task(
-                    self.hass,
-                    self._async_reload_buzzer_choice(
-                        {**self.discovery_resources, **self.last_resources}
-                    ),
-                    "localthings_buzzer_choice",
-                )
-                return
+        resources = self._registration_resources(
+            {**self._registration_evidence, **self.last_resources}, self._registration_evidence
+        )
+        saved = self._rehydrate_resources
+        self._rehydrate_resources = resources
+        try:
+            current = self._included_keys()
+        finally:
+            self._rehydrate_resources = saved
+        gated = frozenset(
+            (b.subdevice.key, _key(b))
+            for b in self.bound
+            if b.desc.exists_fn is not None and not b.desc.dynamic_presence
+        )
+        if (
+            self._registered_included is not None
+            and current & gated != self._registered_included & gated
+        ):
+            self._entity_reload_pending = True
+            self._entry.async_create_background_task(
+                self.hass,
+                self._async_reload_entity_inclusion(resources),
+                "localthings_entity_inclusion",
+            )
 
-    async def _async_reload_buzzer_choice(self, resources: dict[str, dict]) -> None:
+    async def _async_reload_entity_inclusion(self, resources: dict[str, dict]) -> None:
         # A reload may come up offline; bank the evidence before discarding
         # the registration made from an incomplete or older representation.
         saved = await self._async_save_snapshot(
@@ -2003,7 +2051,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             [*self.subdevices, *self.disabled_subdevices],
         )
         if not saved:
-            self._buzzer_reload_pending = False
+            self._entity_reload_pending = False
         elif not self._closed:
             self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
@@ -2154,6 +2202,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 for su in stored.get("subdevice_candidates") or ()
             ]
             self._run_discovery(resources, from_snapshot=True)
+            self._registration_evidence = resources
         except Exception as e:
             # A snapshot written by an older release can outlive both the
             # stored shape and the registry it was discovered against. This
@@ -2173,6 +2222,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._rehydrate_resources = resources
         self._rehydrated_keys = self._bound_keys()
         self._rehydrated_included = self._included_keys()
+        self._registered_included = self._rehydrated_included
         if not self.bound:
             return False
         self._log.info(
@@ -2226,7 +2276,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             len(gone),
             len(new),
         )
-        self._buzzer_reload_pending = True
+        self._entity_reload_pending = True
         self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
     def _run_discovery(self, resources: dict[str, dict], from_snapshot: bool = False) -> None:
@@ -2316,12 +2366,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
         self.device_type_name = device_type_name
         self.bound = bound
-        if self._buzzer_choices is None:
-            self._buzzer_choices = {
-                b.href: _buzzer_kind(resources.get(b.href) or {})
-                for b in bound
-                if b.desc.key == "buzzer_sound_enabled"
-            }
         self._unbound_hrefs = unbound
         self._refresh_learnable_hrefs()
 
@@ -2815,15 +2859,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
             found = await self._with_remembered_resources(resources) if self._flat else resources
-            if self._rehydrate_resources is not None:
-                # An incomplete first answer cannot overturn a model choice
-                # already established by the offline snapshot. Keep it for
-                # registration only; the live cache still gets the real reply.
-                found = dict(found)
-                for href, kind in (self._buzzer_choices or {}).items():
-                    if kind is not None and _buzzer_kind(found.get(href) or {}) is None:
-                        found[href] = self._rehydrate_resources[href]
+            try:
+                stored = await self._snapshot_store.async_load()
+            except Exception:
+                stored = None
+            remembered = self._rehydrate_resources or (
+                from_json_safe(stored.get("resources", {})) if stored else {}
+            )
             self._run_discovery(found)
+            complete = self._registration_resources(found, remembered)
+            if complete != found:
+                found = complete
+                self._run_discovery(found)
+            self._registration_evidence = found
+            self._discovery_extra.update(
+                {href: rep for href, rep in found.items() if rep != resources.get(href)}
+            )
+            previous = self._rehydrate_resources
+            self._rehydrate_resources = found
+            try:
+                if self._registered_included is None:
+                    self._registered_included = self._included_keys()
+            finally:
+                self._rehydrate_resources = previous
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is
             # being replaced.

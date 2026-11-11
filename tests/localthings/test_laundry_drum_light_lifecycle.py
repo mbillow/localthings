@@ -31,20 +31,25 @@ async def test_lamp_late_arrival_absence_and_return_preserve_identity(hass, mock
         coordinator._cache.apply_rep(
             HREF, {OPTIONS: ["Course_16", "DrumLight_On"]}, source="observe"
         )
+        coordinator._publish_data()
         await hass.async_block_till_done()
         entity_id = registry.async_get_entity_id("light", DOMAIN, uid)
         assert entity_id is not None
         assert hass.states.get(entity_id).state == "on"
         registry.async_update_entity(entity_id, name="My lamp")
         coordinator._cache.apply_rep(HREF, {OPTIONS: ["Course_16"]}, source="observe")
+        coordinator._publish_data()
         await hass.async_block_till_done()
         assert hass.states.get(entity_id).state == "unavailable"
         coordinator._cache.apply_rep(
             HREF, {OPTIONS: ["Course_16", "DrumLight_Off"]}, source="observe"
         )
+        coordinator._publish_data()
         await hass.async_block_till_done()
         assert hass.states.get(entity_id).state == "off"
-        assert registry.async_get(entity_id).name == "My lamp"
+        row = registry.async_get(entity_id)
+        assert row is not None
+        assert row.name == "My lamp"
         assert registry.async_get_entity_id("light", DOMAIN, uid) == entity_id
         assert registry.async_get_entity_id("switch", DOMAIN, uid) is None
 
