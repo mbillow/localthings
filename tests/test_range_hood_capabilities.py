@@ -177,3 +177,10 @@ def test_after_run_active_reads_on_off():
     assert active.value_fn is not None
     assert active.value_fn("On") is True
     assert active.value_fn("Off") is False
+
+
+def test_hood_fan_is_declared_free_of_remote_control():
+    """The vent fan must stay writable with Remote Control off; see the
+    descriptor's comment for the board it was measured on."""
+    desc = next(e for e in range_hood.HOOD_FAN.entities if isinstance(e, FanDesc))
+    assert not desc.needs_remote_control

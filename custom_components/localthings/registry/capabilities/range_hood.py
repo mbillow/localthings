@@ -107,6 +107,13 @@ HOOD_FAN = Capability(
             key="fan",
             field="x.com.samsung.da.hood.fanSpeed",
             write_fn=_hood_fan_write,
+            # The vent fan is not a cooking function: an over-the-range
+            # ME8000T (TP2X_DA-KS-MICROWAVE-0101X) takes fan-speed writes
+            # with Remote Control off (2.04, readback confirms), the same
+            # way Samsung's own cooktop-to-hood sync drives it. The
+            # readback in coordinator._took_effect still reports a board
+            # that rejects it.
+            needs_remote_control=False,
         ),
         BinarySensorDesc(
             key="automatic_operation",
