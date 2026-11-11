@@ -1195,7 +1195,14 @@
           "5f": "Tylko wirowanie",
           "63": "Mocna para",
           "67": "Antyalergiczny z parą",
-          "68": "Duże rzeczy z parą"
+          "68": "Duże rzeczy z parą",
+          "a1": "Normalny",
+          "a7": "Pielęgnacja produktu",
+          "a9": "Tide Pod na zimno",
+          "ad": "AI OptiWash + suszenie",
+          "59": "Tkaniny niemnące",
+          "a8": "Suszenie czasowe",
+          "aa": "Napowietrzanie"
         }
       },
       "washer_dry_level": {

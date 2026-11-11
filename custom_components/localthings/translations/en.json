@@ -1195,7 +1195,14 @@
           "5f": "Spin Only",
           "63": "Power Steam",
           "67": "Steam Allergen",
-          "68": "Steam Bulky"
+          "68": "Steam Bulky",
+          "a1": "Normal",
+          "a7": "Product Care",
+          "a9": "Tide Pod Cold",
+          "ad": "AI OptiWash+Dry",
+          "59": "Perm Press",
+          "a8": "Time Dry",
+          "aa": "Air Fluff"
         }
       },
       "washer_dry_level": {

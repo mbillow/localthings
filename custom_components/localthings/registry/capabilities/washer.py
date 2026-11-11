@@ -50,7 +50,9 @@ from .operational import OPERATIONAL_STATE
 # Self Clean+) verified directly on a WF50A8600AV/US by reading back the raw
 # code after selecting each cycle on the appliance (issue #80). 2 more
 # ('0A' Towels, 'B0' Mixed Load) reported for a WW90DG5G34ABLE on the same
-# Table_02 family (issue #363). Several codes legitimately share a label
+# Table_02 family (issue #363). 7 high-range codes (A1/A7/A9/AD/59/A8/AA)
+# from an AWM-US-M64-25-WD80 all-in-one, each selected on the panel and read
+# back (issue #784). Several codes legitimately share a label
 # across different course tables -- '21'/'65' Colors, '27'/'5E'/'78'
 # Rinse+Spin, '0A'/'33'/'54'/'70' Towels -- not typos. (This list said
 # "'24' Towels" until issue #343 found 24/33 transposed; 24 is Bedding.)

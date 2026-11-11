@@ -1195,7 +1195,14 @@
           "5f": "Alleen centrifugeren",
           "63": "Power Steam",
           "67": "Stoom anti-allergie",
-          "68": "Stoom volumineuze was"
+          "68": "Stoom volumineuze was",
+          "a1": "Normaal",
+          "a7": "Productverzorging",
+          "a9": "Tide Pod koud",
+          "ad": "AI OptiWash+drogen",
+          "59": "Strijkvrij",
+          "a8": "Tijdprogramma",
+          "aa": "Luchtdrogen"
         }
       },
       "washer_dry_level": {

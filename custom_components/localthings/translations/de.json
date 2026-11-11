@@ -1158,7 +1158,14 @@
           "5f": "Nur Schleudern",
           "63": "Power-Dampf",
           "67": "Dampf-Anti-Allergie",
-          "68": "Dampf-Großwäsche"
+          "68": "Dampf-Großwäsche",
+          "a1": "Normal",
+          "a7": "Produktpflege",
+          "a9": "Tide Pod Kalt",
+          "ad": "AI OptiWash + Trocknen",
+          "59": "Pflegeleicht",
+          "a8": "Zeittrocknen",
+          "aa": "Lüften"
         }
       },
       "washer_dry_level": {

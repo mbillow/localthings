@@ -1195,7 +1195,14 @@
           "5f": "Samo centrifuga",
           "63": "Snažna para",
           "67": "Antialergijska para",
-          "68": "Kabasti veš sa parom"
+          "68": "Kabasti veš sa parom",
+          "a1": "Normalno",
+          "a7": "Nega proizvoda",
+          "a9": "Tide Pod hladno",
+          "ad": "AI OptiWash+Sušenje",
+          "59": "Lako održavanje",
+          "a8": "Vremensko sušenje",
+          "aa": "Provetravanje hladnim vazduhom"
         }
       },
       "washer_dry_level": {
