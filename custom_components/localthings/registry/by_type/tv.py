@@ -7,8 +7,8 @@ routes on /oic/d alone.
 from ..capabilities import av, common, tv
 from ._base import DeviceRegistry, _build, unpolled
 
-SMART_MONITOR = DeviceRegistry(
-    name="smart_monitor",
+MONITOR = DeviceRegistry(
+    name="monitor",
     capabilities=_build(
         [
             *unpolled(av.IGNORED, tv.COVERAGE),

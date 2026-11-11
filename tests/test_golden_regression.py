@@ -2270,8 +2270,8 @@ def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
     )
 
 
-@pytest.mark.parametrize("name", ["smart_monitor_ls32dm702", "smart_monitor_ls43dm703"])
-def test_registry_reproduces_golden_state_keys_for_smart_monitor(name):
+@pytest.mark.parametrize("name", ["monitor_ls32dm702", "monitor_ls43dm703"])
+def test_registry_reproduces_golden_state_keys_for_monitor(name):
     """M7 Smart Monitors (#815): a flat Tizen TV board routed by /oic/d alone."""
     from tests.conftest import _load_device
 

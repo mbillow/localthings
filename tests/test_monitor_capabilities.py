@@ -14,13 +14,13 @@ from custom_components.localthings.registry.redact import REDACTED, redact_resou
 from tests.conftest import _load_device
 
 DEVICE_TYPES = ("oic.wk.d", "x.com.st.d.monitor")
-FIXTURES = ("smart_monitor_ls32dm702", "smart_monitor_ls43dm703")
+FIXTURES = ("monitor_ls32dm702", "monitor_ls43dm703")
 
 
 def _bound(name):
     resources = _load_device(name)
     reg = resolve(resources, device_types=DEVICE_TYPES)
-    assert reg is not None and reg.name == "smart_monitor"
+    assert reg is not None and reg.name == "monitor"
     unbound = []
     bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
     return bound, resources, unbound
@@ -43,11 +43,11 @@ def test_routes_on_oic_d_alone():
     ("name", "expected"),
     [
         (
-            "smart_monitor_ls32dm702",
+            "monitor_ls32dm702",
             {"network_connection": "wifi", "illuminance": 602, "picture_mode": "modeGen_458775"},
         ),
         (
-            "smart_monitor_ls43dm703",
+            "monitor_ls43dm703",
             {"network_connection": "wifi", "illuminance": 118, "picture_mode": "modeEco"},
         ),
     ],
@@ -58,7 +58,7 @@ def test_state(name, expected):
 
 
 def test_picture_mode_writes_only_advertised_ids():
-    rep = _load_device("smart_monitor_ls32dm702")[tv.HREF_PICTURE]
+    rep = _load_device("monitor_ls32dm702")[tv.HREF_PICTURE]
     desc = tv.PICTURE_MODE.entities[0]
     assert isinstance(desc, SelectDesc) and desc.write_fn is not None
     assert desc.control_response
@@ -76,10 +76,10 @@ def test_picture_mode_writes_only_advertised_ids():
 
 def test_duplicate_input_names_are_told_apart_by_id():
     # LS32DM702: HDMI1 and USB-C are both named "PC".
-    rep = _load_device("smart_monitor_ls32dm702")[tv.HREF_INPUT]
+    rep = _load_device("monitor_ls32dm702")[tv.HREF_INPUT]
     assert tv.mode_options(rep) == {"HDMI1": "PC (HDMI1)", "USB-C": "PC (USB-C)"}
     # LS43DM703 on the tuner: one empty row.
-    assert tv.mode_options(_load_device("smart_monitor_ls43dm703")[tv.HREF_INPUT]) == {}
+    assert tv.mode_options(_load_device("monitor_ls43dm703")[tv.HREF_INPUT]) == {}
 
 
 def test_appdata_mailboxes_are_never_read_and_redacted_whole():
