@@ -1063,7 +1063,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         record = self._cloud.snapshot()
         courses = cycle_options(self.canonical_resources(MAIN))
         pending = cloudcourse.undiscovered(rep, record, courses)
-        slots = cloudcourse.cloud_slots(rep, courses)
+        slots = cloudcourse.known_slots(rep, courses, record)
         needs_course = bool(slots) and not record["download_course"]
         if record["slots"] and (pending or needs_course):
             ir.async_create_issue(

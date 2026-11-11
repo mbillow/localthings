@@ -25,6 +25,9 @@ from tests.conftest import _load_device
 SPORTS = "0021550449284D134AA04C0035F004F005F0AC00"
 JEANS = "001F6B0449284D134AA04C0035F004F005F0AC00"
 TOWELS = "00040A0449404D134AB84C0035F004F005F0AC00"
+# Issue #780 (WA54CG7150): its downloaded Eco Cold, a slot CloudExtraCourse_
+# doesn't list.
+WA54_ECO_COLD = "0013860449124D114A224C2037F0"
 
 
 def _cycle_desc():
@@ -220,12 +223,30 @@ class TestRealDumps:
 
 
 class TestStoreRules:
-    def test_only_advertised_slots_are_recorded(self):
-        """A blob for a slot this appliance doesn't list isn't a program it
-        offers."""
+    def test_a_program_outside_the_advertised_list_is_learned(self):
+        """Issue #780: a WA54CG7150 lists only 59/58 but downloads any of
+        five programs, one at a time, and runs whichever one is selected.
+        Its downloaded Eco Cold sits in slot 86."""
         store = cloudcourse.CloudCourses()
-        store.observe(_rep(["CloudExtraCourse_55", f"OneTimeCloudCourse_{JEANS}"]))
-        assert "6B" not in store.snapshot()["slots"]
+        assert store.observe(_rep(["CloudExtraCourse_5958", f"CloudCourse_{WA54_ECO_COLD}"]))
+        assert store.snapshot()["slots"]["86"]["blob"] == WA54_ECO_COLD
+
+    def test_known_slots_are_advertised_then_learned(self):
+        rep = _rep(["CloudExtraCourse_5958", f"CloudCourse_{WA54_ECO_COLD}"])
+        store = cloudcourse.CloudCourses()
+        store.observe(rep)
+        record = store.snapshot()
+        assert cloudcourse.known_slots(rep, [], record) == ["59", "58", "86"]
+        assert cloudcourse.undiscovered(rep, record, []) == ["59", "58", "86"]
+        store.set_name("86", "Eco Cold")
+        assert cloudcourse.undiscovered(rep, store.snapshot(), []) == ["59", "58"]
+
+    def test_the_sentinel_is_still_not_learned_outside_the_list(self):
+        store = cloudcourse.CloudCourses()
+        store.observe(
+            _rep(["CloudExtraCourse_5958", "OneTimeCloudCourse_FFFF010049004D004A804C0037F0"])
+        )
+        assert store.snapshot()["slots"] == {}
 
     def test_a_relearned_blob_replaces_the_old_payload(self):
         store = cloudcourse.CloudCourses()
