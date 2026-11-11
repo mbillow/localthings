@@ -223,12 +223,13 @@ def test_last_sensing_time_reads_as_utc():
 
 def test_read_only_keys_match_the_range_hood_capability():
     """The three read-only sensor keys are shared with the hood deliberately,
-    so both families read from one translation catalog entry each. If either
-    side renames one, this catches the drift.
+    so entity IDs line up across the two families. If either side renames
+    one, this catches the drift. The hood's last_air_sensing_level has its
+    own translation_key, since it maps the Kr1-Kr4 grades.
 
     periodic_air_sensing is excluded: it's a SwitchDesc here and a
-    BinarySensorDesc on the hood, so the two sit in different platform
-    catalogs and are worded differently -- see the next test.
+    Smart ventilate on the hood, while this family keeps its AI Purify
+    controls and existing entity IDs.
     """
     from custom_components.localthings.registry.capabilities import range_hood
 
@@ -241,16 +242,14 @@ def test_read_only_keys_match_the_range_hood_capability():
     } <= hood & ours
 
 
-def test_periodic_air_sensing_is_writable_here_and_read_only_on_hoods():
-    """The reason range_hood.AIR_LEVEL_CHECK is not imported directly: the hood
-    models this key as a read-only BinarySensorDesc, this board needs a
-    writable SwitchDesc. Reusing the hood's capability would migrate every hood
-    user's entity to a different platform."""
+def test_purifier_and_hood_have_independently_named_writable_sensing_controls():
+    """The hood's app calls this Smart ventilate; purifier IDs stay unchanged."""
     from custom_components.localthings.registry.capabilities import range_hood
-    from custom_components.localthings.registry.entities import BinarySensorDesc, SwitchDesc
+    from custom_components.localthings.registry.entities import SwitchDesc
 
     hood = next(d for d in range_hood.AIR_LEVEL_CHECK.entities if d.key == "periodic_air_sensing")
-    assert isinstance(hood, BinarySensorDesc)
+    assert isinstance(hood, SwitchDesc)
+    assert hood.write_fn is not None
     ours = _desc("periodic_air_sensing")
     assert isinstance(ours, SwitchDesc)
     assert ours.write_fn is not None

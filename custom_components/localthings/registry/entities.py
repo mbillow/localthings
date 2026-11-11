@@ -68,6 +68,10 @@ class SamsungEntityDescription:
     # platforms that use entity.async_add_bound_entities add a late entity:
     # sensor, binary_sensor, number, switch, select, button, time and light.
     dynamic_presence: bool = False
+    # A static exists_fn that a first read can't always decide (the buzzer's
+    # vocabulary). A stub borrows the snapshot's rep at registration, and the
+    # entry reloads once if later live data changes the decision.
+    late_evidence: bool = False
     # Remove this entity's registry row when exists_fn excludes it. Only for
     # an exists_fn verified to mean "this model never has it" (#698, #747).
     prune_when_excluded: bool = False
@@ -221,6 +225,8 @@ class NumberDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class TimeDesc(SamsungEntityDescription):
+    # (raw value, local now) -> displayed clock for a daily UTC-backed window.
+    native_value_fn: Callable[[Any, datetime], dt_time | None] | None = None
     write_fn: WriteFn = None
     payload_fn: TimePayloadFn = None
 

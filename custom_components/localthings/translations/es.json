@@ -491,9 +491,6 @@
       "paired_hood_power": {
         "name": "Energía de la campana emparejada"
       },
-      "periodic_air_sensing": {
-        "name": "Detección de aire periódica"
-      },
       "pouring": {
         "name": "Sirviendo"
       },
@@ -704,6 +701,9 @@
       },
       "paired_hood_light": {
         "name": "Luz de la campana emparejada"
+      },
+      "drum_light": {
+        "name": "Luz del tambor"
       }
     },
     "number": {
@@ -1788,6 +1788,17 @@
           "mute": "Silencio",
           "voice": "Voz"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Modo de ventilación inteligente",
+        "state": {
+          "sensing": "Solo detección",
+          "alarm": "Recibir notificaciones",
+          "airpurify": "Ventilar silenciosamente"
+        }
+      },
+      "picture_mode": {
+        "name": "Modo de imagen"
       }
     },
     "sensor": {
@@ -1823,9 +1834,6 @@
       },
       "auto_ventilation_action": {
         "name": "Acción de ventilación automática"
-      },
-      "automatic_ventilation_state": {
-        "name": "Estado de ventilación automática"
       },
       "battery": {
         "name": "Batería"
@@ -2482,6 +2490,60 @@
       },
       "oven_setpoint": {
         "name": "Punto de ajuste"
+      },
+      "air_sensing_interval": {
+        "name": "Intervalo de medición del aire"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Último nivel de detección de aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Nivel de limpieza",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala"
+        }
+      },
+      "illuminance": {
+        "name": "Iluminancia"
       }
     },
     "switch": {
@@ -2772,6 +2834,15 @@
       },
       "repeated_cleaning": {
         "name": "Repetir limpieza"
+      },
+      "buzzer_sound": {
+        "name": "Sonido del zumbador"
+      },
+      "smart_ventilate": {
+        "name": "Ventilación inteligente"
+      },
+      "hood_do_not_disturb": {
+        "name": "No molestar"
       }
     },
     "time": {
@@ -2807,6 +2878,12 @@
       },
       "sensing_skip_start": {
         "name": "Inicio de la omisión de medición de AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Inicio de No molestar"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Fin de No molestar"
       }
     },
     "water_heater": {

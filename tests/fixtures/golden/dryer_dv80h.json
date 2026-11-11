@@ -12,6 +12,7 @@
     "delay_start_hours",
     "diagnosis",
     "drum_clean_cycles_remaining",
+    "drum_light",
     "dry_level",
     "dry_time",
     "dryer_type",

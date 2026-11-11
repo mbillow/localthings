@@ -25,8 +25,9 @@ from datetime import time as dt_time
 
 from ... import cloudcourse
 from ...catalog import has_entity_translation
+from ..batch import is_stub_rep
 from ..capability import Capability
-from ..entities import NumberDesc, SelectDesc, SensorDesc, SwitchDesc, TimeDesc
+from ..entities import LightDesc, NumberDesc, SelectDesc, SensorDesc, SwitchDesc, TimeDesc
 from .common import hex_pairs, option_value
 
 _LED_LEVELS = ("Low", "High")
@@ -176,11 +177,43 @@ SOUND_VOLUME = Capability(
 )
 
 # ---------------------------------------------------------------------------
-# /buzzersound/vs/0 -- buzzer volume and (on some units) a separate finish
+# /buzzersound/vs/0 -- Boolean or volume buzzer and (on some units) a separate finish
 # chime. Fields have no 'x.com.samsung.da.' prefix in this resource. Seen on
 # washers and DA_WM_TP1 dryers; the dryer dump carries only setBuzzerSound
 # (no supportedFinishSound), so finish_sound self-gates off there.
 # ---------------------------------------------------------------------------
+
+
+def _buzzer_kind(rep: dict) -> str | None:
+    vocabulary = rep.get("supportedBuzzerSound")
+    if (
+        "setBuzzerSound" not in rep
+        or not isinstance(vocabulary, list)
+        or not vocabulary
+        or not all(isinstance(value, str) and value for value in vocabulary)
+    ):
+        return None
+    normalized = [value.casefold() for value in vocabulary]
+    if len(set(normalized)) != len(normalized):
+        return None
+    if set(normalized) == {"on", "off"}:
+        state = rep["setBuzzerSound"]
+        return "boolean" if isinstance(state, str) and state.casefold() in normalized else None
+    return "select"
+
+
+def _buzzer_switch_value(value):
+    return {"on": True, "off": False}.get(value.casefold()) if isinstance(value, str) else None
+
+
+def _buzzer_switch_write(value, rep, href=None):
+    if value not in ("On", "Off") or _buzzer_kind(rep) != "boolean":
+        return None
+    raw = next(
+        token for token in rep["supportedBuzzerSound"] if token.casefold() == value.casefold()
+    )
+    return ["buzzersound", "vs", "0"], {"setBuzzerSound": raw}
+
 
 BUZZER_SOUND = Capability(
     href="/buzzersound/vs/0",
@@ -190,8 +223,25 @@ BUZZER_SOUND = Capability(
             field="setBuzzerSound",
             icon="mdi:volume-high",
             entity_category="config",
+            # Older boards expose volume levels; only the On/Off vocabulary is Boolean.
+            exists_fn=lambda rep, resources: (
+                not rep or is_stub_rep(rep) or _buzzer_kind(rep) == "select"
+            ),
             options_field="supportedBuzzerSound",
+            late_evidence=True,
             write_fn=lambda p, rep, href=None: (["buzzersound", "vs", "0"], {"setBuzzerSound": p}),
+        ),
+        SwitchDesc(
+            key="buzzer_sound_enabled",
+            translation_key="buzzer_sound",
+            field="setBuzzerSound",
+            icon="mdi:volume-high",
+            entity_category="config",
+            exists_fn=lambda rep, resources: _buzzer_kind(rep) == "boolean",
+            late_evidence=True,
+            value_fn=_buzzer_switch_value,
+            supersedes=(("select", "buzzer_sound"),),
+            write_fn=_buzzer_switch_write,
         ),
         SelectDesc(
             key="finish_sound",
@@ -865,6 +915,26 @@ def bool_option_value(prefix):
 def bool_option_exists(prefix):
     return lambda rep, resources: (
         option_value(rep.get("x.com.samsung.da.options"), prefix) is not None
+    )
+
+
+def bool_option_light(key: str, icon: str, prefix: str) -> LightDesc:
+    """Laundry lamps accept independent writes even with Smart Control off."""
+    token_write = bool_option_write(prefix)
+
+    def write(value, rep, href=None):
+        if not isinstance(value, bool):
+            return None
+        return token_write("On" if value else "Off", rep, href)
+
+    return LightDesc(
+        key=key,
+        icon=icon,
+        dynamic_presence=True,
+        needs_remote_control=False,
+        exists_fn=bool_option_exists(prefix),
+        rep_fn=bool_option_value(prefix),
+        write_fn=write,
     )
 
 

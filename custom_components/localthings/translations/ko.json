@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "연동 후드 전원"
       },
-      "periodic_air_sensing": {
-        "name": "주기적 공기 감지"
-      },
       "pouring": {
         "name": "출수 중"
       },
@@ -304,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "연동 후드 조명"
+      },
+      "drum_light": {
+        "name": "통 조명"
       }
     },
     "number": {
@@ -1388,6 +1388,17 @@
           "mute": "음소거",
           "voice": "음성"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "스마트 환기 모드",
+        "state": {
+          "sensing": "감지만",
+          "alarm": "알림 받기",
+          "airpurify": "조용히 환기"
+        }
+      },
+      "picture_mode": {
+        "name": "화면 모드"
       }
     },
     "sensor": {
@@ -1426,9 +1437,6 @@
       },
       "auto_ventilation_action": {
         "name": "자동 환기 동작"
-      },
-      "automatic_ventilation_state": {
-        "name": "자동 환기 상태"
       },
       "battery": {
         "name": "배터리"
@@ -2082,6 +2090,60 @@
       },
       "oven_setpoint": {
         "name": "설정 온도"
+      },
+      "air_sensing_interval": {
+        "name": "공기 감지 간격"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "마지막 공기질 감지 단계",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "청정도",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
+      },
+      "illuminance": {
+        "name": "조도"
       }
     },
     "switch": {
@@ -2372,6 +2434,15 @@
       },
       "repeated_cleaning": {
         "name": "반복 청소"
+      },
+      "buzzer_sound": {
+        "name": "부저음"
+      },
+      "smart_ventilate": {
+        "name": "스마트 환기"
+      },
+      "hood_do_not_disturb": {
+        "name": "방해 금지"
       }
     },
     "time": {
@@ -2407,6 +2478,12 @@
       },
       "sensing_skip_start": {
         "name": "AI Purify 감지 건너뛰기 시작"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "방해 금지 시작"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "방해 금지 종료"
       }
     },
     "water_heater": {

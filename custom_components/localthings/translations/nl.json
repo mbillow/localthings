@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Gekoppelde afzuigkap actief"
       },
-      "periodic_air_sensing": {
-        "name": "Periodieke luchtmeting"
-      },
       "pouring": {
         "name": "Schenken"
       },
@@ -304,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Verlichting gekoppelde afzuigkap"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -1388,6 +1388,17 @@
           "mute": "Gedempt",
           "voice": "Stem"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Modus voor slim ventileren",
+        "state": {
+          "sensing": "Alleen detecteren",
+          "alarm": "Meldingen ontvangen",
+          "airpurify": "Stil ventileren"
+        }
+      },
+      "picture_mode": {
+        "name": "Beeldmodus"
       }
     },
     "sensor": {
@@ -1426,9 +1437,6 @@
       },
       "auto_ventilation_action": {
         "name": "Actie automatische ventilatie"
-      },
-      "automatic_ventilation_state": {
-        "name": "Status automatische ventilatie"
       },
       "battery": {
         "name": "Batterij"
@@ -2082,6 +2090,60 @@
       },
       "oven_setpoint": {
         "name": "Instelpunt"
+      },
+      "air_sensing_interval": {
+        "name": "Interval luchtmeting"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Laatste luchtmeetniveau",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Reinigingsniveau",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht"
+        }
+      },
+      "illuminance": {
+        "name": "Verlichtingssterkte"
       }
     },
     "switch": {
@@ -2372,6 +2434,15 @@
       },
       "repeated_cleaning": {
         "name": "Reiniging herhalen"
+      },
+      "buzzer_sound": {
+        "name": "Zoemergeluid"
+      },
+      "smart_ventilate": {
+        "name": "Slim ventileren"
+      },
+      "hood_do_not_disturb": {
+        "name": "Niet storen"
       }
     },
     "time": {
@@ -2407,6 +2478,12 @@
       },
       "sensing_skip_start": {
         "name": "Start AI Purify meting overslaan"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Begin niet storen"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Einde niet storen"
       }
     },
     "water_heater": {

@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Strom der gekoppelten Dunstabzugshaube"
       },
-      "periodic_air_sensing": {
-        "name": "Periodische Luftmessung"
-      },
       "alarm_in_mute": {
         "name": "Alarm stummgeschaltet"
       },
@@ -304,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Licht der gekoppelten Dunstabzugshaube"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -1388,6 +1388,17 @@
           "mute": "Stumm",
           "voice": "Sprache"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Modus der intelligenten Lüftung",
+        "state": {
+          "sensing": "Nur Erkennung",
+          "alarm": "Benachrichtigungen erhalten",
+          "airpurify": "Leise lüften"
+        }
+      },
+      "picture_mode": {
+        "name": "Bildmodus"
       }
     },
     "sensor": {
@@ -1426,9 +1437,6 @@
       },
       "auto_ventilation_action": {
         "name": "Automatische Lüftungsaktion"
-      },
-      "automatic_ventilation_state": {
-        "name": "Automatischer Lüftungszustand"
       },
       "battery": {
         "name": "Akku"
@@ -2082,6 +2090,60 @@
       },
       "oven_setpoint": {
         "name": "Sollwert"
+      },
+      "air_sensing_interval": {
+        "name": "Intervall der Luftmessung"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 Luftqualität",
+        "state": {
+          "good": "Gut",
+          "normal": "Normal",
+          "poor": "Schlecht",
+          "very_poor": "Sehr schlecht",
+          "processing": "Verarbeitung"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 Luftqualität",
+        "state": {
+          "good": "Gut",
+          "normal": "Normal",
+          "poor": "Schlecht",
+          "very_poor": "Sehr schlecht",
+          "processing": "Verarbeitung"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 Luftqualität",
+        "state": {
+          "good": "Gut",
+          "normal": "Normal",
+          "poor": "Schlecht",
+          "very_poor": "Sehr schlecht",
+          "processing": "Verarbeitung"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Letzte Luftmessstufe",
+        "state": {
+          "good": "Gut",
+          "normal": "Normal",
+          "poor": "Schlecht",
+          "very_poor": "Sehr schlecht"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Reinigungsstufe",
+        "state": {
+          "good": "Gut",
+          "normal": "Normal",
+          "poor": "Schlecht",
+          "very_poor": "Sehr schlecht"
+        }
+      },
+      "illuminance": {
+        "name": "Beleuchtungsstärke"
       }
     },
     "switch": {
@@ -2372,6 +2434,15 @@
       },
       "repeated_cleaning": {
         "name": "Reinigung wiederholen"
+      },
+      "buzzer_sound": {
+        "name": "Signalton"
+      },
+      "smart_ventilate": {
+        "name": "Intelligente Lüftung"
+      },
+      "hood_do_not_disturb": {
+        "name": "Nicht stören"
       }
     },
     "time": {
@@ -2407,6 +2478,12 @@
       },
       "sensing_skip_start": {
         "name": "KI-Reinigung Messpause Start"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Nicht stören Beginn"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Nicht stören Ende"
       }
     },
     "water_heater": {
