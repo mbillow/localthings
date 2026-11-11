@@ -16,7 +16,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator, _payload_present_in
-from custom_components.localthings.registry.capabilities import oven
+from custom_components.localthings.registry.capabilities import microwave, oven, range_hood
 from custom_components.localthings.registry.discovery import BoundEntity
 from tests.conftest import _load_device
 
@@ -52,6 +52,27 @@ def test_cooking_writes_still_need_remote_control() -> None:
     assert oven.START_COOKING_BUTTON.needs_remote_control is True
     cook_time = next(d for d in oven.OVEN_OPERATIONAL_STATE.entities if d.key == "cook_time")
     assert cook_time.needs_remote_control is True
+
+
+def test_microwave_lamp_writes_waive_remote_control() -> None:
+    lamp_writers = (
+        microwave._lamp_write,
+        microwave._lamp_level_write,
+        microwave._lamp_brightness_write,
+    )
+    waived = [d for d in microwave.MICROWAVE_MODE.entities if d.write_fn in lamp_writers]
+    assert len(waived) == len(lamp_writers)
+    assert all(d.needs_remote_control is False for d in waived)
+
+
+def test_microwave_cooking_mode_still_needs_remote_control() -> None:
+    mode = next(d for d in microwave.MICROWAVE_MODE.entities if d.key == "cooking_mode")
+    assert mode.needs_remote_control is True
+
+
+def test_hood_fan_waives_remote_control() -> None:
+    fan = next(d for d in range_hood.HOOD_FAN.entities if d.key == "fan")
+    assert fan.needs_remote_control is False
 
 
 def test_options_token_counts_as_taken_when_merged_into_the_array() -> None:

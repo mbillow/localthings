@@ -83,6 +83,9 @@ HOOD_FAN = Capability(
             key="fan",
             field="x.com.samsung.da.hood.fanSpeed",
             write_fn=_hood_fan_write,
+            # Not a cooking function: TP2X_DA-KS-MICROWAVE-0101X takes speed writes with
+            # Remote Control off, and the coordinator's readback reports a board that doesn't.
+            needs_remote_control=False,
         ),
         BinarySensorDesc(
             key="automatic_operation",
