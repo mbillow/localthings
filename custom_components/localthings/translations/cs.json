@@ -1195,7 +1195,14 @@
           "5f": "Pouze odstřeďování",
           "63": "Výkonná pára",
           "67": "Parní antialergenní",
-          "68": "Parní objemné prádlo"
+          "68": "Parní objemné prádlo",
+          "a1": "Normální",
+          "a7": "Péče o výrobek",
+          "a9": "Tide Pod studená",
+          "ad": "AI OptiWash+sušení",
+          "59": "Nežehlivé prádlo",
+          "a8": "Časové sušení",
+          "aa": "Provětrání"
         }
       },
       "washer_dry_level": {

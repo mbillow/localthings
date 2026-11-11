@@ -1195,7 +1195,14 @@
           "5f": "Somente centrifugação",
           "63": "Vapor potente",
           "67": "Antialérgico a vapor",
-          "68": "Peças volumosas a vapor"
+          "68": "Peças volumosas a vapor",
+          "a1": "Normal",
+          "a7": "Cuidado do produto",
+          "a9": "Tide Pod fria",
+          "ad": "AI OptiWash + secar",
+          "59": "Antirrugas",
+          "a8": "Secagem por tempo",
+          "aa": "Arejar sem aquecer"
         }
       },
       "washer_dry_level": {

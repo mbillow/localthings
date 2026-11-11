@@ -1195,7 +1195,14 @@
           "5f": "Solo centrifuga",
           "63": "Vapore potente",
           "67": "Antiallergia a vapore",
-          "68": "Voluminosi a vapore"
+          "68": "Voluminosi a vapore",
+          "a1": "Normale",
+          "a7": "Cura del prodotto",
+          "a9": "Tide Pod freddo",
+          "ad": "AI OptiWash+Asciugatura",
+          "59": "Pronto da stirare",
+          "a8": "Asciugatura a tempo",
+          "aa": "Arieggiatura"
         }
       },
       "washer_dry_level": {

@@ -1195,7 +1195,14 @@
           "5f": "Essorage seul",
           "63": "Vapeur puissante",
           "67": "Anti-allergènes vapeur",
-          "68": "Articles volumineux vapeur"
+          "68": "Articles volumineux vapeur",
+          "a1": "Normal",
+          "a7": "Soin du produit",
+          "a9": "Tide Pod froid",
+          "ad": "AI OptiWash + séchage",
+          "59": "Repassage facile",
+          "a8": "Séchage minuté",
+          "aa": "Aération"
         }
       },
       "washer_dry_level": {
