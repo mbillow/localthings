@@ -10,6 +10,7 @@
     "climate",
     "current_temperature_c",
     "energy_kwh",
+    "outdoor_temperature",
     "power_energy_kwh",
     "power_watts",
     "remote_control"

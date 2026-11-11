@@ -75,6 +75,7 @@ REGISTRY = DeviceRegistry(
             # removal from _AC_IGNORED above.
             airconditioner.WINDFREE,
             airconditioner.WINDSLEEP,
+            airconditioner.WINDLONG,
             air_purifier.HEPA_FILTER,
             air_purifier.DEVICE_ACTIVE,
             air_purifier.AIR_LEVEL_CHECK,
@@ -86,6 +87,7 @@ REGISTRY = DeviceRegistry(
             # flag the EHS reports.
             airconditioner.INTERLOCK,
             ehs.AWAY_MODE,
+            ehs.OUTDOOR_TEMPERATURE,
             *airconditioner.COVERAGE,
         ]
     ),

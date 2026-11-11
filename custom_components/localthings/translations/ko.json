@@ -2372,6 +2372,9 @@
       "windsleep": {
         "name": "취침 모드"
       },
+      "windlong": {
+        "name": "롱바람 모드"
+      },
       "auto_detergent": {
         "name": "세제 자동 투입"
       },
