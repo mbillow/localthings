@@ -137,6 +137,9 @@ HREF_WIND_DIRECTION = "/wind/direction/vs/0"  # swing_mode
 HREF_WIND_OSCILLATION = "/wind/oscillation/vs/0"  # swing_mode fallback
 HREF_CONVENIENT = "/mode/convenient/vs/0"  # preset_mode
 HREF_TEMPS_VS = "/temperatures/vs/0"  # vendor temp fallback (items[] array)
+# System AC (multi-indoor-subdevice, e.g. AIM-H04N): each indoor unit's
+# vendor temperature, flat fields (no items[] wrapper), if=oic.if.a (writable).
+HREF_TEMPS_INDOOR_VS = "/temperatures/indoor/vs/0"
 # Legacy ARTIK051 boards (issue #136) have no /wind/* resources: fan speed and
 # vane direction live together here instead. See climate.py's _legacy_airflow.
 HREF_AIRFLOW = "/airflow/vs/0"  # legacy fan_mode + swing_mode
@@ -180,6 +183,26 @@ def _temps_vs_current(rep):
 
 def _temps_vs_unit(rep):
     return normalize_temp_unit(_temps_vs_item(rep).get("x.com.samsung.da.unit"), "°C")
+
+
+def _temps_indoor_item(rep):
+    """System-AC per-indoor-subdevice vendor temp (/temperatures/indoor/vs/0):
+    same field names as /temperatures/vs/0's items[0] but flat on the resource
+    itself (no items[] wrapper). Returns the rep when it carries a reading."""
+    if isinstance(rep, dict) and (
+        rep.get("x.com.samsung.da.current") is not None
+        or rep.get("x.com.samsung.da.desired") is not None
+    ):
+        return rep
+    return {}
+
+
+def _temps_indoor_current(rep):
+    return _num(_temps_indoor_item(rep).get("x.com.samsung.da.current"))
+
+
+def _temps_indoor_unit(rep):
+    return normalize_temp_unit(_temps_indoor_item(rep).get("x.com.samsung.da.unit"), "\u00b0C")
 
 
 def _first_mode(rep):
@@ -358,9 +381,18 @@ def _legacy_cumulative_power_kwh(v):
     return round(n / 100000.0, 2) if n > 0 else None
 
 
+def _declares_plain_wh(rep):
+    """True when /energy/consumption/vs/0 declares cumulativeUnit "Wh".
+    ARTIK051's centiwatt-hour boards (#193) omit the field, so an explicit "Wh"
+    selects plain Wh->kWh over the /100000 centiwatt-hour scale -- airflow-legacy
+    AIM-H04N multi-split reports "Wh" (#789)."""
+    unit = rep.get("x.com.samsung.da.cumulativeUnit")
+    return isinstance(unit, str) and unit.strip().lower() == "wh"
+
+
 ENERGY_METER_LEGACY = replace(
     common.ENERGY_METER,
-    match_fn=lambda rep, resources: is_legacy_board(resources),
+    match_fn=lambda rep, resources: is_legacy_board(resources) and not _declares_plain_wh(rep),
     entities=tuple(
         replace(e, value_fn=_legacy_cumulative_power_kwh) if e.key == "energy_kwh" else e
         for e in common.ENERGY_METER.entities
@@ -368,10 +400,11 @@ ENERGY_METER_LEGACY = replace(
 )
 
 # Non-legacy counterpart, needed so both caps can share this href without
-# tripping the "multiple caps need a discriminator" build check.
+# tripping the "multiple caps need a discriminator" build check. Also claims a
+# legacy-by-airflow board that declares its Wh unit (issue #789).
 ENERGY_METER_GENERIC = replace(
     common.ENERGY_METER,
-    match_fn=lambda rep, resources: not is_legacy_board(resources),
+    match_fn=lambda rep, resources: not is_legacy_board(resources) or _declares_plain_wh(rep),
 )
 
 # The usage file's energy field is plain Wh on every AC measured, not the
@@ -610,6 +643,11 @@ def _temperature_step(resources):
         step = _num(_temps_vs_item(temps_vs).get("x.com.samsung.da.increment"))
         if step is not None:
             return step
+    temps_indoor = resources.get(HREF_TEMPS_INDOOR_VS)
+    if isinstance(temps_indoor, dict):
+        step = _num(temps_indoor.get("x.com.samsung.da.increment"))
+        if step is not None:
+            return step
     return None
 
 
@@ -622,6 +660,15 @@ def _climate_write(payload, rep, href=None, resources=None):
     resources. Each write sends only its own field(s); the device merges the
     rest itself (see common.merge_items_field / merge_options_field)."""
     kind, value = payload
+    if kind == "temperature_indoor":
+        quantized = _quantize_temperature(value, _temperature_step(resources))
+        if quantized is None:
+            return None
+        # Flat vendor resource (no items[] wrapper); if=oic.if.a so writable.
+        return (
+            ["temperatures", "indoor", "vs", "0"],
+            {"x.com.samsung.da.desired": str(quantized)},
+        )
     if kind == "power":
         return (["power", "vs", "0"], {"x.com.samsung.da.power": "On" if value else "Off"})
     if kind == "mode":
@@ -934,6 +981,12 @@ CLIMATE = Capability(
     ),
 )
 
+
+def _is_artik051_prac(resources):
+    info = resources.get("/information/vs/0") or {}
+    return str(info.get("x.com.samsung.da.modelNum") or "").upper().startswith("ARTIK051_PRAC")
+
+
 AIR_PURIFY = Capability(
     href="/option/airpurify/vs/0",
     poll_tier="warm",
@@ -941,6 +994,11 @@ AIR_PURIFY = Capability(
         SwitchDesc(
             key="air_purify",
             field="x.com.samsung.da.modes",
+            # ARTIK051_PRAC boards report this option but refuse every write
+            # to it (#747), and #166's AR09TXFCAWKNEU manual says Purify isn't
+            # available. The app's Purify mode on these boards is Wind.
+            exists_fn=lambda rep, resources: not _is_artik051_prac(resources),
+            prune_when_excluded=True,
             icon="mdi:air-purifier",
             entity_category="config",
             value_fn=lambda v: v == "On",
@@ -1385,6 +1443,30 @@ CURRENT_TEMPERATURE_VS = Capability(
             device_class="temperature",
             state_class="measurement",
             unit_fn=_temps_vs_unit,
+        ),
+    ),
+)
+
+# System AC (multi-indoor-subdevice, AIM-H04N) reports each indoor unit's
+# temperature at the flat /temperatures/indoor/vs/0 and omits the OCF pair, so
+# current temperature never reached the card (#789). Guarded on /subdevice/vs/0
+# so it binds only a real indoor subdevice, not the MIM-H04EN EHS kit's
+# single-device fixed-24 placeholder (#682).
+CURRENT_TEMPERATURE_INDOOR_VS = Capability(
+    href=HREF_TEMPS_INDOOR_VS,
+    poll_tier="warm",
+    match_fn=lambda rep, resources: (
+        HREF_TEMP_CURRENT not in resources
+        and HREF_TEMPS_VS not in resources
+        and "/subdevice/vs/0" in resources
+    ),
+    entities=(
+        SensorDesc(
+            key="current_temperature_c",
+            rep_fn=_temps_indoor_current,
+            device_class="temperature",
+            state_class="measurement",
+            unit_fn=_temps_indoor_unit,
         ),
     ),
 )
@@ -1877,9 +1959,14 @@ _AC_IGNORED = [
     # Empty ({}) on a cool-only RAC (issue #569). Revisit if a heat-pump dump
     # populates it.
     "/auxiliaryheater/vs/0",
-    # The MIM-H04EN EHS Wi-Fi kit's (#682): a fixed 24/24 placeholder marked
-    # Hide. The heat pump behind the kit reports its real one.
-    "/temperatures/indoor/vs/0",
+    # System-AC per-indoor-subdevice records (AIM-H04N): the subdevice identity
+    # (read by registry.subdevices), an empty action endpoint, the outdoor-unit
+    # temperature, and the windlong mode option -- none a user entity yet. The
+    # outdoor temp is a candidate follow-up sensor (#789).
+    "/subdevice/vs/0",
+    "/actions/vs/0",
+    "/temperatures/outside/vs/0",
+    "/modeoption/windlong/vs/0",
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

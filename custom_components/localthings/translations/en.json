@@ -1065,6 +1065,7 @@
           "ab": "Eco Cold",
           "b1": "Self Clean+",
           "ba": "Drain/Spin",
+          "bd": "Auto Optimal Wash",
           "c7": "Eco Drum Clean",
           "ca": "Air Wash",
           "d0": "Cotton",
@@ -1194,7 +1195,14 @@
           "5f": "Spin Only",
           "63": "Power Steam",
           "67": "Steam Allergen",
-          "68": "Steam Bulky"
+          "68": "Steam Bulky",
+          "a1": "Normal",
+          "a7": "Product Care",
+          "a9": "Tide Pod Cold",
+          "ad": "AI OptiWash+Dry",
+          "59": "Perm Press",
+          "a8": "Time Dry",
+          "aa": "Air Fluff"
         }
       },
       "washer_dry_level": {
@@ -1380,6 +1388,9 @@
           "mute": "Mute",
           "voice": "Voice"
         }
+      },
+      "picture_mode": {
+        "name": "Picture mode"
       }
     },
     "sensor": {
@@ -1838,6 +1849,57 @@
       "zone_temperature": {
         "name": "Zone temperature"
       },
+      "zone_water_law_offset": {
+        "name": "Zone water law offset"
+      },
+      "zone2_water_law_offset": {
+        "name": "Zone 2 water law offset"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Water law outdoor temperature curve, cold point (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Water law outdoor temperature curve, warm point (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Water law 1 target temperature at cold outdoor temperature (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Water law 1 target temperature at warm outdoor temperature (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Water law 2 target temperature at cold outdoor temperature (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Water law 2 target temperature at warm outdoor temperature (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "DHW target temperature maximum limit (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "DHW target temperature minimum limit (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "DHW application mode (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Heating and DHW priority (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Heating/DHW priority changeover outdoor temperature (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Backup heater application (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Heating water outlet temperature maximum limit (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Heating water outlet temperature minimum limit (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zone control application (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Zone 2 temperature"
       },
@@ -1946,6 +2008,36 @@
       "heat_generated_kwh": {
         "name": "Heat generated"
       },
+      "cycle_flow_temperature": {
+        "name": "Cycle flow temperature"
+      },
+      "cycle_return_temperature": {
+        "name": "Cycle return temperature"
+      },
+      "cycle_flow_rate": {
+        "name": "Cycle flow rate"
+      },
+      "cycle_pump_speed": {
+        "name": "Cycle pump speed"
+      },
+      "compressor_frequency": {
+        "name": "Compressor frequency"
+      },
+      "compressor_target_frequency": {
+        "name": "Compressor target frequency"
+      },
+      "discharge_temperature": {
+        "name": "Discharge temperature"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Evaporator saturation temperature"
+      },
+      "suction_temperature": {
+        "name": "Suction temperature"
+      },
+      "cycle_updated": {
+        "name": "Cycle updated"
+      },
       "three_way_valve": {
         "name": "3-way valve"
       },
@@ -1993,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Setpoint"
+      },
+      "illuminance": {
+        "name": "Illuminance"
       }
     },
     "switch": {
@@ -2456,6 +2551,7 @@
       "no_response": "No response from that IP address — nothing came back on any port in the appliance's local API range (UDP 49152-49160). Check the IP address is correct, the appliance is powered on and on the same network as Home Assistant, and that no firewall is dropping UDP traffic to it.",
       "ports_closed": "That IP address is reachable, but it actively refused every port in the local API range (UDP 49152-49160) and answered nothing on the discovery channel. It is most likely not a Samsung appliance, or not one with the local API enabled.",
       "no_dtls_server": "Ports in the local API range are reachable at that address, but nothing there answered a DTLS handshake. Check that the IP address belongs to the appliance and not another device on your network.",
+      "exec_memory_denied": "Home Assistant isn't allowed to create executable memory, which the DTLS library needs for its callbacks, so no handshake could even start. This is a setting on the Home Assistant host, not a problem with the appliance. On a systemd install, set MemoryDenyWriteExecute=no (or remove the line) in the Home Assistant service unit and restart it. SELinux's deny_execmem setting and hardened kernels can cause the same. The Home Assistant log has the exact error.",
       "appliance_no_dtls": "That address is a Samsung appliance — it identified itself as {model} over the unencrypted discovery channel and advertised its secure port as {port} — but it never completed a DTLS handshake there. The address is not the problem. Check whether the appliance has Remote Control or a similar setting switched off at its panel, and see the Home Assistant log for the exact failure.",
       "non_appliance_stack": "Something at that IP address answered, but it identified itself as an OCF service that isn't an appliance. Some Samsung appliances run one alongside their own, and LocalThings can only find the appliance behind it when Home Assistant is on the same network segment. Put Home Assistant and the appliance on the same subnet and VLAN, then try again.",
       "multiple_appliances": "More than one Samsung appliance answers at that IP address, and LocalThings can't yet choose between them. Please report it on the LocalThings issue tracker and include the Home Assistant log.",
@@ -2505,7 +2601,7 @@
       },
       "settings": {
         "title": "Device settings",
-        "description": "Some devices accept certain writes (e.g. default detergent/softener dosing on a washer) even while reporting remote control off. By default, LocalThings blocks every write with a clear error whenever a device reports remote control off, rather than letting the device silently reject it. Only enable this if you've confirmed writes actually work on this device with remote control off -- otherwise you'll trade that clear error for a silent failure.\n\nEstimated finish time is recomputed from the device's remaining-time estimate on every poll, which can drift or get revised by a minute or two between updates. Raise the minimum-change value below to hold the sensor at its last reported value until the estimate moves by at least that many minutes, cutting down on history/logbook noise. Set it to 0 to report every computed change.\n\nSome models report a mode they never list as supported -- an air conditioner sitting in Quiet that only offers Off/Sleep/Speed, for instance. LocalThings remembers any such mode it sees and keeps offering it, so it stays selectable once the device has been in it at least once. Turn this off to offer only what the device advertises; use \"Forget remembered modes\" on the previous screen to clear what has already been remembered.\n\nA laundry device with cloud-downloaded cycles gets a reminder here once it's reported one Home Assistant can't offer yet -- some devices report one even if you've never opened the SmartThings app's \"Download cycles\" screen yourself. Turn this off to stop that reminder and hide any already-named downloaded cycles from the cycle list; nothing already set up is lost, and turning it back on brings it right back.",
+        "description": "Some devices accept certain writes (e.g. default detergent/softener dosing on a washer) even while reporting remote control off. By default, LocalThings blocks every write with a clear error whenever a device reports remote control off, rather than letting the device silently reject it. Only enable this if you've confirmed writes actually work on this device with remote control off -- otherwise you'll trade that clear error for a silent failure.\n\nEstimated finish time is timed from when each remaining-time reading arrives: to the second on appliances that report seconds, and to the nearest minute on those that don't. A revision smaller than about 5% of the time left is held back, up to the minimum-change value below, cutting down on history/logbook noise. Set it to 0 to report every change.\n\nSome models report a mode they never list as supported -- an air conditioner sitting in Quiet that only offers Off/Sleep/Speed, for instance. LocalThings remembers any such mode it sees and keeps offering it, so it stays selectable once the device has been in it at least once. Turn this off to offer only what the device advertises; use \"Forget remembered modes\" on the previous screen to clear what has already been remembered.\n\nA laundry device with cloud-downloaded cycles gets a reminder here once it's reported one Home Assistant can't offer yet -- some devices report one even if you've never opened the SmartThings app's \"Download cycles\" screen yourself. Turn this off to stop that reminder and hide any already-named downloaded cycles from the cycle list; nothing already set up is lost, and turning it back on brings it right back.",
         "data": {
           "bypass_remote_control_lock": "Allow writes even when remote control is reported off",
           "finish_time_hysteresis_minutes": "Estimated finish -- minimum change (minutes)",
@@ -2548,7 +2644,7 @@
       },
       "cloud_manual": {
         "title": "Download cycles",
-        "description": "This appliance reports {total} downloaded cycle(s); {found} have been seen so far.\n\nA downloaded cycle's settings are only visible while that cycle is loaded, and the appliance never reports their names. To add the missing ones ({pending}): in the SmartThings app (not on the appliance itself), open this appliance and tap \"Download cycles\" -- a separate row from \"Cycle\", further down the screen, and the one that matters here. Step through each downloaded program in turn, pausing a few seconds on each so LocalThings can see it, then come back here.\n\nGive each one the name you want to see in Home Assistant. Leave a name blank to keep that cycle out of the cycle list. Names must be unique.\n\nThe Download cycle is the course on this appliance that runs a downloaded program. It is detected automatically, but confirm it here before use: selecting a downloaded cycle writes this course code to the appliance.",
+        "description": "This appliance has at least {total} downloaded cycle(s); {found} have been seen so far.\n\nA downloaded cycle's settings are only visible while that cycle is loaded, and the appliance never reports their names. To add the missing ones ({pending}): in the SmartThings app (not on the appliance itself), open this appliance and tap \"Download cycles\" -- a separate row from \"Cycle\", further down the screen, and the one that matters here. Step through each downloaded program in turn, pausing a few seconds on each so LocalThings can see it, then come back here.\n\nGive each one the name you want to see in Home Assistant. Leave a name blank to keep that cycle out of the cycle list. Names must be unique.\n\nThe Download cycle is the course on this appliance that runs a downloaded program. It is detected automatically, but confirm it here before use: selecting a downloaded cycle writes this course code to the appliance.",
         "data": {
           "download_course": "Download cycle course code"
         }
@@ -2602,6 +2698,10 @@
     "cloud_courses_undiscovered": {
       "title": "Downloaded cycles not set up for {device_name}",
       "description": "{device_name} has {pending} of {total} downloaded cycle(s) that Home Assistant can't offer yet. A downloaded cycle can only be used once the appliance has been seen with it loaded -- in the SmartThings app's \"Download cycles\" screen, not the \"Cycle\" one -- and you've given it a name.\n\nTo set them up, go to Settings > Devices & Services > LocalThings > {device_name} > Configure > Download cycles and follow the instructions there.\n\nDon't use downloaded cycles? Go to Configure > Device settings instead and turn off \"Offer downloaded cycles\" to silence this reminder for good."
+    },
+    "removed_entities": {
+      "title": "Entities removed from {device_name}",
+      "description": "LocalThings removed entities from {device_name} that it no longer provides, usually because they became a different kind of entity in this release. These automations and scripts still refer to them:\n\n{entities}\n\nUpdate them to use the replacement entities on the device page, then dismiss this notice."
     }
   },
   "exceptions": {

@@ -54,6 +54,7 @@ REGISTRY = DeviceRegistry(
             airconditioner.MOTION_DETECT_WIND,
             airconditioner.CURRENT_TEMPERATURE,
             airconditioner.CURRENT_TEMPERATURE_VS,
+            airconditioner.CURRENT_TEMPERATURE_INDOOR_VS,
             airconditioner.HUMIDITY,
             # TP1X_DA-AC-FAC-class (issue #319): shares its /display/vs/0,
             # /settings/sound/output/vs/0 and /settings/sound/volume/vs/0

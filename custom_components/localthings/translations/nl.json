@@ -1065,6 +1065,7 @@
           "ab": "Eco koud",
           "b1": "Self Clean+",
           "ba": "Afpompen/centrifugeren",
+          "bd": "Automatisch optimaal wassen",
           "c7": "Eco trommelreiniging",
           "ca": "Air Wash",
           "d0": "Katoen",
@@ -1194,7 +1195,14 @@
           "5f": "Alleen centrifugeren",
           "63": "Power Steam",
           "67": "Stoom anti-allergie",
-          "68": "Stoom volumineuze was"
+          "68": "Stoom volumineuze was",
+          "a1": "Normaal",
+          "a7": "Productverzorging",
+          "a9": "Tide Pod koud",
+          "ad": "AI OptiWash+drogen",
+          "59": "Strijkvrij",
+          "a8": "Tijdprogramma",
+          "aa": "Luchtdrogen"
         }
       },
       "washer_dry_level": {
@@ -1380,6 +1388,9 @@
           "mute": "Gedempt",
           "voice": "Stem"
         }
+      },
+      "picture_mode": {
+        "name": "Beeldmodus"
       }
     },
     "sensor": {
@@ -1838,6 +1849,57 @@
       "zone_temperature": {
         "name": "Zonetemperatuur"
       },
+      "zone_water_law_offset": {
+        "name": "Verschuiving stooklijn zone"
+      },
+      "zone2_water_law_offset": {
+        "name": "Verschuiving stooklijn zone 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Stooklijn, koud buitentemperatuurpunt (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Stooklijn, warm buitentemperatuurpunt (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Stooklijn 1, doeltemperatuur bij koude buitentemperatuur (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Stooklijn 1, doeltemperatuur bij warme buitentemperatuur (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Stooklijn 2, doeltemperatuur bij koude buitentemperatuur (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Stooklijn 2, doeltemperatuur bij warme buitentemperatuur (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Bovengrens doeltemperatuur warm tapwater (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Ondergrens doeltemperatuur warm tapwater (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Bedrijfsmodus warm tapwater (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioriteit verwarming en warm tapwater (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Buitentemperatuur voor prioriteitswissel verwarming/warm tapwater (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Gebruik bijverwarming (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Bovengrens aanvoertemperatuur verwarming (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Ondergrens aanvoertemperatuur verwarming (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zoneregeling (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatuur zone 2"
       },
@@ -1946,6 +2008,36 @@
       "heat_generated_kwh": {
         "name": "Opgewekte warmte"
       },
+      "cycle_flow_temperature": {
+        "name": "Aanvoertemperatuur (cyclus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Retourtemperatuur (cyclus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Debiet (cyclus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Pompsnelheid (cyclus)"
+      },
+      "compressor_frequency": {
+        "name": "Compressorfrequentie"
+      },
+      "compressor_target_frequency": {
+        "name": "Doelfrequentie compressor"
+      },
+      "discharge_temperature": {
+        "name": "Persgastemperatuur"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Verzadigingstemperatuur verdamper"
+      },
+      "suction_temperature": {
+        "name": "Zuiggastemperatuur"
+      },
+      "cycle_updated": {
+        "name": "Cyclusgegevens bijgewerkt"
+      },
       "three_way_valve": {
         "name": "Driewegklep"
       },
@@ -1993,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Instelpunt"
+      },
+      "illuminance": {
+        "name": "Verlichtingssterkte"
       }
     },
     "switch": {
@@ -2456,6 +2551,7 @@
       "no_response": "Geen reactie van dat IP-adres — er kwam niets terug op enige poort in het bereik van de lokale API van het apparaat (UDP 49152-49160). Controleer of het IP-adres klopt, of het apparaat aanstaat en op hetzelfde netwerk zit als Home Assistant, en of geen firewall het UDP-verkeer ernaartoe blokkeert.",
       "ports_closed": "Dat IP-adres is bereikbaar, maar weigerde actief elke poort in het bereik van de lokale API (UDP 49152-49160) en gaf geen enkele reactie op het ontdekkingskanaal. Het is hoogstwaarschijnlijk geen Samsung-apparaat, of een apparaat waarop de lokale API niet is ingeschakeld.",
       "no_dtls_server": "De poorten in het bereik van de lokale API zijn bereikbaar op dat adres, maar niets daar beantwoordde een DTLS-handshake. Controleer of het IP-adres bij het apparaat hoort en niet bij een ander apparaat in je netwerk.",
+      "exec_memory_denied": "Home Assistant mag geen uitvoerbaar geheugen aanmaken, dat de DTLS-bibliotheek nodig heeft voor haar callbacks, dus er kon zelfs geen handshake beginnen. Dit is een instelling op de Home Assistant-host, geen probleem met het apparaat. Zet bij een systemd-installatie MemoryDenyWriteExecute=no in de service-unit van Home Assistant (of verwijder de regel) en herstart de dienst. De SELinux-instelling deny_execmem en geharde kernels kunnen hetzelfde veroorzaken. Het Home Assistant-logboek bevat de exacte fout.",
       "appliance_no_dtls": "Dat adres is van een Samsung-apparaat — het heeft zich via het onversleutelde ontdekkingskanaal geïdentificeerd als {model} en {port} als zijn beveiligde poort opgegeven — maar daar is nooit een DTLS-handshake voltooid. Het adres is niet het probleem. Controleer of Afstandsbediening of een vergelijkbare instelling op het bedieningspaneel van het apparaat is uitgeschakeld, en bekijk het Home Assistant-logboek voor de exacte fout.",
       "non_appliance_stack": "Er antwoordde iets op dat IP-adres, maar het meldde zich als een OCF-dienst die geen apparaat is. Sommige Samsung-apparaten draaien er een naast hun eigen dienst, en LocalThings vindt het apparaat daarachter alleen als Home Assistant in hetzelfde netwerksegment zit. Zet Home Assistant en het apparaat in hetzelfde subnet en VLAN en probeer het opnieuw.",
       "multiple_appliances": "Op dat IP-adres antwoordt meer dan één Samsung-apparaat, en LocalThings kan nog niet tussen ze kiezen. Meld het in de issuetracker van LocalThings en voeg het Home Assistant-logboek toe.",
@@ -2505,7 +2601,7 @@
       },
       "settings": {
         "title": "Apparaatinstellingen",
-        "description": "Sommige apparaten accepteren bepaalde schrijfbewerkingen (bijvoorbeeld de standaarddosering van wasmiddel of wasverzachter op een wasmachine), ook als ze melden dat de afstandsbediening is uitgeschakeld. LocalThings blokkeert standaard elke schrijfbewerking met een duidelijke foutmelding wanneer een apparaat meldt dat de afstandsbediening is uitgeschakeld, in plaats van het apparaat de opdracht stilzwijgend te laten weigeren. Schakel deze optie alleen in als je hebt bevestigd dat schrijfbewerkingen op dit apparaat echt werken wanneer de afstandsbediening is uitgeschakeld. Anders verruil je de duidelijke foutmelding voor een stille mislukking.\n\nDe geschatte eindtijd wordt bij elke poll opnieuw berekend op basis van de resterende tijd die het apparaat opgeeft, wat kan afwijken of met een minuut of wat worden bijgesteld tussen updates. Verhoog de minimale wijziging hieronder om de sensor op zijn laatst gerapporteerde waarde te houden totdat de schatting met minstens dat aantal minuten verandert, wat de ruis in geschiedenis/logboek vermindert. Zet op 0 om elke berekende wijziging te rapporteren.\n\nSommige modellen melden een modus die ze nooit als ondersteund opgeven: bijvoorbeeld een airco die in Quiet staat maar alleen Off/Sleep/Speed aanbiedt. LocalThings onthoudt elke zo waargenomen modus en blijft die aanbieden, zodat hij selecteerbaar blijft zodra het apparaat er minstens één keer in heeft gestaan. Schakel dit uit om alleen aan te bieden wat het apparaat opgeeft; gebruik \"Onthouden modi vergeten\" in het vorige scherm om te wissen wat al is onthouden. Een wasapparaat met uit de cloud gedownloade programma's krijgt hier een herinnering zodra het er een meldt die Home Assistant nog niet kan aanbieden -- sommige apparaten melden er een, ook als je het scherm \"Gedownloade programma's\" in de SmartThings-app zelf nooit hebt geopend. Zet dit uit om die herinnering te stoppen en al benoemde gedownloade programma's uit de programmalijst te verbergen; niets van wat al is ingesteld gaat verloren, en bij opnieuw inschakelen verschijnt het meteen weer.",
+        "description": "Sommige apparaten accepteren bepaalde schrijfbewerkingen (bijvoorbeeld de standaarddosering van wasmiddel of wasverzachter op een wasmachine), ook als ze melden dat de afstandsbediening is uitgeschakeld. LocalThings blokkeert standaard elke schrijfbewerking met een duidelijke foutmelding wanneer een apparaat meldt dat de afstandsbediening is uitgeschakeld, in plaats van het apparaat de opdracht stilzwijgend te laten weigeren. Schakel deze optie alleen in als je hebt bevestigd dat schrijfbewerkingen op dit apparaat echt werken wanneer de afstandsbediening is uitgeschakeld. Anders verruil je de duidelijke foutmelding voor een stille mislukking.\n\nDe geschatte eindtijd wordt berekend vanaf het moment dat elke meting van de resterende tijd binnenkomt: op de seconde bij apparaten die seconden melden, anders op de dichtstbijzijnde minuut. Een bijstelling kleiner dan ongeveer 5% van de resterende tijd wordt tegengehouden, hooguit tot de minimale wijziging hieronder, wat de ruis in geschiedenis/logboek vermindert. Zet op 0 om elke wijziging te rapporteren.\n\nSommige modellen melden een modus die ze nooit als ondersteund opgeven: bijvoorbeeld een airco die in Quiet staat maar alleen Off/Sleep/Speed aanbiedt. LocalThings onthoudt elke zo waargenomen modus en blijft die aanbieden, zodat hij selecteerbaar blijft zodra het apparaat er minstens één keer in heeft gestaan. Schakel dit uit om alleen aan te bieden wat het apparaat opgeeft; gebruik \"Onthouden modi vergeten\" in het vorige scherm om te wissen wat al is onthouden. Een wasapparaat met uit de cloud gedownloade programma's krijgt hier een herinnering zodra het er een meldt die Home Assistant nog niet kan aanbieden -- sommige apparaten melden er een, ook als je het scherm \"Gedownloade programma's\" in de SmartThings-app zelf nooit hebt geopend. Zet dit uit om die herinnering te stoppen en al benoemde gedownloade programma's uit de programmalijst te verbergen; niets van wat al is ingesteld gaat verloren, en bij opnieuw inschakelen verschijnt het meteen weer.",
         "data": {
           "bypass_remote_control_lock": "Schrijfbewerkingen toestaan wanneer afstandsbediening als uitgeschakeld wordt gemeld",
           "finish_time_hysteresis_minutes": "Geschatte eindtijd -- minimale wijziging (minuten)",
@@ -2548,7 +2644,7 @@
       },
       "cloud_manual": {
         "title": "Gedownloade programma's",
-        "description": "Dit apparaat meldt {total} gedownloade programma's; {found} daarvan zijn tot nu toe gezien.\n\nDe instellingen van een gedownload programma zijn alleen zichtbaar zolang dat programma geladen is, en het apparaat meldt nooit de naam ervan. Om de ontbrekende ({pending}) toe te voegen: open in de SmartThings-app (niet op het apparaat zelf) dit apparaat en tik op \"Gedownloade programma's\" -- een aparte regel, los van \"Programma\", verderop op het scherm, en degene die hier telt. Doorloop dan elk gedownload programma na elkaar, pauzeer bij elk een paar seconden zodat LocalThings het kan zien, en kom hierna terug.\n\nGeef elk programma de naam die je in Home Assistant wilt zien. Laat een naam leeg om dat programma buiten de programmalijst te houden. Namen moeten uniek zijn.\n\nHet programma \"Gedownload\" is het programma op dit apparaat dat een gedownload programma uitvoert. Het wordt automatisch gedetecteerd, maar bevestig dit hier voor gebruik: als je een gedownload programma selecteert, wordt deze programmacode naar het apparaat geschreven.",
+        "description": "Dit apparaat heeft minstens {total} gedownloade programma's; {found} daarvan zijn tot nu toe gezien.\n\nDe instellingen van een gedownload programma zijn alleen zichtbaar zolang dat programma geladen is, en het apparaat meldt nooit de naam ervan. Om de ontbrekende ({pending}) toe te voegen: open in de SmartThings-app (niet op het apparaat zelf) dit apparaat en tik op \"Gedownloade programma's\" -- een aparte regel, los van \"Programma\", verderop op het scherm, en degene die hier telt. Doorloop dan elk gedownload programma na elkaar, pauzeer bij elk een paar seconden zodat LocalThings het kan zien, en kom hierna terug.\n\nGeef elk programma de naam die je in Home Assistant wilt zien. Laat een naam leeg om dat programma buiten de programmalijst te houden. Namen moeten uniek zijn.\n\nHet programma \"Gedownload\" is het programma op dit apparaat dat een gedownload programma uitvoert. Het wordt automatisch gedetecteerd, maar bevestig dit hier voor gebruik: als je een gedownload programma selecteert, wordt deze programmacode naar het apparaat geschreven.",
         "data": {
           "download_course": "Programmacode van \"Gedownload\""
         }
@@ -2602,6 +2698,10 @@
     "cloud_courses_undiscovered": {
       "title": "Gedownloade programma's niet ingesteld voor {device_name}",
       "description": "{device_name} heeft {pending} van de {total} gedownloade programma's die Home Assistant nog niet kan aanbieden. Een gedownload programma kan pas worden gebruikt zodra het apparaat ermee geladen is gezien -- in het scherm \"Gedownloade programma's\" van de SmartThings-app, niet in \"Programma\" -- en je het een naam hebt gegeven.\n\nGa om ze in te stellen naar Instellingen > Apparaten & diensten > LocalThings > {device_name} > Configureren > Gedownloade programma's en volg de instructies daar.\n\nGebruik je geen gedownloade programma's? Ga dan naar Configureren > Apparaatinstellingen en zet \"Gedownloade programma's aanbieden\" uit om deze herinnering voorgoed te stoppen."
+    },
+    "removed_entities": {
+      "title": "Entiteiten verwijderd van {device_name}",
+      "description": "LocalThings heeft entiteiten van {device_name} verwijderd die het niet meer levert, meestal omdat ze in deze versie een ander soort entiteit zijn geworden. Deze automatiseringen en scripts verwijzen er nog naar:\n\n{entities}\n\nWerk ze bij zodat ze de vervangende entiteiten op de apparaatpagina gebruiken en sluit daarna deze melding."
     }
   },
   "exceptions": {

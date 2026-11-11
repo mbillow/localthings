@@ -377,6 +377,9 @@ POWER_GENERIC = Capability(
             device_class="power",
             value_fn=lambda v: bool(v),
             exists_fn=_power_sensor_exists,
+            # #681: isModelSettingPowerOnOff is a model fact, and an absent
+            # setinfo excludes this sensor, so a partial read keeps both rows.
+            replaces_siblings=True,
         ),
     ),
 )
@@ -402,6 +405,9 @@ POWER_VS_FALLBACK = Capability(
             device_class="power",
             value_fn=lambda v: v == "On",
             exists_fn=_power_sensor_exists,
+            # #681: isModelSettingPowerOnOff is a model fact, and an absent
+            # setinfo excludes this sensor, so a partial read keeps both rows.
+            replaces_siblings=True,
         ),
     ),
 )

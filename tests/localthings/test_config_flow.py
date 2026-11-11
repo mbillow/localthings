@@ -2070,6 +2070,39 @@ def test_peer_initiated_handshake_is_retried_even_from_an_ephemeral_port(monkeyp
     assert len(FakeSession.instances) == 2
 
 
+_CFFI_WX_DENIED = (
+    "Cannot allocate write+execute memory for ffi.callback(). You might be running on "
+    "a system that prevents this. For more information, see "
+    "https://cffi.readthedocs.io/en/latest/using.html#callbacks"
+)
+
+
+def test_denied_exec_memory_stops_the_sweep_with_its_own_error(monkeypatch) -> None:
+    """A host-side W^X policy fails every port the same way, so it's named
+    rather than reported as an appliance that never answered (#740)."""
+    config_flow = _handshake_fixture(monkeypatch)
+    FakeSession.connect_errors = [MemoryError(_CFFI_WX_DENIED)]
+
+    with pytest.raises(config_flow.ExecMemoryDenied) as caught:
+        config_flow._handshake_and_read(
+            MOCK_HOST, _scan(candidates=[49153, 49154]), MOCK_LEAF_CERT_PEM, "KEY", None
+        )
+    assert caught.value.error_key == "exec_memory_denied"
+    assert len(FakeSession.instances) == 1
+
+
+def test_denied_exec_memory_is_found_behind_a_wrapping_error(monkeypatch) -> None:
+    config_flow = _handshake_fixture(monkeypatch)
+    wrapped = RuntimeError("handshake failed")
+    wrapped.__cause__ = MemoryError(_CFFI_WX_DENIED)
+    FakeSession.connect_errors = [wrapped]
+
+    with pytest.raises(config_flow.ExecMemoryDenied):
+        config_flow._handshake_and_read(
+            MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", None
+        )
+
+
 def test_unbindable_fixed_port_falls_back_to_an_ephemeral_one(monkeypatch) -> None:
     config_flow = _handshake_fixture(monkeypatch)
     monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: False)

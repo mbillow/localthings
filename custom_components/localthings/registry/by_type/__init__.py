@@ -17,6 +17,7 @@ from . import (
     ehs,
     microfiber_filter,
     microwave,
+    monitor,
     oven,
     range_hood,
     refrigerator,
@@ -32,6 +33,7 @@ from . import (
 from ._base import DeviceRegistry
 
 __all__ = [
+    "KEY_PLATFORMS",
     "WASHER_ONLY_ENTITIES",
     "DeviceRegistry",
     "_board_tokens",
@@ -57,6 +59,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "ehs": ehs.REGISTRY,
     "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
+    "monitor": monitor.REGISTRY,
     "oven": oven.REGISTRY,
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
@@ -80,6 +83,18 @@ WASHER_ONLY_ENTITIES = {
     name: frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(_REGISTRY_BY_KEY[name]))
     for name in ("microfiber_filter", "oven", "microwave")
 }
+
+
+def _key_platforms() -> dict[str, frozenset[str]]:
+    platforms: dict[str, set[str]] = {}
+    for registry in _REGISTRY_BY_KEY.values():
+        for platform, key in _entity_keys(registry):
+            platforms.setdefault(key, set()).add(platform)
+    return {key: frozenset(found) for key, found in platforms.items()}
+
+
+# Descriptor key -> every platform any registry binds it on, for cleanup.py.
+KEY_PLATFORMS = _key_platforms()
 
 
 # Consumer-model prefix (first two letters of the '_'-delimited token in
@@ -262,6 +277,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     # Microfiber laundry-lint filter (AMF-WW-TP1-22-COMMON, issue #475). It
     # reports washer resources too, but nothing that runs a cycle (#626).
     "x.com.st.d.microfiberfilter": "microfiber_filter",
+    "x.com.st.d.monitor": "monitor",  # issue #815
     "x.com.st.d.stickcleaner": "vacuum_station",
     "x.com.st.d.steamcloset": "air_dresser",
     "x.com.st.d.winecellar": "refrigerator",  # issue #328 -- same TP1X_REF_21K board

@@ -30,7 +30,7 @@ from homeassistant.util import dt as dt_util
 from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
-from . import cloudcourse, probing
+from . import cloudcourse, finish, probing
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
@@ -593,6 +593,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Cloud "Download" programs discovered on this device (issue #342).
         # Same restore-from-entry shape as _learned above; see cloudcourse.py.
         self._cloud = CloudCourses(entry.data.get(CONF_CLOUD_COURSES))
+        # When each running cycle's remainingTime arrived (issue #772).
+        self._finish = finish.FinishAnchors()
         # An oven cavity's mode/setpoint/cook time chosen while idle, held
         # until a start sends them (issue #473); see cook.HeldCook.
         self._held_cooks: dict[Subdevice, cook.HeldCook] = {}
@@ -719,6 +721,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         LearnedModes does, and migrating the persisted shape.
         """
         snapshot = self._with_held_cooks(self._cook_view(self.last_resources))
+        for href, field in self._finish.fields().items():
+            if rep := snapshot.get(href):
+                snapshot[href] = {**rep, finish.FIELD: field}
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
             return snapshot
@@ -743,6 +748,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         doesn't copy every tracked href to read one rep, which is the very
         thing `resource()` was added to avoid."""
         rep = self.resource(href)
+        if rep and (field := self._finish.field(href)):
+            rep = {**rep, finish.FIELD: field}
         if href != cloudcourse.COURSE_HREF or not rep:
             return rep
         view = self._cloud_view()
@@ -872,6 +879,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         one the device reported, so there is nothing to learn from it."""
         if source == "optimistic":
             return
+        if self._finish.observe(href, rep, source, dt_util.utcnow()):
+            # The cache-change push may already have run without it.
+            self._schedule_push()
         if cook.MODE_SPEC in rep:
             self._remember_mode_spec(href, rep)
         if href == cloudcourse.COURSE_HREF:
@@ -917,9 +927,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         both the persist and the Repairs refresh go through hass.add_job.
 
         Always records, regardless of cloud_courses_enabled: it records only
-        what the appliance itself reports about programs it itself
-        advertises, and nothing is offered in the UI until both the option
-        is on and the user has named it."""
+        payloads the appliance itself reports, and nothing is offered in the
+        UI until both the option is on and the user has named it."""
         if not self._cloud.observe(rep):
             return
         self.hass.add_job(self._persist_cloud_courses)
@@ -1063,7 +1072,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         record = self._cloud.snapshot()
         courses = cycle_options(self.canonical_resources(MAIN))
         pending = cloudcourse.undiscovered(rep, record, courses)
-        slots = cloudcourse.cloud_slots(rep, courses)
+        slots = cloudcourse.known_slots(rep, courses, record)
         needs_course = bool(slots) and not record["download_course"]
         if record["slots"] and (pending or needs_course):
             ir.async_create_issue(
@@ -1363,8 +1372,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if source == "observe":
             # A notification is the device answering too (issue #648).
             self.last_response = dt_util.utcnow()
-        if not changed:
-            return
+        if changed:
+            self._schedule_push()
+
+    def _schedule_push(self) -> None:
+        """Drop the memoized view and push once, from any thread."""
         self._canonical_cache.clear()
         with self._push_pending_lock:
             if self._push_pending:

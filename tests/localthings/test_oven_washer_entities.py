@@ -7,7 +7,7 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_misidentified_washer_entities
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import CONF_DISABLED_SUBDEVICES, DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import _is_included
@@ -117,7 +117,7 @@ async def test_cavity_cleanup_without_start_preserves_valid_and_unrelated_rows(
         ]
     )
     for _ in range(2):
-        _drop_misidentified_washer_entities(hass, entry, coordinator)
+        async_reconcile_entities(hass, entry, coordinator)
         assert all(registry.async_get(row.entity_id) is None for row in removed)
         assert all(registry.async_get(row.entity_id) == row for row in kept)
 
@@ -139,6 +139,8 @@ async def test_siblings_use_their_own_registry_and_stable_prefix(hass, main_type
         SimpleNamespace(
             device_type_name=main_type,
             device_key="test-identity",
+            bound=[],
+            discovery_resources={},
             subdevices=[washer, oven, unidentified],
             discovery_canonical=views.__getitem__,
         ),
@@ -153,7 +155,7 @@ async def test_siblings_use_their_own_registry_and_stable_prefix(hass, main_type
         )
         for subdevice in (MAIN, washer, oven, unidentified)
     }
-    _drop_misidentified_washer_entities(hass, entry, coordinator)
+    async_reconcile_entities(hass, entry, coordinator)
     assert registry.async_get(rows[washer].entity_id) is not None
     assert registry.async_get(rows[oven].entity_id) is None
     for subdevice in (MAIN, unidentified):

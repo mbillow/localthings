@@ -81,6 +81,23 @@ This is what makes "3 of 9 discovered" answerable, and it is why no catalog
 of program ids is hardcoded anywhere: the appliance already knows which
 programs it has.
 
+### The advertised list isn't always complete (issue #780)
+
+A WA54CG7150 (`DA_WM_TP1_21_COMMON`, Table_02) reports
+`CloudExtraCourse_5958`, the same two slots as the WA55A7700AV above. Its
+owner's SmartThings "Download cycles" screen offers five programs (Perm Press,
+Wool, Eco Cold, Denim, Power Rinse) and holds one at a time. The downloaded
+Eco Cold sits in `CloudCourse_00 13 86 …`, slot `86`, which the list never
+mentions, and the list stays `5958` whichever program is downloaded.
+
+The owner then downloaded Eco Cold and selected Wool from Home Assistant. The
+washer took Wool's settings and ran it, SmartThings showed "Wool" while it ran,
+and it went back to Eco Cold afterwards. So on this family the list is a fixed
+subset, not the set of programs the washer can run. Any loaded payload is
+learned whatever its slot, and the counts use the advertised slots plus the
+learned ones (`cloudcourse.known_slots`). That means the "of N" total only
+grows as programs are seen; the device gives no way to know the real total.
+
 ## Writing: the two-token rule
 
 Confirmed on hardware by the issue #342 reporter. Writing

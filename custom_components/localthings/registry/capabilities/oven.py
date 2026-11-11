@@ -17,8 +17,7 @@ the start button sends it; mid-cook they write straight through, which the
 board keeps.
 """
 
-from datetime import UTC, datetime, timedelta
-
+from ...finish import running_finish
 from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
@@ -96,30 +95,9 @@ def _percent(v):
 
 
 def _finish_time(rep):
-    """now() + remainingTime while a cook is running, rounded to the minute.
-
-    Same treatment as operational.py's _finish_time, for the same reason:
-    a range pushes /operational/state/vs/0 every few seconds during a cook
-    (progressPercentage ticks about once per 7-10 s), and its remainingTime
-    only has minute resolution with the seconds parked at ':59', so the
-    unrounded sum drifted by a few seconds per push and crossed the minute
-    boundary back and forth. That was one logbook entry per push (NX60T8311SS,
-    a 15-minute bake). The state gate covers boards that leave a stale
-    remainingTime after the cook ends; this one reports 00:00:00 there."""
-    if _to_ocf(rep.get("x.com.samsung.da.state")) != "active":
-        return None
-    remaining = rep.get("x.com.samsung.da.remainingTime")
-    if not remaining:
-        return None
-    try:
-        h, m, s = remaining.split(":")
-        total_s = int(h) * 3600 + int(m) * 60 + int(s)
-    except (AttributeError, ValueError):
-        return None
-    if total_s == 0:
-        return None
-    finish = datetime.now(UTC) + timedelta(seconds=total_s)
-    return finish.replace(second=0, microsecond=0)
+    """Timed from when the reading arrived (finish.py, #772). Gated on state
+    alone: some boards leave a stale remainingTime after the cook ends."""
+    return running_finish(rep, _to_ocf(rep.get("x.com.samsung.da.state")) == "active")
 
 
 def _op_minutes(op_time):
@@ -852,6 +830,7 @@ OVEN_MODE = Capability(
             icon="mdi:volume-high",
             entity_category="config",
             exists_fn=_has_option("Sound"),
+            prune_when_excluded=True,
             value_fn=lambda opts: _option_value(opts, "Sound") == "On",
             write_fn=_option_switch_write("Sound"),
             needs_remote_control=False,

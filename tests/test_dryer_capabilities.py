@@ -64,9 +64,9 @@ def test_dry_level_presence_is_field_gated_not_narrowed_by_an_exists_fn():
     a stub at discovery, which entity._is_included deliberately admits so a
     sub-poll can populate it.
 
-    A missing entity would be permanent and silent: __init__'s
-    _drop_sensors_superseded_by_selects removes the old sensor row on every
-    setup, unconditionally, so there is nothing left to fall back to.
+    A missing entity would be permanent and silent: cleanup.RETIRED_KEYS
+    removes the old sensor row on every setup, unconditionally, so there is
+    nothing left to fall back to.
     """
     desc = next(e for e in dryer.DRYER_SETTINGS.entities if e.key == "dry_level")
     assert isinstance(desc, SelectDesc)

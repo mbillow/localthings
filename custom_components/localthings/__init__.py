@@ -17,6 +17,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
+from .cleanup import async_delete_removed_issues, async_notify_removed, async_reconcile_entities
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import (
     LocalThingsCoordinator,
@@ -24,12 +25,8 @@ from .coordinator import (
     mode_spec_store,
     snapshot_store,
 )
-from .entity import LocalThingsEntity, _is_included, async_load_instance_names
-from .registry.by_type import WASHER_ONLY_ENTITIES, registry_for, resolve
-from .registry.capabilities.cooktop import is_legacy_radiant_cooktop
-from .registry.entities import BinarySensorDesc, SwitchDesc
+from .entity import async_load_instance_names
 from .registry.identity import resolve_serial
-from .registry.subdevices import MAIN
 from .rekey import rekey_entry
 from .services import async_setup_services
 
@@ -208,183 +205,6 @@ def _relabel_particulate_statistics(hass: HomeAssistant, entry: ConfigEntry) -> 
     return True
 
 
-# The dryer's dryLevel and dryTime moved from SensorDesc to SelectDesc in
-# #439. unique_ids are scoped by (integration, platform), so that move can't
-# rewrite the old rows -- they can only be dropped, and until they are, each
-# upgraded dryer keeps a permanently-unavailable `sensor.<name>_dry_level`
-# (and `_dry_time`) carrying the user's rename and area.
-#
-# Tail-matched for the same reason as _PARTICULATE_KEY_RE above: the id is
-# f"{DOMAIN}_{serial}_{state_key}" with an optional subdevice prefix and a
-# trailing `_<n>` instance, and matching the tail keeps working for a renamed
-# entity. No device-type gate is needed -- no registry binds a sensor-domain
-# dry_level or dry_time any more, so the domain check plus this tail is
-# already exact.
-_MOVED_TO_SELECT_KEY_RE = re.compile(r"_(?:dry_level|dry_time)(?:_\d+)?$")
-
-
-@callback
-def _drop_sensors_superseded_by_selects(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Drop the sensor rows dryer.py's dry_level/dry_time selects supersede.
-
-    Runs on every setup rather than as a numbered migration. The sweep is
-    idempotent -- after the first pass there is nothing left matching the
-    pattern in the sensor domain -- so a version gate would buy only running
-    it once, at the cost of a bump that makes the *whole entry* fail to load
-    on a downgrade (`entry.version > 4` in async_migrate_entry) instead of
-    losing two entities. That trade isn't worth it for a registry tidy-up.
-
-    Not gated on the select existing either: dry_level is field-gated and
-    dry_time carries an exists_fn, so on a board reporting neither there is
-    no replacement -- but the sensor is equally dead there, because no
-    registry binds these keys to the sensor platform any more.
-    """
-    ent_reg = er.async_get(hass)
-    for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        if registry_entry.domain != "sensor":
-            continue
-        if not _MOVED_TO_SELECT_KEY_RE.search(registry_entry.unique_id):
-            continue
-        # INFO, not debug: this is irreversible and takes the user's rename,
-        # area and any automation reference with it. The replacement is named
-        # by platform only -- deriving `select.<object_id>` from this row
-        # would be a guess, since a renamed sensor's object id is not the one
-        # the new select gets.
-        _LOGGER.info(
-            "Removing %s, superseded by a select entity on the same device; "
-            "update any automation or dashboard that referenced it",
-            registry_entry.entity_id,
-        )
-        ent_reg.async_remove(registry_entry.entity_id)
-
-
-@callback
-def _drop_duplicate_cooktop_timer(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
-) -> None:
-    """Remove the redundant timer entity only where Timer Remaining replaces it."""
-    resources = coordinator.discovery_resources
-    rep = resources.get("/mode/vs/0") or {}
-    if not is_legacy_radiant_cooktop(rep, resources) or not any(
-        bound.desc.key == "main_timer_set" and _is_included(bound, coordinator)
-        for bound in coordinator.bound
-    ):
-        return
-    ent_reg = er.async_get(hass)
-    unique_id = f"{DOMAIN}_{coordinator.device_key}_main_timer_current"
-    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
-    old = ent_reg.async_get(entity_id) if entity_id else None
-    if old is None or old.config_entry_id != entry.entry_id:
-        return
-    # NZ36K7570R reports the same countdown in both fields; retaining the
-    # registry row would leave an unavailable duplicate after this upgrade.
-    _LOGGER.info(
-        "Removing %s, superseded by Timer Remaining on the same cooktop; "
-        "update any automation or dashboard that referenced it",
-        old.entity_id,
-    )
-    ent_reg.async_remove(old.entity_id)
-
-
-@callback
-def _drop_read_only_power_switches(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
-) -> None:
-    """Remove an old Power switch when discovery now selects its read-only sensor."""
-    ent_reg = er.async_get(hass)
-    for bound in coordinator.bound:
-        if (
-            bound.desc.key != "power_switch"
-            or not isinstance(bound.desc, BinarySensorDesc)
-            or not _is_included(bound, coordinator)
-            or bound.desc.field not in coordinator.discovery_resources.get(bound.href, {})
-        ):
-            continue
-        unique_id = LocalThingsEntity(coordinator, bound).unique_id
-        assert unique_id is not None
-        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
-        old = ent_reg.async_get(entity_id) if entity_id else None
-        if old is None or old.config_entry_id != entry.entry_id:
-            continue
-        # A platform change cannot reuse the switch's registry row.
-        _LOGGER.info(
-            "Removing %s, superseded by a Power binary sensor; "
-            "update any automation or dashboard that referenced it",
-            old.entity_id,
-        )
-        ent_reg.async_remove(old.entity_id)
-
-
-_GATED_SWITCH_KEYS = frozenset({"sound", "rapid_fridge", "rapid_freezing"})
-
-
-@callback
-def _drop_unsupported_sound_switches(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
-) -> None:
-    """Remove old switches that no longer pass their descriptor's existence
-    check: Sound, and the rapid switches older releases gave fridges whose
-    /refrigeration/vs/0 reports only the other field (#698)."""
-    ent_reg = er.async_get(hass)
-    for bound in coordinator.bound:
-        if (
-            not isinstance(bound.desc, SwitchDesc)
-            or bound.desc.key not in _GATED_SWITCH_KEYS
-            or bound.desc.exists_fn is None
-            or _is_included(bound, coordinator)
-        ):
-            continue
-        unique_id = LocalThingsEntity(coordinator, bound).unique_id
-        assert unique_id is not None
-        entity_id = ent_reg.async_get_entity_id("switch", DOMAIN, unique_id)
-        old = ent_reg.async_get(entity_id) if entity_id else None
-        if old is None or old.config_entry_id != entry.entry_id:
-            continue
-        _LOGGER.info(
-            "Removing %s: the device does not report it; "
-            "update any automation or dashboard that referenced it",
-            old.entity_id,
-        )
-        ent_reg.async_remove(old.entity_id)
-
-
-@callback
-def _drop_misidentified_washer_entities(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: LocalThingsCoordinator
-) -> None:
-    """Drop washer-only rows left by earlier routing (#475, #681).
-
-    Repeat on setup, as in _drop_sensors_superseded_by_selects, so a
-    downgrade does not prevent the next upgrade from cleaning up again.
-    """
-    main_registry = registry_for(coordinator.device_type_name)
-    obsolete = set()
-    for subdevice in (MAIN, *coordinator.subdevices):
-        registry = main_registry
-        if subdevice != MAIN:
-            registry = resolve(coordinator.discovery_canonical(subdevice)) or main_registry
-        obsolete.update(
-            (platform, f"{subdevice.key_prefix}{key}")
-            for platform, key in WASHER_ONLY_ENTITIES.get(registry.name, ())
-        )
-    if not obsolete:
-        return
-    ent_reg = er.async_get(hass)
-    prefix = f"{DOMAIN}_{coordinator.device_key}_"
-    for registry_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        if registry_entry.platform != DOMAIN or not registry_entry.unique_id.startswith(prefix):
-            continue
-        key = registry_entry.unique_id.removeprefix(prefix)
-        if (registry_entry.domain, key) not in obsolete:
-            continue
-        _LOGGER.info(
-            "Removing %s, left by an earlier washer misidentification; "
-            "update any automation or dashboard that referenced it",
-            registry_entry.entity_id,
-        )
-        ent_reg.async_remove(registry_entry.entity_id)
-
-
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate an entry to the current version.
 
@@ -455,10 +275,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
-
-    # Before the platforms register anything, so an upgraded dryer never has
-    # the dead sensor row and its replacement select alive at the same time.
-    _drop_sensors_superseded_by_selects(hass, entry)
 
     coordinator = LocalThingsCoordinator(hass, entry)
 
@@ -535,10 +351,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # on a plain callback's None.
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
-    _drop_duplicate_cooktop_timer(hass, entry, coordinator)
-    _drop_read_only_power_switches(hass, entry, coordinator)
-    _drop_unsupported_sound_switches(hass, entry, coordinator)
-    _drop_misidentified_washer_entities(hass, entry, coordinator)
+    # Before the platforms register, so a replaced row and its replacement
+    # are never both alive.
+    async_notify_removed(hass, entry, async_reconcile_entities(hass, entry, coordinator))
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -600,6 +415,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """
     await snapshot_store(hass, entry).async_remove()
     await mode_spec_store(hass, entry).async_remove()
+    async_delete_removed_issues(hass, entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

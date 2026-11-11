@@ -115,6 +115,7 @@
       "no_response": "No hubo respuesta de esa dirección IP: no llegó nada por ningún puerto del rango de la API local del electrodoméstico (UDP 49152-49160). Comprueba que la dirección IP sea correcta, que el electrodoméstico esté encendido y en la misma red que Home Assistant, y que ningún cortafuegos esté descartando el tráfico UDP hacia él.",
       "ports_closed": "Esa dirección IP es accesible, pero rechazó activamente todos los puertos del rango de la API local (UDP 49152-49160) y no respondió nada por el canal de descubrimiento. Lo más probable es que no sea un electrodoméstico Samsung, o que sea uno sin la API local activada.",
       "no_dtls_server": "Los puertos del rango de la API local son accesibles en esa dirección, pero nada respondió a un saludo DTLS. Comprueba que la dirección IP pertenezca al electrodoméstico y no a otro dispositivo de tu red.",
+      "exec_memory_denied": "Home Assistant no tiene permitido crear memoria ejecutable, que la biblioteca DTLS necesita para sus callbacks, así que ningún saludo pudo siquiera empezar. Es un ajuste del equipo donde corre Home Assistant, no un problema del electrodoméstico. En una instalación con systemd, pon MemoryDenyWriteExecute=no (o elimina la línea) en la unidad de servicio de Home Assistant y reinícialo. El ajuste deny_execmem de SELinux y los kernels reforzados pueden causar lo mismo. El registro de Home Assistant tiene el error exacto.",
       "appliance_no_dtls": "Esa dirección es un electrodoméstico Samsung: se identificó como {model} por el canal de descubrimiento sin cifrar y anunció {port} como su puerto seguro, pero nunca completó un saludo DTLS en él. La dirección no es el problema. Comprueba si el Control remoto u otro ajuste similar está desactivado en el panel del electrodoméstico, y consulta el registro de Home Assistant para ver el fallo exacto.",
       "non_appliance_stack": "Algo respondió en esa dirección IP, pero se identificó como un servicio OCF que no es un electrodoméstico. Algunos electrodomésticos Samsung ejecutan uno junto al suyo, y LocalThings solo encuentra el electrodoméstico que hay detrás cuando Home Assistant está en el mismo segmento de red. Pon Home Assistant y el electrodoméstico en la misma subred y VLAN y vuelve a intentarlo.",
       "multiple_appliances": "Más de un electrodoméstico Samsung responde en esa dirección IP y LocalThings aún no puede elegir entre ellos. Infórmalo en el gestor de incidencias de LocalThings e incluye el registro de Home Assistant.",
@@ -164,7 +165,7 @@
       },
       "settings": {
         "title": "Ajustes del dispositivo",
-        "description": "Algunos dispositivos aceptan ciertas escrituras (p. ej. la dosificación por defecto de detergente/suavizante en una lavadora) incluso cuando informan de control remoto desactivado. Por defecto, LocalThings bloquea cada escritura con un error claro cuando un dispositivo informa de control remoto desactivado, en lugar de dejar que el dispositivo la rechace en silencio. Solo actívalo si has confirmado que las escrituras funcionan de verdad en este dispositivo con el control remoto desactivado; si no, cambiarás ese error claro por un fallo silencioso.\n\nLa hora estimada de finalización se recalcula a partir de la estimación de tiempo restante del dispositivo en cada sondeo, que puede variar o revisarse uno o dos minutos entre actualizaciones. Sube el valor de cambio mínimo siguiente para mantener el sensor en su último valor notificado hasta que la estimación varíe al menos esa cantidad de minutos, reduciendo el ruido en el historial/registro de actividad. Ponlo a 0 para notificar cada cambio calculado.\n\nAlgunos modelos notifican un modo que nunca incluyen entre los admitidos: por ejemplo, un aire acondicionado en modo Quiet que solo ofrece Off/Sleep/Speed. LocalThings recuerda cualquier modo así que detecte y lo sigue ofreciendo, de modo que quede seleccionable en cuanto el dispositivo haya estado en él al menos una vez. Desactívalo para ofrecer solo lo que el dispositivo anuncia; usa «Olvidar los modos recordados» en la pantalla anterior para borrar lo ya recordado. Un dispositivo de lavandería con ciclos descargados de la nube recibe aquí un aviso en cuanto informa de uno que Home Assistant aún no puede ofrecer -- algunos dispositivos informan de uno incluso si nunca has abierto tú mismo la pantalla \"Descarga de Programas\" de la app SmartThings. Desactiva esto para detener ese aviso y ocultar los ciclos descargados ya nombrados de la lista de ciclos; no se pierde nada de lo ya configurado, y al volver a activarlo reaparece de inmediato.",
+        "description": "Algunos dispositivos aceptan ciertas escrituras (p. ej. la dosificación por defecto de detergente/suavizante en una lavadora) incluso cuando informan de control remoto desactivado. Por defecto, LocalThings bloquea cada escritura con un error claro cuando un dispositivo informa de control remoto desactivado, en lugar de dejar que el dispositivo la rechace en silencio. Solo actívalo si has confirmado que las escrituras funcionan de verdad en este dispositivo con el control remoto desactivado; si no, cambiarás ese error claro por un fallo silencioso.\n\nLa hora estimada de finalización se calcula desde que llega cada lectura del tiempo restante: al segundo en los dispositivos que informan segundos y al minuto más cercano en los demás. Una revisión inferior a aproximadamente el 5 % del tiempo restante se retiene, como máximo hasta el valor de cambio mínimo siguiente, reduciendo el ruido en el historial/registro de actividad. Ponlo a 0 para notificar cada cambio.\n\nAlgunos modelos notifican un modo que nunca incluyen entre los admitidos: por ejemplo, un aire acondicionado en modo Quiet que solo ofrece Off/Sleep/Speed. LocalThings recuerda cualquier modo así que detecte y lo sigue ofreciendo, de modo que quede seleccionable en cuanto el dispositivo haya estado en él al menos una vez. Desactívalo para ofrecer solo lo que el dispositivo anuncia; usa «Olvidar los modos recordados» en la pantalla anterior para borrar lo ya recordado. Un dispositivo de lavandería con ciclos descargados de la nube recibe aquí un aviso en cuanto informa de uno que Home Assistant aún no puede ofrecer -- algunos dispositivos informan de uno incluso si nunca has abierto tú mismo la pantalla \"Descarga de Programas\" de la app SmartThings. Desactiva esto para detener ese aviso y ocultar los ciclos descargados ya nombrados de la lista de ciclos; no se pierde nada de lo ya configurado, y al volver a activarlo reaparece de inmediato.",
         "data": {
           "bypass_remote_control_lock": "Permitir escrituras incluso cuando el control remoto se notifica como desactivado",
           "finish_time_hysteresis_minutes": "Finalización estimada -- cambio mínimo (minutos)",
@@ -207,7 +208,7 @@
       },
       "cloud_manual": {
         "title": "Ciclos descargados",
-        "description": "Este dispositivo informa de {total} ciclos descargados; se han detectado {found} hasta ahora.\n\nLos ajustes de un ciclo descargado solo son visibles mientras ese ciclo está cargado, y el dispositivo nunca informa de sus nombres. Para añadir los que faltan ({pending}): en la app SmartThings (no en el dispositivo), abre este dispositivo y toca \"Descarga de Programas\" -- una fila aparte de \"Ciclo\", más abajo en la pantalla, y la que importa aquí. Ve pasando por cada programa descargado uno a uno, deteniéndote unos segundos en cada uno para que LocalThings pueda detectarlo, y vuelve aquí.\n\nDa a cada uno el nombre que quieras ver en Home Assistant. Deja un nombre en blanco para mantener ese ciclo fuera de la lista de ciclos. Los nombres deben ser únicos.\n\nDescarga de Programas es el programa de este dispositivo que ejecuta un ciclo descargado. Se detecta automáticamente, pero confírmalo aquí antes de usarlo: seleccionar un ciclo descargado escribe este código de programa en el dispositivo.",
+        "description": "Este dispositivo tiene al menos {total} ciclos descargados; se han detectado {found} hasta ahora.\n\nLos ajustes de un ciclo descargado solo son visibles mientras ese ciclo está cargado, y el dispositivo nunca informa de sus nombres. Para añadir los que faltan ({pending}): en la app SmartThings (no en el dispositivo), abre este dispositivo y toca \"Descarga de Programas\" -- una fila aparte de \"Ciclo\", más abajo en la pantalla, y la que importa aquí. Ve pasando por cada programa descargado uno a uno, deteniéndote unos segundos en cada uno para que LocalThings pueda detectarlo, y vuelve aquí.\n\nDa a cada uno el nombre que quieras ver en Home Assistant. Deja un nombre en blanco para mantener ese ciclo fuera de la lista de ciclos. Los nombres deben ser únicos.\n\nDescarga de Programas es el programa de este dispositivo que ejecuta un ciclo descargado. Se detecta automáticamente, pero confírmalo aquí antes de usarlo: seleccionar un ciclo descargado escribe este código de programa en el dispositivo.",
         "data": {
           "download_course": "Código de programa de Descarga de Programas"
         }
@@ -261,6 +262,10 @@
     "cloud_courses_undiscovered": {
       "title": "Ciclos descargados sin configurar para {device_name}",
       "description": "{device_name} tiene {pending} de {total} ciclos descargados que Home Assistant todavía no puede ofrecer. Un ciclo descargado solo se puede usar una vez que el dispositivo se ha visto con él cargado -- en la pantalla \"Descarga de Programas\" de la app SmartThings, no en la de \"Ciclo\" -- y le has dado un nombre.\n\nPara configurarlos, ve a Ajustes > Dispositivos y servicios > LocalThings > {device_name} > Configurar > Ciclos descargados y sigue las instrucciones que aparecen allí.\n\n¿No usas ciclos descargados? Ve a Configurar > Ajustes del dispositivo y desactiva \"Ofrecer ciclos descargados\" para silenciar este aviso definitivamente."
+    },
+    "removed_entities": {
+      "title": "Entidades eliminadas de {device_name}",
+      "description": "LocalThings ha eliminado de {device_name} entidades que ya no proporciona, normalmente porque en esta versión pasaron a ser otro tipo de entidad. Estas automatizaciones y scripts aún hacen referencia a ellas:\n\n{entities}\n\nActualízalos para usar las entidades de reemplazo de la página del dispositivo y luego descarta este aviso."
     }
   },
   "exceptions": {
@@ -1460,6 +1465,7 @@
           "ab": "Eco frío",
           "b1": "Autolimpieza+",
           "ba": "Solo centrifugar",
+          "bd": "Lavado óptimo automático",
           "c7": "Limpieza de tambor Eco",
           "ca": "Lavado con aire",
           "d0": "Algodón",
@@ -1589,7 +1595,14 @@
           "5f": "Solo centrifugar",
           "63": "Vapor potente",
           "67": "Antialérgico con vapor",
-          "68": "Voluminoso con vapor"
+          "68": "Voluminoso con vapor",
+          "a1": "Normal",
+          "a7": "Cuidado del producto",
+          "a9": "Tide Pod frío",
+          "ad": "AI OptiWash + Secado",
+          "59": "Planchado fácil",
+          "a8": "Secado por tiempo",
+          "aa": "Aireación"
         }
       },
       "washer_dry_level": {
@@ -1775,6 +1788,9 @@
           "mute": "Silencio",
           "voice": "Voz"
         }
+      },
+      "picture_mode": {
+        "name": "Modo de imagen"
       }
     },
     "sensor": {
@@ -2233,6 +2249,57 @@
       "zone_temperature": {
         "name": "Temperatura de zona"
       },
+      "zone_water_law_offset": {
+        "name": "Desplazamiento de la curva climática de la zona"
+      },
+      "zone2_water_law_offset": {
+        "name": "Desplazamiento de la curva climática de la zona 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Curva climática, punto frío de temperatura exterior (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Curva climática, punto cálido de temperatura exterior (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Curva climática 1, temperatura objetivo con temperatura exterior fría (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Curva climática 1, temperatura objetivo con temperatura exterior cálida (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Curva climática 2, temperatura objetivo con temperatura exterior fría (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Curva climática 2, temperatura objetivo con temperatura exterior cálida (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Límite máximo de la temperatura objetivo de ACS (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Límite mínimo de la temperatura objetivo de ACS (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Modo de funcionamiento de ACS (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Prioridad entre calefacción y ACS (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Temperatura exterior de cambio de prioridad calefacción/ACS (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Uso de la resistencia de apoyo (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Límite máximo de la temperatura de impulsión de calefacción (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Límite mínimo de la temperatura de impulsión de calefacción (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Control de zonas (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatura de zona 2"
       },
@@ -2341,6 +2408,36 @@
       "heat_generated_kwh": {
         "name": "Calor generado"
       },
+      "cycle_flow_temperature": {
+        "name": "Temperatura de impulsión (ciclo)"
+      },
+      "cycle_return_temperature": {
+        "name": "Temperatura de retorno (ciclo)"
+      },
+      "cycle_flow_rate": {
+        "name": "Caudal (ciclo)"
+      },
+      "cycle_pump_speed": {
+        "name": "Velocidad de la bomba (ciclo)"
+      },
+      "compressor_frequency": {
+        "name": "Frecuencia del compresor"
+      },
+      "compressor_target_frequency": {
+        "name": "Frecuencia objetivo del compresor"
+      },
+      "discharge_temperature": {
+        "name": "Temperatura de descarga"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Temperatura de saturación del evaporador"
+      },
+      "suction_temperature": {
+        "name": "Temperatura de aspiración"
+      },
+      "cycle_updated": {
+        "name": "Datos del ciclo actualizados"
+      },
       "three_way_valve": {
         "name": "Válvula de 3 vías"
       },
@@ -2388,6 +2485,9 @@
       },
       "oven_setpoint": {
         "name": "Punto de ajuste"
+      },
+      "illuminance": {
+        "name": "Iluminancia"
       }
     },
     "switch": {

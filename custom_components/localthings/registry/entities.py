@@ -68,6 +68,17 @@ class SamsungEntityDescription:
     # platforms that use entity.async_add_bound_entities add a late entity:
     # sensor, binary_sensor, number, switch, select, button, time and light.
     dynamic_presence: bool = False
+    # Remove this entity's registry row when exists_fn excludes it. Only for
+    # an exists_fn verified to mean "this model never has it" (#698, #747).
+    prune_when_excluded: bool = False
+    # (platform, key) rows this entity replaces, removed once it is included
+    # on a rep that carries its field (not a stub or {}) and the old key, if
+    # still bound, is excluded.
+    supersedes: tuple[tuple[str, str], ...] = ()
+    # Once included, remove this key's rows on its siblings' platforms. Only
+    # where inclusion is a model fact, never live state, and where a rep that
+    # can't decide yet excludes this descriptor.
+    replaces_siblings: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -101,6 +112,16 @@ class SamsungEntityDescription:
     # The device can refuse a command inside a 2.04 and say so in the body,
     # {"controlResponse": {"result": false}} (AV boards).
     control_response: bool = False
+
+    def __post_init__(self) -> None:
+        # Excluded is the normal state of a dynamic entity, so neither
+        # registry removal may act on one.
+        if self.dynamic_presence and (
+            self.prune_when_excluded or self.supersedes or self.replaces_siblings
+        ):
+            raise ValueError(f"{self.key}: registry removal can't apply to dynamic_presence")
+        if self.prune_when_excluded and self.exists_fn is None:
+            raise ValueError(f"{self.key}: prune_when_excluded needs an exists_fn")
 
 
 @dataclass(frozen=True, kw_only=True)

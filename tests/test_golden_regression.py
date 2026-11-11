@@ -2235,3 +2235,52 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_s61b():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q700c():
+    """Media resources under /sec/networkaudio/av/ (#796)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q700c")
+    golden = json.loads((GOLDEN / "soundbar_q700c.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_q700c", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
+    """AIM-H04N indoor subdevice (#789): locks in current_temperature_c from
+    the flat /temperatures/indoor/vs/0 and the Wh-scale meter selection. Routed
+    by /oic/d alone -- SAC_SLIM1WAY has no board-token mapping."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_aim_h04n_system_ac"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources, device_types=("oic.d.airconditioner",))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+@pytest.mark.parametrize("name", ["monitor_ls32dm702", "monitor_ls43dm703"])
+def test_registry_reproduces_golden_state_keys_for_monitor(name):
+    """M7 Smart Monitors (#815): a flat Tizen TV board routed by /oic/d alone."""
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )

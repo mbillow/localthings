@@ -930,3 +930,32 @@ def test_the_dw8700b_dishwasher_table_differs_only_where_its_owner_said(lang):
         k: v for k, v in shared["state"].items() if k not in own
     }
     assert own <= variant["state"].keys()
+
+
+def test_confirmed_awm_us_m64_table_02_course_names():
+    """Issue #784: an AWM-US-M64-25-WD80 washer-dryer reports Table_02 but
+    uses seven high-range codes the table lacked; the reporter confirmed
+    each by selecting it on the panel. Four reuse an existing label, pinned
+    to their twin in every locale (the #343 gap)."""
+    shared = {
+        "a1": ("washer_cycle_table_02", "01"),  # Normal
+        "59": ("washer_cycle_table_00", "77"),  # Perm Press
+        "a8": ("dryer_cycle_table_00", "a4"),  # Time Dry
+        "aa": ("dryer_cycle_table_00", "a0"),  # Air Fluff
+    }
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t02 = select["washer_cycle_table_02"]["state"]
+        for code, (table, twin) in shared.items():
+            assert t02[code] == select[table]["state"][twin], (language, code)
+
+    english = _load("en")["entity"]["select"]["washer_cycle_table_02"]["state"]
+    assert {code: english[code] for code in ("a1", "a7", "a9", "ad", "59", "a8", "aa")} == {
+        "a1": "Normal",
+        "a7": "Product Care",
+        "a9": "Tide Pod Cold",
+        "ad": "AI OptiWash+Dry",
+        "59": "Perm Press",
+        "a8": "Time Dry",
+        "aa": "Air Fluff",
+    }

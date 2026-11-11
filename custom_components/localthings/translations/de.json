@@ -1028,6 +1028,7 @@
           "ab": "Eco Kalt",
           "b1": "Selbstreinigung+",
           "ba": "Abpumpen + Schleudern",
+          "bd": "Automatische Optimalwäsche",
           "c7": "Eco-Trommelreinigung",
           "ca": "Air Wash",
           "d0": "Baumwolle",
@@ -1157,7 +1158,14 @@
           "5f": "Nur Schleudern",
           "63": "Power-Dampf",
           "67": "Dampf-Anti-Allergie",
-          "68": "Dampf-Großwäsche"
+          "68": "Dampf-Großwäsche",
+          "a1": "Normal",
+          "a7": "Produktpflege",
+          "a9": "Tide Pod Kalt",
+          "ad": "AI OptiWash + Trocknen",
+          "59": "Pflegeleicht",
+          "a8": "Zeittrocknen",
+          "aa": "Lüften"
         }
       },
       "washer_dry_level": {
@@ -1380,6 +1388,9 @@
           "mute": "Stumm",
           "voice": "Sprache"
         }
+      },
+      "picture_mode": {
+        "name": "Bildmodus"
       }
     },
     "sensor": {
@@ -1832,6 +1843,57 @@
       "zone_temperature": {
         "name": "Zonentemperatur"
       },
+      "zone_water_law_offset": {
+        "name": "Heizkurven-Verschiebung der Zone"
+      },
+      "zone2_water_law_offset": {
+        "name": "Heizkurven-Verschiebung Zone 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Heizkurve, kalter Außentemperaturpunkt (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Heizkurve, warmer Außentemperaturpunkt (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Heizkurve 1, Solltemperatur bei kalter Außentemperatur (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Heizkurve 1, Solltemperatur bei warmer Außentemperatur (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Heizkurve 2, Solltemperatur bei kalter Außentemperatur (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Heizkurve 2, Solltemperatur bei warmer Außentemperatur (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Obergrenze der Warmwasser-Solltemperatur (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Untergrenze der Warmwasser-Solltemperatur (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Warmwasser-Betriebsart (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorität Heizung und Warmwasser (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Außentemperatur für Prioritätswechsel Heizung/Warmwasser (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Einsatz der Zusatzheizung (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Obergrenze der Heizungs-Vorlauftemperatur (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Untergrenze der Heizungs-Vorlauftemperatur (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Zonensteuerung (FSV 4061)"
+      },
       "zone2_temperature": {
         "name": "Temperatur Zone 2"
       },
@@ -1946,6 +2008,36 @@
       "heat_generated_kwh": {
         "name": "Erzeugte Wärme"
       },
+      "cycle_flow_temperature": {
+        "name": "Vorlauftemperatur (Zyklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Rücklauftemperatur (Zyklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Durchfluss (Zyklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Pumpendrehzahl (Zyklus)"
+      },
+      "compressor_frequency": {
+        "name": "Verdichterfrequenz"
+      },
+      "compressor_target_frequency": {
+        "name": "Soll-Verdichterfrequenz"
+      },
+      "discharge_temperature": {
+        "name": "Heißgastemperatur"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Verdampfungs-Sättigungstemperatur"
+      },
+      "suction_temperature": {
+        "name": "Sauggastemperatur"
+      },
+      "cycle_updated": {
+        "name": "Zyklusdaten aktualisiert"
+      },
       "three_way_valve": {
         "name": "3-Wege-Ventil"
       },
@@ -1993,6 +2085,9 @@
       },
       "oven_setpoint": {
         "name": "Sollwert"
+      },
+      "illuminance": {
+        "name": "Beleuchtungsstärke"
       }
     },
     "switch": {
@@ -2456,6 +2551,7 @@
       "no_response": "Keine Antwort von dieser IP-Adresse — auf keinem Port im lokalen API-Bereich des Geräts (UDP 49152-49160) kam eine Rückmeldung. Prüfen Sie, ob die IP-Adresse korrekt ist, das Gerät eingeschaltet und im selben Netzwerk wie Home Assistant ist, und ob keine Firewall den UDP-Verkehr zu ihm blockiert.",
       "ports_closed": "Diese IP-Adresse ist erreichbar, hat aber jeden Port im lokalen API-Bereich (UDP 49152-49160) aktiv abgelehnt und auf dem Discovery-Kanal überhaupt nicht geantwortet. Es handelt sich höchstwahrscheinlich nicht um ein Samsung-Gerät, oder um eines ohne aktivierte lokale API.",
       "no_dtls_server": "Ports im lokalen API-Bereich sind unter dieser Adresse erreichbar, aber nichts hat auf einen DTLS-Handshake reagiert. Prüfen Sie, ob die IP-Adresse tatsächlich zum Gerät gehört und nicht zu einem anderen Gerät in Ihrem Netzwerk.",
+      "exec_memory_denied": "Home Assistant darf keinen ausführbaren Speicher anlegen, den die DTLS-Bibliothek für ihre Callbacks benötigt, daher konnte kein Handshake überhaupt beginnen. Das ist eine Einstellung auf dem Home-Assistant-Host, kein Problem des Geräts. Bei einer systemd-Installation setze MemoryDenyWriteExecute=no in der Service-Unit von Home Assistant (oder entferne die Zeile) und starte den Dienst neu. Die SELinux-Einstellung deny_execmem und gehärtete Kernel können dasselbe verursachen. Das Home-Assistant-Protokoll enthält den genauen Fehler.",
       "appliance_no_dtls": "Diese Adresse gehört zu einem Samsung-Gerät — es hat sich über den unverschlüsselten Discovery-Kanal als {model} identifiziert und {port} als seinen sicheren Port gemeldet — aber dort wurde nie ein DTLS-Handshake abgeschlossen. Die Adresse ist nicht das Problem. Prüfen Sie, ob am Gerät die Fernsteuerung oder eine ähnliche Einstellung am Bedienfeld ausgeschaltet ist, und schauen Sie für den genauen Fehler im Home Assistant-Log nach.",
       "non_appliance_stack": "An dieser IP-Adresse hat etwas geantwortet, sich aber als OCF-Dienst gemeldet, der kein Gerät ist. Manche Samsung-Geräte betreiben einen solchen neben ihrem eigenen, und LocalThings findet das Gerät dahinter nur, wenn Home Assistant im selben Netzwerksegment ist. Bring Home Assistant und das Gerät ins selbe Subnetz und VLAN und versuche es dann erneut.",
       "multiple_appliances": "An dieser IP-Adresse antwortet mehr als ein Samsung-Gerät, und LocalThings kann noch nicht zwischen ihnen wählen. Bitte melde das im Issue-Tracker von LocalThings und füge das Home-Assistant-Log bei.",
@@ -2505,7 +2601,7 @@
       },
       "settings": {
         "title": "Geräteeinstellungen",
-        "description": "Manche Geräte akzeptieren bestimmte Schreibvorgänge (z. B. die Standard-Dosierung von Waschmittel/Weichspüler bei einer Waschmaschine) auch dann, wenn sie melden, dass die Fernsteuerung ausgeschaltet ist. Standardmäßig blockiert LocalThings jeden Schreibvorgang mit einer klaren Fehlermeldung, sobald ein Gerät meldet, dass die Fernsteuerung ausgeschaltet ist, statt das Gerät den Vorgang stillschweigend ablehnen zu lassen. Aktivieren Sie dies nur, wenn Sie bestätigt haben, dass Schreibvorgänge bei diesem Gerät auch mit ausgeschalteter Fernsteuerung tatsächlich funktionieren -- andernfalls tauschen Sie die klare Fehlermeldung gegen ein stilles Fehlschlagen ein.\n\nDie voraussichtliche Fertigstellungszeit wird bei jeder Abfrage aus der verbleibenden Zeitschätzung des Geräts neu berechnet, die zwischen den Aktualisierungen um ein bis zwei Minuten schwanken oder korrigiert werden kann. Erhöhen Sie den unten stehenden Mindeständerungswert, um den Sensor bis zu einer Änderung der Schätzung um mindestens diese Anzahl an Minuten auf seinem zuletzt gemeldeten Wert zu halten und so das Rauschen in Verlauf/Logbuch zu verringern. Setzen Sie ihn auf 0, um jede berechnete Änderung zu melden.\n\nManche Modelle melden einen Modus, den sie nie als unterstützt angeben -- etwa eine Klimaanlage im Modus „Leise“, die nur Aus/Schlaf/Schnell anbietet. LocalThings merkt sich jeden solchen gemeldeten Modus und bietet ihn weiterhin an, sodass er auswählbar bleibt, sobald das Gerät mindestens einmal darin war. Schalten Sie dies aus, um nur das anzubieten, was das Gerät selbst angibt; verwenden Sie „Gemerkte Modi vergessen“ auf dem vorherigen Bildschirm, um bereits Gemerktes zu löschen. Ein Wäschegerät mit aus der Cloud heruntergeladenen Programmen erhält hier eine Erinnerung, sobald es eines gemeldet hat, das Home Assistant noch nicht anbieten kann -- manche Geräte melden eines, auch wenn Sie den Bildschirm \"Download-Programme\" in der SmartThings-App nie selbst geöffnet haben. Schalten Sie dies aus, um diese Erinnerung zu stoppen und bereits benannte heruntergeladene Programme aus der Programmliste auszublenden; bereits Eingerichtetes geht dabei nicht verloren, und beim erneuten Einschalten erscheint es sofort wieder.",
+        "description": "Manche Geräte akzeptieren bestimmte Schreibvorgänge (z. B. die Standard-Dosierung von Waschmittel/Weichspüler bei einer Waschmaschine) auch dann, wenn sie melden, dass die Fernsteuerung ausgeschaltet ist. Standardmäßig blockiert LocalThings jeden Schreibvorgang mit einer klaren Fehlermeldung, sobald ein Gerät meldet, dass die Fernsteuerung ausgeschaltet ist, statt das Gerät den Vorgang stillschweigend ablehnen zu lassen. Aktivieren Sie dies nur, wenn Sie bestätigt haben, dass Schreibvorgänge bei diesem Gerät auch mit ausgeschalteter Fernsteuerung tatsächlich funktionieren -- andernfalls tauschen Sie die klare Fehlermeldung gegen ein stilles Fehlschlagen ein.\n\nDie voraussichtliche Fertigstellungszeit wird ab dem Eintreffen jedes Restzeitwerts berechnet: sekundengenau bei Geräten, die Sekunden melden, sonst auf die nächste Minute gerundet. Eine Korrektur unter etwa 5 % der Restzeit wird zurückgehalten, höchstens bis zum unten stehenden Mindeständerungswert, um das Rauschen in Verlauf/Logbuch zu verringern. Setzen Sie ihn auf 0, um jede Änderung zu melden.\n\nManche Modelle melden einen Modus, den sie nie als unterstützt angeben -- etwa eine Klimaanlage im Modus „Leise“, die nur Aus/Schlaf/Schnell anbietet. LocalThings merkt sich jeden solchen gemeldeten Modus und bietet ihn weiterhin an, sodass er auswählbar bleibt, sobald das Gerät mindestens einmal darin war. Schalten Sie dies aus, um nur das anzubieten, was das Gerät selbst angibt; verwenden Sie „Gemerkte Modi vergessen“ auf dem vorherigen Bildschirm, um bereits Gemerktes zu löschen. Ein Wäschegerät mit aus der Cloud heruntergeladenen Programmen erhält hier eine Erinnerung, sobald es eines gemeldet hat, das Home Assistant noch nicht anbieten kann -- manche Geräte melden eines, auch wenn Sie den Bildschirm \"Download-Programme\" in der SmartThings-App nie selbst geöffnet haben. Schalten Sie dies aus, um diese Erinnerung zu stoppen und bereits benannte heruntergeladene Programme aus der Programmliste auszublenden; bereits Eingerichtetes geht dabei nicht verloren, und beim erneuten Einschalten erscheint es sofort wieder.",
         "data": {
           "bypass_remote_control_lock": "Schreibvorgänge auch bei ausgeschalteter Fernsteuerung zulassen",
           "finish_time_hysteresis_minutes": "Voraussichtliches Ende -- Mindeständerung (Minuten)",
@@ -2548,7 +2644,7 @@
       },
       "cloud_manual": {
         "title": "Download-Programme",
-        "description": "Dieses Gerät meldet {total} heruntergeladene Programme; {found} davon wurden bisher erkannt.\n\nDie Einstellungen eines heruntergeladenen Programms sind nur sichtbar, während dieses Programm geladen ist, und das Gerät meldet nie deren Namen. Um die fehlenden ({pending}) hinzuzufügen: Öffnen Sie in der SmartThings-App (nicht am Gerät selbst) dieses Gerät und tippen Sie auf \"Download-Programme\" -- eine eigene Zeile, getrennt von \"Programm\", weiter unten im Bildschirm, und die, auf die es hier ankommt. Gehen Sie dann nacheinander jedes heruntergeladene Programm durch, halten Sie bei jedem ein paar Sekunden inne, damit LocalThings es erkennen kann, und kommen Sie danach hierher zurück.\n\nGeben Sie jedem den Namen, den Sie in Home Assistant sehen möchten. Lassen Sie einen Namen leer, um das Programm aus der Programmliste auszuschließen. Namen müssen eindeutig sein.\n\nDas Download-Programm ist das Programm auf diesem Gerät, das ein heruntergeladenes Programm ausführt. Es wird automatisch erkannt, bestätigen Sie es aber hier vor der Verwendung: Die Auswahl eines heruntergeladenen Programms schreibt diesen Programmcode auf das Gerät.",
+        "description": "Dieses Gerät hat mindestens {total} heruntergeladene Programme; {found} davon wurden bisher erkannt.\n\nDie Einstellungen eines heruntergeladenen Programms sind nur sichtbar, während dieses Programm geladen ist, und das Gerät meldet nie deren Namen. Um die fehlenden ({pending}) hinzuzufügen: Öffnen Sie in der SmartThings-App (nicht am Gerät selbst) dieses Gerät und tippen Sie auf \"Download-Programme\" -- eine eigene Zeile, getrennt von \"Programm\", weiter unten im Bildschirm, und die, auf die es hier ankommt. Gehen Sie dann nacheinander jedes heruntergeladene Programm durch, halten Sie bei jedem ein paar Sekunden inne, damit LocalThings es erkennen kann, und kommen Sie danach hierher zurück.\n\nGeben Sie jedem den Namen, den Sie in Home Assistant sehen möchten. Lassen Sie einen Namen leer, um das Programm aus der Programmliste auszuschließen. Namen müssen eindeutig sein.\n\nDas Download-Programm ist das Programm auf diesem Gerät, das ein heruntergeladenes Programm ausführt. Es wird automatisch erkannt, bestätigen Sie es aber hier vor der Verwendung: Die Auswahl eines heruntergeladenen Programms schreibt diesen Programmcode auf das Gerät.",
         "data": {
           "download_course": "Programmcode des Download-Programms"
         }
@@ -2602,6 +2698,10 @@
     "cloud_courses_undiscovered": {
       "title": "Heruntergeladene Programme für {device_name} nicht eingerichtet",
       "description": "{device_name} hat {pending} von {total} heruntergeladenen Programmen, die Home Assistant noch nicht anbieten kann. Ein heruntergeladenes Programm kann erst verwendet werden, sobald das Gerät damit geladen gesehen wurde -- im Bildschirm \"Download-Programme\" der SmartThings-App, nicht im Bildschirm \"Programm\" -- und Sie ihm einen Namen gegeben haben.\n\nUm sie einzurichten, gehen Sie zu Einstellungen > Geräte & Dienste > LocalThings > {device_name} > Konfigurieren > Download-Programme und folgen Sie den dortigen Anweisungen.\n\nNutzen Sie keine heruntergeladenen Programme? Gehen Sie stattdessen zu Konfigurieren > Geräteeinstellungen und schalten Sie \"Heruntergeladene Programme anbieten\" aus, um diese Erinnerung dauerhaft zu stoppen."
+    },
+    "removed_entities": {
+      "title": "Entitäten von {device_name} entfernt",
+      "description": "LocalThings hat Entitäten von {device_name} entfernt, die es nicht mehr bereitstellt, meist weil sie in dieser Version zu einer anderen Art von Entität geworden sind. Diese Automationen und Skripte verweisen noch auf sie:\n\n{entities}\n\nStelle sie auf die Ersatzentitäten auf der Geräteseite um und schließe dann diesen Hinweis."
     }
   },
   "exceptions": {
