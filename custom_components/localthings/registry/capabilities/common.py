@@ -147,7 +147,8 @@ def _active_alarm_codes(items):
     codes = [
         i.get("x.com.samsung.da.code")
         for i in items
-        if i.get("x.com.samsung.da.code")
+        if isinstance(i, dict)
+        and i.get("x.com.samsung.da.code")
         and str(i.get("x.com.samsung.da.state", "")).lower() != "deleted"
         and not str(i.get("x.com.samsung.da.code", "")).lower().endswith("_off")
     ]
@@ -502,10 +503,12 @@ ALARMS = Capability(
     entities=(
         SensorDesc(
             key="alarm_code",
-            field="x.com.samsung.da.items",
             icon="mdi:alert",
             entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
+            # No field gate: a clear TP1X_REF_21K EU board answers with OCF
+            # metadata and no items, which the gate dropped. `{}` is the clear
+            # shape for most boards (observe.py, #348), so it reads "none".
+            rep_fn=lambda rep: _active_alarm_codes(rep.get("x.com.samsung.da.items")),
         ),
     ),
 )

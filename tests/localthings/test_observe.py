@@ -134,6 +134,22 @@ def test_apply_fully_replaces_alarms_href_instead_of_merging():
     assert mgr.cache.get("/alarms/vs/0") == {}
 
 
+def test_alarms_stub_does_not_wipe_cached_items():
+    """A /device/0 sweep on stub-only fridges sends /alarms/vs/0 as a bare
+    {"href"}: "exists, not fetched", not "cleared". Replacing the cache with
+    it made a firing alarm flip to "none" on every sweep."""
+    mgr = _manager()
+    active = {
+        "x.com.samsung.da.items": [
+            {"x.com.samsung.da.code": "ErrorCode_DC", "x.com.samsung.da.state": "Created"}
+        ]
+    }
+    mgr.apply("/alarms/vs/0", active, source="poll")
+    mgr.apply("/alarms/vs/0", {"href": "/alarms/vs/0"}, source="poll")
+    cached = mgr.cache.get("/alarms/vs/0") or {}
+    assert cached.get("x.com.samsung.da.items") == active["x.com.samsung.da.items"]
+
+
 def test_apply_fully_replaces_alarms_href_for_subdevice_shapes():
     """The same full-replace behavior must hold for both hrefs
     `Subdevice.to_actual` can produce: an indexed subdevice renumbers only

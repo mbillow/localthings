@@ -44,39 +44,6 @@ from .common import (
 )
 
 
-def _active_alarm_codes(items):
-    """Discard the hood firmware's retained/deleted ``ErrorCode_OFF`` row.
-
-    Unlike ``common._alarm_codes``, the hood retains a deleted alarm row in
-    its live representation, so this family-specific helper also checks state.
-    """
-    codes = []
-    for item in items or ():
-        if not isinstance(item, dict):
-            continue
-        if str(item.get("x.com.samsung.da.state", "")).lower() == "deleted":
-            continue
-        code = item.get("x.com.samsung.da.code")
-        if code and str(code).lower() != "errorcode_off":
-            codes.append(code)
-    return ", ".join(codes) if codes else "none"
-
-
-HOOD_ALARMS = Capability(
-    href="/alarms/vs/0",
-    poll_tier="hot",
-    entities=(
-        SensorDesc(
-            key="alarm_code",
-            field="x.com.samsung.da.items",
-            icon="mdi:alert",
-            entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
-        ),
-    ),
-)
-
-
 def _hood_fan_write(payload, rep, href=None):
     kind, value, *args = payload
     if kind == "power":
