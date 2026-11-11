@@ -141,6 +141,9 @@ def _active_alarm_codes(items):
     unsuffixed code (FilterAlarm, DoorA_Opened, ...); issue #166 shows both
     in one dump. Generalizes what range hood used to special-case as just
     the literal 'ErrorCode_OFF' string.
+
+    Family Hub fridges (25K_REF_LCD_FHUB10.0) mark those placeholders with
+    state 'none' instead; joined, they overflow HA's 255-character state.
     """
     if not items or not isinstance(items, list):
         return "none"
@@ -148,7 +151,7 @@ def _active_alarm_codes(items):
         i.get("x.com.samsung.da.code")
         for i in items
         if i.get("x.com.samsung.da.code")
-        and str(i.get("x.com.samsung.da.state", "")).lower() != "deleted"
+        and str(i.get("x.com.samsung.da.state", "")).lower() not in ("deleted", "none")
         and not str(i.get("x.com.samsung.da.code", "")).lower().endswith("_off")
     ]
     return ", ".join(codes) if codes else "none"
