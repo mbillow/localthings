@@ -273,6 +273,8 @@ class MediaModeSurface:
     options_field: str
     # Wire value -> label, for values with no readable name (`wifiidle`).
     labels: Mapping[str, str] | None = None
+    # rep -> wire ID/label mapping for device-supplied {id, name} rows.
+    options_fn: Callable[[dict], Mapping[str, str]] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -297,6 +299,8 @@ class MediaPlayerDesc(SamsungEntityDescription):
     stream_active_fn: Callable[[dict], bool] | None = None
     # False where the device refuses stop while paused, so it isn't offered.
     stop_when_paused: bool = True
+    # Optional live control gate; absent keeps existing AV profiles unchanged.
+    supported_commands_fn: Callable[[dict], frozenset[str]] | None = None
     write_fn: MediaWriteFn = None
     validate_fn: ValidateFn = None
 

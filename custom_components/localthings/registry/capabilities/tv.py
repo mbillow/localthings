@@ -7,9 +7,10 @@ the TV media player to own, as on the soundbar (#606).
 """
 
 from collections import Counter
+from math import isfinite
 
 from ..capability import Capability
-from ..entities import SelectDesc, SensorDesc
+from ..entities import MediaModeSurface, MediaPlayerDesc, SelectDesc, SensorDesc
 from . import av
 
 PREFIX = "x.com.samsung.tv."
@@ -185,3 +186,97 @@ COVERAGE: list[Capability] = [
 # them; bound for captures that carry them.
 APPDATA_PREFIX = "/sec/tv/appdata/"
 APPDATA = Capability(href_prefix=APPDATA_PREFIX, poll_tier="never")
+
+
+_SOURCE = MediaModeSurface(
+    href=HREF_INPUT,
+    field=CURRENT_MODE,
+    options_field=SUPPORTED_MODES,
+    options_fn=mode_options,
+)
+_SOUND_MODE = MediaModeSurface(
+    href=HREF_SOUND,
+    field=CURRENT_MODE,
+    options_field=SUPPORTED_MODES,
+    options_fn=mode_options,
+)
+
+
+def _number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
+
+
+def _supported_commands(resources: dict) -> frozenset[str]:
+    """Only observed writable fields. OCF cannot wake a TV in standby."""
+    commands = set()
+    power = resources.get(HREF_SWITCH) or {}
+    audio = resources.get(HREF_AUDIO) or {}
+    if _writable(power) and isinstance(power.get("value"), bool):
+        commands.add("power_off")
+    if _writable(audio):
+        if _number(audio.get("volume")):
+            commands.add("volume")
+        if isinstance(audio.get("mute"), bool):
+            commands.add("mute")
+    for command, href in (("source", HREF_INPUT), ("sound_mode", HREF_SOUND)):
+        rep = resources.get(href) or {}
+        if _writable(rep) and mode_options(rep):
+            commands.add(command)
+    return frozenset(commands)
+
+
+def _validate_media(payload, rep, resources) -> str | None:
+    kind, value = payload
+    command = ("power_on" if value else "power_off") if kind == "power" else kind
+    if command not in _supported_commands(resources):
+        return "media_option_not_supported"
+    if kind in ("source", "sound_mode"):
+        href = HREF_INPUT if kind == "source" else HREF_SOUND
+        if not isinstance(value, str) or value not in mode_options(resources.get(href) or {}):
+            return "media_option_not_supported"
+    if kind == "volume" and (not _number(value) or not 0 <= value <= 100):
+        return "media_option_not_supported"
+    if kind in ("power", "mute") and not isinstance(value, bool):
+        return "media_option_not_supported"
+    return None
+
+
+def _media_write(payload, rep, href=None, resources=None):
+    resources = resources or {}
+    if _validate_media(payload, rep, resources) is not None:
+        return None
+    kind, value = payload
+    if kind == "power":
+        return av.path_of(HREF_SWITCH), {"value": value}
+    if kind == "volume":
+        return av.path_of(HREF_AUDIO), {"volume": round(value)}
+    if kind == "mute":
+        return av.path_of(HREF_AUDIO), {"mute": value}
+    mode_href = HREF_INPUT if kind == "source" else HREF_SOUND
+    return av.path_of(mode_href), {CURRENT_MODE: value}
+
+
+MEDIA_PLAYER = Capability(
+    href=HREF_SWITCH,
+    rt_filter="oic.r.switch.binary",
+    poll_tier="hot",
+    entities=(
+        MediaPlayerDesc(
+            key="media_player",
+            rep_fn=lambda rep: rep.get("value"),
+            device_class="tv",
+            power_href=HREF_SWITCH,
+            audio_href=HREF_AUDIO,
+            source=_SOURCE,
+            sound_mode=_SOUND_MODE,
+            # No playback telemetry or OCF playback command has been verified.
+            stream_active_fn=lambda resources: False,
+            supported_commands_fn=_supported_commands,
+            needs_remote_control=False,
+            control_response=True,
+            confirm_on_refusal=True,
+            write_fn=_media_write,
+            validate_fn=_validate_media,
+        ),
+    ),
+)
