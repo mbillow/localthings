@@ -14,6 +14,8 @@ on its token callback, and only then is an AC14K_M CA asked for (#524).
 
 from __future__ import annotations
 
+import logging
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -74,6 +76,11 @@ def legacy_bridge():
             "custom_components.localthings.config_flow._probe_legacy",
             return_value=LEGACY_DEVICE,
         ) as probe,
+        # A developer's own certs/ next to the integration must not leak in.
+        patch(
+            "custom_components.localthings.config_flow.LOCAL_CA_DIR",
+            Path("/nonexistent/localthings-certs"),
+        ),
     ):
         yield token, probe, mint
 
@@ -534,3 +541,120 @@ async def test_refused_minted_identity_retries_original_ca_once(hass, legacy_bri
     assert token.call_args_list[-2].args[2:] == ("CA-FULLCHAIN", "CA-LEAFKEY")
     assert token.call_args_list[-1].args[2:] == ("CA-CERT", "CA-KEY")
     assert token.call_count == 3
+
+
+# --- A local AC14K_M CA in custom_components/localthings/certs/ ---------------
+
+
+def _drop_local_ca(directory: Path, *, cert: bool = True, key: bool = True) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    if cert:
+        # CRLF and a BOM, as a Windows editor saves it: normalized on load.
+        (directory / "ac14k_m.pem").write_text("\ufeffLOCAL-CA-CERT\r\n\r\n", encoding="utf-8")
+    if key:
+        (directory / "ac14k_m.key").write_text("LOCAL-CA-KEY\n", encoding="utf-8")
+
+
+def test_load_local_ca_reads_and_normalizes_both_files(tmp_path) -> None:
+    from custom_components.localthings.config_flow import _load_local_ca
+
+    _drop_local_ca(tmp_path)
+
+    assert _load_local_ca(tmp_path) == ("LOCAL-CA-CERT", "LOCAL-CA-KEY")
+
+
+def test_load_local_ca_without_a_directory_is_none(tmp_path) -> None:
+    from custom_components.localthings.config_flow import _load_local_ca
+
+    assert _load_local_ca(tmp_path / "missing") is None
+
+
+def test_half_a_local_ca_is_ignored_and_says_so(tmp_path, caplog) -> None:
+    from custom_components.localthings.config_flow import _load_local_ca
+
+    _drop_local_ca(tmp_path, key=False)
+
+    with caplog.at_level(logging.WARNING):
+        assert _load_local_ca(tmp_path) is None
+    assert "ac14k_m.key" in caplog.text
+
+
+async def test_a_local_ca_signs_the_first_leaf_without_asking(
+    hass: HomeAssistant, legacy_bridge, tmp_path, caplog
+) -> None:
+    token, probe, mint_self_signed = legacy_bridge
+    _drop_local_ca(tmp_path)
+
+    with (
+        patch("custom_components.localthings.config_flow.LOCAL_CA_DIR", tmp_path),
+        patch(
+            "custom_components.localthings.config_flow._mint_credentials",
+            return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+        ) as mint_ca,
+        caplog.at_level(logging.INFO, logger="custom_components.localthings.config_flow"),
+    ):
+        result = await _start(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+        )
+
+    assert mint_ca.call_args.args == ("LOCAL-CA-CERT", "LOCAL-CA-KEY")
+    assert mint_self_signed.called is False
+    assert token.call_args.args[2:] == ("CA-FULLCHAIN", "CA-LEAFKEY")
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_CA_CERT_PEM] == "LOCAL-CA-CERT"
+    assert result["data"][CONF_CA_KEY_PEM] == "LOCAL-CA-KEY"
+    assert str(tmp_path) in caplog.text
+    assert "Requesting a device token" in caplog.text
+
+
+async def test_a_refused_local_ca_leaf_retries_the_ca_itself(
+    hass: HomeAssistant, legacy_bridge, tmp_path, caplog
+) -> None:
+    from custom_components.localthings.const import CONF_LEAF_KEY_PEM
+    from custom_components.localthings.legacy_http_token import CallbackCertRejected
+
+    token, _, _mint = legacy_bridge
+    token.side_effect = [CallbackCertRejected("unknown ca"), "tok-original-identity"]
+    _drop_local_ca(tmp_path)
+
+    with (
+        patch("custom_components.localthings.config_flow.LOCAL_CA_DIR", tmp_path),
+        patch(
+            "custom_components.localthings.config_flow._mint_credentials",
+            return_value=("CA-FULLCHAIN", "CA-LEAFKEY"),
+        ),
+        caplog.at_level(logging.INFO, logger="custom_components.localthings.config_flow"),
+    ):
+        result = await _start(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_DEVICE_TOKEN: ""}
+        )
+
+    assert token.call_args_list[-1].args[2:] == ("LOCAL-CA-CERT", "LOCAL-CA-KEY")
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_LEAF_CERT_PEM] == "LOCAL-CA-CERT"
+    assert result["data"][CONF_LEAF_KEY_PEM] == "LOCAL-CA-KEY"
+    assert "retrying with the AC14K_M CA certificate itself" in caplog.text
+
+
+async def test_a_local_ca_that_cannot_mint_stays_on_the_address_form(
+    hass: HomeAssistant, legacy_bridge, tmp_path
+) -> None:
+    from custom_components.localthings.config_flow import InvalidCA
+
+    token, _, _mint = legacy_bridge
+    _drop_local_ca(tmp_path)
+
+    with (
+        patch("custom_components.localthings.config_flow.LOCAL_CA_DIR", tmp_path),
+        patch(
+            "custom_components.localthings.config_flow._mint_credentials",
+            side_effect=InvalidCA("bad pem"),
+        ),
+    ):
+        result = await _start(hass)
+
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"base": "invalid_ca"}
+    assert token.called is False
