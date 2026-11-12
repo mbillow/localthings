@@ -131,6 +131,7 @@ COVERAGE: list[Capability] = [
     # Static model, category and feature flags.
     Capability(href="/sec/tv/deviceinfo"),
     Capability(href="/sec/tv/category/monitor"),
+    Capability(href="/sec/tv/category/tv"),
     Capability(href="/sec/tv/support/features"),
     Capability(href="/sec/tv/onsupport"),
     Capability(href="/sec/tv/tapview"),
