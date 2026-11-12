@@ -41,6 +41,11 @@ LocalThings connects Home Assistant to Samsung washers, dryers, refrigerators, a
 | Dryer | Washer and washer-dryer |
 | EHS heat pump | Water purifier |
 
+Initial [Samsung TV support](docs/samsung-tv.md) provides picture-mode settings
+on compatible `oic.d.tv` devices. An existing OCF credential is required;
+most owners cannot acquire one yet. A TV media player and remote are not
+included in this first slice.
+
 What you see depends on what each appliance reports. Typical controls and sensors include power, program or mode selection, start, pause and stop, temperatures and setpoints, time remaining and finish time, door and child-lock state, energy use, filter status and alarms.
 
 Most Samsung appliances from about 2022 onward work, and so do some earlier washers, air conditioners and wall ovens that use an older local interface. See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888). Setup detects which interface an appliance has, and tells you if it finds none.

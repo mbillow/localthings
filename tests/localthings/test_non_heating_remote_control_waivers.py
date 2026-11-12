@@ -18,6 +18,7 @@ from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator, _payload_present_in
 from custom_components.localthings.registry.capabilities import microwave, oven, range_hood
 from custom_components.localthings.registry.discovery import BoundEntity
+from custom_components.localthings.registry.entities import LightDesc, SelectDesc, SwitchDesc
 from tests.conftest import _load_device
 
 _WAIVED = ("lamp", "sound", "energy_saving")
@@ -60,7 +61,11 @@ def test_microwave_lamp_writes_waive_remote_control() -> None:
         microwave._lamp_level_write,
         microwave._lamp_brightness_write,
     )
-    waived = [d for d in microwave.MICROWAVE_MODE.entities if d.write_fn in lamp_writers]
+    waived = [
+        d
+        for d in microwave.MICROWAVE_MODE.entities
+        if isinstance(d, (LightDesc, SelectDesc, SwitchDesc)) and d.write_fn in lamp_writers
+    ]
     assert len(waived) == len(lamp_writers)
     assert all(d.needs_remote_control is False for d in waived)
 

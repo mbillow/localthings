@@ -6,6 +6,16 @@ import pytest
 GOLDEN = Path(__file__).parent / "fixtures" / "golden"
 
 
+def test_registry_reproduces_golden_state_keys_for_tv_qn90a():
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / "tv_qn90a.json").read_text())
+    assert (
+        _new_state_keys("tv_qn90a", _load_device("tv_qn90a"), device_types=("oic.wk.d", "oic.d.tv"))
+        == golden["state_keys"]
+    )
+
+
 def _new_state_keys(name, resources, device_types=()):
     from custom_components.localthings.registry.adapter import flatten
     from custom_components.localthings.registry.by_type import resolve
