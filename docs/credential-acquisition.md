@@ -188,14 +188,15 @@ the same format.
 
 ## Samsung AF18DX936WFN AC with rooted Android 13
 
-An owner recovered a PSK for an `AF18DX936WFN` air conditioner
-(`R18_BIXBY_FAC_TIME_23K`, MAIN and RAC subdevices) from the running
-SmartThings app's native credential list after two inspected persisted SVR
-stores contained no type-1 PSK records. The PSK identity was the app's own
-owner UUID, matching the appliance's `devowneruuid` and `rowneruuid`.
+An owner recovered an `AF18DX936WFN` air conditioner's PSK
+(`R18_BIXBY_FAC_TIME_23K`, MAIN and RAC subdevices) from SmartThings' native
+credential list. Follow-up recovery on SmartThings 1.8.52.23 found the same PSK
+in an encrypted, account-specific `<UUID>.datenc` store omitted by the original
+file scan; the two inspected plaintext SVR stores contained no PSK. Its identity
+was the app's owner UUID, matching the appliance's `devowneruuid` and `rowneruuid`.
 Importing it as **Owner** worked on LocalThings 0.33.0. The
 [hardware report in #435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
-records the tested environment, recovery details and verification limits.
+records the recovery and verification details.
 
 ## References
 
