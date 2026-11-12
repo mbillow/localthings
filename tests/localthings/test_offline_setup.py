@@ -694,3 +694,74 @@ async def test_broken_session_still_reconnects_within_the_cycle(
 
     assert poll.call_count == 2
     close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# A Collection board's href that missed the first live read (issue #833)
+# ---------------------------------------------------------------------------
+
+_EHS_TYPES = ("oic.wk.d", "oic.d.airconditioner")
+_EHS_CYCLE = "/0a1b2c3d-0000-4000-8000-000001200000/ehscycle/vs/0"
+
+
+async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_read(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Issue #833: the MIM-H04EN's heat pump answered its seed without
+    /ehscycle/vs/0 on the first live read after a load from the snapshot.
+    Discovering from that read alone dropped the cycle log's 11 entities and
+    reconciled the entry down to the smaller set, orphaning them until a
+    manual reload. /oic/res still advertises the href, so discovery keeps it
+    from the snapshot; its value stays out of the state cache until it
+    answers."""
+    from dataclasses import asdict
+
+    from custom_components.localthings.registry.encode import json_safe
+    from tests.conftest import _discover_full, _load_device_full
+
+    main, oic_res, seeds = _load_device_full("ehs_mim_h04en")
+    _, materialized, _, full, _ = _discover_full(main, oic_res, seeds, _EHS_TYPES)
+    assert _EHS_CYCLE in full
+    identity = DeviceIdentity(
+        manufacturer="Samsung Electronics",
+        model="MIM-H04EN",
+        name="EHS",
+        serial=None,
+        device_id="7b1f0c9e-2a44-4d6b-9f10-4c8e2b5a0d31",
+        device_types=_EHS_TYPES,
+        raw={"/oic/res": oic_res},
+    )
+    hass_storage[_store_key(mock_entry)] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": _store_key(mock_entry),
+        "data": {
+            "resources": json_safe(full),
+            "subdevice_candidates": [asdict(s) for s in materialized],
+            "identity": asdict(identity),
+        },
+    }
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    cycle_keys = {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE}
+    assert len(cycle_keys) == 11
+
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+
+    def _enumerate(resources):
+        coordinator.subdevices = list(materialized)
+        return resources
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=missed),
+        patch.object(coordinator, "_enumerate_subdevices_blocking", side_effect=_enumerate),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        await coordinator._async_update_data()
+
+    reload.assert_not_called()
+    assert {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE} == cycle_keys
+    assert _EHS_CYCLE not in coordinator.last_resources
+    assert _EHS_CYCLE in hass_storage[_store_key(mock_entry)]["data"]["resources"]

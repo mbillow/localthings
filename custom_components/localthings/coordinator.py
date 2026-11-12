@@ -2157,15 +2157,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return True
 
     async def _with_remembered_resources(self, live: dict[str, dict]) -> dict[str, dict]:
-        """A flat board's discovery read, plus what the last snapshot holds
-        for the advertised hrefs that didn't answer this time.
+        """A first discovery read, plus what the last snapshot holds for the
+        advertised hrefs that didn't answer this time.
 
         A flat board is read one href at a time, and an href can miss a read
-        now and then. Discovering from the read alone would drop its
-        entities until the next restart. Only discovery sees the remembered
-        reps: the state cache gets the live read alone, so an entity kept
-        this way stays without a value until its href answers. An href
-        /oic/res no longer advertises is let go.
+        now and then. A Collection board can miss one too: a subdevice's
+        seed that times out or comes back short drops every href it carries
+        (issue #833, an EHS heat pump's /ehscycle/vs/0). Discovering from the
+        read alone would drop those entities for the whole run, and on a
+        load from the snapshot _reconcile_rehydrated would reload the entry
+        down to the smaller set, orphaning them. Only discovery sees the
+        remembered reps: the state cache gets the live read alone, so an
+        entity kept this way stays without a value until its href answers.
+        An href /oic/res no longer advertises is let go.
         """
         remembered = self._rehydrate_resources
         if remembered is None:
@@ -2897,7 +2901,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *self.subdevices,
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
-            found = await self._with_remembered_resources(resources) if self._flat else resources
+            found = await self._with_remembered_resources(resources)
             try:
                 stored = await self._snapshot_store.async_load()
             except Exception:
