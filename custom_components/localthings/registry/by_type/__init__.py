@@ -23,6 +23,7 @@ from . import (
     refrigerator,
     robot_vacuum,
     soundbar,
+    tv,
     vacuum_station,
     washer,
     water_purifier,
@@ -66,6 +67,7 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "refrigerator": refrigerator.REGISTRY,
     "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
+    "tv": tv.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
@@ -248,7 +250,7 @@ def _consumer_model_key(description: str) -> str | None:
 # Every value must already be a key in `_REGISTRY_BY_KEY` (checked by
 # `test_every_oic_type_resolves_to_a_real_registry`) -- this deliberately
 # stops short of the full OCF/SmartThings vocabulary, since most of it (lights,
-# locks, cameras, TVs, ...) has no registry here to point at, and
+# locks, cameras, ...) has no registry here to point at, and
 # 'oic.d.robotcleaner' names an actual robot vacuum, a different product from
 # the clean/auto-empty *station* `vacuum_station` covers.
 #
@@ -270,6 +272,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",
+    "oic.d.tv": "tv",
     "oic.d.washer": "washer",
     "x.com.st.d.airqualitysensor": "air_monitor",
     "x.com.st.d.dehumidifier": "dehumidifier",

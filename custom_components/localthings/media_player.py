@@ -83,6 +83,8 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         super().__init__(coordinator, bound)
         self._desc = cast(MediaPlayerDesc, bound.desc)
         self._attr_device_class = MediaPlayerDeviceClass(self._desc.device_class)
+        if self._attr_device_class is MediaPlayerDeviceClass.TV:
+            self._attr_media_content_type = MediaType.VIDEO
         self._attr_name = None  # this entity *is* the device
         # The device steps in integers 0..100.
         self._attr_volume_step = 0.01
@@ -138,11 +140,21 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         )
 
     def _mode_options(self, surface: MediaModeSurface | None) -> list[str]:
-        return _strings(self._rep(surface.href).get(surface.options_field)) if surface else []
+        if surface is None:
+            return []
+        rep = self._rep(surface.href)
+        if surface.options_fn is not None:
+            return list(surface.options_fn(rep))
+        return _strings(rep.get(surface.options_field))
 
-    @staticmethod
-    def _label(surface: MediaModeSurface, value: str) -> str:
+    def _label(self, surface: MediaModeSurface, value: str) -> str:
+        if surface.options_fn is not None:
+            return surface.options_fn(self._rep(surface.href)).get(value, value)
         return (surface.labels or {}).get(value, value)
+
+    def _supports_command(self, command: str) -> bool:
+        fn = self._desc.supported_commands_fn
+        return fn is None or command in fn(self._resources)
 
     def _wire_value(self, surface: MediaModeSurface | None, label: str) -> str:
         for value in self._mode_options(surface):
@@ -154,15 +166,18 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
-        features = (
-            MediaPlayerEntityFeature.TURN_ON
-            | MediaPlayerEntityFeature.TURN_OFF
-            | MediaPlayerEntityFeature.VOLUME_SET
-            | MediaPlayerEntityFeature.VOLUME_MUTE
-        )
-        if self._mode_options(self._desc.source):
+        features = MediaPlayerEntityFeature(0)
+        for command, feature in (
+            ("power_on", MediaPlayerEntityFeature.TURN_ON),
+            ("power_off", MediaPlayerEntityFeature.TURN_OFF),
+            ("volume", MediaPlayerEntityFeature.VOLUME_SET),
+            ("mute", MediaPlayerEntityFeature.VOLUME_MUTE),
+        ):
+            if self._supports_command(command):
+                features |= feature
+        if self._supports_command("source") and self._mode_options(self._desc.source):
             features |= MediaPlayerEntityFeature.SELECT_SOURCE
-        if self._mode_options(self._desc.sound_mode):
+        if self._supports_command("sound_mode") and self._mode_options(self._desc.sound_mode):
             features |= MediaPlayerEntityFeature.SELECT_SOUND_MODE
         if "mode" in self._rep(self._desc.shuffle_href):
             features |= MediaPlayerEntityFeature.SHUFFLE_SET

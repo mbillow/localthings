@@ -1,0 +1,7 @@
+{
+  "state_keys": [
+    "media_player",
+    "network_connection",
+    "picture_mode"
+  ]
+}
