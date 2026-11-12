@@ -320,6 +320,42 @@ class TestWmSetinfoFlags:
             == "FilterAlarm"
         )
 
+    def test_family_hub_none_state_placeholders_filtered(self):
+        """Family Hub (25K_REF_LCD_FHUB10.0) placeholders carry state 'none'."""
+        none_rows = [
+            {
+                "x.com.samsung.da.code": code,
+                "x.com.samsung.da.state": "none",
+                "x.com.samsung.da.triggeredTime": "2026-11-11T09:43:48Z",
+            }
+            for code in (
+                "Freeze_Door_Alarm",
+                "Fridge_Door_Alarm",
+                "Ice_Maker_No_Water",
+                "Peltier_Error",
+                "Compressor_Error",
+                "Power_Outage",
+            )
+        ]
+        deleted = {
+            "x.com.samsung.da.code": "F-Alarm",
+            "x.com.samsung.da.state": "deleted",
+            "x.com.samsung.da.triggeredTime": "2026-11-11T14:23:24Z",
+        }
+        assert common._active_alarm_codes([*none_rows, deleted]) == "none"
+        assert (
+            common._active_alarm_codes(
+                [
+                    *none_rows,
+                    {
+                        "x.com.samsung.da.code": "Fridge_High_Temp",
+                        "x.com.samsung.da.state": "Created",
+                    },
+                ]
+            )
+            == "Fridge_High_Temp"
+        )
+
 
 class TestKidsLockFallback:
     def test_generic_is_read_only(self):
