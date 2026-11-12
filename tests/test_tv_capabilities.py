@@ -30,7 +30,7 @@ def test_full_capture_reuses_plumbing_without_hiding_unsupported_controls():
         "/sec/tv/remotecontrol",
         "/sec/tv/switch/ambient",
     ]
-    assert set(flatten(bound, resources)) == {"network_connection", "picture_mode"}
+    assert set(flatten(bound, resources)) == {"media_player", "network_connection", "picture_mode"}
     selects = [b.desc for b in bound if isinstance(b.desc, SelectDesc)]
     assert len(selects) == 1 and selects[0].key == "picture_mode"
     assert selects[0].control_response and not selects[0].confirm_on_refusal

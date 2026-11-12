@@ -1,9 +1,11 @@
-# Samsung TV: initial picture-mode settings
+# Samsung TV: OCF media player and settings
 
 A Samsung TV reporting `oic.d.tv` now uses the existing Tizen TV capability
-profile shared with Smart Monitors. This first slice provides **picture mode**
-when the TV advertises a writable mode list. Input and sound mode are bound
-without standalone selects, reserved for the shared media player.
+profile shared with Smart Monitors. The shared media-player entity provides
+power-off, volume, absolute mute, input and sound mode when the device reports
+those controls as writable. Picture mode remains a separate settings select.
+Source and sound-mode names come from the TV; duplicate input names are
+disambiguated by their wire IDs. Options update as the device changes them.
 
 ## Setup
 
@@ -34,10 +36,15 @@ Game HDR current mode is not advertised as writable, so it is not a new option.
 
 Known AV plumbing reuses the shared AV/TV coverage. Useful unsupported remote,
 native-app, ambient-mode and weather resources remain visible as coverage gaps.
-A media player, standby wake, WSS remote, app launching, casting and
-external-speaker mute routing are not part of this slice.
+Standby wake, WSS remote, app launching, casting and external-speaker mute
+routing are not part of this slice. The TV cannot wake over its offline OCF
+endpoint, so TURN_ON is not advertised and a direct turn-on call is rejected.
+Playing/paused states and playback buttons are not invented from input state.
+With external audio, the TV can report stale audio state: target the speaker
+entity directly rather than infer an external speaker toggle from the TV.
 [Local-extension investigation notes](investigations/qn90a-local-controls.md)
 record the hardware findings for those follow-ups; they are not shipped features.
 
-The shared profile retains the default write-settle window. A six-second HDMI
-settle claim is unnecessary here: this PR does not expose input switching.
+The shared profile retains the default write-settle window for input switching.
+Native mode writes returning an explicit refusal are accepted as an already-current
+no-op only after the coordinator confirms the exact value with a fresh device GET.
