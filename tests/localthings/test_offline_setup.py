@@ -714,6 +714,27 @@ async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_rea
     manual reload. /oic/res still advertises the href, so discovery keeps it
     from the snapshot; its value stays out of the state cache until it
     answers."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    assert _EHS_CYCLE in full
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    cycle_keys = {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE}
+    assert len(cycle_keys) == 11
+
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+    reload = await _first_live_cycle(hass, coordinator, missed, materialized)
+
+    reload.assert_not_called()
+    assert {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE} == cycle_keys
+    assert _EHS_CYCLE not in coordinator.last_resources
+    # Kept for this run, not banked: a second miss in a row lets it go.
+    assert _EHS_CYCLE not in hass_storage[_store_key(mock_entry)]["data"]["resources"]
+
+
+def _ehs_snapshot(hass_storage, entry, resources=None):
+    """The MIM-H04EN's full discovery banked as `entry`'s snapshot; returns
+    (full resources, materialized subdevices)."""
     from dataclasses import asdict
 
     from custom_components.localthings.registry.encode import json_safe
@@ -721,7 +742,6 @@ async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_rea
 
     main, oic_res, seeds = _load_device_full("ehs_mim_h04en")
     _, materialized, _, full, _ = _discover_full(main, oic_res, seeds, _EHS_TYPES)
-    assert _EHS_CYCLE in full
     identity = DeviceIdentity(
         manufacturer="Samsung Electronics",
         model="MIM-H04EN",
@@ -731,37 +751,87 @@ async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_rea
         device_types=_EHS_TYPES,
         raw={"/oic/res": oic_res},
     )
-    hass_storage[_store_key(mock_entry)] = {
+    hass_storage[_store_key(entry)] = {
         "version": 1,
         "minor_version": 1,
-        "key": _store_key(mock_entry),
+        "key": _store_key(entry),
         "data": {
-            "resources": json_safe(full),
+            "resources": json_safe(full if resources is None else resources),
             "subdevice_candidates": [asdict(s) for s in materialized],
             "identity": asdict(identity),
         },
     }
+    return full, materialized, identity
 
-    coordinator = LocalThingsCoordinator(hass, mock_entry)
-    assert await coordinator.async_rehydrate()
-    cycle_keys = {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE}
-    assert len(cycle_keys) == 11
 
-    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
-
+async def _first_live_cycle(hass, coordinator, live, subdevices):
     def _enumerate(resources):
-        coordinator.subdevices = list(materialized)
+        coordinator.subdevices = list(subdevices)
         return resources
 
     with (
-        patch.object(coordinator, "_poll_once", return_value=missed),
+        patch.object(coordinator, "_poll_once", return_value=live),
         patch.object(coordinator, "_enumerate_subdevices_blocking", side_effect=_enumerate),
         patch.object(coordinator, "_attempt_observe_mode"),
         patch.object(hass.config_entries, "async_schedule_reload") as reload,
     ):
         await coordinator._async_update_data()
+    return reload
 
-    reload.assert_not_called()
-    assert {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE} == cycle_keys
-    assert _EHS_CYCLE not in coordinator.last_resources
-    assert _EHS_CYCLE in hass_storage[_store_key(mock_entry)]["data"]["resources"]
+
+async def test_collection_board_lets_go_of_an_href_missed_twice_in_a_row(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """The first miss keeps the cycle log's entities but doesn't bank it;
+    a live first discovery that misses it again binds nothing for it, so an
+    href a batch has stopped carrying can't stay bound forever."""
+    full, materialized, identity = _ehs_snapshot(hass_storage, mock_entry)
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+
+    first = LocalThingsCoordinator(hass, mock_entry)
+    first._identity = identity
+    await _first_live_cycle(hass, first, missed, materialized)
+    assert any(b.href == _EHS_CYCLE for b in first.bound)
+
+    second = LocalThingsCoordinator(hass, mock_entry)
+    second._identity = identity
+    await _first_live_cycle(hass, second, missed, materialized)
+    assert not any(b.href == _EHS_CYCLE for b in second.bound)
+
+
+async def test_collection_board_keeps_nothing_for_a_sibling_whose_seed_did_not_answer(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A sibling whose seed timed out isn't enumerated this cycle. Its
+    remembered hrefs stay out: kept, they would land in MAIN's view as
+    coverage gaps or bind as MAIN's own entities."""
+    full, materialized, identity = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._identity = identity
+    await _first_live_cycle(hass, coordinator, main_only, [])
+
+    assert coordinator.subdevices == []
+    assert not any(heat_pump.owns(b.href) for b in coordinator.bound)
+    assert not any(heat_pump.owns(href) for href in coordinator._unbound_hrefs)
+    assert not any(heat_pump.owns(href) for href in coordinator._discovery_extra)
+
+
+async def test_collection_board_keeps_nothing_for_a_sibling_that_is_not_live(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A sibling the gate rejected or the user disabled is a known
+    candidate that didn't materialize; its hrefs keep nothing, even though
+    /oic/res advertises them."""
+    full, materialized, identity = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._identity = identity
+    live = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+
+    coordinator.subdevices = []
+    assert coordinator._remembered_collection_hrefs(live, full, [heat_pump]) == {}
+    coordinator.subdevices = [heat_pump]
+    assert set(coordinator._remembered_collection_hrefs(live, full, [heat_pump])) == {_EHS_CYCLE}

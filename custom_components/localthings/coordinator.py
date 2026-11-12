@@ -557,8 +557,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._rehydrate_resources: dict[str, dict] | None = None
         self._rehydrated_keys: frozenset[tuple[str, str]] | None = None
         self._rehydrated_included: frozenset[tuple[str, str]] | None = None
-        # What a flat board's discovery took from the last snapshot because
-        # the href didn't answer this time -- see _with_remembered_resources.
+        # What first discovery took from the last snapshot because the href
+        # didn't answer this time -- see _with_remembered_resources (flat
+        # boards) and _remembered_collection_hrefs (Collection boards).
         self._discovery_extra: dict[str, dict] = {}
         # Sibling indoor subdevices on this connection (issue #177); set
         # once at first discovery, narrowed to the ones with live state (see
@@ -2156,37 +2157,61 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         return True
 
-    async def _with_remembered_resources(self, live: dict[str, dict]) -> dict[str, dict]:
-        """A first discovery read, plus what the last snapshot holds for the
-        advertised hrefs that didn't answer this time.
-
-        A flat board is read one href at a time, and an href can miss a read
-        now and then. A Collection board can miss one too: a subdevice's
-        seed that times out or comes back short drops every href it carries
-        (issue #833, an EHS heat pump's /ehscycle/vs/0). Discovering from the
-        read alone would drop those entities for the whole run, and on a
-        load from the snapshot _reconcile_rehydrated would reload the entry
-        down to the smaller set, orphaning them. Only discovery sees the
-        remembered reps: the state cache gets the live read alone, so an
-        entity kept this way stays without a value until its href answers.
-        An href /oic/res no longer advertises is let go.
-        """
+    async def _remembered_snapshot(self) -> tuple[dict[str, dict], list[Subdevice]]:
+        """The last snapshot's resources and subdevice candidates, read once
+        per first discovery. A load from the snapshot already holds its
+        resources; the candidates are read back either way."""
+        try:
+            stored = await self._snapshot_store.async_load()
+        except Exception as e:  # corrupt or unreadable store
+            self._log.debug("could not read discovery snapshot: %s", e)
+            stored = None
+        stored = stored if isinstance(stored, dict) else {}
         remembered = self._rehydrate_resources
         if remembered is None:
+            remembered = from_json_safe(stored["resources"]) if stored.get("resources") else {}
+        candidates: list[Subdevice] = []
+        for su in stored.get("subdevice_candidates") or ():
             try:
-                stored = await self._snapshot_store.async_load()
-            except Exception as e:  # corrupt or unreadable store
-                self._log.debug("could not read discovery snapshot: %s", e)
-                stored = None
-            remembered = (
-                from_json_safe(stored["resources"]) if stored and stored.get("resources") else {}
-            )
+                candidates.append(
+                    Subdevice(
+                        kind=su["kind"],
+                        key=su["key"],
+                        seed_path=tuple(su.get("seed_path") or ()),
+                        flat_hrefs=tuple(su.get("flat_hrefs") or ()),
+                    )
+                )
+            except (KeyError, TypeError):
+                continue
+        return remembered, candidates
+
+    def _missed(self, live: dict[str, dict], remembered: dict[str, dict]) -> dict[str, dict]:
+        """Remembered reps for the hrefs /oic/res still advertises that this
+        read didn't return."""
         advertised = set(flat_hrefs(self._oic_res()))
-        self._discovery_extra = {
+        return {
             href: rep
             for href, rep in remembered.items()
             if href not in live and href in advertised and isinstance(rep, dict)
         }
+
+    async def _with_remembered_resources(
+        self, live: dict[str, dict], remembered: dict[str, dict] | None = None
+    ) -> dict[str, dict]:
+        """A flat board's discovery read, plus what the last snapshot holds
+        for the advertised hrefs that didn't answer this time.
+
+        A flat board is read one href at a time, and an href can miss a read
+        now and then. Discovering from the read alone would drop its
+        entities until the next restart. Only discovery sees the remembered
+        reps: the state cache gets the live read alone, so an entity kept
+        this way stays without a value until its href answers. An href
+        /oic/res no longer advertises is let go. Collection boards take the
+        narrower _remembered_collection_hrefs instead.
+        """
+        if remembered is None:
+            remembered, _ = await self._remembered_snapshot()
+        self._discovery_extra = self._missed(live, remembered)
         if self._discovery_extra:
             self._log.debug(
                 "discovery keeps %d resources from the last snapshot that didn't answer: %s",
@@ -2194,6 +2219,36 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sorted(self._discovery_extra),
             )
         return {**self._discovery_extra, **live}
+
+    def _remembered_collection_hrefs(
+        self,
+        live: dict[str, dict],
+        remembered: dict[str, dict],
+        known: list[Subdevice],
+    ) -> dict[str, dict]:
+        """What a Collection board's first discovery keeps from the snapshot
+        (issue #833): an advertised href missing from a read whose owner did
+        answer -- a seed that came back short, like an EHS heat pump's
+        without /ehscycle/vs/0. Called after a discovery of the live read,
+        so `self.subdevices` holds only the siblings that answered and
+        passed the liveness gate on live data.
+
+        Being advertised in /oic/res says less here than on a flat board,
+        which reads exactly that list, so ownership narrows it: MAIN's
+        hrefs, and those of a sibling materialized from this read. A
+        sibling whose seed didn't answer, one the gate rejected and one the
+        user disabled are all in `known` but not live, and keep nothing --
+        their hrefs would otherwise fall into MAIN's view or prop up a
+        sibling on stale state.
+        """
+        live_keys = {su.key for su in self.subdevices}
+        elsewhere = [su for su in known if su.key not in live_keys]
+        return {
+            href: rep
+            for href, rep in self._missed(live, remembered).items()
+            if any(su.owns(href) for su in self.subdevices)
+            or not any(su.owns(href) for su in elsewhere)
+        }
 
     async def async_rehydrate(self) -> bool:
         """Register the last known entity set without reaching the device.
@@ -2901,19 +2956,42 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *self.subdevices,
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
-            found = await self._with_remembered_resources(resources)
-            try:
-                stored = await self._snapshot_store.async_load()
-            except Exception:
-                stored = None
-            remembered = self._rehydrate_resources or (
-                from_json_safe(stored.get("resources", {})) if stored else {}
-            )
-            self._run_discovery(found)
+            remembered, stored_candidates = await self._remembered_snapshot()
+
+            def _discover(found: dict[str, dict]) -> None:
+                # _run_discovery narrows self.subdevices to the materialized
+                # ones; a repeat pass starts from this cycle's candidates, or
+                # it would lose the disabled ones and the rejected ones' gate.
+                self.subdevices = list(candidates)
+                self._run_discovery(found)
+
+            # Kept for this run but not banked: an href a Collection board
+            # misses on two first reads in a row is let go (see below).
+            unbanked: set[str] = set()
+            if self._flat:
+                found = await self._with_remembered_resources(resources, remembered)
+                _discover(found)
+            else:
+                found = resources
+                _discover(found)
+                kept = self._remembered_collection_hrefs(
+                    resources, remembered, [*candidates, *stored_candidates]
+                )
+                if kept:
+                    self._log.debug(
+                        "discovery keeps %d resources from the last snapshot that "
+                        "didn't answer: %s",
+                        len(kept),
+                        sorted(kept),
+                    )
+                    self._discovery_extra = dict(kept)
+                    unbanked = set(kept)
+                    found = {**kept, **resources}
+                    _discover(found)
             complete = self._registration_resources(found, remembered)
             if complete != found:
                 found = complete
-                self._run_discovery(found)
+                _discover(found)
             self._registration_evidence = found
             self._discovery_extra.update(
                 {href: rep for href, rep in found.items() if rep != resources.get(href)}
@@ -2927,8 +3005,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._rehydrate_resources = previous
             # Banked before the reconcile below, so a reload it schedules
             # comes up against this discovery rather than the one that is
-            # being replaced.
-            await self._async_save_snapshot(found, candidates)
+            # being replaced. A flat board banks what it kept, since it reads
+            # every advertised href each cycle; a Collection board doesn't,
+            # so an href its batch has stopped carrying while /oic/res still
+            # lists it is dropped on the next restart instead of kept bound
+            # with no value forever.
+            await self._async_save_snapshot(
+                {href: rep for href, rep in found.items() if href not in unbanked},
+                candidates,
+            )
             self._reconcile_rehydrated(found)
             resources = self._live_subdevice_resources(resources)
         sweep_mismatch = False
