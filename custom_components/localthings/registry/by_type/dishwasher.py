@@ -19,6 +19,8 @@ REGISTRY = DeviceRegistry(
             dishwasher.OPERATION_ORIGIN,
             laundry.JOB_BEGINNING_STATUS,
             laundry.DOOR_LED,
+            # Volume_Off/Low/Med/High on the DW80H73WBI0U1 (#821).
+            laundry.BUZZER_SOUND,
             laundry.SOUND_MODE,
             laundry.SOUND_VOLUME,
         ]
