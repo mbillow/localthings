@@ -152,6 +152,25 @@ def mode_spec_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str, 
     return Store(hass, _MODE_SPEC_STORE_VERSION, f"{DOMAIN}.{entry.entry_id}.mode_specs")
 
 
+_LAST_STATE_VERSION = 1
+
+
+def last_state_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str, Any]]:
+    """The live state as it stood when this entry last closed; see
+    LocalThingsCoordinator.async_restore_off_state."""
+    return Store(hass, _LAST_STATE_VERSION, f"{DOMAIN}.{entry.entry_id}.last_state")
+
+
+def _powered_off(resources: dict[str, dict]) -> bool:
+    """Whether these reps have the appliance off, read from the same resource
+    the power entity binds to (POWER_GENERIC first, then POWER_VS_FALLBACK)."""
+    generic = resources.get("/power/0")
+    if generic is not None and "value" in generic:
+        return generic["value"] is False
+    power = (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power")
+    return isinstance(power, str) and power.lower() == "off"
+
+
 class _NoOpDescriptor:
     """No-op: StateCache requires an on_observation hook; this integration
     doesn't use per-capability observation hooks."""
@@ -546,6 +565,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._inclusion_retry_at = 0.0
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
+        self._last_state_store = last_state_store(hass, entry)
+        # Set by async_restore_off_state: the cache holds the state saved at
+        # the last close, carried through outages as a discovered device's is.
+        self._carrying_off_state = False
         # Loaded by async_load_mode_specs before the first refresh.
         self._mode_specs: dict[str, Any] = {}
         self._mode_specs_lock = threading.Lock()
@@ -1374,12 +1397,55 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sess.close()
 
     async def async_close(self) -> None:
+        await self._async_save_last_state()
         self._closed = True
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
         self._observe.close()
         await self.hass.async_add_executor_job(self._close_session)
+
+    async def _async_save_last_state(self) -> None:
+        if self._closed or self._flat:
+            return
+        resources = self._cache.snapshot()
+        if not resources:
+            return
+        try:
+            await self._last_state_store.async_save({"resources": json_safe(resources)})
+        except Exception as e:
+            self._log.debug("could not write the last state: %s", e)
+
+    async def async_restore_off_state(self) -> bool:
+        """Seed the cache from the state saved at the last close when it has
+        the appliance powered off. A washer that powers itself off stops
+        answering locally a few minutes later, so a restart after that would
+        otherwise show it unavailable until someone wakes it by hand; carrying
+        "off" is what an outage mid-run already shows. Any other saved state
+        still loads unavailable."""
+        if self._flat:
+            return False
+        try:
+            stored = await self._last_state_store.async_load()
+        except Exception as e:  # corrupt or unreadable store
+            self._log.debug("could not read the last state: %s", e)
+            return False
+        if not stored or not stored.get("resources"):
+            return False
+        resources = from_json_safe(stored["resources"])
+        if not _powered_off(resources):
+            return False
+        # Unhooked so seeding doesn't schedule a push before any entity exists.
+        self._cache.set_on_change(lambda _changed, _source: None)
+        try:
+            for href, rep in resources.items():
+                self._cache.apply_rep(href, rep, "restored")
+        finally:
+            self._cache.set_on_change(self._on_cache_changed)
+        self._carrying_off_state = True
+        self.data = flatten(self.bound, self.entity_resources())
+        self._log.info("restored the last known state (powered off) until the device answers")
+        return True
 
     def _on_cache_changed(self, changed: bool, source: str) -> None:
         """StateCache.set_on_change callback. Runs on whatever thread
@@ -2785,7 +2851,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._observe.downgrade_to_poll()
         # A flat board that stops answering is switched off or gone: its last
         # state isn't carried on as an appliance's is.
-        if self._discovered and self._cache.snapshot() and not self._flat:
+        carried = self._discovered or self._carrying_off_state
+        if carried and self._cache.snapshot() and not self._flat:
             self._log.debug("Full error:", exc_info=e)
             return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e

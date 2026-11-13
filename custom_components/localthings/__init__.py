@@ -22,6 +22,7 @@ from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, 
 from .coordinator import (
     LocalThingsCoordinator,
     disabled_subdevice_keys,
+    last_state_store,
     mode_spec_store,
     snapshot_store,
 )
@@ -295,7 +296,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Start out as an offline load always has: entities unavailable until
         # the device answers, and no "Error fetching" from the base class
         # when an appliance that is simply switched off fails that first poll.
-        coordinator.last_update_success = False
+        # The one exception is an appliance that was powered off when this
+        # entry last closed, which carries on as off.
+        coordinator.last_update_success = await coordinator.async_restore_off_state()
         # This refresh starts before the platforms are forwarded, so a device
         # that answers quickly can finish its live discovery while setup is
         # still going. The platforms then register from the live set instead
@@ -416,6 +419,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """
     await snapshot_store(hass, entry).async_remove()
     await mode_spec_store(hass, entry).async_remove()
+    await last_state_store(hass, entry).async_remove()
     async_delete_removed_issues(hass, entry)
 
 
