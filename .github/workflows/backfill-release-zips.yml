@@ -1,0 +1,60 @@
+name: Backfill release zips
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List the releases that would get a zip without uploading"
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  backfill:
+    name: Attach missing integration zips
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Builds the same zip as release.yml for every published release that
+      # lacks one, so HACS can install versions from before zip_release.
+      - name: Attach localthings.zip to releases missing it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          src=custom_components/localthings
+          tags=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
+            --json tagName,isDraft --jq '.[] | select(.isDraft | not) | .tagName')
+
+          for tag in $tags; do
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
+                --jq '.assets[].name' | grep -qx localthings.zip; then
+              echo "$tag: already has localthings.zip"
+              continue
+            fi
+            if ! git cat-file -e "$tag:$src/manifest.json" 2>/dev/null; then
+              echo "::warning::$tag: no $src/manifest.json at this tag, skipping"
+              continue
+            fi
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "$tag: would upload localthings.zip"
+              continue
+            fi
+
+            work=$(mktemp -d)
+            git archive "$tag" "$src" | tar -x -C "$work"
+            jq --arg v "${tag#v}" '.version = $v' "$work/$src/manifest.json" > "$work/manifest.tmp"
+            mv "$work/manifest.tmp" "$work/$src/manifest.json"
+            (cd "$work/$src" && zip -qr "$work/localthings.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc')
+            gh release upload "$tag" "$work/localthings.zip" --repo "$GITHUB_REPOSITORY"
+            rm -rf "$work"
+            echo "$tag: uploaded localthings.zip"
+          done
