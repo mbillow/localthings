@@ -13,7 +13,9 @@ from tests.conftest import _load_device
 from .test_soundbar import _IDENTITY, ENTRY_DATA, FakeSoundbarSession, _mock_entry
 
 
-async def test_tv_registers_only_picture_select_and_writes_advertised_id(hass: HomeAssistant):
+async def test_tv_registers_its_selects_and_writes_the_advertised_picture_mode_id(
+    hass: HomeAssistant,
+):
     # Reuse the AV transport contract, not its soundbar capabilities.
     session = FakeSoundbarSession()
     session.resources = _load_device("tv_qn90a")
@@ -36,12 +38,14 @@ async def test_tv_registers_only_picture_select_and_writes_advertised_id(hass: H
     assert coordinator.device_type_name == "tv"
     assert coordinator._flat is True
     assert session.subscribed == []
-    entities = [
-        row.entity_id
+    selects = {
+        row.translation_key: row.entity_id
         for row in er.async_get(hass).entities.values()
         if row.config_entry_id == entry.entry_id and row.domain == "select"
-    ]
-    assert len(entities) == 1
+    }
+    # The picture mode, and the TV's own app launcher.
+    assert set(selects) == {"picture_mode", "open_app"}
+    entities = [selects["picture_mode"]]
     state = hass.states.get(entities[0])
     assert state is not None and state.attributes["options"] == ["Game"]
     await hass.services.async_call(

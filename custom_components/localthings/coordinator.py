@@ -30,7 +30,8 @@ from homeassistant.util import dt as dt_util
 from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
 from smartthings_local.ocf.state_cache import StateCache
 
-from . import cloudcourse, finish, probing
+from . import cloudcourse, finish, probing, tvapps
+from .av import AVControl
 from .cleanup import async_notify_removed, async_reconcile_entities
 from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
@@ -42,6 +43,7 @@ from .const import (
     CONF_DEVICE_TYPE,
     CONF_DISABLED_SUBDEVICES,
     CONF_HOST,
+    CONF_KNOWN_APPS,
     CONF_LEARN_MODES,
     CONF_LEARNED_MODES,
     CONF_MAC,
@@ -69,6 +71,7 @@ from .credentials import (
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
+from .playback import PlaybackController
 from .registration import Registration, bound_id, is_included, is_late
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
@@ -86,7 +89,7 @@ from .registry.capabilities.common import (
 from .registry.capabilities.laundry import cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
-from .registry.entities import ClimateDesc
+from .registry.entities import ClimateDesc, RemoteDesc
 from .registry.flat import FLAT_TIMEOUT_S, flat_hrefs, iter_resources, read_all
 from .registry.identity import (
     DeviceIdentity,
@@ -104,6 +107,7 @@ from .registry.registry import PROBE_HREFS
 from .registry.subdevices import (
     MAIN,
     Subdevice,
+    _iter_oic_res_hrefs,
     canonical_view,
     discover_partitioned,
     enumerate_subdevices,
@@ -638,6 +642,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._cloud = CloudCourses(entry.data.get(CONF_CLOUD_COURSES))
         # When each running cycle's remainingTime arrived (issue #772).
         self._finish = finish.FinishAnchors()
+        # Apps a TV has been seen running, launchable by name; see tvapps.py.
+        self._apps = tvapps.KnownApps(entry.data.get(CONF_KNOWN_APPS))
         # An oven cavity's mode/setpoint/cook time chosen while idle, held
         # until a start sends them (issue #473); see cook.HeldCook.
         self._held_cooks: dict[Subdevice, cook.HeldCook] = {}
@@ -687,6 +693,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._next_rediscovery_ts = 0.0
         self._rediscovery_backoff_s = 0.0
         self._moved_port: int | None = None
+        # The last non-empty /oic/res answer: kept across a reconnect whose
+        # identity read failed, since write-only hrefs are known only from it.
+        self._last_oic_res: list = []
+        self.av = AVControl(self)
+        self.playback = PlaybackController(self)
         # Consecutive cycles that ended with no data from the device, so an
         # outage is reported once rather than once per poll (issue #269).
         self._failed_cycles = 0
@@ -770,6 +781,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for href in tuple(self._observed_sensing):
             if rep := snapshot.get(href):
                 snapshot[href] = {**rep, range_hood.SENSING_OBSERVED: True}
+        launch_rep = snapshot.get(tvapps.LAUNCH_HREF)
+        if launch_rep is not None:
+            snapshot[tvapps.LAUNCH_HREF] = self._with_known_apps(launch_rep)
         rep = snapshot.get(cloudcourse.COURSE_HREF)
         if rep is None:
             return snapshot
@@ -778,6 +792,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return snapshot
         snapshot[cloudcourse.COURSE_HREF] = {**rep, cloudcourse.FIELD: view}
         return snapshot
+
+    def _with_known_apps(self, launch_rep: dict) -> dict:
+        """/sec/tv/launchapp's rep with the known apps merged in (tvapps.FIELD)."""
+        known = tvapps.view(self._apps.snapshot(), self.resource(tvapps.CONTENT_HREF))
+        return {**launch_rep, tvapps.FIELD: known}
 
     def _cloud_view(self) -> dict:
         """`self._cloud.view()`, or nothing while cloud_courses_enabled is
@@ -798,6 +817,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             rep = {**rep, finish.FIELD: field}
         if href in self._observed_sensing and rep:
             rep = {**rep, range_hood.SENSING_OBSERVED: True}
+        if href == tvapps.LAUNCH_HREF and rep:
+            rep = self._with_known_apps(rep)
         if href != cloudcourse.COURSE_HREF or not rep:
             return rep
         view = self._cloud_view()
@@ -939,6 +960,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._remember_mode_spec(href, rep)
         if href == cloudcourse.COURSE_HREF:
             self._observe_cloud_courses(rep)
+        if href == tvapps.CONTENT_HREF and (app := self._apps.observe(rep)):
+            self._log.info("remembering app %s (%s) so it can be launched by name", *app)
+            self.hass.add_job(self._persist_known_apps)
         if href not in self._learnable_hrefs:
             return
         if not self.learning_enabled:
@@ -955,6 +979,29 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @callback
     def _persist_learned(self) -> None:
         persist(self.hass, self._entry, self._learned.snapshot())
+
+    @callback
+    def _persist_known_apps(self) -> None:
+        tvapps.persist(self.hass, self._entry, self._apps.snapshot())
+        # A new app changes what entity_resources() hands the Open app select.
+        self._canonical_cache.clear()
+        self._push_cache_snapshot()
+
+    def known_apps(self) -> dict[str, str]:
+        """app_id -> name for every app the TV has been seen running."""
+        return self._apps.snapshot()
+
+    @callback
+    def forget_known_apps(self) -> None:
+        """Drop every remembered app, here and on the entry. The app in front
+        is learned again by the next poll that sees it."""
+        if self.device_type_name != "tv":
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="apps_unsupported",
+            )
+        self._apps.clear()
+        self._persist_known_apps()
 
     # ------------------------------------------------------------------
     # Cloud "Download" programs (issue #342) -- see cloudcourse.py
@@ -1355,6 +1402,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._close_session()
             raise RuntimeError("coordinator closed")
         self._identity = identity
+        links = identity.raw.get("/oic/res") if identity is not None else None
+        if isinstance(links, list) and links:
+            self._last_oic_res = links
         self._log.debug("connected to %s:%d", host, port)
 
     def _check_device_binding(self, identity: DeviceIdentity | None) -> None:
@@ -1412,6 +1462,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
+        self.av.close()
+        await self.playback.async_close()
         self._observe.close()
         await self.hass.async_add_executor_job(self._close_session)
 
@@ -1578,8 +1630,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
     def _oic_res(self) -> list:
+        """This session's /oic/res answer, else the last non-empty one (a
+        failed identity read answers nothing)."""
         links = self._identity.raw.get("/oic/res") if self._identity else None
-        return links if isinstance(links, list) else []
+        return links if isinstance(links, list) and links else self._last_oic_res
+
+    def _advertised_hrefs(self) -> set[str]:
+        return {link.get("href") for link in _iter_oic_res_hrefs(self._oic_res())}
 
     def _device0_answers(self, sess: Transport) -> bool:
         """True when a per-href entry's /device/0 answers 2.05 after all.
@@ -1601,15 +1658,27 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._log.info("/device/0 answered 2.05; polling the Collection again")
         return True
 
+    def _awake_href(self) -> str | None:
+        """The family's DeviceRegistry.awake_href, once an entity is bound
+        to it (before discovery, read_all checks it against /oic/res)."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        href = registry_for(family).awake_href
+        if href is None or not self._discovered:
+            return href
+        return href if any(bound.href == href for bound in self.bound) else None
+
     def _poll_flat_blocking(self, sess) -> dict[str, dict]:
         """Poll a flat board (self._flat) one href at a time. Blocking.
 
         Before discovery this reads everything /oic/res advertises; after it,
         bound and cold-tier hrefs minus hot/warm ones, which _run_subpolls
-        refreshes. No answer at all is treated as a dead session.
+        refreshes. No answer at all is treated as a dead session, and so is
+        no answer from the family's awake href: a board in network standby
+        answers the rest and is still off.
         """
+        awake = self._awake_href()
         if not self._discovered:
-            results = read_all(sess, self._oic_res(), logger=self._log)
+            results = read_all(sess, self._oic_res(), logger=self._log, awake=awake)
         else:
             # A board back from off (failed cycles) is read in full at once:
             # its settings may have changed while it was dark.
@@ -1617,10 +1686,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 0 if self._failed_cycles else (self._flat_poll + 1) % self._FLAT_FULL_EVERY_N_POLLS
             )
             if self._flat_poll != 0:
-                # One liveness GET, any answer counts. No answer fails the
-                # cycle, so a device switched off by its own remote reads as
-                # unreachable on the next poll.
-                if self._session_answers(sess):
+                # One liveness GET. No answer fails the cycle, so a device
+                # switched off by its own remote reads as unreachable on the
+                # next poll. The awake href when the family has one, whose
+                # answer is kept; otherwise any answer to /oic/d counts.
+                if awake is not None:
+                    results = dict(
+                        iter_resources(
+                            sess, [awake], timeout=self._FLAT_TIMEOUT_S, logger=self._log
+                        )
+                    )
+                    if awake in results:
+                        return results
+                elif self._session_answers(sess):
                     return {}
                 raise RuntimeError("flat poll: liveness read got no answer")
             skip = set(self._hot_hrefs) | set(self._warm_hrefs)
@@ -1630,6 +1708,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ({bound.href for bound in self.bound} | set(self._cold_hrefs)) - skip,
                 key=lambda href: (href in self._unconfirmed or href in self._pruned, href),
             )
+            if awake is not None and awake not in hrefs:
+                hrefs.append(awake)
             if not hrefs:
                 return {}
             results = dict(
@@ -1645,6 +1725,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
         if not results:
             raise RuntimeError("flat poll: no resource answered")
+        if awake is not None and awake not in results:
+            raise RuntimeError(f"flat poll: {awake} got no answer (network standby)")
         return results
 
     def _poll_hrefs_blocking(
@@ -2902,7 +2984,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # not `serial`, which can be the host fallback.
             if serial_number := display_serial(info.get("x.com.samsung.da.serialNum")):
                 self.device_info["serial_number"] = serial_number
-            if firmware := resolve_firmware(ident):
+            if firmware := resolve_firmware(ident, resources):
                 self.device_info["sw_version"] = firmware
         # A snapshot replay passes None: it never reached the device, so
         # writing a key here would freeze a pre-v4 entry's legacy key in as
@@ -3437,6 +3519,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for a command relative to fast-moving state (a seek), or returns None
         if it no longer applies. It must resolve to the same path.
 
+        optimistic_body overrides the cache update when the command payload
+        differs from readable state; it is never sent to the device.
+
         A description-level validate_fn (SwitchDesc and SelectDesc) rejects
         a write with a user-facing message ahead of write_fn's silent
         no-op. The remote-control check runs first, unconditionally, unless
@@ -3673,7 +3758,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if cache_after_ack and not write_only:
             self._observe.apply(write_href, _optimistic(body), source="optimistic")
             self._observe.mark_write_pending(write_href, settle_s=self._write_settle_s)
-        if refresh:
+        # A key press changes nothing a poll would read back promptly, and
+        # awaiting one per key stalls a send_command burst behind it.
+        if refresh and not isinstance(desc, RemoteDesc):
             await self.async_request_refresh()
         return True
 
@@ -3839,6 +3926,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 translation_placeholders={"href": write_href, "error": _refusal(code, response)},
             )
         return True
+
+    # ------------------------------------------------------------------
+    # Resource availability (av.py's commands check it first).
+    def has_href(self, href: str) -> bool:
+        """True when the device has `href`: it answered a read (now, or in
+        the snapshot an offline load started from), or /oic/res advertises
+        it (a write-only resource never answers a read)."""
+        if self._cache.get(href) is not None:
+            return True
+        if self._rehydrate_resources is not None and href in self._rehydrate_resources:
+            return True
+        return href in self._advertised_hrefs()
 
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.

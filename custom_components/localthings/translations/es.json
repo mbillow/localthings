@@ -397,6 +397,54 @@
     },
     "media_option_not_supported": {
       "message": "El dispositivo no ofrece esa opción en este momento."
+    },
+    "unknown_remote_command": {
+      "message": "Comando de mando desconocido: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "El control de encendido no está disponible para este dispositivo"
+    },
+    "wake_on_lan_failed": {
+      "message": "No se pudo enviar Wake-on-LAN al televisor: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Este televisor puede reproducir canales, apps, imágenes, archivos de vídeo, streams HLS, cámaras y vídeos de YouTube (channel, app, image, video, url o youtube), no {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} no es un número de canal; usa dígitos como 5 o 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Indica el id de la app (p. ej. kIciSQlYEM.plex) o el nombre de una app que el televisor ya haya abierto."
+    },
+    "search_unsupported": {
+      "message": "Este dispositivo no puede buscar; solo pueden los televisores Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} no es un enlace http(s) a una imagen, un archivo de vídeo o un stream HLS, ni un enlace o id de vídeo de YouTube (los streams MJPEG y los manifiestos DASH .mpd no son compatibles)."
+    },
+    "cast_unsupported": {
+      "message": "Este dispositivo no puede mostrar imágenes ni reproducir vídeos de YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Este dispositivo no puede mostrar notificaciones."
+    },
+    "notify_message_empty": {
+      "message": "El mensaje de la notificación está vacío."
+    },
+    "settings_unsupported": {
+      "message": "Este dispositivo no tiene un menú de ajustes de TV que se pueda controlar."
+    },
+    "apps_unsupported": {
+      "message": "Este dispositivo no guarda una lista de aplicaciones de TV."
+    },
+    "invalid_ask": {
+      "message": "extra.ask debe ser true o false, no '{value}'."
+    },
+    "camera_timeout": {
+      "message": "La cámara {camera} tardó demasiado en responder."
+    },
+    "wake_on_lan_no_route": {
+      "message": "No se pudo enviar Wake-on-LAN al televisor: no hay ruta de red a {targets}."
     }
   },
   "entity": {
@@ -642,6 +690,9 @@
       },
       "pair_bluetooth": {
         "name": "Emparejar Bluetooth"
+      },
+      "screen_off": {
+        "name": "Apagar pantalla"
       }
     },
     "climate": {
@@ -1811,6 +1862,9 @@
           "front": "Delante",
           "rear": "Detrás"
         }
+      },
+      "open_app": {
+        "name": "Abrir aplicación"
       }
     },
     "sensor": {
@@ -2571,6 +2625,18 @@
       },
       "illuminance": {
         "name": "Iluminancia"
+      },
+      "channel": {
+        "name": "Canal"
+      },
+      "now_showing": {
+        "name": "En emisión"
+      },
+      "cast_session": {
+        "name": "Sesión de casting"
+      },
+      "cast_item": {
+        "name": "Elemento de casting"
       }
     },
     "switch": {
@@ -2931,6 +2997,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Mando"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Notificaciones"
+      }
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "Duración",
           "description": "Cuántos segundos escuchar, hasta 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Olvidar las apps aprendidas del TV",
+      "description": "Borra las apps que se han visto en ejecución en un televisor, que la selección Abrir app y media_player.play_media ofrecen por nombre. Las pantallas integradas se mantienen. Las apps se vuelven a aprender a medida que el televisor las muestra, empezando por la que está abierta ahora.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor cuyas apps aprendidas se olvidan."
+        }
+      }
+    },
+    "search": {
+      "name": "Buscar en el TV",
+      "description": "Abre una búsqueda en un televisor Samsung: YouTube se abre con los resultados; los demás sitios se abren en el navegador del televisor.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que buscar."
+        },
+        "query": {
+          "name": "Consulta",
+          "description": "Qué buscar."
+        },
+        "site": {
+          "name": "Sitio",
+          "description": "Dónde buscar. YouTube por defecto."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Abrir una página de ajustes del TV",
+      "description": "Abre una página del menú de ajustes de un televisor Samsung. La lista viene del firmware de Samsung; no todos los televisores tienen todas las páginas, y se puede escribir otro id de página.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que abrir la página."
+        },
+        "page": {
+          "name": "Página",
+          "description": "La página de ajustes que abrir."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Programar el temporizador de apagado del TV",
+      "description": "Apaga un televisor Samsung tras estos minutos; 0 desactiva el temporizador. El televisor no informa del tiempo restante, así que compruébelo en su menú (General, Administrador del sistema, Hora, Temporizador de apagado).",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que programar el temporizador."
+        },
+        "minutes": {
+          "name": "Minutos",
+          "description": "Minutos hasta que el televisor se apague; 0 desactiva el temporizador."
         }
       }
     }

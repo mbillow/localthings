@@ -70,8 +70,11 @@ def is_included(
     load (issue #295) doesn't filter rehydrated entities away. Runtime
     presence checks use `live=True` so the saved snapshot can't freeze them.
     `evidence` judges against a discovery's resources the state cache
-    doesn't hold yet.
+    doesn't hold yet. A `requires_href` entity also needs the device to
+    have that href (coordinator.has_href).
     """
+    if bound.desc.requires_href and not coordinator.has_href(bound.desc.requires_href):
+        return False
     if evidence is not None:
         rep = evidence.get(bound.href)
         if rep is None:

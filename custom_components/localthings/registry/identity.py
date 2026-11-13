@@ -47,13 +47,22 @@ def is_placeholder_serial(serial: str) -> bool:
     return len(upper) >= 8 and len(set(upper)) == 1 and upper[0] in "0123456789ABCDEF"
 
 
-def resolve_firmware(identity: DeviceIdentity | None) -> str | None:
-    """/oic/p's manufacturer firmware version (mnfv), if reported."""
+OCF_RESOURCE_VERSION_HREF = "/capability/custom.ocfResourceVersion/main/0"
+
+
+def resolve_firmware(
+    identity: DeviceIdentity | None, resources: dict[str, dict] | None = None
+) -> str | None:
+    """/oic/p's manufacturer firmware version (mnfv), else the build that
+    leads a TV's ocfResourceVersion (its /oic/p reports none)."""
     platform = identity.raw.get("/oic/p") if identity else None
     mnfv = platform.get("mnfv") if isinstance(platform, dict) else None
-    if not isinstance(mnfv, str):
+    if isinstance(mnfv, str) and mnfv.strip():
+        return mnfv.strip()
+    version = ((resources or {}).get(OCF_RESOURCE_VERSION_HREF) or {}).get("ocfResourceVersion")
+    if not isinstance(version, str):
         return None
-    return mnfv.strip() or None
+    return version.split(";", 1)[0].strip() or None
 
 
 def resolve_serial(raw_serial: str | None, host: str) -> str:
@@ -253,14 +262,20 @@ def resolve_mac(resources: dict[str, dict]) -> str | None:
     field of an appliance's own state that a DHCP sighting can be matched
     against: Home Assistant hands discovery an (ip, hostname, mac) triple,
     and neither of the other two identifies a unit -- three of issue #469's
-    air conditioners share one hostname. A soundbar reports its MAC in its
-    deviceinfo resource instead.
+    air conditioners share one hostname. AV boards report theirs in their
+    deviceinfo resources instead; a TV's wired MAC comes first only when
+    /WiFiConfResURI says it's on Ethernet, as the unused interface's MAC
+    never shows up in DHCP.
 
     Roughly half the dumps in tests/fixtures carry the resource at all, so
     None is an ordinary answer here, not a fault.
     """
+    tv_macs = ("x.com.samsung.tv.wifimac", "x.com.samsung.tv.ethmac")
+    if str((resources.get("/WiFiConfResURI") or {}).get("tnn") or "").lower() == "ethernet":
+        tv_macs = tv_macs[::-1]
     for href, key in (
         (WIRELESS_INFO_HREF, "macaddressWiFi"),
+        *(("/sec/tv/deviceinfo", key) for key in tv_macs),
         ("/sec/networkaudio/deviceinfo", "x.com.samsung.networkaudio.wifimac"),
     ):
         if (found := _normalized_mac((resources.get(href) or {}).get(key))) is not None:

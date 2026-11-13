@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Pair Bluetooth"
+      },
+      "screen_off": {
+        "name": "Screen off"
       }
     },
     "climate": {
@@ -1411,6 +1414,9 @@
           "front": "Front",
           "rear": "Rear"
         }
+      },
+      "open_app": {
+        "name": "Open app"
       }
     },
     "sensor": {
@@ -2171,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Illuminance"
+      },
+      "channel": {
+        "name": "Channel"
+      },
+      "now_showing": {
+        "name": "Now showing"
+      },
+      "cast_session": {
+        "name": "Cast session"
+      },
+      "cast_item": {
+        "name": "Cast item"
       }
     },
     "switch": {
@@ -2530,6 +2548,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Remote"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Notifications"
       }
     }
   },
@@ -2931,6 +2959,54 @@
     },
     "media_option_not_supported": {
       "message": "This device doesn't offer that option right now."
+    },
+    "unknown_remote_command": {
+      "message": "Unknown remote command: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Power control isn't available for this device"
+    },
+    "wake_on_lan_failed": {
+      "message": "Couldn't send Wake-on-LAN to the TV: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "This TV can play channels, apps, images, video files, HLS streams, cameras and YouTube videos (channel, app, image, video, url or youtube), not {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} isn't a channel number; use digits such as 5 or 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Give the app's id (e.g. kIciSQlYEM.plex) or the name of an app the TV has run."
+    },
+    "search_unsupported": {
+      "message": "This device can't search; only Samsung TVs can."
+    },
+    "invalid_media_url": {
+      "message": "{url} isn't an http(s) link to an image, a video file or an HLS stream, or a YouTube link or video id (MJPEG streams and DASH .mpd manifests aren't supported)."
+    },
+    "cast_unsupported": {
+      "message": "This device can't show images or play YouTube videos."
+    },
+    "notify_unsupported": {
+      "message": "This device can't show notifications."
+    },
+    "notify_message_empty": {
+      "message": "The notification message is empty."
+    },
+    "settings_unsupported": {
+      "message": "This device has no TV settings menu to control."
+    },
+    "apps_unsupported": {
+      "message": "This device keeps no list of TV apps."
+    },
+    "invalid_ask": {
+      "message": "extra.ask must be true or false, not '{value}'."
+    },
+    "camera_timeout": {
+      "message": "Camera {camera} took too long to answer."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Couldn't send Wake-on-LAN to the TV: no network route to {targets}."
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "Duration",
           "description": "How many seconds to listen for, up to 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Forget learned TV apps",
+      "description": "Clear the apps a TV has been seen running, which the Open app select and media_player.play_media offer by name. The built-in screens stay. Apps are learned again as the TV shows them, starting with whatever is open right now.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The TV whose learned apps to forget."
+        }
+      }
+    },
+    "search": {
+      "name": "Search on the TV",
+      "description": "Open a search on a Samsung TV: YouTube opens on the results; the other sites open in the TV's browser.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The TV to search on."
+        },
+        "query": {
+          "name": "Query",
+          "description": "What to search for."
+        },
+        "site": {
+          "name": "Site",
+          "description": "Where to search. Defaults to YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Open a TV settings page",
+      "description": "Open a page of a Samsung TV's settings menu. The list comes from Samsung's firmware; not every TV has every page, and another page id can be typed in.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The TV to open the page on."
+        },
+        "page": {
+          "name": "Page",
+          "description": "The settings page to open."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Set the TV's sleep timer",
+      "description": "Turn a Samsung TV off after this many minutes; 0 turns the sleep timer off. The TV doesn't report the time left, so check it in its menu (General, System Manager, Time, Sleep Timer).",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The TV to set the sleep timer on."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Minutes until the TV turns off; 0 turns the sleep timer off."
         }
       }
     }

@@ -65,9 +65,17 @@ async def test_tv_state_and_only_reported_controls(hass: HomeAssistant):
     assert player.sound_mode_list == ["Amplify", "Standard", "Game"]
     assert (
         player.supported_features
-        == F.TURN_OFF | F.VOLUME_SET | F.VOLUME_MUTE | F.SELECT_SOURCE | F.SELECT_SOUND_MODE
+        == F.TURN_OFF
+        | F.VOLUME_SET
+        | F.VOLUME_MUTE
+        | F.SELECT_SOURCE
+        | F.SELECT_SOUND_MODE
+        | F.PLAY_MEDIA
+        | F.BROWSE_MEDIA
     )
-    assert player.media_title is None
+    # On HDMI the content info's title is what is on screen (#834's capture
+    # redacts it); no broadcast schedule, so no position.
+    assert player.media_title == "**REDACTED**"
     assert player.media_position is None
 
 

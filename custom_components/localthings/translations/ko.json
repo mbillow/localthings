@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "블루투스 페어링"
+      },
+      "screen_off": {
+        "name": "화면 끄기"
       }
     },
     "climate": {
@@ -1411,6 +1414,9 @@
           "front": "전면",
           "rear": "후면"
         }
+      },
+      "open_app": {
+        "name": "앱 열기"
       }
     },
     "sensor": {
@@ -2171,6 +2177,18 @@
       },
       "illuminance": {
         "name": "조도"
+      },
+      "channel": {
+        "name": "채널"
+      },
+      "now_showing": {
+        "name": "현재 방송"
+      },
+      "cast_session": {
+        "name": "캐스팅 세션"
+      },
+      "cast_item": {
+        "name": "캐스팅 항목"
       }
     },
     "switch": {
@@ -2530,6 +2548,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "리모컨"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "알림"
       }
     }
   },
@@ -2931,6 +2959,54 @@
     },
     "media_option_not_supported": {
       "message": "기기에서 지금은 이 옵션을 제공하지 않습니다."
+    },
+    "unknown_remote_command": {
+      "message": "알 수 없는 리모컨 명령: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "이 기기에서는 전원 제어를 사용할 수 없습니다"
+    },
+    "wake_on_lan_failed": {
+      "message": "TV에 Wake-on-LAN을 보낼 수 없습니다: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "이 TV는 채널, 앱, 이미지, 동영상 파일, HLS 스트림, 카메라, YouTube 동영상(channel, app, image, video, url 또는 youtube)을 재생할 수 있으며 {media_type}은(는) 지원하지 않습니다."
+    },
+    "invalid_channel_number": {
+      "message": "{channel}은(는) 채널 번호가 아닙니다. 5 또는 5-1처럼 숫자를 사용하세요."
+    },
+    "invalid_app_id": {
+      "message": "앱 ID(예: kIciSQlYEM.plex) 또는 TV에서 실행된 적 있는 앱 이름을 입력하세요."
+    },
+    "search_unsupported": {
+      "message": "이 기기는 검색할 수 없습니다. 삼성 TV만 가능합니다."
+    },
+    "invalid_media_url": {
+      "message": "{url}은(는) 이미지, 동영상 파일 또는 HLS 스트림의 http(s) 링크나 YouTube 링크 또는 동영상 ID가 아닙니다(MJPEG 스트림과 DASH .mpd 매니페스트는 지원되지 않습니다)."
+    },
+    "cast_unsupported": {
+      "message": "이 기기는 이미지를 표시하거나 YouTube 동영상을 재생할 수 없습니다."
+    },
+    "notify_unsupported": {
+      "message": "이 기기는 알림을 표시할 수 없습니다."
+    },
+    "notify_message_empty": {
+      "message": "알림 메시지가 비어 있습니다."
+    },
+    "settings_unsupported": {
+      "message": "이 기기에는 제어할 수 있는 TV 설정 메뉴가 없습니다."
+    },
+    "apps_unsupported": {
+      "message": "이 기기는 TV 앱 목록을 보관하지 않습니다."
+    },
+    "invalid_ask": {
+      "message": "extra.ask는 true 또는 false여야 합니다('{value}' 아님)."
+    },
+    "camera_timeout": {
+      "message": "카메라 {camera}의 응답이 너무 오래 걸렸습니다."
+    },
+    "wake_on_lan_no_route": {
+      "message": "TV에 Wake-on-LAN을 보낼 수 없습니다: {targets}(으)로 가는 네트워크 경로가 없습니다."
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "기간",
           "description": "수신 대기할 초 수로, 최대 120입니다."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "학습된 TV 앱 지우기",
+      "description": "TV에서 실행된 것으로 확인되어 앱 열기 선택과 media_player.play_media에서 이름으로 제공되는 앱을 지웁니다. 기본 제공 화면은 유지됩니다. 앱은 TV에 표시될 때 다시 학습되며, 지금 열려 있는 앱부터 시작합니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "학습된 앱을 지울 TV입니다."
+        }
+      }
+    },
+    "search": {
+      "name": "TV에서 검색",
+      "description": "삼성 TV에서 검색을 엽니다. YouTube는 검색 결과로 열리고, 다른 사이트는 TV 브라우저에서 열립니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "검색할 TV입니다."
+        },
+        "query": {
+          "name": "검색어",
+          "description": "검색할 내용입니다."
+        },
+        "site": {
+          "name": "사이트",
+          "description": "검색할 곳입니다. 기본값은 YouTube입니다."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "TV 설정 페이지 열기",
+      "description": "삼성 TV 설정 메뉴의 페이지를 엽니다. 목록은 삼성 펌웨어에서 가져온 것으로, 모든 TV에 모든 페이지가 있는 것은 아니며 다른 페이지 id를 입력할 수도 있습니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "페이지를 열 TV입니다."
+        },
+        "page": {
+          "name": "페이지",
+          "description": "열 설정 페이지입니다."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "TV 취침 예약 설정",
+      "description": "지정한 분이 지나면 삼성 TV를 끕니다. 0이면 취침 예약을 끕니다. TV는 남은 시간을 알려 주지 않으므로 메뉴(일반, 시스템 관리자, 시간, 취침 예약)에서 확인하세요.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "취침 예약을 설정할 TV입니다."
+        },
+        "minutes": {
+          "name": "분",
+          "description": "TV가 꺼질 때까지의 분입니다. 0이면 취침 예약을 끕니다."
         }
       }
     }

@@ -14,6 +14,8 @@ PLATFORMS = [
     "water_heater",
     "vacuum",
     "media_player",
+    "remote",
+    "notify",
 ]
 
 CONF_HOST = "host"
@@ -126,6 +128,11 @@ DEFAULT_LEARN_MODES = True
 # Download course code. See cloudcourse.py, which owns the shape. Shape:
 # {"download_course": "87"|null, "slots": {slot: {"blob": ..., "name": ...}}}
 CONF_CLOUD_COURSES = "cloud_courses"
+
+# entry.data key: apps a TV has been seen running, so they can be launched
+# by name after a restart -- OCF lists no installed apps (see tvapps.py).
+# Shape: {app_id: name}.
+CONF_KNOWN_APPS = "known_apps"
 
 # Options-flow key: whether downloaded programs are offered as selectable
 # cycles and nagged about via the "not set up yet" Repair (issue #364).
@@ -249,3 +256,7 @@ SERVICE_WRITE_RESOURCE = "write_resource"
 SERVICE_READ_RESOURCE = "read_resource"
 SERVICE_OBSERVE_RESOURCE = "observe_resource"
 SERVICE_START_COOKING = "start_cooking"
+SERVICE_FORGET_KNOWN_APPS = "forget_known_apps"
+SERVICE_SEARCH = "search"
+SERVICE_OPEN_SETTINGS = "open_settings"
+SERVICE_SET_SLEEP_TIMER = "set_sleep_timer"

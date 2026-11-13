@@ -1336,3 +1336,64 @@ async def test_a_rep_answered_short_keeps_its_entities_in_the_snapshot(
     again = LocalThingsCoordinator(hass, mock_entry)
     assert await again.async_rehydrate()
     assert again.registrable(next(b for b in again.bound if bound_id(b) == bound_id(target)))
+
+
+_TV_IDENTITY = DeviceIdentity(
+    manufacturer="Samsung Electronics",
+    model="UE50TU7172UXXH",
+    name="Samsung 7 Series (50)",
+    serial=None,
+    device_types=("oic.wk.d", "oic.d.tv"),
+)
+
+
+def _load_tv() -> dict:
+    data = json.loads((FIXTURES / "tv_ue50tu7172_device.json").read_text())
+    return parse_device0_batch(data["device0"])
+
+
+async def test_tv_offline_load_recovers_everything_including_the_remote(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Set up while the TV is off, every entity recovers once it answers, the remote included."""
+    resources = _load_tv()
+    with _reachable(resources, identity=_TV_IDENTITY):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        entity_ids = sorted(s.entity_id for s in hass.states.async_all())
+        await hass.config_entries.async_unload(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    remote_ids = [eid for eid in entity_ids if eid.startswith("remote.")]
+    assert remote_ids, f"no remote in the live set: {entity_ids}"
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    with _reachable(resources, identity=_TV_IDENTITY):
+        await _tick(hass)
+
+    def _state_of(eid: str) -> str:
+        state = hass.states.get(eid)
+        assert state is not None, f"{eid} not in the state machine at all"
+        return state.state
+
+    stuck = [eid for eid in entity_ids if _state_of(eid) == "unavailable"]
+    assert stuck == [], f"entities still unavailable after recovery: {stuck}"
+    # A RemoteEntity without is_on stays "unknown", which looks unrecovered.
+    remote_state = _state_of(remote_ids[0])
+    assert remote_state in ("on", "off"), f"remote renders {remote_state!r}"
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    with patch.object(coordinator, "_async_put") as put:
+        await hass.services.async_call(
+            "remote",
+            "send_command",
+            {"entity_id": remote_ids[0], "command": ["volume_up"]},
+            blocking=True,
+        )
+    put.assert_called_once()
+    call_body = put.call_args[0][1]
+    assert put.call_args[0][0] == ["sec", "tv", "remotecontrol"]
+    assert call_body.get("x.com.samsung.tv.keyvalue") == "KEY_VOLUP"

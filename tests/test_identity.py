@@ -262,3 +262,28 @@ def test_a_soundbar_reports_its_mac_in_deviceinfo():
     # /wirelessinfo/vs/0 still comes first, and an unusable MAC falls through.
     wireless = {"/wirelessinfo/vs/0": {"macaddressWiFi": "00:00:00:00:00:00"}, **audio}
     assert resolve_mac(wireless) == "aa:bb:cc:dd:ee:01"
+
+
+def test_a_tv_reports_the_mac_of_its_active_uplink():
+    """A TV's deviceinfo carries both MACs; the one DHCP sees comes first,
+    and an unusable one falls through to the other."""
+    from custom_components.localthings.registry.identity import resolve_mac
+
+    deviceinfo = {
+        "x.com.samsung.tv.wifimac": "aa:bb:cc:dd:ee:02",
+        "x.com.samsung.tv.ethmac": "aa:bb:cc:dd:ee:03",
+    }
+    wired = {"/sec/tv/deviceinfo": deviceinfo, "/WiFiConfResURI": {"tnn": "ethernet"}}
+    assert resolve_mac(wired) == "aa:bb:cc:dd:ee:03"
+    wifi = {"/sec/tv/deviceinfo": deviceinfo, "/WiFiConfResURI": {"tnn": "home sweet home"}}
+    assert resolve_mac(wifi) == "aa:bb:cc:dd:ee:02"
+    # No wificonf: wireless first.
+    assert resolve_mac({"/sec/tv/deviceinfo": deviceinfo}) == "aa:bb:cc:dd:ee:02"
+    # An unflashed wired MAC is skipped, not a dead end (even when wired).
+    zero_wired = {
+        "/sec/tv/deviceinfo": {**deviceinfo, "x.com.samsung.tv.ethmac": "00:00:00:00:00:00"},
+        "/WiFiConfResURI": {"tnn": "ethernet"},
+    }
+    assert resolve_mac(zero_wired) == "aa:bb:cc:dd:ee:02"
+    # Scrubbed/invalid fields resolve to None, as everywhere else.
+    assert resolve_mac({"/sec/tv/deviceinfo": {"x.com.samsung.tv.wifimac": "**REDACTED**"}}) is None

@@ -17,6 +17,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
+from . import camera_dash, camera_stream
 from .cleanup import async_delete_removed_issues, async_notify_removed, async_reconcile_entities
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import (
@@ -56,6 +57,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # Services are process-global, registered once here rather than per
     # config entry (issue #300) -- see services.async_setup_services.
     async_setup_services(hass)
+    # A TV casts a camera from these views (camera_dash.py, camera_stream.py).
+    camera_dash.async_register_view(hass)
+    camera_stream.async_register_view(hass)
     return True
 
 

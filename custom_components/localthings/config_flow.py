@@ -748,6 +748,7 @@ def _read_device(transport, host: str, port: int) -> dict:
     (issue #236).
     """
     from .registry.batch import parse_device0_batch
+    from .registry.by_type import for_device_by_oic_type
     from .registry.by_type import resolve as resolve_registry
     from .registry.flat import read_all
     from .registry.identity import (
@@ -767,7 +768,13 @@ def _read_device(transport, host: str, port: int) -> dict:
         # No /device/0 Collection: read /oic/res's hrefs as the coordinator
         # will poll them (registry/flat.py). A batch board stored this way
         # while booting is moved back by the coordinator's /device/0 check.
-        resources = read_all(transport, identity.raw.get("/oic/res") or [], logger=_LOGGER)
+        family = for_device_by_oic_type(identity.device_types)
+        resources = read_all(
+            transport,
+            identity.raw.get("/oic/res") or [],
+            logger=_LOGGER,
+            awake=family.awake_href if family is not None else None,
+        )
         usable = bool(resources)
     else:
         usable = code == 0x45 and body is not None

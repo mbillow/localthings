@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Paruj Bluetooth"
+      },
+      "screen_off": {
+        "name": "Wyłącz ekran"
       }
     },
     "climate": {
@@ -1411,6 +1414,9 @@
           "front": "Z przodu",
           "rear": "Z tyłu"
         }
+      },
+      "open_app": {
+        "name": "Otwórz aplikację"
       }
     },
     "sensor": {
@@ -2171,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Natężenie oświetlenia"
+      },
+      "channel": {
+        "name": "Kanał"
+      },
+      "now_showing": {
+        "name": "Teraz odtwarzane"
+      },
+      "cast_session": {
+        "name": "Sesja castingu"
+      },
+      "cast_item": {
+        "name": "Element castingu"
       }
     },
     "switch": {
@@ -2530,6 +2548,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Pilot"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Powiadomienia"
       }
     }
   },
@@ -2931,6 +2959,54 @@
     },
     "media_option_not_supported": {
       "message": "Urządzenie nie oferuje teraz tej opcji."
+    },
+    "unknown_remote_command": {
+      "message": "Nieznana komenda pilota: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Sterowanie zasilaniem jest niedostępne dla tego urządzenia"
+    },
+    "wake_on_lan_failed": {
+      "message": "Nie udało się wysłać Wake-on-LAN do telewizora: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Ten telewizor odtwarza kanały, aplikacje, obrazy, pliki wideo, strumienie HLS, kamery i filmy z YouTube (channel, app, image, video, url lub youtube), a nie {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} nie jest numerem kanału; użyj cyfr, np. 5 lub 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Podaj identyfikator aplikacji (np. kIciSQlYEM.plex) lub nazwę aplikacji, którą telewizor już uruchomił."
+    },
+    "search_unsupported": {
+      "message": "To urządzenie nie może wyszukiwać; potrafią to tylko telewizory Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} nie jest linkiem http(s) do obrazu, pliku wideo ani strumienia HLS, ani linkiem lub identyfikatorem filmu z YouTube (strumienie MJPEG i manifesty DASH .mpd nie są obsługiwane)."
+    },
+    "cast_unsupported": {
+      "message": "To urządzenie nie może wyświetlać obrazów ani odtwarzać filmów z YouTube."
+    },
+    "notify_unsupported": {
+      "message": "To urządzenie nie może wyświetlać powiadomień."
+    },
+    "notify_message_empty": {
+      "message": "Treść powiadomienia jest pusta."
+    },
+    "settings_unsupported": {
+      "message": "To urządzenie nie ma sterowalnego menu ustawień telewizora."
+    },
+    "apps_unsupported": {
+      "message": "To urządzenie nie przechowuje listy aplikacji telewizora."
+    },
+    "invalid_ask": {
+      "message": "extra.ask musi mieć wartość true lub false, a nie '{value}'."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} zbyt długo nie odpowiadała."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Nie udało się wysłać Wake-on-LAN do telewizora: brak trasy sieciowej do {targets}."
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "Czas trwania",
           "description": "Ile sekund nasłuchiwać, maksymalnie 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zapomnij nauczone aplikacje TV",
+      "description": "Czyści aplikacje, które telewizor uruchamiał i które wybór Otwórz aplikację oraz media_player.play_media oferują po nazwie. Wbudowane ekrany pozostają. Aplikacje są uczone ponownie, gdy telewizor je pokazuje, zaczynając od aktualnie otwartej.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Telewizor, którego nauczone aplikacje mają zostać zapomniane."
+        }
+      }
+    },
+    "search": {
+      "name": "Szukaj na TV",
+      "description": "Otwiera wyszukiwanie na telewizorze Samsung: YouTube otwiera się z wynikami, pozostałe witryny w przeglądarce telewizora.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Telewizor, na którym szukać."
+        },
+        "query": {
+          "name": "Zapytanie",
+          "description": "Czego szukać."
+        },
+        "site": {
+          "name": "Witryna",
+          "description": "Gdzie szukać. Domyślnie YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otwórz stronę ustawień TV",
+      "description": "Otwiera stronę menu ustawień telewizora Samsung. Lista pochodzi z oprogramowania Samsunga; nie każdy telewizor ma każdą stronę, a można wpisać inny identyfikator strony.",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Telewizor, na którym otworzyć stronę."
+        },
+        "page": {
+          "name": "Strona",
+          "description": "Strona ustawień do otwarcia."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Ustaw wyłącznik czasowy TV",
+      "description": "Wyłącza telewizor Samsung po tej liczbie minut; 0 wyłącza wyłącznik czasowy. Telewizor nie podaje pozostałego czasu, sprawdź go w jego menu (Ogólne, Menedżer systemu, Czas, Wyłącznik czasowy).",
+      "fields": {
+        "device_id": {
+          "name": "Urządzenie",
+          "description": "Telewizor, na którym ustawić wyłącznik czasowy."
+        },
+        "minutes": {
+          "name": "Minuty",
+          "description": "Minuty do wyłączenia telewizora; 0 wyłącza wyłącznik czasowy."
         }
       }
     }

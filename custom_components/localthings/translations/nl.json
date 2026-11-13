@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Bluetooth koppelen"
+      },
+      "screen_off": {
+        "name": "Scherm uit"
       }
     },
     "climate": {
@@ -1411,6 +1414,9 @@
           "front": "Voor",
           "rear": "Achter"
         }
+      },
+      "open_app": {
+        "name": "App openen"
       }
     },
     "sensor": {
@@ -2171,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Verlichtingssterkte"
+      },
+      "channel": {
+        "name": "Kanaal"
+      },
+      "now_showing": {
+        "name": "Speelt nu"
+      },
+      "cast_session": {
+        "name": "Cast-sessie"
+      },
+      "cast_item": {
+        "name": "Cast-item"
       }
     },
     "switch": {
@@ -2530,6 +2548,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Afstandsbediening"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Meldingen"
       }
     }
   },
@@ -2931,6 +2959,54 @@
     },
     "media_option_not_supported": {
       "message": "Het apparaat biedt deze optie nu niet aan."
+    },
+    "unknown_remote_command": {
+      "message": "Onbekend afstandsbedieningscommando: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Aan/uit-bediening is niet beschikbaar voor dit apparaat"
+    },
+    "wake_on_lan_failed": {
+      "message": "Kan Wake-on-LAN niet naar de tv sturen: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Deze tv kan kanalen, apps, afbeeldingen, videobestanden, HLS-streams, camera's en YouTube-video's afspelen (channel, app, image, video, url of youtube), niet {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} is geen kanaalnummer; gebruik cijfers zoals 5 of 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Geef de id van de app (bijv. kIciSQlYEM.plex) of de naam van een app die de tv al heeft gedraaid."
+    },
+    "search_unsupported": {
+      "message": "Dit apparaat kan niet zoeken; alleen Samsung-tv's kunnen dat."
+    },
+    "invalid_media_url": {
+      "message": "{url} is geen http(s)-link naar een afbeelding, videobestand of HLS-stream en geen YouTube-link of video-id (MJPEG-streams en DASH-manifesten (.mpd) worden niet ondersteund)."
+    },
+    "cast_unsupported": {
+      "message": "Dit apparaat kan geen afbeeldingen tonen of YouTube-video's afspelen."
+    },
+    "notify_unsupported": {
+      "message": "Dit apparaat kan geen meldingen tonen."
+    },
+    "notify_message_empty": {
+      "message": "Het meldingsbericht is leeg."
+    },
+    "settings_unsupported": {
+      "message": "Dit apparaat heeft geen bedienbaar tv-instellingenmenu."
+    },
+    "apps_unsupported": {
+      "message": "Dit apparaat houdt geen lijst met tv-apps bij."
+    },
+    "invalid_ask": {
+      "message": "extra.ask moet true of false zijn, niet '{value}'."
+    },
+    "camera_timeout": {
+      "message": "Camera {camera} deed er te lang over om te antwoorden."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Kan Wake-on-LAN niet naar de tv sturen: geen netwerkroute naar {targets}."
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "Duur",
           "description": "Hoeveel seconden er geluisterd wordt, tot 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Geleerde tv-apps vergeten",
+      "description": "Wist de apps die op een tv zijn gezien en die de selectie App openen en media_player.play_media op naam aanbieden. De ingebouwde schermen blijven. Apps worden opnieuw geleerd zodra de tv ze toont, te beginnen met wat nu open is.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarvan de geleerde apps worden vergeten."
+        }
+      }
+    },
+    "search": {
+      "name": "Zoeken op de tv",
+      "description": "Opent een zoekopdracht op een Samsung-tv: YouTube opent met de resultaten; de andere sites openen in de browser van de tv.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop wordt gezocht."
+        },
+        "query": {
+          "name": "Zoekterm",
+          "description": "Waarnaar wordt gezocht."
+        },
+        "site": {
+          "name": "Site",
+          "description": "Waar wordt gezocht. Standaard YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Een instellingenpagina van de tv openen",
+      "description": "Opent een pagina van het instellingenmenu van een Samsung-tv. De lijst komt uit de firmware van Samsung; niet elke tv heeft elke pagina, en een ander pagina-id kan worden ingevoerd.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop de pagina wordt geopend."
+        },
+        "page": {
+          "name": "Pagina",
+          "description": "De instellingenpagina die wordt geopend."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "De slaaptimer van de tv instellen",
+      "description": "Zet een Samsung-tv na dit aantal minuten uit; 0 zet de slaaptimer uit. De tv meldt de resterende tijd niet, controleer die in het menu (Algemeen, Systeembeheer, Tijd, Slaaptimer).",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop de slaaptimer wordt ingesteld."
+        },
+        "minutes": {
+          "name": "Minuten",
+          "description": "Minuten tot de tv uitgaat; 0 zet de slaaptimer uit."
         }
       }
     }

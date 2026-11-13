@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Spárovať Bluetooth"
+      },
+      "screen_off": {
+        "name": "Vypnúť obrazovku"
       }
     },
     "climate": {
@@ -1411,6 +1414,9 @@
           "front": "Vpredu",
           "rear": "Vzadu"
         }
+      },
+      "open_app": {
+        "name": "Otvoriť aplikáciu"
       }
     },
     "sensor": {
@@ -2171,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Osvetlenie"
+      },
+      "channel": {
+        "name": "Kanál"
+      },
+      "now_showing": {
+        "name": "Práve vysielané"
+      },
+      "cast_session": {
+        "name": "Relácia castingu"
+      },
+      "cast_item": {
+        "name": "Položka castingu"
       }
     },
     "switch": {
@@ -2530,6 +2548,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Diaľkové ovládanie"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Oznámenia"
       }
     }
   },
@@ -2931,6 +2959,54 @@
     },
     "media_option_not_supported": {
       "message": "Zariadenie túto možnosť práve neponúka."
+    },
+    "unknown_remote_command": {
+      "message": "Neznámy príkaz diaľkového ovládania: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Ovládanie napájania nie je pre toto zariadenie k dispozícii"
+    },
+    "wake_on_lan_failed": {
+      "message": "Nepodarilo sa odoslať Wake-on-LAN do televízora: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Tento televízor vie prehrať kanály, aplikácie, obrázky, video súbory, HLS streamy, kamery a videá z YouTube (channel, app, image, video, url alebo youtube), nie {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} nie je číslo kanála; použite číslice, napr. 5 alebo 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Zadajte ID aplikácie (napr. kIciSQlYEM.plex) alebo názov aplikácie, ktorú televízor už spustil."
+    },
+    "search_unsupported": {
+      "message": "Toto zariadenie nevie vyhľadávať; vedia to len televízory Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} nie je http(s) odkaz na obrázok, video súbor ani HLS stream, ani odkaz či ID videa z YouTube (MJPEG streamy a DASH manifesty .mpd nie sú podporované)."
+    },
+    "cast_unsupported": {
+      "message": "Toto zariadenie nevie zobraziť obrázky ani prehrať videá z YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Toto zariadenie nevie zobrazovať oznámenia."
+    },
+    "notify_message_empty": {
+      "message": "Text oznámenia je prázdny."
+    },
+    "settings_unsupported": {
+      "message": "Toto zariadenie nemá ovládateľnú ponuku nastavení televízora."
+    },
+    "apps_unsupported": {
+      "message": "Toto zariadenie si neuchováva zoznam aplikácií televízora."
+    },
+    "invalid_ask": {
+      "message": "extra.ask musí byť true alebo false, nie '{value}'."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} odpovedala príliš dlho."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Wake-on-LAN sa nepodarilo odoslať do televízora: žiadna sieťová cesta k {targets}."
     }
   },
   "selector": {
@@ -3032,6 +3108,62 @@
         "duration": {
           "name": "Trvanie",
           "description": "Koľko sekúnd počúvať, najviac 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zabudnúť naučené aplikácie TV",
+      "description": "Vymaže aplikácie, ktoré televízor spustil a ktoré výber Otvoriť aplikáciu a media_player.play_media ponúkajú podľa názvu. Vstavané obrazovky zostanú. Aplikácie sa naučia znova, keď ich televízor zobrazí, počnúc tou, ktorá je práve otvorená.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Televízor, ktorého naučené aplikácie sa majú zabudnúť."
+        }
+      }
+    },
+    "search": {
+      "name": "Hľadať na TV",
+      "description": "Otvorí vyhľadávanie na televízore Samsung: YouTube sa otvorí na výsledkoch, ostatné weby v prehliadači televízora.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Televízor, na ktorom sa hľadá."
+        },
+        "query": {
+          "name": "Dopyt",
+          "description": "Čo sa má hľadať."
+        },
+        "site": {
+          "name": "Web",
+          "description": "Kde hľadať. Predvolene YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otvoriť stránku nastavení TV",
+      "description": "Otvorí stránku ponuky nastavení televízora Samsung. Zoznam pochádza z firmvéru Samsungu; nie každý televízor má každú stránku a dá sa zadať aj iné id stránky.",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Televízor, na ktorom sa stránka otvorí."
+        },
+        "page": {
+          "name": "Stránka",
+          "description": "Stránka nastavení, ktorá sa má otvoriť."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Nastaviť časovač vypnutia TV",
+      "description": "Vypne televízor Samsung po tomto počte minút; 0 časovač vypne. Televízor zostávajúci čas nehlási, overte ho v jeho ponuke (Všeobecné, Správca systému, Čas, Časovač vypnutia).",
+      "fields": {
+        "device_id": {
+          "name": "Zariadenie",
+          "description": "Televízor, na ktorom sa časovač nastaví."
+        },
+        "minutes": {
+          "name": "Minúty",
+          "description": "Minúty do vypnutia televízora; 0 časovač vypne."
         }
       }
     }
