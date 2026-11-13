@@ -1215,7 +1215,12 @@
           "180": "3 ч",
           "240": "4 ч",
           "none": "Выкл.",
-          "cupboard": "Шкаф"
+          "cupboard": "Шкаф",
+          "damp": "Влажное",
+          "less": "Меньше",
+          "normal": "Обычный",
+          "more": "Больше",
+          "very": "Очень сильный"
         }
       },
       "zone_mode": {
@@ -1589,6 +1594,12 @@
       "drum_clean_last_cleaned": {
         "name": "Последняя очистка барабана"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "До очистки барабана (сушка)"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Последняя очистка барабана (сушка)"
+      },
       "quick_wash": {
         "name": "Быстрая стирка",
         "state": {
@@ -1785,6 +1796,15 @@
       },
       "progress_percentage": {
         "name": "Прогресс в процентах"
+      },
+      "wash_progress_percentage": {
+        "name": "Прогресс стирки в процентах"
+      },
+      "dry_progress_percentage": {
+        "name": "Прогресс сушки в процентах"
+      },
+      "wash_remaining_minutes": {
+        "name": "Оставшееся время стирки"
       },
       "selfcheck_error": {
         "name": "Ошибка самопроверки"

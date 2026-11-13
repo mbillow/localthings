@@ -6,6 +6,8 @@
     "auto_softener",
     "bubble_soak",
     "child_lock",
+    "combo_dry_clean_cycles_remaining",
+    "combo_dry_clean_last_cleaned",
     "completion_minutes",
     "cycle",
     "cycle_active",
@@ -18,6 +20,8 @@
     "drum_clean_cycles_remaining",
     "drum_light",
     "dry_level",
+    "dry_progress_percentage",
+    "dry_time",
     "energy_kwh",
     "energy_saved_kwh",
     "extra_rinse",
@@ -40,7 +44,10 @@
     "sound_tone",
     "sound_volume",
     "spin_speed",
+    "wash_progress_percentage",
     "wash_temperature",
-    "water_liters"
+    "water_liters",
+    "wrinkle_prevent",
+    "wrinkle_prevent_active"
   ]
 }

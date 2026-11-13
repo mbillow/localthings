@@ -1215,7 +1215,12 @@
           "180": "3시간",
           "240": "4시간",
           "none": "끄기",
-          "cupboard": "옷장 보관"
+          "cupboard": "옷장 보관",
+          "damp": "촉촉",
+          "less": "적게",
+          "normal": "표준",
+          "more": "많이",
+          "very": "매우 많이"
         }
       },
       "zone_mode": {
@@ -1589,6 +1594,12 @@
       "drum_clean_last_cleaned": {
         "name": "마지막 통세척"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "건조 통세척까지 남은 횟수"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "마지막 건조 통세척"
+      },
       "quick_wash": {
         "name": "빠른 세탁",
         "state": {
@@ -1785,6 +1796,15 @@
       },
       "progress_percentage": {
         "name": "진행률"
+      },
+      "wash_progress_percentage": {
+        "name": "세탁 진행률"
+      },
+      "dry_progress_percentage": {
+        "name": "건조 진행률"
+      },
+      "wash_remaining_minutes": {
+        "name": "세탁 남은 시간"
       },
       "selfcheck_error": {
         "name": "자가 점검 오류"

@@ -1215,7 +1215,12 @@
           "180": "3 h",
           "240": "4 h",
           "none": "Désactivé",
-          "cupboard": "Prêt à ranger"
+          "cupboard": "Prêt à ranger",
+          "damp": "Humide",
+          "less": "Moins sec",
+          "normal": "Normal",
+          "more": "Plus sec",
+          "very": "Très sec"
         }
       },
       "zone_mode": {
@@ -1589,6 +1594,12 @@
       "drum_clean_last_cleaned": {
         "name": "Dernier nettoyage du tambour"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Nettoyage du tambour (séchage) dans"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Dernier nettoyage du tambour (séchage)"
+      },
       "quick_wash": {
         "name": "Lavage rapide",
         "state": {
@@ -1785,6 +1796,15 @@
       },
       "progress_percentage": {
         "name": "Pourcentage de progression"
+      },
+      "wash_progress_percentage": {
+        "name": "Pourcentage de progression du lavage"
+      },
+      "dry_progress_percentage": {
+        "name": "Pourcentage de progression du séchage"
+      },
+      "wash_remaining_minutes": {
+        "name": "Temps de lavage restant"
       },
       "selfcheck_error": {
         "name": "Erreur d'autodiagnostic"
