@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  zip:
+    name: Attach integration zip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+
+      # HACS installs from this zip (zip_release in hacs.json) and shows its
+      # GitHub download count, so every release must carry it.
+      - name: Set manifest version from the release tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="${TAG#v}"
+          jq --arg v "$version" '.version = $v' custom_components/localthings/manifest.json > manifest.tmp
+          mv manifest.tmp custom_components/localthings/manifest.json
+
+      - name: Build zip
+        working-directory: custom_components/localthings
+        run: zip -r "$GITHUB_WORKSPACE/localthings.zip" . -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
+
+      - name: Upload zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" localthings.zip --clobber --repo "$GITHUB_REPOSITORY"
