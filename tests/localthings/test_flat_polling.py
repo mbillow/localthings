@@ -466,7 +466,7 @@ async def test_flat_discovery_without_a_snapshot_is_the_live_read(
     coordinator._flat = True
     coordinator._identity = _identity(_AV_LINKS)
     await _first_flat_cycle(coordinator, _RESOURCES)
-    assert not coordinator._retained
+    assert not coordinator.registration.retained
     assert coordinator.discovery_resources == coordinator.last_resources
 
 

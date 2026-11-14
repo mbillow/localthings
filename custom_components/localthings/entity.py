@@ -16,55 +16,13 @@ from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import LocalThingsCoordinator, bound_id
+from .coordinator import LocalThingsCoordinator
+from .registration import bound_id
+
+# Tests import it from here, where it lived before registration.py.
+from .registration import is_included as _is_included  # noqa: F401
 from .registry.adapter import _key
-from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
-
-
-def _is_included(
-    bound: BoundEntity, coordinator: LocalThingsCoordinator, *, live: bool = False
-) -> bool:
-    """Return False if the entity should not be registered for this device.
-
-    Explicit exists_fn takes priority. Otherwise, if the entity has a
-    field, require that field to be present in the resource rep so that
-    optional fields on shared resources don't create phantom entities.
-
-    A stub rep (is_stub_rep) is included anyway so it can be populated by
-    sub-polls. A genuinely empty {} rep is included too by this default
-    gate: whether empty means "not populated yet" or "permanently
-    unsupported" needs per-field domain knowledge this generic gate
-    doesn't have. Only a capability whose author
-    has verified a field is genuinely never populated opts into stricter
-    gating with its own exists_fn (see common.ENERGY_METER, issue #127).
-
-    `bound.href` is already the actual href (issue #177); `exists_fn` gets
-    `bound`'s own subdevice's canonical view instead of the raw snapshot,
-    same rule as everywhere else a whole-resources-dict scan happens --
-    this is a free function, so it can't use self._resources.
-
-    Setup uses discovery resources so an empty live cache during an offline
-    load (issue #295) doesn't filter rehydrated entities away. Runtime
-    presence checks use `live=True` so the saved snapshot can't freeze them.
-    """
-    # live reads the one rep: last_resources copies the whole cache, and this
-    # runs on every update for each dynamic-presence entity.
-    rep = (
-        coordinator.cached_resource(bound.href)
-        if live
-        else coordinator.discovery_resources.get(bound.href)
-    )
-    if rep is None:
-        return False
-    if bound.desc.exists_fn is not None:
-        canonical = coordinator.canonical_resources if live else coordinator.discovery_canonical
-        return bound.desc.exists_fn(rep, canonical(bound.subdevice))
-    if bound.desc.field:
-        if not rep or is_stub_rep(rep):
-            return True
-        return bound.desc.field in rep
-    return True  # rep_fn or no-field entities (ButtonDesc) are always included
 
 
 def async_add_bound_entities(
@@ -84,14 +42,27 @@ def async_add_bound_entities(
     covers the gaps.
     """
     added: set[tuple[str, str, str]] = set()
+    # Selected bounds not added yet that live data can still bring in, and
+    # the registration generation they were collected at: nothing else can
+    # become registrable until the generation moves.
+    pending: list[BoundEntity] = []
+    seen: list[int | None] = [None]
 
     def _new() -> list[Entity]:
+        if seen[0] != coordinator.registration.generation:
+            seen[0] = coordinator.registration.generation
+            candidates = [b for b in coordinator.bound if select(b) and bound_id(b) not in added]
+            pending[:] = [b for b in candidates if b.desc.dynamic_presence]
+        else:
+            candidates = list(pending)
         entities = []
-        for bound in coordinator.bound:
+        for bound in candidates:
             ident = bound_id(bound)
-            if ident in added or not select(bound) or not coordinator.registrable(bound):
+            if ident in added or not coordinator.registrable(bound):
                 continue
             added.add(ident)
+            if bound in pending:
+                pending.remove(bound)
             entities.append(factory(bound))
         return entities
 

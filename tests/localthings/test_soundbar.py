@@ -967,3 +967,72 @@ async def test_a_board_in_standby_never_ages_out_an_href(hass: HomeAssistant) ->
     stored = await coordinator._snapshot_store.async_load()
     assert stored is not None
     assert missed in stored["resources"]
+
+
+async def test_an_href_the_board_stopped_listing_is_let_go(hass: HomeAssistant) -> None:
+    """A flat board's /oic/res is everything it serves. An href it no longer
+    lists is gone rather than short: it isn't kept or retained, so no sweep
+    waits out its timeout."""
+    from dataclasses import asdict, replace
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    href = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    gone = [b for b in coordinator.bound if b.href == href]
+    live = {h: rep for h, rep in resources.items() if h != href}
+    coordinator._identity = replace(
+        _IDENTITY, raw={**_IDENTITY.raw, "/oic/res": [{"href": h} for h in live]}
+    )
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+    ):
+        await coordinator._async_update_data()
+
+    assert not any(b in coordinator.bound for b in gone)
+    assert not any(coordinator.provides(b) for b in gone)
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    assert href not in stored["resources"]
+
+
+async def test_a_sweep_reads_hrefs_not_heard_from_last(hass: HomeAssistant) -> None:
+    """A retained href that keeps timing out can't use up the sweep's
+    budget before the hrefs that answer are read."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = sorted({b.href for b in coordinator.bound})[0]
+    live = {h: rep for h, rep in resources.items() if h != missed}
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+    ):
+        await coordinator._async_update_data()
+    assert missed in coordinator._unconfirmed
+
+    order: list[str] = []
+
+    def _read(sess, hrefs, **kwargs):
+        order.extend(hrefs)
+        return iter(())
+
+    coordinator._flat_poll = coordinator._FLAT_FULL_EVERY_N_POLLS - 1
+    with (
+        patch("custom_components.localthings.coordinator.iter_resources", side_effect=_read),
+        pytest.raises(RuntimeError),
+    ):
+        coordinator._poll_flat_blocking(object())
+    assert order[-1] == missed

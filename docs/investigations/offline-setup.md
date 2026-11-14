@@ -123,13 +123,24 @@ what the snapshot registered (`_adopt_live_discovery`):
   (`coordinator.provides()`).
 - The snapshot keeps the union. An href that never answers is let go only
   once its owner — the main unit, or the sub-unit that owns it — has answered
-  `_PRUNE_AFTER_CYCLES` cycles (about two hours) without it, and then only
-  from the snapshot: HA shows its entities as no longer provided after the
-  next restart. A cycle counts for an owner only if at least half of its
-  bound hrefs answered, the bar `read_all` sets for discovery, so a board in
-  network standby (handshake fine, most reads timing out) never ages
-  anything out. A sub-unit that stays silent keeps its entities
+  `_PRUNE_AFTER_CYCLES` cycles without it (about two hours on a Collection
+  board; about eight on a flat board, which reads in full every fourth
+  poll), and then only from the snapshot: HA shows its entities as no longer
+  provided after the next restart. A cycle counts for an owner only if it
+  answered at least half of what it answered on the read discovery ran on,
+  the bar `read_all` sets for discovery itself, so a board in network
+  standby (handshake fine, most reads timing out) never ages anything out.
+  On a flat board, whose `/oic/res` is the full list it serves, an href that
+  list no longer carries is let go at once. A sub-unit that stays silent keeps its entities
   indefinitely, and a `dynamic_presence` entity's href is never pruned.
+- A known sub-unit that isn't live (off when HA started) has its seed read
+  again with backoff, from every 10 cycles up to every 120
+  (`_recover_dormant`). Once it answers with live state it joins polling and
+  its entities are registered or become available in place.
+- The first live cycle after a snapshot load runs the registry cleanup
+  again against live data, as the reload used to. An href the read missed
+  is no evidence there either: `prune_when_excluded` only acts on a rep
+  that is present.
 - A `late_evidence` gate (the buzzer's vocabulary) follows live data the same
   way: an entity it now includes is added, one it now excludes goes
   unavailable, and the deciding rep is banked for the next start.
