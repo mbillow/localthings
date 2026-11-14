@@ -9,6 +9,7 @@ their checked neighbours.
 """
 
 import functools
+from dataclasses import replace
 
 from ..capability import Capability
 from ..entities import (
@@ -393,6 +394,17 @@ AUTO_POWER_DOWN = Capability(
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.autoPowerDown", _is_on),
         ),
+    ),
+)
+
+# The HW-Q935GF (2025, #853) serves the same field under /av/ instead. The
+# shared key keeps one switch; it binds here only when the plain href is absent.
+AUTO_POWER_DOWN_AV = Capability(
+    href="/sec/networkaudio/av/autoPowerDown",
+    poll_tier="warm",
+    entities=tuple(
+        replace(e, exists_fn=lambda rep, resources: AUTO_POWER_DOWN.href not in resources)
+        for e in AUTO_POWER_DOWN.entities
     ),
 )
 

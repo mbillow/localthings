@@ -35,6 +35,7 @@ REGISTRY = DeviceRegistry(
             soundbar.ACTIVE_VOICE_AMPLIFIER,
             soundbar.SPACEFIT_SOUND,
             soundbar.AUTO_POWER_DOWN,
+            soundbar.AUTO_POWER_DOWN_AV,
             soundbar.AUTO_UPDATE,
             soundbar.SYMPHONY,
             soundbar.AUDIOPROMPT,
