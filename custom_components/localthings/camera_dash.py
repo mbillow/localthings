@@ -243,6 +243,13 @@ def async_register_view(hass: HomeAssistant) -> None:
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_all)
 
 
+@callback
+def async_register_views(hass: HomeAssistant) -> None:
+    """Register both camera views, once a TV entry turns camera casting on."""
+    async_register_view(hass)
+    camera_stream.async_register_view(hass)
+
+
 def is_available(hass: HomeAssistant) -> bool:
     """True once the view is registered."""
     return bool(hass.data.get(_DATA_REGISTERED))
@@ -515,7 +522,7 @@ class CameraDashView(HomeAssistantView):
 
     async def get(self, request: web.Request, token: str, name: str) -> web.StreamResponse:
         session = _sessions(self.hass).get(token)
-        if session is None:
+        if session is None or not camera_stream.casting_enabled(self.hass):
             _LOGGER.debug("DASH request for unknown session %s…", token[:6])
             raise web.HTTPNotFound
         session.touch()

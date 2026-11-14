@@ -2722,7 +2722,8 @@
           "subdevices": "Poduređaji",
           "cloud_courses": "Preuzmi cikluse",
           "forget_learned_modes": "Zaboravi zapamćene režime",
-          "debug_write": "Otklanjanje grešaka: upisivanje u resurs"
+          "debug_write": "Otklanjanje grešaka: upisivanje u resurs",
+          "camera_casting": "Prenos kamera"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Čekaj ponovo",
           "cloud_finish": "Završi"
+        }
+      },
+      "camera_casting": {
+        "title": "Prenos kamera sa malim kašnjenjem",
+        "description": "Kada prenesete kameru na ovaj televizor, Home Assistant je obično služi preko sopstvenog strima, koji televizor baferuje oko 20 sekundi. Uključite ovo da bi LocalThings pokrenuo ffmpeg i sam služio kameru, čime se kašnjenje smanjuje na nekoliko sekundi.\n\nOvo dodaje dve krajnje tačke na veb server Home Assistant-a. Televizor otvara strim nasumičnim jednokratnim linkom, jer ne može da se prijavi. Ostavite isključeno osim ako prenosite kamere i kašnjenje vam je bitno: ništa drugo na televizoru to ne zahteva. Potrebni su ffmpeg i Home Assistant URL dostupan televizoru.",
+        "data": {
+          "camera_casting": "Prenosi kamere preko LocalThings-a (ffmpeg)"
         }
       }
     },

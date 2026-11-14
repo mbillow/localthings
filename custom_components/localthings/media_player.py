@@ -656,7 +656,7 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             camera = str(media_id).removeprefix(_CAMERA_SOURCE)
             if icon is None:
                 icon = _SNAPSHOT_PATH + camera
-            if camera_dash.is_available(self.hass):  # registered with camera_stream's
+            if self.coordinator.camera_casting_enabled and camera_dash.is_available(self.hass):
                 source = await camera_stream.async_stream_source(self.hass, camera)
         if camera and source and not ask and self.coordinator.av.can_launch_gallery():
             if await self.coordinator.playback.async_cast_camera(camera, source):

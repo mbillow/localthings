@@ -2722,7 +2722,8 @@
           "subdevices": "Podřízená zařízení",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
-          "debug_write": "Ladění: zápis do prostředku"
+          "debug_write": "Ladění: zápis do prostředku",
+          "camera_casting": "Přenos kamer"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Počkat znovu",
           "cloud_finish": "Dokončit"
+        }
+      },
+      "camera_casting": {
+        "title": "Přenos kamer s nízkou latencí",
+        "description": "Když na tuto televizi přenášíte kameru, Home Assistant ji běžně poskytuje přes vlastní stream, který si televize ukládá do vyrovnávací paměti asi 20 sekund. Po zapnutí spustí LocalThings ffmpeg a kameru poskytne sám, čímž se zpoždění zkrátí na několik sekund.\n\nTím se na webový server Home Assistantu přidají dva koncové body. Televize stream otevírá náhodným jednorázovým odkazem, protože se nemůže přihlásit. Nechte vypnuté, pokud nepřenášíte kamery a zpoždění vám nevadí: nic jiného v televizi to nepotřebuje. Vyžaduje ffmpeg a adresu Home Assistantu dostupnou z televize.",
+        "data": {
+          "camera_casting": "Přenášet kamery přes LocalThings (ffmpeg)"
         }
       }
     },

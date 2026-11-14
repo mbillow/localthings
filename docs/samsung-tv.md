@@ -16,6 +16,7 @@ with Smart Monitors, plus its own entities:
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
   actions.
 - A **picture mode** select.
+- Optional low-latency **camera casting**, off by default (below).
 
 Source and sound-mode names come from the TV; duplicate input names are
 disambiguated by their wire IDs. Options update as the device changes them.
@@ -37,6 +38,46 @@ list. A temporarily absent list can appear later without re-adding the device.
 A CoAP success carrying `controlResponse.result=false` is still a refusal.
 This picture select does not opt into confirmation-on-refusal: that hardware
 finding concerned sound mode, not picture mode.
+
+## Camera casting
+
+`media_player.play_media` with a `media-source://camera/...` id casts a camera
+to the TV. How it gets there depends on the TV's **Camera casting** option
+(**Settings > Devices & services > LocalThings > the TV > Configure > Camera
+casting**):
+
+| | Off (default) | On |
+| --- | --- | --- |
+| Stream | Home Assistant's own camera HLS | LocalThings runs ffmpeg and serves live MPEG-DASH |
+| Delay behind live | about 20 s | about 4.5 s |
+| On the TV | the renderer's prompt, accepted with the TV's remote | Gallery opens directly, no prompt |
+| Added to Home Assistant | nothing | two HTTP endpoints and an ffmpeg process per camera being cast |
+
+Turn it on if you cast cameras to the TV, a doorbell for instance, and the
+delay matters. Nothing else on the TV uses it, and links, files and YouTube
+cast the same way either way. Measurements are in
+[casting latency](investigations/tv-casting-latency.md).
+
+It needs:
+
+- ffmpeg, which Home Assistant OS and the container image already have;
+- a camera with Home Assistant's stream feature (RTSP and the like). An
+  MJPEG-only camera is shown as a snapshot either way;
+- a Home Assistant URL the TV can reach over plain LAN access
+  (**Settings > System > Network**). An `https` URL needs a certificate the TV
+  trusts.
+
+It's off by default because of what it adds to Home Assistant. The endpoints
+are `/api/localthings/camera_dash/<token>/...` and
+`/api/localthings/camera_stream/<camera>`. The TV can't log in, so the DASH
+endpoint takes no Home Assistant login: a random 32-character token in the
+path is the credential, and it stops working 30 s after the TV stops fetching
+from it. The MPEG-TS endpoint, the fallback when the cast asks for the TV's
+prompt (`extra: {ask: true}`) or DASH can't start, takes a signed URL like
+Home Assistant's own media. Both endpoints answer only while at least one TV has the option on.
+Home Assistant can't remove a route once it's added, so after you turn the
+option off the endpoints stay registered but refuse every request. Turning it
+off also ends any camera this TV is casting.
 
 ## Scope and evidence
 

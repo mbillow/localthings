@@ -68,6 +68,14 @@ class _FakeProc:
         return self.returncode or 0
 
 
+@pytest.fixture(autouse=True)
+def _casting_on():
+    """A TV entry has camera casting on (CONF_CAMERA_CASTING); without one
+    the views refuse every request."""
+    with patch("custom_components.localthings.camera_stream.casting_enabled", return_value=True):
+        yield
+
+
 async def _setup_http(hass: HomeAssistant) -> None:
     assert await async_setup_component(hass, "http", {})
     camera_dash.async_register_view(hass)
@@ -765,3 +773,18 @@ async def test_a_retag_after_stop_leaves_no_ffmpeg_running(hass: HomeAssistant) 
 
     assert late.killed
     assert session.proc is refused
+
+
+async def test_a_live_session_is_refused_once_casting_is_off(
+    hass: HomeAssistant, hass_client_no_auth
+) -> None:
+    await _setup_http(hass)
+    client = await hass_client_no_auth()
+    token = await _start(hass, _FakeProc())
+    (_folder(hass, token) / "manifest.mpd").write_text(_MPD)
+
+    with patch("custom_components.localthings.camera_stream.casting_enabled", return_value=False):
+        response = await client.get(camera_dash.manifest_path(token))
+
+    assert response.status == 404
+    await camera_dash.async_stop(hass, token)

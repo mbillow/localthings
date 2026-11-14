@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from homeassistant.components.media_player import MediaPlayerEntityFeature, MediaType
@@ -21,10 +21,22 @@ from homeassistant.components.media_source import PlayMedia
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
+from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities import tv as tv_caps
 from tests.localthings.test_soundbar import _mock_entry, _setup_soundbar
 from tests.localthings.test_tv_media_player_tu7172 import _entry, _setup_tv
 from tests.localthings.test_tv_notify import _setup_tv as _setup_tv_with_native_app
+
+
+@pytest.fixture(autouse=True)
+def _casting_on():
+    """These TVs have camera casting on (CONF_CAMERA_CASTING, off by default)."""
+    with patch.object(
+        LocalThingsCoordinator, "camera_casting_enabled", new_callable=PropertyMock
+    ) as enabled:
+        enabled.return_value = True
+        yield
+
 
 _RENDERER = ["content", "renderer"]
 _SENDER = {"deviceName": "Home Assistant", "userName": "Home Assistant", "userId": "home-assistant"}

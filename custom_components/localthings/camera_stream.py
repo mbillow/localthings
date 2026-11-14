@@ -122,6 +122,16 @@ def is_available(hass: HomeAssistant) -> bool:
     return bool(hass.data.get(_DATA_REGISTERED))
 
 
+def casting_enabled(hass: HomeAssistant) -> bool:
+    """True while a loaded TV entry has camera casting on (CONF_CAMERA_CASTING).
+    Home Assistant can't remove a registered view, so both views check this
+    on every request: turning the option off closes them again."""
+    return any(
+        getattr(coordinator, "camera_casting_enabled", False)
+        for coordinator in (hass.data.get(DOMAIN) or {}).values()
+    )
+
+
 async def async_stream_source(hass: HomeAssistant, entity_id: str) -> str | None:
     """The camera's source ffmpeg can open (RTSP and the like), if any.
 
@@ -158,7 +168,7 @@ class CameraStreamView(HomeAssistantView):
         self.hass = hass
 
     async def get(self, request: web.Request, entity_id: str) -> web.StreamResponse:
-        if not entity_id.startswith("camera."):
+        if not casting_enabled(self.hass) or not entity_id.startswith("camera."):
             raise web.HTTPNotFound
         try:
             source = await async_stream_source(self.hass, entity_id)

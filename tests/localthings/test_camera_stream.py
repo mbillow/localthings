@@ -41,6 +41,14 @@ class _FakeProc:
         return self.returncode or 0
 
 
+@pytest.fixture(autouse=True)
+def _casting_on():
+    """A TV entry has camera casting on (CONF_CAMERA_CASTING); without one
+    the views refuse every request."""
+    with patch("custom_components.localthings.camera_stream.casting_enabled", return_value=True):
+        yield
+
+
 async def _setup_http(hass: HomeAssistant) -> None:
     assert await async_setup_component(hass, "http", {})
     camera_stream.async_register_view(hass)
@@ -219,4 +227,21 @@ async def test_a_camera_without_the_stream_feature_has_no_source(hass: HomeAssis
         },
     ):
         assert await camera_stream.async_stream_source(hass, "camera.mjpeg") is None
+    source.assert_not_awaited()
+
+
+async def test_the_view_refuses_while_no_tv_has_casting_on(
+    hass: HomeAssistant, hass_client_no_auth
+) -> None:
+    await _setup_http(hass)
+    client = await hass_client_no_auth()
+    path = async_sign_path(hass, camera_stream.stream_path("camera.door"), timedelta(minutes=5))
+
+    with (
+        patch("custom_components.localthings.camera_stream.casting_enabled", return_value=False),
+        patch(_SOURCE, AsyncMock(return_value="rtsp://cam/stream")) as source,
+    ):
+        response = await client.get(path)
+
+    assert response.status == 404
     source.assert_not_awaited()

@@ -2722,7 +2722,8 @@
           "subdevices": "Podriadené zariadenia",
           "cloud_courses": "Stiahnuté cykly",
           "forget_learned_modes": "Zabudnúť zapamätané režimy",
-          "debug_write": "Ladenie: zápis do prostriedku"
+          "debug_write": "Ladenie: zápis do prostriedku",
+          "camera_casting": "Prenos kamier"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Počkať znova",
           "cloud_finish": "Dokončiť"
+        }
+      },
+      "camera_casting": {
+        "title": "Prenos kamier s nízkou latenciou",
+        "description": "Keď na tento televízor prenášate kameru, Home Assistant ju bežne poskytuje cez vlastný stream, ktorý si televízor ukladá do vyrovnávacej pamäte asi 20 sekúnd. Po zapnutí spustí LocalThings ffmpeg a kameru poskytne sám, čím sa oneskorenie skráti na niekoľko sekúnd.\n\nTým sa na webový server Home Assistantu pridajú dva koncové body. Televízor otvára stream náhodným jednorazovým odkazom, pretože sa nemôže prihlásiť. Nechajte vypnuté, ak neprenášate kamery a oneskorenie vám neprekáža: nič iné v televízore to nepotrebuje. Vyžaduje ffmpeg a adresu Home Assistantu dostupnú z televízora.",
+        "data": {
+          "camera_casting": "Prenášať kamery cez LocalThings (ffmpeg)"
         }
       }
     },

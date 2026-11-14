@@ -37,6 +37,7 @@ from .cloudcourse import CloudCourses
 from .cloudcourse import persist as cloud_persist
 from .const import (
     CONF_BYPASS_REMOTE_CONTROL,
+    CONF_CAMERA_CASTING,
     CONF_CLOUD_COURSES,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
@@ -54,6 +55,7 @@ from .const import (
     CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
+    DEFAULT_CAMERA_CASTING,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_LEARN_MODES,
     DEVICE_SUPPORT_ISSUE_URL,
@@ -1006,6 +1008,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # ------------------------------------------------------------------
     # Cloud "Download" programs (issue #342) -- see cloudcourse.py
     # ------------------------------------------------------------------
+
+    @property
+    def camera_casting_enabled(self) -> bool:
+        """Whether this TV casts cameras through camera_dash/camera_stream
+        (CONF_CAMERA_CASTING); read live, so an options save applies at once."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        return family == "tv" and bool(
+            self._entry.options.get(CONF_CAMERA_CASTING, DEFAULT_CAMERA_CASTING)
+        )
 
     @property
     def cloud_courses_enabled(self) -> bool:

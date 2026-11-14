@@ -2722,7 +2722,8 @@
           "subdevices": "Subapparaten",
           "cloud_courses": "Gedownloade programma's",
           "forget_learned_modes": "Onthouden modi vergeten",
-          "debug_write": "Foutopsporing: naar een resource schrijven"
+          "debug_write": "Foutopsporing: naar een resource schrijven",
+          "camera_casting": "Camera casten"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Opnieuw wachten",
           "cloud_finish": "Voltooien"
+        }
+      },
+      "camera_casting": {
+        "title": "Camera casten met lage vertraging",
+        "description": "Als je een camera naar deze tv cast, levert Home Assistant die normaal via een eigen stream, die de tv ongeveer 20 seconden buffert. Zet dit aan om LocalThings ffmpeg te laten draaien en de camera zelf te laten leveren; de vertraging daalt dan tot enkele seconden.\n\nDit voegt twee endpoints toe aan de webserver van Home Assistant. De tv opent de stream met een willekeurige eenmalige link, omdat hij niet kan inloggen. Laat het uit tenzij je camera's cast en de vertraging ertoe doet: niets anders op de tv heeft het nodig. Vereist ffmpeg en een Home Assistant-URL die de tv kan bereiken.",
+        "data": {
+          "camera_casting": "Camera's casten via LocalThings (ffmpeg)"
         }
       }
     },

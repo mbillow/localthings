@@ -50,6 +50,7 @@ from .const import (
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
+    CONF_CAMERA_CASTING,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
     CONF_DEVICE_TOKEN,
@@ -72,6 +73,7 @@ from .const import (
     CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
+    DEFAULT_CAMERA_CASTING,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
@@ -1987,7 +1989,31 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             coord.subdevices or self.config_entry.options.get(CONF_DISABLED_SUBDEVICES)
         ):
             menu.insert(1, "subdevices")
+        if (coord is not None and coord.device_type_name == "tv") or (
+            self.config_entry.data.get(CONF_DEVICE_TYPE) == "tv"
+        ):
+            menu.insert(1, "camera_casting")
         return self.async_show_menu(step_id="init", menu_options=menu)
+
+    async def async_step_camera_casting(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """CONF_CAMERA_CASTING: see its comment, and docs/samsung-tv.md."""
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        return self.async_show_form(
+            step_id="camera_casting",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CAMERA_CASTING,
+                        default=self.config_entry.options.get(
+                            CONF_CAMERA_CASTING, DEFAULT_CAMERA_CASTING
+                        ),
+                    ): bool,
+                }
+            ),
+        )
 
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None

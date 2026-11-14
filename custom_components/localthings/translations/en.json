@@ -2722,7 +2722,8 @@
           "subdevices": "Subdevices",
           "cloud_courses": "Download cycles",
           "forget_learned_modes": "Forget remembered modes",
-          "debug_write": "Debug: write to a resource"
+          "debug_write": "Debug: write to a resource",
+          "camera_casting": "Camera casting"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Wait again",
           "cloud_finish": "Finish"
+        }
+      },
+      "camera_casting": {
+        "title": "Low-latency camera casting",
+        "description": "When you cast a camera to this TV, Home Assistant normally serves it through its own stream, which the TV buffers for about 20 seconds. Turn this on to have LocalThings run ffmpeg and serve the camera itself, which brings the delay down to a few seconds.\n\nThis adds two endpoints to Home Assistant's web server. The TV opens the stream with a random one-time link, because it can't log in. Leave it off unless you cast cameras and the delay matters: nothing else on the TV needs it. Requires ffmpeg and a Home Assistant URL the TV can reach.",
+        "data": {
+          "camera_casting": "Cast cameras through LocalThings (ffmpeg)"
         }
       }
     },

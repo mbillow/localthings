@@ -149,6 +149,14 @@ CONF_KNOWN_APPS = "known_apps"
 CONF_CLOUD_COURSES_ENABLED = "cloud_courses_enabled"
 DEFAULT_CLOUD_COURSES_ENABLED = True
 
+# Options-flow key (TVs): cast cameras through LocalThings' own ffmpeg
+# pipeline (camera_dash.py, camera_stream.py), which serves the TV from two
+# HTTP views. Off by default: it runs ffmpeg and opens a token-authenticated
+# endpoint, and without it a camera still casts through Home Assistant's own
+# stream, only with more delay (docs/samsung-tv.md#camera-casting).
+CONF_CAMERA_CASTING = "camera_casting"
+DEFAULT_CAMERA_CASTING = False
+
 # The subdevices the user switched off in the options flow, as {key: name};
 # the name labels one whose device is gone. A slot can pass the liveness
 # gate without being hardware (#670, #681), and only the owner can tell;

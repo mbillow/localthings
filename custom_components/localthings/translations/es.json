@@ -160,7 +160,8 @@
           "subdevices": "Subdispositivos",
           "cloud_courses": "Ciclos descargados",
           "forget_learned_modes": "Olvidar los modos recordados",
-          "debug_write": "Depuración: escribir en un recurso"
+          "debug_write": "Depuración: escribir en un recurso",
+          "camera_casting": "Transmisión de cámaras"
         }
       },
       "settings": {
@@ -238,6 +239,13 @@
         "menu_options": {
           "cloud_guided": "Esperar de nuevo",
           "cloud_finish": "Finalizar"
+        }
+      },
+      "camera_casting": {
+        "title": "Transmisión de cámaras con baja latencia",
+        "description": "Cuando envías una cámara a este televisor, Home Assistant la sirve normalmente a través de su propio stream, que el televisor almacena en búfer unos 20 segundos. Actívalo para que LocalThings ejecute ffmpeg y sirva la cámara por sí mismo, lo que reduce el retraso a unos pocos segundos.\n\nEsto añade dos endpoints al servidor web de Home Assistant. El televisor abre el stream con un enlace aleatorio de un solo uso, porque no puede iniciar sesión. Déjalo desactivado salvo que envíes cámaras y el retraso te importe: nada más del televisor lo necesita. Requiere ffmpeg y una URL de Home Assistant accesible desde el televisor.",
+        "data": {
+          "camera_casting": "Enviar cámaras a través de LocalThings (ffmpeg)"
         }
       }
     },

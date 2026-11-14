@@ -2722,7 +2722,8 @@
           "subdevices": "Urządzenia podrzędne",
           "cloud_courses": "Pobrane cykle",
           "forget_learned_modes": "Zapomnij zapamiętane tryby",
-          "debug_write": "Debugowanie: zapis do zasobu"
+          "debug_write": "Debugowanie: zapis do zasobu",
+          "camera_casting": "Przesyłanie kamer"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Czekaj ponownie",
           "cloud_finish": "Zakończ"
+        }
+      },
+      "camera_casting": {
+        "title": "Przesyłanie kamer z małym opóźnieniem",
+        "description": "Gdy przesyłasz kamerę na ten telewizor, Home Assistant zwykle udostępnia ją przez własny strumień, który telewizor buforuje przez około 20 sekund. Włącz tę opcję, aby LocalThings uruchamiał ffmpeg i sam udostępniał kamerę, co skraca opóźnienie do kilku sekund.\n\nDodaje to dwa punkty końcowe do serwera WWW Home Assistanta. Telewizor otwiera strumień losowym jednorazowym linkiem, ponieważ nie może się zalogować. Zostaw wyłączone, chyba że przesyłasz kamery i opóźnienie ma znaczenie: nic innego w telewizorze tego nie wymaga. Wymaga ffmpeg i adresu URL Home Assistanta dostępnego z telewizora.",
+        "data": {
+          "camera_casting": "Przesyłaj kamery przez LocalThings (ffmpeg)"
         }
       }
     },

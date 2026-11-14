@@ -2722,7 +2722,8 @@
           "subdevices": "Sous-appareils",
           "cloud_courses": "Programmes téléchargés",
           "forget_learned_modes": "Oublier les modes mémorisés",
-          "debug_write": "Débogage : écrire dans une ressource"
+          "debug_write": "Débogage : écrire dans une ressource",
+          "camera_casting": "Diffusion des caméras"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Attendre à nouveau",
           "cloud_finish": "Terminer"
+        }
+      },
+      "camera_casting": {
+        "title": "Diffusion des caméras à faible latence",
+        "description": "Lorsque vous diffusez une caméra sur ce téléviseur, Home Assistant la sert normalement via son propre flux, que le téléviseur met en mémoire tampon pendant environ 20 secondes. Activez cette option pour que LocalThings lance ffmpeg et serve lui-même la caméra, ce qui ramène le délai à quelques secondes.\n\nCela ajoute deux points d'accès au serveur web de Home Assistant. Le téléviseur ouvre le flux avec un lien aléatoire à usage unique, car il ne peut pas se connecter. Laissez-la désactivée sauf si vous diffusez des caméras et que le délai compte : rien d'autre sur le téléviseur n'en a besoin. Nécessite ffmpeg et une URL Home Assistant joignable par le téléviseur.",
+        "data": {
+          "camera_casting": "Diffuser les caméras via LocalThings (ffmpeg)"
         }
       }
     },

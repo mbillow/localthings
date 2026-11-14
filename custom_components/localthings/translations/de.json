@@ -2722,7 +2722,8 @@
           "subdevices": "Untergeräte",
           "cloud_courses": "Download-Programme",
           "debug_write": "Debug: In eine Ressource schreiben",
-          "forget_learned_modes": "Gemerkte Modi vergessen"
+          "forget_learned_modes": "Gemerkte Modi vergessen",
+          "camera_casting": "Kamera-Übertragung"
         }
       },
       "settings": {
@@ -2800,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Erneut warten",
           "cloud_finish": "Fertig"
+        }
+      },
+      "camera_casting": {
+        "title": "Kamera-Übertragung mit geringer Verzögerung",
+        "description": "Wenn Sie eine Kamera auf diesen Fernseher übertragen, liefert Home Assistant sie normalerweise über einen eigenen Stream, den der Fernseher etwa 20 Sekunden puffert. Schalten Sie dies ein, damit LocalThings ffmpeg ausführt und die Kamera selbst liefert; die Verzögerung sinkt dann auf wenige Sekunden.\n\nDadurch erhält der Webserver von Home Assistant zwei zusätzliche Endpunkte. Der Fernseher öffnet den Stream über einen zufälligen Einmal-Link, da er sich nicht anmelden kann. Lassen Sie es aus, außer Sie übertragen Kameras und die Verzögerung stört: Nichts anderes am Fernseher benötigt es. Erfordert ffmpeg und eine Home-Assistant-URL, die der Fernseher erreicht.",
+        "data": {
+          "camera_casting": "Kameras über LocalThings übertragen (ffmpeg)"
         }
       }
     },
