@@ -2262,7 +2262,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         keeps answering."""
         if not self._unconfirmed:
             return
-        for owner in {self._owner_key(href) for href in resources}:
+        for owner in self._owners_awake(resources):
             self._owner_cycles[owner] = self._owner_cycles.get(owner, 0) + 1
         for href in [h for h in self._unconfirmed if self._cache.get(h) is not None]:
             del self._unconfirmed[href]
@@ -2288,6 +2288,24 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._entry.async_create_background_task(
             self.hass, self._async_rebank(drop=gone), "localthings_snapshot_prune"
         )
+
+    def _owners_awake(self, resources: dict[str, dict]) -> set[str]:
+        """Owners that answered this cycle the way an awake device does: at
+        least half of the bound hrefs it read for them, the bar read_all sets
+        for discovery. A board in network standby completes the handshake and
+        lets most reads time out; counting that would age out an href over a
+        night the board spent asleep."""
+        # A flat board's sweep leaves the hot and warm hrefs to the sub-polls.
+        skip = set(self._hot_hrefs) | set(self._warm_hrefs) if self._flat else set()
+        read: dict[str, set[str]] = {}
+        for bound in self.bound:
+            if bound.href not in skip:
+                read.setdefault(self._owner_key(bound.href), set()).add(bound.href)
+        return {
+            owner
+            for owner, hrefs in read.items()
+            if 2 * len(hrefs.intersection(resources)) >= len(hrefs)
+        }
 
     async def _adopt_live_discovery(
         self,

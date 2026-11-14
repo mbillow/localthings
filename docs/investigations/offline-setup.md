@@ -125,8 +125,11 @@ what the snapshot registered (`_adopt_live_discovery`):
   once its owner — the main unit, or the sub-unit that owns it — has answered
   `_PRUNE_AFTER_CYCLES` cycles (about two hours) without it, and then only
   from the snapshot: HA shows its entities as no longer provided after the
-  next restart. A sub-unit that stays silent keeps its entities indefinitely,
-  and a `dynamic_presence` entity's href is never pruned.
+  next restart. A cycle counts for an owner only if at least half of its
+  bound hrefs answered, the bar `read_all` sets for discovery, so a board in
+  network standby (handshake fine, most reads timing out) never ages
+  anything out. A sub-unit that stays silent keeps its entities
+  indefinitely, and a `dynamic_presence` entity's href is never pruned.
 - A `late_evidence` gate (the buzzer's vocabulary) follows live data the same
   way: an entity it now includes is added, one it now excludes goes
   unavailable, and the deciding rep is banked for the next start.

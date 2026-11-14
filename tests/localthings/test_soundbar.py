@@ -933,3 +933,37 @@ async def test_a_dynamic_presence_href_is_never_pruned(hass: HomeAssistant) -> N
     banked = stored["resources"]
     assert dynamic in banked
     assert ordinary not in banked
+
+
+async def test_a_board_in_standby_never_ages_out_an_href(hass: HomeAssistant) -> None:
+    """A board in network standby completes the handshake and answers a few
+    reads. Those cycles don't count as the board answering, so an href that
+    missed the first read survives however long the board sleeps."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    awake = {h: rep for h, rep in resources.items() if h != missed}
+    standby = dict(list(awake.items())[:2])
+
+    with (
+        patch.object(coordinator, "_attempt_observe_mode"),
+        patch.object(coordinator, "_maybe_retry_observe_mode"),
+        patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
+    ):
+        with patch.object(coordinator, "_poll_once", return_value=awake):
+            await coordinator._async_update_data()
+        with patch.object(coordinator, "_poll_once", return_value=standby):
+            for _ in range(10):
+                await coordinator._async_update_data()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    assert missed in stored["resources"]
