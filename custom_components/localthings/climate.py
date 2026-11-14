@@ -37,7 +37,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.capabilities.airconditioner import (
     HREF_AIRFLOW as AIRFLOW_HREF,
 )
@@ -227,15 +227,16 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsClimate(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, ClimateDesc) and _is_included(b, coordinator)
-    )
-    async_add_entities(
-        LocalThingsZoneClimate(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, ZoneClimateDesc) and _is_included(b, coordinator)
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda b: isinstance(b.desc, (ClimateDesc, ZoneClimateDesc)),
+        lambda b: (
+            LocalThingsClimate(coordinator, b)
+            if isinstance(b.desc, ClimateDesc)
+            else LocalThingsZoneClimate(coordinator, b)
+        ),
     )
 
 

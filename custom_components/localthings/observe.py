@@ -369,6 +369,22 @@ class ObserveManager:
                 self.log.warning("subscribe %s failed: %s", href, e)
         return subscribed
 
+    def add_hrefs(self, session, hrefs: list[str]) -> None:
+        """Subscribe hrefs that joined after observe mode began (a sub-unit
+        that came back mid-run). Blocking. Each stays on the poll cadence
+        as a fallback until it pushes, like a subscribed-but-silent href."""
+        subscribed: set[str] = set()
+        for href in hrefs:
+            segs = [s for s in href.strip("/").split("/") if s]
+            try:
+                session.subscribe(segs)
+                subscribed.add(href)
+            except Exception as e:
+                self.log.warning("subscribe %s failed: %s", href, e)
+        self.subscribed_hrefs = self.subscribed_hrefs | subscribed
+        with self._notify_cond:
+            self.fallback_hrefs = self.fallback_hrefs | set(hrefs)
+
     def await_observe_notifies(
         self,
         subscribed: set[str],

@@ -449,34 +449,14 @@ async def test_flat_subpolls_rotate_so_no_href_is_starved(hass: HomeAssistant, m
     assert set(budgets) == {2 * coordinator._FLAT_TIMEOUT_S + 4 * coordinator._FLAT_READ_S}
 
 
-async def test_flat_discovery_keeps_what_did_not_answer_this_time(
-    hass: HomeAssistant, mock_entry
-) -> None:
-    """An href that missed this read keeps its entities from the last
-    snapshot, without its old value reaching the state cache; one /oic/res
-    no longer advertises is let go."""
-    coordinator = LocalThingsCoordinator(hass, mock_entry)
-    coordinator._flat = True
-    coordinator._identity = _identity(_AV_LINKS)
-    await coordinator._snapshot_store.async_save(
-        {
-            "resources": {
-                "/sec/switch/binary": {"value": False},
-                "/sec/audio": {"volume": 1},
-                "/sec/gone": {"value": 1},
-            },
-            "subdevice_candidates": [],
-            "identity": None,
-        }
-    )
-    live = {"/sec/audio": {"volume": 9}}
+async def _first_flat_cycle(coordinator, live):
+    from unittest.mock import patch
 
-    found = await coordinator._with_remembered_resources(live)
-
-    assert found == {"/sec/switch/binary": {"value": False}, "/sec/audio": {"volume": 9}}
-    coordinator._observe.apply("/sec/audio", {"volume": 9}, source="poll")
-    assert coordinator.discovery_resources == found
-    assert "/sec/switch/binary" not in coordinator.last_resources
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+    ):
+        await coordinator._async_update_data()
 
 
 async def test_flat_discovery_without_a_snapshot_is_the_live_read(
@@ -485,7 +465,8 @@ async def test_flat_discovery_without_a_snapshot_is_the_live_read(
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     coordinator._flat = True
     coordinator._identity = _identity(_AV_LINKS)
-    assert await coordinator._with_remembered_resources(_RESOURCES) == _RESOURCES
+    await _first_flat_cycle(coordinator, _RESOURCES)
+    assert not coordinator.registration.retained
     assert coordinator.discovery_resources == coordinator.last_resources
 
 

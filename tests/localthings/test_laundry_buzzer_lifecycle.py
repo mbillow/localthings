@@ -1,8 +1,9 @@
-"""Late model evidence must replace provisional platform registration."""
+"""Late model evidence changes registration in place, never by reloading."""
 
 from unittest.mock import patch
 
 import pytest
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.localthings.const import DOMAIN
@@ -17,60 +18,78 @@ BOOLEAN = {"supportedBuzzerSound": ["On", "Off"], "setBuzzerSound": "Off"}
 VOLUME = {"supportedBuzzerSound": ["Volume_Low", "Volume_High"], "setBuzzerSound": "Volume_Low"}
 
 
+def _buzzer(hass, entry) -> dict[str, bool]:
+    """Registered buzzer entities, by platform: whether each is available."""
+    found = {}
+    for row in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id):
+        if row.unique_id.endswith(("_buzzer_sound", "_buzzer_sound_enabled")):
+            state = hass.states.get(row.entity_id)
+            found[row.domain] = state is not None and state.state != STATE_UNAVAILABLE
+    return found
+
+
+async def _setup(hass, entry, resources):
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return hass.data[DOMAIN][entry.entry_id]
+
+
+async def _push(hass, coordinator, rep):
+    coordinator._observe.apply(HREF, rep, source="observe")
+    coordinator._publish_data()
+    await hass.async_block_till_done()
+
+
 @pytest.mark.parametrize("initial", [{}, {"href": HREF}, {"setBuzzerSound": "Off"}, VOLUME])
-async def test_late_boolean_evidence_reloads_once_and_saves_snapshot(hass, mock_entry, initial):
-    resources = _load_device("washer")
-    resources[HREF] = initial
-    with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_called_once_with(mock_entry.entry_id)
+async def test_late_boolean_evidence_adds_the_switch_in_place_and_saves_it(
+    hass, mock_entry, initial
+):
+    resources = {**_load_device("washer"), HREF: initial}
+    with (
+        _reachable(resources),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        coordinator = await _setup(hass, mock_entry, resources)
+        await _push(hass, coordinator, BOOLEAN)
+        assert _buzzer(hass, mock_entry)["switch"] is True
+        assert _buzzer(hass, mock_entry).get("select", False) is False
         saved = await coordinator._snapshot_store.async_load()
         assert {k: v for k, v in saved["resources"][HREF].items() if k != "href"} == BOOLEAN
         assert await hass.config_entries.async_unload(mock_entry.entry_id)
         await hass.async_block_till_done()
+    reload.assert_not_called()
     with _unreachable():
         assert await hass.config_entries.async_setup(mock_entry.entry_id)
         await hass.async_block_till_done()
-    assert any(
-        row.domain == "switch" and row.unique_id.endswith("_buzzer_sound_enabled")
-        for row in er.async_entries_for_config_entry(er.async_get(hass), mock_entry.entry_id)
-    )
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    switch = next(b for b in coordinator.bound if b.desc.key == "buzzer_sound_enabled")
+    assert coordinator.registrable(switch)
 
 
 @pytest.mark.parametrize(
-    "initial,after,expected",
+    "initial,after,changed",
     [
-        (BOOLEAN, BOOLEAN, 0),
-        (BOOLEAN, {"setBuzzerSound": "Off"}, 0),
-        (BOOLEAN, VOLUME, 1),
-        ({"setBuzzerSound": "Off"}, VOLUME, 1),
+        (BOOLEAN, BOOLEAN, False),
+        (BOOLEAN, {"setBuzzerSound": "Off"}, False),
+        (BOOLEAN, VOLUME, True),
+        ({"setBuzzerSound": "Off"}, VOLUME, True),
     ],
 )
-async def test_only_complete_changed_choices_reload(hass, mock_entry, initial, after, expected):
-    resources = _load_device("washer")
-    resources[HREF] = initial
+async def test_only_complete_changed_choices_change_registration(
+    hass, mock_entry, initial, after, changed
+):
+    resources = {**_load_device("washer"), HREF: initial}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, after, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            assert reload.call_count == expected
+        coordinator = await _setup(hass, mock_entry, resources)
+        before = _buzzer(hass, mock_entry)
+        with patch.object(coordinator, "_async_rebank") as rebank:
+            await _push(hass, coordinator, after)
+        assert (_buzzer(hass, mock_entry) != before) is changed
+        assert rebank.called is changed
 
 
 async def test_evidence_during_platform_forwarding_is_not_missed(hass, mock_entry):
-    resources = _load_device("washer")
-    resources[HREF] = {"setBuzzerSound": "Off"}
+    resources = {**_load_device("washer"), HREF: {"setBuzzerSound": "Off"}}
     forward = hass.config_entries.async_forward_entry_setups
 
     async def updating_forward(entry, platforms):
@@ -83,22 +102,17 @@ async def test_evidence_during_platform_forwarding_is_not_missed(hass, mock_entr
         patch.object(
             hass.config_entries, "async_forward_entry_setups", side_effect=updating_forward
         ),
-        patch.object(hass.config_entries, "async_schedule_reload") as reload,
     ):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        reload.assert_called_once_with(mock_entry.entry_id)
+        await _setup(hass, mock_entry, resources)
+    assert _buzzer(hass, mock_entry)["switch"] is True
 
 
-async def test_unload_cancels_pending_snapshot_and_reload(hass, mock_entry):
+async def test_unload_cancels_a_pending_snapshot_write(hass, mock_entry):
     import asyncio
 
-    resources = _load_device("washer")
-    resources[HREF] = VOLUME
+    resources = {**_load_device("washer"), HREF: VOLUME}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        coordinator = await _setup(hass, mock_entry, resources)
         started = asyncio.Event()
         cancelled = asyncio.Event()
 
@@ -110,60 +124,38 @@ async def test_unload_cancels_pending_snapshot_and_reload(hass, mock_entry):
                 cancelled.set()
                 raise
 
-        with (
-            patch.object(coordinator._snapshot_store, "async_save", side_effect=blocked_save),
-            patch.object(hass.config_entries, "async_schedule_reload") as reload,
-        ):
+        with patch.object(coordinator._snapshot_store, "async_save", side_effect=blocked_save):
             coordinator._observe.apply(HREF, BOOLEAN, source="observe")
             await started.wait()
             assert await hass.config_entries.async_unload(mock_entry.entry_id)
             await hass.async_block_till_done()
             assert cancelled.is_set()
-            reload.assert_not_called()
 
 
-async def test_failed_snapshot_defers_reload_until_evidence_can_be_saved(hass, mock_entry):
-    resources = _load_device("washer")
-    resources[HREF] = VOLUME
+async def test_failed_snapshot_write_still_registers_in_place(hass, mock_entry):
+    resources = {**_load_device("washer"), HREF: VOLUME}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            with patch.object(
-                coordinator._snapshot_store, "async_save", side_effect=OSError("disk unavailable")
-            ):
-                coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-                await hass.async_block_till_done(wait_background_tasks=True)
-                reload.assert_not_called()
-            # Backs off rather than retrying the failed write on every update.
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_not_called()
-            coordinator._inclusion_retry_at = 0.0
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_called_once_with(mock_entry.entry_id)
+        coordinator = await _setup(hass, mock_entry, resources)
+        with patch.object(
+            coordinator._snapshot_store, "async_save", side_effect=OSError("disk unavailable")
+        ):
+            await _push(hass, coordinator, BOOLEAN)
+            await hass.async_block_till_done(wait_background_tasks=True)
+        assert _buzzer(hass, mock_entry) == {"select": False, "switch": True}
 
 
 async def test_decisive_rep_is_captured_before_background_save(hass, mock_entry):
-    resources = _load_device("washer")
-    resources[HREF] = VOLUME
+    resources = {**_load_device("washer"), HREF: VOLUME}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        coordinator = await _setup(hass, mock_entry, resources)
         create_task = mock_entry.async_create_background_task
 
         def deferred_task(hass, target, name):
             return create_task(hass, target, name, eager_start=False)
 
-        with (
-            patch.object(mock_entry, "async_create_background_task", side_effect=deferred_task),
-            patch.object(hass.config_entries, "async_schedule_reload") as reload,
-        ):
+        with patch.object(mock_entry, "async_create_background_task", side_effect=deferred_task):
             coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._check_entity_inclusion()
+            coordinator._update_late_decisions()
             # A partial response may replace the cache before the save task runs.
             coordinator._observe.apply(
                 HREF, {"setBuzzerSound": "Off", "supportedBuzzerSound": []}, source="observe"
@@ -171,15 +163,12 @@ async def test_decisive_rep_is_captured_before_background_save(hass, mock_entry)
             await hass.async_block_till_done()
             saved = await coordinator._snapshot_store.async_load()
             assert saved["resources"][HREF] == BOOLEAN
-            reload.assert_called_once_with(mock_entry.entry_id)
 
 
 async def test_partial_first_recovery_preserves_snapshot_platform(hass, mock_entry):
-    resources = _load_device("washer")
-    resources[HREF] = BOOLEAN
+    resources = {**_load_device("washer"), HREF: BOOLEAN}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await _setup(hass, mock_entry, resources)
         assert await hass.config_entries.async_unload(mock_entry.entry_id)
         await hass.async_block_till_done()
     with _unreachable():
@@ -187,184 +176,127 @@ async def test_partial_first_recovery_preserves_snapshot_platform(hass, mock_ent
         await hass.async_block_till_done()
     coordinator = hass.data[DOMAIN][mock_entry.entry_id]
     partial = {**resources, HREF: {"setBuzzerSound": "Off"}}
-    with _reachable(partial), patch.object(hass.config_entries, "async_schedule_reload") as reload:
+    with _reachable(partial):
         await _tick(hass)
-        reload.assert_not_called()
         saved = await coordinator._snapshot_store.async_load()
         assert saved["resources"][HREF] == BOOLEAN
+    assert _buzzer(hass, mock_entry)["switch"] is True
 
 
 @pytest.mark.parametrize("initial", [{"href": HREF}, {"setBuzzerSound": "Off"}])
-async def test_online_reload_retains_complete_evidence(hass, mock_entry, initial):
+async def test_cold_start_registers_from_saved_complete_evidence(hass, mock_entry, initial):
     resources = {**_load_device("washer"), HREF: dict(initial)}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_called_once_with(mock_entry.entry_id)
+        coordinator = await _setup(hass, mock_entry, resources)
+        await _push(hass, coordinator, BOOLEAN)
         assert await hass.config_entries.async_unload(mock_entry.entry_id)
         await hass.async_block_till_done()
         resources[HREF] = dict(initial)
         # Exercise a reachable cold start rather than setup's snapshot-first path.
-        with (
-            patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False),
-            patch.object(hass.config_entries, "async_schedule_reload") as reload,
-        ):
-            assert await hass.config_entries.async_setup(mock_entry.entry_id)
-            await hass.async_block_till_done()
-            coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-            registry = er.async_get(hass)
-            entity_id = registry.async_get_entity_id(
-                "switch", DOMAIN, f"{DOMAIN}_{coordinator.device_key}_buzzer_sound_enabled"
-            )
-            assert entity_id is not None
-            assert hass.states.get(entity_id) is not None
-            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_not_called()
+        with patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False):
+            coordinator = await _setup(hass, mock_entry, resources)
+        assert "switch" in _buzzer(hass, mock_entry)
+        with patch.object(coordinator, "_async_rebank") as rebank:
+            await _push(hass, coordinator, BOOLEAN)
+        rebank.assert_not_called()
+        assert _buzzer(hass, mock_entry)["switch"] is True
 
 
 @pytest.mark.parametrize("initial", [{}, {"href": HREF}])
-async def test_provisional_volume_select_needs_no_reload(hass, mock_entry, initial):
+async def test_provisional_volume_select_is_added_in_place(hass, mock_entry, initial):
     resources = {**_load_device("washer"), HREF: dict(initial)}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, VOLUME, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_not_called()
+        coordinator = await _setup(hass, mock_entry, resources)
+        await _push(hass, coordinator, VOLUME)
+        assert _buzzer(hass, mock_entry)["select"] is True
 
 
 @pytest.mark.parametrize("initial,after", [(VOLUME, BOOLEAN), (BOOLEAN, VOLUME)])
 async def test_complete_buzzer_change_wins_over_missing_finish_fields(
     hass, mock_entry, initial, after
 ):
-    resources = _load_device("washer")
-    resources[HREF] = {
-        **initial,
-        "supportedFinishSound": ["On", "Off"],
-        "setFinishSound": "Off",
-    }
+    finish = {"supportedFinishSound": ["On", "Off"], "setFinishSound": "Off"}
+    resources = {**_load_device("washer"), HREF: {**initial, **finish}}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, dict(after), source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_called_once_with(mock_entry.entry_id)
-            snapshot = await coordinator._snapshot_store.async_load()
-            assert snapshot["resources"][HREF] == {
-                **after,
-                "supportedFinishSound": ["On", "Off"],
-                "setFinishSound": "Off",
-            }
+        coordinator = await _setup(hass, mock_entry, resources)
+        before = _buzzer(hass, mock_entry)
+        await _push(hass, coordinator, dict(after))
+        assert _buzzer(hass, mock_entry) != before
+        snapshot = await coordinator._snapshot_store.async_load()
+        assert snapshot["resources"][HREF] == {**after, **finish}
 
 
 async def test_complete_finish_fields_preserve_undecided_buzzer(hass, mock_entry):
     finish = {"supportedFinishSound": ["On", "Off"], "setFinishSound": "Off"}
     resources = {**_load_device("washer"), HREF: {**BOOLEAN, **finish}}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, {"setBuzzerSound": "Off", **finish}, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_not_called()
+        coordinator = await _setup(hass, mock_entry, resources)
+        before = _buzzer(hass, mock_entry)
+        await _push(hass, coordinator, {"setBuzzerSound": "Off", **finish})
+        assert _buzzer(hass, mock_entry) == before
 
 
 @pytest.mark.parametrize(
-    "initial,partial,reloads",
+    "initial,partial,changed",
     [
-        # A new vocabulary is the board changing its buzzer: one reload.
-        (BOOLEAN, {"supportedBuzzerSound": VOLUME["supportedBuzzerSound"]}, 1),
-        (VOLUME, {"supportedBuzzerSound": BOOLEAN["supportedBuzzerSound"]}, 1),
+        # A new vocabulary is the board changing its buzzer.
+        (BOOLEAN, {"supportedBuzzerSound": VOLUME["supportedBuzzerSound"]}, True),
+        (VOLUME, {"supportedBuzzerSound": BOOLEAN["supportedBuzzerSound"]}, True),
         # A state outside the known vocabulary decides nothing.
-        (VOLUME, {"setBuzzerSound": "On"}, 0),
+        (VOLUME, {"setBuzzerSound": "On"}, False),
     ],
 )
-async def test_partial_buzzer_update_reloads_only_on_new_vocabulary(
-    hass, mock_entry, initial, partial, reloads
+async def test_partial_buzzer_update_changes_registration_only_on_new_vocabulary(
+    hass, mock_entry, initial, partial, changed
 ):
     resources = {**_load_device("washer"), HREF: dict(initial)}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, dict(partial), source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            assert reload.call_count == reloads
+        coordinator = await _setup(hass, mock_entry, resources)
+        before = _buzzer(hass, mock_entry)
+        await _push(hass, coordinator, dict(partial))
+        assert (_buzzer(hass, mock_entry) != before) is changed
 
 
 async def test_field_missing_from_a_populated_rep_is_not_filled_from_snapshot(hass, mock_entry):
     finish = {"supportedFinishSound": ["On", "Off"], "setFinishSound": "Off"}
     resources = {**_load_device("washer"), HREF: {**BOOLEAN, **finish}}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await _setup(hass, mock_entry, resources)
         assert await hass.config_entries.async_unload(mock_entry.entry_id)
         await hass.async_block_till_done()
         # The board stops reporting its buzzer; only a stub or {} may borrow
         # the snapshot's evidence, so the switch must not outlive the field.
         resources[HREF] = dict(finish)
         with patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False):
-            assert await hass.config_entries.async_setup(mock_entry.entry_id)
-            await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+            coordinator = await _setup(hass, mock_entry, resources)
         switch = next(b for b in coordinator.bound if b.desc.key == "buzzer_sound_enabled")
         assert not _is_included(switch, coordinator)
         saved = await coordinator._snapshot_store.async_load()
         assert "setBuzzerSound" not in saved["resources"][HREF]
 
 
-async def test_undecided_first_read_reloads_toward_a_target_once_per_run(hass, mock_entry):
+async def test_undecided_first_read_never_reloads(hass, mock_entry):
     """{} is a confirmed empty answer, so it borrows nothing from the
-    snapshot. A board whose first read is always {} would reload on every
-    start; the second attempt at the same target in one run is skipped."""
+    snapshot. A board whose first read is always {} once reloaded on every
+    start; the switch is now added in place each time instead."""
     resources = {**_load_device("washer"), HREF: {}}
-    with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-        with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._publish_data()
+    with (
+        _reachable(resources),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        for _ in range(2):
+            with patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False):
+                coordinator = await _setup(hass, mock_entry, resources)
+            await _push(hass, coordinator, BOOLEAN)
+            assert _buzzer(hass, mock_entry)["switch"] is True
+            assert await hass.config_entries.async_unload(mock_entry.entry_id)
             await hass.async_block_till_done()
-            reload.assert_called_once_with(mock_entry.entry_id)
-        assert await hass.config_entries.async_unload(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        resources[HREF] = {}
-        with (
-            patch.object(LocalThingsCoordinator, "async_rehydrate", return_value=False),
-            patch.object(hass.config_entries, "async_schedule_reload") as reload,
-        ):
-            assert await hass.config_entries.async_setup(mock_entry.entry_id)
-            await hass.async_block_till_done()
-            coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-            coordinator._observe.apply(HREF, BOOLEAN, source="observe")
-            coordinator._publish_data()
-            await hass.async_block_till_done()
-            reload.assert_not_called()
+    reload.assert_not_called()
 
 
 async def test_watcher_ignores_gates_without_late_evidence(hass, mock_entry):
     resources = {**_load_device("washer"), HREF: dict(VOLUME)}
     with _reachable(resources):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        coordinator = await _setup(hass, mock_entry, resources)
         late = {b.desc.key for b in coordinator._late_bound()}
         assert late == {"buzzer_sound", "buzzer_sound_enabled"}
