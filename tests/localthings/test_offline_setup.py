@@ -33,6 +33,7 @@ from smartthings_local.errors import SessionTimeoutError
 
 from custom_components.localthings.const import DOMAIN, SUMMARY_INTERVAL_S
 from custom_components.localthings.coordinator import LocalThingsCoordinator, bound_id
+from custom_components.localthings.registration import is_included
 from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.identity import DeviceIdentity
@@ -956,6 +957,49 @@ async def test_a_sub_unit_answering_short_never_reloads(
         assert set(full) <= set(hass_storage[_store_key(mock_entry)]["data"]["resources"])
 
 
+async def test_a_short_first_read_catches_up_without_a_reload(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Issue #807, after the loop: the run that started on the short read
+    provides, polls and subscribes what a run that started on the full read
+    does, once the full set answers."""
+    from custom_components.localthings.observe import MODE_OBSERVE
+
+    full, short, materialized = _two_unit_ac_snapshot(hass_storage, mock_entry)
+    reference = LocalThingsCoordinator(hass, mock_entry)
+    assert await reference.async_rehydrate()
+    await _first_live_cycle(hass, reference, full, materialized)
+
+    _two_unit_ac_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, short, materialized)
+    tiered = set(coordinator._hot_hrefs) | set(coordinator._warm_hrefs)
+    assert tiered < set(reference._hot_hrefs) | set(reference._warm_hrefs)
+    coordinator._observe._set_mode(MODE_OBSERVE)
+    coordinator._session = cast(Any, object())
+
+    with (
+        patch.object(coordinator._observe, "add_hrefs") as add_hrefs,
+        patch.object(coordinator, "_run_subpolls"),
+        patch.object(coordinator, "_close_session"),
+    ):
+        await _later_cycles(hass, coordinator, full, 2)
+    coordinator._session = None
+
+    def provided(c: LocalThingsCoordinator) -> set:
+        return {bound_id(b) for b in c.bound if c.provides(b)}
+
+    assert provided(coordinator) == provided(reference)
+    assert coordinator._hot_hrefs == reference._hot_hrefs
+    assert coordinator._warm_hrefs == reference._warm_hrefs
+    # Subscribed once, with exactly what the short read left out.
+    add_hrefs.assert_called_once()
+    tiers = {"hot": reference._hot_hrefs, "warm": reference._warm_hrefs}
+    wanted = {h for t in coordinator._subscribe_tiers for h in tiers.get(t, ())} - tiered
+    assert set(add_hrefs.call_args.args[1]) == wanted
+
+
 async def test_a_changed_device_type_reloads_once_per_run(
     hass: HomeAssistant, mock_entry, hass_storage
 ) -> None:
@@ -1107,7 +1151,10 @@ async def test_a_dormant_sub_unit_is_added_once_it_answers(
         await _later_cycles(hass, coordinator, main_only, 2)
 
     assert heat_pump in coordinator.subdevices
-    assert not coordinator.registration.retained
+    # What the seed includes is provided again; what it excludes stays
+    # retained, showing whatever live data shows (nothing).
+    retained = [b for b in coordinator.bound if bound_id(b) in coordinator.registration.retained]
+    assert not any(is_included(b, coordinator, live=True) for b in retained)
     assert any(coordinator.provides(b) for b in sibling)
     banked = hass_storage[_store_key(mock_entry)]["data"]
     assert heat_pump.key in {su["key"] for su in banked["subdevice_candidates"]}
@@ -1174,30 +1221,27 @@ async def test_a_type_change_whose_snapshot_cannot_be_saved_does_not_reload(
     reload.assert_not_called()
 
 
-async def test_only_an_entity_whose_href_was_silent_is_retained(
+async def test_an_entity_a_read_excludes_is_retained_unavailable(
     hass: HomeAssistant, mock_entry, hass_storage
 ) -> None:
-    """An href that answered and bound nothing for an entity is evidence,
-    not a short read: that entity isn't retained, so it stays unavailable
-    instead of borrowing availability from its href's live rep."""
+    """A registered entity this read bound and excluded is retained, not
+    dropped: a short read can answer an href without the entity's field.
+    It shows whatever live data shows, which is nothing yet."""
     full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     assert await coordinator.async_rehydrate()
     registered = list(coordinator.bound)
     previous = replace(coordinator.registration)
     await _first_live_cycle(hass, coordinator, full, materialized)
-    dropped = registered[0]
-    # As if this live discovery hadn't bound it.
-    coordinator.bound = [b for b in coordinator.bound if bound_id(b) != bound_id(dropped)]
+    dropped = next(b for b in registered if bound_id(b) in previous.static)
+    # As if this live discovery had excluded it.
     coordinator._judge_registration(full)
+    coordinator.registration.static -= {bound_id(dropped)}
 
-    coordinator._retain(registered, previous, full)
-    assert bound_id(dropped) not in coordinator.registration.retained
-    assert not coordinator.provides(dropped)
-
-    silent = {href: rep for href, rep in full.items() if href != dropped.href}
-    coordinator._retain(registered, previous, silent)
+    coordinator._retain(registered, previous)
     assert bound_id(dropped) in coordinator.registration.retained
+    with patch("custom_components.localthings.coordinator.is_included", return_value=False):
+        assert not coordinator.provides(dropped)
 
 
 async def test_an_owner_with_nothing_to_measure_never_counts_as_awake(
@@ -1262,3 +1306,33 @@ async def test_a_recovered_sub_unit_is_subscribed_in_observe_mode(
     subscribed = add_hrefs.call_args.args[1]
     assert subscribed and all(heat_pump.owns(href) for href in subscribed)
     coordinator._session = None
+
+
+async def test_a_rep_answered_short_keeps_its_entities_in_the_snapshot(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """An href that answers without a registered entity's field mustn't
+    take that entity from the next start: the banked rep keeps the field."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    target = next(
+        b
+        for b in coordinator.bound
+        if bound_id(b) in coordinator.registration.static
+        and b.desc.field
+        and b.desc.exists_fn is None
+        and not b.desc.dynamic_presence
+        and len(full.get(b.href, {})) > 2
+    )
+    partial = {
+        **full,
+        target.href: {k: v for k, v in full[target.href].items() if k != target.desc.field},
+    }
+    await _first_live_cycle(hass, coordinator, partial, materialized)
+
+    banked = hass_storage[_store_key(mock_entry)]["data"]["resources"]
+    assert target.desc.field in banked[target.href]
+    again = LocalThingsCoordinator(hass, mock_entry)
+    assert await again.async_rehydrate()
+    assert again.registrable(next(b for b in again.bound if bound_id(b) == bound_id(target)))

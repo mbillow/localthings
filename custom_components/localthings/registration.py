@@ -4,7 +4,11 @@ One read can't tell a lost resource from a short answer: a sibling's seed
 comes back without some hrefs, a flat-board read times out, a vocabulary
 arrives partial. So registration grows in place and never shrinks on a read
 (#807). A discovery adds what it finds to what is registered; an entity it
-didn't find stays registered, unavailable until its resource answers. The
+didn't include stays registered, unavailable until its resource answers.
+Discovery runs on the first read, the one this can't trust, so a later
+read that brings anything new binds again over the state cache and adds
+what that finds (coordinator._regrow), never taking anything away: what a
+short read bound differently stays until the next start. The
 snapshot lets an href go only once its owner has answered
 _PRUNE_AFTER_CYCLES cycles without it (coordinator._track_unconfirmed), and
 that takes effect at the next start, where HA shows the entity as no longer
@@ -100,6 +104,22 @@ def _field_included(bound: BoundEntity, rep: dict) -> bool:
     return True  # rep_fn or no-field entities (ButtonDesc) are always included
 
 
+def binding(bound: BoundEntity) -> tuple:
+    """What a bound's entity is built from, compared without the
+    descriptor's callables: an expand_fn descriptor is a new object on
+    every discovery, so two bindings of the same entity are never equal."""
+    return (
+        bound.href,
+        bound.capability.href,
+        type(bound.desc),
+        bound.desc.key,
+        bound.instance,
+        bound.key_override,
+        bound.instance_name,
+        bound.subdevice,
+    )
+
+
 def is_late(bound: BoundEntity) -> bool:
     """A late_evidence gate: a static exists_fn live data keeps deciding."""
     return (
@@ -116,7 +136,9 @@ class Registration:
     `static`: ordinary entities a discovery judged registrable; one its
     exists_fn excluded stays out until the next discovery. `late`: the
     current decision for each late_evidence entity. `retained`: entities
-    registered from the snapshot that live discovery didn't bind.
+    registered from the snapshot that live discovery didn't include: their
+    resource was silent, or answered without them. They show whatever live
+    data shows (`provides`) until a later read includes them.
     `generation` moves on every change, so platforms only rescan then.
     """
 
@@ -139,21 +161,21 @@ class Registration:
         self.retained = frozenset()
         self.generation += 1
 
-    def extend(
-        self,
-        bounds: Iterable[BoundEntity],
-        late_bounds: Iterable[BoundEntity],
-        included: Callable[[BoundEntity], bool],
-    ) -> None:
-        """Decide entities a later discovery added, leaving the rest as
-        they are -- a sub-unit that came back (coordinator._recover_dormant)."""
-        bounds = list(bounds)
-        ids = {bound_id(b) for b in bounds}
-        late = {bound_id(b) for b in late_bounds} & ids
-        decided = {bound_id(b) for b in bounds if included(b)}
-        self.static |= decided - late
-        self.late.update({ident: ident in decided for ident in late})
-        self.retained -= ids
+    def grow(self, bounds: Iterable[BoundEntity], included: Callable[[BoundEntity], bool]) -> None:
+        """Decide entities a later read brought in, and register a retained
+        one that read now includes (coordinator._grow). Never takes a
+        decision back: an excluded entity a read doesn't include stays as it
+        was, and a late_evidence decision already made is left to live
+        evidence (coordinator._update_late_decisions)."""
+        for bound in bounds:
+            ident = bound_id(bound)
+            decided = included(bound)
+            if is_late(bound):
+                self.late.setdefault(ident, decided)
+            elif decided:
+                self.static |= {ident}
+            if decided:
+                self.retained -= {ident}
         self.generation += 1
 
     def retain(self, retained: Iterable[BoundEntity], previous: Registration) -> None:

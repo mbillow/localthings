@@ -99,3 +99,31 @@ async def test_an_unchanged_rediscovery_replaces_nothing(hass: HomeAssistant) ->
 
     assert len(added) == len(bound)
     assert not any(e.removed for e in added)
+
+
+async def test_an_expanded_entity_rediscovered_is_not_replaced(hass: HomeAssistant) -> None:
+    """An expand_fn descriptor is a new object on every discovery, so its
+    bound never compares equal; rebinding goes by what the entity is built
+    from instead, or every first discovery would remove and re-add it."""
+    main, oic_res, seeds = _load_device_full("refrigerator_tp6x_ref_16k_8888")
+    bound, *_ = _discover_full(main, oic_res, seeds)
+    again, *_ = _discover_full(main, oic_res, seeds)
+    assert bound != again
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    entry.add_to_hass(hass)
+    coordinator = _Coordinator(hass, bound)
+    added: list[_Fake] = []
+    async_add_bound_entities(
+        entry,
+        cast(Any, coordinator),
+        cast(Any, lambda new: added.extend(new)),
+        lambda b: True,
+        cast(Any, _Fake),
+    )
+    coordinator.bound = list(again)
+    coordinator.registration.judge(coordinator.bound, [], lambda b: True)
+    coordinator.update()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert len(added) == len(bound)
+    assert not any(e.removed for e in added)

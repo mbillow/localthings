@@ -566,6 +566,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # key, and how many cycles each owner has answered -- see
         # _track_unconfirmed.
         self._unconfirmed: dict[str, str] = {}
+        # Hrefs let go of this run: still swept last, and banked again by
+        # _regrow if they answer.
+        self._pruned: set[str] = set()
+        # Per href, every field a partition has seen this run -- see _regrow.
+        self._seen_fields: dict[str, frozenset[str]] = {}
         self._owner_cycles: dict[str, int] = {}
         self._known_subdevices: list[Subdevice] = []
         # Per owner, what it answered on the read discovery ran on -- see
@@ -1623,7 +1628,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # use up the budget before the ones that answer are read.
             hrefs = sorted(
                 ({bound.href for bound in self.bound} | set(self._cold_hrefs)) - skip,
-                key=lambda href: (href in self._unconfirmed, href),
+                key=lambda href: (href in self._unconfirmed or href in self._pruned, href),
             )
             if not hrefs:
                 return {}
@@ -2057,25 +2062,48 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _judge_registration(self, resources: dict[str, dict]) -> None:
         self.registration.judge(self.bound, self._late_bound(), self._judged(resources))
 
-    def _retain(
-        self, registered: list[BoundEntity], previous: Registration, found: dict[str, dict]
-    ) -> None:
+    def _retain(self, registered: list[BoundEntity], previous: Registration) -> None:
         """Keep what was registered from the snapshot but this live
-        discovery didn't bind because its href was silent, with the
-        registration it had. An href that answered and bound nothing for
-        it is evidence, not a short read: that entity is left unavailable,
-        and the snapshot, which now holds the live rep, won't bind it again."""
+        discovery didn't include, with the registration it had. A short
+        read misses an entity more ways than a silent href: its twin binds
+        on another href and is excluded there, its exists_fn reads a
+        resource that was silent, or its href answered without its field.
+        Each shows whatever live data shows (Registration.provides) until a
+        later read includes it (_grow)."""
+        reg = self.registration
         live = {bound_id(b) for b in self.bound}
-        retained = [b for b in registered if bound_id(b) not in live and b.href not in found]
+        # Decided this run: an included entity, and every late_evidence one,
+        # which live evidence keeps deciding. A dynamic_presence entity
+        # bound live follows its own live rep.
+        settled = (
+            set(reg.static)
+            | set(reg.late)
+            | {bound_id(b) for b in self.bound if b.desc.dynamic_presence}
+        )
+        # Everything the snapshot bound that this read didn't, and what it
+        # registered that this read bound but excluded. One the snapshot's
+        # own evidence excluded wasn't registered, so a live exclusion of it
+        # agrees and changes nothing.
+        was = set(previous.static) | set(previous.retained)
+        was |= {ident for ident, decided in previous.late.items() if decided}
+        retained = [
+            b
+            for b in registered
+            if bound_id(b) not in live or (bound_id(b) in was and bound_id(b) not in settled)
+        ]
         if not retained:
             return
-        self.bound = [*self.bound, *retained]
+        ids = {bound_id(b) for b in retained}
+        # The snapshot's binding stands in for a live one that excluded it.
+        self.bound = [*(b for b in self.bound if bound_id(b) not in ids), *retained]
         self.registration.retain(retained, previous)
         self._refresh_learnable_hrefs()
         self._log.info(
-            "keeping %d entities from the last snapshot that this read didn't find; "
-            "they stay unavailable until their resources answer",
+            "keeping %d entities from the last snapshot that this read didn't "
+            "include (%d bound elsewhere); they stay unavailable until their "
+            "resources answer",
             len(retained),
+            len(ids & live),
         )
 
     def _reload_for_type(self, previous: str | None) -> bool:
@@ -2222,6 +2250,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         without it. Only the owner's answers count: an indoor unit switched
         off for the season keeps its entities however long the outdoor unit
         keeps answering."""
+        self._pruned = {h for h in self._pruned if self._cache.get(h) is None}
         if not self._unconfirmed:
             return
         for owner in self._owners_awake(resources):
@@ -2241,6 +2270,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         for href in gone:
             del self._unconfirmed[href]
+        self._pruned |= set(gone)
         self._log.info(
             "%s didn't answer in %d polls; entities only it backed won't be "
             "provided after the next restart",
@@ -2344,58 +2374,209 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._log.debug("dormant subdevice %s didn't answer: %s", su.key, e)
         return {}
 
-    async def _materialize(self, su: Subdevice, seed: dict[str, dict]) -> bool:
-        """Add a sub-unit that came back, if its seed passes the liveness
-        gate: bind it, register what it brings in place, and poll it from
-        the next cycle. Grow-only, like every discovery (registration.py).
-        Everything that can fail runs before any state changes, so a failed
-        attempt leaves the unit dormant and retried."""
-        resources = {**self.last_resources, **seed}
-        tiers: dict[str, set[str]] = {"hot": set(), "warm": set()}
+    def _grown_hrefs(self, resources: dict[str, dict]) -> list[str]:
+        """Hrefs the state cache holds with a field no partition has seen
+        yet: an unconfirmed href answering, a probe answering for the first
+        time, a rep that came back fuller than the one discovery saw."""
+        grown = []
+        for href, rep in resources.items():
+            seen = self._seen_fields.get(href)
+            if seen is None or (isinstance(rep, dict) and not seen.issuperset(rep)):
+                grown.append(href)
+        return grown
+
+    def _see(self, resources: dict[str, dict]) -> None:
+        for href, rep in resources.items():
+            fields = frozenset(rep) if isinstance(rep, dict) else frozenset()
+            self._seen_fields[href] = self._seen_fields.get(href, frozenset()) | fields
+
+    async def _regrow(self) -> None:
+        """Bind again over the state cache when it holds something no
+        partition saw, and add what that brings (_grow). This is how a run
+        that started on a short read catches up without a reload (#807)."""
+        resources = self.last_resources
+        grown = self._grown_hrefs(resources)
+        if not grown:
+            return
+        try:
+            await self._grow(
+                self._registration_resources(resources, self._registration_evidence),
+                list(self.subdevices),
+                bank={href: resources[href] for href in grown},
+            )
+        except Exception as e:
+            # Growing must never fail the poll it rides on; the fields stay
+            # seen, so a rep that breaks discovery isn't retried every cycle.
+            self._log.warning("could not bind what %s brought: %s", grown, e, exc_info=True)
+        self._see(resources)
+
+    async def _grow(
+        self,
+        resources: dict[str, dict],
+        subdevices: list[Subdevice],
+        *,
+        bank: dict[str, dict],
+        unit: Subdevice | None = None,
+    ) -> bool:
+        """Partition `resources` again and add what it binds that this run
+        doesn't provide: a new entity, or a retained one it now includes.
+        The tiers and OBSERVE subscriptions grow with what answered. Never
+        removes or rebinds an entity already provided, and leaves identity
+        and device info to first discovery (registration.py). With `unit`,
+        False unless that sub-unit passes the liveness gate. Everything that
+        can fail runs before any state changes, so a failed attempt leaves
+        the run as it was."""
+        tiers: dict[str, set[str]] = {"hot": set(), "warm": set(), "cold": set()}
 
         def _tier_log(href: str, tier: str) -> None:
-            if tier in tiers and su.owns(href):
+            if tier in tiers and href in resources:
                 tiers[tier].add(href)
 
-        bound, _, materialized, _ = self._partition(
-            resources, [*self.subdevices, su], tier_log=_tier_log
+        unbound: list[str] = []
+        bound, device_type_name, materialized, _ = self._partition(
+            resources, subdevices, log=unbound.append, tier_log=_tier_log
         )
-        if su not in materialized:
+        if unit is not None and unit not in materialized:
             return False
-        new = [b for b in bound if b.subdevice == su]
+        # A first read that missed /information/vs/0 resolves no type, and
+        # binds only the common capabilities; the type it resolves later is
+        # growth. Any other change is a different appliance, not growth: the
+        # next start's first discovery handles it (_reload_for_type).
+        resolved = self.device_type_name is None and device_type_name is not None
+        if device_type_name != self.device_type_name and not resolved:
+            self._log.debug(
+                "re-binding found type %s, not %s; leaving it to the next start",
+                device_type_name,
+                self.device_type_name,
+            )
+            return False
+        reg = self.registration
+        provided = (set(reg.static) | set(reg.late)) - set(reg.retained)
+        current = {bound_id(b) for b in self.bound}
         judged = self._judged(resources)
-        decisions = {bound_id(b): judged(b) for b in new}
+        decisions: dict[tuple[str, str, str], bool] = {}
+        grown: list[BoundEntity] = []
+        for b in bound:
+            ident = bound_id(b)
+            if ident in provided or ident in decisions:
+                continue
+            decisions[ident] = judged(b)
+            # A known entity is rebound only onto evidence that includes it.
+            if ident not in current or decisions[ident]:
+                grown.append(b)
+        bank = self._keep_registered_fields(bank)
 
-        existing = {bound_id(b) for b in self.bound}
-        self.subdevices = [*self.subdevices, su]
-        self._skipped_subdevices = [s for s in self._skipped_subdevices if s.subdevice != su]
-        self.bound = [*self.bound, *(b for b in new if bound_id(b) not in existing)]
-        self.registration.extend(
-            new, [b for b in new if is_late(b)], lambda b: decisions[bound_id(b)]
-        )
-        self._hot_hrefs = sorted(set(self._hot_hrefs) | tiers["hot"])
-        self._warm_hrefs = sorted(set(self._warm_hrefs) | tiers["warm"])
+        by_id = {bound_id(b): b for b in grown}
+        self.bound = [
+            *(by_id.pop(bound_id(b), b) for b in self.bound),
+            *by_id.values(),
+        ]
+        self.subdevices = [
+            *self.subdevices,
+            *(su for su in materialized if su not in self.subdevices),
+        ]
+        reg.grow(grown, lambda b: decisions[bound_id(b)])
+        added = {
+            "hot": tiers["hot"] - set(self._hot_hrefs),
+            "warm": tiers["warm"] - set(self._warm_hrefs),
+            "cold": tiers["cold"] - set(self._cold_hrefs),
+        }
+        self._hot_hrefs = sorted(set(self._hot_hrefs) | added["hot"])
+        self._warm_hrefs = sorted(set(self._warm_hrefs) | added["warm"])
+        self._cold_hrefs = sorted(set(self._cold_hrefs) | added["cold"])
         self._refresh_learnable_hrefs()
-        self._awake_baseline[su.key] = self._read_baseline(seed).get(su.key, frozenset())
-        self._dormant_due.pop(su.key, None)
-        self._dormant_backoff.pop(su.key, None)
-        self._log.info("subdevice %s answered with live state; adding it", su.key)
-        for href, rep in seed.items():
-            self._observe.apply(href, rep, source="poll")
+        self._registration_evidence = {**self._registration_evidence, **bank}
+        if resolved:
+            self._log.info("a later read resolved the device type: %s", device_type_name)
+            self.device_type_name = device_type_name
+            family = registry_for(device_type_name)
+            self._subscribe_tiers = family.subscribe_tiers
+            if family.write_settle_s is not None:
+                self._write_settle_s = family.write_settle_s
+            # The type first discovery couldn't resolve raised a coverage gap.
+            # The device name stays generic until the next start.
+            self._unbound_hrefs = unbound
+            self._update_coverage_gap_issue(
+                False, unbound, self.device_info.get("name") or "This appliance"
+            )
+        if grown or any(added.values()):
+            self._log.info(
+                "a later read bound %d more entities; hot+%s warm+%s",
+                sum(decisions[bound_id(b)] for b in grown),
+                sorted(added["hot"]),
+                sorted(added["warm"]),
+            )
         if self._observe.mode == MODE_OBSERVE:
             # Subscriptions are made once, after first discovery.
             subscribe = [
-                *(tiers["hot"] if "hot" in self._subscribe_tiers else ()),
-                *(tiers["warm"] if "warm" in self._subscribe_tiers else ()),
+                *(added["hot"] if "hot" in self._subscribe_tiers else ()),
+                *(added["warm"] if "warm" in self._subscribe_tiers else ()),
             ]
             async with self._session_lock:
                 if subscribe and self._session is not None:
                     await self.hass.async_add_executor_job(
                         self._observe.add_hrefs, self._session, subscribe
                     )
-        if su not in self._banked_candidates:
-            self._banked_candidates = [*self._banked_candidates, su]
-        await self._async_rebank(update=seed)
+        if any(decisions[bound_id(b)] for b in grown):
+            # The pass the first live cycle runs (see _async_update_data): a
+            # replaces_siblings winner added here mustn't run beside the row
+            # it replaces.
+            async_notify_removed(
+                self.hass, self._entry, async_reconcile_entities(self.hass, self._entry, self)
+            )
+        if unit is not None and unit not in self._banked_candidates:
+            self._banked_candidates = [*self._banked_candidates, unit]
+        await self._async_rebank(update=bank)
+        return True
+
+    def _keep_registered_fields(
+        self,
+        update: dict[str, dict],
+        banked: dict[str, dict] | None = None,
+        bounds: Iterable[BoundEntity] | None = None,
+    ) -> dict[str, dict]:
+        """`update` with a field kept from the banked rep wherever dropping
+        it would exclude an entity registered on that href: a rep that
+        answered short mustn't take entities away from the next start
+        either. late_evidence and dynamic_presence entities are left out,
+        since their reps decide them on purpose."""
+        banked = self._banked_resources if banked is None else banked
+        bounds = self.bound if bounds is None else bounds
+        by_href: dict[str, list[BoundEntity]] = {}
+        for b in bounds:
+            if not is_late(b) and not b.desc.dynamic_presence:
+                by_href.setdefault(b.href, []).append(b)
+        out = dict(update)
+        context = {**banked, **update}
+        for href, rep in update.items():
+            old = banked.get(href)
+            if not (isinstance(old, dict) and isinstance(rep, dict) and by_href.get(href)):
+                continue
+            if set(old) <= set(rep):
+                continue
+            merged = {**old, **rep}
+            now = self._judged({**context, href: rep})
+            kept = self._judged({**context, href: merged})
+            if any(kept(b) and not now(b) for b in by_href[href]):
+                out[href] = merged
+        return out
+
+    async def _materialize(self, su: Subdevice, seed: dict[str, dict]) -> bool:
+        """Add a sub-unit that came back, if its seed passes the liveness
+        gate, through the same path as any later read (_grow), then poll it
+        from the next cycle."""
+        if not await self._grow(
+            {**self.last_resources, **seed}, [*self.subdevices, su], bank=seed, unit=su
+        ):
+            return False
+        self._skipped_subdevices = [s for s in self._skipped_subdevices if s.subdevice != su]
+        self._awake_baseline[su.key] = self._read_baseline(seed).get(su.key, frozenset())
+        self._dormant_due.pop(su.key, None)
+        self._dormant_backoff.pop(su.key, None)
+        self._log.info("subdevice %s answered with live state; adding it", su.key)
+        for href, rep in seed.items():
+            self._observe.apply(href, rep, source="poll")
+        self._see(seed)
         return True
 
     async def _adopt_live_discovery(
@@ -2454,7 +2635,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # read timeout on every sweep.
             kept = {href: rep for href, rep in kept.items() if href in advertised}
             registered = [b for b in registered if b.href in advertised or b.href in found]
-        self._retain(registered, previous, found)
+        self._retain(registered, previous)
         self._known_subdevices = [
             *candidates,
             *(su for su in stored_candidates if su not in candidates),
@@ -2462,7 +2643,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._unconfirmed = {href: self._owner_key(href) for href in kept}
         self._awake_baseline = self._read_baseline(resources)
         await self._async_save_snapshot(
-            {**kept, **found},
+            {**kept, **self._keep_registered_fields(found, remembered, [*registered, *self.bound])},
             [
                 *candidates,
                 *(
@@ -2683,6 +2864,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._unbound_hrefs = unbound
         self._refresh_learnable_hrefs()
         self._judge_registration(resources)
+        if not from_snapshot:
+            self._seen_fields = {}
+            self._see(resources)
 
         polled_serial = resolve_serial(
             info.get("x.com.samsung.da.serialNum"), self._entry.data[CONF_HOST]
@@ -3191,6 +3375,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         if not first_cycle:
             await self._recover_dormant()
+            await self._regrow()
             self._track_unconfirmed(resources)
         if came_up_on_snapshot:
             # Setup cleaned the registry against the snapshot; entities this

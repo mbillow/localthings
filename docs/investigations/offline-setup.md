@@ -139,10 +139,34 @@ what the snapshot registered (`_adopt_live_discovery`):
   (`_recover_dormant`). Once it answers with live state it joins polling (and
   OBSERVE, if the entry is in it), and its entities are registered or become
   available in place.
-- An entity the snapshot registered is retained only if the live read never
-  returned its href. One whose href answered without binding it is
-  unavailable for the run, and an entity a later discovery binds to another
-  href or descriptor is rebuilt in place under the same entity_id.
+- An entity the snapshot registered that the live read didn't include is
+  retained, whatever the reason: its href was silent, its twin bound on
+  another href and was excluded there, its `exists_fn` reads a resource
+  that was silent, or its href answered without its field. A retained
+  entity shows whatever live data shows. The banked rep keeps a field the
+  live read dropped if dropping it would exclude a registered entity, so a
+  short rep can't take entities away from the next start either
+  (`_keep_registered_fields`).
+- Discovery runs on the first read, which is the one this can't trust. So
+  whenever the state cache holds a field no partition has seen (an
+  unconfirmed href answering, a probe answering, a rep coming back fuller),
+  the coordinator partitions again over the cache and adds what that binds
+  (`_regrow`, `_grow`): new entities, retained ones it now includes, the hot
+  and warm hrefs that answered, and their OBSERVE subscriptions. It never
+  removes or rebinds an entity already provided. A first read that missed
+  `/information/vs/0` resolves no type; the type a later read resolves is
+  growth too. Recovering a dormant sub-unit goes through the same path. What
+  a short read bound differently (a twin's href, a common-capability entity
+  bound before the type resolved) stays until the next start:
+  `tests/localthings/test_short_first_read.py` drops each href from the
+  first read of every fixture and checks the run catches up to at least what
+  a full first read gives.
+- An entity a later discovery binds to another href or descriptor is
+  rebuilt in place under the same entity_id. Bindings are compared on what
+  the entity is built from (`registration.binding`), not by equality, since
+  an `expand_fn` descriptor is a new object on every discovery.
+- An href let go from the snapshot is still read last in a flat board's
+  sweep, and is banked again if it answers.
 - The first live cycle after a snapshot load runs the registry cleanup
   again against live data, as the reload used to. An href the read missed
   is no evidence there either: `prune_when_excluded` only acts on a rep

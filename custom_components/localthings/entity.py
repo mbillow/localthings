@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .registration import bound_id
+from .registration import binding, bound_id
 
 # Tests import it from here, where it lived before registration.py.
 from .registration import is_included as _is_included  # noqa: F401
@@ -54,7 +54,7 @@ def async_add_bound_entities(
         registry row and entity_id; the reload this replaces rebuilt it."""
         for ident, entity in list(added.items()):
             bound = current.get(ident)
-            if bound is None or getattr(entity, "_bound", bound) == bound:
+            if bound is None or binding(getattr(entity, "_bound", bound)) == binding(bound):
                 continue
             replacement = factory(bound)
             added[ident] = replacement

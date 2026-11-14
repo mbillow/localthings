@@ -1053,3 +1053,61 @@ async def test_a_sweep_reads_hrefs_not_heard_from_last(hass: HomeAssistant) -> N
     ):
         coordinator._poll_flat_blocking(object())
     assert order[-1] == missed
+
+
+async def test_a_pruned_href_is_swept_last_and_banked_again_if_it_answers(
+    hass: HomeAssistant,
+) -> None:
+    """Letting an href go from the snapshot doesn't make it a live href:
+    the sweep still reads it after the ones that answer, and if it answers
+    after all the snapshot takes it back."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    awake = {h: rep for h, rep in resources.items() if h != missed}
+
+    async def _cycles(read: dict, count: int) -> None:
+        with (
+            patch.object(coordinator, "_poll_once", return_value=read),
+            patch.object(coordinator, "_attempt_observe_mode"),
+            patch.object(coordinator, "_maybe_retry_observe_mode"),
+            _no_discovery_io(coordinator),
+            patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 1),
+        ):
+            for _ in range(count):
+                await coordinator._async_update_data()
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    async def _banked() -> dict:
+        stored = await coordinator._snapshot_store.async_load()
+        assert stored is not None
+        return stored["resources"]
+
+    await _cycles(awake, 2)
+    assert missed not in await _banked()
+    assert missed in coordinator._pruned
+
+    order: list[str] = []
+
+    def _read(sess, hrefs, **kwargs):
+        order.extend(hrefs)
+        return iter(())
+
+    coordinator._flat_poll = coordinator._FLAT_FULL_EVERY_N_POLLS - 1
+    with (
+        patch("custom_components.localthings.coordinator.iter_resources", side_effect=_read),
+        pytest.raises(RuntimeError),
+    ):
+        coordinator._poll_flat_blocking(object())
+    assert order[-1] == missed
+
+    await _cycles(resources, 1)
+    assert missed in await _banked()
+    assert not coordinator._pruned
