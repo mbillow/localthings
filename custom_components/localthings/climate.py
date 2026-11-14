@@ -440,9 +440,19 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         directly, so a subdevice's own /airflow/vs/1 gets translated first,
         like every other sibling read below.
         """
-        if not is_legacy_board(self._resources):
+        if not self._legacy_airflow_board():
             return {}
         return self._rep(AIRFLOW_HREF)
+
+    def _legacy_airflow_board(self) -> bool:
+        """The board-generation test alone, for the option lists.
+
+        Reads the capability view, so it still answers during an offline
+        load -- where _legacy_airflow's rep deliberately does not, being a
+        value. Without this the fan and swing lists come back empty before
+        the first poll and HomeKit builds an accessory with neither.
+        """
+        return is_legacy_board(self._capability_resources)
 
     def _legacy_preset(self) -> bool:
         """Whether presets come from the Comode_* token rather than a
@@ -484,8 +494,12 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         Both the option lists (preset_modes, fan_modes, ...) and the write
         paths resolve codes through here, so a learned code is selectable
         and writable by virtue of appearing in one list.
+
+        Falls back to the discovery snapshot while the live cache is empty,
+        so an offline load doesn't publish an hvac_modes of nothing but OFF
+        -- see LocalThingsEntity._capability_resources.
         """
-        rep = self._rep(href)
+        rep = self._rep(href) or self._capability_rep(href)
         supported = list(rep.get(_SUPPORTED_FIELD) or [])
         if href == MODE_HREF and "Heat" not in supported and has_heating_capacity(rep):
             # The TP6X_RAC bridge leaves Heat off a heat pump's list (#589).
@@ -590,11 +604,25 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         current_temperature = native_current_temperature
         target_temperature = native_target_temperature
 
+    def _capability_temps_vs(self) -> dict:
+        """`_temps_vs` through the capability view, for the setpoint bounds
+        alone -- the current and desired readings stay on the live cache."""
+        return _temps_vs_item(self._capability_rep(TEMPS_VS_HREF)) or _temps_indoor_item(
+            self._capability_rep(TEMPS_INDOOR_VS_HREF)
+        )
+
     def _range(self) -> list | None:
-        r = self._rep(TEMP_DESIRED_HREF).get("range")
+        """The setpoint bounds, falling back to the capability view.
+
+        Home Assistant publishes min_temp/max_temp as capability attributes
+        and HomeKit freezes them into the target-temperature characteristic
+        at accessory creation, so an offline load answering with HA's generic
+        7-35 defaults leaves a slider that writes values the unit rejects.
+        """
+        r = (self._rep(TEMP_DESIRED_HREF) or self._capability_rep(TEMP_DESIRED_HREF)).get("range")
         if isinstance(r, (list, tuple)) and len(r) == 2:
             return r
-        item = self._temps_vs()
+        item = self._temps_vs() or self._capability_temps_vs()
         lo = _num(item.get("x.com.samsung.da.minimum"))
         hi = _num(item.get("x.com.samsung.da.maximum"))
         return [lo, hi] if (lo is not None and hi is not None) else None
@@ -613,9 +641,10 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     def target_temperature_step(self) -> float:
         # Shared with the write path (airconditioner._climate_write) so a
         # step read here always matches the step a write is quantized to --
-        # self._resources is this entity's own subdevice's canonical view
-        # (issue #177), the same shape _temperature_step expects.
-        return _temperature_step(self._resources) or 1.0
+        # the capability view is this entity's own subdevice's canonical view
+        # (issue #177), the same shape _temperature_step expects, and keeps
+        # answering across an offline load like the other capabilities.
+        return _temperature_step(self._capability_resources) or 1.0
 
     # -- hvac mode ----------------------------------------------------------
 
@@ -667,7 +696,7 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def fan_modes(self) -> list[str]:
-        if self._legacy_airflow():
+        if self._legacy_airflow_board():
             # This resource carries no supportedModes, so the full scale is offered.
             return list(_DEVICE_TO_FAN.values())
         rep = self._rep(WIND_STRENGTH_HREF)
@@ -682,7 +711,7 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         """True when WIND_DIRECTION_HREF is the swing channel to use --
         signalled by its presence. Boards without it (issue #126) report
         the 2-axis oscillation resource instead; see _oscillation_swing."""
-        return bool(self._rep(WIND_DIRECTION_HREF))
+        return bool(self._capability_rep(WIND_DIRECTION_HREF))
 
     @property
     def swing_mode(self):
@@ -695,11 +724,11 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
 
     @property
     def swing_modes(self) -> list[str]:
-        if self._legacy_airflow():
+        if self._legacy_airflow_board():
             return list(_SWING_TO_DEVICE.keys())
         if self._swing_via_direction():
             return self._read_modes(WIND_DIRECTION_HREF, _DEVICE_TO_SWING)
-        if self._rep(WIND_OSCILLATION_HREF):
+        if self._capability_rep(WIND_OSCILLATION_HREF):
             return list(_SWING_TO_DEVICE.keys())
         return []
 

@@ -142,7 +142,10 @@ class LocalThingsWaterHeater(LocalThingsEntity, WaterHeaterEntity):
         return str(self._rep(POWER_HREF).get("x.com.samsung.da.power", "")).lower() == "on"
 
     def _supported(self) -> list[str]:
-        return list(self._rep(MODE_HREF).get(_SUPPORTED_FIELD) or [])
+        """Same discovery-snapshot fallback as climate.py's identical helper:
+        an offline load must not publish an empty operation list."""
+        rep = self._rep(MODE_HREF) or self._capability_rep(MODE_HREF)
+        return list(rep.get(_SUPPORTED_FIELD) or [])
 
     def _warn_unmapped(self, code: str) -> None:
         if code in self._warned_unmapped:

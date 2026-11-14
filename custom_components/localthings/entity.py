@@ -230,5 +230,29 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         return self.coordinator.canonical_resources(self._bound.subdevice)
 
     @property
+    def _capability_resources(self) -> dict:
+        """The resources view a capability decision reads: `_resources`, or
+        the discovery snapshot while the live cache is still empty.
+
+        Home Assistant publishes capability attributes even for an
+        unavailable entity, so during an offline load (issue #295) a
+        capability answered from the live cache is answered from nothing --
+        and a consumer that snapshots them keeps what it saw, as HomeKit
+        Bridge does when it bakes hvac_modes into a thermostat at accessory
+        creation.
+
+        Values must keep reading `_resources`, whose emptiness is what marks
+        a rehydrated entity unavailable rather than showing a stale reading.
+        The fallback is whole-view only, never per-href: once a poll has
+        landed, a missing href is genuinely absent and must not come back
+        from the snapshot.
+        """
+        return self._resources or self.coordinator.discovery_canonical(self._bound.subdevice)
+
+    def _capability_rep(self, href: str) -> dict:
+        """One canonical href out of `_capability_resources`."""
+        return self._capability_resources.get(href) or {}
+
+    @property
     def device_info(self) -> DeviceInfo:
         return self.coordinator.device_info_for(self._bound.subdevice)
