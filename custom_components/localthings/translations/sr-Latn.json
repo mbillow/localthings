@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Režim slike"
+      },
+      "rear_speaker_position": {
+        "name": "Položaj zadnjih zvučnika",
+        "state": {
+          "front": "Napred",
+          "rear": "Pozadi"
+        }
       }
     },
     "sensor": {

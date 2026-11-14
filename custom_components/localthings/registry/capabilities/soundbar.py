@@ -10,7 +10,6 @@ their checked neighbours.
 
 import functools
 
-from ..batch import is_stub_rep
 from ..capability import Capability
 from ..entities import (
     BinarySensorDesc,
@@ -83,15 +82,21 @@ MEDIA_SURFACE_COVERAGE: list[Capability] = [
 ]
 
 
+HREF_AV_SOUNDSETTING = "/sec/networkaudio/av/soundsetting"
+
+
 def _has_av_setting(resources: dict, field: str) -> bool:
-    value = resources.get("/sec/networkaudio/av/soundsetting", {}).get(field)
+    value = (resources.get(HREF_AV_SOUNDSETTING) or {}).get(field)
     return type(value) is int and value in (0, 1)
 
 
 def _legacy_av_setting(rep: dict, resources: dict, legacy_field: str, field: str) -> bool:
-    return not _has_av_setting(resources, field) and (
-        not rep or is_stub_rep(rep) or legacy_field in rep
-    )
+    """The older per-setting resource owns a setting only when the combined
+    resource has no valid field for it. Both forms need a populated rep: a
+    flat bar never serves a stub, and one that misses the combined resource
+    on its first read keeps the older binding until the next start, as any
+    short read does (registration.py)."""
+    return not _has_av_setting(resources, field) and legacy_field in rep
 
 
 def _has_rear_position(rep: dict, resources: dict) -> bool:
@@ -414,7 +419,7 @@ SPACEFIT_SOUND = Capability(
 )
 
 AV_SOUND_SETTING = Capability(
-    href="/sec/networkaudio/av/soundsetting",
+    href=HREF_AV_SOUNDSETTING,
     poll_tier="warm",
     # HW-Q990H confirms these unprefixed fields; prefer them to legacy aliases.
     entities=(
@@ -437,6 +442,8 @@ AV_SOUND_SETTING = Capability(
     ),
 )
 
+# isSupport is ignored, as for REAR_FAMILY: the current value being one of
+# the advertised options is the evidence (HW-Q990H; the S61B reports none).
 REAR_SPEAKER_POSITION = Capability(
     href="/sec/networkaudio/surroundspeaker",
     poll_tier="warm",

@@ -150,3 +150,12 @@ def test_existing_s61b_entities_and_golden_stay_unchanged():
     old = deepcopy(resources)
     old[MODERN] = {}
     assert flatten(_bound(old), old) == state
+
+
+@pytest.mark.parametrize("legacy_rep", [{}, {"x.com.samsung.networkaudio.other": 1}])
+def test_legacy_control_needs_its_own_populated_field(legacy_rep):
+    # Both forms agree: neither registers on a rep that hasn't shown its field.
+    resources = _load_device("soundbar_q990h")
+    del resources[MODERN]["activevoiceamplifier"]
+    resources["/sec/networkaudio/activeVoiceAmplifier"] = legacy_rep
+    assert all(bound.desc.key != "active_voice_amplifier" for bound in _included(resources))

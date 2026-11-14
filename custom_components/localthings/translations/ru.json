@@ -1404,6 +1404,13 @@
       },
       "picture_mode": {
         "name": "Режим изображения"
+      },
+      "rear_speaker_position": {
+        "name": "Расположение тыловых динамиков",
+        "state": {
+          "front": "Спереди",
+          "rear": "Сзади"
+        }
       }
     },
     "sensor": {
