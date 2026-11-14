@@ -743,6 +743,20 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/vfd"),
     # Relative volume steps, command-only.
     Capability(href="/sec/networkaudio/volumeUpDown"),
+    # Cloud, voice-assistant and log plumbing on the HW-Q935GF (#853), the
+    # same set the TVs carry (capabilities/tv.py).
+    Capability(href="/calmconnection/command"),
+    Capability(href="/capability/sec.calmConnectionCare/main/0"),
+    Capability(href="/capability/sec.diagnosticsInformation/main/0"),
+    Capability(href="/capability/sec.wifiConfiguration/main/0"),
+    Capability(href="/devicelog/connectioninfo"),
+    Capability(href="/devicelog/dump"),
+    Capability(href="/edgeclient/info/vs/0"),
+    Capability(href="/sec/networkaudio/av/logTrigger"),
+    Capability(href="/sec/networkaudio/av/remotecontrol"),
+    Capability(href="/sec/networkaudio/av/support"),
+    Capability(href="/sec/networkaudio/bixbyonboarding"),
+    Capability(href="/sec/networkaudio/bixbysettings"),
     # Multiroom grouping state and nearby speakers (HW-Q700C, #796).
     Capability(href="/sec/networkaudio/av/groupconf"),
     Capability(href="/sec/networkaudio/av/groupdiscovery"),
