@@ -1215,7 +1215,12 @@
           "180": "3 сата",
           "240": "4 сата",
           "none": "Искључено",
-          "cupboard": "Суво за ормар"
+          "cupboard": "Суво за ормар",
+          "damp": "Влажно",
+          "less": "Мање",
+          "normal": "Нормално",
+          "more": "Више",
+          "very": "Веома"
         }
       },
       "zone_mode": {
@@ -1589,6 +1594,12 @@
       "drum_clean_last_cleaned": {
         "name": "Бубањ је последњи пут очишћен"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Чишћење бубња (сушење) потребно за"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Бубањ је последњи пут очишћен (сушење)"
+      },
       "quick_wash": {
         "name": "Брзо прање",
         "state": {
@@ -1785,6 +1796,15 @@
       },
       "progress_percentage": {
         "name": "Проценат напретка"
+      },
+      "wash_progress_percentage": {
+        "name": "Проценат напретка прања"
+      },
+      "dry_progress_percentage": {
+        "name": "Проценат напретка сушења"
+      },
+      "wash_remaining_minutes": {
+        "name": "Преостало време прања"
       },
       "selfcheck_error": {
         "name": "Грешка при самопровери"
