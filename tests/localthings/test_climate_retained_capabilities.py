@@ -100,3 +100,26 @@ async def test_an_href_let_go_of_stops_standing_in(hass, mock_entry, hass_storag
     assert not coordinator._unconfirmed
     _, fan_modes, *_ = _capabilities(hass, coordinator)[sub.key]
     assert expected[sub.key][1] and not fan_modes
+
+
+async def test_a_prune_drops_the_memoized_view(hass, mock_entry, hass_storage) -> None:
+    """Pruning one owner's hrefs while another's are still held must not
+    leave the capability view serving the pruned ones from its memo."""
+    full, short, materialized = _two_unit_ac_snapshot(hass_storage, mock_entry)
+    (sub,) = materialized
+    expected = await _reference(hass, mock_entry, hass_storage, full, materialized)
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, short, materialized)
+    # An owner that never answers, so its href is never let go of.
+    coordinator._banked_resources["/never/vs/0"] = {"value": 1}
+    coordinator._unconfirmed["/never/vs/0"] = "never-answers"
+    assert _capabilities(hass, coordinator)[sub.key] == expected[sub.key]
+
+    with patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 3):
+        await _later_cycles(hass, coordinator, short, 4)
+
+    assert list(coordinator._unconfirmed) == ["/never/vs/0"]
+    _, fan_modes, *_ = _capabilities(hass, coordinator)[sub.key]
+    assert not fan_modes

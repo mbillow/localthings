@@ -187,16 +187,13 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         a permanent None if the first poll handed a sibling an empty stub
         rep (see _is_included's docstring) before it populated.
 
-        Falls back to the discovery snapshot while the live cache is empty:
-        an offline load (issue #295) registers entities before any poll, and
-        HA keeps the key it sees then until the entity is next added
-        (issue #531).
+        Reads the capability view: an offline load (issue #295) or a silent
+        sub-unit would otherwise answer from nothing, and HA keeps the key it
+        sees then until the entity is next added (issue #531).
         """
         tk = self._bound.desc.translation_key
         if callable(tk):
-            return tk(
-                self._resources or self.coordinator.discovery_canonical(self._bound.subdevice)
-            )
+            return tk(self._capability_resources)
         return tk if tk is not None else self._bound.desc.key
 
     @callback

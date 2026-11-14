@@ -470,7 +470,21 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         would make the resource never look empty.
         """
         convenient_href = self._bound.subdevice.to_actual(CONVENIENT_HREF)
-        return not self.coordinator.resource(convenient_href) and bool(self._legacy_airflow())
+        return not self.coordinator.resource(convenient_href) and self._legacy_airflow_channel()
+
+    def _legacy_airflow_channel(self) -> bool:
+        """Whether /airflow/vs/0 is this board's fan/swing channel, from the
+        capability view -- so the preset list and the preset write agree on
+        a unit whose airflow resource hasn't answered yet."""
+        return self._legacy_airflow_board() and bool(self._capability_rep(AIRFLOW_HREF))
+
+    def _capability_rep(self, href: str) -> dict:
+        """The base capability view, plus _rep's Comode_* synthesis for a
+        legacy board's presets, built from the capability view's mode rep."""
+        rep = super()._capability_rep(href)
+        if not rep and href == CONVENIENT_HREF and self._legacy_airflow_channel():
+            return self._legacy_convenient(super()._capability_rep(MODE_HREF))
+        return rep
 
     def _rep(self, href: str) -> dict:
         """`href` is one of this module's canonical HREF_* constants,
@@ -503,14 +517,6 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         nothing but OFF -- see coordinator.capability_canonical.
         """
         rep = self._rep(href) or self._capability_rep(href)
-        if (
-            not rep
-            and href == CONVENIENT_HREF
-            and self._legacy_airflow_board()
-            and self._capability_rep(AIRFLOW_HREF)
-        ):
-            # _rep's own Comode_* fallback reads the live mode rep only.
-            rep = self._legacy_convenient(self._capability_rep(MODE_HREF))
         supported = list(rep.get(_SUPPORTED_FIELD) or [])
         if href == MODE_HREF and "Heat" not in supported and has_heating_capacity(rep):
             # The TP6X_RAC bridge leaves Heat off a heat pump's list (#589).
