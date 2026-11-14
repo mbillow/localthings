@@ -376,7 +376,12 @@ def test_auto_power_down_under_av_on_2025_bars():
 
 
 def test_auto_power_down_binds_once_when_both_hrefs_answer():
+    """The /av/ form wins, as it does for the /av/ sound settings."""
     resources = _load_device(FIXTURE)
-    resources[_APD_AV] = resources[_APD]
+    resources[_APD_AV] = dict(resources[_APD])
+    (bound,) = _auto_power_down(resources)
+    assert bound.href == _APD_AV
+    # An /av/ resource with no usable field leaves the switch on the old href.
+    resources[_APD_AV] = {}
     (bound,) = _auto_power_down(resources)
     assert bound.href == _APD

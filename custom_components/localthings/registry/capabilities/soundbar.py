@@ -9,7 +9,6 @@ their checked neighbours.
 """
 
 import functools
-from dataclasses import replace
 
 from ..capability import Capability
 from ..entities import (
@@ -58,6 +57,14 @@ def _is_on(p) -> bool:
 
 def _int_on(p) -> int:
     return 1 if p == "On" else 0
+
+
+_APD_FIELD = "x.com.samsung.networkaudio.autoPowerDown"
+HREF_AV_AUTO_POWER_DOWN = "/sec/networkaudio/av/autoPowerDown"
+
+
+def _has_av_auto_power_down(resources: dict) -> bool:
+    return type((resources.get(HREF_AV_AUTO_POWER_DOWN) or {}).get(_APD_FIELD)) is bool
 
 
 def _on_off(p) -> str:
@@ -389,22 +396,32 @@ AUTO_POWER_DOWN = Capability(
     entities=(
         SwitchDesc(
             key="auto_power_down",
-            field="x.com.samsung.networkaudio.autoPowerDown",
+            field=_APD_FIELD,
+            # Same precedence as the /av/ sound settings: the older href owns
+            # the switch only when the /av/ one carries no valid field.
+            exists_fn=lambda rep, resources: (
+                not _has_av_auto_power_down(resources) and _APD_FIELD in rep
+            ),
             value_fn=lambda v: bool(v),
             entity_category="config",
-            write_fn=_write("x.com.samsung.networkaudio.autoPowerDown", _is_on),
+            write_fn=_write(_APD_FIELD, _is_on),
         ),
     ),
 )
 
-# The HW-Q935GF (2025, #853) serves the same field under /av/ instead. The
-# shared key keeps one switch; it binds here only when the plain href is absent.
+# The HW-Q935GF (2025, #853) serves the setting under /av/ only.
 AUTO_POWER_DOWN_AV = Capability(
-    href="/sec/networkaudio/av/autoPowerDown",
+    href=HREF_AV_AUTO_POWER_DOWN,
     poll_tier="warm",
-    entities=tuple(
-        replace(e, exists_fn=lambda rep, resources: AUTO_POWER_DOWN.href not in resources)
-        for e in AUTO_POWER_DOWN.entities
+    entities=(
+        SwitchDesc(
+            key="auto_power_down",
+            field=_APD_FIELD,
+            exists_fn=lambda rep, resources: _has_av_auto_power_down(resources),
+            value_fn=lambda v: bool(v),
+            entity_category="config",
+            write_fn=_write(_APD_FIELD, _is_on),
+        ),
     ),
 )
 
