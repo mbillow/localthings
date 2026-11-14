@@ -5,10 +5,17 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from collections.abc import Callable
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
+from homeassistant.core import CALLBACK_TYPE, Event, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.device_registry import (
+    CONNECTION_NETWORK_MAC,
+    EVENT_DEVICE_REGISTRY_UPDATED,
+    EventDeviceRegistryUpdatedData,
+)
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 from . import wol
@@ -44,11 +51,22 @@ class AVControl:
         self._notify_lock = asyncio.Lock()
         self._notify_seq = 0
         self._wake_lock = asyncio.Lock()
+        # Orders a device's media commands, from its media player and its
+        # remote alike, so a skip can't land mid-seek and each optimistic
+        # body is worked out against the state the previous command left.
+        self.command_lock = asyncio.Lock()
         self._wake_task: asyncio.Task | None = None
         self._closed = False
+        # The device registry's MAC, looked up once per registry change:
+        # _wake_mac runs several times on every state write.
+        self._registry_mac: tuple[str | None] | None = None
+        self._unsub_registry: CALLBACK_TYPE | None = None
 
     def close(self) -> None:
         self._closed = True
+        if self._unsub_registry is not None:
+            self._unsub_registry()
+            self._unsub_registry = None
         if self._wake_task is not None:
             self._wake_task.cancel()
             self._wake_task = None
@@ -67,6 +85,15 @@ class AVControl:
             return None
         if mac := self._coordinator._entry.data.get(CONF_MAC):
             return mac
+        if self._registry_mac is None:
+            if self._unsub_registry is None and not self._closed:
+                self._unsub_registry = self.hass.bus.async_listen(
+                    EVENT_DEVICE_REGISTRY_UPDATED, self._on_registry_updated
+                )
+            self._registry_mac = (self._lookup_registry_mac(),)
+        return self._registry_mac[0]
+
+    def _lookup_registry_mac(self) -> str | None:
         device = async_get_device_registry(self.hass).async_get_device(
             identifiers={(DOMAIN, self._coordinator.device_key)}
         )
@@ -76,6 +103,10 @@ class AVControl:
             (value for kind, value in device.connections if kind == CONNECTION_NETWORK_MAC),
             None,
         )
+
+    @callback
+    def _on_registry_updated(self, _event: Event[EventDeviceRegistryUpdatedData]) -> None:
+        self._registry_mac = None
 
     def wakeable(self) -> bool:
         """True for a TV with a MAC to wake (async_power_on)."""
@@ -105,6 +136,48 @@ class AVControl:
         return self._coordinator._failed_cycles > 0 or (
             self._coordinator._session is None and self._coordinator._handshake_failed
         )
+
+    async def async_media_command(
+        self,
+        bound_entity: BoundEntity,
+        kind: str,
+        value=None,
+        *,
+        optimistic: Callable[[], dict] | None = None,
+    ) -> None:
+        """One media player (kind, value) command. What replaces the picture
+        on a TV releases a camera it was casting (playback.py). The confirming
+        refresh runs after the lock, so the next command needn't wait for it."""
+        replaces = kind == "source" or (kind, value) in (("power", False), ("playback", "stop"))
+        coordinator = self._coordinator
+        async with (
+            coordinator.playback.async_change() if replaces else nullcontext(),
+            self.command_lock,
+        ):
+            sent = await coordinator.async_send_command(
+                bound_entity,
+                (kind, value),
+                optimistic_body=optimistic() if optimistic is not None else None,
+                refresh=False,
+            )
+        if sent:
+            await coordinator.async_request_refresh()
+
+    async def async_turn_on(self, bound_entity: BoundEntity) -> None:
+        """Turn on through the media player's descriptor: Wake-on-LAN for a
+        TV (MediaPlayerDesc.wake_on_lan), refused when there's no MAC."""
+        if not getattr(bound_entity.desc, "wake_on_lan", False):
+            await self.async_media_command(bound_entity, "power", True)
+        elif self.wakeable():
+            await self.async_power_on(bound_entity)
+        else:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="media_option_not_supported"
+            )
+
+    async def async_turn_off(self, bound_entity: BoundEntity) -> None:
+        if not self.reads_as_off():  # else: already off, nothing to reach
+            await self.async_media_command(bound_entity, "power", False)
 
     def _require_href(self, href: str, translation_key: str) -> None:
         """Refuse a command for a resource this device doesn't have."""

@@ -13,7 +13,6 @@ import asyncio
 import base64
 import hashlib
 from collections.abc import Callable
-from contextlib import nullcontext
 from datetime import datetime
 from typing import cast
 from urllib.parse import urlsplit
@@ -144,9 +143,6 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         self._attr_name = None  # this entity *is* the device
         # The device steps in integers 0..100.
         self._attr_volume_step = 0.01
-        # Every command goes through here, so a skip can't land mid-seek and
-        # a seek's offset is computed against the track it will move.
-        self._command_lock = asyncio.Lock()
         # See _handle_coordinator_update.
         self._position_updated_at: datetime | None = None
         self._last_position_evidence: tuple | None = None
@@ -215,18 +211,21 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             for state in (self._feed_state(), self._family_state())
         )
 
-    def _mode_options(self, surface: MediaModeSurface | None) -> list[str]:
+    def _mode_labels(self, surface: MediaModeSurface | None) -> dict[str, str]:
+        """Wire value -> label for each option the device offers now, built
+        once per call: a TV's options_fn rebuilds its whole mapping."""
         if surface is None:
-            return []
+            return {}
         rep = self._rep(surface.href)
         if surface.options_fn is not None:
-            return list(surface.options_fn(rep))
-        return _strings(rep.get(surface.options_field))
+            return dict(surface.options_fn(rep))
+        names = surface.labels or {}
+        return {
+            value: names.get(value, value) for value in _strings(rep.get(surface.options_field))
+        }
 
-    def _label(self, surface: MediaModeSurface, value: str) -> str:
-        if surface.options_fn is not None:
-            return surface.options_fn(self._rep(surface.href)).get(value, value)
-        return (surface.labels or {}).get(value, value)
+    def _mode_options(self, surface: MediaModeSurface | None) -> list[str]:
+        return list(self._mode_labels(surface))
 
     def _supports_command(self, command: str) -> bool:
         fn = self._desc.supported_commands_fn
@@ -238,10 +237,10 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         return self._supports_command("power_on")
 
     def _wire_value(self, surface: MediaModeSurface | None, label: str) -> str:
-        for value in self._mode_options(surface):
-            if surface is not None and self._label(surface, value) == label:
-                return value
-        return label
+        return next(
+            (value for value, shown in self._mode_labels(surface).items() if shown == label),
+            label,
+        )
 
     # -- features -----------------------------------------------------------
 
@@ -357,13 +356,13 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             return None
         value = self._rep(surface.href).get(surface.field)
         # A soundbar's source goes empty while it streams; HA wants None.
-        return self._label(surface, value) if isinstance(value, str) and value else None
+        if not isinstance(value, str) or not value:
+            return None
+        # A current id the TV no longer lists shows as itself.
+        return self._mode_labels(surface).get(value) or (surface.labels or {}).get(value, value)
 
     def _mode_list(self, surface: MediaModeSurface | None) -> list[str] | None:
-        options = self._mode_options(surface)
-        if surface is None or not options:
-            return None
-        return [self._label(surface, value) for value in options]
+        return list(self._mode_labels(surface).values()) or None
 
     @property
     def source(self) -> str | None:
@@ -565,23 +564,9 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     async def _send(
         self, kind: str, value=None, *, optimistic: Callable[[], dict] | None = None
     ) -> None:
-        # The optimistic body is worked out inside the lock, against the
-        # state the previous command left. The confirming refresh runs after
-        # it, so the next command needn't wait for a poll. What replaces the
-        # picture on a TV releases a camera it was casting (playback.py).
-        replaces = kind == "source" or (kind, value) in (("power", False), ("playback", "stop"))
-        async with (
-            self.coordinator.playback.async_change() if replaces else nullcontext(),
-            self._command_lock,
-        ):
-            sent = await self.coordinator.async_send_command(
-                self._bound,
-                (kind, value),
-                optimistic_body=optimistic() if optimistic is not None else None,
-                refresh=False,
-            )
-        if sent:
-            await self.coordinator.async_request_refresh()
+        await self.coordinator.av.async_media_command(
+            self._bound, kind, value, optimistic=optimistic
+        )
 
     def _playback_optimistic_body(self, mode: str) -> dict:
         body: dict = {"modes": [mode]}
@@ -592,18 +577,10 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         return body
 
     async def async_turn_on(self) -> None:
-        if not self._desc.wake_on_lan:
-            await self._send("power", True)
-        elif self.coordinator.av.wakeable():
-            await self.coordinator.av.async_power_on(self._bound)
-        else:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN, translation_key="media_option_not_supported"
-            )
+        await self.coordinator.av.async_turn_on(self._bound)
 
     async def async_turn_off(self) -> None:
-        if not self.coordinator.av.reads_as_off():  # else: already off, nothing to reach
-            await self._send("power", False)
+        await self.coordinator.av.async_turn_off(self._bound)
 
     async def async_set_volume_level(self, volume: float) -> None:
         await self._send("volume", round(volume * 100))
@@ -702,10 +679,10 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             )
         # The name follows on the next read; until then the number alone,
         # not the old station's name under the new number.
-        await self.coordinator.async_send_command(
-            self._bound,
-            ("channel", number),
-            optimistic_body={
+        await self._send(
+            "channel",
+            number,
+            optimistic=lambda: {
                 "x.com.samsung.tv.channelNumber": number,
                 "x.com.samsung.tv.channelName": "",
             },
@@ -819,7 +796,7 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
         await self._send("shuffle", shuffle)
 
     async def async_media_seek(self, position: float) -> None:
-        async with self._command_lock:
+        async with self.coordinator.av.command_lock:
             sent = await self._async_seek(position)
         if sent:
             await self.coordinator.async_request_refresh()

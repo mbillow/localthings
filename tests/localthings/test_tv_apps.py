@@ -266,3 +266,15 @@ async def test_forget_known_apps_keeps_only_the_built_in_screens(hass: HomeAssis
     assert entry.data[CONF_KNOWN_APPS] == {}
     assert coordinator.known_apps() == {}
     assert _open_app(hass).attributes["options"] == _NATIVE
+
+
+async def test_forget_known_apps_works_before_the_tv_answers(hass: HomeAssistant) -> None:
+    """An offline load knows the stored family, not a live one yet."""
+    entry = _entry(hass, **{CONF_KNOWN_APPS: {"kIciSQlYEM.plex": "Plex"}})
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator.device_type_name = None
+
+    coordinator.forget_known_apps()
+
+    assert coordinator.known_apps() == {}

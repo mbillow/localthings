@@ -111,8 +111,9 @@ class LocalThingsRemote(LocalThingsEntity, RemoteEntity):
         value = (self.coordinator.resource(HREF_SWITCH) or {}).get("value")
         return value if isinstance(value, bool) else None
 
-    async def _send_power(self, value: bool) -> None:
-        """The media player's power write; KEY_POWER would only toggle blindly."""
+    def _media_bound(self):
+        """The media player's binding: the remote powers the TV through it,
+        never KEY_POWER, which would only toggle blindly."""
         media_bound = next(
             (b for b in self.coordinator.bound if isinstance(b.desc, MediaPlayerDesc)), None
         )
@@ -121,18 +122,13 @@ class LocalThingsRemote(LocalThingsEntity, RemoteEntity):
                 translation_domain=DOMAIN,
                 translation_key="remote_power_unavailable",
             )
-        if value:
-            await self.coordinator.av.async_power_on(media_bound)
-        else:
-            async with self.coordinator.playback.async_change():
-                await self.coordinator.async_send_command(media_bound, ("power", False))
+        return media_bound
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._send_power(True)
+        await self.coordinator.av.async_turn_on(self._media_bound())
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        if not self.coordinator.av.reads_as_off():  # else: already off
-            await self._send_power(False)
+        await self.coordinator.av.async_turn_off(self._media_bound())
 
     def _resolve_key(self, command: str) -> str:
         norm = command.strip()

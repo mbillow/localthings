@@ -698,6 +698,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # The last non-empty /oic/res answer: kept across a reconnect whose
         # identity read failed, since write-only hrefs are known only from it.
         self._last_oic_res: list = []
+        self._advertised: tuple[list, frozenset[str]] | None = None
         self.av = AVControl(self)
         self.playback = PlaybackController(self)
         # Consecutive cycles that ended with no data from the device, so an
@@ -997,7 +998,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def forget_known_apps(self) -> None:
         """Drop every remembered app, here and on the entry. The app in front
         is learned again by the next poll that sees it."""
-        if self.device_type_name != "tv":
+        if (self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)) != "tv":
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="apps_unsupported",
@@ -1646,8 +1647,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         links = self._identity.raw.get("/oic/res") if self._identity else None
         return links if isinstance(links, list) and links else self._last_oic_res
 
-    def _advertised_hrefs(self) -> set[str]:
-        return {link.get("href") for link in _iter_oic_res_hrefs(self._oic_res())}
+    def _advertised_hrefs(self) -> frozenset[str]:
+        # Cached per /oic/res answer: has_href runs on every registration check.
+        links = self._oic_res()
+        cached = self._advertised
+        if cached is None or cached[0] is not links:
+            hrefs = frozenset(link.get("href") for link in _iter_oic_res_hrefs(links))
+            cached = self._advertised = (links, hrefs)
+        return cached[1]
 
     def _device0_answers(self, sess: Transport) -> bool:
         """True when a per-href entry's /device/0 answers 2.05 after all.
@@ -1720,7 +1727,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 key=lambda href: (href in self._unconfirmed or href in self._pruned, href),
             )
             if awake is not None and awake not in hrefs:
-                hrefs.append(awake)
+                # First: the poll fails without it, so the budget can't run
+                # out on timeouts before it is read.
+                hrefs.insert(0, awake)
             if not hrefs:
                 return {}
             results = dict(
@@ -2300,6 +2309,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._banked_resources = dict(resources)
         self._banked_candidates = list(candidates)
         ident = self._identity
+        if ident is not None and not ident.raw.get("/oic/res") and self._last_oic_res:
+            # A reconnect whose /oic/res read failed: write-only hrefs are
+            # known only from it (has_href), so bank the last good answer.
+            ident = replace(ident, raw={**ident.raw, "/oic/res": self._last_oic_res})
         try:
             await self._snapshot_store.async_save(
                 {

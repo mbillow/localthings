@@ -611,3 +611,41 @@ def test_setup_probe_of_a_tv_in_network_standby_is_unusable() -> None:
         _read_device(_TvBoard(resources=_TV_STANDBY, links=_TV_LINKS), "10.0.0.99", 49154)
     info = _read_device(_TvBoard(resources=_TV_ON, links=_TV_LINKS), "10.0.0.99", 49154)
     assert info["device_type_name"] == "tv"
+
+
+def test_a_full_sweep_reads_the_switch_first(hass: HomeAssistant, mock_entry) -> None:
+    """Hrefs that time out go last; the switch can't be among them, or a TV
+    that is on would run out of budget and read as in standby."""
+    coordinator = _discovered_tv(hass, mock_entry, _TV_ON)
+    coordinator._failed_cycles = 1
+    coordinator._unconfirmed = {"/sec/tv/audio": "/sec/tv/audio"}
+
+    coordinator._poll_once()
+
+    sess = cast(FakeFlatSession, coordinator._session)
+    assert sess.reads[0] == _TV_SWITCH
+
+
+def test_advertised_hrefs_follow_a_new_oic_res_answer(hass: HomeAssistant, mock_entry) -> None:
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._identity = _identity(links=[])
+    coordinator._last_oic_res = [{"href": "/sec/a"}]
+    assert coordinator.has_href("/sec/a")
+
+    coordinator._last_oic_res = [{"href": "/sec/b"}]
+    assert coordinator.has_href("/sec/b")
+    assert not coordinator.has_href("/sec/a")
+
+
+async def test_the_snapshot_keeps_the_last_good_oic_res(hass: HomeAssistant, mock_entry) -> None:
+    """A reconnect whose /oic/res read failed mustn't bank an identity
+    without it: an offline load would lose the write-only hrefs."""
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._identity = _identity(links=[])
+    coordinator._last_oic_res = _AV_LINKS
+
+    await coordinator._async_save_snapshot({"/sec/audio": {"volume": 1}}, [])
+
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    assert stored["identity"]["raw"]["/oic/res"] == _AV_LINKS

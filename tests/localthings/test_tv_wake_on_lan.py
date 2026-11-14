@@ -456,3 +456,20 @@ async def test_a_routine_reconnect_does_not_flicker_the_tv_off(hass: HomeAssista
 
     coordinator._handshake_failed = True  # the TV went dark under the reconnect
     assert coordinator.av.reads_as_off()
+
+
+async def test_a_registry_mac_added_later_is_seen(hass: HomeAssistant) -> None:
+    """The registry lookup is cached until the device registry changes."""
+    entry = _tv_entry(hass)
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    assert not coordinator.av.wakeable()
+
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, coordinator.device_key)},
+        connections={(dr.CONNECTION_NETWORK_MAC, TV_MAC)},
+    )
+    await hass.async_block_till_done()
+
+    assert coordinator.av.wakeable()

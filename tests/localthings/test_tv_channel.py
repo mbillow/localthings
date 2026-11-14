@@ -81,3 +81,21 @@ async def test_the_old_station_name_is_not_shown_under_the_new_number(
     rep = coordinator.resource("/sec/tv/channel")
     assert rep["x.com.samsung.tv.channelNumber"] == "1"
     assert rep["x.com.samsung.tv.channelName"] == ""
+
+
+async def test_tuning_waits_for_the_command_before_it(hass: HomeAssistant) -> None:
+    """Channels go through the media commands' lock, like every other one."""
+    import asyncio
+
+    session = await _setup_tv(hass, _entry(hass))
+    coordinator = hass.data[DOMAIN][next(iter(hass.data[DOMAIN]))]
+
+    async with coordinator.av.command_lock:
+        task = hass.async_create_task(_player(hass).async_play_media(MediaType.CHANNEL, "5"))
+        for _ in range(5):
+            await asyncio.sleep(0)
+        assert not task.done()
+        assert not any(path == _CHANNEL_PATH for path, _body in session.writes)
+    await task
+
+    assert (_CHANNEL_PATH, {"x.com.samsung.tv.channelNumber": "5"}) in session.writes

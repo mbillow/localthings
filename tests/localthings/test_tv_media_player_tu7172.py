@@ -429,3 +429,28 @@ async def test_playing_progress_has_a_timestamp_from_initial_setup(hass: HomeAss
             + (dt_util.utcnow() - state.attributes["media_position_updated_at"]).total_seconds()
         )
         assert progress == 150
+
+
+async def test_the_remote_and_the_player_share_one_power_path(hass: HomeAssistant) -> None:
+    """Both go through AVControl, so the remote's power commands take the
+    same lock and camera release as the player's."""
+    from unittest.mock import AsyncMock
+
+    from custom_components.localthings.registry.entities import MediaPlayerDesc
+
+    await _setup_tv(hass, _entry(hass))
+    coordinator = hass.data[DOMAIN][next(iter(hass.data[DOMAIN]))]
+    remote = next(iter(hass.data["remote"].entities))
+    player = next(iter(hass.data["media_player"].entities))
+
+    with (
+        patch.object(coordinator.av, "async_turn_on", AsyncMock()) as turn_on,
+        patch.object(coordinator.av, "async_turn_off", AsyncMock()) as turn_off,
+    ):
+        for entity in (remote, player):
+            await entity.async_turn_on()
+            await entity.async_turn_off()
+
+    for mock in (turn_on, turn_off):
+        assert mock.await_count == 2
+        assert all(isinstance(call.args[0].desc, MediaPlayerDesc) for call in mock.await_args_list)
