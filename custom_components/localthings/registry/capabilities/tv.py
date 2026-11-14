@@ -87,11 +87,7 @@ PICTURE_MODE = Capability(
 )
 
 # The media player's surface. Unpolled until it exists: no entity reads them.
-MEDIA_SURFACE_COVERAGE: list[Capability] = [
-    Capability(href=HREF_SWITCH, rt_filter="oic.r.switch.binary", poll_tier="never"),
-    Capability(href=HREF_AUDIO, rt_filter="oic.r.audio", poll_tier="never"),
-    Capability(href=HREF_INPUT, poll_tier="never"),
-    Capability(href=HREF_SOUND, poll_tier="never"),
+_MEDIA_OTHER: list[Capability] = [
     # What is on screen: the input or app, and the broadcast channel.
     Capability(href="/sec/tv/contentinfo", poll_tier="never"),
     Capability(href="/sec/tv/channel", poll_tier="never"),
@@ -100,6 +96,13 @@ MEDIA_SURFACE_COVERAGE: list[Capability] = [
     # App and casting launchers.
     Capability(href="/sec/tv/launchapp", poll_tier="never"),
     Capability(href="/content/renderer", poll_tier="never"),
+]
+MEDIA_SURFACE_COVERAGE: list[Capability] = [
+    Capability(href=HREF_SWITCH, rt_filter="oic.r.switch.binary", poll_tier="never"),
+    Capability(href=HREF_AUDIO, rt_filter="oic.r.audio", poll_tier="never"),
+    Capability(href=HREF_INPUT, poll_tier="never"),
+    Capability(href=HREF_SOUND, poll_tier="never"),
+    *_MEDIA_OTHER,
 ]
 
 # The field is named lux; the two monitors read 118 and 602 at different
@@ -274,9 +277,20 @@ MEDIA_PLAYER = Capability(
             supported_commands_fn=_supported_commands,
             needs_remote_control=False,
             control_response=True,
+            # Every write here sets an absolute value, so a refusal passes only
+            # when a fresh GET already shows the requested fields; an
+            # already-current sound mode is the refusal seen (QN90A, #834).
             confirm_on_refusal=True,
             write_fn=_media_write,
             validate_fn=_validate_media,
         ),
     ),
 )
+
+# The TV binds MEDIA_PLAYER on the switch and polls what it reads.
+TV_MEDIA_SURFACE: list[Capability] = [
+    Capability(href=HREF_AUDIO, rt_filter="oic.r.audio", poll_tier="hot"),
+    Capability(href=HREF_INPUT, poll_tier="warm"),
+    Capability(href=HREF_SOUND, poll_tier="warm"),
+    *_MEDIA_OTHER,
+]

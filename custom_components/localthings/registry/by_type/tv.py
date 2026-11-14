@@ -1,24 +1,14 @@
-"""OCF TVs reuse the Tizen settings profile with the shared media player."""
-
-from dataclasses import replace
+"""Samsung OCF TVs (oic.d.tv, #755): the Smart Monitor's Tizen surface plus
+the shared media player (#834)."""
 
 from ..capabilities import tv
-from ..capability import Capability
-from ._base import _build
+from ._base import DeviceRegistry, _build
 from .monitor import REGISTRY as MONITOR_REGISTRY
+from .monitor import TIZEN_BASE
 
-REGISTRY = replace(
-    MONITOR_REGISTRY,
+REGISTRY = DeviceRegistry(
     name="tv",
-    capabilities={
-        **MONITOR_REGISTRY.capabilities,
-        **_build(
-            [
-                tv.MEDIA_PLAYER,
-                Capability(href=tv.HREF_AUDIO, rt_filter="oic.r.audio", poll_tier="hot"),
-                Capability(href=tv.HREF_INPUT, poll_tier="warm"),
-                Capability(href=tv.HREF_SOUND, poll_tier="warm"),
-            ]
-        ),
-    },
+    capabilities=_build([*TIZEN_BASE, tv.MEDIA_PLAYER, *tv.TV_MEDIA_SURFACE]),
+    pattern_capabilities=MONITOR_REGISTRY.pattern_capabilities,
+    subscribe_tiers=MONITOR_REGISTRY.subscribe_tiers,
 )
