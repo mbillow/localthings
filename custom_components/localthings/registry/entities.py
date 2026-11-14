@@ -309,7 +309,6 @@ class MediaPlayerDesc(SamsungEntityDescription):
     # Read when track_href has no title (a TV's audio track under its video
     # metadata).
     fallback_track_href: str | None = None
-    repeat_href: str | None = None
     # TV only: the broadcast channel, the program on screen and its schedule,
     # and the current app's base64 artwork.
     channel_href: str | None = None

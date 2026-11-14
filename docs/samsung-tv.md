@@ -1,9 +1,22 @@
-# Samsung TV: OCF media player and settings
+# Samsung TV
 
-A Samsung TV reporting `oic.d.tv` now uses the existing Tizen TV capability
-profile shared with Smart Monitors. The shared media-player entity provides
-power-off, volume, absolute mute, input and sound mode when the device reports
-those controls as writable. Picture mode remains a separate settings select.
+A Samsung TV reporting `oic.d.tv` uses the Tizen capability profile shared
+with Smart Monitors, plus its own entities:
+
+- **Media player** on the shared AV platform: power-off, volume, mute, input
+  and sound mode, each offered only while the TV reports it writable. Channel,
+  programme and position come from the broadcast schedule on live TV; title and
+  artwork from the content info and thumbnail otherwise. `play_media` tunes a
+  channel, launches an app, or casts an image, video, HLS stream or YouTube link.
+- **Turn-on** by Wake-on-LAN, offered once the entry knows the TV's MAC. The OCF
+  endpoint is gone in standby, so no OCF power-on write is sent. Wi-Fi wake
+  needs the TV's "Power On with Mobile" setting.
+- **Remote** (`remote.send_command` with `KEY_*` names or aliases), **notify**
+  (an on-screen pop-up), an **Open app** select and a **screen off** button.
+- The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
+  actions.
+- A **picture mode** select.
+
 Source and sound-mode names come from the TV; duplicate input names are
 disambiguated by their wire IDs. Options update as the device changes them.
 
@@ -34,17 +47,12 @@ for flat per-href resources; the TV does not serve a `/device/0` Collection.
 Resources absent from the cache or timed out are not fabricated. The capture's
 Game HDR current mode is not advertised as writable, so it is not a new option.
 
-Known AV plumbing reuses the shared AV/TV coverage. Useful unsupported remote,
-native-app, ambient-mode and weather resources remain visible as coverage gaps.
-Standby wake, WSS remote, app launching, casting and external-speaker mute
-routing are not part of this slice. The TV cannot wake over its offline OCF
-endpoint, so TURN_ON is not advertised and a direct turn-on call is rejected.
-Playing/paused states and playback buttons are not invented from input state.
-With external audio, the TV can report stale audio state: target the speaker
-entity directly rather than infer an external speaker toggle from the TV.
+WSS remote tokens and external-speaker mute routing are not included. With
+external audio, the TV can report stale audio state: target the speaker entity
+directly rather than infer an external speaker toggle from the TV.
 [Local-extension investigation notes](investigations/qn90a-local-controls.md)
-record the hardware findings for those follow-ups; they are not shipped features.
+record the QN90A hardware findings; [casting latency](investigations/tv-casting-latency.md)
+records the renderer and Gallery measurements from a UE50TU7172.
 
-The shared profile retains the default write-settle window for input switching.
-Native mode writes returning an explicit refusal are accepted as an already-current
+TV writes settle for six seconds, as on the soundbar. Native mode writes returning an explicit refusal are accepted as an already-current
 no-op only after the coordinator confirms the exact value with a fresh device GET.
