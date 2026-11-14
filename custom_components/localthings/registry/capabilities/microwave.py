@@ -391,6 +391,8 @@ MICROWAVE_MODE = Capability(
             value_fn=lambda opts: option_value(opts, "Sound") == "On",
             write_fn=_sound_write,
         ),
+        # The Lamp token's three writers waive Remote Control: it doesn't heat, and
+        # TP2X_DA-KS-MICROWAVE-0101X applied it with Remote Control off.
         SwitchDesc(
             key="lamp",
             field="x.com.samsung.da.options",
@@ -399,6 +401,7 @@ MICROWAVE_MODE = Capability(
             exists_fn=_lamp_exists,
             value_fn=_lamp_is_on,
             write_fn=_lamp_write,
+            needs_remote_control=False,
         ),
         SelectDesc(
             key="lamp_level",
@@ -409,6 +412,7 @@ MICROWAVE_MODE = Capability(
             exists_fn=_lamp_level_exists,
             value_fn=lambda opts: option_value(opts, "Lamp"),
             write_fn=_lamp_level_write,
+            needs_remote_control=False,
         ),
         # Its own key so the switch above keeps its unique_id (#568).
         LightDesc(
@@ -420,6 +424,7 @@ MICROWAVE_MODE = Capability(
             exists_fn=_lamp_level_exists,
             value_fn=_lamp_brightness,
             write_fn=_lamp_brightness_write,
+            needs_remote_control=False,
         ),
         LightDesc(
             key="lamp_light",

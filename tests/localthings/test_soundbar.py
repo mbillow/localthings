@@ -1,16 +1,24 @@
 """HW-S61B soundbar: end-to-end through Home Assistant.
 
 A PSK entry polled flat (no /device/0 anywhere), routed to the soundbar
-registry by /oic/d alone, with its entities read off the live state
-machine.
+registry by /oic/d alone, with the media_player entity read off the live
+state machine and exercised through its service calls.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+from homeassistant.components.media_player import MediaPlayerState
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings.const import (
@@ -33,9 +41,38 @@ from custom_components.localthings.const import (
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.observe import MODE_OBSERVE
+from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
+from custom_components.localthings.registry.capabilities import av
+from custom_components.localthings.registry.capabilities import soundbar as soundbar_caps
 from custom_components.localthings.registry.identity import DeviceIdentity
 from tests.conftest import FIXTURES
+
+# The hrefs the soundbar's media player reads, for the unit-level tests.
+PROFILE = SimpleNamespace(
+    playback_href=av.HREF_MEDIA_PLAYBACK,
+    power_href=soundbar_caps.HREF_SWITCH,
+    track_href=av.HREF_TRACK_DATA,
+)
+
+
+def _stream(coordinator, source: str = "") -> None:
+    """Put the bar on a network stream: its source goes empty while one plays."""
+    coordinator._observe.apply("/sec/networkaudio/mode", {"mode": source}, source="optimistic")
+
+
+def _freeze_polls(coordinator) -> None:
+    """Stop sub-polls from overwriting seeded reps.
+
+    Cancelling _subpoll_task isn't enough, because a GET already in flight
+    still lands. Clearing the tier lists makes later ticks no-ops; the
+    caller must block_till_done once before seeding.
+    """
+    coordinator._hot_hrefs = []
+    coordinator._warm_hrefs = []
+    if coordinator._subpoll_task is not None:
+        coordinator._subpoll_task.cancel()
+
 
 MOCK_HOST = "10.0.0.63"
 MOCK_PORT = 40294
@@ -187,17 +224,230 @@ async def test_psk_entry_polls_flat(hass: HomeAssistant) -> None:
     assert not _SKIP_EXACT & set(session.reads)
 
 
+async def test_media_player_state_and_controls(hass: HomeAssistant) -> None:
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+
+    players = hass.states.async_all("media_player")
+    assert len(players) == 1
+    player = players[0]
+    entity_id = player.entity_id
+
+    # On a wired input the playback feed says nothing about what plays.
+    assert player.state == MediaPlayerState.ON
+    assert player.attributes["volume_level"] == 0.11
+    assert player.attributes["is_volume_muted"] is False
+    assert player.attributes["source"] == "optical"
+    assert player.attributes["source_list"] == ["optical", "bt", "Wi-Fi"]
+    assert player.attributes["sound_mode"] == "standard"
+
+    async def call(service: str, data: dict | None = None) -> None:
+        await hass.services.async_call(
+            "media_player", service, {"entity_id": entity_id, **(data or {})}, blocking=True
+        )
+
+    await call("volume_set", {"volume_level": 0.42})
+    await call("volume_mute", {"is_volume_muted": True})
+    await call("select_source", {"source": "bt"})
+    await call("select_sound_mode", {"sound_mode": "music"})
+    # Playback commands need something to act on: a paused BT track, on the
+    # fake too so sub-polls keep it.
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources["/capability/audioTrackData/main/0"]["title"] = "Track"
+    session.resources["/sec/networkaudio/mode"]["mode"] = "bt"
+    coordinator._observe.apply(
+        "/capability/audioTrackData/main/0", {"title": "Track"}, source="optimistic"
+    )
+    await hass.async_block_till_done()
+    await call("media_play")
+    await call("media_stop")
+    await call("shuffle_set", {"shuffle": True})
+    coordinator._observe.apply(
+        "/capability/mediaTrackControl/main/0",
+        {"supportedModes": ["next", "previous"]},
+        source="optimistic",
+    )
+    await hass.async_block_till_done()
+    await call("media_next_track")
+
+    # HA seeks to absolute seconds; the device takes a delta in ms. The
+    # fixture sits at 120000 ms.
+    coordinator._observe.apply(
+        "/capability/mediaPlayback/main/0",
+        {"modes": ["play"], "position": 120_000},
+        source="optimistic",
+    )
+    await hass.async_block_till_done()
+    await call("media_seek", {"seek_position": 60.0})
+
+    # The optimistic cache holds the rebased absolute ms, not the delta.
+    rep = coordinator.resource("/capability/mediaPlayback/main/0")
+    assert rep["position"] == 60_000
+    assert rep["modes"] == ["play"]
+    player = next(iter(hass.data["media_player"].entities))
+    assert player.media_position == 60
+    await call("media_seek", {"seek_position": 120.0})
+
+    # The toggle goes out as is; the cache gets the mode it toggles to.
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.state == MediaPlayerState.PLAYING
+    await call("media_play_pause")
+    assert (
+        ["capability", "mediaPlayback", "main", "0"],
+        {"modes": ["playpause"]},
+    ) in session.writes
+    assert coordinator.resource("/capability/mediaPlayback/main/0")["modes"] == ["pause"]
+
+    await call("turn_off")
+
+    assert (["sec", "networkaudio", "audio"], {"volume": 42}) in session.writes
+    assert (["sec", "networkaudio", "audio"], {"mute": True}) in session.writes
+    assert (["sec", "networkaudio", "mode"], {"mode": "bt"}) in session.writes
+    assert (
+        ["sec", "networkaudio", "soundmode"],
+        {"x.com.samsung.networkaudio.soundmode": "music"},
+    ) in session.writes
+    assert (["capability", "mediaPlayback", "main", "0"], {"modes": ["play"]}) in session.writes
+    assert (["capability", "mediaPlayback", "main", "0"], {"modes": ["stop"]}) in session.writes
+    assert (
+        ["capability", "mediaPlaybackShuffle", "main", "0"],
+        {"mode": "enabled"},
+    ) in session.writes
+    assert (
+        ["capability", "mediaTrackControl", "main", "0"],
+        {"modes": ["next"]},
+    ) in session.writes
+    # A playing feed advances while the test runs, a few ms at most.
+    seeks = [b["position"] for p, b in session.writes if b.get("modes") == ["seek"]]
+    assert len(seeks) == 2
+    assert -61_000 < seeks[0] <= -60_000
+    assert 59_000 < seeks[1] <= 60_000
+    assert (["sec", "networkaudio", "switch", "binary"], {"value": False}) in session.writes
+
+
+async def test_media_position_and_duration_are_seconds_not_milliseconds(
+    hass: HomeAssistant,
+) -> None:
+    """The /capability/* tree reports ms; HA works in seconds."""
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+
+    # Seed the fake itself, so sub-polls return the same reps.
+    session.resources["/sec/networkaudio/mode"]["mode"] = ""
+    session.resources["/capability/mediaPlayback/main/0"].update(
+        {"modes": ["play"], "position": 133_556}
+    )
+    session.resources["/capability/audioTrackData/main/0"].update(
+        {"title": "One Day We Will Lose Everything", "duration": 225_000}
+    )
+
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    # Wait for the sub-poll to deliver them.
+    for _ in range(50):
+        if coordinator.resource("/capability/mediaPlayback/main/0").get("position") == 133_556:
+            break
+        await asyncio.sleep(0.01)
+
+    assert player.media_position == 133
+    assert player.media_duration == 225
+    assert player.media_position_updated_at is not None
+
+
+async def test_state_follows_the_networkaudio_playback_line(
+    hass: HomeAssistant,
+) -> None:
+    """The bar's own playback status wins over /capability's 'stop'."""
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    def _seed_status(status: str) -> None:
+        coordinator._observe.apply(
+            "/sec/networkaudio/playback",
+            {"x.com.samsung.networkaudio.status": status},
+            source="optimistic",
+        )
+
+    _stream(coordinator)
+    _seed_status("PLAYING")
+    await hass.async_block_till_done()
+    assert (
+        coordinator.resource("/sec/networkaudio/playback").get("x.com.samsung.networkaudio.status")
+        == "PLAYING"
+    )
+    assert player.state == MediaPlayerState.PLAYING
+
+    _seed_status("PAUSED")
+    for _ in range(500):
+        if (
+            coordinator.resource("/sec/networkaudio/playback").get(
+                "x.com.samsung.networkaudio.status"
+            )
+            == "PAUSED"
+        ):
+            break
+        await asyncio.sleep(0.01)
+    assert (
+        coordinator.resource("/sec/networkaudio/playback").get("x.com.samsung.networkaudio.status")
+        == "PAUSED"
+    )
+    assert player.state == MediaPlayerState.PAUSED
+
+    _seed_status("IDLE")
+    for _ in range(500):
+        if (
+            coordinator.resource("/sec/networkaudio/playback").get(
+                "x.com.samsung.networkaudio.status"
+            )
+            == "IDLE"
+        ):
+            break
+        await asyncio.sleep(0.01)
+    assert (
+        coordinator.resource("/sec/networkaudio/playback").get("x.com.samsung.networkaudio.status")
+        == "IDLE"
+    )
+    assert player.state == MediaPlayerState.IDLE
+
+
+async def test_device_registry_carries_firmware_but_no_uuid_serial(
+    hass: HomeAssistant,
+) -> None:
+    """Firmware from /oic/p lands on the card; the OCF per-unit UUID is
+    NOT a serial (an AV board has none -- resolve_serial's host fallback
+    is an address, not identity) and must not surface as one."""
+    from homeassistant.helpers import device_registry as dr
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    device = next(
+        row
+        for row in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+        if row.model == "HW-TEST"
+    )
+    assert device.sw_version == "HW-TESTWWB-1000.0"
+    assert device.serial_number is None
+
+
 async def test_standalone_entities_register(hass: HomeAssistant) -> None:
     entry = _mock_entry(hass)
     await _setup_soundbar(hass, entry)
     coordinator = _coordinator(hass, entry)
 
     keys = {b.desc.key for b in coordinator.bound}
-    for expected in ("bass", "woofer_level", "night_mode", "network_connection", "wifi_signal"):
+    for expected in ("media_player", "bass", "woofer_level", "night_mode", "network_connection"):
         assert expected in keys
-    # Power, volume and input wait for the media player.
-    for key in ("media_player", "power_switch", "volume", "mute", "input_source"):
-        assert key not in keys
+    # The media player's surfaces have no standalone duplicates.
+    for dup in ("power_switch", "volume", "mute", "input_source", "soundbar_sound_mode"):
+        assert dup not in keys
 
 
 async def test_channel_level_write_keeps_the_other_channels(
@@ -245,3 +495,619 @@ async def test_diagnostics_report_the_stored_read_mode(hass: HomeAssistant) -> N
     await _setup_soundbar(hass, entry)
     diag = await async_get_config_entry_diagnostics(hass, entry)
     assert diag["read_mode"] == READ_MODE_PER_HREF
+
+
+async def test_seek_from_the_beginning_of_a_track(hass: HomeAssistant) -> None:
+    """Position 0 with a live track is a real position, and seeking from it works."""
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    # The live track is what makes 0 a real position.
+    _stream(coordinator)
+    coordinator._observe.apply(
+        "/capability/audioTrackData/main/0",
+        {"title": "Intro", "artist": "Test"},
+        source="optimistic",
+    )
+    coordinator._observe.apply(
+        "/capability/mediaPlayback/main/0",
+        {"modes": ["play"], "position": 0},
+        source="optimistic",
+    )
+    await hass.async_block_till_done()
+    assert player.media_position == 0
+
+    await hass.services.async_call(
+        "media_player",
+        "media_seek",
+        {"entity_id": player.entity_id, "seek_position": 90.0},
+        blocking=True,
+    )
+    [(path, body)] = session.writes
+    assert path == ["capability", "mediaPlayback", "main", "0"]
+    assert body["modes"] == ["seek"]
+    # The feed plays on while the test runs.
+    assert 89_000 < body["position"] <= 90_000
+
+
+async def test_position_timestamp_follows_only_the_position_feed(
+    hass: HomeAssistant,
+) -> None:
+    """media_position_updated_at restamps when the position changes, not on a volume write."""
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+
+    async def _wait_cache(href: str, field: str, value) -> None:
+        # The sub-poll delivers seeded reps within a tick.
+        for _ in range(100):
+            if coordinator.resource(href).get(field) == value:
+                return
+            await asyncio.sleep(0.01)
+        raise AssertionError(f"{href} {field} never became {value!r}")
+
+    # Seed what the bar would answer live mid-track.
+    session.resources["/sec/networkaudio/mode"]["mode"] = ""
+    session.resources["/capability/mediaPlayback/main/0"].update(
+        {"modes": ["play"], "position": 120_000}
+    )
+    session.resources["/capability/audioTrackData/main/0"].update({"title": "T"})
+    await coordinator.async_refresh()
+    await _wait_cache("/capability/mediaPlayback/main/0", "position", 120_000)
+    for _ in range(100):
+        if player.media_position_updated_at is not None:
+            break
+        await asyncio.sleep(0.01)
+    stamp = player.media_position_updated_at
+    assert stamp is not None
+
+    # Same position feed, different resource: the stamp must hold.
+    session.resources["/sec/networkaudio/audio"].update({"volume": 9, "mute": False})
+    await coordinator.async_refresh()
+    await _wait_cache("/sec/networkaudio/audio", "volume", 9)
+    assert player.media_position == 120
+    assert player.media_position_updated_at == stamp
+
+    # A genuinely fresh position sample restamps.
+    session.resources["/capability/mediaPlayback/main/0"].update(
+        {"modes": ["play"], "position": 121_500}
+    )
+    await coordinator.async_refresh()
+    await _wait_cache("/capability/mediaPlayback/main/0", "position", 121_500)
+    for _ in range(100):
+        if player.media_position_updated_at > stamp:
+            break
+        await asyncio.sleep(0.01)
+    assert player.media_position == 121
+    assert player.media_position_updated_at is not None
+    assert player.media_position_updated_at > stamp
+
+
+async def test_airplay_frozen_feed_shows_no_progress_and_offers_no_seek(
+    hass: HomeAssistant,
+) -> None:
+    """AirPlay/BT: the bar plays (its own status) while /capability's feed
+    says stop with a frozen position -- that position must not drive a
+    progress bar or a seek."""
+    from homeassistant.components.media_player import MediaPlayerEntityFeature
+
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    _stream(coordinator, "bt")
+    for href, rep in (
+        ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": "PLAYING"}),
+        ("/capability/mediaPlayback/main/0", {"modes": ["stop"], "position": 133_556}),
+        ("/capability/audioTrackData/main/0", {"title": "Song", "duration": 225_000}),
+    ):
+        coordinator._observe.apply(href, rep, source="poll")
+    await hass.async_block_till_done()
+
+    assert player.state == MediaPlayerState.PLAYING
+    assert player.media_position is None
+    assert player.media_position_updated_at is None
+    assert not player.supported_features & MediaPlayerEntityFeature.SEEK
+    writes = len(session.writes)
+    await player.async_media_seek(30)
+    assert len(session.writes) == writes
+
+
+async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
+    from homeassistant.components.media_player import MediaPlayerEntityFeature
+
+    await _setup_soundbar(hass, _mock_entry(hass))
+    assert (
+        not next(iter(hass.data["media_player"].entities)).supported_features
+        & MediaPlayerEntityFeature.PLAY_MEDIA
+    )
+
+
+# V4n1X's HW-Q950T state table (#719): what the bar reported in each state.
+_Q950T_STATES = {
+    "standby": {
+        "power": False,
+        "status": "IDLE",
+        "modes": ["stop"],
+        "mode": "hdmi1",
+        "title": "",
+        "skips": [],
+    },
+    "on_hdmi1": {
+        "power": True,
+        "status": "IDLE",
+        "modes": ["stop"],
+        "mode": "hdmi1",
+        "title": "",
+        "skips": [],
+    },
+    "spotify_playing": {
+        "power": True,
+        "status": "PLAYING",
+        "modes": ["play"],
+        "mode": "",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+    "spotify_paused": {
+        "power": True,
+        "status": "PAUSED",
+        "modes": ["pause"],
+        "mode": "",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+    # Spotify stopped and the input switched: the stream's state stays.
+    "hdmi1_after_spotify": {
+        "power": True,
+        "status": "PAUSED",
+        "modes": ["pause"],
+        "mode": "hdmi1",
+        "title": "Song",
+        "skips": ["next", "previous"],
+    },
+}
+
+
+@pytest.mark.parametrize(
+    ("name", "state", "title", "playback_controls", "stop"),
+    [
+        ("standby", MediaPlayerState.OFF, None, False, False),
+        ("on_hdmi1", MediaPlayerState.ON, None, False, False),
+        ("spotify_playing", MediaPlayerState.PLAYING, "Song", True, True),
+        # The paused bar refuses stop (#775).
+        ("spotify_paused", MediaPlayerState.PAUSED, "Song", True, False),
+        ("hdmi1_after_spotify", MediaPlayerState.ON, None, False, False),
+    ],
+)
+async def test_the_q950t_states(
+    hass: HomeAssistant, name, state, title, playback_controls, stop
+) -> None:
+    from homeassistant.components.media_player import MediaPlayerEntityFeature as F
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    row = _Q950T_STATES[name]
+    for href, rep in (
+        ("/sec/networkaudio/switch/binary", {"value": row["power"]}),
+        ("/sec/networkaudio/playback", {"x.com.samsung.networkaudio.status": row["status"]}),
+        (
+            "/capability/mediaPlayback/main/0",
+            {"modes": row["modes"], "position": 61_000 if row["title"] else 0},
+        ),
+        ("/capability/audioTrackData/main/0", {"title": row["title"], "duration": 200_000}),
+        ("/capability/mediaTrackControl/main/0", {"supportedModes": row["skips"]}),
+        ("/sec/networkaudio/mode", {"mode": row["mode"]}),
+    ):
+        coordinator._observe.apply(href, rep, source="poll")
+    await hass.async_block_till_done()
+
+    assert player.state == state
+    assert player.media_title == title
+    controls = F.PAUSE | F.NEXT_TRACK | F.PREVIOUS_TRACK | F.SEEK
+    assert bool(player.supported_features & controls) is playback_controls
+    if playback_controls:
+        assert player.supported_features & controls == controls
+        assert player.media_position == 61
+    assert bool(player.supported_features & F.STOP) is stop
+
+
+async def test_features_follow_what_the_bar_reports(hass: HomeAssistant) -> None:
+    from homeassistant.components.media_player import MediaPlayerEntityFeature as F
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    player = next(iter(hass.data["media_player"].entities))
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+
+    # The S61B capture: optical, idle, nothing in mediaTrackControl. An idle
+    # bar acknowledges play and next and does nothing (HW-Q950T), so no
+    # playback control is offered.
+    features = player.supported_features
+    for feature in (F.SELECT_SOURCE, F.SELECT_SOUND_MODE, F.SHUFFLE_SET):
+        assert features & feature
+    for feature in (
+        F.PLAY,
+        F.PAUSE,
+        F.STOP,
+        F.NEXT_TRACK,
+        F.PREVIOUS_TRACK,
+        F.SEEK,
+        F.REPEAT_SET,
+    ):
+        assert not features & feature
+
+    # A paused stream: play, pause and stop as the feed lists them.
+    _stream(coordinator)
+    coordinator._observe.apply(
+        "/capability/audioTrackData/main/0", {"title": "Track"}, source="poll"
+    )
+    await hass.async_block_till_done()
+    assert player.supported_features & (F.PLAY | F.PAUSE | F.STOP) == F.PLAY | F.PAUSE | F.STOP
+
+    coordinator._observe.apply(
+        "/capability/mediaPlayback/main/0", {"supportedModes": ["play"]}, source="poll"
+    )
+    coordinator._observe.apply("/sec/networkaudio/mode", {"supportedModes": []}, source="poll")
+    await hass.async_block_till_done()
+    features = player.supported_features
+    assert features & F.PLAY
+    assert not features & (F.PAUSE | F.STOP | F.SELECT_SOURCE)
+
+
+async def test_only_advertised_sources_are_written(hass: HomeAssistant) -> None:
+    entry = _mock_entry(hass)
+    session = await _setup_soundbar(hass, entry)
+    player = next(iter(hass.data["media_player"].entities))
+
+    async def select(source: str) -> None:
+        await hass.services.async_call(
+            "media_player",
+            "select_source",
+            {"entity_id": player.entity_id, "source": source},
+            blocking=True,
+        )
+
+    await select("Wi-Fi")
+    assert session.writes[-1] == (["sec", "networkaudio", "mode"], {"mode": "wifiidle"})
+    writes = len(session.writes)
+    with pytest.raises(ServiceValidationError) as err:
+        await select("hdmi2")
+    assert err.value.translation_key == "media_option_not_supported"
+    assert len(session.writes) == writes
+
+
+def _push(coordinator, href: str, fields: dict) -> None:
+    coordinator._observe.apply(href, {**coordinator.resource(href), **fields}, source="poll")
+    coordinator.async_set_updated_data(flatten(coordinator.bound, coordinator.entity_resources()))
+
+
+@pytest.mark.parametrize(
+    ("domain", "key", "href", "present", "absent"),
+    [
+        # A restart while the bar is in standby, which drops the sub (#775).
+        (
+            "number",
+            "woofer_level",
+            "/sec/networkaudio/woofer",
+            {"x.com.samsung.networkaudio.connection": "on"},
+            {"x.com.samsung.networkaudio.connection": "off"},
+        ),
+        # Bass boost reads -1 in a sound mode without it.
+        (
+            "switch",
+            "bass_boost",
+            "/sec/networkaudio/advancedaudio",
+            {"x.com.samsung.networkaudio.bassboost": 0},
+            {"x.com.samsung.networkaudio.bassboost": -1},
+        ),
+    ],
+)
+async def test_state_gated_entities_follow_the_live_state(
+    hass: HomeAssistant, domain, key, href, present, absent
+) -> None:
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    coordinator = _coordinator(hass, entry)
+    _freeze_polls(coordinator)
+    await hass.async_block_till_done()
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_{key}"
+    registry = er.async_get(hass)
+
+    assert registry.async_get_entity_id(domain, DOMAIN, unique_id) is None
+
+    def state(entity_id):
+        current = hass.states.get(entity_id)
+        assert current is not None
+        return current.state
+
+    _push(coordinator, href, present)
+    await hass.async_block_till_done()
+    entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
+    assert entity_id is not None
+    assert state(entity_id) != STATE_UNAVAILABLE
+
+    _push(coordinator, href, absent)
+    await hass.async_block_till_done()
+    assert state(entity_id) == STATE_UNAVAILABLE
+
+    # Coming back reuses the same entity rather than adding a second one.
+    _push(coordinator, href, present)
+    await hass.async_block_till_done()
+    assert registry.async_get_entity_id(domain, DOMAIN, unique_id) == entity_id
+    assert state(entity_id) != STATE_UNAVAILABLE
+    assert (
+        len(
+            [
+                e
+                for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+                if e.unique_id == unique_id
+            ]
+        )
+        == 1
+    )
+
+
+@contextmanager
+def _no_discovery_io(coordinator):
+    """First discovery's sub-unit enumeration and probes, which these tests
+    don't exercise and which would otherwise open a session."""
+    with (
+        patch.object(coordinator, "_enumerate_subdevices_blocking", side_effect=lambda r: r),
+        patch.object(coordinator, "_probe_blocking", return_value={}),
+    ):
+        yield
+
+
+async def test_an_href_missing_from_the_first_read_keeps_its_entities(
+    hass: HomeAssistant,
+) -> None:
+    """A flat board reads one href at a time, and one can time out on the
+    first read after a restart. Its entities stay registered from the
+    snapshot, unavailable until it answers, and nothing reloads (#807)."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    href = next(b.href for b in coordinator.bound if b.href != "/sec/networkaudio/woofer")
+    kept = [b for b in coordinator.bound if b.href == href]
+
+    live = {h: rep for h, rep in resources.items() if h != href}
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        await coordinator._async_update_data()
+
+    reload.assert_not_called()
+    assert all(b in coordinator.bound for b in kept)
+    assert not any(coordinator.provides(b) for b in kept)
+    assert href not in coordinator.last_resources
+    coordinator._observe.apply(href, resources[href], source="poll")
+    assert all(coordinator.provides(b) for b in kept if not b.desc.dynamic_presence)
+
+
+async def test_a_dynamic_presence_href_is_never_pruned(hass: HomeAssistant) -> None:
+    """A resource that comes and goes with what it reports stays in the
+    snapshot however long it's absent; an ordinary one is let go once the
+    board has answered _PRUNE_AFTER_CYCLES cycles without it."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    dynamic = next(b.href for b in coordinator.bound if b.desc.dynamic_presence)
+    ordinary = next(
+        b.href
+        for b in coordinator.bound
+        if b.href != dynamic
+        and not any(o.href == b.href and o.desc.dynamic_presence for o in coordinator.bound)
+    )
+    live = {h: rep for h, rep in resources.items() if h not in (dynamic, ordinary)}
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
+        patch.object(coordinator, "_maybe_retry_observe_mode"),
+        patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
+    ):
+        for _ in range(4):
+            await coordinator._async_update_data()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    banked = stored["resources"]
+    assert dynamic in banked
+    assert ordinary not in banked
+
+
+async def test_a_board_in_standby_never_ages_out_an_href(hass: HomeAssistant) -> None:
+    """A board in network standby completes the handshake and answers a few
+    reads. Those cycles don't count as the board answering, so an href that
+    missed the first read survives however long the board sleeps."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    awake = {h: rep for h, rep in resources.items() if h != missed}
+    standby = dict(list(awake.items())[:2])
+
+    with (
+        patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
+        patch.object(coordinator, "_maybe_retry_observe_mode"),
+        patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
+    ):
+        with patch.object(coordinator, "_poll_once", return_value=awake):
+            await coordinator._async_update_data()
+        with patch.object(coordinator, "_poll_once", return_value=standby):
+            for _ in range(10):
+                await coordinator._async_update_data()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    assert missed in stored["resources"]
+
+
+async def test_an_href_the_board_stopped_listing_is_let_go(hass: HomeAssistant) -> None:
+    """A flat board's /oic/res is everything it serves. An href it no longer
+    lists is gone rather than short: it isn't kept or retained, so no sweep
+    waits out its timeout."""
+    from dataclasses import asdict, replace
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    href = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    gone = [b for b in coordinator.bound if b.href == href]
+    live = {h: rep for h, rep in resources.items() if h != href}
+    coordinator._identity = replace(
+        _IDENTITY, raw={**_IDENTITY.raw, "/oic/res": [{"href": h} for h in live]}
+    )
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
+    ):
+        await coordinator._async_update_data()
+
+    assert not any(b in coordinator.bound for b in gone)
+    assert not any(coordinator.provides(b) for b in gone)
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    assert href not in stored["resources"]
+
+
+async def test_a_sweep_reads_hrefs_not_heard_from_last(hass: HomeAssistant) -> None:
+    """A retained href that keeps timing out can't use up the sweep's
+    budget before the hrefs that answer are read."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = sorted({b.href for b in coordinator.bound})[0]
+    live = {h: rep for h, rep in resources.items() if h != missed}
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
+    ):
+        await coordinator._async_update_data()
+    assert missed in coordinator._unconfirmed
+
+    order: list[str] = []
+
+    def _read(sess, hrefs, **kwargs):
+        order.extend(hrefs)
+        return iter(())
+
+    coordinator._flat_poll = coordinator._FLAT_FULL_EVERY_N_POLLS - 1
+    with (
+        patch("custom_components.localthings.coordinator.iter_resources", side_effect=_read),
+        pytest.raises(RuntimeError),
+    ):
+        coordinator._poll_flat_blocking(object())
+    assert order[-1] == missed
+
+
+async def test_a_pruned_href_is_swept_last_and_banked_again_if_it_answers(
+    hass: HomeAssistant,
+) -> None:
+    """Letting an href go from the snapshot doesn't make it a live href:
+    the sweep still reads it after the ones that answer, and if it answers
+    after all the snapshot takes it back."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    missed = next(b.href for b in coordinator.bound if not b.desc.dynamic_presence)
+    awake = {h: rep for h, rep in resources.items() if h != missed}
+
+    async def _cycles(read: dict, count: int) -> None:
+        with (
+            patch.object(coordinator, "_poll_once", return_value=read),
+            patch.object(coordinator, "_attempt_observe_mode"),
+            patch.object(coordinator, "_maybe_retry_observe_mode"),
+            _no_discovery_io(coordinator),
+            patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 1),
+        ):
+            for _ in range(count):
+                await coordinator._async_update_data()
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    async def _banked() -> dict:
+        stored = await coordinator._snapshot_store.async_load()
+        assert stored is not None
+        return stored["resources"]
+
+    await _cycles(awake, 2)
+    assert missed not in await _banked()
+    assert missed in coordinator._pruned
+
+    order: list[str] = []
+
+    def _read(sess, hrefs, **kwargs):
+        order.extend(hrefs)
+        return iter(())
+
+    coordinator._flat_poll = coordinator._FLAT_FULL_EVERY_N_POLLS - 1
+    with (
+        patch("custom_components.localthings.coordinator.iter_resources", side_effect=_read),
+        pytest.raises(RuntimeError),
+    ):
+        coordinator._poll_flat_blocking(object())
+    assert order[-1] == missed
+
+    await _cycles(resources, 1)
+    assert missed in await _banked()
+    assert not coordinator._pruned

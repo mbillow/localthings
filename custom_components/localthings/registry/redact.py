@@ -34,6 +34,10 @@ _SENSITIVE_SUBSTRINGS = (
     # DevConf's x.com.samsung.ssolist: embedded JSON holding the owner's
     # Samsung account e-mail. Its inner keys aren't walked, so drop it whole.
     "ssolist",
+    # A TV's appdata x.com.samsung.tv.tvtomobile: embedded JSON that can hold
+    # the Samsung account list or a remote token (#815). Dropped whole for
+    # the same reason.
+    "tvtomobile",
     # /wirelessinfo/vs/0's connectedApSsid -- the owner's WiFi network name.
     # Not an account credential, which is why it slipped past the rules
     # above, but it is a location identifier: public wardriving databases map
@@ -57,12 +61,20 @@ _SENSITIVE_SUBSTRINGS = (
 # the identity every entity in a report is named after -- which is exactly
 # what made #381's first diagnostics download unable to answer it.
 # x.com.samsung.rmd: the paired phone's name and model; laststatus and
-# connectioninfo: provisioning ids and an on/off history.
+# connectioninfo: provisioning ids and an on/off history. groupName,
+# masterName, masterDi and nick are the soundbar's multiroom group and nearby
+# speakers' owner-set names and ids (HW-Q700C, #796); code_challenge is the
+# Alexa sign-in's PKCE challenge.
 _SENSITIVE_EXACT = frozenset(
     {
         "n",
         "tnn",
         "cd",
+        "nick",
+        "groupname",
+        "mastername",
+        "masterdi",
+        "x.com.samsung.alexa.code_challenge",
         "x.com.samsung.networkaudio.name",
         "x.com.samsung.rmd",
         "x.com.samsung.provisioning.sessionid",
@@ -75,6 +87,10 @@ _SENSITIVE_EXACT = frozenset(
 # connectionType; their name is the source device's, often a phone named
 # after its owner, and ip is a LAN address.
 _CONNECTION_ROW_KEYS = frozenset({"name", "groupname", "ip"})
+
+# A groupdiscovery candidate (a nearby speaker) has a nick; its di is that
+# speaker's id, unlike /oic/d's own di above.
+_SPEAKER_ROW_KEYS = frozenset({"di"})
 
 # Whole-segment matches (the whole key, or its tail after "." or "_"):
 # UPnP's udn is a per-unit UUID, and sn/dsn are serial numbers (the TV's
@@ -105,10 +121,13 @@ def redact_resources(resources):
     """
     if isinstance(resources, dict):
         row = "connectionType" in resources
+        speaker = "nick" in resources
         return {
             key: (
                 REDACTED
-                if _is_sensitive_key(key) or (row and key.lower() in _CONNECTION_ROW_KEYS)
+                if _is_sensitive_key(key)
+                or (row and key.lower() in _CONNECTION_ROW_KEYS)
+                or (speaker and key.lower() in _SPEAKER_ROW_KEYS)
                 else redact_resources(value)
             )
             for key, value in resources.items()

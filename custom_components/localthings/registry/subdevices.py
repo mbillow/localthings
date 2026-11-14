@@ -563,6 +563,7 @@ def discover_partitioned(
     log: Callable[[str], None] | None = None,
     tier_log: Callable[[str, str], None] | None = None,
     oic_device_types: Sequence[str] = (),
+    type_resources: dict[str, dict] | None = None,
 ):
     """Bind every href in `resources` (the merged, real-href snapshot --
     main plus every enumerated subdevice's seed) to entities, partitioned
@@ -589,6 +590,10 @@ def discover_partitioned(
     be wrong the moment a composite appliance pairs two different device
     types under one connection.
 
+    `type_resources`, when given, is the same real-href snapshot with the
+    coordinator's remembered modeSpecs filled in. It is used only to resolve
+    each view's device type (#744), never to bind.
+
     Returns `(bound, device_type_name, materialized, skipped)`:
     - `bound`: the concatenated BoundEntity list (main + every materialized
       subdevice).
@@ -612,8 +617,9 @@ def discover_partitioned(
     # Same computation canonical_view does for MAIN -- reuse it rather than
     # re-deriving owned_elsewhere here too.
     main_view = canonical_view(MAIN, resources, subdevices)
+    typing = resources if type_resources is None else type_resources
 
-    reg = resolve_registry(main_view, device_types=oic_device_types)
+    reg = resolve_registry(canonical_view(MAIN, typing, subdevices), device_types=oic_device_types)
     caps, pats = (
         (reg.capabilities, reg.pattern_capabilities)
         if reg is not None
@@ -629,7 +635,7 @@ def discover_partitioned(
 
     for su in subdevices:
         view = canonical_view(su, resources, subdevices)
-        su_reg = resolve_registry(view) or reg
+        su_reg = resolve_registry(canonical_view(su, typing, subdevices)) or reg
         su_caps, su_pats = (
             (su_reg.capabilities, su_reg.pattern_capabilities)
             if su_reg is not None

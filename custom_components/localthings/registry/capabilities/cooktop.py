@@ -300,7 +300,11 @@ def _legacy_radiant_entity(desc):
         # NZ36K7570R reports remaining minutes in both timer fields; retain
         # the existing enabled entity (docs/investigations/legacy-cooktop.md).
         return dataclasses.replace(
-            desc, translation_key="cooktop_timer_remaining", unit="min", device_class="duration"
+            desc,
+            translation_key="cooktop_timer_remaining",
+            unit="min",
+            device_class="duration",
+            supersedes=(("sensor", "main_timer_current"),),
         )
     if desc.key == "main_timer_state":
         return dataclasses.replace(desc, translation_key="cooktop_timer_status")

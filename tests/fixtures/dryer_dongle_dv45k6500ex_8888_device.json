@@ -1,0 +1,109 @@
+{
+  "seeds_note": "Canonical hrefs generated with legacy_http.to_resources from the real issue #761 capture in dryer_dongle_dv45k6500ex_8888.json; these hrefs are bridge mappings, not appliance-served OCF resources.",
+  "device0": [
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.progress": "None",
+        "x.com.samsung.da.progressPercentage": 1,
+        "x.com.samsung.da.remainingTime": "01:15:00",
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Drying",
+          "Cooling",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "Course_01",
+          "DeviceType_0152",
+          "RackDry_Disable",
+          "DrytimeValue_0",
+          "UsagesDB_ok",
+          "LaundryOutTime_0"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "3018410D33EE000708520D33EE000718520D33EE000778410D33EE000768204D308E000758102D33EE000748410D308E0006F8520D520E0007C8520D000E13E7D8520D000E0007E8000D000E13E7F853ED000E53E808520D000E23E818102D33EE000"
+        ]
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.dryLevel": "Normal",
+        "x.com.samsung.da.dryTime": "00:00:00",
+        "x.com.samsung.da.dryerType": "Electricity",
+        "x.com.samsung.da.supportedDryLevel": [
+          "None",
+          "Damp",
+          "Less",
+          "Normal",
+          "More",
+          "Very"
+        ],
+        "x.com.samsung.da.supportedDryTime": [
+          "00:00:00",
+          "00:20:00",
+          "00:30:00",
+          "00:40:00",
+          "00:50:00",
+          "01:00:00"
+        ],
+        "x.com.samsung.da.supportedWaterTemperature": [
+          "None",
+          "ExtraLow",
+          "Low",
+          "MediumLow",
+          "Medium",
+          "High"
+        ],
+        "x.com.samsung.da.waterTemperature": "Medium",
+        "x.com.samsung.da.wrinklePrevent": "Off"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": true
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "DONGLE_DRY",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "DONGLE_DV45K6500Ex|00185441|",
+        "x.com.samsung.da.deviceSubType": "Dryer"
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_unsupported_sound_switches
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import LocalThingsEntity, _is_included
@@ -64,7 +64,7 @@ async def test_an_explicit_sound_token_keeps_the_existing_control(hass, token, e
         f"{DOMAIN}_{coordinator.device_key}_sound",
         config_entry=coordinator._entry,
     )
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is not None
 
 
@@ -94,15 +94,14 @@ async def test_cleanup_removes_only_the_exact_sound_switch(hass, disabled, caplo
     keep = [
         registry.async_get_or_create(platform, domain, unique_id, config_entry=coordinator._entry)
         for platform, domain, unique_id in (
-            ("sensor", DOMAIN, uid),
             ("switch", DOMAIN, uid + "_other"),
             ("switch", "other_integration", uid),
             ("switch", DOMAIN, f"{DOMAIN}_{coordinator.device_key}_energy_saving"),
         )
     ]
     with caplog.at_level("INFO", logger="custom_components.localthings"):
-        _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
-        _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+        async_reconcile_entities(hass, coordinator._entry, coordinator)
+        async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert len(removed) == 2
     assert all(registry.async_get(entity_id) is None for entity_id in removed)
     assert all(registry.async_get(e.entity_id) for e in keep)
@@ -118,7 +117,7 @@ async def test_cleanup_leaves_another_config_entry_untouched(hass):
     old = registry.async_get_or_create(
         "switch", DOMAIN, f"{DOMAIN}_{coordinator.device_key}_sound", config_entry=other
     )
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is not None
 
 
@@ -137,7 +136,7 @@ async def test_offline_snapshot_applies_the_same_sound_gate(hass, token):
     old = registry.async_get_or_create(
         "switch", DOMAIN, f"{DOMAIN}_{restored.device_key}_sound", config_entry=online._entry
     )
-    _drop_unsupported_sound_switches(hass, online._entry, restored)
+    async_reconcile_entities(hass, online._entry, restored)
     assert (registry.async_get(old.entity_id) is not None) is bool(token)
 
 
@@ -168,7 +167,7 @@ async def test_fixture_sound_controls_and_registry_cleanup(hass, name, kept_href
         )
         for b in sound
     }
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert {
         href for href, row in controls.items() if registry.async_get(row.entity_id)
     } == kept_hrefs
@@ -194,7 +193,7 @@ async def test_legacy_combo_keeps_microwave_sound_and_removes_oven_controls(hass
             "switch", DOMAIN, uid, config_entry=coordinator._entry
         )
     assert set(controls) == {"/mode/vs/0", "/mode/vs/2", "/mode/vs/3"}
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert {href for href, row in controls.items() if registry.async_get(row.entity_id)} == {
         "/mode/vs/0"
     }
@@ -225,7 +224,7 @@ async def test_cleanup_uses_the_descriptor_gate_including_stubs(hass, rep, expec
         str(LocalThingsEntity(coordinator, sound).unique_id),
         config_entry=coordinator._entry,
     )
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert (registry.async_get(old.entity_id) is not None) is expected
 
 
@@ -248,7 +247,7 @@ async def test_each_cavity_uses_its_own_sound_option(hass, supported_cavity):
             config_entry=coordinator._entry,
         )
     assert len(controls) == 2
-    _drop_unsupported_sound_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert {href for href, row in controls.items() if registry.async_get(row.entity_id)} == {
         f"/mode/vs/{supported_cavity}"
     }

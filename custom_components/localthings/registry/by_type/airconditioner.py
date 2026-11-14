@@ -14,6 +14,9 @@ every other AC family, so this registry needs two mutually-exclusive variants
 of that one capability instead of the single shared one every other registry
 uses unconditionally.
 
+common.FILE_TRANSFER is swapped the same way, for airconditioner.FILE_TRANSFER:
+the usage file stores plain Wh on ACs (issue #741).
+
 Reuses dishwasher.DIAGNOSIS for /diagnosis/vs/0.
 """
 
@@ -25,9 +28,14 @@ REGISTRY = DeviceRegistry(
     capabilities=_build(
         [
             *ignored.IGNORED,
-            *[c for c in common.UNIVERSAL if c is not common.ENERGY_METER],
+            *[
+                c
+                for c in common.UNIVERSAL
+                if c is not common.ENERGY_METER and c is not common.FILE_TRANSFER
+            ],
             airconditioner.ENERGY_METER_GENERIC,
             airconditioner.ENERGY_METER_LEGACY,
+            airconditioner.FILE_TRANSFER,
             dishwasher.DIAGNOSIS,
             airconditioner.CLIMATE,
             airconditioner.FOUR_WAY_FLAPS,
@@ -46,6 +54,7 @@ REGISTRY = DeviceRegistry(
             airconditioner.MOTION_DETECT_WIND,
             airconditioner.CURRENT_TEMPERATURE,
             airconditioner.CURRENT_TEMPERATURE_VS,
+            airconditioner.CURRENT_TEMPERATURE_INDOOR_VS,
             airconditioner.HUMIDITY,
             # TP1X_DA-AC-FAC-class (issue #319): shares its /display/vs/0,
             # /settings/sound/output/vs/0 and /settings/sound/volume/vs/0

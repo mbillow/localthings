@@ -1,0 +1,205 @@
+{
+  "seeds_note": "Canonical hrefs generated with legacy_http.to_resources from the real issue #749 capture in refrigerator_tp6x_ref_16k_8888.json; these hrefs are bridge mappings, not appliance-served OCF resources.",
+  "device0": [
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": [
+          "ICESTATUS_STOP",
+          "CV_TTYPE_FREEZER",
+          "WATERFILTER_DISABLE",
+          "CVN_CONVERTIBLE_ZONE",
+          "KIMCHIT_RIPE_REMAIN_255:255",
+          "KIMCHIB_RIPE_REMAIN_255:255",
+          "KIMCHIM_RIPE_REMAIN_255:255",
+          "KIMCHI_RIPE_REMAIN_255:255",
+          "KIMCHIT_BOX_COUNT_255",
+          "KIMCHIM_BOX_COUNT_255",
+          "KIMCHIB_BOX_COUNT_255",
+          "KIMCHI_BOX_COUNT_255",
+          "BAR_FRIDGE_TEMP_0",
+          "BAR_FRIDGE_MAXTEMP_0",
+          "BAR_FREEZER_TEMP_0",
+          "BAR_FREEZER_MAXTEMP_0",
+          "DEFROST_BLOCK_OFF"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "ICESTATUS_STOP",
+          "ICESTATUS_RUN",
+          "CV_TTYPE_FREEZER",
+          "CV_TTYPE_SOFT_FREEZER",
+          "CV_TTYPE_CHILL",
+          "CV_TTYPE_COOL",
+          "CV_TTYPE_FERMENT",
+          "CV_TTYPE_KIMCHI_WARM",
+          "CV_TTYPE_KIMCHI_NORMAL",
+          "CV_TTYPE_KIMCHI_COLD",
+          "CV_SBS_FRIDGE",
+          "CV_SBS_RAPID_FRIDGE",
+          "CV_SBS_DEFROST_5HR",
+          "CV_SBS_DEFROST_10HR",
+          "CV_TMF_FRIDGE",
+          "CV_TMF_SOFT_FREEZER",
+          "CV_TMF_FREEZER",
+          "CV_TMF_MINUS_1_ZONE",
+          "CV_TMF_FAST_COOLING",
+          "CV_TMF_OFF",
+          "CV_SSEC_COOL",
+          "CV_SSEC_CHILL",
+          "CV_SSEC_SOFT_FREEZER",
+          "CV_SSEC_FREEZER",
+          "CV_FHUB_FREEZER",
+          "CV_FHUB_SOFT_FREEZER",
+          "CV_FHUB_MEAT_FISH",
+          "CV_FHUB_VEGETABLE_CHEESE",
+          "CV_FHUB_BEER",
+          "CV_FDR_WINE",
+          "CV_FDR_DELI",
+          "CV_FDR_BEVERAGE",
+          "CV_FDR_MEAT",
+          "CV_FDR_WINE_PARTY_DISHES",
+          "CV_FDR_DELI_SNACKS",
+          "CV_FDR_COLD_DRINKS",
+          "CV_FDR_MEAT_FISH",
+          "WATERFILTER_ENABLE",
+          "WATERFILTER_DISABLE",
+          "CVN_COOL_SELECT+",
+          "CVN_CONVERTIBLE_ZONE",
+          "CVN_CHAMMAT_FREEZER",
+          "CVN_3STEP_CHAMMAT",
+          "CVN_COOL_SELECT_ZONE",
+          "CVN_FLEX_ZONE_TM",
+          "DEFROST_BLOCK_ON",
+          "DEFROST_BLOCK_OFF"
+        ]
+      }
+    },
+    {
+      "href": "/refrigeration/vs/0",
+      "rep": {
+        "x.com.samsung.da.DefrostReservations": [
+          {
+            "x.com.samsung.da.description": "Summer Season",
+            "x.com.samsung.da.endTime": "0000-10-31T00:00:00",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.period": "04:00:00",
+            "x.com.samsung.da.startTime": "0000-05-01T15:00:00"
+          },
+          {
+            "x.com.samsung.da.description": "Winter Season",
+            "x.com.samsung.da.endTime": "0000-04-30T00:00:00",
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.period": "04:00:00",
+            "x.com.samsung.da.startTime": "0000-11-01T06:00:00"
+          }
+        ],
+        "x.com.samsung.da.delayDefrost": "Off",
+        "x.com.samsung.da.iceMaker": "Off",
+        "x.com.samsung.da.rapidFreezing": "Off",
+        "x.com.samsung.da.rapidFridge": "Off"
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.current": 0.0,
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.desired": 0.0,
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.maximum": 5,
+            "x.com.samsung.da.minimum": -8,
+            "x.com.samsung.da.name": "Freezer",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          },
+          {
+            "x.com.samsung.da.current": 37.0,
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.desired": 37.0,
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.maximum": 44,
+            "x.com.samsung.da.minimum": 34,
+            "x.com.samsung.da.name": "Fridge",
+            "x.com.samsung.da.unit": "Fahrenheit"
+          },
+          {
+            "x.com.samsung.da.description": "CVRoom",
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/doors/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.description": "Freezer",
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.name": "Freezer",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.description": "Fridge",
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.name": "Fridge",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.description": "CVRoom",
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.name": "CVRoom",
+            "x.com.samsung.da.openState": "Close"
+          },
+          {
+            "x.com.samsung.da.description": "Single",
+            "x.com.samsung.da.id": "3"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiT",
+            "x.com.samsung.da.id": "4"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiB",
+            "x.com.samsung.da.id": "5"
+          },
+          {
+            "x.com.samsung.da.description": "KimchiM",
+            "x.com.samsung.da.id": "6"
+          },
+          {
+            "x.com.samsung.da.description": "Homebar",
+            "x.com.samsung.da.id": "7"
+          },
+          {
+            "x.com.samsung.da.description": "Kimchi",
+            "x.com.samsung.da.id": "8"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "000"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "TP6X_REF_16K",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "TP6X_REF_16K|00074343|00000850051011280102000000000000",
+        "x.com.samsung.da.deviceSubType": "Refrigerator"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    }
+  ]
+}

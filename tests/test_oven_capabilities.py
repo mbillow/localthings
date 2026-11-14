@@ -2,7 +2,8 @@
 
 import pytest
 
-from custom_components.localthings.registry.by_type import for_device_by_model
+from custom_components.localthings.registry.adapter import flatten
+from custom_components.localthings.registry.by_type import for_device_by_model, registry_for
 from custom_components.localthings.registry.capabilities import oven
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
@@ -33,6 +34,30 @@ def test_oven_fixture_resolves_and_has_no_unbound_hrefs():
     unbound = []
     discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
     assert unbound == []
+
+
+@pytest.mark.parametrize("device_type", ["oven", "range", "microwave"])
+def test_divider_preserves_unknown_readings(device_type):
+    registry = registry_for(device_type)
+    resources = {
+        "/mode/vs/0": {"x.com.samsung.da.defaultMode": "LowerConvectionBake"},
+        "/connected/vs/0": {"x.com.samsung.da.connected": "On"},
+    }
+    bound = [b for b in discover(resources, registry.capabilities) if b.desc.key == "divider"]
+    assert len(bound) == 1
+    for value, expected in (
+        ("On", True),
+        ("Off", False),
+        (None, None),
+        ("", None),
+        ("Unknown", None),
+    ):
+        resources["/connected/vs/0"] = {"x.com.samsung.da.connected": value}
+        assert flatten(bound, resources)["divider"] is expected
+    resources["/connected/vs/0"] = {}
+    assert flatten(bound, resources)["divider"] is None
+    del resources["/connected/vs/0"]
+    assert flatten(bound, resources)["divider"] is None
 
 
 # ---------------------------------------------------------------------------

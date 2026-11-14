@@ -3,6 +3,7 @@
 import re
 from collections.abc import Sequence
 
+from ..capabilities.cook import MODE_HREF, MODE_SPEC, mode_specs, selectable_modes
 from ..entities import PLATFORM_OF
 from . import (
     air_dresser,
@@ -16,11 +17,13 @@ from . import (
     ehs,
     microfiber_filter,
     microwave,
+    monitor,
     oven,
     range_hood,
     refrigerator,
     robot_vacuum,
     soundbar,
+    tv,
     vacuum_station,
     washer,
     water_purifier,
@@ -31,6 +34,7 @@ from . import (
 from ._base import DeviceRegistry
 
 __all__ = [
+    "KEY_PLATFORMS",
     "WASHER_ONLY_ENTITIES",
     "DeviceRegistry",
     "_board_tokens",
@@ -57,12 +61,14 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "ehs": ehs.REGISTRY,
     "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
+    "monitor": monitor.REGISTRY,
     "oven": oven.REGISTRY,
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
     "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
+    "tv": tv.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
@@ -80,6 +86,18 @@ WASHER_ONLY_ENTITIES = {
     name: frozenset(_entity_keys(washer.REGISTRY) - _entity_keys(_REGISTRY_BY_KEY[name]))
     for name in ("microfiber_filter", "oven", "microwave")
 }
+
+
+def _key_platforms() -> dict[str, frozenset[str]]:
+    platforms: dict[str, set[str]] = {}
+    for registry in _REGISTRY_BY_KEY.values():
+        for platform, key in _entity_keys(registry):
+            platforms.setdefault(key, set()).add(platform)
+    return {key: frozenset(found) for key, found in platforms.items()}
+
+
+# Descriptor key -> every platform any registry binds it on, for cleanup.py.
+KEY_PLATFORMS = _key_platforms()
 
 
 # Consumer-model prefix (first two letters of the '_'-delimited token in
@@ -139,6 +157,7 @@ _BOARD_TOKEN_TO_KEY: dict[str, str] = {
     "DHM": "dehumidifier",  # issue #88 -- target humidity, no climate
     "EHS": "ehs",  # heat pump: zone1 heating/cooling + domestic hot water
     "TVTL": "air_purifier",  # issue #56 (ARTIK051)
+    "VTL": "air_purifier",  # issue #608 (TP6X_VTL_16K, 8888)
     "VTWW": "air_purifier",  # issue #151 (BESPOKE Cube Air)
     # issue #190: same lineage as VTWW, but the '-WW-' delimiter falls one
     # letter left ('A-VTWW-' -> 'AVT-WW-'), splitting into a different token.
@@ -245,7 +264,7 @@ def _consumer_model_key(description: str) -> str | None:
 # Every value must already be a key in `_REGISTRY_BY_KEY` (checked by
 # `test_every_oic_type_resolves_to_a_real_registry`) -- this deliberately
 # stops short of the full OCF/SmartThings vocabulary, since most of it (lights,
-# locks, cameras, TVs, ...) has no registry here to point at, and
+# locks, cameras, ...) has no registry here to point at, and
 # 'oic.d.robotcleaner' names an actual robot vacuum, a different product from
 # the clean/auto-empty *station* `vacuum_station` covers.
 #
@@ -267,6 +286,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",
+    "oic.d.tv": "tv",
     "oic.d.washer": "washer",
     "x.com.st.d.airqualitysensor": "air_monitor",
     "x.com.st.d.dehumidifier": "dehumidifier",
@@ -274,6 +294,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     # Microfiber laundry-lint filter (AMF-WW-TP1-22-COMMON, issue #475). It
     # reports washer resources too, but nothing that runs a cycle (#626).
     "x.com.st.d.microfiberfilter": "microfiber_filter",
+    "x.com.st.d.monitor": "monitor",  # issue #815
     "x.com.st.d.stickcleaner": "vacuum_station",
     "x.com.st.d.steamcloset": "air_dresser",
     "x.com.st.d.winecellar": "refrigerator",  # issue #328 -- same TP1X_REF_21K board
@@ -393,6 +414,13 @@ def for_device_by_resources(resources: dict[str, dict]) -> DeviceRegistry | None
     supported_modes = mode.get("x.com.samsung.da.supportedModes") or ()
     if not isinstance(supported_modes, (list, tuple)):
         supported_modes = ()
+    # After a Wi-Fi board restart an LCD_R18 microwave lists only
+    # HOMECARE_WIZARD_V2 until its power is cut (#600), and would come up as
+    # an oven (#744). Its modeSpec, live or remembered by the coordinator,
+    # still names the modes. Only that shape: an empty list means something
+    # else on other boards.
+    if supported_modes and not selectable_modes(list(supported_modes)):
+        supported_modes = tuple(mode_specs({MODE_HREF: {MODE_SPEC: mode.get(MODE_SPEC, "[]")}}))
     cavity = resources.get("/oven/vs/0")
     if isinstance(cavity, dict):
         if any(

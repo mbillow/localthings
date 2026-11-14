@@ -17,6 +17,7 @@
     "detergent_water_hardness",
     "diagnosis_status",
     "drum_clean_cycles_remaining",
+    "drum_light",
     "energy_kwh",
     "energy_saved_kwh",
     "finish_sound",

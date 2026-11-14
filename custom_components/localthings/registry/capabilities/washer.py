@@ -15,6 +15,7 @@ here; they read washer-only fields off the same shared /course/vs/0 options
 array.
 """
 
+import math
 from dataclasses import replace
 
 from ..capability import Capability
@@ -26,6 +27,7 @@ from .laundry import (
     OPTION_KIND_WATER_TEMPERATURE,
     _course_codes_from_supported_options,
     bool_option_exists,
+    bool_option_light,
     bool_option_switch,
     course_narrowed_options,
     cycle_options,
@@ -37,7 +39,7 @@ from .laundry import (
     option_write,
     washer_cycle_fallback,
 )
-from .operational import OPERATIONAL_STATE
+from .operational import OPERATIONAL_STATE, _remaining_seconds, _state_is_active
 
 # Course_XX hex code labels (translations/en.json,
 # washer_cycle_table_02.state.<id>) come from several devices, cross-checked
@@ -50,7 +52,9 @@ from .operational import OPERATIONAL_STATE
 # Self Clean+) verified directly on a WF50A8600AV/US by reading back the raw
 # code after selecting each cycle on the appliance (issue #80). 2 more
 # ('0A' Towels, 'B0' Mixed Load) reported for a WW90DG5G34ABLE on the same
-# Table_02 family (issue #363). Several codes legitimately share a label
+# Table_02 family (issue #363). 7 high-range codes (A1/A7/A9/AD/59/A8/AA)
+# from an AWM-US-M64-25-WD80 all-in-one, each selected on the panel and read
+# back (issue #784). Several codes legitimately share a label
 # across different course tables -- '21'/'65' Colors, '27'/'5E'/'78'
 # Rinse+Spin, '0A'/'33'/'54'/'70' Towels -- not typos. (This list said
 # "'24' Towels" until issue #343 found 24/33 transposed; 24 is Bedding.)
@@ -78,7 +82,8 @@ from .operational import OPERATIONAL_STATE
 # an unconfirmed code (FlexWash's washer_flexwash_device fixture, for
 # instance) still renders that code raw rather than borrowing a Table_02
 # label -- the two tables are unrelated code spaces despite a handful of
-# overlapping hex values.
+# overlapping hex values. A WD80N645OOW/EU washer-dryer's owner read six more
+# out of the app (issue #736), and a WW10M86INOA/EN's owner named BD (#798).
 # ---------------------------------------------------------------------------
 
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count, soil level.
@@ -117,6 +122,8 @@ def _wash_control_present(name):
 
 
 _TEMPERATURE = "x.com.samsung.da.waterTemperature"
+_COMBO_DRY_TEMPERATURE = "x.com.samsung.da.comboDryTemperature"
+_WRINKLE_PREVENT = "x.com.samsung.da.wrinklePrevent"
 _SUPPORTED_TEMPERATURE = "x.com.samsung.da.supportedWaterTemperature"
 _RINSE = "x.com.samsung.da.rinseCycles"
 _SUPPORTED_RINSE = "x.com.samsung.da.supportedRinseCycles"
@@ -275,6 +282,46 @@ WASHER_SETTINGS = Capability(
             write_fn=lambda p, rep, href=None: (
                 ["washer", "vs", "0"],
                 {"x.com.samsung.da.dryLevel": p},
+            ),
+        ),
+        # The rest of a combo's dry surface on the same resource, as the
+        # AWM-US-M64 washer-dryers report it (issues #784, #786). Writes take
+        # the {field: value} shape dryLevel's write uses here; not yet
+        # confirmed live for these three fields.
+        SelectDesc(
+            key="combo_dry_temperature",
+            translation_key="drying_temperature",
+            field=_COMBO_DRY_TEMPERATURE,
+            icon="mdi:thermometer",
+            entity_category="config",
+            options_field="x.com.samsung.da.supportedComboDryTemperature",
+            exists_fn=_wash_control_present("comboDryTemperature"),
+            write_fn=lambda p, rep, href=None: (
+                ["washer", "vs", "0"],
+                {_COMBO_DRY_TEMPERATURE: p},
+            ),
+        ),
+        SelectDesc(
+            key="dry_time",
+            field="x.com.samsung.da.dryTime",
+            icon="mdi:timer",
+            entity_category="config",
+            options_field="x.com.samsung.da.supportedDryTime",
+            exists_fn=lambda rep, resources: bool(rep.get("x.com.samsung.da.supportedDryTime")),
+            write_fn=lambda p, rep, href=None: (
+                ["washer", "vs", "0"],
+                {"x.com.samsung.da.dryTime": p},
+            ),
+        ),
+        SwitchDesc(
+            key="wrinkle_prevent",
+            field=_WRINKLE_PREVENT,
+            icon="mdi:iron",
+            entity_category="config",
+            exists_fn=lambda rep, resources: _WRINKLE_PREVENT in rep,
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                (["washer", "vs", "0"], {_WRINKLE_PREVENT: p}) if p in ("On", "Off") else None
             ),
         ),
     ),
@@ -595,6 +642,14 @@ def _quick_wash(rep):
     return state if state in _QUICK_WASH_STATES else None
 
 
+def _combo_dry_clean_remaining(rep):
+    return drum_clean_cycles_remaining(rep, "DrumComboDryCleanProposal", "WashingComboDryingTimes")
+
+
+def _combo_dry_clean_last(rep):
+    return drum_clean_last_cleaned(rep, "DrumComboDryCleanLog")
+
+
 def _washer_course_label(value, resources):
     """Personal-course name, else raw hex code to avoid cosmetic splitting."""
     label = washer_cycle_fallback(value, resources)
@@ -615,6 +670,12 @@ WASHER_COURSE = Capability(
             icon="mdi:washing-machine",
             table_href="/st/washercourse/vs/0",
             display_fn=_washer_course_label,
+        ),
+        # Same lamp token and write contract as dryer.DRYER_COURSE.
+        bool_option_light(
+            "drum_light",
+            "mdi:lightbulb",
+            "DrumLight",
         ),
         _bool_option_switch(
             "extra_rinse",
@@ -638,6 +699,34 @@ WASHER_COURSE = Capability(
             entity_category="diagnostic",
             exists_fn=lambda rep, resources: drum_clean_last_cleaned(rep) is not None,
             rep_fn=drum_clean_last_cleaned,
+        ),
+        # The same reminder for a combo's drying cycles (issue #786): the
+        # AWM-US-M64 reports DrumComboDryCleanProposal_30 against
+        # WashingComboDryingTimes_<n>, and logs DrumComboDryCleanLog_<ISO>.
+        SensorDesc(
+            key="combo_dry_clean_cycles_remaining",
+            unit="cycles",
+            icon="mdi:tumble-dryer-alert",
+            state_class="measurement",
+            exists_fn=lambda rep, resources: _combo_dry_clean_remaining(rep) is not None,
+            rep_fn=_combo_dry_clean_remaining,
+        ),
+        SensorDesc(
+            key="combo_dry_clean_last_cleaned",
+            device_class="timestamp",
+            icon="mdi:calendar-clock",
+            entity_category="diagnostic",
+            exists_fn=bool_option_exists("DrumComboDryCleanLog"),
+            rep_fn=_combo_dry_clean_last,
+        ),
+        # Reports the post-cycle anti-wrinkle tumble, as on a dryer.
+        BinarySensorDesc(
+            key="wrinkle_prevent_active",
+            icon="mdi:iron-outline",
+            exists_fn=bool_option_exists("WrinklePreventRunning"),
+            rep_fn=lambda rep: (
+                option_value(rep.get("x.com.samsung.da.options"), "WrinklePreventRunning") == "On"
+            ),
         ),
         SelectDesc(
             key="detergent_quantity",
@@ -785,6 +874,69 @@ def _delay_wash_set_exists(rep, resources):
     return _washes(rep) and not has_field
 
 
+# A combo splits its progress into the wash and dry phases (issues #784,
+# #786): progressPercentageWashing/Drying beside the overall figure, and
+# remainingWashTime beside remainingTime. Zero outside a running cycle, like
+# progress_percentage, since idle boards keep the last cycle's numbers. Gated
+# on the dry figure: a plain WF80H reports the wash ones too, where they only
+# repeat the overall progress.
+def _phase_percentage(field):
+    def read(rep):
+        if not _state_is_active(rep):
+            return 0
+        try:
+            return int(rep[field])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    return read
+
+
+def _wash_remaining_minutes(rep):
+    if not _state_is_active(rep):
+        return None
+    total_s = _remaining_seconds(rep.get(_REMAINING_WASH_TIME))
+    return None if total_s is None else math.ceil(total_s / 60)
+
+
+_WASHING_PERCENT = "x.com.samsung.da.progressPercentageWashing"
+_DRYING_PERCENT = "x.com.samsung.da.progressPercentageDrying"
+_REMAINING_WASH_TIME = "x.com.samsung.da.remainingWashTime"
+
+
+def _has_dry_phase(rep):
+    return _DRYING_PERCENT in rep
+
+
+_COMBO_PHASE_SENSORS = (
+    SensorDesc(
+        key="wash_progress_percentage",
+        icon="mdi:washing-machine",
+        unit="%",
+        state_class="measurement",
+        exists_fn=lambda rep, resources: _has_dry_phase(rep) and _WASHING_PERCENT in rep,
+        rep_fn=_phase_percentage(_WASHING_PERCENT),
+    ),
+    SensorDesc(
+        key="dry_progress_percentage",
+        icon="mdi:tumble-dryer",
+        unit="%",
+        state_class="measurement",
+        exists_fn=lambda rep, resources: _has_dry_phase(rep),
+        rep_fn=_phase_percentage(_DRYING_PERCENT),
+    ),
+    SensorDesc(
+        key="wash_remaining_minutes",
+        icon="mdi:clock-outline",
+        unit="min",
+        device_class="duration",
+        state_class="measurement",
+        exists_fn=lambda rep, resources: _has_dry_phase(rep) and _REMAINING_WASH_TIME in rep,
+        rep_fn=_wash_remaining_minutes,
+    ),
+)
+
+
 # The shared operational state, plus what supportedProgress says about a
 # washer's own options. A dishwasher lists Prewash on every course, so these
 # stay out of the shared capability.
@@ -792,6 +944,7 @@ WASHER_OPERATIONAL_STATE = replace(
     OPERATIONAL_STATE,
     entities=(
         *OPERATIONAL_STATE.entities,
+        *_COMBO_PHASE_SENSORS,
         BinarySensorDesc(
             key="pre_wash_selected",
             icon="mdi:washing-machine",

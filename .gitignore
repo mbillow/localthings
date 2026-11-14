@@ -12,6 +12,8 @@ certs/
 token.txt
 
 # Python artifacts
+.pytest_cache/
+.ruff_cache/
 __pycache__/
 *.pyc
 .venv/

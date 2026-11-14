@@ -897,14 +897,13 @@ async def test_the_timeout_screen_fills_in_its_counters(hass: HomeAssistant):
 
 
 async def test_guided_ignores_a_payload_the_store_would_not_record(hass: HomeAssistant):
-    """The probe reports whatever payload is loaded; observe() declines one
-    whose slot the device doesn't advertise. Offering to name that would take
-    a name and discard it -- there is no record to hang it on."""
+    """Naming a slot the store has no record of would take a name and
+    discard it -- there is no payload to replay."""
     coordinator = await _coordinator(hass)
     handler = await _options_handler(hass, coordinator)
     await handler.async_step_cloud_guided()
 
-    # 'ZZ' is not in this appliance's CloudExtraCourse_ list.
+    # The stub reports 'ZZ' without the store ever having observed it.
     _stub_probe(coordinator, ["ZZ"])
     result = await _run_wait(handler)
     assert result["step_id"] == "cloud_timeout"
@@ -920,3 +919,54 @@ async def test_the_prefilled_course_is_always_one_the_dropdown_offers(hass: Home
 
     offered = handler._cloud_course_selector(coordinator).config["options"]
     assert handler._cloud_course is None or handler._cloud_course in offered
+
+
+# Issue #780: a WA54CG7150 advertises only 59/58, but its owner can download
+# any of five programs and the washer runs whichever is selected.
+ECO_COLD = "0013860449124D114A224C2037F0"
+
+
+def _observe_unadvertised_load(coordinator):
+    _observe_program_load(coordinator, ECO_COLD)
+
+
+async def test_guided_names_a_program_the_device_does_not_advertise(hass: HomeAssistant):
+    coordinator = await _coordinator(hass)
+    handler = await _options_handler(hass, coordinator)
+    await handler.async_step_cloud_guided()
+
+    _observe_unadvertised_load(coordinator)
+    _stub_probe(coordinator, ["86"])
+    result = await _run_wait(handler)
+    assert result["step_id"] == "cloud_name"
+    form = await handler.async_step_cloud_name()
+    # Counted alongside the nine advertised slots, not hidden behind them.
+    assert form["description_placeholders"]["total"] == "10"
+
+    await handler.async_step_cloud_name({"name": "Eco Cold", "download_course": "87"})
+    await _flush(hass)
+    assert coordinator.cloud_courses.named()["86"] == "Eco Cold"
+    assert "cloud:86" in _cycle_options(coordinator)
+
+
+async def test_the_manual_form_gives_an_unadvertised_program_a_row(hass: HomeAssistant):
+    coordinator = await _coordinator(hass)
+    _observe_unadvertised_load(coordinator)
+    handler = await _options_handler(hass, coordinator)
+
+    result = await handler.async_step_cloud_manual()
+    fields = [str(key) for key in result["data_schema"].schema]
+    assert "name_86" in fields
+    assert result["description_placeholders"]["total"] == "10"
+
+
+async def test_the_repair_counts_an_unadvertised_program(hass: HomeAssistant):
+    entry = _entry(hass)
+    coordinator = await _coordinator(hass, entry)
+    _observe_unadvertised_load(coordinator)
+    coordinator._refresh_cloud_course_issue()
+    await _flush(hass)
+
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"cloud_courses_{entry.entry_id}")
+    assert issue is not None
+    assert (issue.translation_placeholders or {})["total"] == "10"

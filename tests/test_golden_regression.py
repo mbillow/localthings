@@ -6,6 +6,16 @@ import pytest
 GOLDEN = Path(__file__).parent / "fixtures" / "golden"
 
 
+def test_registry_reproduces_golden_state_keys_for_tv_qn90a():
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / "tv_qn90a.json").read_text())
+    assert (
+        _new_state_keys("tv_qn90a", _load_device("tv_qn90a"), device_types=("oic.wk.d", "oic.d.tv"))
+        == golden["state_keys"]
+    )
+
+
 def _new_state_keys(name, resources, device_types=()):
     from custom_components.localthings.registry.adapter import flatten
     from custom_components.localthings.registry.by_type import resolve
@@ -217,6 +227,51 @@ def test_registry_reproduces_golden_state_keys_for_refrigerator_dongle_0281_8888
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_refrigerator_tp6x_ref_16k_8888():
+    """RF28K9380SR/AA over 8888 (#749): named doors, the CVRoom's mode, and
+    the switches and filter alert its board keeps on shared resources."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_tp6x_ref_16k_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_dryer_dongle_dv45k6500ex_8888():
+    """DV45K6500EW behind a DONGLE_DV45K6500Ex module (#761), typed by its
+    record's `type` since it reports no `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "dryer_dongle_dv45k6500ex_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_dongle_wf7500_8888():
+    """WF45K6500AW behind a DONGLE_WF7500 module (#762), typed by its
+    record's `type` since it reports no `deviceSubType`."""
+    from tests.conftest import _load_device
+
+    name = "washer_dongle_wf7500_8888"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_dryer_dve50a8600():
     """DVE50A8600V/A3 (issue #79) -- description pairs two model numbers
     ('..._DVE50A8800_8600/...'), so the true 'DV' consumer-model token sits
@@ -250,6 +305,38 @@ def test_registry_reproduces_golden_state_keys_for_dryer_dv6800n():
     golden = json.loads((GOLDEN / "dryer_dv6800n.json").read_text())
     state_keys = _new_state_keys(
         "dryer_dv6800n", resources, device_types=("oic.wk.d", "oic.d.dryer")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64():
+    """AWM-US-M64-24-WD80 washer-dryer (issue #784): sound settings bound."""
+    from tests.conftest import _load_device
+
+    name = "washer_dryer_awm_m64"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64_25():
+    """AWM-US-M64-25-WD80 / WD90F53AVS washer-dryer (issue #786)."""
+    from tests.conftest import _load_device
+
+    name = "washer_dryer_awm_m64_25"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
     )
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
@@ -1223,6 +1310,21 @@ def test_registry_reproduces_golden_state_keys_for_robot_vacuum_powerbot_r7040()
     state_keys = _new_state_keys(
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.robotcleaner")
     )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_range_os70h30e():
+    """OS70H30E range (issue #726): the DAWIT 3.0 oven half is one bare-field
+    /oven/status/vs/0, typed by /oic/d."""
+    from tests.conftest import _load_device
+
+    name = "range_os70h30e"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.range"))
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
@@ -2224,6 +2326,55 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_s61b():
     golden = json.loads((GOLDEN / "soundbar_s61b.json").read_text())
     state_keys = _new_state_keys(
         "soundbar_s61b", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q700c():
+    """Media resources under /sec/networkaudio/av/ (#796)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q700c")
+    golden = json.loads((GOLDEN / "soundbar_q700c.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_q700c", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
+    """AIM-H04N indoor subdevice (#789): locks in current_temperature_c from
+    the flat /temperatures/indoor/vs/0 and the Wh-scale meter selection. Routed
+    by /oic/d alone -- SAC_SLIM1WAY has no board-token mapping."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_aim_h04n_system_ac"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources, device_types=("oic.d.airconditioner",))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+@pytest.mark.parametrize("name", ["monitor_ls32dm702", "monitor_ls43dm703"])
+def test_registry_reproduces_golden_state_keys_for_monitor(name):
+    """M7 Smart Monitors (#815): a flat Tizen TV board routed by /oic/d alone."""
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
     )
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"

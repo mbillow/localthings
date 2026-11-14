@@ -46,7 +46,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.capabilities.common import normalize_temp_unit
 from .registry.capabilities.ehs import (
     HREF_DHW_MODE as MODE_HREF,
@@ -92,10 +92,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsWaterHeater(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, WaterHeaterDesc) and _is_included(b, coordinator)
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda b: isinstance(b.desc, WaterHeaterDesc),
+        lambda b: LocalThingsWaterHeater(coordinator, b),
     )
 
 
@@ -140,7 +142,10 @@ class LocalThingsWaterHeater(LocalThingsEntity, WaterHeaterEntity):
         return str(self._rep(POWER_HREF).get("x.com.samsung.da.power", "")).lower() == "on"
 
     def _supported(self) -> list[str]:
-        return list(self._rep(MODE_HREF).get(_SUPPORTED_FIELD) or [])
+        """Same discovery-snapshot fallback as climate.py's identical helper:
+        an offline load must not publish an empty operation list."""
+        rep = self._rep(MODE_HREF) or self._capability_rep(MODE_HREF)
+        return list(rep.get(_SUPPORTED_FIELD) or [])
 
     def _warn_unmapped(self, code: str) -> None:
         if code in self._warned_unmapped:

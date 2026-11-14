@@ -92,6 +92,26 @@ def _bind(
     ]
 
 
+def _expand(
+    cap: Capability, href: str, rep: dict, inst: str, subdevice: Subdevice
+) -> list[BoundEntity]:
+    """The entities `cap.expand_fn` derives from this rep, each keyed by its
+    own prefix as a pattern cap's are."""
+    if cap.expand_fn is None:
+        return []
+    return [
+        BoundEntity(
+            href=subdevice.to_actual(href),
+            capability=cap,
+            desc=desc,
+            instance=inst,
+            key_override=f"{prefix}_{desc.key}",
+            subdevice=subdevice,
+        )
+        for prefix, desc in cap.expand_fn(rep)
+    ]
+
+
 def discover(
     resources: dict[str, dict],
     registry: dict[str, list[Capability]],
@@ -130,6 +150,7 @@ def discover(
                 continue
             inst = instance_suffix(href)
             out.extend(_bind(cap, href, inst, _instance_name(cap, rep), subdevice=subdevice))
+            out.extend(_expand(cap, href, rep, inst, subdevice))
             matched = True
             if tier_log is not None:
                 tier_log(subdevice.to_actual(href), cap.poll_tier)

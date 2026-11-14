@@ -58,6 +58,18 @@
       "door_open": {
         "name": "Dvířka"
       },
+      "door_1_open": {
+        "name": "Dvířka 1"
+      },
+      "door_2_open": {
+        "name": "Dvířka 2"
+      },
+      "door_3_open": {
+        "name": "Dvířka 3"
+      },
+      "door_4_open": {
+        "name": "Dvířka 4"
+      },
       "filter_blockage": {
         "name": "Ucpání filtru"
       },
@@ -78,9 +90,6 @@
       },
       "paired_hood_power": {
         "name": "Napájení spárovaného odsavače"
-      },
-      "periodic_air_sensing": {
-        "name": "Pravidelné měření kvality vzduchu"
       },
       "pouring": {
         "name": "Nalévání"
@@ -174,6 +183,12 @@
       },
       "woofer_connection": {
         "name": "Připojení wooferu"
+      },
+      "lamp": {
+        "name": "Lampa"
+      },
+      "energy_saving": {
+        "name": "Úspora energie"
       }
     },
     "button": {
@@ -286,6 +301,9 @@
       },
       "paired_hood_light": {
         "name": "Světlo spárovaného odsavače"
+      },
+      "drum_light": {
+        "name": "Osvětlení bubnu"
       }
     },
     "number": {
@@ -662,7 +680,10 @@
           "35": "Proti pomačkání",
           "36": "Provětrání",
           "3e": "Malá náplň",
-          "2e": "Eco normální"
+          "2e": "Eco normální",
+          "42": "Osvěžení",
+          "44": "Rychlé sušení",
+          "47": "Sušení pro domácí mazlíčky"
         }
       },
       "dryer_dry_level": {
@@ -674,6 +695,17 @@
           "normal": "Normální",
           "more": "Více",
           "very": "Velmi"
+        }
+      },
+      "drying_temperature": {
+        "name": "Teplota",
+        "state": {
+          "none": "Bez ohřevu",
+          "extra_low": "Extra nízká",
+          "low": "Nízká",
+          "medium_low": "Středně nízká",
+          "medium": "Střední",
+          "high": "Vysoká"
         }
       },
       "favorite_capacity": {
@@ -714,7 +746,15 @@
           "cv_fdr_soft_freezer": "Mírný mrazák",
           "fconvert_freezer": "Mražení",
           "fconvert_fridge": "Chlazení",
-          "fconvert_off": "Vypnuto"
+          "fconvert_off": "Vypnuto",
+          "cv_ttype_freezer": "Mrazák",
+          "cv_ttype_soft_freezer": "Mírný mrazák",
+          "cv_ttype_chill": "Vychlazení",
+          "cv_ttype_cool": "Chlazení",
+          "cv_ttype_ferment": "Kvašení",
+          "cv_ttype_kimchi_warm": "Kimči, slabé",
+          "cv_ttype_kimchi_normal": "Kimči",
+          "cv_ttype_kimchi_cold": "Kimči, silné"
         }
       },
       "heated_dry": {
@@ -941,6 +981,9 @@
           "mute": "Ztlumeno"
         }
       },
+      "sound_tone": {
+        "name": "Zvukový tón"
+      },
       "energy_saving_mode": {
         "name": "Režim úspory energie"
       },
@@ -987,6 +1030,8 @@
         "name": "Cyklus",
         "state": {
           "01": "Normální",
+          "50": "Sušení bavlny",
+          "51": "Sušení syntetiky",
           "55": "Bílé prádlo",
           "57": "Samočištění+",
           "5b": "Bavlna",
@@ -1026,6 +1071,9 @@
           "ab": "Eco studená",
           "b1": "Samočištění+",
           "ba": "Vypuštění/odstřeďování",
+          "bd": "Automatické optimální praní",
+          "c7": "Eco čištění bubnu",
+          "ca": "Sušení vzduchem",
           "d0": "Bavlna",
           "d1": "Eko bavlna",
           "d2": "Syntetika",
@@ -1038,7 +1086,9 @@
           "da": "Super Eco",
           "db": "Super rychlé",
           "dc": "15min rychlé praní",
-          "e4": "Antialergenní"
+          "e3": "Denní praní",
+          "e4": "Antialergenní",
+          "e7": "Rychlé praní+sušení"
         }
       },
       "washer_cycle_table_02": {
@@ -1151,7 +1201,14 @@
           "5f": "Pouze odstřeďování",
           "63": "Výkonná pára",
           "67": "Parní antialergenní",
-          "68": "Parní objemné prádlo"
+          "68": "Parní objemné prádlo",
+          "a1": "Normální",
+          "a7": "Péče o výrobek",
+          "a9": "Tide Pod studená",
+          "ad": "AI OptiWash+sušení",
+          "59": "Nežehlivé prádlo",
+          "a8": "Časové sušení",
+          "aa": "Provětrání"
         }
       },
       "washer_dry_level": {
@@ -1164,7 +1221,12 @@
           "180": "3 h",
           "240": "4 h",
           "none": "Vypnuto",
-          "cupboard": "Do skříně"
+          "cupboard": "Do skříně",
+          "damp": "Vlhké",
+          "less": "Méně",
+          "normal": "Normální",
+          "more": "Více",
+          "very": "Velmi"
         }
       },
       "zone_mode": {
@@ -1348,6 +1410,17 @@
           "mute": "Ztlumeno",
           "voice": "Hlas"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Režim chytrého větrání",
+        "state": {
+          "sensing": "Pouze detekce",
+          "alarm": "Dostávat oznámení",
+          "airpurify": "Tiché větrání"
+        }
+      },
+      "picture_mode": {
+        "name": "Režim obrazu"
       }
     },
     "sensor": {
@@ -1386,9 +1459,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akce automatického větrání"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stav automatického větrání"
       },
       "battery": {
         "name": "Baterie"
@@ -1540,6 +1610,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Poslední čištění bubnu"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Čištění bubnu (sušení) za"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Poslední čištění bubnu (sušení)"
       },
       "quick_wash": {
         "name": "Rychlé praní",
@@ -1719,12 +1795,14 @@
           "idle": "Nečinný",
           "delaywash": "Odložený start",
           "weightsensing": "Detekce náplně",
+          "laundrysensing": "Rozpoznávání prádla",
           "wash": "Praní",
           "rinse": "Máchání",
           "spin": "Odstřeďování",
           "finish": "Dokončeno",
           "steaming": "Napařování",
           "airwashing": "Osvěžení vzduchem",
+          "aidrying": "Sušení",
           "drying": "Sušení",
           "dryingwithdooropen": "Větrání",
           "cooling": "Chlazení",
@@ -1735,6 +1813,15 @@
       },
       "progress_percentage": {
         "name": "Průběh v procentech"
+      },
+      "wash_progress_percentage": {
+        "name": "Průběh praní v procentech"
+      },
+      "dry_progress_percentage": {
+        "name": "Průběh sušení v procentech"
+      },
+      "wash_remaining_minutes": {
+        "name": "Zbývající čas praní"
       },
       "selfcheck_error": {
         "name": "Chyba vlastní kontroly"
@@ -1803,6 +1890,57 @@
       },
       "zone_temperature": {
         "name": "Teplota zóny"
+      },
+      "zone_water_law_offset": {
+        "name": "Posun ekvitermní křivky zóny"
+      },
+      "zone2_water_law_offset": {
+        "name": "Posun ekvitermní křivky zóny 2"
+      },
+      "fsv_outdoor_curve_cold_point": {
+        "name": "Ekvitermní křivka, studený bod venkovní teploty (FSV 2011)"
+      },
+      "fsv_outdoor_curve_warm_point": {
+        "name": "Ekvitermní křivka, teplý bod venkovní teploty (FSV 2012)"
+      },
+      "fsv_water_law_1_cold_target": {
+        "name": "Ekvitermní křivka 1, cílová teplota při nízké venkovní teplotě (FSV 2021)"
+      },
+      "fsv_water_law_1_warm_target": {
+        "name": "Ekvitermní křivka 1, cílová teplota při vysoké venkovní teplotě (FSV 2022)"
+      },
+      "fsv_water_law_2_cold_target": {
+        "name": "Ekvitermní křivka 2, cílová teplota při nízké venkovní teplotě (FSV 2031)"
+      },
+      "fsv_water_law_2_warm_target": {
+        "name": "Ekvitermní křivka 2, cílová teplota při vysoké venkovní teplotě (FSV 2032)"
+      },
+      "fsv_dhw_temperature_maximum": {
+        "name": "Horní mez cílové teploty teplé vody (FSV 1051)"
+      },
+      "fsv_dhw_temperature_minimum": {
+        "name": "Dolní mez cílové teploty teplé vody (FSV 1052)"
+      },
+      "fsv_dhw_application_mode": {
+        "name": "Režim ohřevu teplé vody (FSV 3011)"
+      },
+      "fsv_heating_dhw_priority": {
+        "name": "Priorita vytápění a teplé vody (FSV 4011)"
+      },
+      "fsv_heating_dhw_changeover_temperature": {
+        "name": "Venkovní teplota přepnutí priority vytápění/teplé vody (FSV 4012)"
+      },
+      "fsv_backup_heater_application": {
+        "name": "Použití záložního topného tělesa (FSV 4021)"
+      },
+      "fsv_heating_outlet_temperature_maximum": {
+        "name": "Horní mez teploty výstupní vody pro vytápění (FSV 1031)"
+      },
+      "fsv_heating_outlet_temperature_minimum": {
+        "name": "Dolní mez teploty výstupní vody pro vytápění (FSV 1032)"
+      },
+      "fsv_zone_control_application": {
+        "name": "Řízení zón (FSV 4061)"
       },
       "zone2_temperature": {
         "name": "Teplota zóny 2"
@@ -1912,6 +2050,36 @@
       "heat_generated_kwh": {
         "name": "Vyrobené teplo"
       },
+      "cycle_flow_temperature": {
+        "name": "Teplota výstupní vody (cyklus)"
+      },
+      "cycle_return_temperature": {
+        "name": "Teplota vratné vody (cyklus)"
+      },
+      "cycle_flow_rate": {
+        "name": "Průtok (cyklus)"
+      },
+      "cycle_pump_speed": {
+        "name": "Otáčky čerpadla (cyklus)"
+      },
+      "compressor_frequency": {
+        "name": "Frekvence kompresoru"
+      },
+      "compressor_target_frequency": {
+        "name": "Cílová frekvence kompresoru"
+      },
+      "discharge_temperature": {
+        "name": "Teplota na výtlaku"
+      },
+      "evaporator_saturation_temperature": {
+        "name": "Saturační teplota výparníku"
+      },
+      "suction_temperature": {
+        "name": "Teplota sání"
+      },
+      "cycle_updated": {
+        "name": "Data cyklu aktualizována"
+      },
       "three_way_valve": {
         "name": "Trojcestný ventil"
       },
@@ -1956,6 +2124,63 @@
       },
       "robot_movement": {
         "name": "Pohyb"
+      },
+      "oven_setpoint": {
+        "name": "Požadovaná teplota"
+      },
+      "air_sensing_interval": {
+        "name": "Interval měření vzduchu"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Poslední úroveň měření vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Úroveň čištění",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná"
+        }
+      },
+      "illuminance": {
+        "name": "Osvětlení"
       }
     },
     "switch": {
@@ -2246,6 +2471,15 @@
       },
       "repeated_cleaning": {
         "name": "Opakovat úklid"
+      },
+      "buzzer_sound": {
+        "name": "Zvuk bzučáku"
+      },
+      "smart_ventilate": {
+        "name": "Chytré větrání"
+      },
+      "hood_do_not_disturb": {
+        "name": "Nerušit"
       }
     },
     "time": {
@@ -2281,6 +2515,12 @@
       },
       "sensing_skip_start": {
         "name": "Začátek přeskočení měření AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Začátek režimu Nerušit"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Konec režimu Nerušit"
       }
     },
     "water_heater": {
@@ -2419,6 +2659,7 @@
       "no_response": "Z této IP adresy nepřišla žádná odpověď — na žádném portu v rozsahu lokálního API spotřebiče (UDP 49152-49160) se nic neozvalo. Zkontrolujte, že je IP adresa správná, že je spotřebič zapnutý a ve stejné síti jako Home Assistant a že firewall neblokuje UDP provoz k němu.",
       "ports_closed": "Tato IP adresa je dostupná, ale aktivně odmítla všechny porty v rozsahu lokálního API (UDP 49152-49160) a na discovery kanálu vůbec neodpověděla. Nejspíš nejde o spotřebič Samsung, nebo jde o spotřebič bez zapnutého lokálního API.",
       "no_dtls_server": "Porty v rozsahu lokálního API jsou na této adrese dostupné, ale nic na nich neodpovědělo na DTLS handshake. Ověřte, že IP adresa patří spotřebiči, a ne jinému zařízení ve vaší síti.",
+      "exec_memory_denied": "Home Assistant nemá povoleno vytvářet spustitelnou paměť, kterou knihovna DTLS potřebuje pro svá zpětná volání, takže handshake nemohl ani začít. Jde o nastavení hostitele Home Assistant, ne o problém spotřebiče. Při instalaci se systemd nastavte v servisní jednotce Home Assistant MemoryDenyWriteExecute=no (nebo řádek odstraňte) a službu restartujte. Totéž může způsobit nastavení deny_execmem v SELinuxu nebo zabezpečená jádra. Přesná chyba je v logu Home Assistant.",
       "appliance_no_dtls": "Na této adrese je spotřebič Samsung — přes nešifrovaný discovery kanál se představil jako {model} a jako svůj zabezpečený port uvedl {port} — ale handshake DTLS na něm nikdy nedokončil. Adresa tedy není problém. Zkontrolujte, zda spotřebič nemá na panelu vypnuté dálkové ovládání nebo podobné nastavení, a přesný důvod selhání najdete v logu Home Assistanta.",
       "non_appliance_stack": "Na této IP adrese něco odpovědělo, ale ohlásilo se jako služba OCF, která není spotřebičem. Některé spotřebiče Samsung ji provozují vedle své vlastní a LocalThings najde spotřebič za ní jen tehdy, když je Home Assistant ve stejném segmentu sítě. Umístěte Home Assistant a spotřebič do stejné podsítě a VLAN a zkuste to znovu.",
       "multiple_appliances": "Na této IP adrese odpovídá více než jeden spotřebič Samsung a LocalThings mezi nimi zatím neumí vybrat. Nahlaste to prosím v systému hlášení chyb LocalThings a přiložte log Home Assistantu.",
@@ -2468,7 +2709,7 @@
       },
       "settings": {
         "title": "Nastavení zápisu pro dálkové ovládání",
-        "description": "Některá zařízení přijímají určité zápisy (např. výchozí dávkování pracího prostředku/aviváže v pračce) i když hlásí vypnuté dálkové ovládání. LocalThings ve výchozím nastavení blokuje každý zápis srozumitelnou chybou, kdykoli zařízení hlásí vypnuté dálkové ovládání, místo aby jej zařízení tiše odmítlo. Povolte toto pouze tehdy, pokud jste ověřili, že zápisy na tomto zařízení skutečně fungují i s vypnutým dálkovým ovládáním – jinak tuto srozumitelnou chybu vyměníte za tiché selhání.\n\nNěkterá zařízení hlásí režim, který nikdy neuvedou mezi podporovanými – například klimatizace běžící v režimu Quiet, která nabízí pouze Off/Sleep/Speed. LocalThings si každý takový režim zapamatuje a dál jej nabízí, takže zůstane volitelný, jakmile v něm zařízení alespoň jednou bylo. Vypnutím této volby se budou nabízet pouze režimy, které zařízení samo uvádí; k vymazání již zapamatovaných použijte „Zapomenout zapamatované režimy“ v předchozí nabídce. Zařízení pro praní se staženými cykly z cloudu zde dostane připomenutí, jakmile nahlásí cyklus, který Home Assistant zatím nemůže nabídnout -- některá zařízení jej nahlásí, i když jste obrazovku „Stažené cykly“ v aplikaci SmartThings sami nikdy neotevřeli. Vypněte tuto možnost, chcete-li připomenutí zastavit a skrýt už pojmenované stažené cykly ze seznamu cyklů; nic z toho, co je již nastaveno, se neztratí, a po opětovném zapnutí se to hned znovu objeví.",
+        "description": "Některá zařízení přijímají určité zápisy (např. výchozí dávkování pracího prostředku/aviváže v pračce) i když hlásí vypnuté dálkové ovládání. LocalThings ve výchozím nastavení blokuje každý zápis srozumitelnou chybou, kdykoli zařízení hlásí vypnuté dálkové ovládání, místo aby jej zařízení tiše odmítlo. Povolte toto pouze tehdy, pokud jste ověřili, že zápisy na tomto zařízení skutečně fungují i s vypnutým dálkovým ovládáním – jinak tuto srozumitelnou chybu vyměníte za tiché selhání.\n\nOdhadovaný čas dokončení se počítá od okamžiku, kdy dorazí každý údaj o zbývajícím čase: na sekundy u zařízení, která sekundy hlásí, jinak na nejbližší minutu. Úprava menší než přibližně 5 % zbývajícího času se nezobrazí, nejvýše však do minimální změny níže, což omezuje počet záznamů v historii a deníku. Nastavením na 0 se nahlásí každá změna.\n\nNěkterá zařízení hlásí režim, který nikdy neuvedou mezi podporovanými – například klimatizace běžící v režimu Quiet, která nabízí pouze Off/Sleep/Speed. LocalThings si každý takový režim zapamatuje a dál jej nabízí, takže zůstane volitelný, jakmile v něm zařízení alespoň jednou bylo. Vypnutím této volby se budou nabízet pouze režimy, které zařízení samo uvádí; k vymazání již zapamatovaných použijte „Zapomenout zapamatované režimy“ v předchozí nabídce. Zařízení pro praní se staženými cykly z cloudu zde dostane připomenutí, jakmile nahlásí cyklus, který Home Assistant zatím nemůže nabídnout -- některá zařízení jej nahlásí, i když jste obrazovku „Stažené cykly“ v aplikaci SmartThings sami nikdy neotevřeli. Vypněte tuto možnost, chcete-li připomenutí zastavit a skrýt už pojmenované stažené cykly ze seznamu cyklů; nic z toho, co je již nastaveno, se neztratí, a po opětovném zapnutí se to hned znovu objeví.",
         "data": {
           "bypass_remote_control_lock": "Povolit zápis i když je dálkové ovládání hlášeno jako vypnuté",
           "finish_time_hysteresis_minutes": "Odhadovaný konec -- minimální změna (minuty)",
@@ -2511,7 +2752,7 @@
       },
       "cloud_manual": {
         "title": "Stažené cykly",
-        "description": "Toto zařízení hlásí {total} stažených cyklů; {found} jich bylo dosud zjištěno.\n\nNastavení staženého cyklu jsou viditelná pouze tehdy, když je daný cyklus právě načtený, a zařízení nikdy nehlásí jejich názvy. Chcete-li doplnit chybějící ({pending}): v aplikaci SmartThings (ne na samotném zařízení) otevřete toto zařízení a klepněte na „Stažené cykly“ -- samostatný řádek odlišný od „Cyklus“, níže na obrazovce, a ten, na kterém zde záleží. Poté postupně projděte jednotlivé stažené programy, u každého se na pár sekund zastavte, aby jej LocalThings zaznamenal, a vraťte se sem.\n\nKaždému z nich zadejte název, který chcete vidět v Home Assistant. Necháte-li název prázdný, daný cyklus zůstane mimo seznam cyklů. Názvy musí být jedinečné.\n\nStažený program je program na tomto zařízení, který spouští stažený cyklus. Rozpoznává se automaticky, ale před použitím jej zde potvrďte: výběrem staženého cyklu se do zařízení zapíše tento kód programu.",
+        "description": "Toto zařízení má nejméně tento počet stažených cyklů: {total}; dosud jich bylo zjištěno: {found}.\n\nNastavení staženého cyklu jsou viditelná pouze tehdy, když je daný cyklus právě načtený, a zařízení nikdy nehlásí jejich názvy. Chcete-li doplnit chybějící ({pending}): v aplikaci SmartThings (ne na samotném zařízení) otevřete toto zařízení a klepněte na „Stažené cykly“ -- samostatný řádek odlišný od „Cyklus“, níže na obrazovce, a ten, na kterém zde záleží. Poté postupně projděte jednotlivé stažené programy, u každého se na pár sekund zastavte, aby jej LocalThings zaznamenal, a vraťte se sem.\n\nKaždému z nich zadejte název, který chcete vidět v Home Assistant. Necháte-li název prázdný, daný cyklus zůstane mimo seznam cyklů. Názvy musí být jedinečné.\n\nStažený program je program na tomto zařízení, který spouští stažený cyklus. Rozpoznává se automaticky, ale před použitím jej zde potvrďte: výběrem staženého cyklu se do zařízení zapíše tento kód programu.",
         "data": {
           "download_course": "Kód programu „Stažený program“"
         }
@@ -2565,6 +2806,10 @@
     "cloud_courses_undiscovered": {
       "title": "Stažené cykly nejsou nastaveny pro {device_name}",
       "description": "{device_name} má {pending} z {total} stažených cyklů, které Home Assistant zatím nemůže nabídnout. Stažený cyklus lze použít až poté, co byl na zařízení zjištěn načtený -- na obrazovce „Stažené cykly“ v aplikaci SmartThings, ne na obrazovce „Cyklus“ -- a co jste mu dali název.\n\nChcete-li je nastavit, přejděte do Nastavení > Zařízení a služby > LocalThings > {device_name} > Konfigurovat > Stažené cykly a postupujte podle pokynů.\n\nStažené cykly nepoužíváte? Přejděte místo toho do Konfigurovat > Nastavení zařízení a vypněte „Nabízet stažené cykly“, čímž toto připomenutí natrvalo umlčíte."
+    },
+    "removed_entities": {
+      "title": "Z {device_name} byly odebrány entity",
+      "description": "LocalThings odebral z {device_name} entity, které už neposkytuje, obvykle proto, že se v této verzi změnily na jiný druh entity. Tyto automatizace a skripty na ně stále odkazují:\n\n{entities}\n\nUpravte je tak, aby používaly náhradní entity na stránce zařízení, a pak toto upozornění zavřete."
     }
   },
   "exceptions": {
@@ -2693,6 +2938,9 @@
     },
     "vacuum_command_params": {
       "message": "Příkazy robotického vysavače nemají žádné parametry."
+    },
+    "media_option_not_supported": {
+      "message": "Zařízení tuto možnost právě nenabízí."
     }
   },
   "selector": {
@@ -2708,6 +2956,7 @@
         "winecellar_bottom": "Dolní vinná zóna",
         "door_freezer": "Dvířka mrazáku",
         "door_cooler": "Dvířka chladničky",
+        "door_fridge": "Dvířka chladničky",
         "door_cvroom": "Dvířka flexibilní zóny",
         "door_winecellar": "Dvířka vinotéky",
         "door_onedoorfreezer": "Hlavní dvířka",

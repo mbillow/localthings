@@ -13,7 +13,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.entities import TimeDesc
 
 
@@ -23,10 +23,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsTime(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, TimeDesc) and _is_included(b, coordinator)
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda b: isinstance(b.desc, TimeDesc),
+        lambda b: LocalThingsTime(coordinator, b),
     )
 
 
@@ -34,10 +36,12 @@ class LocalThingsTime(LocalThingsEntity, TimeEntity):
     @property
     def native_value(self) -> datetime.time | None:
         value = (self.coordinator.data or {}).get(self._state_key)
-        # A descriptor projecting a device-reported *duration* onto the clock
-        # has no timezone to do it in, so it hands over a UTC instant and the
-        # conversion lands here (operational.delay_finish_at). Every other
-        # time entity reads a wall-clock field straight off the device.
+        desc = cast(TimeDesc, self._bound.desc)
+        if desc.native_value_fn is not None:
+            return desc.native_value_fn(value, dt_util.now())
+        # UTC-backed descriptors (such as delay-finish projections)
+        # hand over an aware instant for localization. Wall-clock fields
+        # already supply a time and need no timezone conversion.
         if isinstance(value, datetime.datetime):
             return dt_util.as_local(value).time()
         return value

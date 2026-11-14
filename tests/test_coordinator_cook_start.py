@@ -15,6 +15,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.localthings.button import LocalThingsButton
 from custom_components.localthings.const import (
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
@@ -101,7 +102,7 @@ async def test_start_sends_the_held_choices_in_one_write(coordinator) -> None:
     await coordinator.async_send_command(_entity(coordinator, "oven_setpoint"), 375)
     await coordinator.async_send_command(_entity(coordinator, "cook_time"), 20)
 
-    await coordinator.async_send_command(_entity(coordinator, "start_cooking"), "")
+    await LocalThingsButton(coordinator, _entity(coordinator, "start_cooking")).async_press()
 
     assert len(_posts(coordinator)) == 1
     path, body = _posts(coordinator)[0]
@@ -161,6 +162,56 @@ async def test_start_is_refused_with_remote_control_off(coordinator) -> None:
     assert _posts(coordinator) == []
 
 
+async def test_running_start_button_keeps_remote_control_error(coordinator) -> None:
+    coordinator._observe.apply(
+        "/operational/state/vs/0", {"x.com.samsung.da.state": "Run"}, source="poll"
+    )
+    coordinator._observe.apply(
+        "/remotectrl/vs/0", {"x.com.samsung.da.remoteControlEnabled": "false"}, source="poll"
+    )
+
+    with pytest.raises(ServiceValidationError) as err:
+        await LocalThingsButton(coordinator, _entity(coordinator, "start_cooking")).async_press()
+
+    assert err.value.translation_key == "remote_control_disabled"
+    assert _posts(coordinator) == []
+
+
+@pytest.mark.parametrize("state", ["Run", "Pause", "Unknown", None, "Ready"])
+async def test_start_only_ignores_confirmed_running_state(bare_coordinator, state) -> None:
+    resources = _idle("range_ne63a6111ss")
+    operation = resources["/operational/state/vs/0"]
+    if state is None:
+        operation.pop("x.com.samsung.da.state", None)
+    else:
+        operation["x.com.samsung.da.state"] = state
+    # A selected mode under Ready can still be cooking (#473's Keep Warm).
+    resources["/mode/vs/0"]["x.com.samsung.da.modes"] = ["KeepWarm"]
+    _load(bare_coordinator, resources)
+
+    if state == "Run":
+        await bare_coordinator.async_start_cooking()
+    else:
+        with pytest.raises(ServiceValidationError) as err:
+            await bare_coordinator.async_start_cooking()
+        assert err.value.translation_key == "cook_start_not_idle"
+    assert _posts(bare_coordinator) == []
+
+
+async def test_running_start_does_not_silently_accept_held_settings(coordinator) -> None:
+    await coordinator.async_send_command(_entity(coordinator, "cook_time"), 20)
+    coordinator._observe.apply(
+        "/operational/state/vs/0", {"x.com.samsung.da.state": "Run"}, source="poll"
+    )
+    assert coordinator._held_cooks[MAIN].values
+
+    with pytest.raises(ServiceValidationError) as err:
+        await coordinator.async_start_cooking()
+
+    assert err.value.translation_key == "cook_start_not_idle"
+    assert _posts(coordinator) == []
+
+
 @pytest.fixture
 def device_id(hass: HomeAssistant, coordinator: LocalThingsCoordinator) -> str:
     device = dr.async_get(hass).async_get_or_create(
@@ -203,6 +254,23 @@ async def test_action_rejects_before_sending(hass, coordinator, device_id) -> No
         await _start(hass, device_id, mode="Bake", duration={"hours": 12})
 
     assert err.value.translation_key == "cook_duration_out_of_range"
+    assert _posts(coordinator) == []
+
+
+@pytest.mark.parametrize(
+    "settings", [{}, {"mode": "Bake"}, {"temperature": 200}, {"duration": {"minutes": 15}}]
+)
+async def test_running_start_action_still_reports_an_error(
+    hass, coordinator, device_id, settings
+) -> None:
+    coordinator._observe.apply(
+        "/operational/state/vs/0", {"x.com.samsung.da.state": "Run"}, source="poll"
+    )
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _start(hass, device_id, **settings)
+
+    assert err.value.translation_key == "cook_start_not_idle"
     assert _posts(coordinator) == []
 
 

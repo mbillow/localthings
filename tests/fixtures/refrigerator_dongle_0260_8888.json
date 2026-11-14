@@ -1,0 +1,85 @@
+{
+  "capture_note": "Captured transport.bodies from the real diagnostics of a BRB260087WW behind a DONGLE_0260 bridge (#728), idle, both doors closed. Information.Versions and link metadata omitted, except the record's own `type`; the serial was already redacted by diagnostics and is left out. Every retained field is unchanged. Its Doors items carry only an id and an openState, no description.",
+  "bodies": {
+    "type": "Refrigerator",
+    "Information": {
+      "description": "DONGLE_0260",
+      "manufacturer": "Samsung Electronics",
+      "modelID": "DONGLE_0260|00090441|0005011A001131B40100000000000000"
+    },
+    "Alarms": [],
+    "Configuration": {
+      "region": "000"
+    },
+    "Doors": [
+      {
+        "id": "0",
+        "openState": "Close"
+      },
+      {
+        "id": "1",
+        "openState": "Close"
+      },
+      {
+        "id": "2"
+      }
+    ],
+    "Fridge": {
+      "rapidFreezing": "Off",
+      "rapidFridge": "Off"
+    },
+    "Mode": {
+      "modes": [
+        "RVACATION_OFF",
+        "FCONVERT_FREEZER",
+        "KIMCHIT_RIPE_REMAIN_255:255",
+        "KIMCHIB_RIPE_REMAIN_255:255",
+        "KIMCHIM_RIPE_REMAIN_255:255",
+        "BAR_FRIDGE_TEMP_0",
+        "BAR_FRIDGE_MAXTEMP_0",
+        "BAR_FREEZER_TEMP_0",
+        "BAR_FREEZER_MAXTEMP_0"
+      ],
+      "supportedModes": [
+        "RVACATION_ON",
+        "RVACATION_OFF",
+        "FCONVERT_FREEZER",
+        "FCONVERT_FRIDGE",
+        "FCONVERT_OFF",
+        "FCONVERT_KIMCHI_NORMAL",
+        "FCONVERT_KIMCHI_COLD",
+        "FCONVERT_KIMCHI_WARM",
+        "FCONVERT_SOFT_FREEZING",
+        "FCONVERT_CHILL",
+        "FCONVERT_COOL"
+      ]
+    },
+    "Temperatures": [
+      {
+        "current": -18.0,
+        "description": "Freezer",
+        "desired": -18.0,
+        "id": "0",
+        "maximum": -15,
+        "minimum": -23,
+        "name": "Freezer",
+        "unit": "Celsius"
+      },
+      {
+        "current": 4.0,
+        "description": "Fridge",
+        "desired": 4.0,
+        "id": "1",
+        "maximum": 7,
+        "minimum": 1,
+        "name": "Fridge",
+        "unit": "Celsius"
+      },
+      {
+        "description": "CVRoom",
+        "id": "2",
+        "unit": "Celsius"
+      }
+    ]
+  }
+}

@@ -6,8 +6,8 @@ import pytest
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_read_only_power_switches
 from custom_components.localthings.binary_sensor import LocalThingsBinarySensor
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.entity import LocalThingsEntity, _is_included
@@ -185,13 +185,13 @@ async def test_cleanup_removes_exact_renamed_switches_and_is_idempotent(hass, di
     )
     kept.append(foreign.entity_id)
     with caplog.at_level("INFO", logger="custom_components.localthings"):
-        _drop_read_only_power_switches(hass, coordinator._entry, coordinator)
-        _drop_read_only_power_switches(hass, coordinator._entry, coordinator)
+        async_reconcile_entities(hass, coordinator._entry, coordinator)
+        async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert len(removed) == 2
     assert all(registry.async_get(entity_id) is None for entity_id in removed)
     assert all(registry.async_get(entity_id) is not None for entity_id in kept)
     for entity_id in removed:
-        assert caplog.text.count(f"Removing {entity_id},") == 1
+        assert caplog.text.count(f"Removing {entity_id}:") == 1
     assert "update any automation or dashboard" in caplog.text
 
 
@@ -210,7 +210,7 @@ async def test_cleanup_also_applies_to_read_only_laundry_power(hass):
     uid = LocalThingsEntity(coordinator, power[0]).unique_id
     assert uid is not None
     old = registry.async_get_or_create("switch", DOMAIN, uid, config_entry=coordinator._entry)
-    _drop_read_only_power_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is None
 
 
@@ -236,7 +236,7 @@ async def test_cleanup_requires_owning_entry_and_a_discovered_replacement(hass, 
             resources[bound.href] = {"rt": ["x.com.samsung.da.power"]}
         coordinator._run_discovery(resources, from_snapshot=True)
         coordinator._rehydrate_resources = resources
-    _drop_read_only_power_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert registry.async_get(old.entity_id) is not None
 
 
@@ -254,7 +254,7 @@ async def test_offline_snapshot_restores_status_without_using_stale_values(hass)
         assert entity.is_on is None
         assert entity.unique_id is not None
         registry.async_get_or_create("switch", DOMAIN, entity.unique_id, config_entry=online._entry)
-    _drop_read_only_power_switches(hass, online._entry, restored)
+    async_reconcile_entities(hass, online._entry, restored)
     assert not [
         e
         for e in er.async_entries_for_config_entry(registry, online._entry.entry_id)
@@ -284,7 +284,7 @@ async def test_previously_affected_appliances_keep_power_switches(hass, name):
             config_entry=coordinator._entry,
         )
         controls.append(old.entity_id)
-    _drop_read_only_power_switches(hass, coordinator._entry, coordinator)
+    async_reconcile_entities(hass, coordinator._entry, coordinator)
     assert all(registry.async_get(entity_id) is not None for entity_id in controls)
     state = flatten(coordinator.bound, coordinator.last_resources)
     assert "sound" in state

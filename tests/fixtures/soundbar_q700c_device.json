@@ -1,0 +1,1148 @@
+{
+  "seeds_note": "HW-Q700C (issue #796), verbatim from the reporter's redacted diagnostics. The Alexa code challenge and the nearby speaker's nickname and id were redacted further.",
+  "device0": [
+    {
+      "href": "/WiFiConfResURI",
+      "rep": {
+        "rt": [
+          "oic.r.wificonf"
+        ],
+        "if": [
+          "oic.if.baseline"
+        ],
+        "swmt": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "swa": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "swf": 2,
+        "tnn": "**REDACTED**",
+        "wat": 0,
+        "wet": 0,
+        "x.com.samsung.chn": 0
+      }
+    },
+    {
+      "href": "/sec/alexa/aisettingpopup",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.aisettingpopup"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.aisettingpopup": 0
+      }
+    },
+    {
+      "href": "/sec/alexa/avsDeviceInfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.avsDeviceInfo"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.product_id": "Q700C_PRD",
+        "x.com.samsung.alexa.product_dsn": "**REDACTED**",
+        "x.com.samsung.alexa.code_challenge": "**REDACTED**",
+        "x.com.samsung.alexa.code_challenge_method": "S256"
+      }
+    },
+    {
+      "href": "/sec/alexa/avsSignInStatus",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.avsSignInStatus"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.signin_status": 0,
+        "x.com.samsung.alexa.alexa_client_version": "23.25.10221"
+      }
+    },
+    {
+      "href": "/sec/alexa/listlocale",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.localelist"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.localelist": [
+          "en-US",
+          "English (US)",
+          "en-GB",
+          "English (UK)",
+          "de-DE",
+          "German",
+          "en-IN",
+          "English (India)",
+          "en-CA",
+          "English (Canada)",
+          "en-AU",
+          "English (Australia)",
+          "fr-FR",
+          "French",
+          "it-IT",
+          "Italian",
+          "es-ES",
+          "Spanish (Spain)",
+          "es-MX",
+          "Spanish (Mexico)",
+          "es-US",
+          "Spanish (US)",
+          "hi-IN",
+          "Hindi",
+          "fr-CA",
+          "French (Canada)",
+          "pt-BR",
+          "Portuguese"
+        ]
+      }
+    },
+    {
+      "href": "/sec/alexa/locale",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.locale"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.locale": "en-US"
+      }
+    },
+    {
+      "href": "/sec/alexa/userprofile",
+      "rep": {
+        "rt": [
+          "x.com.samsung.alexa.userprofile"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.alexa.userprofile": ""
+      }
+    },
+    {
+      "href": "/sec/contentPanel/support",
+      "rep": {
+        "rt": [
+          "x.com.samsung.contentpanel.support"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "isSupport": 1
+      }
+    },
+    {
+      "href": "/sec/mde",
+      "rep": {
+        "rt": [
+          "x.com.samsung.mde"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/activeVoiceAmplifier",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.activeVoiceAmplifier"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.activeVoiceAmplifier": -2
+      }
+    },
+    {
+      "href": "/sec/networkaudio/advancedaudio",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.advancedaudio"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.voiceamplifier": 0,
+        "x.com.samsung.networkaudio.bassboost": 1,
+        "x.com.samsung.networkaudio.nightmode": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audio",
+      "rep": {
+        "rt": [
+          "oic.r.audio"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "mute": true,
+        "volume": 15
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audioPrompt",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.audioPrompt"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.supportedList": [
+          "ENG",
+          "DEU",
+          "FRA",
+          "KOR",
+          "SPA",
+          "ENG_UK",
+          "ITA"
+        ],
+        "x.com.samsung.networkaudio.language": "ENG",
+        "x.com.samsung.networkaudio.audioPrompt": false
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audiosync",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.audiosync"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.audiosync": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/autoPowerDown",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.autoPowerDown"
+        ],
+        "if": [
+          "oic.if.rw"
+        ],
+        "x.com.samsung.networkaudio.autoPowerDown": true
+      }
+    },
+    {
+      "href": "/sec/networkaudio/autoUpdate",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.autoUpdate"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.autoUpdate": "on"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/autoeq",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.autoeq"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.tunestatus": 0,
+        "x.com.samsung.networkaudio.calibrationstatus": 0,
+        "x.com.samsung.networkaudio.autoeqmode": -2
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/audioTrackData",
+      "rep": {
+        "rt": [
+          "x.com.st.audiotrackdata"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "station": "",
+        "title": "cliairplay",
+        "artist": "",
+        "album": "",
+        "trackNumber": 0,
+        "trackUri": "",
+        "trackDescription": "",
+        "thumbnail": "",
+        "source": "wificp",
+        "appId": "com.samsung.audio.airplay-app",
+        "appName": "airplay-app",
+        "capsuleId": "",
+        "duration": 0,
+        "isAdult": false
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/groupconf",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.av.groupconf"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "slaveCount": 0,
+        "groupName": "noValue",
+        "status": "noValue",
+        "masterDi": "noValue"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/groupdiscovery",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.av.groupdiscovery"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "candidateCount": 1,
+        "candidateList": [
+          {
+            "di": "**REDACTED**",
+            "stereoType": "A",
+            "role": "single",
+            "nick": "**REDACTED**",
+            "model": "SPK-6500",
+            "deviceType": "",
+            "frequency": "",
+            "rssi": 1930442152
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/groupinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.av.groupinfo"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "isSupported": false,
+        "slaveCount": 0,
+        "maxGroupSize": 5,
+        "masterName": "",
+        "status": "single",
+        "stereoType": "A",
+        "role": "none",
+        "channel": "all",
+        "configuration": "SINGLESPK",
+        "capability": [
+          "single",
+          "multiChannel",
+          "group",
+          "directAudio"
+        ],
+        "groupName": ""
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/mediaPlayback",
+      "rep": {
+        "rt": [
+          "x.com.st.mediaplayer"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "modes": [
+          "play"
+        ],
+        "supportedModes": [
+          "play",
+          "pause",
+          "stop"
+        ],
+        "position": 22809405,
+        "trackIndex": "",
+        "index": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/mediaPlaybackRepeat",
+      "rep": {
+        "rt": [
+          "x.com.st.mediarepeat"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "supportedModes": [
+          "enabled",
+          "disabled"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/mediaPlaybackShuffle",
+      "rep": {
+        "rt": [
+          "x.com.st.mediashuffle"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "mode": "disabled",
+        "supportedModes": [
+          "enabled",
+          "disabled"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/av/mediaTrackControl",
+      "rep": {
+        "rt": [
+          "x.com.st.mediatrackcontrol"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "supportedModes": [
+          "next",
+          "previous"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/btPairingMode",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.btPairingMode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.pairingMode": false,
+        "x.com.samsung.networkaudio.btAppReady": true
+      }
+    },
+    {
+      "href": "/sec/networkaudio/channelVolume",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.channelVolume"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.channelVolume": [
+          {
+            "name": "Spk_Center",
+            "value": 0,
+            "status": 1
+          },
+          {
+            "name": "Spk_Side",
+            "value": 0,
+            "status": -1
+          },
+          {
+            "name": "Spk_Wide",
+            "value": 0,
+            "status": -1
+          },
+          {
+            "name": "Spk_Front_Top",
+            "value": 0,
+            "status": 1
+          },
+          {
+            "name": "Spk_Rear",
+            "value": 0,
+            "status": 0
+          },
+          {
+            "name": "Spk_Rear_Top",
+            "value": 0,
+            "status": 0
+          },
+          {
+            "name": "Spk_Rear_Side",
+            "value": 0,
+            "status": -1
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/currentEQMode",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.currentEQMode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.currentEQMode": "usereq"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/deviceinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.deviceinfo"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.wifimac": "**REDACTED**",
+        "x.com.samsung.networkaudio.ptopmac": "**REDACTED**",
+        "x.com.samsung.networkaudio.bluetoothmac": "**REDACTED**",
+        "x.com.samsung.networkaudio.uniquedevicenumber": "",
+        "x.com.samsung.networkaudio.hwduid": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/downloadableApp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.downloadableApp"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.appDetail": [
+          {
+            "appId": "com.samsung.tizen.samsung-cloud",
+            "appName": "samsungcloud",
+            "appVersion": "3.2.9"
+          },
+          {
+            "appId": "com.samsung.tizen.samsung-service-manager",
+            "appName": "samsung-service-manager",
+            "appVersion": "5.0.20"
+          },
+          {
+            "appId": "com.samsung.tizen.smartthings-client",
+            "appName": "smartthings-client",
+            "appVersion": "3.2.57"
+          },
+          {
+            "appId": "com.samsung.tizen.smartthings-hub",
+            "appName": "SmartThingsHub",
+            "appVersion": "6.62.13"
+          },
+          {
+            "appId": "com.samsung.tizen.smartthings-thing",
+            "appName": "smartthings-thing",
+            "appVersion": "5.0.22"
+          },
+          {
+            "appId": "com.samsung.tv.iot-hub-control",
+            "appName": "iot-hub-control",
+            "appVersion": "2.70.134"
+          }
+        ],
+        "x.com.samsung.networkaudio.appUpgrade": true
+      }
+    },
+    {
+      "href": "/sec/networkaudio/eq",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.eq"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.supportedList": [
+          "NONE",
+          "POP",
+          "JAZZ",
+          "CLASSIC"
+        ],
+        "x.com.samsung.networkaudio.EQname": "NONE",
+        "x.com.samsung.networkaudio.action": "setEQmode",
+        "x.com.samsung.networkaudio.EQband": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/feature",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.feature"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.wifi": "111-111",
+        "x.com.samsung.networkaudio.bt": "111-111",
+        "x.com.samsung.networkaudio.aux": "000-000",
+        "x.com.samsung.networkaudio.hdmi": "111-111",
+        "x.com.samsung.networkaudio.optical": "111-111",
+        "x.com.samsung.networkaudio.coaxial": "000-000",
+        "x.com.samsung.networkaudio.usb": "000-000",
+        "x.com.samsung.networkaudio.installationType": 0,
+        "x.com.samsung.networkaudio.dialController": 1,
+        "x.com.samsung.networkaudio.numOfHdmi": 1,
+        "x.com.samsung.networkaudio.woofer": 0,
+        "x.com.samsung.networkaudio.audioPrompt": 1,
+        "x.com.samsung.networkaudio.tap": true
+      }
+    },
+    {
+      "href": "/sec/networkaudio/googlesupport",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.googlesupport"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.chromecastsupport": 1,
+        "x.com.samsung.networkaudio.googletosagreement": 0,
+        "x.com.samsung.networkaudio.chromecastversion": 1,
+        "x.com.samsung.networkaudio.googleusagereport": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/infoLink",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.infoLink"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.infoLinkVersion": "T-INFOLINK2023-1001",
+        "x.com.samsung.networkaudio.infoLinkServer": "Operating",
+        "x.com.samsung.networkaudio.infoLinkServerList": [
+          "Developing",
+          "Development",
+          "Operating"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/installationType",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.installationType"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.installationType": "None"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/lastConnections",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.lastConnections"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.lastConnections": [
+          {
+            "connectionType": "D-IN/TV ARC",
+            "deviceType": 4,
+            "di": "",
+            "duid": "**REDACTED**",
+            "groupName": "**REDACTED**",
+            "ip": "**REDACTED**",
+            "mac": "**REDACTED**",
+            "name": "**REDACTED**",
+            "sbMode": 10,
+            "status": 0
+          },
+          {
+            "connectionType": "HDMI",
+            "deviceType": 4,
+            "di": "",
+            "duid": "**REDACTED**",
+            "groupName": "**REDACTED**",
+            "ip": "**REDACTED**",
+            "mac": "**REDACTED**",
+            "name": "**REDACTED**",
+            "sbMode": 3,
+            "status": 0
+          },
+          {
+            "connectionType": "WIFI",
+            "deviceType": 7,
+            "di": "",
+            "duid": "**REDACTED**",
+            "groupName": "**REDACTED**",
+            "ip": "**REDACTED**",
+            "mac": "**REDACTED**",
+            "name": "**REDACTED**",
+            "sbMode": 29,
+            "status": 1
+          },
+          {
+            "connectionType": "WIFI",
+            "deviceType": 8,
+            "di": "",
+            "duid": "**REDACTED**",
+            "groupName": "**REDACTED**",
+            "ip": "**REDACTED**",
+            "mac": "**REDACTED**",
+            "name": "**REDACTED**",
+            "sbMode": 30,
+            "status": 0
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/mic",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.mic"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.micsupport": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/mode",
+      "rep": {
+        "rt": [
+          "oic.r.mode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "supportedModes": [
+          "optical",
+          "hdmi1",
+          "bt",
+          "wifiidle"
+        ],
+        "mode": "optical"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/musicinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.musicinfo"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "control": {
+          "play": "enabled",
+          "next": "enabled",
+          "prev": "enabled",
+          "skip_forward": "disabled",
+          "skip_backward": "disabled",
+          "shuffle": "disabled",
+          "repeat": "disabled",
+          "loop": "disabled",
+          "thumbs_up": "disabled",
+          "thumbs_down": "disabled"
+        },
+        "contentProvider": {
+          "name": "",
+          "logo": ""
+        }
+      }
+    },
+    {
+      "href": "/sec/networkaudio/networkInfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.networkInfo"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.networkInfo": {
+          "connectionType": "wireless",
+          "ip": "**REDACTED**",
+          "rssi": 4,
+          "ch": 100,
+          "wifidirectch": 100
+        }
+      }
+    },
+    {
+      "href": "/sec/networkaudio/passThrough",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.passThrough"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 0,
+        "x.com.samsung.networkaudio.passThruEnable": false
+      }
+    },
+    {
+      "href": "/sec/networkaudio/playback",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.playback"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.status": "PLAYING"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/sesInfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.sesInfo"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.sesUpdateServerType": -1,
+        "x.com.samsung.networkaudio.sesVersion": "3.2.171",
+        "x.com.samsung.networkaudio.sesApiLevel": "15",
+        "x.com.samsung.networkaudio.updateStatus": "UPDATED"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/smartThingsHub",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.smartThingsHub"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 0,
+        "x.com.samsung.networkaudio.hubStatus": {
+          "dongle_connected": true,
+          "hub_di": "noValue",
+          "module_connected": true,
+          "onboarded": true,
+          "zigbee_enabled": true
+        },
+        "x.com.samsung.networkaudio.state": "Default",
+        "x.com.samsung.networkaudio.zigbeeMac": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/soundFrom",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.soundFrom"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.soundFrom": {
+          "connectionType": "D-IN/TV ARC",
+          "deviceType": 4,
+          "di": "",
+          "duid": "**REDACTED**",
+          "groupName": "**REDACTED**",
+          "ip": "**REDACTED**",
+          "mac": "**REDACTED**",
+          "name": "**REDACTED**",
+          "sbMode": 10,
+          "status": 0
+        },
+        "x.com.samsung.networkaudio.sbMode": 10,
+        "x.com.samsung.networkaudio.name": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/soundmode",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.soundmode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.soundmode": "standard",
+        "x.com.samsung.networkaudio.supportedSoundmode": [
+          "standard",
+          "surround",
+          "game",
+          "adaptive sound"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/spacefitSound",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.spacefitSound"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.spacefitSound": -2
+      }
+    },
+    {
+      "href": "/sec/networkaudio/speakerStatus",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.speakerStatus"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.speakerStatus": "normal"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/surroundspeaker",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.surroundspeaker"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupport": 0,
+        "x.com.samsung.networkaudio.currentRearPosition": "none",
+        "x.com.samsung.networkaudio.rearPositionList": [
+          "none"
+        ],
+        "x.com.samsung.networkaudio.isGuide": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/swUpdate",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.swUpdate"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.updateStatus": "noupdate",
+        "x.com.samsung.networkaudio.updateVersion": "0",
+        "x.com.samsung.networkaudio.updateProgress": -1,
+        "x.com.samsung.networkaudio.updateErrorEvent": ""
+      }
+    },
+    {
+      "href": "/sec/networkaudio/switch/binary",
+      "rep": {
+        "rt": [
+          "oic.r.switch.binary"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "value": false
+      }
+    },
+    {
+      "href": "/sec/networkaudio/symphony",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.symphony"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.isSupported": 1,
+        "x.com.samsung.networkaudio.symphonyStatus": 1
+      }
+    },
+    {
+      "href": "/sec/networkaudio/tone",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.tone"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.bass": 0,
+        "x.com.samsung.networkaudio.treble": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/vasupport",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.vasupport"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.vasupport": 1,
+        "x.com.samsung.networkaudio.supportedVA": [
+          "alexa"
+        ],
+        "x.com.samsung.networkaudio.defaultVA": ""
+      }
+    },
+    {
+      "href": "/sec/networkaudio/versionInfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.versionInfo"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.micomVersion": "38",
+        "x.com.samsung.networkaudio.dialVersion": "none"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/vfd",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.vfd"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.vfd.support": true
+      }
+    },
+    {
+      "href": "/sec/networkaudio/volumeUpDown",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.volumeUpDown"
+        ],
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/networkaudio/woofer",
+      "rep": {
+        "rt": [
+          "x.com.samsung.networkaudio.woofer"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.networkaudio.woofer": 0,
+        "x.com.samsung.networkaudio.connection": "on"
+      }
+    },
+    {
+      "href": "/selfhealing/session",
+      "rep": {
+        "x.com.samsung.selfhealing.session.expirytime": 0
+      }
+    },
+    {
+      "href": "/x.com.samsung/notification/receiver",
+      "rep": {
+        "rt": [
+          "x.com.samsung.audionotification"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.version": "0.6.0",
+        "x.com.samsung.language": "ko_KR"
+      }
+    }
+  ]
+}

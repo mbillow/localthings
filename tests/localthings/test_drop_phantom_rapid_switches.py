@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.localthings import _drop_unsupported_sound_switches
+from custom_components.localthings.cleanup import async_reconcile_entities
 from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.capabilities import fridge
@@ -30,7 +30,8 @@ def _coordinator(rep: dict) -> LocalThingsCoordinator:
             discovery_resources=resources,
             discovery_canonical=lambda subdevice: resources,
             device_key=MOCK_SERIAL,
-            instance_names={},
+            device_type_name="refrigerator",
+            subdevices=[],
         ),
     )
 
@@ -51,9 +52,7 @@ def _rows(hass: HomeAssistant) -> tuple[MockConfigEntry, dict[str, str]]:
 async def test_the_switch_for_an_unreported_field_is_removed(hass: HomeAssistant) -> None:
     entry, rows = _rows(hass)
 
-    _drop_unsupported_sound_switches(
-        hass, entry, _coordinator({"x.com.samsung.da.rapidFreezing": "Off"})
-    )
+    async_reconcile_entities(hass, entry, _coordinator({"x.com.samsung.da.rapidFreezing": "Off"}))
 
     registry = er.async_get(hass)
     assert registry.async_get(rows["rapid_fridge"]) is None
@@ -63,7 +62,7 @@ async def test_the_switch_for_an_unreported_field_is_removed(hass: HomeAssistant
 async def test_a_stub_keeps_both(hass: HomeAssistant) -> None:
     entry, rows = _rows(hass)
 
-    _drop_unsupported_sound_switches(hass, entry, _coordinator({"href": HREF}))
+    async_reconcile_entities(hass, entry, _coordinator({"href": HREF}))
 
     registry = er.async_get(hass)
     assert all(registry.async_get(entity_id) is not None for entity_id in rows.values())

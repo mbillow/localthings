@@ -22,10 +22,12 @@ reason nothing here ever synthesizes one.
 
 ``CloudExtraCourse_`` does not mean the same thing on every family, so
 nothing keys off it directly -- see ``cloud_slots``, which is what the rest
-of this module and its callers gate on. Even then, a device can advertise a
-slot whose payload has never been observed, so ``cloud_slots`` answers
-"which exist" while the store answers "which are usable"; the two are
-deliberately allowed to disagree.
+of this module and its callers gate on. Nor is it always complete: a
+WA54CG7150 lists only ``5958`` while its owner can download five programs
+and the washer runs any of them (issue #780), so a loaded program is learned
+whether or not its slot is listed, and ``known_slots`` is advertised plus
+learned. A device can also advertise a slot whose payload has never been
+observed; the store alone answers "which are usable".
 
 What this module does and deliberately does not do
 --------------------------------------------------
@@ -127,9 +129,8 @@ def _slot_and_loaded(blob) -> tuple[str | None, bool]:
 
 def advertised_slots(rep) -> list[str]:
     """Slot ids this device says it has downloaded programs in, from its own
-    CloudExtraCourse_ token. The authority on *which* programs exist -- this
-    is never inferred from what has been learned so far, so "3 of 9
-    discovered" is answerable."""
+    CloudExtraCourse_ token. Not always complete (issue #780) -- see
+    known_slots for the full set."""
     raw = option_value(rep.get("x.com.samsung.da.options"), EXTRA_PREFIX)
     if not isinstance(raw, str) or len(raw) % 2:
         return []
@@ -156,6 +157,21 @@ def cloud_slots(rep, courses) -> list[str]:
     """
     known = {c.upper() for c in courses or ()}
     return [slot for slot in advertised_slots(rep) if slot not in known]
+
+
+def known_slots(rep, courses, record) -> list[str]:
+    """``cloud_slots`` in the device's order, then any learned slot it
+    doesn't list (issue #780) -- every program there is to name.
+
+    Empty whenever ``cloud_slots`` is, so it never disagrees with
+    ``supports_cloud_courses``, which gates the options menu. Learned slots
+    skip cloud_slots' course-list subtraction: a payload proves a program,
+    and the WA54CG7150's Eco Cold slot 86 is also one of its course codes."""
+    advertised = cloud_slots(rep, courses)
+    if not advertised:
+        return []
+    learned = (record or {}).get("slots") or {}
+    return advertised + [slot for slot in learned if slot not in advertised]
 
 
 def supports_cloud_courses(rep, courses) -> bool:
@@ -259,7 +275,6 @@ class CloudCourses:
         options = rep.get("x.com.samsung.da.options")
         if not options:
             return False
-        known_slots = advertised_slots(rep)
         oneshot = option_value(options, ONESHOT_PREFIX)
         with self._lock:
             # Compared once, at the end, against where this pass started --
@@ -277,9 +292,9 @@ class CloudCourses:
             for prefix in (DEFAULT_PREFIX, ONESHOT_PREFIX):
                 blob = option_value(options, prefix)
                 slot = slot_of(blob)
-                # A blob whose slot the device doesn't advertise is not a
-                # program this appliance offers -- don't record it.
-                if slot is None or (known_slots and slot not in known_slots):
+                # Unadvertised slots count too: the advertised list can be a
+                # fixed subset of what the owner can download (issue #780).
+                if slot is None:
                     continue
                 record = self._slots.get(slot)
                 if record is None:
@@ -369,9 +384,9 @@ class CloudCourses:
 
 
 def undiscovered(rep: dict, record: dict, courses) -> list[str]:
-    """Cloud slots that aren't yet usable -- unlearned or unnamed. What the
+    """Known slots that aren't yet usable -- unlearned or unnamed. What the
     Repairs issue counts, and what the options flow asks the user to walk the
-    appliance through. Counts against cloud_slots, not every advertised byte:
+    appliance through. Counts against known_slots, not every advertised byte:
     a slot that is already a selectable course is nothing to set up."""
     programs = record.get("slots") or {}
-    return [s for s in cloud_slots(rep, courses) if not (programs.get(s) or {}).get("name")]
+    return [s for s in known_slots(rep, courses, record) if not (programs.get(s) or {}).get("name")]

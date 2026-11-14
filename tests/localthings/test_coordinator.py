@@ -2170,10 +2170,17 @@ async def test_send_command_select_validate_fn_rejects_idle_oven_mode(
     remote-control gate, replacing write_fn's warning-and-return."""
     from custom_components.localthings.registry.capabilities.oven import OVEN_MODE
     from custom_components.localthings.registry.discovery import BoundEntity
+    from tests.conftest import _load_device
 
     fake = mock_coordinator_observe_session
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    resources = _load_device("oven")
+    resources["/mode/vs/0"] = {
+        "x.com.samsung.da.supportedModes": ["Bake", "Broil"],
+        "x.com.samsung.da.modes": ["NoOperation"],
+    }
+    with patch.object(LocalThingsCoordinator, "_poll_once", return_value=resources):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
     coordinator._cache.apply_rep(
         "/remotectrl/vs/0",
@@ -2206,7 +2213,8 @@ async def test_send_command_select_validate_fn_rejects_idle_oven_mode(
         assert posted == []
 
         await coordinator.async_send_command(bound, "Bake")
-    assert posted and posted[0][0] == ["mode", "vs", "0"]
+    assert not posted
+    assert coordinator._held_cooks[bound.subdevice].values["mode"] == "Bake"
 
 
 async def test_send_command_bypasses_remote_control_when_option_enabled(

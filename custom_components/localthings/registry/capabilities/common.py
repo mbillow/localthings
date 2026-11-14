@@ -141,14 +141,18 @@ def _active_alarm_codes(items):
     unsuffixed code (FilterAlarm, DoorA_Opened, ...); issue #166 shows both
     in one dump. Generalizes what range hood used to special-case as just
     the literal 'ErrorCode_OFF' string.
+
+    Family Hub fridges (25K_REF_LCD_FHUB10.0) mark those placeholders with
+    state 'none' instead; joined, they overflow HA's 255-character state.
     """
     if not items or not isinstance(items, list):
         return "none"
     codes = [
         i.get("x.com.samsung.da.code")
         for i in items
-        if i.get("x.com.samsung.da.code")
-        and str(i.get("x.com.samsung.da.state", "")).lower() != "deleted"
+        if isinstance(i, dict)
+        and i.get("x.com.samsung.da.code")
+        and str(i.get("x.com.samsung.da.state", "")).lower() not in ("deleted", "none")
         and not str(i.get("x.com.samsung.da.code", "")).lower().endswith("_off")
     ]
     return ", ".join(codes) if codes else "none"
@@ -283,32 +287,11 @@ def diagnosis_status(value):
 
 
 def sensor_item_value(items, sensor_type, index=0):
-    """Pull one reading out of a `/sensors/vs/0`-style items[] list -- each
-    item is `{type, value: [...]}`; `index` picks which slot to read
-    (index 0 is the raw measurement on every family seen so far). Shared
-    by range_hood.AIR_QUALITY, air_purifier.AIR_QUALITY, and
-    air_monitor.SENSORS, which all read the same resource shape.
+    """Read a numeric slot from a Samsung sensor-items list.
 
-    value[] is 2-element on the fields that carry a magnitude
-    (Dust/FineDust/SuperFineDust/CO2) and 1-element on Odor/CleanLevel.
-    That asymmetry is what index 1 means: it is the device's own graded
-    air-quality level for that reading -- the same kind of value Odor and
-    CleanLevel already *are*, which is why those two have no second slot.
-    It reads 0-2 against index 0's observed 0-31, tracks index 0 within a
-    device, and CleanLevel equals the highest per-field grade on 9 of the
-    11 fixtures reporting this resource (the range hood and one RAC report
-    a higher CleanLevel than any dust grade, so they fold in something
-    else).
-
-    Index 1 is deliberately left unbound rather than exposed as an entity:
-    its floor is not portable. ARTIK051_TVTL grades good air as 0, while
-    AVT-WW-TP1 / A-VTWW-TP2 / TP1X / ASM-KR-TP1 / AHD-WW-TP1 all grade it
-    as 1, so a shared descriptor would need a per-family offset to mean
-    anything, and CleanLevel already carries the aggregate. The grade is
-    still load-bearing as *evidence*: it is what confirms the three dust
-    fields are three different scales rather than one repeated reading --
-    see air_purifier._AIR_QUALITY_SENSORS and
-    tests/test_air_quality_grade_column.py.
+    Index 0 holds the concentration or aggregate level; index 1 holds a
+    family-specific grade. Hood descriptors interpret grades 1-4 and the
+    transient processing code 10; other families need their own mapping.
     """
     for item in items or ():
         if not isinstance(item, dict):
@@ -377,6 +360,9 @@ POWER_GENERIC = Capability(
             device_class="power",
             value_fn=lambda v: bool(v),
             exists_fn=_power_sensor_exists,
+            # #681: isModelSettingPowerOnOff is a model fact, and an absent
+            # setinfo excludes this sensor, so a partial read keeps both rows.
+            replaces_siblings=True,
         ),
     ),
 )
@@ -402,6 +388,9 @@ POWER_VS_FALLBACK = Capability(
             device_class="power",
             value_fn=lambda v: v == "On",
             exists_fn=_power_sensor_exists,
+            # #681: isModelSettingPowerOnOff is a model fact, and an absent
+            # setinfo excludes this sensor, so a partial read keeps both rows.
+            replaces_siblings=True,
         ),
     ),
 )
@@ -517,10 +506,12 @@ ALARMS = Capability(
     entities=(
         SensorDesc(
             key="alarm_code",
-            field="x.com.samsung.da.items",
             icon="mdi:alert",
             entity_category="diagnostic",
-            value_fn=_active_alarm_codes,
+            # No field gate: a clear TP1X_REF_21K EU board answers with OCF
+            # metadata and no items, which the gate dropped. `{}` is the clear
+            # shape for most boards (observe.py, #348), so it reads "none".
+            rep_fn=lambda rep: _active_alarm_codes(rep.get("x.com.samsung.da.items")),
         ),
     ),
 )
@@ -913,13 +904,17 @@ def _meter_reports_cumulative_power(resources) -> bool:
     return "x.com.samsung.da.cumulativePower" in rep
 
 
-def _usage_energy_exists(rep, resources) -> bool:
+def usage_energy_exists(energy_fn):
     """Bind the file's energy only where the meter resource cannot supply it
     and the blob actually decodes -- an unreadable payload must produce no
     entity rather than a permanently-unknown one."""
-    if _meter_reports_cumulative_power(resources):
-        return False
-    return usagedb.cumulative_energy_kwh(rep) is not None
+
+    def exists(rep, resources) -> bool:
+        if _meter_reports_cumulative_power(resources):
+            return False
+        return energy_fn(rep) is not None
+
+    return exists
 
 
 FILE_TRANSFER = Capability(
@@ -950,7 +945,7 @@ FILE_TRANSFER = Capability(
             state_class="total_increasing",
             unit="kWh",
             rep_fn=usagedb.cumulative_energy_kwh,
-            exists_fn=_usage_energy_exists,
+            exists_fn=usage_energy_exists(usagedb.cumulative_energy_kwh),
         ),
         # Runtime, unlike energy, is not a fallback: no other resource on
         # these boards reports it, so there is nothing to defer to. Issue

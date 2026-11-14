@@ -1,0 +1,19 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "defrost_delay",
+    "door_cvroom_open",
+    "door_freezer_open",
+    "door_fridge_open",
+    "door_open",
+    "filter_status",
+    "flex_zone_mode",
+    "freezer_setpoint",
+    "freezer_temperature",
+    "fridge_setpoint",
+    "fridge_temperature",
+    "ice_maker_enabled",
+    "rapid_freezing",
+    "rapid_fridge"
+  ]
+}

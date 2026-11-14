@@ -192,3 +192,54 @@ def test_a_runtime_board_publishes_no_energy_fallback():
     state = _state({ENERGY: {}, TRANSFER: _transfer_rep(_prac_like())})
     assert state["usage_runtime_hours"] == 6270.0
     assert "energy_kwh" not in state
+
+
+# ---------------------------------------------------------------------------
+# Air conditioners (#741): the energy field is plain Wh on every AC measured.
+# ---------------------------------------------------------------------------
+
+
+def _ac_state(resources: dict) -> dict:
+    from custom_components.localthings.registry.by_type.airconditioner import REGISTRY
+
+    return flatten(discover(resources, REGISTRY.capabilities), resources)
+
+
+def _cac_like(last_wh: int = 694954, days: int = 12) -> bytes:
+    """#741's A-CAWW-TP2-20-COMMON, hand-built from the reported newest record
+    `(ts, 694954, 0)`: plain Wh beside a third field that is zero throughout."""
+    return b"".join(
+        struct.pack("<III", 1_780_000_000 + i * 86400, last_wh - (days - 1 - i) * 900, 0)
+        for i in range(days)
+    )
+
+
+def test_an_ac_with_an_all_zero_third_field_reads_plain_wh():
+    """The washer-shaped third field would otherwise read 69,495.4 kWh where
+    SmartThings shows 694.957."""
+    state = _ac_state({TRANSFER: _transfer_rep(_cac_like())})
+    assert state["energy_kwh"] == pytest.approx(694.954)
+    # The shared capability still reads that shape as a washer's.
+    assert _state({ENERGY: {}, TRANSFER: _transfer_rep(_cac_like())})["energy_kwh"] == (
+        pytest.approx(69495.4)
+    )
+
+
+def test_an_ac_runtime_board_still_publishes_no_energy_fallback():
+    """#488's TP2X_RAC_20K capture. On a multi-split the energy beside a
+    runtime counter is the shared outdoor unit's (#329), so a per-head
+    sensor would count it once per head."""
+    data = json.loads((FIXTURES / "usage_blobs.json").read_text())["airconditioner_tp2x_rac_20k"]
+    state = _ac_state({TRANSFER: _transfer_rep(from_json_safe(data["blob"]))})
+    assert "energy_kwh" not in state
+    assert state["usage_runtime_hours"] == data["runtime_hours"]
+
+
+def test_an_ac_meter_still_wins_over_the_file():
+    state = _ac_state(
+        {
+            ENERGY: {"x.com.samsung.da.cumulativePower": "694957"},
+            TRANSFER: _transfer_rep(_cac_like()),
+        }
+    )
+    assert state["energy_kwh"] == 694.96

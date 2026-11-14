@@ -1,0 +1,536 @@
+{
+  "meta": {
+    "model": "TP1X_DA-KS-RANGE-0103X (OS70H30E/AA0)",
+    "device_type": "range",
+    "source": "issue #726 diagnostics (redacted by the integration)",
+    "note": "DAWIT 3.0 range: the oven half is the bare-field /oven/status/vs/0 generation the ME80H microwave uses (#433), with no /oven/vs/0, /mode/vs/0 or /temperatures/vs/0. Typed by /oic/d (oic.d.range)."
+  },
+  "oic_device_types": [
+    "oic.wk.d",
+    "oic.d.range"
+  ],
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "TKIP",
+          "AES",
+          "WEP-64",
+          "WEP-128"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "flashingProgress": "",
+        "otnTarget": "main",
+        "otnStatus": "None",
+        "otnCompleteDate": "noHistory",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "modelId": "AKS-WW-TP1-25-OVEN-3-OS90",
+            "versions": [
+              "40251124"
+            ],
+            "visVersion": "251124"
+          },
+          {
+            "type": "Micom",
+            "modelId": "0712A0044741FFFFFFFF",
+            "versions": [
+              "25112000",
+              "FFFFFFFF"
+            ],
+            "visVersion": "251120"
+          },
+          {
+            "type": "Micom",
+            "modelId": "071260146641FFFFFFFF",
+            "versions": [
+              "24060400",
+              "FFFFFFFF"
+            ],
+            "visVersion": "240604"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "TP1X_DA-KS-RANGE-0103X|A0044741|5001011E031911010A00000000000000",
+        "x.com.samsung.da.description": "OS70H30E/AA0",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "25112400",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "00447A25112000",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.description": "Version",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "01466A24060400",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "SSM",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "KR2",
+        "x.com.samsung.da.diagTsId": "DA01"
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "timezoneid": "America/New_York",
+        "offset": "-05:00",
+        "DST": "OFF"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Alarm",
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "OV_E_OFF",
+            "x.com.samsung.da.triggeredTime": "2026-11-02T01:38:55"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/oven/spec/vs/0",
+      "rep": {
+        "resourceVersion": 2,
+        "modeSpecVersion": "1.02",
+        "micomModelId": "OS70H30E/AA0",
+        "temperatureUnitList": [
+          "fahrenheit",
+          "celsius"
+        ],
+        "cavityInfo": {
+          "numberOfCavity": 1,
+          "cavityType": "single",
+          "serviceDefaultCavity": "single",
+          "cavityList": [
+            {
+              "name": "single",
+              "resourceNumber": 0,
+              "settingList": [
+                "12HourEnergySaving",
+                "beepSound",
+                "temperatureAdjustment",
+                "temperatureUnit",
+                "timeFormat",
+                "displayTimeAutoSync",
+                "lamp"
+              ],
+              "featureList": [
+                ""
+              ],
+              "defaultMode": "Bake",
+              "modeSpecList": [
+                {
+                  "mode": "Bake",
+                  "remoteControlProperty": [
+                    "set",
+                    "start"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 80,
+                      "max": 285,
+                      "default": 175,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 175,
+                      "max": 550,
+                      "default": 350,
+                      "interval": 1
+                    }
+                  },
+                  "time": {
+                    "min": 60,
+                    "max": 35940,
+                    "default": 3600,
+                    "interval": 60
+                  }
+                },
+                {
+                  "mode": "Broil",
+                  "remoteControlProperty": [
+                    "set"
+                  ],
+                  "temperature": {
+                    "grade": {
+                      "min": "low",
+                      "max": "high",
+                      "default": "high",
+                      "gradeList": [
+                        "low",
+                        "high"
+                      ],
+                      "gradeToDegree": {
+                        "low": {
+                          "celsius": 204,
+                          "fahrenheit": 400
+                        },
+                        "high": {
+                          "celsius": 248,
+                          "fahrenheit": 480
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "mode": "ConvectionBake",
+                  "remoteControlProperty": [
+                    "set",
+                    "start"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 80,
+                      "max": 285,
+                      "default": 160,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 175,
+                      "max": 550,
+                      "default": 325,
+                      "interval": 1
+                    }
+                  },
+                  "time": {
+                    "min": 60,
+                    "max": 35940,
+                    "default": 3600,
+                    "interval": 60
+                  }
+                },
+                {
+                  "mode": "ConvectionRoast",
+                  "remoteControlProperty": [
+                    "set",
+                    "start"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 80,
+                      "max": 285,
+                      "default": 160,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 175,
+                      "max": 550,
+                      "default": 325,
+                      "interval": 1
+                    }
+                  },
+                  "time": {
+                    "min": 60,
+                    "max": 35940,
+                    "default": 3600,
+                    "interval": 60
+                  }
+                },
+                {
+                  "mode": "AirFryMax",
+                  "remoteControlProperty": [
+                    "set",
+                    "start"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 175,
+                      "max": 260,
+                      "default": 220,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 350,
+                      "max": 500,
+                      "default": 425,
+                      "interval": 1
+                    }
+                  },
+                  "time": {
+                    "min": 60,
+                    "max": 35940,
+                    "default": 3600,
+                    "interval": 60
+                  }
+                },
+                {
+                  "mode": "KeepWarm",
+                  "remoteControlProperty": [
+                    "set"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 80,
+                      "max": 80,
+                      "default": 80,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 175,
+                      "max": 175,
+                      "default": 175,
+                      "interval": 1
+                    }
+                  }
+                },
+                {
+                  "mode": "BreadProof",
+                  "remoteControlProperty": [
+                    "set",
+                    "start"
+                  ],
+                  "temperature": {
+                    "celsius": {
+                      "min": 35,
+                      "max": 35,
+                      "default": 35,
+                      "interval": 1
+                    },
+                    "fahrenheit": {
+                      "min": 95,
+                      "max": 95,
+                      "default": 95,
+                      "interval": 1
+                    }
+                  },
+                  "time": {
+                    "min": 60,
+                    "max": 35940,
+                    "default": 3600,
+                    "interval": 60
+                  }
+                },
+                {
+                  "mode": "SelfClean",
+                  "remoteControlProperty": [
+                    ""
+                  ]
+                },
+                {
+                  "mode": "SteamClean",
+                  "remoteControlProperty": [
+                    ""
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "href": "/oven/status/vs/0",
+      "rep": {
+        "sequenceNumber": 45,
+        "cavityName": "single",
+        "availableSettingList": [
+          "12HourEnergySaving",
+          "beepSound",
+          "temperatureAdjustment",
+          "temperatureUnit",
+          "timeFormat",
+          "displayTimeAutoSync",
+          "lamp"
+        ],
+        "door": {
+          "state": "closed",
+          "lock": "off"
+        },
+        "smartControl": "on",
+        "lamp": "off",
+        "childLock": "off",
+        "availableModeList": [
+          "Bake",
+          "Broil",
+          "ConvectionBake",
+          "ConvectionRoast",
+          "AirFryMax",
+          "KeepWarm",
+          "BreadProof"
+        ],
+        "operation": "ready",
+        "subOperation": "ready",
+        "mode": {
+          "name": "NoOperation"
+        },
+        "temperature": {
+          "unit": "fahrenheit",
+          "target": 0,
+          "current": 175
+        },
+        "time": {
+          "operation": "ready",
+          "setting": 0,
+          "completion": "",
+          "remaining": 0
+        },
+        "ddms": "off"
+      }
+    },
+    {
+      "href": "/oven/settings/status/vs/0",
+      "rep": {
+        "sequenceNumber": 26,
+        "timeFormat": "12h",
+        "displayTimeAutoSync": "on",
+        "beepSound": "on",
+        "temperatureUnit": "fahrenheit",
+        "temperatureAdjustment": 0,
+        "12HourEnergySaving": "on",
+        "sabbathMode": "off"
+      }
+    },
+    {
+      "href": "/cooktop/spec/vs/0",
+      "rep": {
+        "deviceType": "range",
+        "supportedFeatureList": [
+          "batchMonitoring",
+          "warmingCenter"
+        ],
+        "numberOfBurners": 4
+      }
+    },
+    {
+      "href": "/cooktop/status/vs/0",
+      "rep": {
+        "sequenceNumber": 103,
+        "operationState": "ready",
+        "warmingCenterOperation": "off",
+        "burnerList": [
+          {
+            "burnerNumber": 0,
+            "operationState": "ready"
+          },
+          {
+            "burnerNumber": 1,
+            "operationState": "ready"
+          },
+          {
+            "burnerNumber": 2,
+            "operationState": "ready"
+          },
+          {
+            "burnerNumber": 3,
+            "operationState": "ready"
+          }
+        ],
+        "rt": [
+          "cooktopStatus"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/cooktop/settings/status/vs/0",
+      "rep": {
+        "sequenceNumber": 63,
+        "burnerOnAlert": "off",
+        "rt": [
+          "cooktopSettingStatus"
+        ],
+        "if": [
+          "oic.if.baseline",
+          "oic.if.s"
+        ]
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "supportedVersion": "1.0"
+      }
+    }
+  ]
+}

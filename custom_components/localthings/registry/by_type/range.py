@@ -42,6 +42,8 @@ REGISTRY = DeviceRegistry(
             range_caps.COOKTOP_SPEC,
             range_caps.COOKTOP_SAFETY,
             range_caps.COOKTOP_MONITORING,
+            range_caps.DAWIT_OVEN_STATUS,
+            range_caps.DAWIT_OVEN_SETTINGS,
         ]
     ),
 )

@@ -205,6 +205,26 @@ class HandshakeTimeout(CannotConnect):
     error_key = "handshake_timeout"
 
 
+class ExecMemoryDenied(CannotConnect):
+    """Home Assistant's own process may not map write+execute memory, which
+    cffi needs for the DTLS library's callbacks (#740: systemd's
+    MemoryDenyWriteExecute). No port or credential can change that."""
+
+    error_key = "exec_memory_denied"
+
+
+def _exec_memory_denied(exc: BaseException) -> bool:
+    """Whether `exc`, or anything it wraps, is cffi refusing an ffi.callback()."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if "write+execute memory" in str(current):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 class CertRejected(CannotConnect):
     """The appliance broke off the handshake over our certificate."""
 
@@ -924,6 +944,10 @@ def _handshake_and_read(
                     raise
                 raise failure from err
             except Exception as exc:
+                if _exec_memory_denied(exc):
+                    raise ExecMemoryDenied(
+                        f"this host denies the write+execute memory cffi needs: {exc}"
+                    ) from exc
                 if not retried and _worth_retrying(exc, port in scan.confirmed, local_port):
                     retried = True
                     _LOGGER.debug("port %d failed (%s); retrying once", port, exc)
@@ -2180,11 +2204,8 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         deadline = time.monotonic() + _CLOUD_WAIT_TIMEOUT_S
         while time.monotonic() < deadline:
             slot = await coord.async_probe_cloud_courses()
-            # Only a slot the store actually recorded. The probe reports
-            # whatever payload is loaded, while observe() declines one whose
-            # slot the device doesn't advertise -- offering to name that would
-            # take a name and silently discard it, since there is no record to
-            # hang it on and no payload to replay.
+            # Only a slot the store actually recorded: naming one with no
+            # payload to replay would silently discard the name.
             if (
                 slot is not None
                 and slot != self._cloud_baseline
@@ -2211,7 +2232,7 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         rep = coord.cloud_course_rep()
         courses = cycle_options(coord.canonical_resources(MAIN))
         record = coord.cloud_courses.snapshot()
-        slots = cloudcourse.cloud_slots(rep, courses)
+        slots = cloudcourse.known_slots(rep, courses, record)
         names = [n for s in slots if (n := (record["slots"].get(s) or {}).get("name"))]
         return {
             "named": str(len(names)),
@@ -2365,10 +2386,11 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
         rep = coord.cloud_course_rep()
         record = store.snapshot()
         slots = record["slots"]
-        advertised = cloudcourse.cloud_slots(rep, cycle_options(coord.canonical_resources(MAIN)))
-        # Learned slots keep the appliance's own ordering; anything learned
-        # but no longer advertised still gets a row so a name isn't stranded.
-        known = [s for s in advertised if s in slots] + [s for s in slots if s not in advertised]
+        courses = cycle_options(coord.canonical_resources(MAIN))
+        advertised = cloudcourse.cloud_slots(rep, courses)
+        # Learned slots in the appliance's own order, then any it doesn't list
+        # (issue #780) or no longer lists, so a name isn't stranded.
+        known = [s for s in cloudcourse.known_slots(rep, courses, record) if s in slots]
 
         if user_input is not None:
             errors = self._apply_cloud_course_names(coord, known, user_input)
@@ -2474,7 +2496,7 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             errors=errors or {},
             description_placeholders={
                 "found": str(len(known)),
-                "total": str(len(advertised)) if advertised else str(len(known)),
+                "total": str(len(known) + len(pending)),
                 "pending": ", ".join(pending) if pending else "(none)",
             },
         )

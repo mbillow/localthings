@@ -16,6 +16,8 @@ from datetime import time as dt_time
 from typing import Any, Literal
 
 WriteFn = Callable[[Any, dict], "tuple[list[str], dict] | None"] | None
+# ((kind, value), rep) -> (path_segs, body), for the composite media player.
+MediaWriteFn = Callable[[tuple[str, Any], dict], "tuple[list[str], dict] | None"] | None
 # (payload, rep, resources) -> a translation key, or None to allow the
 # write. resources is the coordinator's full href->rep snapshot, for the same
 # cross-resource lookups exists_fn needs (e.g. reading a sibling href's live
@@ -28,6 +30,8 @@ ButtonPayloadFn = Callable[[datetime], Any] | None
 # platform supplies `now` so the registry stays free of HA's timezone
 # handling, the same split ButtonPayloadFn uses.
 TimePayloadFn = Callable[[dt_time, datetime], Any] | None
+# payload -> whether a write policy applies to that payload.
+PayloadPredicate = Callable[[Any], bool] | None
 
 
 def _identity(v: Any) -> Any:
@@ -59,6 +63,25 @@ class SamsungEntityDescription:
     # resources is the coordinator's full href->rep snapshot, for gating
     # presence on a sibling resource (e.g. laundry.cycle_options's source).
     exists_fn: Callable[[dict, dict], bool] | None = None
+    # Recheck exists_fn after setup: add when present, unavailable when
+    # absent. For presence that follows live state, not the model. Its
+    # resource's absence never prunes it from the snapshot.
+    dynamic_presence: bool = False
+    # A static exists_fn that a first read can't always decide (the buzzer's
+    # vocabulary). A stub borrows the snapshot's rep at registration, and
+    # later live data that decides otherwise adds or disables it in place.
+    late_evidence: bool = False
+    # Remove this entity's registry row when exists_fn excludes it. Only for
+    # an exists_fn verified to mean "this model never has it" (#698, #747).
+    prune_when_excluded: bool = False
+    # (platform, key) rows this entity replaces, removed once it is included
+    # on a rep that carries its field (not a stub or {}) and the old key, if
+    # still bound, is excluded.
+    supersedes: tuple[tuple[str, str], ...] = ()
+    # Once included, remove this key's rows on its siblings' platforms. Only
+    # where inclusion is a model fact, never live state, and where a rep that
+    # can't decide yet excludes this descriptor.
+    replaces_siblings: bool = False
     extra_state_attributes_fn: Callable[[dict, dict], dict[str, Any]] | None = None
     # One of cook.PARAM_*: a cook parameter the coordinator holds while an
     # idle oven can be started, instead of writing it (issue #473).
@@ -66,6 +89,10 @@ class SamsungEntityDescription:
     # False for a write the appliance takes with Remote Control off; the
     # coordinator then leaves the refusal, if any, to the appliance.
     needs_remote_control: bool = True
+    # Some boards apply a write but answer 4.00; require a fresh matching GET
+    # before accepting it, including a refusal of a value already set (a no-op).
+    # Raw writes retain the device's response.
+    confirm_on_refusal: bool = False
     # The write carries one `<Group>_<Value>` token of a multi-group
     # x.com.samsung.da.modes list (robot_vacuum). The coordinator merges it
     # by prefix into the cached list, as it does for options, instead of
@@ -74,12 +101,34 @@ class SamsungEntityDescription:
     # Wire body -> the body to merge into the cache, for a write whose effect
     # the device reports in fields it never accepts. The wire body is unchanged.
     optimistic_fn: Callable[[dict], dict] | None = None
+    # A write that must not be resent once it may have reached the device:
+    # a lost reply can follow one that landed, and a relative seek or a skip
+    # would then apply twice. A write that never left is still retried.
+    resend_unsafe_fn: PayloadPredicate = None
+    # Cache the optimistic value only once the device acknowledged the
+    # write, so a failed one can't become the next write's baseline.
+    cache_after_ack_fn: PayloadPredicate = None
+    # A payload that is a command, with no readable state behind it (a
+    # skip): treated as write_only, so nothing is cached and polls of its
+    # href aren't held back.
+    command_fn: PayloadPredicate = None
+    # The device can refuse a command inside a 2.04 and say so in the body,
+    # {"controlResponse": {"result": false}} (AV boards).
+    control_response: bool = False
+
+    def __post_init__(self) -> None:
+        # Excluded is the normal state of a dynamic entity, so neither
+        # registry removal may act on one.
+        if self.dynamic_presence and (
+            self.prune_when_excluded or self.supersedes or self.replaces_siblings
+        ):
+            raise ValueError(f"{self.key}: registry removal can't apply to dynamic_presence")
+        if self.prune_when_excluded and self.exists_fn is None:
+            raise ValueError(f"{self.key}: prune_when_excluded needs an exists_fn")
 
 
 @dataclass(frozen=True, kw_only=True)
 class SensorDesc(SamsungEntityDescription):
-    # Recheck inclusion after setup: add when present, unavailable when absent.
-    dynamic_presence: bool = False
     device_class: str | None = None
     state_class: str | None = None
     unit: str | None = None
@@ -175,6 +224,8 @@ class NumberDesc(SamsungEntityDescription):
 
 @dataclass(frozen=True, kw_only=True)
 class TimeDesc(SamsungEntityDescription):
+    # (raw value, local now) -> displayed clock for a daily UTC-backed window.
+    native_value_fn: Callable[[Any, datetime], dt_time | None] | None = None
     write_fn: WriteFn = None
     payload_fn: TimePayloadFn = None
 
@@ -212,6 +263,43 @@ class WaterHeaterDesc(SamsungEntityDescription):
     write_fn: WriteFn = None
 
 
+@dataclass(frozen=True)
+class MediaModeSurface:
+    """A selectable mode (source, sound mode): where it lives and how to read it."""
+
+    href: str
+    field: str
+    options_field: str
+    # Wire value -> label, for values with no readable name (`wifiidle`).
+    labels: Mapping[str, str] | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaPlayerDesc(SamsungEntityDescription):
+    # Binds the generic /capability/mediaPlayback resource; the family names
+    # its sibling resources here, so media_player.py needs no per-family code.
+    # write_fn maps (kind, value) -> (path_segs, body), like ClimateDesc.
+    device_class: str = "speaker"
+    power_href: str = ""
+    audio_href: str = ""
+    source: MediaModeSurface | None = None
+    sound_mode: MediaModeSurface | None = None
+    track_href: str | None = None
+    shuffle_href: str | None = None
+    # Advertises next/previous in supportedModes while a stream is active.
+    track_control_href: str | None = None
+    # resources -> the family's own playback state ("PLAYING", "PAUSED", ...),
+    # preferred over the generic feed when it reports one.
+    status_fn: Callable[[dict], str | None] | None = None
+    # resources -> False when the generic playback and track feeds are stale,
+    # e.g. a soundbar keeps its last stream's track on an HDMI input.
+    stream_active_fn: Callable[[dict], bool] | None = None
+    # False where the device refuses stop while paused, so it isn't offered.
+    stop_when_paused: bool = True
+    write_fn: MediaWriteFn = None
+    validate_fn: ValidateFn = None
+
+
 @dataclass(frozen=True, kw_only=True)
 class VacuumDesc(SamsungEntityDescription):
     # Composite vacuum entity: rep_fn gives the HA activity; vacuum.py reads
@@ -232,5 +320,6 @@ PLATFORM_OF: dict[type, str] = {
     FanDesc: "fan",
     WaterHeaterDesc: "water_heater",
     ZoneClimateDesc: "climate",
+    MediaPlayerDesc: "media_player",
     VacuumDesc: "vacuum",
 }

@@ -507,6 +507,31 @@ def test_confirmed_wv9900_table_00_course_names():
         assert t00["91"] == self_clean, language
 
 
+def test_confirmed_wd80n645_table_00_course_names():
+    """A WD80N645OOW/EU washer-dryer (DA_WM_A51_20_COMMON) owner read six
+    more Table_00 courses out of the SmartThings app (issue #736). The three
+    drying and Air Wash courses reuse their washer_cycle_table_02 wording.
+    """
+    shared = {"ca": "37", "50": "38", "51": "39"}
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t00 = select["washer_cycle_table_00"]["state"]
+        t02 = select["washer_cycle_table_02"]["state"]
+        for code, twin in shared.items():
+            assert t00[code] == t02[twin], (language, code, twin)
+        assert {"e3", "e7", "c7"} <= set(t00), language
+
+    english = _load("en")["entity"]["select"]["washer_cycle_table_00"]["state"]
+    assert {code: english[code] for code in ("e7", "ca", "51", "50", "e3", "c7")} == {
+        "e7": "Speed Wash+Dry",
+        "ca": "Air Wash",
+        "51": "Synthetics Dry",
+        "50": "Cotton Dry",
+        "e3": "Daily Wash",
+        "c7": "Eco Drum Clean",
+    }
+
+
 def test_confirmed_dryer_dry_level_labels():
     """dryer_dry_level's word vocabulary (None/Damp/Less/Normal/More/Very),
     confirmed across the TP1_21 dryer fixtures. The numeric vocabulary
@@ -720,6 +745,8 @@ def test_confirmed_course_names_are_localized():
 UNNAMED_DESCRIPTORS = {
     ("fan", "fan"),
     ("fan", "paired_hood_fan"),
+    # Named after the device, like the fan; HA core translates its states.
+    ("media_player", "media_player"),
 }
 
 
@@ -903,3 +930,32 @@ def test_the_dw8700b_dishwasher_table_differs_only_where_its_owner_said(lang):
         k: v for k, v in shared["state"].items() if k not in own
     }
     assert own <= variant["state"].keys()
+
+
+def test_confirmed_awm_us_m64_table_02_course_names():
+    """Issue #784: an AWM-US-M64-25-WD80 washer-dryer reports Table_02 but
+    uses seven high-range codes the table lacked; the reporter confirmed
+    each by selecting it on the panel. Four reuse an existing label, pinned
+    to their twin in every locale (the #343 gap)."""
+    shared = {
+        "a1": ("washer_cycle_table_02", "01"),  # Normal
+        "59": ("washer_cycle_table_00", "77"),  # Perm Press
+        "a8": ("dryer_cycle_table_00", "a4"),  # Time Dry
+        "aa": ("dryer_cycle_table_00", "a0"),  # Air Fluff
+    }
+    for language in _languages():
+        select = _load(language)["entity"]["select"]
+        t02 = select["washer_cycle_table_02"]["state"]
+        for code, (table, twin) in shared.items():
+            assert t02[code] == select[table]["state"][twin], (language, code)
+
+    english = _load("en")["entity"]["select"]["washer_cycle_table_02"]["state"]
+    assert {code: english[code] for code in ("a1", "a7", "a9", "ad", "59", "a8", "aa")} == {
+        "a1": "Normal",
+        "a7": "Product Care",
+        "a9": "Tide Pod Cold",
+        "ad": "AI OptiWash+Dry",
+        "59": "Perm Press",
+        "a8": "Time Dry",
+        "aa": "Air Fluff",
+    }

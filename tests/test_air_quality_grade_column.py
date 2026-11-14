@@ -3,10 +3,11 @@ it is what confirms Dust/FineDust/SuperFineDust are PM10/PM2.5/PM1.
 
 `x.com.samsung.da.value` is `[concentration, grade]` on the fields that
 carry a magnitude and `[grade]` on Odor/CleanLevel, which are grades
-already. Index 1 is never bound to an entity (its floor differs by board
-family), but it is the device's own opinion about its own readings, and
-that makes it the one piece of evidence for the PM mapping that doesn't
-depend on Samsung's field names or on a user's screenshot.
+already. Only the range hood binds index 1 (range_hood._particle_grade),
+since its floor differs by board family. It is also the device's own
+opinion about its own readings, which makes it the one piece of evidence
+for the PM mapping that doesn't depend on Samsung's field names or on a
+user's screenshot.
 
 These assertions read the shipped fixtures rather than restating numbers,
 so a re-captured dump that contradicts the mapping fails here instead of
@@ -128,8 +129,8 @@ def test_clean_level_aggregates_the_per_field_grades():
 
 
 def test_grade_floor_is_zero_based_on_artik051_tvtl_and_one_based_elsewhere():
-    """Why index 1 stays unbound: a shared descriptor would need a
-    per-family offset to mean anything."""
+    """Why index 1 has no shared descriptor: it would need a per-family
+    offset to mean anything, so only the hood maps its own grades."""
     assert _items("air_purifier")["CleanLevel"] == ["0"]
     for fixture in ("air_monitor", "air_purifier_avt_ww", "air_purifier_vtww", "range_hood"):
         assert int(_items(fixture)["CleanLevel"][0]) >= 1, fixture
