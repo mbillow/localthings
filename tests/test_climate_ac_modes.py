@@ -114,6 +114,9 @@ def test_fac_bora_wind_strength_codes_fit_the_standard_scale():
         def resource(self, href):
             return self.last_resources.get(href, {})
 
+        def capability_canonical(self, subdevice):
+            return self.canonical_resources(subdevice)
+
         def canonical_resources(self, subdevice):
             # This test's entity uses the default MAIN subdevice, so the
             # canonical view is just the raw snapshot (issue #177).

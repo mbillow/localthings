@@ -37,6 +37,9 @@ class _Coordinator:
     def resource(self, href):
         return self.last_resources.get(href, {})
 
+    def capability_canonical(self, subdevice):
+        return self.canonical_resources(subdevice)
+
     def canonical_resources(self, subdevice):
         return self.last_resources
 

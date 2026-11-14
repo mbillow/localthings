@@ -136,3 +136,17 @@ async def test_offline_load_still_withholds_stale_values(hass):
     for entity in _climate(hass, restored):
         assert entity.current_temperature is None
         assert entity.target_temperature is None
+
+
+async def test_offline_load_keeps_legacy_presets(hass):
+    """A legacy /airflow board has no convenient resource: its presets are
+    built from the Comode_* token in /mode/vs/0's options, which the
+    capability view has to reach as well."""
+    online = _coordinator(hass)
+    await _discover(online, FIXTURE)
+    expected = [entity.preset_modes for entity in _climate(hass, online)]
+    assert expected and all(modes for modes in expected)
+
+    restored = await _rehydrated(hass, online)
+    assert [entity.preset_modes for entity in _climate(hass, restored)] == expected
+    assert all(entity.preset_mode is None for entity in _climate(hass, restored))
