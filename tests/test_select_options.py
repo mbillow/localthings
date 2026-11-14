@@ -31,6 +31,9 @@ class _FakeCoordinator:
         # (issue #177 -- see LocalThingsEntity._resources).
         return self.last_resources
 
+    def capability_canonical(self, subdevice):
+        return self.canonical_resources(subdevice)
+
 
 def _make_select(desc, href, last_resources, coordinator_cls=_FakeCoordinator):
     capability = Capability(href=href, entities=(desc,))

@@ -865,6 +865,63 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         resources = self._cook_view(self.discovery_resources)
         return canonical_view(subdevice, resources, self.subdevices)
 
+    def capability_canonical(self, subdevice: Subdevice) -> dict[str, dict]:
+        """What `subdevice`'s capability attributes (option lists, setpoint
+        bounds) are answered from: the live view, with the snapshot standing
+        in for what hasn't answered yet. Values never read this.
+
+        Home Assistant publishes capability attributes for an unavailable
+        entity too, and HomeKit Bridge bakes them into its accessory once, so
+        an answer from an empty view sticks for the run. Before the first
+        live discovery the whole snapshot stands in (#295); after it, only
+        the hrefs _track_unconfirmed still holds, missed rather than known
+        gone (#807), so a sub-unit that is silent or answering short keeps
+        its lists while an href let go of stays gone.
+        """
+        live = self.canonical_resources(subdevice)
+        rehydrated = self._rehydrate_resources is not None
+        held = {} if rehydrated else self._held_resources()
+        if live if rehydrated else not held:
+            return live
+        view_key = (f"capability:{subdevice.kind}", subdevice.key)
+        cached = self._canonical_cache.get(view_key)
+        if cached is not None:
+            return cached
+        if rehydrated:
+            view = self.discovery_canonical(subdevice)
+        else:
+            # A silent sub-unit isn't in self.subdevices, but its held hrefs
+            # still mustn't land in MAIN's view.
+            owners = [
+                *self.subdevices,
+                *(
+                    su
+                    for su in self._known_subdevices
+                    if su not in self.subdevices and any(su.owns(href) for href in held)
+                ),
+            ]
+            view = canonical_view(subdevice, {**held, **self.entity_resources()}, owners)
+        self._canonical_cache[view_key] = view
+        return view
+
+    def _held_resources(self) -> dict[str, dict]:
+        """The banked reps of the hrefs _track_unconfirmed still holds. A
+        dynamic_presence href is left out: it is never let go of, and its
+        absence means the thing it reports is absent, not a short read."""
+        if not self._unconfirmed:
+            return {}
+        cached = self._canonical_cache.get(("capability:held", ""))
+        if cached is not None:
+            return cached
+        dynamic = {b.href for b in self.bound if b.desc.dynamic_presence}
+        held = {
+            href: self._banked_resources[href]
+            for href in self._unconfirmed
+            if href in self._banked_resources and href not in dynamic
+        }
+        self._canonical_cache[("capability:held", "")] = held
+        return held
+
     # ------------------------------------------------------------------
     # Learned modes (issue #327)
     # ------------------------------------------------------------------
@@ -2255,8 +2312,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         for owner in self._owners_awake(resources):
             self._owner_cycles[owner] = self._owner_cycles.get(owner, 0) + 1
-        for href in [h for h in self._unconfirmed if self._cache.get(h) is not None]:
+        answered = [h for h in self._unconfirmed if self._cache.get(h) is not None]
+        for href in answered:
             del self._unconfirmed[href]
+        if answered:
+            self._canonical_cache.clear()
         # A dynamic_presence entity's resource is absent for as long as the
         # thing it reports is (an unplugged oven probe), so absence never
         # lets it go.
@@ -2271,6 +2331,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for href in gone:
             del self._unconfirmed[href]
         self._pruned |= set(gone)
+        # capability_canonical held these, and a cycle with no value change
+        # wouldn't drop its memo otherwise.
+        self._canonical_cache.clear()
         self._log.info(
             "%s didn't answer in %d polls; entities only it backed won't be "
             "provided after the next restart",

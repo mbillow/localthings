@@ -342,7 +342,7 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
     # distinguishable from the Smart preset below, and no name to give it that
     # the appliance would recognise.
 
-    def _legacy_preset_codes(self, hvac: str, options: list) -> list[str]:
+    def _legacy_preset_codes(self, hvac: str, options: list, rep: dict) -> list[str]:
         """Comfort-mode codes this unit offers in this HVAC mode.
 
         Derived only for boards that publish *both* capability maps. One map on
@@ -359,7 +359,6 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         to a parsing failure is worse than offering one too many. Codes that were
         never in that list (d'light) still need their bit to be explicitly set.
         """
-        rep = self._rep(MODE_HREF)
         if (
             not has_option_code(rep)
             or not has_extend_option_code(rep)
@@ -406,10 +405,14 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
             codes += self._LEGACY_SLEEP_PRESET_CODES
         return codes
 
-    def _legacy_convenient(self) -> dict:
+    def _legacy_convenient(self, mode_rep: dict | None = None) -> dict:
         """A /mode/convenient/vs/0-shaped rep built from the Comode_* token in
-        /mode/vs/0's options, for boards that have no convenient resource."""
-        options = self._rep(MODE_HREF).get("x.com.samsung.da.options") or []
+        /mode/vs/0's options, for boards that have no convenient resource.
+        `mode_rep` defaults to the live one; the option list passes the
+        capability view's so presets survive an offline load."""
+        if mode_rep is None:
+            mode_rep = self._rep(MODE_HREF)
+        options = mode_rep.get("x.com.samsung.da.options") or []
         active = next(
             (o.split("_", 1)[1] for o in options if isinstance(o, str) and o.startswith("Comode_")),
             None,
@@ -417,7 +420,7 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         if active is None:
             return {}
 
-        codes = self._legacy_preset_codes(_first(self._rep(MODE_HREF).get(_MODES_FIELD)), options)
+        codes = self._legacy_preset_codes(_first(mode_rep.get(_MODES_FIELD)), options, mode_rep)
         # Whatever the unit is actually running has to be listed whether the
         # rules expect it there or not -- a preset_mode outside preset_modes is
         # not a state HA allows, and the appliance has the last word on what it
@@ -467,7 +470,21 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         would make the resource never look empty.
         """
         convenient_href = self._bound.subdevice.to_actual(CONVENIENT_HREF)
-        return not self.coordinator.resource(convenient_href) and bool(self._legacy_airflow())
+        return not self.coordinator.resource(convenient_href) and self._legacy_airflow_channel()
+
+    def _legacy_airflow_channel(self) -> bool:
+        """Whether /airflow/vs/0 is this board's fan/swing channel, from the
+        capability view -- so the preset list and the preset write agree on
+        a unit whose airflow resource hasn't answered yet."""
+        return self._legacy_airflow_board() and bool(self._capability_rep(AIRFLOW_HREF))
+
+    def _capability_rep(self, href: str) -> dict:
+        """The base capability view, plus _rep's Comode_* synthesis for a
+        legacy board's presets, built from the capability view's mode rep."""
+        rep = super()._capability_rep(href)
+        if not rep and href == CONVENIENT_HREF and self._legacy_airflow_channel():
+            return self._legacy_convenient(super()._capability_rep(MODE_HREF))
+        return rep
 
     def _rep(self, href: str) -> dict:
         """`href` is one of this module's canonical HREF_* constants,
@@ -495,9 +512,9 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         paths resolve codes through here, so a learned code is selectable
         and writable by virtue of appearing in one list.
 
-        Falls back to the discovery snapshot while the live cache is empty,
-        so an offline load doesn't publish an hvac_modes of nothing but OFF
-        -- see LocalThingsEntity._capability_resources.
+        Falls back to the capability view for what hasn't answered, so an
+        offline load or a silent sub-unit doesn't publish an hvac_modes of
+        nothing but OFF -- see coordinator.capability_canonical.
         """
         rep = self._rep(href) or self._capability_rep(href)
         supported = list(rep.get(_SUPPORTED_FIELD) or [])

@@ -19,6 +19,7 @@
     "detergent_water_hardness",
     "diagnosis_status",
     "drum_clean_cycles_remaining",
+    "drum_light",
     "dry_level",
     "dry_progress_percentage",
     "dry_time",

@@ -8,12 +8,16 @@ nothing but OFF leaves the Home app offering nothing but "off" for the rest
 of the run.
 """
 
+from unittest.mock import AsyncMock, patch
+
 from homeassistant.components.climate import ClimateEntityCapabilityAttribute, HVACMode
 
-from custom_components.localthings.climate import LocalThingsClimate
+from custom_components.localthings.climate import AIRFLOW_HREF, LocalThingsClimate
 from custom_components.localthings.coordinator import LocalThingsCoordinator
 from custom_components.localthings.registry.entities import ClimateDesc
-from tests.test_subdevice_discovery import _coordinator, _discover
+from custom_components.localthings.registry.subdevices import MAIN
+from tests.conftest import _load_device_full
+from tests.test_subdevice_discovery import _coordinator, _discover, _discover_with
 
 # Two climate entities across a subdevice, so one snapshot covers the
 # per-subdevice path as well as the single-entity one.
@@ -136,3 +140,36 @@ async def test_offline_load_still_withholds_stale_values(hass):
     for entity in _climate(hass, restored):
         assert entity.current_temperature is None
         assert entity.target_temperature is None
+
+
+async def test_offline_load_keeps_legacy_presets(hass):
+    """A legacy /airflow board has no convenient resource: its presets are
+    built from the Comode_* token in /mode/vs/0's options, which the
+    capability view has to reach as well."""
+    online = _coordinator(hass)
+    await _discover(online, FIXTURE)
+    expected = [entity.preset_modes for entity in _climate(hass, online)]
+    assert expected and all(modes for modes in expected)
+
+    restored = await _rehydrated(hass, online)
+    assert [entity.preset_modes for entity in _climate(hass, restored)] == expected
+    assert all(entity.preset_mode is None for entity in _climate(hass, restored))
+
+
+async def test_a_held_airflow_rep_writes_presets_the_legacy_way(hass):
+    """A unit whose /airflow/vs/0 is held unconfirmed (#850) lists its
+    Comode_* presets from the capability view, so the write has to take the
+    same legacy path -- not /mode/convenient/vs/0, which the board lacks."""
+    resources, oic_res, seeds = _load_device_full(FIXTURE)
+    airflow = resources.pop(AIRFLOW_HREF)
+    coordinator = _coordinator(hass)
+    await _discover_with(coordinator, resources, oic_res, seeds)
+    coordinator._banked_resources[AIRFLOW_HREF] = airflow
+    coordinator._unconfirmed[AIRFLOW_HREF] = MAIN.key
+
+    (entity,) = [e for e in _climate(hass, coordinator) if e._bound.subdevice == MAIN]
+    preset = next(p for p in entity.preset_modes if p not in ("none", "ai_comfort"))
+    with patch.object(coordinator, "async_send_command", AsyncMock()) as send:
+        await entity.async_set_preset_mode(preset)
+    kinds = {call.args[1][0] for call in send.await_args_list}
+    assert "preset_legacy" in kinds and "preset" not in kinds
