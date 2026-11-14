@@ -16,10 +16,10 @@ from homeassistant.helpers.device_registry import (
     EVENT_DEVICE_REGISTRY_UPDATED,
     EventDeviceRegistryUpdatedData,
 )
-from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 from . import wol
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_MAC, DOMAIN
+from .devices import find_entry_device
 from .registry.capabilities import tv as tv_caps
 from .registry.discovery import BoundEntity
 
@@ -94,8 +94,8 @@ class AVControl:
         return self._registry_mac[0]
 
     def _lookup_registry_mac(self) -> str | None:
-        device = async_get_device_registry(self.hass).async_get_device(
-            identifiers={(DOMAIN, self._coordinator.device_key)}
+        device = find_entry_device(
+            self.hass, self._coordinator._entry.entry_id, {(DOMAIN, self._coordinator.device_key)}
         )
         if device is None:
             return None

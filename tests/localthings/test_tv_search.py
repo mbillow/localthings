@@ -9,9 +9,9 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
 
 from custom_components.localthings.const import DOMAIN
+from custom_components.localthings.devices import find_entry_device
 from tests.localthings.test_soundbar import _mock_entry, _setup_soundbar
 from tests.localthings.test_tv_media_player_tu7172 import _entry, _setup_tv
 
@@ -20,7 +20,9 @@ _SEARCH = ["sec", "tv", "searchonweb"]
 
 def _device_id(hass: HomeAssistant) -> str:
     coordinator = next(iter(hass.data[DOMAIN].values()))
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, coordinator.device_key)})
+    device = find_entry_device(
+        hass, coordinator._entry.entry_id, {(DOMAIN, coordinator.device_key)}
+    )
     assert device is not None
     return device.id
 

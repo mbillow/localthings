@@ -41,7 +41,9 @@ async def _setup_tv(hass: HomeAssistant, *, advertised: bool = True):
 
 
 def _device_id(hass: HomeAssistant) -> str:
-    return next(iter(dr.async_get(hass).devices.values())).id
+    (entry,) = hass.config_entries.async_entries(DOMAIN)
+    (device,) = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    return device.id
 
 
 def _menu(menu_id: str, param: str, name: str | None = None) -> tuple[list[str], dict]:

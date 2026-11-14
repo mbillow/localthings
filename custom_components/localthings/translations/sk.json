@@ -3008,7 +3008,7 @@
       "message": "Toto zariadenie si neuchováva zoznam aplikácií televízora."
     },
     "invalid_ask": {
-      "message": "extra.ask musí byť true alebo false, nie '{value}'."
+      "message": "extra.ask musí byť true alebo false, nie {value}."
     },
     "camera_timeout": {
       "message": "Kamera {camera} odpovedala príliš dlho."

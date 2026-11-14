@@ -3008,7 +3008,7 @@
       "message": "To urządzenie nie przechowuje listy aplikacji telewizora."
     },
     "invalid_ask": {
-      "message": "extra.ask musi mieć wartość true lub false, a nie '{value}'."
+      "message": "extra.ask musi mieć wartość true lub false, a nie {value}."
     },
     "camera_timeout": {
       "message": "Kamera {camera} zbyt długo nie odpowiadała."

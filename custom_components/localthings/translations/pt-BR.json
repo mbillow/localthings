@@ -3008,7 +3008,7 @@
       "message": "Este dispositivo não mantém uma lista de aplicativos de TV."
     },
     "invalid_ask": {
-      "message": "extra.ask deve ser true ou false, não '{value}'."
+      "message": "extra.ask deve ser true ou false, não {value}."
     },
     "camera_timeout": {
       "message": "A câmera {camera} demorou demais para responder."

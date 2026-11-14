@@ -16,6 +16,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings import tvapps
 from custom_components.localthings.const import CONF_KNOWN_APPS, DOMAIN
+from custom_components.localthings.devices import find_entry_device
 from tests.localthings.test_tv_media_player_tu7172 import ENTRY_DATA, MOCK_TV_DI, _setup_tv
 
 _LAUNCH = ["sec", "tv", "launchapp"]
@@ -250,12 +251,11 @@ async def test_an_empty_app_id_is_refused(hass: HomeAssistant) -> None:
 
 
 async def test_forget_known_apps_keeps_only_the_built_in_screens(hass: HomeAssistant) -> None:
-    from homeassistant.helpers import device_registry as dr
 
     entry = _entry(hass, **{CONF_KNOWN_APPS: {"kIciSQlYEM.plex": "Plex"}})
     await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, coordinator.device_key)})
+    device = find_entry_device(hass, entry.entry_id, {(DOMAIN, coordinator.device_key)})
     assert device is not None
 
     await hass.services.async_call(

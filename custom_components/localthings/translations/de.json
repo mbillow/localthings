@@ -3008,7 +3008,7 @@
       "message": "Dieses Gerät merkt sich keine TV-Apps."
     },
     "invalid_ask": {
-      "message": "extra.ask muss true oder false sein, nicht '{value}'."
+      "message": "extra.ask muss true oder false sein, nicht {value}."
     },
     "camera_timeout": {
       "message": "Die Kamera {camera} hat zu lange nicht geantwortet."

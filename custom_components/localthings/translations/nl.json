@@ -3008,7 +3008,7 @@
       "message": "Dit apparaat houdt geen lijst met tv-apps bij."
     },
     "invalid_ask": {
-      "message": "extra.ask moet true of false zijn, niet '{value}'."
+      "message": "extra.ask moet true of false zijn, niet {value}."
     },
     "camera_timeout": {
       "message": "Camera {camera} deed er te lang over om te antwoorden."

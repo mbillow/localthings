@@ -3008,7 +3008,7 @@
       "message": "이 기기는 TV 앱 목록을 보관하지 않습니다."
     },
     "invalid_ask": {
-      "message": "extra.ask는 true 또는 false여야 합니다('{value}' 아님)."
+      "message": "extra.ask는 true 또는 false여야 합니다({value} 아님)."
     },
     "camera_timeout": {
       "message": "카메라 {camera}의 응답이 너무 오래 걸렸습니다."

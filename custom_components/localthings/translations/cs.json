@@ -3008,7 +3008,7 @@
       "message": "Toto zařízení si nepamatuje žádné aplikace televize."
     },
     "invalid_ask": {
-      "message": "extra.ask musí být true nebo false, ne '{value}'."
+      "message": "extra.ask musí být true nebo false, ne {value}."
     },
     "camera_timeout": {
       "message": "Kamera {camera} odpovídala příliš dlouho."
