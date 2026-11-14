@@ -66,8 +66,9 @@ Three pieces, plus a gating rule.
 
 ### 1. A persisted discovery snapshot
 
-After each successful first cycle, `_save_snapshot` banks exactly the
-`resources` dict that cycle handed `_run_discovery`, along with the
+After each successful first cycle, `_async_save_snapshot` banks the
+`resources` dict that cycle handed `_run_discovery`, plus the last snapshot's
+reps for any href that read missed (see section 2), along with the
 pre-narrowing subdevice candidate list and the `DeviceIdentity` read from
 `/oic/*`.
 
@@ -81,8 +82,8 @@ resolution, and no second source of truth.
 
 Three things ride along because `_run_discovery` reads them off `self`
 rather than out of `resources`, and getting them wrong would silently resolve
-a *different* registry offline than online — which reconciliation below would
-then see as a real change and reload on every restart:
+a *different* registry offline than online, and register a different entity
+set on every restart:
 
 - `_identity.device_types` routes `resolve_registry`.
 - `self.subdevices` is the candidate list `discover_partitioned` narrows;
@@ -93,24 +94,66 @@ It lives in `.storage` (`Store`, keyed on entry_id) rather than on the config
 entry: it's device state, not configuration, and runs to tens of kilobytes.
 `async_remove_entry` deletes it with the entry.
 
-The write is awaited, not `async_delay_save`d. A deferred write outlives
-whatever queued it: it lands after `async_remove_entry` has deleted the file
-and recreates it orphaned, and a reload scheduled by the reconcile below
-would read the pre-reload snapshot back off disk. It runs once per entry
-load, so there's nothing worth deferring. A write that fails is logged and
+The write is not `async_delay_save`d. A deferred write outlives whatever
+queued it: it lands after `async_remove_entry` has deleted the file and
+recreates it orphaned. It runs once per entry load, plus once for each prune
+or late-evidence decision, so there's nothing worth deferring. A write that fails is logged and
 swallowed — a board reporting something the JSON encoder rejects must not
 break polling.
 
-### 2. Reconcile on reconnect
+### 2. Grow in place, shrink slowly
 
-The snapshot is a claim about a device we haven't talked to yet. When the
-first live poll lands, `_reconcile_rehydrated` compares the live entity set
-against the rehydrated one — as `(subdevice key, _key(bound))` pairs, which
-is the unique_id identity — and calls `async_schedule_reload` if they differ.
+The snapshot is a claim about a device we haven't talked to yet. The first
+version reloaded the entry whenever the first live discovery disagreed with
+it. One read can't tell a lost resource from a short answer, though, and
+that design looped: a two-unit AC whose sub-unit alternated between its full
+set and three resources reloaded every 30 s, closing the session under each
+subscribe burst (#807). An EHS heat pump whose seed came back short was
+reconciled down to the smaller set and lost its cycle sensors (#833).
 
-Gate 2 above is why this has to be a reload rather than an in-place fixup.
-It's what makes the feature safe against a firmware update, a sibling
-subdevice that starts answering, or a different appliance at the same IP.
+The first live discovery now runs on the live read alone and is added to
+what the snapshot registered (`_adopt_live_discovery`):
+
+- An entity the live read binds that wasn't registered is added in place.
+  Every platform registers through `entity.async_add_bound_entities`, which
+  adds any entity in `coordinator.bound` that `coordinator.registrable()`
+  allows, at setup and on each update after.
+- An entity registered from the snapshot that the live read didn't bind is
+  retained in `bound`, unavailable until its own resource answers
+  (`coordinator.provides()`).
+- The snapshot keeps the union. An href that never answers is let go only
+  once its owner — the main unit, or the sub-unit that owns it — has answered
+  `_PRUNE_AFTER_CYCLES` cycles without it (about two hours on a Collection
+  board; about eight on a flat board, which reads in full every fourth
+  poll), and then only from the snapshot: HA shows its entities as no longer
+  provided after the next restart. A cycle counts for an owner only if it
+  answered at least half of what it answered on the read discovery ran on,
+  the bar `read_all` sets for discovery itself, so a board in network
+  standby (handshake fine, most reads timing out) never ages anything out.
+  On a flat board, whose `/oic/res` is the full list it serves, an href that
+  list no longer carries is let go at once. A sub-unit that stays silent keeps its entities
+  indefinitely, and a `dynamic_presence` entity's href is never pruned.
+- A known sub-unit that isn't live (off when HA started) has its seed read
+  again with backoff, from every 10 cycles up to every 120, one sub-unit per
+  cycle on a 3 s timeout, since the read holds the session lock
+  (`_recover_dormant`). Once it answers with live state it joins polling (and
+  OBSERVE, if the entry is in it), and its entities are registered or become
+  available in place.
+- An entity the snapshot registered is retained only if the live read never
+  returned its href. One whose href answered without binding it is
+  unavailable for the run, and an entity a later discovery binds to another
+  href or descriptor is rebuilt in place under the same entity_id.
+- The first live cycle after a snapshot load runs the registry cleanup
+  again against live data, as the reload used to. An href the read missed
+  is no evidence there either: `prune_when_excluded` only acts on a rep
+  that is present.
+- A `late_evidence` gate (the buzzer's vocabulary) follows live data the same
+  way: an entity it now includes is added, one it now excludes goes
+  unavailable, and the deciding rep is banked for the next start.
+
+The one reload left is a device type that differs from the snapshot's, since
+nothing registered for the old type belongs to the appliance now answering.
+It happens at most once per entry per run.
 
 ### 3. Keep polling with no listeners
 

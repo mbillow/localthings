@@ -27,7 +27,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, SelectDesc)),
+        lambda b: isinstance(b.desc, SelectDesc),
         lambda b: LocalThingsSelect(coordinator, b),
     )
 

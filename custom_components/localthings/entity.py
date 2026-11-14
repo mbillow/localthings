@@ -17,92 +17,85 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
+from .registration import bound_id
+
+# Tests import it from here, where it lived before registration.py.
+from .registration import is_included as _is_included  # noqa: F401
 from .registry.adapter import _key
-from .registry.batch import is_stub_rep
 from .registry.discovery import BoundEntity, _snake_to_title
-
-
-def _is_included(
-    bound: BoundEntity, coordinator: LocalThingsCoordinator, *, live: bool = False
-) -> bool:
-    """Return False if the entity should not be registered for this device.
-
-    Explicit exists_fn takes priority. Otherwise, if the entity has a
-    field, require that field to be present in the resource rep so that
-    optional fields on shared resources don't create phantom entities.
-
-    A stub rep (is_stub_rep) is included anyway so it can be populated by
-    sub-polls. A genuinely empty {} rep is included too by this default
-    gate: whether empty means "not populated yet" or "permanently
-    unsupported" needs per-field domain knowledge this generic gate
-    doesn't have. Only a capability whose author
-    has verified a field is genuinely never populated opts into stricter
-    gating with its own exists_fn (see common.ENERGY_METER, issue #127).
-
-    `bound.href` is already the actual href (issue #177); `exists_fn` gets
-    `bound`'s own subdevice's canonical view instead of the raw snapshot,
-    same rule as everywhere else a whole-resources-dict scan happens --
-    this is a free function, so it can't use self._resources.
-
-    Setup uses discovery resources so an empty live cache during an offline
-    load (issue #295) doesn't filter rehydrated entities away. Runtime
-    presence checks use `live=True` so the saved snapshot can't freeze them.
-    """
-    # live reads the one rep: last_resources copies the whole cache, and this
-    # runs on every update for each dynamic-presence entity.
-    rep = (
-        coordinator.cached_resource(bound.href)
-        if live
-        else coordinator.discovery_resources.get(bound.href)
-    )
-    if rep is None:
-        return False
-    if bound.desc.exists_fn is not None:
-        canonical = coordinator.canonical_resources if live else coordinator.discovery_canonical
-        return bound.desc.exists_fn(rep, canonical(bound.subdevice))
-    if bound.desc.field:
-        if not rep or is_stub_rep(rep):
-            return True
-        return bound.desc.field in rep
-    return True  # rep_fn or no-field entities (ButtonDesc) are always included
 
 
 def async_add_bound_entities(
     entry: ConfigEntry,
     coordinator: LocalThingsCoordinator,
     async_add_entities: AddEntitiesCallback,
-    bounds: Iterable[BoundEntity],
+    select: Callable[[BoundEntity], bool],
     factory: Callable[[BoundEntity], Entity],
     extra: Iterable[Entity] = (),
 ) -> None:
-    """Add the included bounds now, and any `dynamic_presence` bound that
-    isn't included yet once a live update shows it (PR #665).
+    """Add every selected bound the coordinator says is registrable, now and
+    on each update after, so an entity a later discovery or live evidence
+    brings in is added in place instead of by reloading the entry (#807).
 
-    Each late bound is added once, so dropping out and coming back reuses
-    the same entity, with its ID and customizations; LocalThingsEntity.available
+    Each is added once, so one that drops out and comes back reuses the same
+    entity, with its ID and customizations; LocalThingsEntity.available
     covers the gaps.
     """
-    entities: list[Entity] = []
+    added: dict[tuple[str, str, str], Entity] = {}
+    # Selected bounds not added yet that live data can still bring in, and
+    # the registration generation they were collected at: nothing else can
+    # become registrable until the generation moves.
     pending: list[BoundEntity] = []
-    for bound in bounds:
-        if _is_included(bound, coordinator):
-            entities.append(factory(bound))
-        elif bound.desc.dynamic_presence:
-            pending.append(bound)
-    entities.extend(extra)
-    async_add_entities(entities)
-    if not pending:
-        return
+    seen: list[int | None] = [None]
+
+    def _rebind(current: dict[tuple[str, str, str], BoundEntity]) -> None:
+        """Replace an entity whose id a later discovery bound differently
+        (another href or descriptor after a firmware update), keeping its
+        registry row and entity_id; the reload this replaces rebuilt it."""
+        for ident, entity in list(added.items()):
+            bound = current.get(ident)
+            if bound is None or getattr(entity, "_bound", bound) == bound:
+                continue
+            replacement = factory(bound)
+            added[ident] = replacement
+
+            async def _swap(old: Entity = entity, new: Entity = replacement) -> None:
+                await old.async_remove()
+                async_add_entities([new])
+
+            entry.async_create_background_task(
+                coordinator.hass, _swap(), f"localthings rebind {ident}"
+            )
+
+    def _new() -> list[Entity]:
+        if seen[0] != coordinator.registration.generation:
+            seen[0] = coordinator.registration.generation
+            current = {bound_id(b): b for b in coordinator.bound if select(b)}
+            _rebind(current)
+            candidates = [b for ident, b in current.items() if ident not in added]
+            pending[:] = [b for b in candidates if b.desc.dynamic_presence]
+        else:
+            candidates = list(pending)
+        entities = []
+        for bound in candidates:
+            ident = bound_id(bound)
+            if ident in added or not coordinator.registrable(bound):
+                continue
+            entity = factory(bound)
+            added[ident] = entity
+            if bound in pending:
+                pending.remove(bound)
+            entities.append(entity)
+        return entities
+
+    async_add_entities([*_new(), *extra])
 
     @callback
-    def _add_detected() -> None:
-        detected = [b for b in pending if _is_included(b, coordinator, live=True)]
-        for bound in detected:
-            pending.remove(bound)
-        if detected:
-            async_add_entities(factory(b) for b in detected)
+    def _add_new() -> None:
+        if entities := _new():
+            async_add_entities(entities)
 
-    entry.async_on_unload(coordinator.async_add_listener(_add_detected))
+    entry.async_on_unload(coordinator.async_add_listener(_add_new))
 
 
 def _derive_name(state_key: str) -> str:
@@ -162,6 +155,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
     def __init__(self, coordinator: LocalThingsCoordinator, bound: BoundEntity) -> None:
         super().__init__(coordinator)
         self._bound = bound
+        self._bound_id = bound_id(bound)
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
         if bound.desc.translation_placeholders is not None:
@@ -222,10 +216,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
 
     @property
     def available(self) -> bool:
-        return super().available and (
-            not self._bound.desc.dynamic_presence
-            or _is_included(self._bound, self.coordinator, live=True)
-        )
+        return super().available and self.coordinator.provides(self._bound, self._bound_id)
 
     @property
     def _resources(self) -> dict:

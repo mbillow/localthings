@@ -25,7 +25,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, LightDesc)),
+        lambda b: isinstance(b.desc, LightDesc),
         lambda b: LocalThingsLight(coordinator, b),
     )
 

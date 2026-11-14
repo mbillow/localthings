@@ -27,7 +27,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.capabilities.av import first_mode
 from .registry.entities import MediaModeSurface, MediaPlayerDesc
 
@@ -61,10 +61,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        LocalThingsMediaPlayer(coordinator, b)
-        for b in coordinator.bound
-        if isinstance(b.desc, MediaPlayerDesc) and _is_included(b, coordinator)
+    async_add_bound_entities(
+        entry,
+        coordinator,
+        async_add_entities,
+        lambda b: isinstance(b.desc, MediaPlayerDesc),
+        lambda b: LocalThingsMediaPlayer(coordinator, b),
     )
 
 
