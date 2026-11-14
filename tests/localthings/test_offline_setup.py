@@ -574,6 +574,79 @@ async def test_offline_load_survives_repeated_poll_failures(
 
 
 # ---------------------------------------------------------------------------
+# Carrying a powered-off appliance through a restart
+# ---------------------------------------------------------------------------
+
+
+def _washer_powered(power: str) -> dict:
+    resources = _load_washer()
+    resources["/power/vs/0"] = {**resources["/power/vs/0"], "x.com.samsung.da.power": power}
+    resources["/power/0"] = {**resources["/power/0"], "value": power == "On"}
+    return resources
+
+
+def _power_switch_state(hass: HomeAssistant, entry) -> str:
+    ent_reg = er.async_get(hass)
+    (power,) = (
+        e
+        for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+        if e.unique_id.endswith("_power_switch")
+    )
+    state = hass.states.get(power.entity_id)
+    assert state is not None
+    return state.state
+
+
+async def test_powered_off_appliance_restarts_as_off(hass: HomeAssistant, mock_entry) -> None:
+    """A washer that powered itself off stops answering locally minutes
+    later, so a restart after that showed it unavailable until it was woken
+    by hand. Off at the last close comes back off."""
+    await _setup_online_then_unload(hass, mock_entry, _washer_powered("Off"))
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        assert _power_switch_state(hass, mock_entry) == "off"
+        await _tick(hass)
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    assert coordinator.last_update_success
+    assert _power_switch_state(hass, mock_entry) == "off"
+
+    with _reachable(_washer_powered("On")):
+        await _tick(hass)
+
+    assert _power_switch_state(hass, mock_entry) == "on"
+
+
+async def test_powered_on_appliance_still_restarts_unavailable(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Only a saved power-off is carried: an appliance last seen on may be
+    mid-cycle or may since have switched off, and its last values would be
+    a guess."""
+    await _setup_online_then_unload(hass, mock_entry, _washer_powered("On"))
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert all(s.state == "unavailable" for s in hass.states.async_all())
+
+
+async def test_last_state_removed_when_entry_removed(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    await _setup_online_then_unload(hass, mock_entry, _washer_powered("Off"))
+    key = f"{DOMAIN}.{mock_entry.entry_id}.last_state"
+    assert hass_storage[key]["data"]["resources"]
+
+    await hass.config_entries.async_remove(mock_entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass_storage.get(key, {}).get("data") is None
+
+
+# ---------------------------------------------------------------------------
 # What a cycle against a dark appliance costs (issue #269)
 # ---------------------------------------------------------------------------
 
