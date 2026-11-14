@@ -862,22 +862,74 @@ async def test_state_gated_entities_follow_the_live_state(
     )
 
 
-async def test_a_state_gated_entity_never_reloads_the_entry(hass: HomeAssistant) -> None:
-    """A snapshot saved with the sub connected, then a first live poll in
-    standby: the platform handles woofer_level itself, so no reload."""
+async def test_an_href_missing_from_the_first_read_keeps_its_entities(
+    hass: HomeAssistant,
+) -> None:
+    """A flat board reads one href at a time, and one can time out on the
+    first read after a restart. Its entities stay registered from the
+    snapshot, unavailable until it answers, and nothing reloads (#807)."""
+    from dataclasses import asdict
+
     entry = _mock_entry(hass)
-    await _setup_soundbar(hass, entry)
-    coordinator = _coordinator(hass, entry)
-    _freeze_polls(coordinator)
-    await hass.async_block_till_done()
-    href = "/sec/networkaudio/woofer"
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    href = next(b.href for b in coordinator.bound if b.href != "/sec/networkaudio/woofer")
+    kept = [b for b in coordinator.bound if b.href == href]
 
-    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "on"})
-    coordinator._rehydrated_keys = coordinator._bound_keys()
-    coordinator._rehydrated_included = coordinator._included_keys()
-    assert all(key != "woofer_level" for _, key in coordinator._rehydrated_included)
+    live = {h: rep for h, rep in resources.items() if h != href}
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        await coordinator._async_update_data()
 
-    _push(coordinator, href, {"x.com.samsung.networkaudio.connection": "off"})
-    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
-        coordinator._reconcile_rehydrated(coordinator.last_resources)
     reload.assert_not_called()
+    assert all(b in coordinator.bound for b in kept)
+    assert not any(coordinator.provides(b) for b in kept)
+    assert href not in coordinator.last_resources
+    coordinator._observe.apply(href, resources[href], source="poll")
+    assert all(coordinator.provides(b) for b in kept if not b.desc.dynamic_presence)
+
+
+async def test_a_dynamic_presence_href_is_never_pruned(hass: HomeAssistant) -> None:
+    """A resource that comes and goes with what it reports stays in the
+    snapshot however long it's absent; an ordinary one is let go once the
+    board has answered _PRUNE_AFTER_CYCLES cycles without it."""
+    from dataclasses import asdict
+
+    entry = _mock_entry(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    resources = _soundbar_resources()
+    await coordinator._snapshot_store.async_save(
+        {"resources": resources, "subdevice_candidates": [], "identity": asdict(_IDENTITY)}
+    )
+    assert await coordinator.async_rehydrate()
+    dynamic = next(b.href for b in coordinator.bound if b.desc.dynamic_presence)
+    ordinary = next(
+        b.href
+        for b in coordinator.bound
+        if b.href != dynamic
+        and not any(o.href == b.href and o.desc.dynamic_presence for o in coordinator.bound)
+    )
+    live = {h: rep for h, rep in resources.items() if h not in (dynamic, ordinary)}
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        patch.object(coordinator, "_maybe_retry_observe_mode"),
+        patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
+    ):
+        for _ in range(4):
+            await coordinator._async_update_data()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    stored = await coordinator._snapshot_store.async_load()
+    assert stored is not None
+    banked = stored["resources"]
+    assert dynamic in banked
+    assert ordinary not in banked

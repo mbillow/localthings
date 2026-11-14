@@ -84,7 +84,7 @@ from .registry.capabilities.common import (
 from .registry.capabilities.laundry import cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
-from .registry.entities import ClimateDesc
+from .registry.entities import PLATFORM_OF, ClimateDesc
 from .registry.flat import FLAT_TIMEOUT_S, flat_hrefs, iter_resources, read_all
 from .registry.identity import (
     DeviceIdentity,
@@ -316,8 +316,16 @@ def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dic
 # Write errors after which the session is fine and a re-poll shows the
 # appliance's real state; a dead session isn't re-polled (see _async_put).
 _APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
-# hass.data key: per entry, the included set the last inclusion reload aimed for.
-_INCLUSION_RELOADS = f"{DOMAIN}_inclusion_reloads"
+# hass.data key: entries already reloaded this run for a changed device type,
+# so a type that flips between reads can't reload in a loop.
+_TYPE_RELOADS = f"{DOMAIN}_type_reloads"
+
+
+def bound_id(bound: BoundEntity) -> tuple[str, str, str]:
+    """One registered entity's identity: platform, subdevice and unique_id
+    suffix. The same key can be bound on two platforms (see cleanup.py), so
+    the platform is part of it."""
+    return (PLATFORM_OF[type(bound.desc)], bound.subdevice.key, _key(bound))
 
 
 def _refusal(code: int, response: Any) -> str:
@@ -482,7 +490,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # How long a write sent with Remote Control off is given before it is
     # read back (_took_effect).
     _CONFIRM_DELAY_S: float = 3.0
-    _INCLUSION_RETRY_S: float = 300.0
+    # Cycles a banked href's owner must answer without it before the
+    # snapshot lets it go (_track_unconfirmed): about two hours, and several
+    # times _PROBE_EVERY_N_CYCLES, so a probe href gets a few reads first.
+    _PRUNE_AFTER_CYCLES: int = 240
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -541,9 +552,24 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._discovered = False
         self.bound = []
         self._registration_evidence: dict[str, dict] = {}
-        self._registered_included: frozenset[tuple[str, str]] | None = None
-        self._entity_reload_pending = False
-        self._inclusion_retry_at = 0.0
+        # Which bound entities platforms may register: judged once per
+        # discovery for ordinary entities, on every update for late_evidence
+        # ones -- see registrable().
+        self._static_registrable: frozenset[tuple[str, str, str]] = frozenset()
+        self._late_decided: dict[tuple[str, str, str], bool] = {}
+        # Entities registered from the snapshot that this run's live
+        # discovery didn't bind (issue #807) -- see _adopt_live_discovery.
+        self._retained: frozenset[tuple[str, str, str]] = frozenset()
+        # What was last banked, so a prune or a late decision can rewrite the
+        # snapshot without a fresh discovery.
+        self._banked_resources: dict[str, dict] = {}
+        self._banked_candidates: list[Subdevice] = []
+        # Banked hrefs this run hasn't heard from yet, by owning subdevice
+        # key, and how many cycles each owner has answered -- see
+        # _track_unconfirmed.
+        self._unconfirmed: dict[str, str] = {}
+        self._owner_cycles: dict[str, int] = {}
+        self._known_subdevices: list[Subdevice] = []
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
         # Loaded by async_load_mode_specs before the first refresh.
@@ -552,14 +578,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Set by async_close: a save queued from another thread after unload
         # would recreate the file async_remove_entry deletes.
         self._closed = False
-        # Both set only when this entry loaded from a snapshot instead of a
-        # live poll -- see async_rehydrate.
+        # Set only while this entry runs on a snapshot instead of a live poll
+        # -- see async_rehydrate.
         self._rehydrate_resources: dict[str, dict] | None = None
-        self._rehydrated_keys: frozenset[tuple[str, str]] | None = None
-        self._rehydrated_included: frozenset[tuple[str, str]] | None = None
-        # What first discovery took from the last snapshot because the href
-        # didn't answer this time -- see _with_remembered_resources (flat
-        # boards) and _remembered_collection_hrefs (Collection boards).
+        # Remembered reps first discovery stood in for a late_evidence gate
+        # the live read couldn't decide (_registration_resources).
         self._discovery_extra: dict[str, dict] = {}
         # Sibling indoor subdevices on this connection (issue #177); set
         # once at first discovery, narrowed to the ones with live state (see
@@ -1996,14 +2019,110 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
     # ------------------------------------------------------------------
-    # Discovery snapshot (issue #295)
+    # Entity registration and the discovery snapshot (issues #295, #807)
     # ------------------------------------------------------------------
+    #
+    # One read can't tell a lost resource from a short answer: a sibling's
+    # seed comes back without some hrefs, a flat-board read times out, a
+    # vocabulary arrives partial. So the entity set grows in place and never
+    # shrinks on a read. A live discovery adds what it finds to what is
+    # registered; an entity it didn't find stays registered, unavailable
+    # until its resource answers. The snapshot lets an href go only once its
+    # owner has answered _PRUNE_AFTER_CYCLES cycles without it, and that
+    # takes effect at the next start, where HA shows the entity as no longer
+    # provided. Don't judge a single read with heuristics or reload the
+    # entry over a difference: both have looped (#807) and orphaned entities
+    # (#833). The one reload left is a changed device type.
+
+    def registrable(self, bound: BoundEntity) -> bool:
+        """Whether a platform should register `bound` now; entity.py adds
+        each entity once. An ordinary entity is judged once per discovery,
+        so one its exists_fn excluded stays out for the run. A late_evidence
+        one follows _late_decided, and a dynamic_presence one is added once
+        live data shows it."""
+        ident = bound_id(bound)
+        if ident in self._late_decided:
+            return self._late_decided[ident]
+        if ident in self._static_registrable:
+            return True
+        if not bound.desc.dynamic_presence:
+            return False
+        # entity.py imports this module, so this one can't import it at the top.
+        from .entity import _is_included
+
+        return _is_included(bound, self, live=True)
+
+    def provides(self, bound: BoundEntity) -> bool:
+        """Whether a registered entity has anything to show this run. An
+        entity this run's data stopped backing stays registered, but
+        unavailable rather than showing nothing as a value."""
+        ident = bound_id(bound)
+        if self._late_decided.get(ident) is False:
+            return False
+        if not (bound.desc.dynamic_presence or ident in self._retained):
+            return True
+        from .entity import _is_included
+
+        return _is_included(bound, self, live=True)
+
+    def _judge_registration(self, resources: dict[str, dict]) -> None:
+        """Decide registrable() for every bound entity from one discovery's
+        evidence, which the state cache doesn't hold yet."""
+        from .entity import _is_included
+
+        saved = self._rehydrate_resources
+        self._rehydrate_resources = resources
+        try:
+            included = {bound_id(b) for b in self.bound if _is_included(b, self)}
+        finally:
+            self._rehydrate_resources = saved
+        late = {bound_id(b) for b in self._late_bound()}
+        self._static_registrable = frozenset(included - late)
+        self._late_decided = {ident: ident in included for ident in late}
+
+    def _retain(
+        self,
+        registered: list[BoundEntity],
+        static: frozenset[tuple[str, str, str]],
+        late: dict[tuple[str, str, str], bool],
+    ) -> None:
+        """Keep what was registered from the snapshot but this live
+        discovery didn't bind, with the registration it had."""
+        live = {bound_id(b) for b in self.bound}
+        retained = [b for b in registered if bound_id(b) not in live]
+        self._retained = frozenset(bound_id(b) for b in retained)
+        if not retained:
+            return
+        self.bound = [*self.bound, *retained]
+        self._static_registrable |= static & self._retained
+        self._late_decided.update({i: d for i, d in late.items() if i in self._retained})
+        self._refresh_learnable_hrefs()
+        self._log.info(
+            "keeping %d entities from the last snapshot that this read didn't find; "
+            "they stay unavailable until their resources answer",
+            len(retained),
+        )
+
+    def _reload_for_type(self, previous: str | None) -> bool:
+        """Reload an entry whose device type changed since the snapshot:
+        nothing registered for the old type belongs to this appliance. Once
+        per entry per run, so a type that flips between reads can't loop."""
+        reloaded = self.hass.data.setdefault(_TYPE_RELOADS, set())
+        if self._entry.entry_id in reloaded:
+            return False
+        reloaded.add(self._entry.entry_id)
+        self._log.info(
+            "device type changed from %s to %s since the last snapshot; reloading",
+            previous,
+            self.device_type_name,
+        )
+        self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
+        return True
 
     @callback
-    def async_watch_entity_inclusion(self) -> None:
-        """Reload when late model evidence changes static registration."""
-        self._entry.async_on_unload(self.async_add_listener(self._check_entity_inclusion))
-        self._check_entity_inclusion()
+    def async_watch_late_evidence(self) -> None:
+        self._entry.async_on_unload(self.async_add_listener(self._update_late_decisions))
+        self._update_late_decisions()
 
     def _late_bound(self) -> list[BoundEntity]:
         return [
@@ -2011,6 +2130,44 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for b in self.bound
             if b.desc.late_evidence and b.desc.exists_fn is not None and not b.desc.dynamic_presence
         ]
+
+    @callback
+    def _update_late_decisions(self) -> None:
+        """Follow live evidence for a late_evidence gate: register an entity
+        it now includes, make one it now excludes unavailable, and bank the
+        deciding rep so the next start registers the same way."""
+        if self._closed or self.rehydrated:
+            return
+        from .entity import _is_included
+
+        evidence = self._registration_evidence
+        resources = self._registration_resources({**evidence, **self.last_resources}, evidence)
+        saved = self._rehydrate_resources
+        self._rehydrate_resources = resources
+        try:
+            # An href that hasn't answered decides nothing.
+            decided = {
+                bound_id(b): (b.href, _is_included(b, self))
+                for b in self._late_bound()
+                if b.href in resources
+            }
+        finally:
+            self._rehydrate_resources = saved
+        changed = {
+            ident: href
+            for ident, (href, included) in decided.items()
+            if self._late_decided.get(ident) != included
+        }
+        if not changed:
+            return
+        self._late_decided.update({ident: decided[ident][1] for ident in changed})
+        decisive = {href: resources[href] for href in set(changed.values())}
+        self._registration_evidence = {**evidence, **decisive}
+        self._entry.async_create_background_task(
+            self.hass, self._async_rebank(update=decisive), "localthings_late_evidence"
+        )
+        # Listeners that already ran this update judged the old decision.
+        self.async_update_listeners()
 
     def _registration_resources(
         self, live: dict[str, dict], remembered: dict[str, dict]
@@ -2042,86 +2199,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 found[bound.href] = {**current, options: previous[options]}
         return found
 
-    @callback
-    def _check_entity_inclusion(self) -> None:
-        if self._closed or self.rehydrated or self._entity_reload_pending:
-            return
-        late = self._late_bound()
-        if not late or self.hass.loop.time() < self._inclusion_retry_at:
-            return
-        # entity.py imports this module, so this one can't import it at the top.
-        from .entity import _is_included
-
-        resources = self._registration_resources(
-            {**self._registration_evidence, **self.last_resources}, self._registration_evidence
-        )
-        saved = self._rehydrate_resources
-        self._rehydrate_resources = resources
-        try:
-            current = frozenset((b.subdevice.key, _key(b)) for b in late if _is_included(b, self))
-        finally:
-            self._rehydrate_resources = saved
-        if self._registered_included is None:
-            return
-        gated = frozenset((b.subdevice.key, _key(b)) for b in late)
-        if current == self._registered_included & gated:
-            return
-        # A board whose first read never decides (always {} or partial)
-        # would otherwise reload on every start; one try per target per run.
-        tried = self.hass.data.setdefault(_INCLUSION_RELOADS, {})
-        if tried.get(self._entry.entry_id) == current:
-            return
-        tried[self._entry.entry_id] = current
-        self._entity_reload_pending = True
-        self._entry.async_create_background_task(
-            self.hass,
-            self._async_reload_entity_inclusion(resources),
-            "localthings_entity_inclusion",
-        )
-
-    async def _async_reload_entity_inclusion(self, resources: dict[str, dict]) -> None:
-        # A reload may come up offline; bank the evidence before discarding
-        # the registration made from an incomplete or older representation.
-        saved = await self._async_save_snapshot(
-            resources,
-            [*self.subdevices, *self.disabled_subdevices],
-        )
-        if not saved:
-            # Retry later, not on every update: the write and its warning
-            # would otherwise repeat for as long as the disk refuses it.
-            self.hass.data.get(_INCLUSION_RELOADS, {}).pop(self._entry.entry_id, None)
-            self._inclusion_retry_at = self.hass.loop.time() + self._INCLUSION_RETRY_S
-            self._entity_reload_pending = False
-        elif not self._closed:
-            self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
-
-    def _bound_keys(self) -> frozenset[tuple[str, str]]:
-        """This entity set's identity: one (subdevice, state key) pair per
-        bound entity. `_key` is the unique_id suffix, so two discoveries that
-        agree here would register byte-identical entities."""
-        return frozenset((b.subdevice.key, _key(b)) for b in self.bound)
-
-    def _included_keys(self) -> frozenset[tuple[str, str]]:
-        """The subset of `_bound_keys` that platforms actually register:
-        bound entities that also pass entity._is_included (exists_fn or the
-        field gate), judged against `discovery_resources`.
-
-        Dynamic-presence entities are left out: their platform adds them when
-        they appear, so a difference there needs no reload."""
-        # entity.py imports this module, so this one can't import it at the top.
-        from .entity import _is_included
-
-        return frozenset(
-            (b.subdevice.key, _key(b))
-            for b in self.bound
-            if not b.desc.dynamic_presence and _is_included(b, self)
-        )
-
     async def _async_save_snapshot(
         self, resources: dict[str, dict], candidates: list[Subdevice]
     ) -> bool:
-        """Record what this first cycle handed `_run_discovery`, so the next
-        restart can replay it while the appliance is unreachable.
+        """Bank what the next restart registers from while the appliance
+        is unreachable.
 
         `candidates` is the pre-narrowing subdevice list (issue #177):
         `discover_partitioned` takes candidates and returns the live ones, so
@@ -2130,11 +2212,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Written now rather than through `async_delay_save`, because a pending
         delayed write outlives whatever queued it: it lands after
-        `async_remove_entry` has deleted the file and recreates it orphaned,
-        and a reload scheduled by `_reconcile_rehydrated` would read the
-        pre-reload snapshot back off disk. This runs once per entry load, so
-        the immediate write costs nothing worth deferring.
+        `async_remove_entry` has deleted the file and recreates it orphaned.
         """
+        self._banked_resources = dict(resources)
+        self._banked_candidates = list(candidates)
         ident = self._identity
         try:
             await self._snapshot_store.async_save(
@@ -2156,6 +2237,115 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._log.warning("could not write discovery snapshot: %s", e)
             return False
         return True
+
+    async def _async_rebank(
+        self, update: dict[str, dict] | None = None, drop: Iterable[str] = ()
+    ) -> None:
+        if self._closed:
+            return
+        resources: dict[str, dict] = {**self._banked_resources, **(update or {})}
+        for href in drop:
+            resources.pop(href, None)
+        await self._async_save_snapshot(resources, self._banked_candidates)
+
+    def _owner_key(self, href: str) -> str:
+        return next(
+            (su.key for su in self._known_subdevices if su.owns(href)),
+            MAIN.key,
+        )
+
+    def _track_unconfirmed(self, resources: dict[str, dict]) -> None:
+        """Count this cycle for every owner that answered it, and let go of
+        a banked href whose owner has answered _PRUNE_AFTER_CYCLES cycles
+        without it. Only the owner's answers count: an indoor unit switched
+        off for the season keeps its entities however long the outdoor unit
+        keeps answering."""
+        if not self._unconfirmed:
+            return
+        for owner in {self._owner_key(href) for href in resources}:
+            self._owner_cycles[owner] = self._owner_cycles.get(owner, 0) + 1
+        for href in [h for h in self._unconfirmed if self._cache.get(h) is not None]:
+            del self._unconfirmed[href]
+        # A dynamic_presence entity's resource is absent for as long as the
+        # thing it reports is (an unplugged oven probe), so absence never
+        # lets it go.
+        dynamic = {b.href for b in self.bound if b.desc.dynamic_presence}
+        gone = sorted(
+            href
+            for href, owner in self._unconfirmed.items()
+            if href not in dynamic and self._owner_cycles.get(owner, 0) >= self._PRUNE_AFTER_CYCLES
+        )
+        if not gone:
+            return
+        for href in gone:
+            del self._unconfirmed[href]
+        self._log.info(
+            "%s didn't answer in %d polls; entities only it backed won't be "
+            "provided after the next restart",
+            gone,
+            self._PRUNE_AFTER_CYCLES,
+        )
+        self._entry.async_create_background_task(
+            self.hass, self._async_rebank(drop=gone), "localthings_snapshot_prune"
+        )
+
+    async def _adopt_live_discovery(
+        self,
+        resources: dict[str, dict],
+        candidates: list[Subdevice],
+        registered: list[BoundEntity],
+        snapshot_type: str | None,
+    ) -> bool:
+        """First live discovery: discover from this read alone, keep what
+        the snapshot registered, and bank the union. True when it scheduled
+        a reload instead."""
+        remembered, stored_candidates = await self._remembered_snapshot()
+        static, late = self._static_registrable, self._late_decided
+
+        def _discover(found: dict[str, dict]) -> None:
+            # _run_discovery narrows self.subdevices to the materialized
+            # ones; a repeat pass starts from this cycle's candidates, or it
+            # would lose the disabled ones and the rejected ones' gate.
+            self.subdevices = list(candidates)
+            self._run_discovery(found)
+
+        _discover(resources)
+        found = self._registration_resources(resources, remembered)
+        if found != resources:
+            _discover(found)
+        self._discovery_extra = {
+            href: rep for href, rep in found.items() if rep != resources.get(href)
+        }
+        self._registration_evidence = found
+        self._rehydrate_resources = None
+
+        if registered and snapshot_type != self.device_type_name:
+            await self._async_save_snapshot(found, candidates)
+            return self._reload_for_type(snapshot_type)
+
+        self._retain(registered, static, late)
+        kept = {
+            href: rep
+            for href, rep in remembered.items()
+            if href not in found and isinstance(rep, dict)
+        }
+        self._known_subdevices = [
+            *candidates,
+            *(su for su in stored_candidates if su not in candidates),
+        ]
+        self._unconfirmed = {href: self._owner_key(href) for href in kept}
+        await self._async_save_snapshot(
+            {**kept, **found},
+            [
+                *candidates,
+                *(
+                    su
+                    for su in stored_candidates
+                    if su not in candidates and any(su.owns(href) for href in kept)
+                ),
+            ],
+        )
+        return False
 
     async def _remembered_snapshot(self) -> tuple[dict[str, dict], list[Subdevice]]:
         """The last snapshot's resources and subdevice candidates, read once
@@ -2184,71 +2374,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except (KeyError, TypeError):
                 continue
         return remembered, candidates
-
-    def _missed(self, live: dict[str, dict], remembered: dict[str, dict]) -> dict[str, dict]:
-        """Remembered reps for the hrefs /oic/res still advertises that this
-        read didn't return."""
-        advertised = set(flat_hrefs(self._oic_res()))
-        return {
-            href: rep
-            for href, rep in remembered.items()
-            if href not in live and href in advertised and isinstance(rep, dict)
-        }
-
-    async def _with_remembered_resources(
-        self, live: dict[str, dict], remembered: dict[str, dict] | None = None
-    ) -> dict[str, dict]:
-        """A flat board's discovery read, plus what the last snapshot holds
-        for the advertised hrefs that didn't answer this time.
-
-        A flat board is read one href at a time, and an href can miss a read
-        now and then. Discovering from the read alone would drop its
-        entities until the next restart. Only discovery sees the remembered
-        reps: the state cache gets the live read alone, so an entity kept
-        this way stays without a value until its href answers. An href
-        /oic/res no longer advertises is let go. Collection boards take the
-        narrower _remembered_collection_hrefs instead.
-        """
-        if remembered is None:
-            remembered, _ = await self._remembered_snapshot()
-        self._discovery_extra = self._missed(live, remembered)
-        if self._discovery_extra:
-            self._log.debug(
-                "discovery keeps %d resources from the last snapshot that didn't answer: %s",
-                len(self._discovery_extra),
-                sorted(self._discovery_extra),
-            )
-        return {**self._discovery_extra, **live}
-
-    def _remembered_collection_hrefs(
-        self,
-        live: dict[str, dict],
-        remembered: dict[str, dict],
-        known: list[Subdevice],
-    ) -> dict[str, dict]:
-        """What a Collection board's first discovery keeps from the snapshot
-        (issue #833): an advertised href missing from a read whose owner did
-        answer -- a seed that came back short, like an EHS heat pump's
-        without /ehscycle/vs/0. Called after a discovery of the live read,
-        so `self.subdevices` holds only the siblings that answered and
-        passed the liveness gate on live data.
-
-        Being advertised in /oic/res says less here than on a flat board,
-        which reads exactly that list, so ownership narrows it: MAIN's
-        hrefs, and those of a sibling materialized from this read. A
-        sibling whose seed didn't answer, one the gate rejected and one the
-        user disabled are all in `known` but not live, and keep nothing --
-        their hrefs would otherwise fall into MAIN's view or prop up a
-        sibling on stale state.
-        """
-        live_keys = {su.key for su in self.subdevices}
-        elsewhere = [su for su in known if su.key not in live_keys]
-        return {
-            href: rep
-            for href, rep in self._missed(live, remembered).items()
-            if any(su.owns(href) for su in self.subdevices)
-            or not any(su.owns(href) for su in elsewhere)
-        }
 
     async def async_rehydrate(self) -> bool:
         """Register the last known entity set without reaching the device.
@@ -2318,9 +2443,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # still enumerate subdevices and rediscover for real.
         self._discovered = False
         self._rehydrate_resources = resources
-        self._rehydrated_keys = self._bound_keys()
-        self._rehydrated_included = self._included_keys()
-        self._registered_included = self._rehydrated_included
         if not self.bound:
             return False
         self._log.info(
@@ -2330,52 +2452,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             SUMMARY_INTERVAL_S,
         )
         return True
-
-    @callback
-    def _reconcile_rehydrated(self, resources: dict[str, dict]) -> None:
-        """Reload the entry when a live discovery disagrees with the snapshot
-        this load registered from, and stop judging anything against that
-        snapshot from here on.
-
-        Platforms enumerate `bound` exactly once, at forward time, so a
-        firmware update, a newly-answering sibling subdevice or a different
-        appliance at the same IP can't be picked up in place -- the entry has
-        to come back up against the live set.
-
-        Both the bound set and the included set are compared: an entity can
-        stay bound while its exists_fn flips (an options token appearing
-        after a firmware update, say), and that changes what the platforms
-        would register just as much. `resources` is what the first live
-        cycle handed `_run_discovery`; the state cache doesn't hold it yet,
-        so the included set is judged against it directly.
-        """
-        if self._rehydrated_keys is None:
-            return
-        stale_bound = self._rehydrated_keys
-        stale_included = self._rehydrated_included or frozenset()
-        self._rehydrated_keys = None
-        self._rehydrated_included = None
-        live_bound = self._bound_keys()
-        self._rehydrate_resources = resources
-        try:
-            live_included = self._included_keys()
-        finally:
-            self._rehydrate_resources = None
-        if live_bound == stale_bound and live_included == stale_included:
-            return
-        # An entity counts once whether it changed in the bound set, the
-        # included set or both, so a bound-only change doesn't log "0 gone,
-        # 0 new".
-        gone = (stale_bound - live_bound) | (stale_included - live_included)
-        new = (live_bound - stale_bound) | (live_included - stale_included)
-        self._log.info(
-            "live discovery differs from the snapshot this entry loaded from "
-            "(%d entities gone, %d new); reloading",
-            len(gone),
-            len(new),
-        )
-        self._entity_reload_pending = True
-        self.hass.config_entries.async_schedule_reload(self._entry.entry_id)
 
     def _run_discovery(self, resources: dict[str, dict], from_snapshot: bool = False) -> None:
         # Diagnostics only -- names the firmware generation (e.g. '7.0 Air
@@ -2466,6 +2542,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.bound = bound
         self._unbound_hrefs = unbound
         self._refresh_learnable_hrefs()
+        self._judge_registration(resources)
 
         polled_serial = resolve_serial(
             info.get("x.com.samsung.da.serialNum"), self._entry.data[CONF_HOST]
@@ -2956,65 +3033,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *self.subdevices,
                 *(s for s in self.disabled_subdevices if s not in self.subdevices),
             ]
-            remembered, stored_candidates = await self._remembered_snapshot()
-
-            def _discover(found: dict[str, dict]) -> None:
-                # _run_discovery narrows self.subdevices to the materialized
-                # ones; a repeat pass starts from this cycle's candidates, or
-                # it would lose the disabled ones and the rejected ones' gate.
-                self.subdevices = list(candidates)
-                self._run_discovery(found)
-
-            # Kept for this run but not banked: an href a Collection board
-            # misses on two first reads in a row is let go (see below).
-            unbanked: set[str] = set()
-            if self._flat:
-                found = await self._with_remembered_resources(resources, remembered)
-                _discover(found)
-            else:
-                found = resources
-                _discover(found)
-                kept = self._remembered_collection_hrefs(
-                    resources, remembered, [*candidates, *stored_candidates]
-                )
-                if kept:
-                    self._log.debug(
-                        "discovery keeps %d resources from the last snapshot that "
-                        "didn't answer: %s",
-                        len(kept),
-                        sorted(kept),
-                    )
-                    self._discovery_extra = dict(kept)
-                    unbanked = set(kept)
-                    found = {**kept, **resources}
-                    _discover(found)
-            complete = self._registration_resources(found, remembered)
-            if complete != found:
-                found = complete
-                _discover(found)
-            self._registration_evidence = found
-            self._discovery_extra.update(
-                {href: rep for href, rep in found.items() if rep != resources.get(href)}
-            )
-            previous = self._rehydrate_resources
-            self._rehydrate_resources = found
-            try:
-                if self._registered_included is None:
-                    self._registered_included = self._included_keys()
-            finally:
-                self._rehydrate_resources = previous
-            # Banked before the reconcile below, so a reload it schedules
-            # comes up against this discovery rather than the one that is
-            # being replaced. A flat board banks what it kept, since it reads
-            # every advertised href each cycle; a Collection board doesn't,
-            # so an href its batch has stopped carrying while /oic/res still
-            # lists it is dropped on the next restart instead of kept bound
-            # with no value forever.
-            await self._async_save_snapshot(
-                {href: rep for href, rep in found.items() if href not in unbanked},
-                candidates,
-            )
-            self._reconcile_rehydrated(found)
+            # What the platforms registered from the snapshot, if this load
+            # came up on one; empty on a cold start.
+            registered = list(self.bound) if self.rehydrated else []
+            if await self._adopt_live_discovery(
+                resources, candidates, registered, self.device_type_name
+            ):
+                # The reload closes this session; subscribing on it would
+                # only fail every href with "no session".
+                return flatten(self.bound, self.entity_resources())
             resources = self._live_subdevice_resources(resources)
         sweep_mismatch = False
         if self._observe.mode == MODE_OBSERVE:
@@ -3027,6 +3054,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for href, rep in resources.items():
             self._observe.apply(href, rep, source=source)
 
+        if not first_cycle:
+            self._track_unconfirmed(resources)
         if first_cycle:
             # The apply loop above has just fed this poll's /course/vs/0 to
             # the cloud-program store, so the gap is knowable now. Explicit

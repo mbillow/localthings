@@ -95,6 +95,10 @@ async def async_get_config_entry_diagnostics(
             if identity is not None
             else None,
             "unbound_hrefs": sorted(coordinator._unbound_hrefs),
+            # Registered from the snapshot but not bound by this run's live
+            # discovery, and banked hrefs not heard from yet (issue #807).
+            "retained_entities": sorted("/".join(ident) for ident in coordinator._retained),
+            "unconfirmed_hrefs": sorted(coordinator._unconfirmed),
             # As stored in the entry: "per_href" for a board without a
             # /device/0 Collection (registry/flat.py), None otherwise.
             "read_mode": entry.data.get(CONF_READ_MODE),
