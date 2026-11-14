@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -862,6 +863,17 @@ async def test_state_gated_entities_follow_the_live_state(
     )
 
 
+@contextmanager
+def _no_discovery_io(coordinator):
+    """First discovery's sub-unit enumeration and probes, which these tests
+    don't exercise and which would otherwise open a session."""
+    with (
+        patch.object(coordinator, "_enumerate_subdevices_blocking", side_effect=lambda r: r),
+        patch.object(coordinator, "_probe_blocking", return_value={}),
+    ):
+        yield
+
+
 async def test_an_href_missing_from_the_first_read_keeps_its_entities(
     hass: HomeAssistant,
 ) -> None:
@@ -884,6 +896,7 @@ async def test_an_href_missing_from_the_first_read_keeps_its_entities(
     with (
         patch.object(coordinator, "_poll_once", return_value=live),
         patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
         patch.object(hass.config_entries, "async_schedule_reload") as reload,
     ):
         await coordinator._async_update_data()
@@ -921,6 +934,7 @@ async def test_a_dynamic_presence_href_is_never_pruned(hass: HomeAssistant) -> N
     with (
         patch.object(coordinator, "_poll_once", return_value=live),
         patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
         patch.object(coordinator, "_maybe_retry_observe_mode"),
         patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
     ):
@@ -954,6 +968,7 @@ async def test_a_board_in_standby_never_ages_out_an_href(hass: HomeAssistant) ->
 
     with (
         patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
         patch.object(coordinator, "_maybe_retry_observe_mode"),
         patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 2),
     ):
@@ -992,6 +1007,7 @@ async def test_an_href_the_board_stopped_listing_is_let_go(hass: HomeAssistant) 
     with (
         patch.object(coordinator, "_poll_once", return_value=live),
         patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
     ):
         await coordinator._async_update_data()
 
@@ -1019,6 +1035,7 @@ async def test_a_sweep_reads_hrefs_not_heard_from_last(hass: HomeAssistant) -> N
     with (
         patch.object(coordinator, "_poll_once", return_value=live),
         patch.object(coordinator, "_attempt_observe_mode"),
+        _no_discovery_io(coordinator),
     ):
         await coordinator._async_update_data()
     assert missed in coordinator._unconfirmed
