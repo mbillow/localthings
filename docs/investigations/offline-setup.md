@@ -134,9 +134,15 @@ what the snapshot registered (`_adopt_live_discovery`):
   list no longer carries is let go at once. A sub-unit that stays silent keeps its entities
   indefinitely, and a `dynamic_presence` entity's href is never pruned.
 - A known sub-unit that isn't live (off when HA started) has its seed read
-  again with backoff, from every 10 cycles up to every 120
-  (`_recover_dormant`). Once it answers with live state it joins polling and
-  its entities are registered or become available in place.
+  again with backoff, from every 10 cycles up to every 120, one sub-unit per
+  cycle on a 3 s timeout, since the read holds the session lock
+  (`_recover_dormant`). Once it answers with live state it joins polling (and
+  OBSERVE, if the entry is in it), and its entities are registered or become
+  available in place.
+- An entity the snapshot registered is retained only if the live read never
+  returned its href. One whose href answered without binding it is
+  unavailable for the run, and an entity a later discovery binds to another
+  href or descriptor is rebuilt in place under the same entity_id.
 - The first live cycle after a snapshot load runs the registry cleanup
   again against live data, as the reload used to. An href the read missed
   is no evidence there either: `prune_when_excluded` only acts on a rep

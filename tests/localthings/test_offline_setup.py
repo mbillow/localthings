@@ -18,6 +18,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import timedelta
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -1101,7 +1102,7 @@ async def test_a_dormant_sub_unit_is_added_once_it_answers(
 
     with (
         patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 2),
-        patch.object(coordinator, "_poll_subdevice_seed", return_value=seed),
+        patch.object(coordinator, "_read_dormant_seed", return_value=seed),
     ):
         await _later_cycles(hass, coordinator, main_only, 2)
 
@@ -1125,7 +1126,7 @@ async def test_a_quiet_sub_unit_is_read_with_backoff(
     with (
         patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 2),
         patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_MAX_CYCLES", 8),
-        patch.object(coordinator, "_poll_subdevice_seed", return_value={}) as seed,
+        patch.object(coordinator, "_read_dormant_seed", return_value={}) as seed,
     ):
         await _later_cycles(hass, coordinator, main_only, 30)
 
@@ -1156,3 +1157,108 @@ async def test_live_registry_cleanup_leaves_a_missed_href_alone(
         await _tick(hass)
 
     assert registry.async_get_entity_id("switch", DOMAIN, unique_id) is not None
+
+
+async def test_a_type_change_whose_snapshot_cannot_be_saved_does_not_reload(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """The reload must come back up on the new discovery. If that can't be
+    banked, reloading would only replay the old type."""
+    _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    assert coordinator._identity is not None
+    coordinator._identity = replace(coordinator._identity, device_types=())
+    with patch.object(coordinator._snapshot_store, "async_save", side_effect=OSError("disk")):
+        reload = await _first_live_cycle(hass, coordinator, _load_fridge(), [])
+    reload.assert_not_called()
+
+
+async def test_only_an_entity_whose_href_was_silent_is_retained(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """An href that answered and bound nothing for an entity is evidence,
+    not a short read: that entity isn't retained, so it stays unavailable
+    instead of borrowing availability from its href's live rep."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    registered = list(coordinator.bound)
+    previous = replace(coordinator.registration)
+    await _first_live_cycle(hass, coordinator, full, materialized)
+    dropped = registered[0]
+    # As if this live discovery hadn't bound it.
+    coordinator.bound = [b for b in coordinator.bound if bound_id(b) != bound_id(dropped)]
+    coordinator._judge_registration(full)
+
+    coordinator._retain(registered, previous, full)
+    assert bound_id(dropped) not in coordinator.registration.retained
+    assert not coordinator.provides(dropped)
+
+    silent = {href: rep for href, rep in full.items() if href != dropped.href}
+    coordinator._retain(registered, previous, silent)
+    assert bound_id(dropped) in coordinator.registration.retained
+
+
+async def test_an_owner_with_nothing_to_measure_never_counts_as_awake(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._awake_baseline = {"": frozenset(), "unit": frozenset({"/a"})}
+    assert coordinator._owners_awake({}) == set()
+    assert coordinator._owners_awake({"/a": {}}) == {"unit"}
+
+
+async def test_a_failed_recovery_leaves_the_sub_unit_dormant(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Nothing changes until everything that can fail has run, so a failed
+    attempt is retried rather than leaving the unit half-added."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    seed = {href: rep for href, rep in full.items() if heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+    bound_before = list(coordinator.bound)
+
+    with (
+        patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 1),
+        patch.object(coordinator, "_read_dormant_seed", return_value=seed),
+        patch.object(coordinator, "_judged", side_effect=RuntimeError("odd rep")),
+    ):
+        await _later_cycles(hass, coordinator, main_only, 1)
+
+    assert heat_pump not in coordinator.subdevices
+    assert coordinator.bound == bound_before
+    assert heat_pump.key in coordinator._dormant_due
+
+
+async def test_a_recovered_sub_unit_is_subscribed_in_observe_mode(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Subscriptions are made once, after first discovery; a sub-unit that
+    joins later subscribes its own hot and warm hrefs."""
+    from custom_components.localthings.observe import MODE_OBSERVE
+
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    seed = {href: rep for href, rep in full.items() if heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+    coordinator._observe._set_mode(MODE_OBSERVE)
+    coordinator._session = cast(Any, object())
+
+    with (
+        patch.object(coordinator._observe, "add_hrefs") as add_hrefs,
+        patch.object(coordinator, "_close_session"),
+    ):
+        assert await coordinator._materialize(heat_pump, seed)
+
+    add_hrefs.assert_called_once()
+    subscribed = add_hrefs.call_args.args[1]
+    assert subscribed and all(heat_pump.owns(href) for href in subscribed)
+    coordinator._session = None

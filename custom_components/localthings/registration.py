@@ -37,7 +37,11 @@ def bound_id(bound: BoundEntity) -> EntityId:
 
 
 def is_included(
-    bound: BoundEntity, coordinator: LocalThingsCoordinator, *, live: bool = False
+    bound: BoundEntity,
+    coordinator: LocalThingsCoordinator,
+    *,
+    live: bool = False,
+    evidence: dict[str, dict] | None = None,
 ) -> bool:
     """Return False if the entity should not be registered for this device.
 
@@ -61,7 +65,18 @@ def is_included(
     Setup uses discovery resources so an empty live cache during an offline
     load (issue #295) doesn't filter rehydrated entities away. Runtime
     presence checks use `live=True` so the saved snapshot can't freeze them.
+    `evidence` judges against a discovery's resources the state cache
+    doesn't hold yet.
     """
+    if evidence is not None:
+        rep = evidence.get(bound.href)
+        if rep is None:
+            return False
+        if bound.desc.exists_fn is not None:
+            return bound.desc.exists_fn(
+                rep, coordinator.evidence_canonical(evidence, bound.subdevice)
+            )
+        return _field_included(bound, rep)
     # live reads the one rep: last_resources copies the whole cache, and this
     # runs on every update for each dynamic-presence entity.
     rep = (
@@ -74,11 +89,24 @@ def is_included(
     if bound.desc.exists_fn is not None:
         canonical = coordinator.canonical_resources if live else coordinator.discovery_canonical
         return bound.desc.exists_fn(rep, canonical(bound.subdevice))
+    return _field_included(bound, rep)
+
+
+def _field_included(bound: BoundEntity, rep: dict) -> bool:
     if bound.desc.field:
         if not rep or is_stub_rep(rep):
             return True
         return bound.desc.field in rep
     return True  # rep_fn or no-field entities (ButtonDesc) are always included
+
+
+def is_late(bound: BoundEntity) -> bool:
+    """A late_evidence gate: a static exists_fn live data keeps deciding."""
+    return (
+        bound.desc.late_evidence
+        and bound.desc.exists_fn is not None
+        and not bound.desc.dynamic_presence
+    )
 
 
 @dataclass
@@ -155,10 +183,12 @@ class Registration:
             return True
         return bound.desc.dynamic_presence and live()
 
-    def provides(self, bound: BoundEntity, live: Callable[[], bool]) -> bool:
+    def provides(
+        self, bound: BoundEntity, live: Callable[[], bool], ident: EntityId | None = None
+    ) -> bool:
         """Whether a registered entity has anything to show: one this run's
         data stopped backing stays registered but unavailable."""
-        ident = bound_id(bound)
+        ident = ident or bound_id(bound)
         if self.late.get(ident) is False:
             return False
         if bound.desc.dynamic_presence or ident in self.retained:

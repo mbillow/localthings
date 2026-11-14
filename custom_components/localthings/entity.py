@@ -41,17 +41,38 @@ def async_add_bound_entities(
     entity, with its ID and customizations; LocalThingsEntity.available
     covers the gaps.
     """
-    added: set[tuple[str, str, str]] = set()
+    added: dict[tuple[str, str, str], Entity] = {}
     # Selected bounds not added yet that live data can still bring in, and
     # the registration generation they were collected at: nothing else can
     # become registrable until the generation moves.
     pending: list[BoundEntity] = []
     seen: list[int | None] = [None]
 
+    def _rebind(current: dict[tuple[str, str, str], BoundEntity]) -> None:
+        """Replace an entity whose id a later discovery bound differently
+        (another href or descriptor after a firmware update), keeping its
+        registry row and entity_id; the reload this replaces rebuilt it."""
+        for ident, entity in list(added.items()):
+            bound = current.get(ident)
+            if bound is None or getattr(entity, "_bound", bound) == bound:
+                continue
+            replacement = factory(bound)
+            added[ident] = replacement
+
+            async def _swap(old: Entity = entity, new: Entity = replacement) -> None:
+                await old.async_remove()
+                async_add_entities([new])
+
+            entry.async_create_background_task(
+                coordinator.hass, _swap(), f"localthings rebind {ident}"
+            )
+
     def _new() -> list[Entity]:
         if seen[0] != coordinator.registration.generation:
             seen[0] = coordinator.registration.generation
-            candidates = [b for b in coordinator.bound if select(b) and bound_id(b) not in added]
+            current = {bound_id(b): b for b in coordinator.bound if select(b)}
+            _rebind(current)
+            candidates = [b for ident, b in current.items() if ident not in added]
             pending[:] = [b for b in candidates if b.desc.dynamic_presence]
         else:
             candidates = list(pending)
@@ -60,10 +81,11 @@ def async_add_bound_entities(
             ident = bound_id(bound)
             if ident in added or not coordinator.registrable(bound):
                 continue
-            added.add(ident)
+            entity = factory(bound)
+            added[ident] = entity
             if bound in pending:
                 pending.remove(bound)
-            entities.append(factory(bound))
+            entities.append(entity)
         return entities
 
     async_add_entities([*_new(), *extra])
@@ -133,6 +155,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
     def __init__(self, coordinator: LocalThingsCoordinator, bound: BoundEntity) -> None:
         super().__init__(coordinator)
         self._bound = bound
+        self._bound_id = bound_id(bound)
         self._state_key = _key(bound)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
         if bound.desc.translation_placeholders is not None:
@@ -193,7 +216,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
 
     @property
     def available(self) -> bool:
-        return super().available and self.coordinator.provides(self._bound)
+        return super().available and self.coordinator.provides(self._bound, self._bound_id)
 
     @property
     def _resources(self) -> dict:

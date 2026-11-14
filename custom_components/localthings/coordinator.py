@@ -69,7 +69,7 @@ from .credentials import (
 from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
-from .registration import Registration, bound_id, is_included
+from .registration import Registration, bound_id, is_included, is_late
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
 from .registry.batch import is_stub_rep, parse_device0_batch
@@ -496,6 +496,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # stays quiet or fails the liveness gate (_recover_dormant).
     _DORMANT_RETRY_CYCLES: int = 10
     _DORMANT_RETRY_MAX_CYCLES: int = 120
+    _DORMANT_SEED_TIMEOUT_S: float = 3.0
     _POLL_TIMEOUT_S: float = 35.0
     # Summary polls run every 30 s; probe hrefs get one read per this many
     # cycles (~30 min). A usage file gains one record a day and costs a
@@ -2040,32 +2041,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         each entity once."""
         return self.registration.registrable(bound, lambda: is_included(bound, self, live=True))
 
-    def provides(self, bound: BoundEntity) -> bool:
+    def provides(self, bound: BoundEntity, ident: tuple[str, str, str] | None = None) -> bool:
         """Whether a registered entity has anything to show this run."""
-        return self.registration.provides(bound, lambda: is_included(bound, self, live=True))
+        return self.registration.provides(bound, lambda: is_included(bound, self, live=True), ident)
+
+    def evidence_canonical(self, evidence: dict[str, dict], subdevice: Subdevice) -> dict:
+        """`subdevice`'s canonical view of a discovery's evidence."""
+        return canonical_view(subdevice, self._cook_view(evidence), self.subdevices)
 
     def _judged(self, resources: dict[str, dict]) -> Callable[[BoundEntity], bool]:
         """is_included against one discovery's evidence, which the state
         cache doesn't hold yet."""
-
-        def included(bound: BoundEntity) -> bool:
-            saved = self._rehydrate_resources
-            self._rehydrate_resources = resources
-            try:
-                return is_included(bound, self)
-            finally:
-                self._rehydrate_resources = saved
-
-        return included
+        return lambda bound: is_included(bound, self, evidence=resources)
 
     def _judge_registration(self, resources: dict[str, dict]) -> None:
         self.registration.judge(self.bound, self._late_bound(), self._judged(resources))
 
-    def _retain(self, registered: list[BoundEntity], previous: Registration) -> None:
+    def _retain(
+        self, registered: list[BoundEntity], previous: Registration, found: dict[str, dict]
+    ) -> None:
         """Keep what was registered from the snapshot but this live
-        discovery didn't bind, with the registration it had."""
+        discovery didn't bind because its href was silent, with the
+        registration it had. An href that answered and bound nothing for
+        it is evidence, not a short read: that entity is left unavailable,
+        and the snapshot, which now holds the live rep, won't bind it again."""
         live = {bound_id(b) for b in self.bound}
-        retained = [b for b in registered if bound_id(b) not in live]
+        retained = [b for b in registered if bound_id(b) not in live and b.href not in found]
         if not retained:
             return
         self.bound = [*self.bound, *retained]
@@ -2099,11 +2100,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._update_late_decisions()
 
     def _late_bound(self) -> list[BoundEntity]:
-        return [
-            b
-            for b in self.bound
-            if b.desc.late_evidence and b.desc.exists_fn is not None and not b.desc.dynamic_presence
-        ]
+        return [b for b in self.bound if is_late(b)]
 
     @callback
     def _update_late_decisions(self) -> None:
@@ -2281,44 +2278,78 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             owner
             for owner, hrefs in self._awake_baseline.items()
-            if 2 * len(hrefs.intersection(resources)) >= len(hrefs)
+            # An owner with nothing to measure against never counts.
+            if hrefs and 2 * len(hrefs.intersection(resources)) >= len(hrefs)
         }
 
     async def _recover_dormant(self) -> None:
-        """Read the seed of each known sub-unit that isn't live, and add one
-        that answers with live state. Discovery runs once per load, so
+        """Read the seed of a known sub-unit that isn't live, and add it if
+        it answers with live state. Discovery runs once per load, so
         without this an indoor unit switched on mid-run would stay
-        unavailable until the next restart, though its entities are kept."""
+        unavailable until the next restart, though its entities are kept.
+        One sub-unit per cycle, on a short timeout: the read holds the
+        session lock that writes wait on, and a unit that's off only ever
+        times out."""
         self._cycles += 1
         live = {su.key for su in self.subdevices}
-        dormant = [
-            su
-            for su in self._known_subdevices
-            if su.key not in live and su.key not in self.disabled_keys
-        ]
-        for su in dormant:
-            due = self._dormant_due.setdefault(su.key, self._DORMANT_RETRY_CYCLES)
-            if due > self._cycles:
-                continue
-            async with self._session_lock:
-                seed = await self.hass.async_add_executor_job(self._poll_subdevice_seed, su)
-            try:
-                if seed and await self._materialize(su, seed):
-                    continue
-            except Exception as e:
-                # A recovery attempt must never fail the poll it rides on.
-                self._log.warning("could not add subdevice %s: %s", su.key, e, exc_info=True)
-            backoff = min(
-                2 * self._dormant_backoff.get(su.key, self._DORMANT_RETRY_CYCLES // 2),
-                self._DORMANT_RETRY_MAX_CYCLES,
+        due = next(
+            (
+                su
+                for su in self._known_subdevices
+                if su.key not in live
+                and su.key not in self.disabled_keys
+                and self._dormant_due.setdefault(su.key, self._DORMANT_RETRY_CYCLES) <= self._cycles
+            ),
+            None,
+        )
+        if due is None:
+            return
+        async with self._session_lock:
+            seed = await self.hass.async_add_executor_job(self._read_dormant_seed, due)
+        try:
+            if seed and await self._materialize(due, seed):
+                return
+        except Exception as e:
+            # A recovery attempt must never fail the poll it rides on.
+            self._log.warning("could not add subdevice %s: %s", due.key, e, exc_info=True)
+        backoff = min(
+            2 * self._dormant_backoff.get(due.key, self._DORMANT_RETRY_CYCLES // 2),
+            self._DORMANT_RETRY_MAX_CYCLES,
+        )
+        self._dormant_backoff[due.key] = backoff
+        self._dormant_due[due.key] = self._cycles + backoff
+
+    def _read_dormant_seed(self, su: Subdevice) -> dict[str, dict]:
+        """One read of a dormant sub-unit's seed, on a short timeout and,
+        for a per-href seed, a short budget. Blocking."""
+        sess = self._session
+        if sess is None:
+            return {}
+        if su.flat_hrefs:
+            hrefs = [su.to_actual(href) for href in su.flat_hrefs]
+            return dict(
+                iter_resources(
+                    sess,
+                    hrefs,
+                    timeout=self._DORMANT_SEED_TIMEOUT_S,
+                    budget=self._DORMANT_SEED_TIMEOUT_S,
+                    logger=self._log,
+                )
             )
-            self._dormant_backoff[su.key] = backoff
-            self._dormant_due[su.key] = self._cycles + backoff
+        try:
+            code, body = sess.read(list(su.seed_path), timeout=self._DORMANT_SEED_TIMEOUT_S)
+            if code == 0x45 and isinstance(body, list):
+                return normalize_seed_batch(su, parse_device0_batch(body))
+        except Exception as e:
+            self._log.debug("dormant subdevice %s didn't answer: %s", su.key, e)
+        return {}
 
     async def _materialize(self, su: Subdevice, seed: dict[str, dict]) -> bool:
         """Add a sub-unit that came back, if its seed passes the liveness
         gate: bind it, register what it brings in place, and poll it from
-        the next cycle. Grow-only, like every discovery (registration.py)."""
+        the next cycle. Grow-only, like every discovery (registration.py).
+        Everything that can fail runs before any state changes, so a failed
+        attempt leaves the unit dormant and retried."""
         resources = {**self.last_resources, **seed}
         tiers: dict[str, set[str]] = {"hot": set(), "warm": set()}
 
@@ -2332,24 +2363,36 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if su not in materialized:
             return False
         new = [b for b in bound if b.subdevice == su]
+        judged = self._judged(resources)
+        decisions = {bound_id(b): judged(b) for b in new}
+
         existing = {bound_id(b) for b in self.bound}
         self.subdevices = [*self.subdevices, su]
         self._skipped_subdevices = [s for s in self._skipped_subdevices if s.subdevice != su]
         self.bound = [*self.bound, *(b for b in new if bound_id(b) not in existing)]
         self.registration.extend(
-            new,
-            [b for b in new if b.desc.late_evidence and not b.desc.dynamic_presence],
-            self._judged(resources),
+            new, [b for b in new if is_late(b)], lambda b: decisions[bound_id(b)]
         )
         self._hot_hrefs = sorted(set(self._hot_hrefs) | tiers["hot"])
         self._warm_hrefs = sorted(set(self._warm_hrefs) | tiers["warm"])
         self._refresh_learnable_hrefs()
-        for href, rep in seed.items():
-            self._observe.apply(href, rep, source="poll")
         self._awake_baseline[su.key] = self._read_baseline(seed).get(su.key, frozenset())
         self._dormant_due.pop(su.key, None)
         self._dormant_backoff.pop(su.key, None)
         self._log.info("subdevice %s answered with live state; adding it", su.key)
+        for href, rep in seed.items():
+            self._observe.apply(href, rep, source="poll")
+        if self._observe.mode == MODE_OBSERVE:
+            # Subscriptions are made once, after first discovery.
+            subscribe = [
+                *(tiers["hot"] if "hot" in self._subscribe_tiers else ()),
+                *(tiers["warm"] if "warm" in self._subscribe_tiers else ()),
+            ]
+            async with self._session_lock:
+                if subscribe and self._session is not None:
+                    await self.hass.async_add_executor_job(
+                        self._observe.add_hrefs, self._session, subscribe
+                    )
         if su not in self._banked_candidates:
             self._banked_candidates = [*self._banked_candidates, su]
         await self._async_rebank(update=seed)
@@ -2387,13 +2430,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # A type that didn't resolve is a short read, not a different
         # appliance; a refused reload falls through to the usual union.
+        # Banked before the reload, so the entry comes back up on this
+        # discovery; if the write fails, reloading would only replay the
+        # old type, so it falls through instead.
         if (
             registered
             and self.device_type_name is not None
             and snapshot_type != self.device_type_name
+            and await self._async_save_snapshot(found, candidates)
             and self._reload_for_type(snapshot_type)
         ):
-            await self._async_save_snapshot(found, candidates)
             return True
 
         kept = {
@@ -2408,7 +2454,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # read timeout on every sweep.
             kept = {href: rep for href, rep in kept.items() if href in advertised}
             registered = [b for b in registered if b.href in advertised or b.href in found]
-        self._retain(registered, previous)
+        self._retain(registered, previous, found)
         self._known_subdevices = [
             *candidates,
             *(su for su in stored_candidates if su not in candidates),
