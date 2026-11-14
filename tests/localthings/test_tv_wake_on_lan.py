@@ -368,7 +368,7 @@ async def _load_while_off(hass: HomeAssistant, entry: MockConfigEntry) -> None:
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         # The first refresh is a background task, which block_till_done
-        # doesn't wait for; this is the poll that finds the TV off.
+        # doesn't wait for; whichever finishes first, the entities show off.
         await hass.data[DOMAIN][entry.entry_id].async_refresh()
         await hass.async_block_till_done()
 

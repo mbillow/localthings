@@ -3266,6 +3266,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # there's no live session this cycle to resubscribe on.
         if self._observe.mode == MODE_OBSERVE:
             self._observe.downgrade_to_poll()
+        # A TV reads as off from here (av.reads_as_off), but the base class
+        # doesn't notify listeners of a failure after a failure, as on an
+        # offline load whose entities registered before this first one.
+        if self._failed_cycles == 1 and self._flat:
+            self.hass.loop.call_soon(self.async_update_listeners)
         # A flat board that stops answering is switched off or gone: its last
         # state isn't carried on as an appliance's is.
         if self._discovered and self._cache.snapshot() and not self._flat:
