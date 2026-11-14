@@ -1215,7 +1215,12 @@
           "180": "3 godz.",
           "240": "4 godz.",
           "none": "Wył.",
-          "cupboard": "Do szafy"
+          "cupboard": "Do szafy",
+          "damp": "Wilgotne",
+          "less": "Mniej",
+          "normal": "Normalny",
+          "more": "Więcej",
+          "very": "Bardzo"
         }
       },
       "zone_mode": {
@@ -1589,6 +1594,12 @@
       "drum_clean_last_cleaned": {
         "name": "Ostatnie czyszczenie bębna"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Czyszczenie bębna (suszenie) za"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Ostatnie czyszczenie bębna (suszenie)"
+      },
       "quick_wash": {
         "name": "Szybkie pranie",
         "state": {
@@ -1785,6 +1796,15 @@
       },
       "progress_percentage": {
         "name": "Postęp w procentach"
+      },
+      "wash_progress_percentage": {
+        "name": "Postęp prania w procentach"
+      },
+      "dry_progress_percentage": {
+        "name": "Postęp suszenia w procentach"
+      },
+      "wash_remaining_minutes": {
+        "name": "Pozostały czas prania"
       },
       "selfcheck_error": {
         "name": "Błąd autotestu"

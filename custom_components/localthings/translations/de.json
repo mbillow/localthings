@@ -1178,7 +1178,12 @@
           "180": "3 Std",
           "240": "4 Std",
           "none": "Aus",
-          "cupboard": "Schranktrocken"
+          "cupboard": "Schranktrocken",
+          "damp": "Feucht",
+          "less": "Weniger",
+          "normal": "Normal",
+          "more": "Mehr",
+          "very": "Sehr"
         }
       },
       "zone_mode": {
@@ -1583,6 +1588,12 @@
       "drum_clean_last_cleaned": {
         "name": "Trommel zuletzt gereinigt"
       },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Trommelreinigung (Trocknen) fällig in"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Trommel zuletzt gereinigt (Trocknen)"
+      },
       "quick_wash": {
         "name": "Schnellwäsche",
         "state": {
@@ -1779,6 +1790,15 @@
       },
       "progress_percentage": {
         "name": "Fortschritt in Prozent"
+      },
+      "wash_progress_percentage": {
+        "name": "Waschfortschritt in Prozent"
+      },
+      "dry_progress_percentage": {
+        "name": "Trocknungsfortschritt in Prozent"
+      },
+      "wash_remaining_minutes": {
+        "name": "Verbleibende Waschzeit"
       },
       "selfcheck_error": {
         "name": "Selbsttestfehler"
