@@ -1,0 +1,1995 @@
+{
+  "seeds_note": "JETBOT_COMBOT_9X00_24K (Bespoke Jet Bot Combo, issue #838), verbatim from the reporter's redacted diagnostics. The region code was redacted further, and /file/list/vs/0 is left out: it is a probed href, not part of the batch.",
+  "device0": [
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.operation"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.alarms"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.alarmType": "Device",
+            "x.com.samsung.da.code": "4",
+            "x.com.samsung.da.state": "deleted",
+            "x.com.samsung.da.triggeredTime": "2026-11-12T06:45:07"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/energy/battery/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.energybattery"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.battery": "100"
+      }
+    },
+    {
+      "href": "/battery/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.battery"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.soh": "100"
+      }
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.configuration"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.region": "**REDACTED**",
+        "x.com.samsung.da.currentTime": "2026-11-12T06:44:42",
+        "x.com.samsung.da.countryCode": "KR"
+      }
+    },
+    {
+      "href": "/dnd/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.dnd"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.startTime": "15:00:00",
+        "x.com.samsung.da.endTime": "15:00:00",
+        "x.com.samsung.da.startTimeOffset": "32400",
+        "x.com.samsung.da.utcTimeOffset": "-00:01",
+        "x.com.samsung.da.timezone": "Asia/Seoul",
+        "x.com.samsung.da.value": "false",
+        "x.com.samsung.da.option": {
+          "x.com.samsung.da.dustemission": "Enable",
+          "x.com.samsung.da.lighting": "Enable",
+          "x.com.samsung.da.sound": "Enable"
+        }
+      }
+    },
+    {
+      "href": "/view/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.view"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.visibles": [
+          "Start_Visible",
+          "Stop_Invisible",
+          "Dock_Invisible",
+          "SelectRoom_Invisible",
+          "Suction_Visible",
+          "Repeat_Invisible",
+          "MapMerge_Invisible",
+          "MapDivide_Invisible",
+          "MySchedule_Visible",
+          "Homecare_Visible",
+          "CleanReport_Visible",
+          "CleanHistory_Visible",
+          "DND_Visible",
+          "Sound_Visible",
+          "DustEmit_Visible",
+          "NoEntryZone_Invisible",
+          "RenameRoom_Invisible",
+          "ResetMap_Invisible",
+          "SelectObject_Invisible",
+          "Accessory_Visible",
+          "SelectSpot_Invisible",
+          "CleaningOption_Visible",
+          "ObjectEdit_Invisible",
+          "CleaningMethod_Visible",
+          "WaterLevel_Visible",
+          "MopWash_Visible",
+          "MopDry_Visible",
+          "ClimbZone_Invisible",
+          "CarpetZone_Invisible",
+          "CleanCount_Visible",
+          "FloorPattern_Invisible"
+        ],
+        "x.com.samsung.da.options": [
+          "HOMECARE_WIZARD_V2"
+        ]
+      }
+    },
+    {
+      "href": "/preview/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.preview"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.scheduleNum": "0",
+        "x.com.samsung.da.scheduleTime": "0",
+        "x.com.samsung.da.cleanReport": {
+          "x.com.samsung.da.cleanTime": "0",
+          "x.com.samsung.da.cleanStatus": "None",
+          "x.com.samsung.da.timezone": "Asia/Seoul",
+          "x.com.samsung.da.startTimeOffset": "32400"
+        }
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mode"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.modes": [
+          "Cleaning_Stop",
+          "Control_Charged",
+          "RepeatedCleaning_Off",
+          "Turbo_Off",
+          "Sound_VoiceFeed",
+          "Option_Daily",
+          "Map_Invalid",
+          "DustEmission_On",
+          "CamChange_Off",
+          "PetPoopOption_On",
+          "CleaningMethod_AtOnce",
+          "WaterLevel_Med",
+          "CleaningStatus_None",
+          "MopHolder_Attach",
+          "BixbyPrev_Control_Homing",
+          "BixbyPrev_Cleaning_Auto"
+        ],
+        "x.com.samsung.da.supportedModes": [
+          "Cleaning_Auto",
+          "Cleaning_Area",
+          "Cleaning_Object",
+          "Cleaning_Spot",
+          "Cleaning_UncleanedObject",
+          "Cleaning_Stop",
+          "Cleaning_Cancel",
+          "Control_Homing",
+          "Control_RechargeHoming",
+          "Control_EndHoming",
+          "Control_CancelHoming",
+          "Control_RelocalHoming",
+          "Control_DustEmitHoming",
+          "Control_DNDHoming",
+          "Control_Charging",
+          "Control_Charged",
+          "Control_After",
+          "Control_Moving",
+          "Control_Cleaning",
+          "Control_Pause",
+          "Control_Idle",
+          "Control_Alarm",
+          "Control_PowerOff",
+          "Control_Factory",
+          "Control_Relocal",
+          "Control_Exploring",
+          "Control_OOBE",
+          "Control_Patrol",
+          "Control_Monitoring",
+          "Control_Manual",
+          "Control_Processing",
+          "Control_Message",
+          "Control_BixbyProcessing",
+          "Turbo_On",
+          "Turbo_Off",
+          "Turbo_Silence",
+          "Sound_Mute",
+          "Sound_SoundEffect",
+          "Sound_VoiceFeed",
+          "RepeatedCleaning_On",
+          "RepeatedCleaning_Off",
+          "DustEmission_On",
+          "DustEmission_Off",
+          "DustEmission_Start",
+          "Control_CreatingMap",
+          "Cleaning_UncleanedObject",
+          "Option_Daily",
+          "Option_Intensive",
+          "Option_Intensive2",
+          "Option_Light",
+          "Cleaning_PatternMap",
+          "Control_PatternMapPause",
+          "Control_BixbyMoving",
+          "Control_PatternMap",
+          "Control_CreateMapHoming",
+          "Control_ManualNoMap",
+          "Control_CreateMapPause",
+          "Control_CreateMapRechargeHoming",
+          "Control_CreateMapAfter",
+          "Map_Valid",
+          "Map_Invalid",
+          "Control_EmitDust",
+          "Control_PatternMapAfter",
+          "Control_ExploringStation",
+          "Control_Demo",
+          "Control_PetFind",
+          "CamChange_On",
+          "CamChange_Off",
+          "Control_SelfCalibration",
+          "CleaningMethod_Vacuum",
+          "CleaningMethod_Mop",
+          "CleaningMethod_AtOnce",
+          "CleaningMethod_MopAfterVacuum",
+          "WaterLevel_VeryHigh",
+          "WaterLevel_High",
+          "WaterLevel_Med",
+          "WaterLevel_Low",
+          "WaterLevel_VeryLow",
+          "Control_Welcome",
+          "PetPoopOption_On",
+          "PetPoopOption_Off",
+          "Control_MonitoringAutomation",
+          "Control_Standby",
+          "Turbo_UltraSilence",
+          "CleaningStatus_None",
+          "CleaningStatus_Mop",
+          "CleaningStatus_Vacuum",
+          "CleaningStatus_AtOnce",
+          "Control_PadHoming",
+          "Control_MopWashHoming",
+          "Control_MopWash",
+          "Control_MopSterilization",
+          "Control_MopDry",
+          "Control_SupplyingWater",
+          "Control_PreparingWater",
+          "Control_Dehydration",
+          "Control_AccumRelocal",
+          "Control_FlexCharged",
+          "Control_MopWashAfter",
+          "Control_SupplyingWaterHoming",
+          "MopHolder_Attach",
+          "MopHolder_Detach",
+          "Control_MopWashCharging",
+          "Control_MopWashPause",
+          "Control_Descaling",
+          "Control_MopWashStop",
+          "Control_MopWashResume",
+          "Control_DrainingWater",
+          "Control_DescalingWaiting",
+          "Control_Sabbath",
+          "Control_SabbathHoming"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "causeSource.modes": [
+          "UNKN_Cleaning_Stop",
+          "UNKN_Control_Charged",
+          "UNKN_RepeatedCleaning_Off",
+          "UNKN_Turbo_Off",
+          "UNKN_Sound_VoiceFeed",
+          "UNKN_Option_Daily",
+          "UNKN_Map_Invalid",
+          "UNKN_DustEmission_On",
+          "UNKN_CamChange_Off",
+          "UNKN_PetPoopOption_On",
+          "UNKN_CleaningMethod_AtOnce",
+          "UNKN_WaterLevel_Med",
+          "UNKN_CleaningStatus_None",
+          "UNKN_MopHolder_Attach",
+          "UNKN_BixbyPrev_Control_Homing",
+          "UNKN_BixbyPrev_Cleaning_Auto"
+        ]
+      }
+    },
+    {
+      "href": "/settings/sound/output/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings.sound.output"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "deviceType": "speaker",
+        "alarmInMute": "true"
+      }
+    },
+    {
+      "href": "/settings/sound/mode/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings.sound.mode"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "mode": "voice",
+        "supportedModes": [
+          "voice",
+          "tone",
+          "mute"
+        ]
+      }
+    },
+    {
+      "href": "/settings/sound/tone/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings.sound.tone"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "tone": ""
+      }
+    },
+    {
+      "href": "/settings/sound/voice/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings.sound.voice"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "voice": "101",
+        "supportedVoices": [
+          "101",
+          "100"
+        ]
+      }
+    },
+    {
+      "href": "/schedule/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.schedule"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": [
+          "allowOverlappingTime",
+          "allowExcludeHoliday"
+        ]
+      }
+    },
+    {
+      "href": "/map/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.map"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.mapExisted": "False",
+        "x.com.samsung.da.onlineExisted": "True",
+        "x.com.samsung.da.oobeExplore": "False",
+        "x.com.samsung.da.oobeCreateMap": "True",
+        "x.com.samsung.da.needEditName": "False",
+        "x.com.samsung.da.firstCleaned": "False",
+        "x.com.samsung.da.mapUUID": "**REDACTED**",
+        "x.com.samsung.da.stationCoordinate": [
+          "",
+          ""
+        ],
+        "x.com.samsung.da.stationType": "AutoWashingStation"
+      }
+    },
+    {
+      "href": "/map/objectinfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.objectinfo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.supported": [
+          "polygon"
+        ]
+      }
+    },
+    {
+      "href": "/map/areaname/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.areaname"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.oldestMap": "True"
+      }
+    },
+    {
+      "href": "/map/objectclean/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.objectclean"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/cleaninfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.cleaninfo"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.currentArea": "None",
+        "x.com.samsung.da.currentObject": "None",
+        "x.com.samsung.da.extraInfo": "None",
+        "x.com.samsung.da.cleanedCell": "-1",
+        "x.com.samsung.da.mopCleanedCell": "-1",
+        "x.com.samsung.da.remainTime": "-1",
+        "x.com.samsung.da.elapsedTime": "-1",
+        "x.com.samsung.da.currentExtraCleaning": "None"
+      }
+    },
+    {
+      "href": "/map/areaclean/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.areaclean"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/divide/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.divide"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/map/merge/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.merge"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/map/restrict/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.restrict"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.supported": [
+          "polygon",
+          "mop",
+          "recommend",
+          "virtualWall",
+          "unsafezone"
+        ],
+        "x.com.samsung.da.supportedMax": "45"
+      }
+    },
+    {
+      "href": "/map/spotinfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.spotinfo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/spotclean/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.spotclean"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.realtimenotiforclient"
+        ],
+        "if": [
+          "oic.if.rw"
+        ],
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.longnotisubscription": "false",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/findrobotcleaner/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.findrobotcleaner"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.findAlarm": "Stop",
+        "x.com.samsung.da.supportedFindAlarm": [
+          "Start",
+          "Stop"
+        ]
+      }
+    },
+    {
+      "href": "/filter/motorfilter/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.filter.motor"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.filterResetType": [
+          "washable"
+        ],
+        "x.com.samsung.da.filterResetable": "false"
+      }
+    },
+    {
+      "href": "/component/station/dustbag/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.dustbag"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.status": "normal",
+        "x.com.samsung.da.supportedStatus": [
+          "full",
+          "normal"
+        ]
+      }
+    },
+    {
+      "href": "/component/station/filter/hepafilter/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.filter.hepafilter"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.filterStatus": "normal",
+        "x.com.samsung.da.filterResetType": [
+          "replaceable"
+        ],
+        "x.com.samsung.da.filterResetable": "true"
+      }
+    },
+    {
+      "href": "/streaming/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.streaming"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.isOnBoarding": "Registered"
+      }
+    },
+    {
+      "href": "/bixby/status/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.bixbystatus"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.enable": "true"
+      }
+    },
+    {
+      "href": "/direction/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.direction"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.direction": "None"
+      }
+    },
+    {
+      "href": "/wifi/level/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.wifiLevel"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.wifiLevel": "good"
+      }
+    },
+    {
+      "href": "/monitoring/auto/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.monitoringAuto"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": [
+          "allowExcludeHoliday"
+        ]
+      }
+    },
+    {
+      "href": "/clip/audio/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.clipAudio"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.enable": "Off"
+      }
+    },
+    {
+      "href": "/video/stream/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.videoStream"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.videoStream": {
+          "x.com.samsung.da.liveStream": "none"
+        }
+      }
+    },
+    {
+      "href": "/monitoring/spot/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.monitoringSpot"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/monitoring/status/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.monitoringStatus"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/monitoring/block/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.monitoringBlock"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.monitoringBlock": "False"
+      }
+    },
+    {
+      "href": "/music/playlist/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.musicPlaylist"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/media/playback/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mediaPlayback"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.controls": "stop",
+        "x.com.samsung.da.supportedControls": [
+          "play",
+          "pause",
+          "stop",
+          "previous",
+          "next",
+          "playWith"
+        ]
+      }
+    },
+    {
+      "href": "/media/playback/repeat/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mediaPlaybackRepeat"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mode": "all",
+        "x.com.samsung.da.supportedModes": [
+          "off",
+          "one",
+          "all"
+        ]
+      }
+    },
+    {
+      "href": "/pet/monitoring/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.petMonitoring"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": [
+          "allowExcludeHoliday"
+        ]
+      }
+    },
+    {
+      "href": "/pet/cleaning/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.petCleaning"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": [
+          "allowExcludeHoliday"
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.energyconsumption"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.cumulativePower": "61",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativeDate": "1794465882",
+        "x.com.samsung.da.cumulativeDateUTC": "1794433482"
+      }
+    },
+    {
+      "href": "/manual/dustemission/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.manualDustEmission"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/ready/join/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.readyJoin"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.IsReadyToJoin": "False"
+      }
+    },
+    {
+      "href": "/homing/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.homing"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mode": "None"
+      }
+    },
+    {
+      "href": "/audio/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.audio"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.volumeLevel": 13
+      }
+    },
+    {
+      "href": "/map/obstacle/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.obstacle"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.realtimeObstacle": "None",
+        "x.com.samsung.da.realtimeObstacleSensing": {
+          "x.com.samsung.da.size": "high",
+          "x.com.samsung.da.unit": "cm",
+          "x.com.samsung.da.supportedSize": [
+            "very_low",
+            "low",
+            "middle",
+            "high"
+          ],
+          "x.com.samsung.da.sensingRange": {
+            "x.com.samsung.da.min": "10",
+            "x.com.samsung.da.max": "30"
+          }
+        },
+        "x.com.samsung.da.visionVersion": "furniture=0, obstacle=0, pet=0",
+        "x.com.samsung.da.supportedBoundingBox": "True"
+      }
+    },
+    {
+      "href": "/pet/status/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.petStatus"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.enable": "True"
+      }
+    },
+    {
+      "href": "/smartthings/token/vs/0",
+      "rep": "**REDACTED**"
+    },
+    {
+      "href": "/monitoring/push/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.monitoringPush"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.monitoringPush": "Off"
+      }
+    },
+    {
+      "href": "/map/obstacleinfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.obstacleinfo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/modelinfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.modelinfo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.nation": "KO"
+      }
+    },
+    {
+      "href": "/pet/installedappid/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.petInstalledappid"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.installedappid": ""
+      }
+    },
+    {
+      "href": "/pet/find/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.petFind"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/self/calibration/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.selfCalibration"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.progress": "0"
+      }
+    },
+    {
+      "href": "/child/lock/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.childLock"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.enable": "False",
+        "x.com.samsung.da.supported": [
+          "Reset"
+        ]
+      }
+    },
+    {
+      "href": "/map/areaoption/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.areaOption"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/list/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mapList"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.onlineStation": {
+          "x.com.samsung.da.coordinate": [
+            "-12",
+            "0"
+          ],
+          "x.com.samsung.da.enable": "True"
+        }
+      }
+    },
+    {
+      "href": "/child/care/recording/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.childCareRecording"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/child/care/schedule/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.childCareSchedule"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": [
+          "allowExcludeHoliday"
+        ]
+      }
+    },
+    {
+      "href": "/child/care/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.childCare"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.lastSnapshot": {},
+        "x.com.samsung.da.location": {}
+      }
+    },
+    {
+      "href": "/settings/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.unit": "Meter",
+        "x.com.samsung.da.reclean": {
+          "x.com.samsung.da.enable": "Enable",
+          "x.com.samsung.da.reclean": "1",
+          "x.com.samsung.da.smartCharging": "Disable",
+          "x.com.samsung.da.supportedRecleans": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "x.com.samsung.da.supportedSmartCharging": [
+            "Enable",
+            "Disable"
+          ]
+        },
+        "x.com.samsung.da.flash": "Off",
+        "x.com.samsung.da.flexCharging": "None",
+        "x.com.samsung.da.modelShape": "O",
+        "x.com.samsung.da.bathroomRecognition": "Off",
+        "x.com.samsung.da.cleaningCount": {
+          "x.com.samsung.da.count": "1",
+          "x.com.samsung.da.supportedCounts": [
+            "1",
+            "2"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.information"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.modelNum": "JETBOT_COMBOT_9X00_24K|50029141|80010a0002d8411f0100000000000000",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.description": "Jet Bot V/C",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.name": "Network",
+            "x.com.samsung.da.number": "26080419",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.name": "Vision",
+            "x.com.samsung.da.number": "26080419",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "2",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.name": "Main",
+            "x.com.samsung.da.number": "26070300",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "3",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.name": "Display",
+            "x.com.samsung.da.number": "24012200",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "4",
+            "x.com.samsung.da.type": "Bixby",
+            "x.com.samsung.da.name": "Bixby",
+            "x.com.samsung.da.number": "7.3.56",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "5",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.name": "Station",
+            "x.com.samsung.da.number": "26052200",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ],
+        "x.com.samsung.da.diagProtocolType": "BLE_OCF",
+        "x.com.samsung.da.diagLogType": [
+          "errCode",
+          "dump"
+        ],
+        "x.com.samsung.da.diagDumpType": "file",
+        "x.com.samsung.da.diagEndPoint": "PIPER",
+        "x.com.samsung.da.diagMnid": "0AJT",
+        "x.com.samsung.da.diagSetupid": "VR0",
+        "x.com.samsung.da.diagMinVersion": "3.0",
+        "x.com.samsung.da.diagTsId": "DA10"
+      }
+    },
+    {
+      "href": "/mop/settings/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mopSettings"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mopPattern": "Normal",
+        "x.com.samsung.da.mopFarAwayWallFollowing": "On",
+        "x.com.samsung.da.mopCarpetCleanOption": "Auto",
+        "x.com.samsung.da.stainClean": "Off",
+        "x.com.samsung.da.stainCleanSensitivity": {
+          "x.com.samsung.da.value": "Low",
+          "x.com.samsung.da.supported": [
+            "Low",
+            "Middle",
+            "High"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/lighting/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.lighting"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.lighting": "On"
+      }
+    },
+    {
+      "href": "/station/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.station"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mopRemainingItems": {
+          "x.com.samsung.da.supportedRemainStatus": [
+            "PreparingWater",
+            "Wash",
+            "Dehydration",
+            "Sterilization",
+            "Dry"
+          ]
+        },
+        "x.com.samsung.da.mopStationStatus": {
+          "x.com.samsung.da.cleanWater": "Good",
+          "x.com.samsung.da.dirtyWater": "Good",
+          "x.com.samsung.da.cleanPanel": "Good",
+          "x.com.samsung.da.waterLeak": "False",
+          "x.com.samsung.da.mopDetect": "True"
+        },
+        "x.com.samsung.da.mopOption": {
+          "x.com.samsung.da.supportedDryTime": [
+            "2",
+            "3",
+            "4"
+          ],
+          "x.com.samsung.da.supportedIntervalTime": [
+            "5",
+            "10",
+            "15",
+            "20",
+            "25",
+            "30",
+            "35",
+            "40",
+            "45",
+            "50"
+          ],
+          "x.com.samsung.da.supportedIntervalTimeRange": {
+            "WaterLevel_VeryHigh": {
+              "min": "10",
+              "max": "15",
+              "default": "15"
+            },
+            "WaterLevel_High": {
+              "min": "10",
+              "max": "20",
+              "default": "20"
+            },
+            "WaterLevel_Med": {
+              "min": "10",
+              "max": "30",
+              "default": "30"
+            },
+            "WaterLevel_Low": {
+              "min": "10",
+              "max": "45",
+              "default": "45"
+            },
+            "WaterLevel_VeryLow": {
+              "min": "10",
+              "max": "50",
+              "default": "50"
+            }
+          },
+          "x.com.samsung.da.dryTime": "2",
+          "x.com.samsung.da.interval": "Time",
+          "x.com.samsung.da.intervalTime": "20"
+        },
+        "x.com.samsung.da.washType": "None",
+        "x.com.samsung.da.bleStatus": "Connected",
+        "x.com.samsung.da.washingTank": {
+          "x.com.samsung.da.capacityStatus": "Good",
+          "x.com.samsung.da.cleaningStatus": "None"
+        },
+        "x.com.samsung.da.intensiveSteamMode": "False"
+      }
+    },
+    {
+      "href": "/station/time/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.station.time"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mopRemainingTime": {
+          "x.com.samsung.da.mopWashStartTime": "0",
+          "x.com.samsung.da.mopWashEndTime": "0",
+          "x.com.samsung.da.mopDryStartTime": "0",
+          "x.com.samsung.da.mopDryEndTime": "0"
+        },
+        "x.com.samsung.da.pausedTime": {
+          "x.com.samsung.da.remainWashTime": "0",
+          "x.com.samsung.da.processWashTime": "0",
+          "x.com.samsung.da.remainDryTime": "0",
+          "x.com.samsung.da.processDryTime": "0"
+        }
+      }
+    },
+    {
+      "href": "/mic/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.mic"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mic": "On"
+      }
+    },
+    {
+      "href": "/energy/planner/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.energyplanner"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "plan": "none"
+      }
+    },
+    {
+      "href": "/map/stainclean/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.stainclean"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/settings/sound/volume/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settings.sound.volume"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "level": "2",
+        "minLevel": "0",
+        "maxLevel": "3",
+        "resolution": "1"
+      }
+    },
+    {
+      "href": "/settings/sound/language/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.settingsSoundLanguage"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.locale": "ko_KR",
+        "x.com.samsung.da.supportedLocales": [
+          "ko_KR",
+          "pl_PL",
+          "ru_RU",
+          "es_ES",
+          "sv_SE",
+          "th_TH",
+          "zh_CN",
+          "nl_NL",
+          "en_US",
+          "fr_FR",
+          "de_DE",
+          "hu_HU",
+          "it_IT",
+          "pt_BR",
+          "tr_TR"
+        ]
+      }
+    },
+    {
+      "href": "/laboratory/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.laboratory"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.supported": {
+          "x.com.samsung.da.stainClean": "True",
+          "x.com.samsung.da.bathroomRecognition": "True"
+        }
+      }
+    },
+    {
+      "href": "/demo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.demo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.key": "MOP_DEMO"
+          },
+          {
+            "x.com.samsung.da.key": "MOP_STEAM"
+          },
+          {
+            "x.com.samsung.da.key": "MOP_OPERATION"
+          },
+          {
+            "x.com.samsung.da.key": "MOP_SPIN"
+          },
+          {
+            "x.com.samsung.da.key": "MOP_LIFTING"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/map/recognitioninfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.recognitioninfo"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/padlocation/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.padlocation"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/map/climbzone/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.climbzone"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/descaling/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.descaling"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.currentStep": "None",
+        "x.com.samsung.da.supportedSteps": [
+          "None",
+          "StandBy",
+          "Clean",
+          "CleanComplete",
+          "Rinse"
+        ],
+        "x.com.samsung.da.startTime": "0",
+        "x.com.samsung.da.endTime": "0"
+      }
+    },
+    {
+      "href": "/map/areaorder/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.areaOrder"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/maintenance/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.maintenance"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.motorFilter": "None"
+      }
+    },
+    {
+      "href": "/schedulewithoffset/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.schedulewithoffset"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/map/floorpattern/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.floorPattern"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0"
+      }
+    },
+    {
+      "href": "/detailedcleaning/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.detailedcleaning"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.status": "Off"
+      }
+    },
+    {
+      "href": "/map/carpet/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.carpet"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.mapId": "0",
+        "x.com.samsung.da.supported": [
+          "ignore"
+        ]
+      }
+    },
+    {
+      "href": "/notification/context/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.notification.context"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "supportedContexts": [
+          "incomingCall",
+          "messageReceived",
+          "endCall"
+        ]
+      }
+    },
+    {
+      "href": "/notification/context/robotVacuum/operation/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.notification.context.robotVacuum.operation"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.robotVacuum.operation": "Off"
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audio",
+      "rep": {
+        "rt": [
+          "oic.r.audio"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "volume": 3,
+        "mute": false,
+        "maxVolume": 5,
+        "timestamp": 0
+      }
+    },
+    {
+      "href": "/sec/networkaudio/audio/vs/0",
+      "rep": {
+        "rt": [
+          "oic.r.audio.vs"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "volume": "3",
+        "mute": "false",
+        "maxVolume": "5",
+        "timestamp": "0"
+      }
+    },
+    {
+      "href": "/bixby/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.bixby"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.voiceWakeup": "Mid",
+        "x.com.samsung.da.soundfeedback": "3"
+      }
+    },
+    {
+      "href": "/voice/feature/vs/0",
+      "rep": {
+        "rt": [
+          "voice.feature"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "voice.feature": {
+          "ContinuousConversation": {
+            "support": "true",
+            "value": "false",
+            "supportedValues": [
+              "true",
+              "false"
+            ]
+          },
+          "DiscoverBixby": {
+            "support": "false"
+          },
+          "LLMBixby": {
+            "support": "true"
+          },
+          "Personalization": {
+            "support": "false"
+          }
+        }
+      }
+    },
+    {
+      "href": "/connectionconfig/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.connectionconfig"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "autoReconnectionMinVersion": "1.0",
+        "autoReconnection": "true",
+        "autoReconnectionProtocolType": [
+          "helper_hotspot",
+          "ble_ocf"
+        ],
+        "supportedWiFiAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "SAE"
+        ],
+        "supportedWiFiCryptoType": [
+          "WEP-64",
+          "WEP-128",
+          "TKIP",
+          "AES"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G",
+          "5G"
+        ],
+        "calmConnectionCare": {
+          "version": "1.0",
+          "role": [
+            "things"
+          ]
+        }
+      }
+    },
+    {
+      "href": "/otninformation/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.otninformation"
+        ],
+        "if": [
+          "oic.if.s"
+        ],
+        "x.com.samsung.da.target": "",
+        "x.com.samsung.da.newVersionAvailable": "false",
+        "x.com.samsung.da.newVersionNo": "00000000",
+        "x.com.samsung.da.currentVersionInfo": "00000000",
+        "otnStatus": "None",
+        "flashingProgress": "00",
+        "otnTarget": "main",
+        "otnCompletedDate": "2026-08-04",
+        "otnList": [
+          {
+            "type": "WIFI",
+            "versions": [
+              "26080400"
+            ],
+            "modelId": "AVR-WW-RB4-24-9700MU",
+            "visVersion": "260804"
+          },
+          {
+            "type": "Micom",
+            "versions": [
+              "26070300",
+              "ffffffff"
+            ],
+            "modelId": "061050029141FFFFFFFF",
+            "visVersion": "260703"
+          }
+        ],
+        "totalCount": "0",
+        "successCount": "0",
+        "failCount": "0"
+      }
+    },
+    {
+      "href": "/timezone/vs/0",
+      "rep": {
+        "rt": [
+          "timezone"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "timezoneid": "Asia/Seoul",
+        "offset": "+09:00",
+        "DST": "OFF"
+      }
+    },
+    {
+      "href": "/wirelessinfo/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.wireless.info"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "macaddressWiFi": "**REDACTED**",
+        "macaddressBLE": "**REDACTED**",
+        "macaddressBT": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/quickcontrol/info/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.quickcontrol.info"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "supportedVersion": "1.0"
+      }
+    },
+    {
+      "href": "/logtrigger/vs/0",
+      "rep": {
+        "rt": [
+          "logtrigger"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "logRequestState": "idle",
+        "logState": "idle"
+      }
+    },
+    {
+      "href": "/bixbyterms/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.bixbyterms"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "PrivacyNotice",
+            "x.com.samsung.da.termsStatus": "Agreed",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/kor/1.0.2/1726806774110/kor/kor_kor_pn.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "PrivacyPolicy",
+            "x.com.samsung.da.termsStatus": "Agreed",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/kor/1.8.0/1787873207493/kor/kor_kor_pp.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "Datasharing",
+            "x.com.samsung.da.termsStatus": "Agreed",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/kor/1.0.1/1690269284216/kor/kor_kor_DataSharingAgreement_v4.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "SamsungLocation",
+            "x.com.samsung.da.termsStatus": "Agreed",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://static.bada.com/contents/legal/kor/kor/locationinfortnc.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "Personalization",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/kor/1.0.2/1773644167282/kor/kor_kor_PersonalizationAgreement.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "AudioReview",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": "https://d264isyiyrfhr3.cloudfront.net/storage/tos/kor/1.0.1/1773704680415/kor/kor_kor_AudioRecordingReview.html"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "FMMPrivacyPolicy",
+            "x.com.samsung.da.termsStatus": "Agreed",
+            "x.com.samsung.da.termsType": "Mandatory",
+            "x.com.samsung.da.termsURL": "https://account.samsung.com/membership/policy/privacy/service/o12ht525e6"
+          },
+          {
+            "x.com.samsung.da.accountInfo": "**REDACTED**",
+            "x.com.samsung.da.termsName": "BixbyPrivacy",
+            "x.com.samsung.da.termsStatus": "Unchecked",
+            "x.com.samsung.da.termsType": "Optional",
+            "x.com.samsung.da.termsURL": ""
+          }
+        ],
+        "x.com.samsung.da.lastCheckedTime": "1794465882"
+      }
+    },
+    {
+      "href": "/voice/provisioning/vs/0",
+      "rep": {
+        "rt": [
+          "voice.provisioning"
+        ],
+        "if": [
+          "oic.if.a"
+        ],
+        "voice.provisioning.headers": {
+          "login_id": "**REDACTED**",
+          "voice.provisioning.headers.bixbyLanguage": "ko-KR",
+          "voice.provisioning.headers.bixbyType": "BixbyAgent",
+          "voice.provisioning.headers.bixbyVersion": "7.3.56",
+          "voice.provisioning.headers.companioncountry": "KR",
+          "voice.provisioning.headers.csc": "920",
+          "voice.provisioning.headers.csciso": "KR",
+          "voice.provisioning.headers.deviceLanguage": "ko-KR",
+          "voice.provisioning.headers.deviceModelNameAsh": "24_RVC_COMBO_VR9700D_0",
+          "voice.provisioning.headers.deviceModelNamePro": "BIXBY-FAC",
+          "voice.provisioning.headers.deviceSubType": "robot_vc",
+          "voice.provisioning.headers.deviceTypeAsh": "appliance",
+          "voice.provisioning.headers.deviceTypePro": "fac",
+          "voice.provisioning.headers.mcc": "450",
+          "voice.provisioning.headers.osType": "Tizen",
+          "voice.provisioning.headers.osVersion": "7.0",
+          "voice.provisioning.headers.requestTrackId": "1794426724939",
+          "voice.provisioning.headers.sspServerUrl": "us-auth2.samsungosp.com",
+          "voice.provisioning.headers.storecountry": "KR",
+          "voice.provisioning.headers.userType": "COMMERCIAL"
+        },
+        "voice.provisioning.termsstatechange": {
+          "voice.provisioning.termsstatechange.refresh": "",
+          "voice.provisioning.termsstatechange.state": "Unchecked",
+          "voice.provisioning.termsstatechange.terms": ""
+        },
+        "voice.provisioning.deviceinfo": {
+          "voice.provisioning.deviceinfo.accesstoken": "**REDACTED**",
+          "voice.provisioning.deviceinfo.bixbyserver": "bixby4PrdKR",
+          "voice.provisioning.deviceinfo.bixbyserviceid": "",
+          "voice.provisioning.deviceinfo.deviceid": "**REDACTED**",
+          "voice.provisioning.deviceinfo.gdprcountry": "false",
+          "voice.provisioning.deviceinfo.isSupportedCountry": "true",
+          "voice.provisioning.deviceinfo.userid": "**REDACTED**"
+        }
+      }
+    },
+    {
+      "href": "/bixbyuservalidate/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.bixbyuservalidate"
+        ],
+        "if": [
+          "oic.if.a"
+        ]
+      }
+    },
+    {
+      "href": "/sound/detection/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.da.soundDetection"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.a"
+        ],
+        "x.com.samsung.da.soundDetectionState": false,
+        "x.com.samsung.da.soundDetected": "noSound",
+        "x.com.samsung.da.supportedSoundTypes": [
+          "noSound",
+          "dogBarking"
+        ],
+        "x.com.samsung.da.sensitivity": "medium",
+        "x.com.samsung.da.supportedSensitivities": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "x.com.samsung.da.notificationInterval": {
+          "x.com.samsung.da.interval": "0",
+          "x.com.samsung.da.minInterval": "0",
+          "x.com.samsung.da.maxInterval": "0"
+        }
+      }
+    }
+  ]
+}

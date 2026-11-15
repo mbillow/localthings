@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Economia de energia"
+      },
+      "mop_attached": {
+        "name": "Mop encaixado"
+      },
+      "dust_bag_full": {
+        "name": "Saco de pó da base cheio"
+      },
+      "dock_filter": {
+        "name": "Filtro da base"
+      },
+      "motor_filter": {
+        "name": "Filtro do motor"
+      },
+      "do_not_disturb": {
+        "name": "Não perturbe"
+      },
+      "clean_water_tank": {
+        "name": "Reservatório de água limpa"
+      },
+      "dirty_water_tank": {
+        "name": "Reservatório de água suja"
+      },
+      "station_water_leak": {
+        "name": "Vazamento de água na base"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Desligar a tela"
+      },
+      "empty_dust_bin": {
+        "name": "Esvaziar reservatório de pó"
+      },
+      "find_robot": {
+        "name": "Encontrar robô"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Repetir",
           "manual": "Manual",
           "stop": "Parar",
-          "map": "Mapa"
+          "map": "Mapa",
+          "spot": "Localizada",
+          "area": "Cômodo",
+          "object": "Objeto"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Efeitos sonoros",
           "mute": "Mudo",
-          "voice": "Voz"
+          "voice": "Voz",
+          "voicefeed": "Voz"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "Abrir aplicativo"
+      },
+      "cleaning_method": {
+        "name": "Método de limpeza",
+        "state": {
+          "vacuum": "Aspirar",
+          "mop": "Passar pano",
+          "atonce": "Aspirar e passar pano",
+          "mopaftervacuum": "Passar pano após aspirar"
+        }
+      },
+      "water_level": {
+        "name": "Nível de água",
+        "state": {
+          "veryhigh": "Muito alto",
+          "high": "Alto",
+          "med": "Médio",
+          "low": "Baixo",
+          "verylow": "Muito baixo"
+        }
+      },
+      "cleaning_option": {
+        "name": "Opção de limpeza",
+        "state": {
+          "daily": "Diária",
+          "intensive": "Intensiva",
+          "light": "Leve"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Pausado",
           "alarm": "Alarme",
           "reserve": "Agendado",
-          "poweroff": "Desligado"
+          "poweroff": "Desligado",
+          "charged": "Carregado"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Item transmitido"
+      },
+      "battery_health": {
+        "name": "Saúde da bateria"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Não perturbe"
+      },
+      "robot_lighting": {
+        "name": "Iluminação"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Normal",
               "turbo": "Turbo",
               "quiet": "Silencioso",
-              "extra_quiet": "Extra silencioso"
+              "extra_quiet": "Extra silencioso",
+              "ultra_quiet": "Ultrassilencioso"
             }
           }
         }

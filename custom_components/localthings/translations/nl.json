@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Energiebesparing"
+      },
+      "mop_attached": {
+        "name": "Dweil bevestigd"
+      },
+      "dust_bag_full": {
+        "name": "Stofzak van station vol"
+      },
+      "dock_filter": {
+        "name": "Stationfilter"
+      },
+      "motor_filter": {
+        "name": "Motorfilter"
+      },
+      "do_not_disturb": {
+        "name": "Niet storen"
+      },
+      "clean_water_tank": {
+        "name": "Schoonwatertank"
+      },
+      "dirty_water_tank": {
+        "name": "Vuilwatertank"
+      },
+      "station_water_leak": {
+        "name": "Waterlek station"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Scherm uit"
+      },
+      "empty_dust_bin": {
+        "name": "Stofbak legen"
+      },
+      "find_robot": {
+        "name": "Robot zoeken"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Herhalen",
           "manual": "Handmatig",
           "stop": "Stop",
-          "map": "Kaart"
+          "map": "Kaart",
+          "spot": "Plaatselijk",
+          "area": "Kamer",
+          "object": "Object"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Geluidseffecten",
           "mute": "Gedempt",
-          "voice": "Stem"
+          "voice": "Stem",
+          "voicefeed": "Stem"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "App openen"
+      },
+      "cleaning_method": {
+        "name": "Reinigingsmethode",
+        "state": {
+          "vacuum": "Zuigen",
+          "mop": "Dweilen",
+          "atonce": "Zuigen en dweilen",
+          "mopaftervacuum": "Dweilen na zuigen"
+        }
+      },
+      "water_level": {
+        "name": "Waterniveau",
+        "state": {
+          "veryhigh": "Zeer hoog",
+          "high": "Hoog",
+          "med": "Gemiddeld",
+          "low": "Laag",
+          "verylow": "Zeer laag"
+        }
+      },
+      "cleaning_option": {
+        "name": "Reinigingsoptie",
+        "state": {
+          "daily": "Dagelijks",
+          "intensive": "Intensief",
+          "light": "Licht"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Gepauzeerd",
           "alarm": "Alarm",
           "reserve": "Gepland",
-          "poweroff": "Uitgeschakeld"
+          "poweroff": "Uitgeschakeld",
+          "charged": "Opgeladen"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Cast-item"
+      },
+      "battery_health": {
+        "name": "Batterijconditie"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Niet storen"
+      },
+      "robot_lighting": {
+        "name": "Verlichting"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Normaal",
               "turbo": "Turbo",
               "quiet": "Stil",
-              "extra_quiet": "Extra stil"
+              "extra_quiet": "Extra stil",
+              "ultra_quiet": "Ultrastil"
             }
           }
         }

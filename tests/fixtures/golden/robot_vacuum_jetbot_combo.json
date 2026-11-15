@@ -1,0 +1,31 @@
+{
+  "state_keys": [
+    "alarm_code",
+    "auto_empty",
+    "battery",
+    "battery_charging",
+    "battery_health",
+    "child_lock",
+    "clean_water_tank",
+    "cleaning_method",
+    "cleaning_mode",
+    "cleaning_option",
+    "dirty_water_tank",
+    "do_not_disturb",
+    "dock_filter",
+    "dust_bag_full",
+    "energy_kwh",
+    "firmware_update",
+    "mop_attached",
+    "motor_filter",
+    "power_switch",
+    "repeated_cleaning",
+    "robot_lighting",
+    "robot_sound",
+    "robot_status",
+    "sound_volume",
+    "station_water_leak",
+    "vacuum",
+    "water_level"
+  ]
+}

@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Энергосбережение"
+      },
+      "mop_attached": {
+        "name": "Насадка для мытья установлена"
+      },
+      "dust_bag_full": {
+        "name": "Мешок для пыли станции заполнен"
+      },
+      "dock_filter": {
+        "name": "Фильтр станции"
+      },
+      "motor_filter": {
+        "name": "Фильтр мотора"
+      },
+      "do_not_disturb": {
+        "name": "Не беспокоить"
+      },
+      "clean_water_tank": {
+        "name": "Бак для чистой воды"
+      },
+      "dirty_water_tank": {
+        "name": "Бак для грязной воды"
+      },
+      "station_water_leak": {
+        "name": "Протечка воды на станции"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Выключить экран"
+      },
+      "empty_dust_bin": {
+        "name": "Очистить контейнер для пыли"
+      },
+      "find_robot": {
+        "name": "Найти робота"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Повторная",
           "manual": "Ручная",
           "stop": "Стоп",
-          "map": "По карте"
+          "map": "По карте",
+          "spot": "Локальная",
+          "area": "Комната",
+          "object": "Объект"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Звуковые эффекты",
           "mute": "Без звука",
-          "voice": "Голос"
+          "voice": "Голос",
+          "voicefeed": "Голос"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "Открыть приложение"
+      },
+      "cleaning_method": {
+        "name": "Способ уборки",
+        "state": {
+          "vacuum": "Сухая уборка",
+          "mop": "Влажная уборка",
+          "atonce": "Сухая и влажная",
+          "mopaftervacuum": "Влажная после сухой"
+        }
+      },
+      "water_level": {
+        "name": "Подача воды",
+        "state": {
+          "veryhigh": "Очень высокая",
+          "high": "Высокая",
+          "med": "Средняя",
+          "low": "Низкая",
+          "verylow": "Очень низкая"
+        }
+      },
+      "cleaning_option": {
+        "name": "Вариант уборки",
+        "state": {
+          "daily": "Ежедневная",
+          "intensive": "Интенсивная",
+          "light": "Лёгкая"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Приостановлен",
           "alarm": "Тревога",
           "reserve": "По расписанию",
-          "poweroff": "Выключен"
+          "poweroff": "Выключен",
+          "charged": "Заряжен"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Транслируемый элемент"
+      },
+      "battery_health": {
+        "name": "Состояние батареи"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Не беспокоить"
+      },
+      "robot_lighting": {
+        "name": "Подсветка"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Обычная",
               "turbo": "Турбо",
               "quiet": "Тихая",
-              "extra_quiet": "Сверхтихая"
+              "extra_quiet": "Сверхтихая",
+              "ultra_quiet": "Ультратихая"
             }
           }
         }

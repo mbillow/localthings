@@ -61,12 +61,13 @@ class LocalThingsVacuum(LocalThingsEntity, StateVacuumEntity):
         for feature, group, value in (
             (VacuumEntityFeature.START, rv.CLEANING, rv.START_PROGRAM),
             (VacuumEntityFeature.STOP, rv.CLEANING, rv.STOP_PROGRAM),
-            (VacuumEntityFeature.CLEAN_SPOT, rv.CLEANING, rv.SPOT_PROGRAM),
             (VacuumEntityFeature.PAUSE, rv.CONTROL, "Pause"),
             (VacuumEntityFeature.RETURN_HOME, rv.CONTROL, "Homing"),
         ):
             if self._supports(group, value):
                 features |= feature
+        if rv.spot_program(self._rep) is not None:
+            features |= VacuumEntityFeature.CLEAN_SPOT
         if rv.fan_speed_list(self._rep):
             features |= VacuumEntityFeature.FAN_SPEED
         return features
@@ -110,7 +111,7 @@ class LocalThingsVacuum(LocalThingsEntity, StateVacuumEntity):
         await self._send(rv.CONTROL, "Homing")
 
     async def async_clean_spot(self, **kwargs: Any) -> None:
-        await self._send(rv.CLEANING, rv.SPOT_PROGRAM)
+        await self._send(rv.CLEANING, rv.spot_program(self._rep) or rv.SPOT_PROGRAMS[0])
 
     async def async_set_fan_speed(self, fan_speed: str, **kwargs: Any) -> None:
         value = rv.turbo_value(fan_speed, self._rep)
