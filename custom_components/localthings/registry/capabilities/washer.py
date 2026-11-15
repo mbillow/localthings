@@ -84,6 +84,8 @@ from .operational import OPERATIONAL_STATE, _remaining_seconds, _state_is_active
 # label -- the two tables are unrelated code spaces despite a handful of
 # overlapping hex values. A WD80N645OOW/EU washer-dryer's owner read six more
 # out of the app (issue #736), and a WW10M86INOA/EN's owner named BD (#798).
+# A WW9000HE's owner named its 22 codes from the panel (#635); none overlap
+# the codes above.
 # ---------------------------------------------------------------------------
 
 # /washer/vs/0 -- wash temperature, spin speed, rinse cycle count, soil level.

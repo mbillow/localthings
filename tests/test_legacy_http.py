@@ -229,6 +229,17 @@ class TestCourseTable:
 
         assert rep[PREFIX + "st.courseTable"] == "Table_00"
 
+    @pytest.mark.parametrize("family", ["WW9000HE", "WW9000HE(REDACTED)"])
+    def test_the_ww9000he_is_table_00_whatever_its_unit_suffix(self, family):
+        """#635: its description is the model plus a per-unit "(...)" suffix."""
+        rep = course_table(family)[COURSE_TABLE_HREF]
+
+        assert rep[PREFIX + "st.courseTable"] == "Table_00"
+
+    @pytest.mark.parametrize("family", ["WW9000HEX", "WW9000", None])
+    def test_a_near_miss_or_missing_family_gets_none(self, family):
+        assert course_table(family) == {}
+
     def test_an_unknown_family_gets_none(self):
         """Rather than a guessed one: course codes are not consistent across
         board generations, so a board nobody has walked the dial on belongs

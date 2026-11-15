@@ -396,8 +396,9 @@ _COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
 # This family serves no /st/washercourse/vs/0, so its table is declared per
 # family. TP6X_WASHER is Table_00: a dial walk through all 14 panel positions
 # on a WW6500 matched the existing washer_cycle_table_00 catalog on 13 codes,
-# and the fourteenth (0x6C) is Denim by elimination.
-FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00"}
+# and the fourteenth (0x6C) is Denim by elimination. The WW9000HE's 22 codes,
+# named by its owner (#635), share none with Table_00, so they join it.
+FAMILY_COURSE_TABLES: dict[str, str] = {"TP6X_WASHER": "Table_00", "WW9000HE": "Table_00"}
 
 
 # Where model_allows_power_on_off reads whether remote power on/off works.
@@ -453,7 +454,8 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
 def course_table(family: str) -> dict[str, dict]:
     """A `/st/washercourse/vs/0` rep for `family`; empty (raw course codes)
     for a family nobody has walked the dial on."""
-    table = FAMILY_COURSE_TABLES.get(family)
+    # The WW9000HE's description carries a unit-specific "(...)" suffix.
+    table = FAMILY_COURSE_TABLES.get((family or "").split("(", 1)[0])
     if not table:
         return {}
     return {COURSE_TABLE_HREF: {_COURSE_TABLE_FIELD: table}}
