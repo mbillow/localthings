@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Připojení wooferu"
       },
+      "ip_control": {
+        "name": "Ovládání přes IP"
+      },
       "lamp": {
         "name": "Lampa"
       },
@@ -1365,6 +1368,14 @@
           "ita": "italština"
         }
       },
+      "tv_remote": {
+        "name": "Dálkový ovladač TV",
+        "state": {
+          "tv_remote_all": "Všechny ovladače",
+          "tv_remote_off": "Vypnuto",
+          "tv_remote_samsung": "Pouze ovladače Samsung"
+        }
+      },
       "equalizer": {
         "name": "Ekvalizér",
         "state": {
@@ -2071,6 +2082,9 @@
       },
       "installation_type": {
         "name": "Typ instalace"
+      },
+      "audio_codec": {
+        "name": "Zvukový kodek"
       },
       "micom_version": {
         "name": "Verze micom"

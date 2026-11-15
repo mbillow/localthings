@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Повезивање вуфера"
       },
+      "ip_control": {
+        "name": "ИП контрола"
+      },
       "lamp": {
         "name": "Лампа"
       },
@@ -1365,6 +1368,14 @@
           "ita": "Италијански"
         }
       },
+      "tv_remote": {
+        "name": "Даљински управљач телевизора",
+        "state": {
+          "tv_remote_all": "Сви даљински управљачи",
+          "tv_remote_off": "Искључено",
+          "tv_remote_samsung": "Само Samsung даљински управљачи"
+        }
+      },
       "equalizer": {
         "name": "Еквилајзер",
         "state": {
@@ -2071,6 +2082,9 @@
       },
       "installation_type": {
         "name": "Тип инсталације"
+      },
+      "audio_codec": {
+        "name": "Аудио кодек"
       },
       "micom_version": {
         "name": "Верзија микроконтролера (Micom)"

@@ -425,6 +425,46 @@ AUTO_POWER_DOWN_AV = Capability(
     ),
 )
 
+# Which remotes the bar answers (HW-Q935GF, #853). The write is guessed from
+# the rw interface and the /av/ sound settings' unprefixed fields; it needs
+# live confirmation.
+TV_REMOTE = Capability(
+    href="/sec/networkaudio/av/tvremote",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="tv_remote",
+            field="currentRemote",
+            options_field="supportedRemote",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                rep.get("currentRemote") in (rep.get("supportedRemote") or ())
+            ),
+            write_fn=_write("currentRemote"),
+        ),
+    ),
+)
+
+PLAYER_INFO = Capability(
+    href="/sec/networkaudio/av/playerinfo",
+    poll_tier="warm",
+    entities=(SensorDesc(key="audio_codec", field="codecinfo", entity_category="diagnostic"),),
+)
+
+IP_CONTROL = Capability(
+    href="/sec/networkaudio/ipcontrol/state",
+    poll_tier="cold",
+    entities=(
+        BinarySensorDesc(
+            key="ip_control",
+            field="value",
+            value_fn=bool,
+            entity_category="diagnostic",
+            exists_fn=lambda rep, resources: type(rep.get("value")) is bool,
+        ),
+    ),
+)
+
 # "on"/"off" strings, not a bool.
 AUTO_UPDATE = Capability(
     href="/sec/networkaudio/autoUpdate",

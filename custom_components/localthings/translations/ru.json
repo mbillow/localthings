@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Подключение сабвуфера"
       },
+      "ip_control": {
+        "name": "Управление по IP"
+      },
       "lamp": {
         "name": "Лампа"
       },
@@ -1365,6 +1368,14 @@
           "ita": "Итальянский"
         }
       },
+      "tv_remote": {
+        "name": "Пульт телевизора",
+        "state": {
+          "tv_remote_all": "Все пульты",
+          "tv_remote_off": "Выкл.",
+          "tv_remote_samsung": "Только пульты Samsung"
+        }
+      },
       "equalizer": {
         "name": "Эквалайзер",
         "state": {
@@ -2071,6 +2082,9 @@
       },
       "installation_type": {
         "name": "Тип установки"
+      },
+      "audio_codec": {
+        "name": "Аудиокодек"
       },
       "micom_version": {
         "name": "Версия микроконтроллера"

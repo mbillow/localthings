@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Połączenie woofera"
       },
+      "ip_control": {
+        "name": "Sterowanie przez IP"
+      },
       "lamp": {
         "name": "Oświetlenie"
       },
@@ -1365,6 +1368,14 @@
           "ita": "włoski"
         }
       },
+      "tv_remote": {
+        "name": "Pilot telewizora",
+        "state": {
+          "tv_remote_all": "Wszystkie piloty",
+          "tv_remote_off": "Wyłączone",
+          "tv_remote_samsung": "Tylko piloty Samsung"
+        }
+      },
       "equalizer": {
         "name": "Korektor",
         "state": {
@@ -2071,6 +2082,9 @@
       },
       "installation_type": {
         "name": "Typ instalacji"
+      },
+      "audio_codec": {
+        "name": "Kodek audio"
       },
       "micom_version": {
         "name": "Wersja micom"
