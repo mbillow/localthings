@@ -343,3 +343,45 @@ def test_attitude_toward_the_board_is_deliberate():
     reg = registry_for("soundbar")
     assert reg.subscribe_tiers == ()
     assert reg.write_settle_s == 6.0
+
+
+_APD = "/sec/networkaudio/autoPowerDown"
+_APD_AV = "/sec/networkaudio/av/autoPowerDown"
+
+
+def _auto_power_down(resources):
+    reg = resolve(resources, device_types=DEVICE_TYPES)
+    assert reg is not None
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    # registration.is_included's gate: exists_fn when there is one.
+    return [
+        b
+        for b in bound
+        if b.desc.key == "auto_power_down"
+        and (b.desc.exists_fn is None or b.desc.exists_fn(resources[b.href], resources))
+    ]
+
+
+def test_auto_power_down_under_av_on_2025_bars():
+    """HW-Q935GF (#853) serves the setting under /av/ only."""
+    resources = _load_device(FIXTURE)
+    resources[_APD_AV] = resources.pop(_APD)
+    (bound,) = _auto_power_down(resources)
+    assert bound.href == _APD_AV
+    assert flatten([bound], resources)["auto_power_down"] is True
+    assert _write(bound.desc, "Off", bound.href) == (
+        ["sec", "networkaudio", "av", "autoPowerDown"],
+        {"x.com.samsung.networkaudio.autoPowerDown": False},
+    )
+
+
+def test_auto_power_down_binds_once_when_both_hrefs_answer():
+    """The /av/ form wins, as it does for the /av/ sound settings."""
+    resources = _load_device(FIXTURE)
+    resources[_APD_AV] = dict(resources[_APD])
+    (bound,) = _auto_power_down(resources)
+    assert bound.href == _APD_AV
+    # An /av/ resource with no usable field leaves the switch on the old href.
+    resources[_APD_AV] = {}
+    (bound,) = _auto_power_down(resources)
+    assert bound.href == _APD

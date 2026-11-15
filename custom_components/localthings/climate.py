@@ -102,6 +102,11 @@ _SUPPORTED_FIELD = "x.com.samsung.da.supportedModes"
 # HVAC mode: Samsung /mode/vs/0 modes <-> HA HVACMode (excluding OFF, which is
 # driven by the power resource).
 _DEVICE_TO_HVAC: dict[str, HVACMode] = {
+    # Cool and Dry with Auto Clean, going by the names, read as their base
+    # mode (ARTIK051_DONGLE_FAC_18K, #844). Listed before 'Cool'/'Dry' so
+    # those stay the reverse map's fallback.
+    "CoolClean": HVACMode.COOL,
+    "DryClean": HVACMode.DRY,
     "Cool": HVACMode.COOL,
     # AI Air Combo ventilator (TP1X_DA-AC-RHS-01001, #551). Listed before
     # 'Dry' so that stays the reverse map's fallback.

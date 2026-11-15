@@ -47,6 +47,8 @@ IGNORED: list[Capability] = [
     Capability(href="/quickcontrol/info/vs/0"),
     Capability(href="/realtimenotiforclient/vs/0"),
     Capability(href="/file/information/vs/0"),
+    # File-transfer chunking endpoint, empty on reads (R18_BIXBY_FAC_TIME_23K, #839).
+    Capability(href="/file/transfer/chunk/vs/0"),
     # Normally static region/countryCode metadata. The range, oven and
     # microwave registries replace this entry with the write-only clock button.
     Capability(href="/configuration/vs/0"),

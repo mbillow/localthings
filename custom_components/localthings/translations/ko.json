@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "우퍼 연결"
       },
+      "ip_control": {
+        "name": "IP 제어"
+      },
       "lamp": {
         "name": "램프"
       },
@@ -1368,6 +1371,14 @@
           "ita": "이탈리아어"
         }
       },
+      "tv_remote": {
+        "name": "TV 리모컨",
+        "state": {
+          "tv_remote_all": "모든 리모컨",
+          "tv_remote_off": "끄기",
+          "tv_remote_samsung": "삼성 리모컨만"
+        }
+      },
       "equalizer": {
         "name": "이퀄라이저",
         "state": {
@@ -2084,6 +2095,9 @@
       },
       "installation_type": {
         "name": "설치 유형"
+      },
+      "audio_codec": {
+        "name": "오디오 코덱"
       },
       "micom_version": {
         "name": "마이컴 버전"

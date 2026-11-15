@@ -63,6 +63,15 @@ def test_fan_only_reverse_fallback_prefers_wind():
     assert _HVAC_TO_DEVICE[HVACMode.FAN_ONLY] == "Wind"
 
 
+def test_auto_clean_modes_read_as_their_base_mode():
+    """ARTIK051_DONGLE_FAC_18K (#844) lists CoolClean and DryClean next to
+    Cool and Dry; HA shows them as COOL and DRY, and writes the plain codes."""
+    assert _DEVICE_TO_HVAC["CoolClean"] == HVACMode.COOL
+    assert _DEVICE_TO_HVAC["DryClean"] == HVACMode.DRY
+    assert _HVAC_TO_DEVICE[HVACMode.COOL] == "Cool"
+    assert _HVAC_TO_DEVICE[HVACMode.DRY] == "Dry"
+
+
 def test_preset_ai_comfort_constant():
     assert PRESET_AI_COMFORT == "ai_comfort"
 

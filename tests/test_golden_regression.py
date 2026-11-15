@@ -2292,6 +2292,22 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q700c():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_soundbar_q935gf():
+    """2025 bar with settings under /sec/networkaudio/av/ (#853)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q935gf")
+    golden = json.loads((GOLDEN / "soundbar_q935gf.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_q935gf", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
     """AIM-H04N indoor subdevice (#789): locks in current_temperature_c from
     the flat /temperatures/indoor/vs/0 and the Wh-scale meter selection. Routed
