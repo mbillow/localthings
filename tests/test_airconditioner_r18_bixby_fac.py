@@ -50,10 +50,21 @@ def test_reads_from_the_fixture():
     assert state["bluetooth_discoverable"] is False
 
 
-def test_volume_is_an_open_ended_box():
-    desc = _desc(airconditioner.SPEAKER_VOLUME, "speaker_volume")
-    assert desc.mode == "box"
-    assert desc.native_min == 0 and desc.native_max is None
+async def test_volume_box_bounds_are_what_the_entity_exposes(hass):
+    """The entity's real bounds, not just the descriptor's: Home Assistant
+    rejects a value over max_value before a write is sent."""
+    from custom_components.localthings.number import LocalThingsNumber
+    from tests.test_subdevice_discovery import _coordinator, _discover
+
+    coordinator = _coordinator(hass)
+    await _discover(coordinator, "airconditioner_r18_bixby_fac_time_23k")
+    (bound,) = [b for b in coordinator.bound if b.desc.key == "speaker_volume"]
+    entity = LocalThingsNumber(coordinator, bound)
+    assert entity.mode == "box"
+    assert (entity.min_value, entity.max_value, entity.step) == (0, 100, 1)
+
+
+def test_volume_write_sends_an_integer():
     assert _write(airconditioner.SPEAKER_VOLUME, "speaker_volume", 7.0) == (
         ["audio", "vs", "0"],
         {"x.com.samsung.da.volumeLevel": 7},

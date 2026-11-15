@@ -1711,8 +1711,8 @@ def _hhmm_write(field: str):
     )
 
 
-# No range is reported, so the box takes any level from 0 and the unit
-# refuses one it can't take.
+# No range is reported. Home Assistant needs a maximum, so 100 is stated
+# rather than inherited; within it the unit refuses a level it can't take.
 SPEAKER_VOLUME = Capability(
     href="/audio/vs/0",
     poll_tier="cold",
@@ -1724,6 +1724,7 @@ SPEAKER_VOLUME = Capability(
             entity_category="config",
             mode="box",
             native_min=0,
+            native_max=100,
             step=1,
             value_fn=int_or_none,
             write_fn=lambda p, rep, href=None: (
