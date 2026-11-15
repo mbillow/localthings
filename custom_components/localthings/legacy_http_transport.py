@@ -45,6 +45,7 @@ from .legacy_http import (
     divider_in,
     http_status_to_coap,
     is_disconnected,
+    is_flexdry_family,
     is_start,
     model_settings,
     split_start_only,
@@ -327,7 +328,15 @@ class LegacyHttpTransport:
                 bodies.update(unwrap(linked))
             else:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
+        # A composite's section can be a different family from the entry's:
+        # FlexDry's upper and lower dryers each name their own (#649).
+        course_family = self._family
         if index:
+            information = bodies.get("Information")
+            description = information.get("description") if isinstance(information, dict) else None
+            if description is None:
+                description = record.get("description")
+            course_family = description if is_flexdry_family(description) else None
             bodies = _with_record_description(bodies, record.get("description"))
             bodies = _with_record_name(bodies, record.get("name") or _record_type(record))
         state = self._state_at(index)
@@ -344,14 +353,13 @@ class LegacyHttpTransport:
         )
         # Each cavity needs its own canonical power capability before remapping.
         resources.update(model_settings(self._family, bodies))
+        resources.update(course_table(course_family))
         if index:
             if listed is not None:
                 resources[_LISTED_HREF] = listed
             sibling = Subdevice(kind="indexed", key=str(index), seed_path=("device", str(index)))
             resources = {sibling.to_actual(href): rep for href, rep in resources.items()}
         else:
-            # Not served by this family; see legacy_http.FAMILY_COURSE_TABLES.
-            resources.update(course_table(self._family))
             if CLOCK_HREF not in resources and self._has_clock(timeout):
                 resources[CLOCK_HREF] = {}
         return 0x45, [{"href": href, "rep": rep} for href, rep in resources.items()]
@@ -439,7 +447,7 @@ class LegacyHttpTransport:
             return refused, None
         timeout = _remaining(deadline)
         device_type = state.device_type
-        table = table_for(device_type)
+        table = table_for(device_type, self._family)
         steps: list[tuple[str, Mapping[str, Any]]] | None
         if isinstance(body, list):
             # A cook start's Collection batch (#473) is the same coalesced
