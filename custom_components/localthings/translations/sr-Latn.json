@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Ušteda energije"
+      },
+      "mop_attached": {
+        "name": "Krpa postavljena"
+      },
+      "dust_bag_full": {
+        "name": "Kesa za prašinu u stanici puna"
+      },
+      "dock_filter": {
+        "name": "Filter stanice"
+      },
+      "motor_filter": {
+        "name": "Filter motora"
+      },
+      "do_not_disturb": {
+        "name": "Ne uznemiravaj"
+      },
+      "clean_water_tank": {
+        "name": "Rezervoar za čistu vodu"
+      },
+      "dirty_water_tank": {
+        "name": "Rezervoar za prljavu vodu"
+      },
+      "station_water_leak": {
+        "name": "Curenje vode iz stanice"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Isključi ekran"
+      },
+      "empty_dust_bin": {
+        "name": "Isprazni posudu za prašinu"
+      },
+      "find_robot": {
+        "name": "Pronađi robota"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Ponovljeno",
           "manual": "Ručno",
           "stop": "Zaustavljeno",
-          "map": "Mapa"
+          "map": "Mapa",
+          "spot": "Lokalno",
+          "area": "Prostorija",
+          "object": "Objekat"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Zvučni efekti",
           "mute": "Utišano",
-          "voice": "Glas"
+          "voice": "Glas",
+          "voicefeed": "Glas"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "Otvori aplikaciju"
+      },
+      "cleaning_method": {
+        "name": "Način čišćenja",
+        "state": {
+          "vacuum": "Usisavanje",
+          "mop": "Brisanje",
+          "atonce": "Usisavanje i brisanje",
+          "mopaftervacuum": "Brisanje posle usisavanja"
+        }
+      },
+      "water_level": {
+        "name": "Nivo vode",
+        "state": {
+          "veryhigh": "Veoma visok",
+          "high": "Visok",
+          "med": "Srednji",
+          "low": "Nizak",
+          "verylow": "Veoma nizak"
+        }
+      },
+      "cleaning_option": {
+        "name": "Opcija čišćenja",
+        "state": {
+          "daily": "Svakodnevno",
+          "intensive": "Intenzivno",
+          "light": "Lagano"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Pauzirano",
           "alarm": "Alarm",
           "reserve": "Zakazano",
-          "poweroff": "Isključen"
+          "poweroff": "Isključen",
+          "charged": "Napunjen"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Prebačena stavka"
+      },
+      "battery_health": {
+        "name": "Stanje baterije"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Ne uznemiravaj"
+      },
+      "robot_lighting": {
+        "name": "Osvetljenje"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Normalno",
               "turbo": "Turbo",
               "quiet": "Tiho",
-              "extra_quiet": "Veoma tiho"
+              "extra_quiet": "Veoma tiho",
+              "ultra_quiet": "Ultra tiho"
             }
           }
         }

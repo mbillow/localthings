@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "절전"
+      },
+      "mop_attached": {
+        "name": "물걸레 장착됨"
+      },
+      "dust_bag_full": {
+        "name": "스테이션 먼지봉투 가득 참"
+      },
+      "dock_filter": {
+        "name": "스테이션 필터"
+      },
+      "motor_filter": {
+        "name": "모터 필터"
+      },
+      "do_not_disturb": {
+        "name": "방해 금지"
+      },
+      "clean_water_tank": {
+        "name": "깨끗한 물통"
+      },
+      "dirty_water_tank": {
+        "name": "오수통"
+      },
+      "station_water_leak": {
+        "name": "스테이션 누수"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "화면 끄기"
+      },
+      "empty_dust_bin": {
+        "name": "먼지통 비우기"
+      },
+      "find_robot": {
+        "name": "로봇 찾기"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "반복",
           "manual": "수동",
           "stop": "정지",
-          "map": "지도"
+          "map": "지도",
+          "spot": "집중",
+          "area": "방",
+          "object": "사물"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "효과음",
           "mute": "음소거",
-          "voice": "음성"
+          "voice": "음성",
+          "voicefeed": "음성"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "앱 열기"
+      },
+      "cleaning_method": {
+        "name": "청소 방식",
+        "state": {
+          "vacuum": "흡입",
+          "mop": "물걸레",
+          "atonce": "흡입과 물걸레",
+          "mopaftervacuum": "흡입 후 물걸레"
+        }
+      },
+      "water_level": {
+        "name": "물 양",
+        "state": {
+          "veryhigh": "매우 많음",
+          "high": "많음",
+          "med": "보통",
+          "low": "적음",
+          "verylow": "매우 적음"
+        }
+      },
+      "cleaning_option": {
+        "name": "청소 옵션",
+        "state": {
+          "daily": "일상",
+          "intensive": "강력",
+          "light": "가볍게"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "일시정지",
           "alarm": "알람",
           "reserve": "예약",
-          "poweroff": "전원 꺼짐"
+          "poweroff": "전원 꺼짐",
+          "charged": "충전 완료"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "캐스팅 항목"
+      },
+      "battery_health": {
+        "name": "배터리 상태"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "방해 금지"
+      },
+      "robot_lighting": {
+        "name": "조명"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "보통",
               "turbo": "터보",
               "quiet": "조용히",
-              "extra_quiet": "매우 조용히"
+              "extra_quiet": "매우 조용히",
+              "ultra_quiet": "초저소음"
             }
           }
         }

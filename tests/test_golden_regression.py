@@ -1259,6 +1259,22 @@ def test_registry_reproduces_golden_state_keys_for_robot_vacuum_powerbot_r7040()
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_robot_vacuum_jetbot_combo():
+    """Bespoke Jet Bot Combo (#838): mop, station and dock resources."""
+    from tests.conftest import _load_device
+
+    name = "robot_vacuum_jetbot_combo"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.robotcleaner")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_range_os70h30e():
     """OS70H30E range (issue #726): the DAWIT 3.0 oven half is one bare-field
     /oven/status/vs/0, typed by /oic/d."""

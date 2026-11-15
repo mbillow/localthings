@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Уштеда енергије"
+      },
+      "mop_attached": {
+        "name": "Крпа постављена"
+      },
+      "dust_bag_full": {
+        "name": "Кеса за прашину у станици пуна"
+      },
+      "dock_filter": {
+        "name": "Филтер станице"
+      },
+      "motor_filter": {
+        "name": "Филтер мотора"
+      },
+      "do_not_disturb": {
+        "name": "Не узнемиравај"
+      },
+      "clean_water_tank": {
+        "name": "Резервоар за чисту воду"
+      },
+      "dirty_water_tank": {
+        "name": "Резервоар за прљаву воду"
+      },
+      "station_water_leak": {
+        "name": "Цурење воде из станице"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Искључи екран"
+      },
+      "empty_dust_bin": {
+        "name": "Испразни посуду за прашину"
+      },
+      "find_robot": {
+        "name": "Пронађи робота"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Поновљено",
           "manual": "Ручно",
           "stop": "Заустављено",
-          "map": "Мапа"
+          "map": "Мапа",
+          "spot": "Локално",
+          "area": "Просторија",
+          "object": "Објекат"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Звучни ефекти",
           "mute": "Утишано",
-          "voice": "Глас"
+          "voice": "Глас",
+          "voicefeed": "Глас"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "Отвори апликацију"
+      },
+      "cleaning_method": {
+        "name": "Начин чишћења",
+        "state": {
+          "vacuum": "Усисавање",
+          "mop": "Брисање",
+          "atonce": "Усисавање и брисање",
+          "mopaftervacuum": "Брисање после усисавања"
+        }
+      },
+      "water_level": {
+        "name": "Ниво воде",
+        "state": {
+          "veryhigh": "Веома висок",
+          "high": "Висок",
+          "med": "Средњи",
+          "low": "Низак",
+          "verylow": "Веома низак"
+        }
+      },
+      "cleaning_option": {
+        "name": "Опција чишћења",
+        "state": {
+          "daily": "Свакодневно",
+          "intensive": "Интензивно",
+          "light": "Лагано"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Паузирано",
           "alarm": "Аларм",
           "reserve": "Заказано",
-          "poweroff": "Искључен"
+          "poweroff": "Искључен",
+          "charged": "Напуњен"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Пребачена ставка"
+      },
+      "battery_health": {
+        "name": "Стање батерије"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Не узнемиравај"
+      },
+      "robot_lighting": {
+        "name": "Осветљење"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Нормално",
               "turbo": "Турбо",
               "quiet": "Тихо",
-              "extra_quiet": "Веома тихо"
+              "extra_quiet": "Веома тихо",
+              "ultra_quiet": "Ултра тихо"
             }
           }
         }

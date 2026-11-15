@@ -195,6 +195,30 @@
       },
       "energy_saving": {
         "name": "Úspora energie"
+      },
+      "mop_attached": {
+        "name": "Mop nasadený"
+      },
+      "dust_bag_full": {
+        "name": "Vrecko na prach v stanici plné"
+      },
+      "dock_filter": {
+        "name": "Filter stanice"
+      },
+      "motor_filter": {
+        "name": "Filter motora"
+      },
+      "do_not_disturb": {
+        "name": "Nerušiť"
+      },
+      "clean_water_tank": {
+        "name": "Nádrž na čistú vodu"
+      },
+      "dirty_water_tank": {
+        "name": "Nádrž na špinavú vodu"
+      },
+      "station_water_leak": {
+        "name": "Únik vody zo stanice"
       }
     },
     "button": {
@@ -251,6 +275,12 @@
       },
       "screen_off": {
         "name": "Vypnúť obrazovku"
+      },
+      "empty_dust_bin": {
+        "name": "Vyprázdniť nádobu na prach"
+      },
+      "find_robot": {
+        "name": "Nájsť robota"
       }
     },
     "climate": {
@@ -1432,7 +1462,10 @@
           "repeat": "Opakovať",
           "manual": "Ručný",
           "stop": "Stop",
-          "map": "Mapa"
+          "map": "Mapa",
+          "spot": "Bodový",
+          "area": "Miestnosť",
+          "object": "Objekt"
         }
       },
       "robot_sound": {
@@ -1440,7 +1473,8 @@
         "state": {
           "soundeffect": "Zvukové efekty",
           "mute": "Stlmené",
-          "voice": "Hlas"
+          "voice": "Hlas",
+          "voicefeed": "Hlas"
         }
       },
       "smart_ventilate_mode": {
@@ -1463,6 +1497,33 @@
       },
       "open_app": {
         "name": "Otvoriť aplikáciu"
+      },
+      "cleaning_method": {
+        "name": "Spôsob upratovania",
+        "state": {
+          "vacuum": "Vysávanie",
+          "mop": "Mopovanie",
+          "atonce": "Vysávanie a mopovanie",
+          "mopaftervacuum": "Mopovanie po vysávaní"
+        }
+      },
+      "water_level": {
+        "name": "Množstvo vody",
+        "state": {
+          "veryhigh": "Veľmi vysoké",
+          "high": "Vysoké",
+          "med": "Stredné",
+          "low": "Nízke",
+          "verylow": "Veľmi nízke"
+        }
+      },
+      "cleaning_option": {
+        "name": "Možnosť upratovania",
+        "state": {
+          "daily": "Denné",
+          "intensive": "Intenzívne",
+          "light": "Ľahké"
+        }
       }
     },
     "sensor": {
@@ -2164,7 +2225,8 @@
           "pause": "Pozastavené",
           "alarm": "Alarm",
           "reserve": "Naplánované",
-          "poweroff": "Vypnuté"
+          "poweroff": "Vypnuté",
+          "charged": "Nabité"
         }
       },
       "robot_movement": {
@@ -2238,6 +2300,9 @@
       },
       "cast_item": {
         "name": "Položka castingu"
+      },
+      "battery_health": {
+        "name": "Stav batérie"
       }
     },
     "switch": {
@@ -2543,6 +2608,9 @@
       },
       "hood_do_not_disturb": {
         "name": "Nerušiť"
+      },
+      "robot_lighting": {
+        "name": "Osvetlenie"
       }
     },
     "time": {
@@ -2605,7 +2673,8 @@
               "normal": "Normálny",
               "turbo": "Turbo",
               "quiet": "Tichý",
-              "extra_quiet": "Veľmi tichý"
+              "extra_quiet": "Veľmi tichý",
+              "ultra_quiet": "Ultra tichý"
             }
           }
         }
