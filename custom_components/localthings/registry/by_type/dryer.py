@@ -36,13 +36,33 @@ REGISTRY = DeviceRegistry(
 )
 
 
+def _is_drum_section(resources):
+    information = resources.get("/information/vs/0") or {}
+    return str(information.get("x.com.samsung.da.description", "")).upper() == "TP6X_DRYER_DRUM"
+
+
+# Only cycle selection and Start/Pause/Stop have been confirmed from Home
+# Assistant on the upper (top-load) section (#673); its other settings stay off.
+_DRUM_ONLY_CONTROLS = frozenset({"dry_level", "dry_time", "wrinkle_prevent", "damp_alert"})
+
+
+def _drum_only(desc):
+    exists_fn = desc.exists_fn
+    return replace(
+        desc,
+        exists_fn=lambda rep, resources: (
+            _is_drum_section(resources) and (exists_fn is None or exists_fn(rep, resources))
+        ),
+    )
+
+
 def _flexdry_description(desc):
     """Expose only the confirmed FlexDry controls."""
     if isinstance(desc, (SensorDesc, BinarySensorDesc)):
         return desc
-    if isinstance(desc, SelectDesc) and desc.key in {"cycle", "dry_level", "dry_time"}:
-        return desc
-    if isinstance(desc, SwitchDesc) and desc.key in {"wrinkle_prevent", "damp_alert"}:
+    if desc.key in _DRUM_ONLY_CONTROLS and isinstance(desc, (SelectDesc, SwitchDesc)):
+        return _drum_only(desc)
+    if isinstance(desc, SelectDesc) and desc.key == "cycle":
         return desc
     if isinstance(desc, ButtonDesc) and desc.key in {"start", "pause", "stop"}:
         return desc
@@ -72,10 +92,7 @@ def _flexdry_registry() -> DeviceRegistry:
                         ),
                         exists_fn=lambda rep, resources: (
                             bool(rep.get("x.com.samsung.da.supportedWaterTemperature"))
-                            and resources.get("/information/vs/0", {}).get(
-                                "x.com.samsung.da.description"
-                            )
-                            == "TP6X_DRYER_DRUM"
+                            and _is_drum_section(resources)
                         ),
                         write_fn=dryer._setting_write(temperature),
                     ),

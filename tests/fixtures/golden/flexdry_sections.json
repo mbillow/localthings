@@ -44,14 +44,12 @@
       "cycle",
       "cycle_active",
       "diagnosis",
-      "dry_level",
       "dryer_type",
       "finish_time",
       "machine_state",
       "progress",
       "progress_percentage",
-      "remote_control",
-      "wrinkle_prevent"
+      "remote_control"
     ],
     "cycle_codes": [
       "AD",

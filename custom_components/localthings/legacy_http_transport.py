@@ -320,11 +320,15 @@ class LegacyHttpTransport:
                 bodies.update(unwrap(linked))
             else:
                 _LOGGER.debug("%s: %s/%s answered %s", self._host, base, endpoint, linked_status)
-        information = bodies.get("Information")
-        description = information.get("description") if isinstance(information, dict) else None
-        if description is None:
-            description = record.get("description")
+        # A composite's section can be a different family from the entry's:
+        # FlexDry's upper and lower dryers each name their own (#649).
+        course_family = self._family
         if index:
+            information = bodies.get("Information")
+            description = information.get("description") if isinstance(information, dict) else None
+            if description is None:
+                description = record.get("description")
+            course_family = description if is_flexdry_family(description) else None
             bodies = _with_record_description(bodies, record.get("description"))
             bodies = _with_record_name(bodies, record.get("name") or _record_type(record))
         state = self._state_at(index)
@@ -341,10 +345,6 @@ class LegacyHttpTransport:
         )
         # Each cavity needs its own canonical power capability before remapping.
         resources.update(model_settings(self._family, bodies))
-        # Composite sections may use a different family from the config entry.
-        course_family = self._family if not index else None
-        if index and isinstance(description, str) and is_flexdry_family(description):
-            course_family = description
         resources.update(course_table(course_family))
         if index:
             if listed is not None:
