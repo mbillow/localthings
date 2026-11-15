@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Parear Bluetooth"
+      },
+      "screen_off": {
+        "name": "Desligar a tela"
       }
     },
     "climate": {
@@ -1404,6 +1407,16 @@
       },
       "picture_mode": {
         "name": "Modo de imagem"
+      },
+      "rear_speaker_position": {
+        "name": "Posicionamento dos alto-falantes traseiros",
+        "state": {
+          "front": "Frontal",
+          "rear": "Traseiro"
+        }
+      },
+      "open_app": {
+        "name": "Abrir aplicativo"
       }
     },
     "sensor": {
@@ -2164,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Iluminância"
+      },
+      "channel": {
+        "name": "Canal"
+      },
+      "now_showing": {
+        "name": "Em exibição"
+      },
+      "cast_session": {
+        "name": "Sessão de transmissão"
+      },
+      "cast_item": {
+        "name": "Item transmitido"
       }
     },
     "switch": {
@@ -2524,6 +2549,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Controle remoto"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Notificações"
+      }
     }
   },
   "config": {
@@ -2687,7 +2722,8 @@
           "subdevices": "Subdispositivos",
           "cloud_courses": "Baixar ciclos",
           "forget_learned_modes": "Esquecer modos memorizados",
-          "debug_write": "Depuração: gravar em um recurso"
+          "debug_write": "Depuração: gravar em um recurso",
+          "camera_casting": "Transmissão de câmeras"
         }
       },
       "settings": {
@@ -2765,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Aguardar novamente",
           "cloud_finish": "Concluir"
+        }
+      },
+      "camera_casting": {
+        "title": "Transmissão de câmeras com baixa latência",
+        "description": "Quando você transmite uma câmera para esta TV, o Home Assistant normalmente a serve pelo próprio stream, que a TV armazena em buffer por cerca de 20 segundos. Ative esta opção para que o LocalThings execute o ffmpeg e sirva a câmera diretamente, reduzindo o atraso para poucos segundos.\n\nIsso adiciona dois endpoints ao servidor web do Home Assistant. A TV abre o stream com um link aleatório de uso único, porque não consegue fazer login. Deixe desativado, a menos que você transmita câmeras e o atraso importe: nada mais na TV precisa disso. Requer ffmpeg e uma URL do Home Assistant acessível pela TV.",
+        "data": {
+          "camera_casting": "Transmitir câmeras pelo LocalThings (ffmpeg)"
         }
       }
     },
@@ -2924,6 +2967,54 @@
     },
     "media_option_not_supported": {
       "message": "O dispositivo não oferece essa opção no momento."
+    },
+    "unknown_remote_command": {
+      "message": "Comando de controle remoto desconhecido: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "O controle de energia não está disponível para este dispositivo"
+    },
+    "wake_on_lan_failed": {
+      "message": "Não foi possível enviar o Wake-on-LAN para a TV: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Esta TV pode reproduzir canais, aplicativos, imagens, arquivos de vídeo, streams HLS, câmeras e vídeos do YouTube (channel, app, image, video, url ou youtube), não {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} não é um número de canal; use dígitos como 5 ou 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Informe o id do aplicativo (por exemplo, kIciSQlYEM.plex) ou o nome de um aplicativo que a TV já executou."
+    },
+    "search_unsupported": {
+      "message": "Este dispositivo não pode pesquisar; somente TVs Samsung podem."
+    },
+    "invalid_media_url": {
+      "message": "{url} não é um link http(s) para uma imagem, um arquivo de vídeo ou um stream HLS, nem um link ou id de vídeo do YouTube (streams MJPEG e manifestos DASH .mpd não são suportados)."
+    },
+    "cast_unsupported": {
+      "message": "Este dispositivo não pode exibir imagens nem reproduzir vídeos do YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Este dispositivo não pode exibir notificações."
+    },
+    "notify_message_empty": {
+      "message": "A mensagem da notificação está vazia."
+    },
+    "settings_unsupported": {
+      "message": "Este dispositivo não tem um menu de configurações de TV para controlar."
+    },
+    "apps_unsupported": {
+      "message": "Este dispositivo não mantém uma lista de aplicativos de TV."
+    },
+    "invalid_ask": {
+      "message": "extra.ask deve ser true ou false, não {value}."
+    },
+    "camera_timeout": {
+      "message": "A câmera {camera} demorou demais para responder."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Não foi possível enviar o Wake-on-LAN para a TV: nenhuma rota de rede para {targets}."
     }
   },
   "selector": {
@@ -3025,6 +3116,62 @@
         "duration": {
           "name": "Duração",
           "description": "Quantidade de segundos a escutar, até 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Esquecer apps de TV aprendidos",
+      "description": "Apaga os apps que foram vistos em execução em uma TV, que a seleção Abrir aplicativo e media_player.play_media oferecem pelo nome. As telas integradas permanecem. Os apps são aprendidos de novo à medida que a TV os mostra, começando pelo que está aberto agora.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "A TV cujos apps aprendidos serão esquecidos."
+        }
+      }
+    },
+    "search": {
+      "name": "Pesquisar na TV",
+      "description": "Abre uma pesquisa em uma TV Samsung: o YouTube abre nos resultados; os outros sites abrem no navegador da TV.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "A TV em que pesquisar."
+        },
+        "query": {
+          "name": "Consulta",
+          "description": "O que pesquisar."
+        },
+        "site": {
+          "name": "Site",
+          "description": "Onde pesquisar. O padrão é YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Abrir uma página de configurações da TV",
+      "description": "Abre uma página do menu de configurações de uma TV Samsung. A lista vem do firmware da Samsung; nem toda TV tem todas as páginas, e outro id de página pode ser digitado.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "A TV em que abrir a página."
+        },
+        "page": {
+          "name": "Página",
+          "description": "A página de configurações a abrir."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Definir o desligamento automático da TV",
+      "description": "Desliga uma TV Samsung após esse número de minutos; 0 desativa o desligamento automático. A TV não informa o tempo restante, então confira no menu dela (Geral, Gerenciador do sistema, Hora, Desligamento automático).",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "A TV em que definir o desligamento automático."
+        },
+        "minutes": {
+          "name": "Minutos",
+          "description": "Minutos até a TV desligar; 0 desativa o desligamento automático."
         }
       }
     }

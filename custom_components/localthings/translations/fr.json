@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Appairer en Bluetooth"
+      },
+      "screen_off": {
+        "name": "Éteindre l'écran"
       }
     },
     "climate": {
@@ -1404,6 +1407,16 @@
       },
       "picture_mode": {
         "name": "Mode image"
+      },
+      "rear_speaker_position": {
+        "name": "Placement des enceintes arrière",
+        "state": {
+          "front": "Avant",
+          "rear": "Arrière"
+        }
+      },
+      "open_app": {
+        "name": "Ouvrir une application"
       }
     },
     "sensor": {
@@ -2164,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Éclairement"
+      },
+      "channel": {
+        "name": "Chaîne"
+      },
+      "now_showing": {
+        "name": "À l'écran"
+      },
+      "cast_session": {
+        "name": "Session de diffusion"
+      },
+      "cast_item": {
+        "name": "Élément diffusé"
       }
     },
     "switch": {
@@ -2524,6 +2549,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Télécommande"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Notifications"
+      }
     }
   },
   "config": {
@@ -2687,7 +2722,8 @@
           "subdevices": "Sous-appareils",
           "cloud_courses": "Programmes téléchargés",
           "forget_learned_modes": "Oublier les modes mémorisés",
-          "debug_write": "Débogage : écrire dans une ressource"
+          "debug_write": "Débogage : écrire dans une ressource",
+          "camera_casting": "Diffusion des caméras"
         }
       },
       "settings": {
@@ -2765,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Attendre à nouveau",
           "cloud_finish": "Terminer"
+        }
+      },
+      "camera_casting": {
+        "title": "Diffusion des caméras à faible latence",
+        "description": "Lorsque vous diffusez une caméra sur ce téléviseur, Home Assistant la sert normalement via son propre flux, que le téléviseur met en mémoire tampon pendant environ 20 secondes. Activez cette option pour que LocalThings lance ffmpeg et serve lui-même la caméra, ce qui ramène le délai à quelques secondes.\n\nCela ajoute deux points d'accès au serveur web de Home Assistant. Le téléviseur ouvre le flux avec un lien aléatoire à usage unique, car il ne peut pas se connecter. Laissez-la désactivée sauf si vous diffusez des caméras et que le délai compte : rien d'autre sur le téléviseur n'en a besoin. Nécessite ffmpeg et une URL Home Assistant joignable par le téléviseur.",
+        "data": {
+          "camera_casting": "Diffuser les caméras via LocalThings (ffmpeg)"
         }
       }
     },
@@ -2924,6 +2967,54 @@
     },
     "media_option_not_supported": {
       "message": "L'appareil ne propose pas cette option pour le moment."
+    },
+    "unknown_remote_command": {
+      "message": "Commande de télécommande inconnue : {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "La mise sous tension n'est pas disponible pour cet appareil"
+    },
+    "wake_on_lan_failed": {
+      "message": "Impossible d'envoyer le Wake-on-LAN au téléviseur : {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Ce téléviseur peut lire des chaînes, des applications, des images, des fichiers vidéo, des flux HLS, des caméras et des vidéos YouTube (channel, app, image, video, url ou youtube), pas {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} n'est pas un numéro de chaîne ; utilisez des chiffres comme 5 ou 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Indiquez l'identifiant de l'application (par ex. kIciSQlYEM.plex) ou le nom d'une application que le téléviseur a déjà lancée."
+    },
+    "search_unsupported": {
+      "message": "Cet appareil ne peut pas lancer de recherche ; seuls les téléviseurs Samsung le peuvent."
+    },
+    "invalid_media_url": {
+      "message": "{url} n'est pas un lien http(s) vers une image, un fichier vidéo ou un flux HLS, ni un lien ou un identifiant de vidéo YouTube (les flux MJPEG et les manifestes DASH .mpd ne sont pas pris en charge)."
+    },
+    "cast_unsupported": {
+      "message": "Cet appareil ne peut pas afficher d'images ni lire de vidéos YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Cet appareil ne peut pas afficher de notifications."
+    },
+    "notify_message_empty": {
+      "message": "Le message de la notification est vide."
+    },
+    "settings_unsupported": {
+      "message": "Cet appareil n'a pas de menu de réglages de téléviseur à piloter."
+    },
+    "apps_unsupported": {
+      "message": "Cet appareil ne tient pas de liste d'applications de téléviseur."
+    },
+    "invalid_ask": {
+      "message": "extra.ask doit valoir true ou false, pas « {value} »."
+    },
+    "camera_timeout": {
+      "message": "La caméra {camera} a mis trop de temps à répondre."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Impossible d'envoyer le Wake-on-LAN au téléviseur : aucune route réseau vers {targets}."
     }
   },
   "selector": {
@@ -3025,6 +3116,62 @@
         "duration": {
           "name": "Durée",
           "description": "Nombre de secondes d'écoute, 120 au maximum."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Oublier les applications TV apprises",
+      "description": "Efface les applications vues en cours d'exécution sur un téléviseur, que la sélection Ouvrir une application et media_player.play_media proposent par leur nom. Les écrans intégrés restent. Les applications sont réapprises à mesure que le téléviseur les affiche, en commençant par celle ouverte en ce moment.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "Le téléviseur dont les applications apprises sont oubliées."
+        }
+      }
+    },
+    "search": {
+      "name": "Rechercher sur le TV",
+      "description": "Lance une recherche sur un téléviseur Samsung : YouTube s'ouvre sur les résultats ; les autres sites s'ouvrent dans le navigateur du téléviseur.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "Le téléviseur sur lequel rechercher."
+        },
+        "query": {
+          "name": "Recherche",
+          "description": "Ce qu'il faut rechercher."
+        },
+        "site": {
+          "name": "Site",
+          "description": "Où rechercher. YouTube par défaut."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Ouvrir une page de réglages du TV",
+      "description": "Ouvre une page du menu des réglages d'un téléviseur Samsung. La liste vient du micrologiciel de Samsung ; tous les téléviseurs n'ont pas toutes les pages, et un autre identifiant de page peut être saisi.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "Le téléviseur sur lequel ouvrir la page."
+        },
+        "page": {
+          "name": "Page",
+          "description": "La page de réglages à ouvrir."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Régler la mise en veille du TV",
+      "description": "Éteint un téléviseur Samsung après ce nombre de minutes ; 0 désactive la mise en veille. Le téléviseur n'indique pas le temps restant, vérifiez-le dans son menu (Général, Gestionnaire système, Heure, Mise en veille).",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "Le téléviseur dont la mise en veille est réglée."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Minutes avant l'extinction du téléviseur ; 0 désactive la mise en veille."
         }
       }
     }

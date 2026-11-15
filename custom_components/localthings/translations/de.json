@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Bluetooth koppeln"
+      },
+      "screen_off": {
+        "name": "Bildschirm aus"
       }
     },
     "climate": {
@@ -1404,6 +1407,16 @@
       },
       "picture_mode": {
         "name": "Bildmodus"
+      },
+      "rear_speaker_position": {
+        "name": "Position der Rücklautsprecher",
+        "state": {
+          "front": "Vorne",
+          "rear": "Hinten"
+        }
+      },
+      "open_app": {
+        "name": "App öffnen"
       }
     },
     "sensor": {
@@ -2164,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Beleuchtungsstärke"
+      },
+      "channel": {
+        "name": "Kanal"
+      },
+      "now_showing": {
+        "name": "Läuft gerade"
+      },
+      "cast_session": {
+        "name": "Cast-Sitzung"
+      },
+      "cast_item": {
+        "name": "Cast-Element"
       }
     },
     "switch": {
@@ -2524,6 +2549,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Fernbedienung"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Benachrichtigungen"
+      }
     }
   },
   "config": {
@@ -2687,7 +2722,8 @@
           "subdevices": "Untergeräte",
           "cloud_courses": "Download-Programme",
           "debug_write": "Debug: In eine Ressource schreiben",
-          "forget_learned_modes": "Gemerkte Modi vergessen"
+          "forget_learned_modes": "Gemerkte Modi vergessen",
+          "camera_casting": "Kamera-Übertragung"
         }
       },
       "settings": {
@@ -2765,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Erneut warten",
           "cloud_finish": "Fertig"
+        }
+      },
+      "camera_casting": {
+        "title": "Kamera-Übertragung mit geringer Verzögerung",
+        "description": "Wenn Sie eine Kamera auf diesen Fernseher übertragen, liefert Home Assistant sie normalerweise über einen eigenen Stream, den der Fernseher etwa 20 Sekunden puffert. Schalten Sie dies ein, damit LocalThings ffmpeg ausführt und die Kamera selbst liefert; die Verzögerung sinkt dann auf wenige Sekunden.\n\nDadurch erhält der Webserver von Home Assistant zwei zusätzliche Endpunkte. Der Fernseher öffnet den Stream über einen zufälligen Einmal-Link, da er sich nicht anmelden kann. Lassen Sie es aus, außer Sie übertragen Kameras und die Verzögerung stört: Nichts anderes am Fernseher benötigt es. Erfordert ffmpeg und eine Home-Assistant-URL, die der Fernseher erreicht.",
+        "data": {
+          "camera_casting": "Kameras über LocalThings übertragen (ffmpeg)"
         }
       }
     },
@@ -2924,6 +2967,54 @@
     },
     "media_option_not_supported": {
       "message": "Das Gerät bietet diese Option gerade nicht an."
+    },
+    "unknown_remote_command": {
+      "message": "Unbekannter Fernbedienungsbefehl: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Die Ein-/Ausschaltsteuerung ist für dieses Gerät nicht verfügbar"
+    },
+    "wake_on_lan_failed": {
+      "message": "Wake-on-LAN konnte nicht an den Fernseher gesendet werden: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Dieser Fernseher kann Kanäle, Apps, Bilder, Videodateien, HLS-Streams, Kameras und YouTube-Videos abspielen (channel, app, image, video, url oder youtube), nicht {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} ist keine Kanalnummer; verwende Ziffern wie 5 oder 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Gib die ID der App an (z. B. kIciSQlYEM.plex) oder den Namen einer App, die der Fernseher schon ausgeführt hat."
+    },
+    "search_unsupported": {
+      "message": "Dieses Gerät kann nicht suchen; das können nur Samsung-Fernseher."
+    },
+    "invalid_media_url": {
+      "message": "{url} ist kein http(s)-Link zu einem Bild, einer Videodatei oder einem HLS-Stream und kein YouTube-Link bzw. keine Video-ID (MJPEG-Streams und DASH-Manifeste (.mpd) werden nicht unterstützt)."
+    },
+    "cast_unsupported": {
+      "message": "Dieses Gerät kann keine Bilder anzeigen und keine YouTube-Videos abspielen."
+    },
+    "notify_unsupported": {
+      "message": "Dieses Gerät kann keine Benachrichtigungen anzeigen."
+    },
+    "notify_message_empty": {
+      "message": "Der Benachrichtigungstext ist leer."
+    },
+    "settings_unsupported": {
+      "message": "Dieses Gerät hat kein steuerbares TV-Einstellungsmenü."
+    },
+    "apps_unsupported": {
+      "message": "Dieses Gerät merkt sich keine TV-Apps."
+    },
+    "invalid_ask": {
+      "message": "extra.ask muss true oder false sein, nicht {value}."
+    },
+    "camera_timeout": {
+      "message": "Die Kamera {camera} hat zu lange nicht geantwortet."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Wake-on-LAN konnte nicht gesendet werden: keine Netzwerkroute zu {targets}."
     }
   },
   "selector": {
@@ -3025,6 +3116,62 @@
         "duration": {
           "name": "Dauer",
           "description": "Wie viele Sekunden gelauscht wird, höchstens 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Gelernte TV-Apps vergessen",
+      "description": "Löscht die Apps, die auf einem Fernseher gesehen wurden und die die Auswahl „App öffnen“ und media_player.play_media mit Namen anbieten. Die eingebauten Bildschirme bleiben. Apps werden wieder gelernt, sobald der Fernseher sie zeigt, beginnend mit der gerade geöffneten.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Fernseher, dessen gelernte Apps vergessen werden."
+        }
+      }
+    },
+    "search": {
+      "name": "Auf dem TV suchen",
+      "description": "Öffnet eine Suche auf einem Samsung-Fernseher: YouTube öffnet sich mit den Ergebnissen, die anderen Seiten im Browser des Fernsehers.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Fernseher, auf dem gesucht wird."
+        },
+        "query": {
+          "name": "Suchbegriff",
+          "description": "Wonach gesucht wird."
+        },
+        "site": {
+          "name": "Seite",
+          "description": "Wo gesucht wird. Standard ist YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Eine TV-Einstellungsseite öffnen",
+      "description": "Öffnet eine Seite im Einstellungsmenü eines Samsung-Fernsehers. Die Liste stammt aus Samsungs Firmware; nicht jeder Fernseher hat jede Seite, und eine andere Seiten-ID kann eingegeben werden.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Fernseher, auf dem die Seite geöffnet wird."
+        },
+        "page": {
+          "name": "Seite",
+          "description": "Die zu öffnende Einstellungsseite."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Den Sleep-Timer des TV stellen",
+      "description": "Schaltet einen Samsung-Fernseher nach so vielen Minuten aus; 0 schaltet den Sleep-Timer aus. Der Fernseher meldet die Restzeit nicht, prüfen Sie sie in seinem Menü (Allgemein, Systemmanager, Zeit, Sleep-Timer).",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der Fernseher, dessen Sleep-Timer gestellt wird."
+        },
+        "minutes": {
+          "name": "Minuten",
+          "description": "Minuten, bis sich der Fernseher ausschaltet; 0 schaltet den Sleep-Timer aus."
         }
       }
     }

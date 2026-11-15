@@ -17,6 +17,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
+from . import camera_dash
 from .cleanup import async_delete_removed_issues, async_notify_removed, async_reconcile_entities
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import (
@@ -317,6 +318,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
+    # Only an install that opts in serves the camera views (CONF_CAMERA_CASTING).
+    if coordinator.camera_casting_enabled:
+        camera_dash.async_register_views(hass)
 
     # Send the DTLS close_notify on Core shutdown, not just on unload (issue
     # #254): HA doesn't unload entries on a plain Core restart, so a restart
@@ -370,6 +374,11 @@ async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> Non
     if disabled_subdevice_keys(entry.options) != coordinator.disabled_keys:
         hass.config_entries.async_schedule_reload(entry.entry_id)
         return
+    if coordinator.camera_casting_enabled:
+        camera_dash.async_register_views(hass)
+    else:
+        # Ends a camera this TV is casting; the views refuse it from now on.
+        await coordinator.playback.async_close()
     coordinator._on_cloud_courses_changed()
 
 

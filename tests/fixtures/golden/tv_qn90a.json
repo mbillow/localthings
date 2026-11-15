@@ -1,6 +1,10 @@
 {
   "state_keys": [
+    "channel",
+    "media_player",
     "network_connection",
+    "now_showing",
+    "open_app",
     "picture_mode"
   ]
 }

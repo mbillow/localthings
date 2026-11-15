@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Spárovat Bluetooth"
+      },
+      "screen_off": {
+        "name": "Vypnout obrazovku"
       }
     },
     "climate": {
@@ -1404,6 +1407,16 @@
       },
       "picture_mode": {
         "name": "Režim obrazu"
+      },
+      "rear_speaker_position": {
+        "name": "Umístění zadních reproduktorů",
+        "state": {
+          "front": "Vpředu",
+          "rear": "Vzadu"
+        }
+      },
+      "open_app": {
+        "name": "Otevřít aplikaci"
       }
     },
     "sensor": {
@@ -2164,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Osvětlení"
+      },
+      "channel": {
+        "name": "Kanál"
+      },
+      "now_showing": {
+        "name": "Právě vysílané"
+      },
+      "cast_session": {
+        "name": "Relace castingu"
+      },
+      "cast_item": {
+        "name": "Položka castingu"
       }
     },
     "switch": {
@@ -2524,6 +2549,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Dálkové ovládání"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Oznámení"
+      }
     }
   },
   "config": {
@@ -2687,7 +2722,8 @@
           "subdevices": "Podřízená zařízení",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
-          "debug_write": "Ladění: zápis do prostředku"
+          "debug_write": "Ladění: zápis do prostředku",
+          "camera_casting": "Přenos kamer"
         }
       },
       "settings": {
@@ -2765,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Počkat znovu",
           "cloud_finish": "Dokončit"
+        }
+      },
+      "camera_casting": {
+        "title": "Přenos kamer s nízkou latencí",
+        "description": "Když na tuto televizi přenášíte kameru, Home Assistant ji běžně poskytuje přes vlastní stream, který si televize ukládá do vyrovnávací paměti asi 20 sekund. Po zapnutí spustí LocalThings ffmpeg a kameru poskytne sám, čímž se zpoždění zkrátí na několik sekund.\n\nTím se na webový server Home Assistantu přidají dva koncové body. Televize stream otevírá náhodným jednorázovým odkazem, protože se nemůže přihlásit. Nechte vypnuté, pokud nepřenášíte kamery a zpoždění vám nevadí: nic jiného v televizi to nepotřebuje. Vyžaduje ffmpeg a adresu Home Assistantu dostupnou z televize.",
+        "data": {
+          "camera_casting": "Přenášet kamery přes LocalThings (ffmpeg)"
         }
       }
     },
@@ -2924,6 +2967,54 @@
     },
     "media_option_not_supported": {
       "message": "Zařízení tuto možnost právě nenabízí."
+    },
+    "unknown_remote_command": {
+      "message": "Neznámý příkaz dálkového ovládání: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Ovládání napájení není pro toto zařízení k dispozici"
+    },
+    "wake_on_lan_failed": {
+      "message": "Nepodařilo se odeslat Wake-on-LAN do televize: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Tato televize umí přehrát kanály, aplikace, obrázky, video soubory, HLS streamy, kamery a videa z YouTube (channel, app, image, video, url nebo youtube), ne {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} není číslo kanálu; použijte číslice, např. 5 nebo 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Zadejte ID aplikace (např. kIciSQlYEM.plex) nebo název aplikace, kterou už televize spustila."
+    },
+    "search_unsupported": {
+      "message": "Toto zařízení neumí vyhledávat; umí to jen televize Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} není http(s) odkaz na obrázek, video soubor ani HLS stream, ani odkaz či ID videa z YouTube (MJPEG streamy a DASH manifesty .mpd nejsou podporovány)."
+    },
+    "cast_unsupported": {
+      "message": "Toto zařízení neumí zobrazit obrázky ani přehrát videa z YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Toto zařízení neumí zobrazovat oznámení."
+    },
+    "notify_message_empty": {
+      "message": "Text oznámení je prázdný."
+    },
+    "settings_unsupported": {
+      "message": "Toto zařízení nemá ovladatelnou nabídku nastavení televize."
+    },
+    "apps_unsupported": {
+      "message": "Toto zařízení si nepamatuje žádné aplikace televize."
+    },
+    "invalid_ask": {
+      "message": "extra.ask musí být true nebo false, ne {value}."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} odpovídala příliš dlouho."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Wake-on-LAN se nepodařilo odeslat: žádná síťová cesta k {targets}."
     }
   },
   "selector": {
@@ -3025,6 +3116,62 @@
         "duration": {
           "name": "Doba trvání",
           "description": "Kolik sekund naslouchat, nejvýše 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zapomenout naučené aplikace TV",
+      "description": "Smaže aplikace, které televizor spustil a které výběr Otevřít aplikaci a media_player.play_media nabízejí podle názvu. Vestavěné obrazovky zůstanou. Aplikace se naučí znovu, jak je televizor zobrazí, počínaje tou, která je právě otevřená.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, jehož naučené aplikace se mají zapomenout."
+        }
+      }
+    },
+    "search": {
+      "name": "Hledat na TV",
+      "description": "Otevře vyhledávání na televizoru Samsung: YouTube se otevře na výsledcích, ostatní weby v prohlížeči televizoru.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se hledá."
+        },
+        "query": {
+          "name": "Dotaz",
+          "description": "Co se má hledat."
+        },
+        "site": {
+          "name": "Web",
+          "description": "Kde hledat. Výchozí je YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otevřít stránku nastavení TV",
+      "description": "Otevře stránku nabídky nastavení televizoru Samsung. Seznam pochází z firmwaru Samsungu; ne každý televizor má každou stránku a lze zadat i jiné id stránky.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se stránka otevře."
+        },
+        "page": {
+          "name": "Stránka",
+          "description": "Stránka nastavení, která se má otevřít."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Nastavit časovač vypnutí TV",
+      "description": "Vypne televizor Samsung po tomto počtu minut; 0 časovač vypne. Televizor zbývající čas nehlásí, ověřte ho v jeho nabídce (Obecné, Správce systému, Čas, Časovač vypnutí).",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se časovač nastaví."
+        },
+        "minutes": {
+          "name": "Minuty",
+          "description": "Minuty do vypnutí televizoru; 0 časovač vypne."
         }
       }
     }

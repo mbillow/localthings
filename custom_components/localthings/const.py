@@ -14,6 +14,8 @@ PLATFORMS = [
     "water_heater",
     "vacuum",
     "media_player",
+    "remote",
+    "notify",
 ]
 
 CONF_HOST = "host"
@@ -127,6 +129,11 @@ DEFAULT_LEARN_MODES = True
 # {"download_course": "87"|null, "slots": {slot: {"blob": ..., "name": ...}}}
 CONF_CLOUD_COURSES = "cloud_courses"
 
+# entry.data key: apps a TV has been seen running, so they can be launched
+# by name after a restart -- OCF lists no installed apps (see tvapps.py).
+# Shape: {app_id: name}.
+CONF_KNOWN_APPS = "known_apps"
+
 # Options-flow key: whether downloaded programs are offered as selectable
 # cycles and nagged about via the "not set up yet" Repair (issue #364).
 # Defaults to on. Unlike CONF_LEARN_MODES this does not also stop passive
@@ -141,6 +148,14 @@ CONF_CLOUD_COURSES = "cloud_courses"
 # coordinator.cloud_courses_enabled for exactly what it gates.
 CONF_CLOUD_COURSES_ENABLED = "cloud_courses_enabled"
 DEFAULT_CLOUD_COURSES_ENABLED = True
+
+# Options-flow key (TVs): cast cameras through LocalThings' own ffmpeg
+# pipeline (camera_dash.py, camera_stream.py), which serves the TV from two
+# HTTP views. Off by default: it runs ffmpeg and opens a token-authenticated
+# endpoint, and without it a camera still casts through Home Assistant's own
+# stream, only with more delay (docs/samsung-tv.md#camera-casting).
+CONF_CAMERA_CASTING = "camera_casting"
+DEFAULT_CAMERA_CASTING = False
 
 # The subdevices the user switched off in the options flow, as {key: name};
 # the name labels one whose device is gone. A slot can pass the liveness
@@ -249,3 +264,7 @@ SERVICE_WRITE_RESOURCE = "write_resource"
 SERVICE_READ_RESOURCE = "read_resource"
 SERVICE_OBSERVE_RESOURCE = "observe_resource"
 SERVICE_START_COOKING = "start_cooking"
+SERVICE_FORGET_KNOWN_APPS = "forget_known_apps"
+SERVICE_SEARCH = "search"
+SERVICE_OPEN_SETTINGS = "open_settings"
+SERVICE_SET_SLEEP_TIMER = "set_sleep_timer"

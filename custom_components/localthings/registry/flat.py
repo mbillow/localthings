@@ -1,6 +1,6 @@
 """Devices with no /device/0 Collection, polled one href at a time.
 
-Samsung's AV boards (oic.d.networkaudio so far) serve plain property
+Samsung's AV boards (oic.d.tv, oic.d.networkaudio) serve plain property
 resources instead of the devcol batch. The config flow and the coordinator
 both read them through here, so they agree on which hrefs to GET.
 """
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     import logging
 
 # Reps answer in milliseconds; the timeout only matters for advertised hrefs
-# that never answer (the soundbar's Alexa sub-resources).
+# that never answer (a TV has several).
 FLAT_TIMEOUT_S = 2.5
 # The first full read must outlast those: an href it misses gets no
 # entities until a later discovery reads it.
@@ -41,13 +41,16 @@ def flat_hrefs(links) -> list[str]:
     return sorted(h for h in hrefs if h not in _SKIP_EXACT and not h.startswith(_SKIP_PREFIXES))
 
 
-def read_all(transport, links, *, logger: logging.Logger) -> dict[str, dict]:
+def read_all(
+    transport, links, *, logger: logging.Logger, awake: str | None = None
+) -> dict[str, dict]:
     """Every resource /oic/res advertises, for discovery. Blocking.
 
-    Nothing unless at least half of them answered. A board in network
-    standby can complete the handshake and then let most reads time out;
-    discovering from that would register a handful of entities and drop
-    the rest until it is read in full again.
+    Nothing unless at least half of them answered, and `awake` (the
+    family's DeviceRegistry.awake_href) among them when advertised. A
+    board in network standby can complete the handshake and then let
+    reads time out; discovering from that would register only the
+    entities that answered.
     """
     hrefs = flat_hrefs(links)
     resources = dict(
@@ -61,6 +64,9 @@ def read_all(transport, links, *, logger: logging.Logger) -> dict[str, dict]:
     )
     if 2 * len(resources) < len(hrefs):
         logger.debug("only %d of %d resources answered; not ready", len(resources), len(hrefs))
+        return {}
+    if awake in hrefs and awake not in resources:
+        logger.debug("%s didn't answer; the board is in standby", awake)
         return {}
     return resources
 

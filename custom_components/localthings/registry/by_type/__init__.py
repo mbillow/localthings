@@ -328,7 +328,7 @@ _DEFAULT = DeviceRegistry(name="", capabilities={})
 
 def registry_for(name: str | None) -> DeviceRegistry:
     """A family's registry by name, for its settings (subscribe_tiers,
-    write_settle_s); an unrecognized device gets the defaults."""
+    write_settle_s, awake_href); an unrecognized device gets the defaults."""
     return _REGISTRY_BY_KEY.get(name or "", _DEFAULT)
 
 

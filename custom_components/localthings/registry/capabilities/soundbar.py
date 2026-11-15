@@ -81,6 +81,35 @@ MEDIA_SURFACE_COVERAGE: list[Capability] = [
     ),
 ]
 
+
+HREF_AV_SOUNDSETTING = "/sec/networkaudio/av/soundsetting"
+
+
+def _has_av_setting(resources: dict, field: str) -> bool:
+    value = (resources.get(HREF_AV_SOUNDSETTING) or {}).get(field)
+    return type(value) is int and value in (0, 1)
+
+
+def _legacy_av_setting(rep: dict, resources: dict, legacy_field: str, field: str) -> bool:
+    """The older per-setting resource owns a setting only when the combined
+    resource has no valid field for it. Both forms need a populated rep: a
+    flat bar never serves a stub, and one that misses the combined resource
+    on its first read keeps the older binding until the next start, as any
+    short read does (registration.py)."""
+    return not _has_av_setting(resources, field) and legacy_field in rep
+
+
+def _has_rear_position(rep: dict, resources: dict) -> bool:
+    current = rep.get("x.com.samsung.networkaudio.currentRearPosition")
+    choices = rep.get("x.com.samsung.networkaudio.rearPositionList")
+    return (
+        isinstance(current, str)
+        and current.lower() != "none"
+        and isinstance(choices, list)
+        and current in choices
+    )
+
+
 # ------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------
@@ -359,6 +388,12 @@ ACTIVE_VOICE_AMPLIFIER = Capability(
         SwitchDesc(
             key="active_voice_amplifier",
             field="x.com.samsung.networkaudio.activeVoiceAmplifier",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep,
+                resources,
+                "x.com.samsung.networkaudio.activeVoiceAmplifier",
+                "activevoiceamplifier",
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.activeVoiceAmplifier", _int_on),
@@ -373,9 +408,53 @@ SPACEFIT_SOUND = Capability(
         SwitchDesc(
             key="spacefit_sound",
             field="x.com.samsung.networkaudio.spacefitSound",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep, resources, "x.com.samsung.networkaudio.spacefitSound", "spacefitsound"
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.spacefitSound", _int_on),
+        ),
+    ),
+)
+
+AV_SOUND_SETTING = Capability(
+    href=HREF_AV_SOUNDSETTING,
+    poll_tier="warm",
+    # HW-Q990H confirms these unprefixed fields; prefer them to legacy aliases.
+    entities=(
+        SwitchDesc(
+            key="active_voice_amplifier",
+            field="activevoiceamplifier",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "activevoiceamplifier"),
+            write_fn=_write("activevoiceamplifier", _int_on),
+        ),
+        SwitchDesc(
+            key="spacefit_sound",
+            field="spacefitsound",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "spacefitsound"),
+            write_fn=_write("spacefitsound", _int_on),
+        ),
+    ),
+)
+
+# isSupport is ignored, as for REAR_FAMILY: the current value being one of
+# the advertised options is the evidence (HW-Q990H; the S61B reports none).
+REAR_SPEAKER_POSITION = Capability(
+    href="/sec/networkaudio/surroundspeaker",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="rear_speaker_position",
+            field="x.com.samsung.networkaudio.currentRearPosition",
+            options_field="x.com.samsung.networkaudio.rearPositionList",
+            entity_category="config",
+            exists_fn=_has_rear_position,
+            write_fn=_write("x.com.samsung.networkaudio.currentRearPosition", str),
         ),
     ),
 )
@@ -708,8 +787,6 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/lastConnections"),
     # Static "has a mic" flag.
     Capability(href="/sec/networkaudio/mic"),
-    # Rear-speaker steering (isSupport says whether the bar has it).
-    Capability(href="/sec/networkaudio/surroundspeaker"),
     # Static "has a VFD" flag.
     Capability(href="/sec/networkaudio/vfd"),
     # Relative volume steps, command-only.

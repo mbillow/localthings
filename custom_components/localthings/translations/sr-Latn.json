@@ -242,6 +242,9 @@
       },
       "pair_bluetooth": {
         "name": "Upari Bluetooth"
+      },
+      "screen_off": {
+        "name": "Isključi ekran"
       }
     },
     "climate": {
@@ -1404,6 +1407,16 @@
       },
       "picture_mode": {
         "name": "Režim slike"
+      },
+      "rear_speaker_position": {
+        "name": "Položaj zadnjih zvučnika",
+        "state": {
+          "front": "Napred",
+          "rear": "Pozadi"
+        }
+      },
+      "open_app": {
+        "name": "Otvori aplikaciju"
       }
     },
     "sensor": {
@@ -2164,6 +2177,18 @@
       },
       "illuminance": {
         "name": "Osvetljenost"
+      },
+      "channel": {
+        "name": "Kanal"
+      },
+      "now_showing": {
+        "name": "Trenutno na programu"
+      },
+      "cast_session": {
+        "name": "Sesija prebacivanja"
+      },
+      "cast_item": {
+        "name": "Prebačena stavka"
       }
     },
     "switch": {
@@ -2524,6 +2549,16 @@
           }
         }
       }
+    },
+    "remote": {
+      "remote": {
+        "name": "Daljinski upravljač"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Obaveštenja"
+      }
     }
   },
   "config": {
@@ -2687,7 +2722,8 @@
           "subdevices": "Poduređaji",
           "cloud_courses": "Preuzmi cikluse",
           "forget_learned_modes": "Zaboravi zapamćene režime",
-          "debug_write": "Otklanjanje grešaka: upisivanje u resurs"
+          "debug_write": "Otklanjanje grešaka: upisivanje u resurs",
+          "camera_casting": "Prenos kamera"
         }
       },
       "settings": {
@@ -2765,6 +2801,13 @@
         "menu_options": {
           "cloud_guided": "Čekaj ponovo",
           "cloud_finish": "Završi"
+        }
+      },
+      "camera_casting": {
+        "title": "Prenos kamera sa malim kašnjenjem",
+        "description": "Kada prenesete kameru na ovaj televizor, Home Assistant je obično služi preko sopstvenog strima, koji televizor baferuje oko 20 sekundi. Uključite ovo da bi LocalThings pokrenuo ffmpeg i sam služio kameru, čime se kašnjenje smanjuje na nekoliko sekundi.\n\nOvo dodaje dve krajnje tačke na veb server Home Assistant-a. Televizor otvara strim nasumičnim jednokratnim linkom, jer ne može da se prijavi. Ostavite isključeno osim ako prenosite kamere i kašnjenje vam je bitno: ništa drugo na televizoru to ne zahteva. Potrebni su ffmpeg i Home Assistant URL dostupan televizoru.",
+        "data": {
+          "camera_casting": "Prenosi kamere preko LocalThings-a (ffmpeg)"
         }
       }
     },
@@ -2924,6 +2967,54 @@
     },
     "media_option_not_supported": {
       "message": "Uređaj trenutno ne nudi ovu opciju."
+    },
+    "unknown_remote_command": {
+      "message": "Nepoznata komanda daljinskog upravljača: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Upravljanje napajanjem nije dostupno za ovaj uređaj"
+    },
+    "wake_on_lan_failed": {
+      "message": "Slanje Wake-on-LAN televizoru nije uspelo: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Ovaj televizor može da reprodukuje kanale, aplikacije, slike, video datoteke, HLS tokove, kamere i YouTube video snimke (channel, app, image, video, url ili youtube), ne {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} nije broj kanala; koristite cifre kao što su 5 ili 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Navedite id aplikacije (npr. kIciSQlYEM.plex) ili naziv aplikacije koju je televizor već pokrenuo."
+    },
+    "search_unsupported": {
+      "message": "Ovaj uređaj ne može da pretražuje; to mogu samo Samsung televizori."
+    },
+    "invalid_media_url": {
+      "message": "{url} nije http(s) veza ka slici, video datoteci ili HLS toku, niti YouTube veza ili id video snimka (MJPEG tokovi i DASH .mpd manifesti nisu podržani)."
+    },
+    "cast_unsupported": {
+      "message": "Ovaj uređaj ne može da prikazuje slike niti da reprodukuje YouTube video snimke."
+    },
+    "notify_unsupported": {
+      "message": "Ovaj uređaj ne može da prikazuje obaveštenja."
+    },
+    "notify_message_empty": {
+      "message": "Poruka obaveštenja je prazna."
+    },
+    "settings_unsupported": {
+      "message": "Ovaj uređaj nema meni podešavanja televizora kojim bi se upravljalo."
+    },
+    "apps_unsupported": {
+      "message": "Ovaj uređaj ne vodi spisak aplikacija televizora."
+    },
+    "invalid_ask": {
+      "message": "extra.ask mora biti true ili false, a ne „{value}”."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} je predugo odgovarala."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Slanje Wake-on-LAN televizoru nije uspelo: nema mrežne rute do {targets}."
     }
   },
   "selector": {
@@ -3025,6 +3116,62 @@
         "duration": {
           "name": "Trajanje",
           "description": "Broj sekundi tokom kojih se slušaju obaveštenja, najviše do 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zaboravi naučene aplikacije televizora",
+      "description": "Briše aplikacije koje su viđene pokrenute na televizoru, a koje izbor „Otvori aplikaciju” i media_player.play_media nude po nazivu. Ugrađeni ekrani ostaju. Aplikacije se ponovo uče kako ih televizor prikazuje, počevši od one koja je sada otvorena.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor čije naučene aplikacije treba zaboraviti."
+        }
+      }
+    },
+    "search": {
+      "name": "Pretraga na televizoru",
+      "description": "Otvara pretragu na Samsung televizoru: YouTube se otvara na rezultatima, a ostali sajtovi u pregledaču televizora.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se pretražuje."
+        },
+        "query": {
+          "name": "Upit",
+          "description": "Šta treba pretražiti."
+        },
+        "site": {
+          "name": "Sajt",
+          "description": "Gde pretraživati. Podrazumevano YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otvori stranicu podešavanja televizora",
+      "description": "Otvara stranicu menija podešavanja Samsung televizora. Spisak potiče iz Samsung firmvera; nema svaki televizor svaku stranicu, a može se uneti i drugi id stranice.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se otvara stranica."
+        },
+        "page": {
+          "name": "Stranica",
+          "description": "Stranica podešavanja koju treba otvoriti."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Podesi tajmer za isključivanje televizora",
+      "description": "Isključuje Samsung televizor posle navedenog broja minuta; 0 isključuje tajmer. Televizor ne prijavljuje preostalo vreme, pa ga proverite u njegovom meniju (Opšte, Upravljanje sistemom, Vreme, Tajmer za isključivanje).",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se podešava tajmer za isključivanje."
+        },
+        "minutes": {
+          "name": "Minuti",
+          "description": "Minuti do isključivanja televizora; 0 isključuje tajmer."
         }
       }
     }
