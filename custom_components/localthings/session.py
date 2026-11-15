@@ -32,6 +32,9 @@ from .credentials import (
     certificate_credentials,
     psk_credentials,
 )
+from .dtls_profile import install_samsung_dtls_profile
+
+install_samsung_dtls_profile()
 
 
 def certificate_provider(

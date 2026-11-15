@@ -34,6 +34,10 @@ from .const import (
 )
 from .registry.identity import device_types_of
 
+from .dtls_profile import install_samsung_dtls_profile
+
+install_samsung_dtls_profile()
+
 _LOGGER = logging.getLogger(__name__)
 
 # The kernel's way of saying the datagram never had anywhere to go: no route,

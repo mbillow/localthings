@@ -35,6 +35,9 @@ from .const import (
     TRANSPORT_LEGACY_HTTP,
 )
 from .session import authentication_provider_from_entry, entry_endpoint
+from .dtls_profile import install_samsung_dtls_profile
+
+install_samsung_dtls_profile()
 
 
 def local_source_port(host: str) -> int:
