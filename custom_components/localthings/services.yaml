@@ -148,6 +148,28 @@ read_resource:
       example: /device/1?if=oic.if.b
       selector:
         text:
+    timeout:
+      name: Timeout
+      description: >-
+        Seconds to allow the read, 10 by default. A longer one also lifts
+        the 64 KB size limit, for a large resource such as a file transfer.
+        Polling and commands wait while it runs.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 600
+          unit_of_measurement: s
+    save_to_file:
+      name: Save files
+      description: >-
+        Save each file the read returns to the localthings_downloads folder
+        in the Home Assistant configuration directory, and list the saved
+        files in the response instead of their contents.
+      required: false
+      default: false
+      selector:
+        boolean:
 
 observe_resource:
   name: Observe resource

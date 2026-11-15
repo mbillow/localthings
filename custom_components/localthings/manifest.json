@@ -12,7 +12,7 @@
   "loggers": ["smartthings_local"],
   "requirements": [
     "cbor2>=5.4.6",
-    "smartthings-local>=0.1.23"
+    "smartthings-local>=0.1.25"
   ],
   "version": "0.38.0"
 }

@@ -17,7 +17,10 @@ through that subdevice, and shapes the response.
 
 from __future__ import annotations
 
+import hashlib
+import re
 from collections.abc import Callable, Coroutine
+from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 import voluptuous as vol
@@ -26,6 +29,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import ServiceValidationError, Unauthorized, UnknownUser
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
@@ -57,6 +61,8 @@ ATTR_DEVICE_ID = "device_id"
 ATTR_MODE = "mode"
 ATTR_TEMPERATURE = "temperature"
 ATTR_DURATION = "duration"
+ATTR_TIMEOUT = "timeout"
+ATTR_SAVE_TO_FILE = "save_to_file"
 
 _WRITE_ITEM_SCHEMA = vol.Schema(
     {
@@ -92,6 +98,11 @@ _READ_RESOURCE_SCHEMA = vol.Schema(
     {
         **cv.TARGET_SERVICE_FIELDS,
         vol.Optional(ATTR_HREF): str,
+        vol.Optional(ATTR_TIMEOUT): vol.All(
+            vol.Coerce(float),
+            vol.Range(min=1.0, max=LocalThingsCoordinator.RAW_READ_TIMEOUT_MAX_S),
+        ),
+        vol.Optional(ATTR_SAVE_TO_FILE, default=False): cv.boolean,
     }
 )
 
@@ -260,7 +271,20 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
     # Same normalize-before-translate order as the write path above.
     canonical = normalize_href(path)
     actual_href = subdevice.to_actual(canonical)
-    code, rep, body = await coordinator.async_raw_read(actual_href, query)
+    code, rep, body = await coordinator.async_raw_read(
+        actual_href,
+        query,
+        call.data.get(ATTR_TIMEOUT, LocalThingsCoordinator.RAW_READ_TIMEOUT_S),
+    )
+    saved: list[str] = []
+    if call.data[ATTR_SAVE_TO_FILE]:
+        folder = Path(hass.config.path(DOWNLOADS_DIR, _download_folder(canonical)))
+        saved_body, saved = await hass.async_add_executor_job(
+            save_blobs, folder, body if body is not None else rep
+        )
+        if isinstance(saved_body, dict):
+            rep = saved_body
+        body = saved_body
     read_result: dict[str, Any] = {
         "href": canonical,
         "actual_href": actual_href,
@@ -277,7 +301,69 @@ async def _async_read_resource(hass: HomeAssistant, call: ServiceCall) -> Servic
     # duplicating every rep in every response.
     if body is not None and not isinstance(body, dict):
         read_result["body"] = body
+    if call.data[ATTR_SAVE_TO_FILE]:
+        read_result["saved_files"] = saved
     return cast(ServiceResponse, json_safe(read_result))
+
+
+# read_resource's save_to_file folder, under the Home Assistant config
+# directory: a file transfer (the POWERbot's map, #659) is too large to paste
+# from a service response.
+DOWNLOADS_DIR = "localthings_downloads"
+_UNSAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _download_folder(href: str) -> str:
+    stamp = dt_util.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    return f"{stamp}_{_UNSAFE.sub('_', href.strip('/')) or 'resource'}"
+
+
+def _safe_name(name: Any, index: int) -> str:
+    """The basename of a device-reported path, reduced to safe characters."""
+    if isinstance(name, str):
+        base = _UNSAFE.sub("_", PurePosixPath(name.replace("\\", "/")).name).lstrip(".")
+        if base:
+            return f"{index}_{base}"
+    return f"{index}_blob.bin"
+
+
+def save_blobs(folder: Path, body: Any) -> tuple[Any, list[str]]:
+    """Write every bytes value in `body` to its own file in `folder`.
+
+    A blob is named after a sibling field ending in `name`
+    (`x.com.samsung.name` on a file transfer), or numbered. Returns `body`
+    with each blob replaced by where it went, its length and its SHA-256,
+    and the paths written. Blocking -- runs in the executor."""
+    written: list[str] = []
+
+    def walk(value: Any) -> Any:
+        if isinstance(value, dict):
+            name = next(
+                (v for k, v in value.items() if isinstance(k, str) and k.endswith("name")),
+                None,
+            )
+            out = {}
+            for key, item in value.items():
+                if isinstance(item, (bytes, bytearray)):
+                    folder.mkdir(parents=True, exist_ok=True)
+                    path = folder / _safe_name(name, len(written))
+                    path.write_bytes(bytes(item))
+                    written.append(str(path))
+                    out[key] = {
+                        "saved_to": str(path),
+                        "len": len(item),
+                        "sha256": hashlib.sha256(item).hexdigest(),
+                    }
+                else:
+                    out[key] = walk(item)
+            return out
+        if isinstance(value, list):
+            return [walk(item) for item in value]
+        if isinstance(value, (bytes, bytearray)):
+            return walk({"blob": value})["blob"]
+        return value
+
+    return walk(body), written
 
 
 async def _async_observe_resource(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:

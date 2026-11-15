@@ -3238,6 +3238,14 @@
         "href": {
           "name": "href do recurso",
           "description": "href canônico do recurso a ler (por exemplo, /mode/vs/0). Adicione uma consulta após ? para enviá-la com o GET, por exemplo, /device/1?if=oic.if.b, com & entre os parâmetros. Omita para obter os dados em cache de todos os recursos acompanhados em vez de executar um GET direto."
+        },
+        "timeout": {
+          "name": "Tempo limite",
+          "description": "Segundos permitidos para a leitura, 10 por padrão. Um valor maior também remove o limite de tamanho de 64 KB, para um recurso grande como uma transferência de arquivo. A consulta periódica e os comandos aguardam enquanto ela ocorre."
+        },
+        "save_to_file": {
+          "name": "Salvar arquivos",
+          "description": "Salva cada arquivo retornado pela leitura na pasta localthings_downloads do diretório de configuração do Home Assistant e lista na resposta os arquivos salvos em vez do conteúdo deles."
         }
       }
     },

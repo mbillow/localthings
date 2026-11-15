@@ -4289,8 +4289,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._log.debug("raw write follow-up read failed: %s", e)
         return code, new_rep, response_body
 
+    # read_resource's default and longest live read, in seconds. A read
+    # given longer than the default also lifts the library's 64 KB Block2
+    # cap: the POWERbot's file transfer was still arriving at block 58 when
+    # the 10 s ran out (#659). Blocks come at about five a second, so the
+    # caps cover what the longest timeout can fetch.
+    RAW_READ_TIMEOUT_S: float = 10.0
+    RAW_READ_TIMEOUT_MAX_S: float = 600.0
+    _LARGE_READ_MAX_BLOCKS: int = 4096
+    _LARGE_READ_MAX_BYTES: int = 4096 * 1024
+
     def _raw_read_blocking(
-        self, path_segs: list[str], href: str, query: Sequence[str] = ()
+        self,
+        path_segs: list[str],
+        href: str,
+        query: Sequence[str] = (),
+        timeout: float = RAW_READ_TIMEOUT_S,
     ) -> tuple[int, dict, Any]:
         """Debug primitive: a live GET, deliberately bypassing the cache
         (issue #300) -- the cache can be up to a poll interval stale,
@@ -4320,8 +4334,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise RuntimeError("no session")
         rep: dict = {}
         body: Any = None
+        caps: dict[str, int] = {}
+        if timeout > self.RAW_READ_TIMEOUT_S:
+            caps = {
+                "max_payload_bytes": self._LARGE_READ_MAX_BYTES,
+                "max_blocks": self._LARGE_READ_MAX_BLOCKS,
+            }
         try:
-            code, body = sess.read(path_segs, timeout=10.0, query=query)
+            code, body = sess.read(path_segs, timeout=timeout, query=query, **caps)
         except DecodeError as e:
             # A body that will not decode is itself what a debug read exists
             # to surface, so it is reported raw rather than raised.
@@ -4333,7 +4353,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             rep = body
         return code, rep, body
 
-    async def async_raw_read(self, href: str, query: Sequence[str] = ()) -> tuple[int, dict, Any]:
+    async def async_raw_read(
+        self, href: str, query: Sequence[str] = (), read_timeout: float = RAW_READ_TIMEOUT_S
+    ) -> tuple[int, dict, Any]:
         """Debug-only live GET (issue #300, backs the read_resource
         service). Same href validation as async_raw_write. Three-tuple --
         see `_raw_read_blocking` for why the raw body comes back alongside
@@ -4348,7 +4370,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._session_lock:
             try:
                 return await self.hass.async_add_executor_job(
-                    self._raw_read_blocking, path_segs, norm_href, query
+                    self._raw_read_blocking, path_segs, norm_href, query, read_timeout
                 )
             except Exception as e:
                 # Unlike async_raw_write_sequence, there's nothing to

@@ -517,3 +517,33 @@ async def test_links_only_prefixed_collection_discovers_wall_unit_swing(
         ([_SUBDEVICE_ID, "device", "0"], ()),
         ([_SUBDEVICE_ID, "device", "0"], ("if=oic.if.b",)),
     ]
+
+
+class TestLargeReadCaps:
+    """The Block2 caps reach the library only when a caller sets them (#659)."""
+
+    def _recording(self, transport, monkeypatch):
+        calls = []
+        session = transport._session
+
+        def get(path_segs, query=(), timeout=None, **caps):
+            calls.append((timeout, caps))
+            return session.code, session.payload
+
+        monkeypatch.setattr(session, "get", get)
+        return calls
+
+    def test_an_ordinary_read_passes_no_caps(self, transport, monkeypatch):
+        calls = self._recording(transport, monkeypatch)
+        transport.read(["power", "vs", "0"], timeout=10.0)
+        assert calls == [(10.0, {})]
+
+    def test_a_large_read_passes_its_caps(self, transport, monkeypatch):
+        calls = self._recording(transport, monkeypatch)
+        transport.read(
+            ["file", "transfer", "vs", "0"],
+            timeout=120.0,
+            max_payload_bytes=1 << 22,
+            max_blocks=4096,
+        )
+        assert calls == [(120.0, {"max_payload_bytes": 1 << 22, "max_blocks": 4096})]

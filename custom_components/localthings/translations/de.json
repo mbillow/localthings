@@ -3238,6 +3238,14 @@
         "href": {
           "name": "Ressourcen-href",
           "description": "Kanonische Ressourcen-href zum Lesen (z. B. /mode/vs/0). Hänge nach ? eine Abfrage an, um sie mit dem GET zu senden, z. B. /device/1?if=oic.if.b, mit & zwischen den Parametern. Weglassen, um statt eines Live-GET den zwischengespeicherten Stand aller verfolgten Ressourcen zu erhalten."
+        },
+        "timeout": {
+          "name": "Zeitlimit",
+          "description": "Sekunden, die das Lesen dauern darf, standardmäßig 10. Ein längeres Limit hebt auch die Größengrenze von 64 KB auf, für eine große Ressource wie eine Dateiübertragung. Abfragen und Befehle warten, solange es läuft."
+        },
+        "save_to_file": {
+          "name": "Dateien speichern",
+          "description": "Speichert jede Datei, die das Lesen liefert, im Ordner localthings_downloads im Home-Assistant-Konfigurationsverzeichnis und führt in der Antwort die gespeicherten Dateien statt ihres Inhalts auf."
         }
       }
     },

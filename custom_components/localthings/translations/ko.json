@@ -3238,6 +3238,14 @@
         "href": {
           "name": "리소스 href",
           "description": "읽을 정규 리소스 href입니다(예: /mode/vs/0). ? 뒤에 쿼리를 추가하면 GET과 함께 보냅니다(예: /device/1?if=oic.if.b, 매개변수 사이에는 &). 생략하면 실시간 GET 대신 추적 중인 모든 리소스의 캐시 스냅샷을 가져옵니다."
+        },
+        "timeout": {
+          "name": "시간 제한",
+          "description": "읽기에 허용할 시간(초)이며 기본값은 10입니다. 더 길게 지정하면 파일 전송처럼 큰 리소스를 위해 64KB 크기 제한도 해제됩니다. 실행 중에는 폴링과 명령이 대기합니다."
+        },
+        "save_to_file": {
+          "name": "파일 저장",
+          "description": "읽기에서 반환된 각 파일을 Home Assistant 구성 디렉터리의 localthings_downloads 폴더에 저장하고, 응답에는 내용 대신 저장된 파일 목록을 표시합니다."
         }
       }
     },

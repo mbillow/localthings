@@ -60,4 +60,17 @@ data:
 
 returning `{"href", "actual_href", "code", "raw_code", "rep"}` off a **live GET straight from the device**, not the cache — which can be up to a poll interval stale, exactly the staleness that would make `held` above meaningless. A sixth key, `body`, appears only when the response isn't a Property map: a Collection (`/device/0`, and the `x.com.samsung.devcol` siblings some boards expose) answers a CBOR list, which `rep` can't carry, and which would otherwise read as an accepted-but-empty resource. Omit `href` and you get `{"resources": {href: rep, ...}}`, the cached snapshot of everything this integration currently tracks on that device, with no GET at all — useful for seeing what's there before you start writing to it, without hammering the appliance.
 
+A live read gets 10 seconds and at most 64 KB by default, which is plenty for any state resource but not for a file. `/file/transfer/vs/0` on a POWERbot sends its map in 1 KB blocks at about five a second, and was still arriving at block 58 when the 10 seconds ran out (#659). Give a longer `timeout` (up to 600 seconds) and the read also lifts the size limit, to about 4 MB. Polling and commands to that appliance wait while it runs. Add `save_to_file: true` to write each file in the reply to `localthings_downloads/<time>_<href>/` in your Home Assistant configuration directory, named after the file the device reports:
+
+```yaml
+action: localthings.read_resource
+data:
+  device_id: abc123...
+  href: /file/transfer/vs/0
+  timeout: 120
+  save_to_file: true
+```
+
+The response then lists `saved_files`, and each blob in `rep` becomes `{"saved_to", "len", "sha256"}` instead of its contents.
+
 The **Debug write** panel under a device's **Configure** menu is the friendlier single-write path over this same machinery — pick an href, type a payload, see the result — for when you don't need a sequence.
