@@ -3238,6 +3238,14 @@
         "href": {
           "name": "href zasobu",
           "description": "Kanoniczny href zasobu do odczytu (np. /mode/vs/0). Dodaj zapytanie po ?, aby wysłać je z GET, np. /device/1?if=oic.if.b, z & między parametrami. Pomiń, aby zamiast GET na żywo otrzymać zapisaną migawkę wszystkich śledzonych zasobów."
+        },
+        "timeout": {
+          "name": "Limit czasu",
+          "description": "Liczba sekund na odczyt, domyślnie 10. Dłuższy limit znosi też ograniczenie rozmiaru 64 KB, dla dużego zasobu, takiego jak przesyłanie pliku. Odpytywanie i polecenia czekają w tym czasie."
+        },
+        "save_to_file": {
+          "name": "Zapisz pliki",
+          "description": "Zapisuje każdy plik zwrócony przez odczyt w folderze localthings_downloads w katalogu konfiguracji Home Assistant i w odpowiedzi podaje zapisane pliki zamiast ich zawartości."
         }
       }
     },

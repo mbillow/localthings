@@ -3238,6 +3238,14 @@
         "href": {
           "name": "Resource-href",
           "description": "Canonieke resource-href om te lezen (bijv. /mode/vs/0). Voeg na ? een query toe om die met de GET mee te sturen, bijv. /device/1?if=oic.if.b, met & tussen de parameters. Laat weg voor de gecachte momentopname van elke gevolgde resource in plaats van een live GET."
+        },
+        "timeout": {
+          "name": "Time-out",
+          "description": "Seconden die het lezen mag duren, standaard 10. Een langere waarde heft ook de groottelimiet van 64 KB op, voor een grote resource zoals een bestandsoverdracht. Polling en opdrachten wachten zolang het loopt."
+        },
+        "save_to_file": {
+          "name": "Bestanden opslaan",
+          "description": "Slaat elk bestand dat het lezen oplevert op in de map localthings_downloads in de configuratiemap van Home Assistant, en vermeldt in het antwoord de opgeslagen bestanden in plaats van hun inhoud."
         }
       }
     },

@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, patch
 
 import cbor2
 import pytest
+import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import (
     HomeAssistantError,
@@ -452,7 +453,7 @@ async def test_write_resource_verify_after_survives_a_failed_confirmation_read(
     fake.queue_get("mode/vs/0", {"x.field": "target"})  # write's own follow-up read
     coordinator._session = fake
 
-    def _boom(path_segs, href, query=()):
+    def _boom(path_segs, href, query=(), timeout=None):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -777,7 +778,7 @@ async def test_read_resource_with_a_query_the_library_refuses_keeps_the_session(
     fake = _FakeSession()
     coordinator._session = fake
 
-    def _refuse(path_segs, href, query=()):
+    def _refuse(path_segs, href, query=(), timeout=None):
         raise ValueError("query must contain at most 32 values")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _refuse)
@@ -847,6 +848,105 @@ async def test_read_resource_renders_a_binary_rep_as_a_marker(hass, coordinator,
     assert from_json_safe(json.loads(json.dumps(response)))["rep"]["x.com.samsung.blob"] == blob
 
 
+class _CapsSession(_FakeSession):
+    """Records the timeout and Block2 caps each read was given."""
+
+    def __init__(self):
+        super().__init__()
+        self.read_args: list[tuple[float | None, dict]] = []
+
+    def read(self, path_segs, timeout=None, query=(), **caps):
+        self.read_args.append((timeout, caps))
+        return super().read(path_segs, timeout=timeout, query=query)
+
+
+async def test_read_resource_keeps_the_default_timeout_and_caps(hass, coordinator, device_id):
+    fake = _CapsSession()
+    coordinator._session = fake
+
+    await _call_read(hass, device_id, href="/file/transfer/vs/0")
+
+    assert fake.read_args == [(LocalThingsCoordinator.RAW_READ_TIMEOUT_S, {})]
+
+
+async def test_read_resource_longer_timeout_lifts_the_block2_caps(hass, coordinator, device_id):
+    """#659: the POWERbot's file transfer outlasted the 10 s read and the
+    library's 64 KB cap; a longer read asked for lifts both."""
+    fake = _CapsSession()
+    coordinator._session = fake
+
+    await _call_read(hass, device_id, href="/file/transfer/vs/0", timeout=120)
+
+    assert fake.read_args == [
+        (
+            120.0,
+            {
+                "max_payload_bytes": LocalThingsCoordinator._LARGE_READ_MAX_BYTES,
+                "max_blocks": LocalThingsCoordinator._LARGE_READ_MAX_BLOCKS,
+            },
+        )
+    ]
+
+
+@pytest.mark.parametrize("seconds", [0, 601])
+async def test_read_resource_rejects_a_timeout_out_of_range(hass, coordinator, device_id, seconds):
+    with pytest.raises(vol.Invalid):
+        await _call_read(hass, device_id, href="/file/transfer/vs/0", timeout=seconds)
+
+
+async def test_read_resource_saves_file_blobs_instead_of_returning_them(
+    hass, coordinator, device_id, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(hass.config, "config_dir", str(tmp_path))
+    map_zip, history = b"PK" + bytes(range(256)) * 4, b"history-bytes"
+    fake = _FakeSession()
+    fake.queue_get(
+        "file/transfer/vs/0",
+        {
+            "x.com.samsung.items": [
+                {
+                    "x.com.samsung.name": "/home/owner/trusted/map/map.zip",
+                    "x.com.samsung.blob": map_zip,
+                },
+                # A device-reported path never escapes the download folder.
+                {"x.com.samsung.name": "../../../.storage/auth", "x.com.samsung.blob": history},
+            ]
+        },
+    )
+    coordinator._session = fake
+
+    response = await _call_read(hass, device_id, href="/file/transfer/vs/0", save_to_file=True)
+
+    folder = tmp_path / "localthings_downloads"
+    (download,) = folder.iterdir()
+    assert download.name.endswith("_file_transfer_vs_0")
+    assert sorted(p.name for p in download.iterdir()) == ["0_map.zip", "1_auth"]
+    assert (download / "0_map.zip").read_bytes() == map_zip
+    assert (download / "1_auth").read_bytes() == history
+    items = response["rep"]["x.com.samsung.items"]
+    assert items[0]["x.com.samsung.blob"] == {
+        "saved_to": str(download / "0_map.zip"),
+        "len": len(map_zip),
+        "sha256": hashlib.sha256(map_zip).hexdigest(),
+    }
+    assert response["saved_files"] == [str(download / "0_map.zip"), str(download / "1_auth")]
+
+
+async def test_read_resource_save_with_no_blob_writes_nothing(
+    hass, coordinator, device_id, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(hass.config, "config_dir", str(tmp_path))
+    fake = _FakeSession()
+    fake.queue_get("mode/vs/0", {"x.field": "live"})
+    coordinator._session = fake
+
+    response = await _call_read(hass, device_id, href="/mode/vs/0", save_to_file=True)
+
+    assert response["rep"] == {"x.field": "live"}
+    assert response["saved_files"] == []
+    assert not (tmp_path / "localthings_downloads").exists()
+
+
 async def test_read_resource_failure_is_surfaced_as_a_home_assistant_error(
     hass, coordinator, device_id, monkeypatch
 ):
@@ -856,7 +956,7 @@ async def test_read_resource_failure_is_surfaced_as_a_home_assistant_error(
     already goes through HomeAssistantError on failure, and async_raw_read
     must match that instead of letting the exception escape uncaught."""
 
-    def _boom(path_segs, href, query=()):
+    def _boom(path_segs, href, query=(), timeout=None):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -874,7 +974,7 @@ async def test_read_resource_failure_closes_a_confirmed_dead_session(
     poll cycle's own reconnect notices, up to a full update_interval later."""
     coordinator._session = _FakeSession()
 
-    def _boom(path_segs, href, query=()):
+    def _boom(path_segs, href, query=(), timeout=None):
         raise ConnectionError("session closed")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)
@@ -895,7 +995,7 @@ async def test_read_resource_timeout_does_not_close_the_session(
     fake = _FakeSession()
     coordinator._session = fake
 
-    def _boom(path_segs, href, query=()):
+    def _boom(path_segs, href, query=(), timeout=None):
         raise TimeoutError("GET timeout")
 
     monkeypatch.setattr(coordinator, "_raw_read_blocking", _boom)

@@ -3238,6 +3238,14 @@
         "href": {
           "name": "href prostředku",
           "description": "Kanonický href prostředku ke čtení (např. /mode/vs/0). Za ? přidejte dotaz, který se odešle s GET, např. /device/1?if=oic.if.b, s & mezi parametry. Vynechte ho a místo živého GET získáte uložený snímek všech sledovaných prostředků."
+        },
+        "timeout": {
+          "name": "Časový limit",
+          "description": "Kolik sekund má čtení trvat, výchozí je 10. Delší limit zároveň zruší omezení velikosti 64 KB, pro velký prostředek, jako je přenos souboru. Dotazování a příkazy během něj čekají."
+        },
+        "save_to_file": {
+          "name": "Uložit soubory",
+          "description": "Uloží každý soubor, který čtení vrátí, do složky localthings_downloads v konfiguračním adresáři Home Assistantu a v odpovědi místo jeho obsahu uvede uložené soubory."
         }
       }
     },

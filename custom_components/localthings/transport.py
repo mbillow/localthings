@@ -135,7 +135,13 @@ class Transport(Protocol):
     def pace(self) -> None: ...
 
     def read(
-        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+        self,
+        path_segs: Sequence[str],
+        timeout: float,
+        query: Sequence[str] = (),
+        *,
+        max_payload_bytes: int | None = None,
+        max_blocks: int | None = None,
     ) -> tuple[int, Any]: ...
 
     def write(
@@ -243,8 +249,16 @@ class DtlsTransport:
         self._live().pace()
 
     def read(
-        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+        self,
+        path_segs: Sequence[str],
+        timeout: float,
+        query: Sequence[str] = (),
+        *,
+        max_payload_bytes: int | None = None,
+        max_blocks: int | None = None,
     ) -> tuple[int, Any]:
+        """`max_payload_bytes` and `max_blocks` lift the library's Block2
+        caps for this one read; only a user-run large read sets them."""
         session = self._live()
         path = list(path_segs)
         # LCD_R18 collections (#597) and the R18_BIXBY wall unit's
@@ -253,7 +267,15 @@ class DtlsTransport:
         if seed and tuple(path) in self._batch_paths:
             return _decode_read(*session.get(path, query=list(_BATCH_QUERY), timeout=timeout))
         deadline = time.monotonic() + timeout
-        code, body = _decode_read(*session.get(path, query=tuple(query), timeout=timeout))
+        caps = {
+            name: value
+            for name, value in (
+                ("max_payload_bytes", max_payload_bytes),
+                ("max_blocks", max_blocks),
+            )
+            if value is not None
+        }
+        code, body = _decode_read(*session.get(path, query=tuple(query), timeout=timeout, **caps))
         if seed and code == 0x45 and isinstance(body, dict) and isinstance(body.get("links"), list):
             session.pace()
             remaining = deadline - time.monotonic()

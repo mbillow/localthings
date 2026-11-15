@@ -237,8 +237,16 @@ class LegacyHttpTransport:
         return 0, href
 
     def read(
-        self, path_segs: Sequence[str], timeout: float, query: Sequence[str] = ()
+        self,
+        path_segs: Sequence[str],
+        timeout: float,
+        query: Sequence[str] = (),
+        *,
+        max_payload_bytes: int | None = None,
+        max_blocks: int | None = None,
     ) -> tuple[int, Any]:
+        # HTTPS has no Block2 caps to lift, so the two are accepted and unused.
+        del max_payload_bytes, max_blocks
         if query:
             # 4.02 Bad Option: these endpoints have no counterpart to an OCF
             # interface query, and ignoring it would pass off a plain read as

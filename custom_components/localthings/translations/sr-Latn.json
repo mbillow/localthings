@@ -3238,6 +3238,14 @@
         "href": {
           "name": "Href resursa",
           "description": "Kanonski href resursa za čitanje (npr. /mode/vs/0). Dodajte upit nakon znaka ? da biste ga poslali uz GET zahtev, npr. /device/1?if=oic.if.b, sa znakom & između parametara. Izostavite da biste dobili keširani snimak svih praćenih resursa umesto GET zahteva u realnom vremenu."
+        },
+        "timeout": {
+          "name": "Vremensko ograničenje",
+          "description": "Broj sekundi za čitanje, podrazumevano 10. Duže ograničenje ukida i ograničenje veličine od 64 KB, za veliki resurs kao što je prenos datoteke. Prozivanje i komande čekaju dok traje."
+        },
+        "save_to_file": {
+          "name": "Sačuvaj datoteke",
+          "description": "Čuva svaku datoteku koju čitanje vrati u fasciklu localthings_downloads u konfiguracionom direktorijumu Home Assistant-a i u odgovoru navodi sačuvane datoteke umesto njihovog sadržaja."
         }
       }
     },
