@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Повезивање вуфера"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth звучник"
+      },
       "ip_control": {
         "name": "ИП контрола"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Јачина звука"
+      },
+      "speaker_volume": {
+        "name": "Јачина звучника"
       },
       "target_humidity": {
         "name": "Циљна влажност"
@@ -1276,6 +1282,13 @@
           "smart": "Паметно",
           "high": "Јако",
           "low": "Слабо"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Режим увек укљученог екрана",
+        "state": {
+          "always": "Увек",
+          "scheduled": "По распореду"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Индикаторско светло"
       },
+      "always_on_display": {
+        "name": "Увек укључен екран"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth видљивост"
+      },
       "windfree": {
         "name": "Wind-Free режим"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Крај прескакања AI Purify узорковања"
+      },
+      "always_on_display_start": {
+        "name": "Почетак увек укљученог екрана"
+      },
+      "always_on_display_end": {
+        "name": "Крај увек укљученог екрана"
       },
       "sensing_skip_start": {
         "name": "Почетак прескакања AI Purify узорковања"

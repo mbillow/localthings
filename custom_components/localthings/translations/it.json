@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Connessione woofer"
       },
+      "bluetooth_speaker": {
+        "name": "Altoparlante Bluetooth"
+      },
       "ip_control": {
         "name": "Controllo IP"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Volume audio"
+      },
+      "speaker_volume": {
+        "name": "Volume dell'altoparlante"
       },
       "target_humidity": {
         "name": "Umidità obiettivo"
@@ -1276,6 +1282,13 @@
           "smart": "Smart",
           "high": "Alta",
           "low": "Bassa"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Modalità display sempre attivo",
+        "state": {
+          "always": "Sempre",
+          "scheduled": "Programmato"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Spia luminosa"
       },
+      "always_on_display": {
+        "name": "Display sempre attivo"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth visibile"
+      },
       "windfree": {
         "name": "Modalità Wind-Free"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Fine esclusione rilevamento AI Purify"
+      },
+      "always_on_display_start": {
+        "name": "Inizio display sempre attivo"
+      },
+      "always_on_display_end": {
+        "name": "Fine display sempre attivo"
       },
       "sensing_skip_start": {
         "name": "Inizio esclusione rilevamento AI Purify"

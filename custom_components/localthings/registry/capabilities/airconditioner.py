@@ -9,6 +9,7 @@ here off the coordinator snapshot. These caps stay out of the global
 capabilities/__init__.py) -- AC-only, by_type registry only.
 """
 
+import datetime
 import math
 from dataclasses import replace
 
@@ -22,6 +23,7 @@ from ..entities import (
     SelectDesc,
     SensorDesc,
     SwitchDesc,
+    TimeDesc,
 )
 from . import common
 from .common import (
@@ -29,6 +31,7 @@ from .common import (
     filter_usage_hours,
     filter_usage_percent,
     has_sensor_type,
+    int_or_none,
     normalize_temp_unit,
 )
 from .laundry import option_write
@@ -1681,6 +1684,122 @@ LIGHT_STATEFUL = Capability(
             write_fn=lambda p, rep, href=None: (
                 ["light", "stateful", "vs", "0"],
                 {"mode": p},
+            ),
+        ),
+    ),
+)
+
+# Bixby floor-standing AC (R18_BIXBY_FAC_TIME_23K, #839): its speaker, its
+# always-on display and the speaker's Bluetooth pairing. Every write below
+# follows the field shape the unit reports and needs live confirmation.
+
+
+def _hhmm_read(value) -> datetime.time | None:
+    raw = str(value or "")
+    if len(raw) != 4 or not raw.isdigit():
+        return None
+    try:
+        return datetime.time(int(raw[:2]), int(raw[2:]))
+    except ValueError:
+        return None
+
+
+def _hhmm_write(field: str):
+    return lambda p, rep, href=None: (
+        ["option", "alwaysdisplay", "vs", "0"],
+        {field: f"{p.hour:02d}{p.minute:02d}"},
+    )
+
+
+# No range is reported, so the box takes any level from 0 and the unit
+# refuses one it can't take.
+SPEAKER_VOLUME = Capability(
+    href="/audio/vs/0",
+    poll_tier="cold",
+    entities=(
+        NumberDesc(
+            key="speaker_volume",
+            field="x.com.samsung.da.volumeLevel",
+            icon="mdi:volume-medium",
+            entity_category="config",
+            mode="box",
+            native_min=0,
+            step=1,
+            value_fn=int_or_none,
+            write_fn=lambda p, rep, href=None: (
+                ["audio", "vs", "0"],
+                {"x.com.samsung.da.volumeLevel": int(p)},
+            ),
+        ),
+    ),
+)
+
+ALWAYS_ON_DISPLAY = Capability(
+    href="/option/alwaysdisplay/vs/0",
+    poll_tier="cold",
+    entities=(
+        SwitchDesc(
+            key="always_on_display",
+            field="status",
+            icon="mdi:monitor",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["option", "alwaysdisplay", "vs", "0"],
+                {"status": "On" if p == "On" else "Off"},
+            ),
+        ),
+        SelectDesc(
+            key="always_on_display_mode",
+            field="mode",
+            icon="mdi:monitor-shimmer",
+            entity_category="config",
+            options_field="supportedModes",
+            write_fn=lambda p, rep, href=None: (
+                ["option", "alwaysdisplay", "vs", "0"],
+                {"mode": p},
+            ),
+        ),
+        TimeDesc(
+            key="always_on_display_start",
+            field="startTime",
+            icon="mdi:clock-start",
+            entity_category="config",
+            value_fn=_hhmm_read,
+            write_fn=_hhmm_write("startTime"),
+        ),
+        TimeDesc(
+            key="always_on_display_end",
+            field="endTime",
+            icon="mdi:clock-end",
+            entity_category="config",
+            value_fn=_hhmm_read,
+            write_fn=_hhmm_write("endTime"),
+        ),
+    ),
+)
+
+# displayName is the owner's own name for the unit, so it stays unexposed.
+BLUETOOTH_SPEAKER = Capability(
+    href="/speaker/btconnection/vs/0",
+    poll_tier="cold",
+    entities=(
+        BinarySensorDesc(
+            key="bluetooth_speaker",
+            field="x.com.samsung.da.connectionState",
+            device_class="connectivity",
+            entity_category="diagnostic",
+            value_fn=lambda v: v == "Connected",
+        ),
+        SwitchDesc(
+            key="bluetooth_discoverable",
+            field="x.com.samsung.da.discoverableMode",
+            icon="mdi:bluetooth-audio",
+            entity_category="config",
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["speaker", "btconnection", "vs", "0"],
+                {"x.com.samsung.da.discoverableMode": "On" if p == "On" else "Off"},
             ),
         ),
     ),

@@ -2308,6 +2308,21 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q935gf():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_r18_bixby_fac():
+    """Bixby floor-standing AC with a speaker and always-on display (#839)."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_r18_bixby_fac_time_23k"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources, device_types=("oic.wk.d", "oic.d.airconditioner"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
     """AIM-H04N indoor subdevice (#789): locks in current_temperature_c from
     the flat /temperatures/indoor/vs/0 and the Wh-scale meter selection. Routed

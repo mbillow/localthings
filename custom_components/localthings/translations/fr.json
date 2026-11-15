@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Connexion du caisson de basses"
       },
+      "bluetooth_speaker": {
+        "name": "Haut-parleur Bluetooth"
+      },
       "ip_control": {
         "name": "Contrôle IP"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Volume sonore"
+      },
+      "speaker_volume": {
+        "name": "Volume du haut-parleur"
       },
       "target_humidity": {
         "name": "Humidité cible"
@@ -1276,6 +1282,13 @@
           "smart": "Intelligent",
           "high": "Élevé",
           "low": "Faible"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Mode écran toujours actif",
+        "state": {
+          "always": "Toujours",
+          "scheduled": "Programmé"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Voyant lumineux"
       },
+      "always_on_display": {
+        "name": "Écran toujours actif"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth visible"
+      },
       "windfree": {
         "name": "Mode Wind-Free"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Fin de la pause de détection AI Purify"
+      },
+      "always_on_display_start": {
+        "name": "Début de l'écran toujours actif"
+      },
+      "always_on_display_end": {
+        "name": "Fin de l'écran toujours actif"
       },
       "sensing_skip_start": {
         "name": "Début de la pause de détection AI Purify"

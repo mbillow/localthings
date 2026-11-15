@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Připojení wooferu"
       },
+      "bluetooth_speaker": {
+        "name": "Reproduktor Bluetooth"
+      },
       "ip_control": {
         "name": "Ovládání přes IP"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Hlasitost zvuku"
+      },
+      "speaker_volume": {
+        "name": "Hlasitost reproduktoru"
       },
       "target_humidity": {
         "name": "Požadovaná vlhkost"
@@ -1276,6 +1282,13 @@
           "smart": "Chytrý",
           "high": "Vysoký",
           "low": "Nízký"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Režim stále zapnutého displeje",
+        "state": {
+          "always": "Vždy",
+          "scheduled": "Podle plánu"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Kontrolka"
       },
+      "always_on_display": {
+        "name": "Stále zapnutý displej"
+      },
+      "bluetooth_discoverable": {
+        "name": "Viditelnost Bluetooth"
+      },
       "windfree": {
         "name": "Režim Wind-Free"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Konec přeskočení měření AI Purify"
+      },
+      "always_on_display_start": {
+        "name": "Začátek stále zapnutého displeje"
+      },
+      "always_on_display_end": {
+        "name": "Konec stále zapnutého displeje"
       },
       "sensing_skip_start": {
         "name": "Začátek přeskočení měření AI Purify"

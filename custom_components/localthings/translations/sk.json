@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Pripojenie woofera"
       },
+      "bluetooth_speaker": {
+        "name": "Reproduktor Bluetooth"
+      },
       "ip_control": {
         "name": "Ovládanie cez IP"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Hlasitosť zvuku"
+      },
+      "speaker_volume": {
+        "name": "Hlasitosť reproduktora"
       },
       "target_humidity": {
         "name": "Požadovaná vlhkosť"
@@ -1276,6 +1282,13 @@
           "smart": "Inteligentný",
           "high": "Vysoký",
           "low": "Nízky"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Režim vždy zapnutého displeja",
+        "state": {
+          "always": "Vždy",
+          "scheduled": "Podľa plánu"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Kontrolka"
       },
+      "always_on_display": {
+        "name": "Vždy zapnutý displej"
+      },
+      "bluetooth_discoverable": {
+        "name": "Viditeľnosť Bluetooth"
+      },
       "windfree": {
         "name": "Režim Wind-Free"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Koniec vynechania merania AI Purify"
+      },
+      "always_on_display_start": {
+        "name": "Začiatok vždy zapnutého displeja"
+      },
+      "always_on_display_end": {
+        "name": "Koniec vždy zapnutého displeja"
       },
       "sensing_skip_start": {
         "name": "Začiatok vynechania merania AI Purify"

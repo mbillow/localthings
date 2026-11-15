@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "우퍼 연결"
       },
+      "bluetooth_speaker": {
+        "name": "블루투스 스피커"
+      },
       "ip_control": {
         "name": "IP 제어"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "음량"
+      },
+      "speaker_volume": {
+        "name": "스피커 볼륨"
       },
       "target_humidity": {
         "name": "목표 습도"
@@ -1276,6 +1282,13 @@
           "smart": "스마트",
           "high": "높음",
           "low": "낮음"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "상시 표시 모드",
+        "state": {
+          "always": "항상",
+          "scheduled": "예약"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "표시등"
       },
+      "always_on_display": {
+        "name": "상시 표시"
+      },
+      "bluetooth_discoverable": {
+        "name": "블루투스 검색 허용"
+      },
       "windfree": {
         "name": "무풍 모드"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "AI Purify 감지 건너뛰기 종료"
+      },
+      "always_on_display_start": {
+        "name": "상시 표시 시작"
+      },
+      "always_on_display_end": {
+        "name": "상시 표시 종료"
       },
       "sensing_skip_start": {
         "name": "AI Purify 감지 건너뛰기 시작"

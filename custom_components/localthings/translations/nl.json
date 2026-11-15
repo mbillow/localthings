@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Woofer-verbinding"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth-luidspreker"
+      },
       "ip_control": {
         "name": "IP-bediening"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Geluidsvolume"
+      },
+      "speaker_volume": {
+        "name": "Luidsprekervolume"
       },
       "target_humidity": {
         "name": "Doelvochtigheid"
@@ -1276,6 +1282,13 @@
           "smart": "Slim",
           "high": "Hoog",
           "low": "Laag"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Modus altijd-aan-scherm",
+        "state": {
+          "always": "Altijd",
+          "scheduled": "Gepland"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Indicatorlampje"
       },
+      "always_on_display": {
+        "name": "Altijd-aan-scherm"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth zichtbaar"
+      },
       "windfree": {
         "name": "Wind-Free modus"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Einde AI Purify meting overslaan"
+      },
+      "always_on_display_start": {
+        "name": "Start altijd-aan-scherm"
+      },
+      "always_on_display_end": {
+        "name": "Einde altijd-aan-scherm"
       },
       "sensing_skip_start": {
         "name": "Start AI Purify meting overslaan"
