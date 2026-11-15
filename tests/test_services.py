@@ -45,7 +45,7 @@ from custom_components.localthings.const import (
     TRANSPORT_LEGACY_HTTP,
 )
 from custom_components.localthings.coordinator import LocalThingsCoordinator
-from custom_components.localthings.entity import LocalThingsEntity
+from custom_components.localthings.entity import LocalThingsEntity, entity_unique_id
 from custom_components.localthings.registry.capabilities import cook
 from custom_components.localthings.registry.encode import TYPE_KEY, from_json_safe
 from custom_components.localthings.registry.subdevices import MAIN, Subdevice
@@ -1686,8 +1686,7 @@ def cooking_button(hass, coordinator, device_id):
     _load(coordinator, _idle("range_ne63a6111ss"))
     coordinator.async_start_cooking = AsyncMock()
     bound = next(b for b in coordinator.bound if b.desc.cook_param == cook.PARAM_START)
-    unique_id = LocalThingsEntity(coordinator, bound).unique_id
-    assert unique_id is not None
+    unique_id = entity_unique_id(coordinator.device_key, bound)
     return er.async_get(hass).async_get_or_create(
         "button",
         DOMAIN,
@@ -1785,13 +1784,43 @@ async def test_cooking_allows_device_control_permission(
     coordinator.async_start_cooking.assert_awaited_once()
 
 
-async def test_cooking_refuses_when_start_entity_is_missing(
-    hass, coordinator, device_id, cooking_button, hass_user
+@pytest.mark.parametrize("user_kind", ["regular", "admin", "owner"])
+async def test_cooking_refuses_user_when_start_button_is_deleted_from_registry(
+    hass,
+    coordinator,
+    device_id,
+    cooking_button,
+    hass_user,
+    hass_admin_user,
+    hass_owner_user,
+    user_kind,
 ):
+    user = {"regular": hass_user, "admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
     er.async_get(hass).async_remove(cooking_button.entity_id)
     with pytest.raises(Unauthorized):
-        await _call_cooking(hass, device_id, hass_user.id)
+        await _call_cooking(hass, device_id, user.id)
     coordinator.async_start_cooking.assert_not_awaited()
+
+
+async def test_cooking_allows_internal_automation_when_start_button_is_deleted_from_registry(
+    hass, coordinator, device_id, cooking_button
+):
+    er.async_get(hass).async_remove(cooking_button.entity_id)
+    await _call_cooking(hass, device_id)
+    coordinator.async_start_cooking.assert_awaited_once()
+
+
+@pytest.mark.parametrize("sibling", [False, True])
+def test_cooking_entity_unique_id_matches_registered_entity(coordinator, sibling):
+    _load(coordinator, _idle("range_ne63a6111ss"))
+    bound = next(b for b in coordinator.bound if b.desc.cook_param == cook.PARAM_START)
+    if sibling:
+        bound = replace(
+            bound, subdevice=Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
+        )
+    expected = f"{DOMAIN}_{coordinator.device_key}_{bound.subdevice.key_prefix}start_cooking"
+    assert entity_unique_id(coordinator.device_key, bound) == expected
+    assert LocalThingsEntity(coordinator, bound).unique_id == expected
 
 
 async def test_cooking_refuses_inactive_user(
@@ -1818,8 +1847,7 @@ async def test_cooking_cannot_use_another_cavity_permission(
         config_entry_id=coordinator._entry.entry_id,
         identifiers=coordinator.device_info_for(subdevice)["identifiers"],
     )
-    sibling_unique_id = LocalThingsEntity(coordinator, sibling_bound).unique_id
-    assert sibling_unique_id is not None
+    sibling_unique_id = entity_unique_id(coordinator.device_key, sibling_bound)
     sibling_button = er.async_get(hass).async_get_or_create(
         "button",
         DOMAIN,

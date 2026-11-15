@@ -46,7 +46,7 @@ from .const import (
     SERVICE_WRITE_RESOURCE,
 )
 from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
-from .entity import LocalThingsEntity
+from .entity import entity_unique_id
 from .registry.capabilities import cook
 from .registry.capabilities import tv as tv_caps
 from .registry.capabilities.tv import SEARCH_SITES
@@ -422,8 +422,7 @@ async def _async_check_cooking_permission(
             or getattr(bound.desc, "cook_param", None) != cook.PARAM_START
         ):
             continue
-        unique_id = LocalThingsEntity(coordinator, bound).unique_id
-        assert unique_id is not None
+        unique_id = entity_unique_id(coordinator.device_key, bound)
         entity_id = registry.async_get_entity_id("button", DOMAIN, unique_id)
         if entity_id and user.permissions.check_entity(entity_id, POLICY_CONTROL):
             return
