@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Подключение сабвуфера"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth-динамик"
+      },
       "ip_control": {
         "name": "Управление по IP"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Громкость звука"
+      },
+      "speaker_volume": {
+        "name": "Громкость динамика"
       },
       "target_humidity": {
         "name": "Целевая влажность"
@@ -1276,6 +1282,13 @@
           "smart": "Умный",
           "high": "Высокий",
           "low": "Низкий"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Режим всегда включенного экрана",
+        "state": {
+          "always": "Всегда",
+          "scheduled": "По расписанию"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Световой индикатор"
       },
+      "always_on_display": {
+        "name": "Всегда включенный экран"
+      },
+      "bluetooth_discoverable": {
+        "name": "Видимость Bluetooth"
+      },
       "windfree": {
         "name": "Режим Wind-Free"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "Окончание пропуска измерений AI Purify"
+      },
+      "always_on_display_start": {
+        "name": "Начало всегда включенного экрана"
+      },
+      "always_on_display_end": {
+        "name": "Окончание всегда включенного экрана"
       },
       "sensing_skip_start": {
         "name": "Начало пропуска измерений AI Purify"

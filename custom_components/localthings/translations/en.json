@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Woofer connection"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth speaker"
+      },
       "ip_control": {
         "name": "IP control"
       },
@@ -348,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Sound volume"
+      },
+      "speaker_volume": {
+        "name": "Speaker volume"
       },
       "target_humidity": {
         "name": "Target humidity"
@@ -1276,6 +1282,13 @@
           "smart": "Smart",
           "high": "High",
           "low": "Low"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Always-on display mode",
+        "state": {
+          "always": "Always",
+          "scheduled": "Scheduled"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Indicator light"
       },
+      "always_on_display": {
+        "name": "Always-on display"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth discoverable"
+      },
       "windfree": {
         "name": "Wind-Free mode"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "AI Purify sensing skip end"
+      },
+      "always_on_display_start": {
+        "name": "Always-on display start"
+      },
+      "always_on_display_end": {
+        "name": "Always-on display end"
       },
       "sensing_skip_start": {
         "name": "AI Purify sensing skip start"

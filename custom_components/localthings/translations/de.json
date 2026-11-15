@@ -184,6 +184,9 @@
       "woofer_connection": {
         "name": "Woofer-Verbindung"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth-Lautsprecher"
+      },
       "ip_control": {
         "name": "IP-Steuerung"
       },
@@ -339,6 +342,9 @@
       },
       "sound_volume": {
         "name": "Lautstärke"
+      },
+      "speaker_volume": {
+        "name": "Lautsprecherlautstärke"
       },
       "target_humidity": {
         "name": "Ziel-Luftfeuchtigkeit"
@@ -1276,6 +1282,13 @@
           "smart": "Intelligent",
           "high": "Hoch",
           "low": "Niedrig"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Always-On-Display-Modus",
+        "state": {
+          "always": "Immer",
+          "scheduled": "Zeitplan"
         }
       },
       "ventilation_mode": {
@@ -2425,6 +2438,12 @@
       "indicator_light": {
         "name": "Kontrollleuchte"
       },
+      "always_on_display": {
+        "name": "Always-On-Display"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth sichtbar"
+      },
       "windfree": {
         "name": "WindFree-Modus"
       },
@@ -2534,6 +2553,12 @@
       },
       "sensing_skip_end": {
         "name": "KI-Reinigung Messpause Ende"
+      },
+      "always_on_display_start": {
+        "name": "Always-On-Display Beginn"
+      },
+      "always_on_display_end": {
+        "name": "Always-On-Display Ende"
       },
       "sensing_skip_start": {
         "name": "KI-Reinigung Messpause Start"
