@@ -2640,6 +2640,16 @@
           "fallback_ca": "AC14K_M-CA-Zertifikat versuchen"
         }
       },
+      "credential_timeout": {
+        "title": "Gerät antwortet nicht mehr",
+        "description": "{host} hat auf seinem lokalen API-Port geantwortet, beim Zertifikats-Handshake aber auch nach einem erneuten Versuch nicht mehr reagiert. Manche Geräte tun das, wenn sie statt eines Zertifikats einen Pre-Shared Key verwenden. Andere halten noch eine alte Verbindung, die ein Neustart des Geräts freigibt. Wenn Sie das Gerät gerade neu gestartet haben, versuchen Sie es erneut. Andernfalls importieren Sie einen Pre-Shared Key, den Sie bereits besitzen: LocalThings kann ihn nicht selbst beschaffen. Ein AC14K_M-CA-Zertifikat wird ebenfalls angeboten, aber bisher wurde kein Gerät gemeldet, das das automatische Zertifikat ignorierte und ein solches annahm.\n\nGeräte mit Pre-Shared Key versuchen wir noch zu verstehen, und Sie werden damit wahrscheinlich auf Probleme stoßen. Unseren Plan, unsere bisherigen Erkenntnisse und einen Ort für Rückmeldungen finden Sie in [Issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Erneut versuchen",
+          "psk_owner": "Owner-Pre-Shared-Key importieren",
+          "psk_peer": "Peer-Pre-Shared-Key importieren",
+          "fallback_ca": "AC14K_M-CA-Zertifikat versuchen"
+        }
+      },
       "ca_rejected": {
         "title": "Zertifikat weiterhin abgelehnt",
         "description": "{host} hat auch das von dieser CA signierte Zertifikat abgelehnt. Das deckt sich mit allen bisherigen Berichten: Kein Gerät, das das automatische Zertifikat ablehnte, hat eine AC14K_M-CA angenommen. Möglicherweise verwendet es stattdessen einen Pre-Shared Key. Das Home-Assistant-Protokoll enthält den genauen Alert.\n\nGeräte mit Pre-Shared Key versuchen wir noch zu verstehen, und Sie werden damit wahrscheinlich auf Probleme stoßen. Unseren Plan, unsere bisherigen Erkenntnisse und einen Ort für Rückmeldungen finden Sie in [Issue #435]({issue_url}).",

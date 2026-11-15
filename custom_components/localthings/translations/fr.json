@@ -2640,6 +2640,16 @@
           "fallback_ca": "Essayer un certificat CA AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "L'appareil ne répond plus",
+        "description": "{host} a répondu sur le port de son API locale mais a cessé de répondre pendant la négociation du certificat, même après une nouvelle tentative. Certains appareils font cela lorsqu'ils acceptent une clé pré-partagée à la place d'un certificat. D'autres maintiennent encore une ancienne connexion, que le redémarrage de l'appareil libère. Si vous venez de le redémarrer, réessayez. Sinon, importez une clé pré-partagée que vous possédez déjà : LocalThings ne peut pas l'obtenir lui-même. Un certificat CA AC14K_M est également proposé, mais aucun appareil ayant ignoré le certificat automatique n'a été signalé comme l'acceptant.\n\nNous cherchons encore à comprendre les appareils qui utilisent une clé pré-partagée, et vous risquez de rencontrer des problèmes avec eux. Notre plan, ce que nous avons découvert jusqu'ici et un espace pour laisser vos retours se trouvent dans le [ticket #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Réessayer",
+          "psk_owner": "Importer une clé pré-partagée de propriétaire",
+          "psk_peer": "Importer une clé pré-partagée de pair",
+          "fallback_ca": "Essayer un certificat CA AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certificat toujours refusé",
         "description": "{host} a également refusé le certificat signé par cette CA. Cela correspond à tous les signalements à ce jour : aucun appareil ayant refusé le certificat automatique n'a accepté de CA AC14K_M. Il accepte peut-être une clé pré-partagée à la place. Le journal de Home Assistant indique l'alerte exacte.\n\nNous cherchons encore à comprendre les appareils qui utilisent une clé pré-partagée, et vous risquez de rencontrer des problèmes avec eux. Notre plan, ce que nous avons découvert jusqu'ici et un espace pour laisser vos retours se trouvent dans le [ticket #435]({issue_url}).",

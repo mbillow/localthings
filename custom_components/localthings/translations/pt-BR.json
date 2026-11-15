@@ -2640,6 +2640,16 @@
           "fallback_ca": "Tentar um certificado da autoridade certificadora AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "O aparelho parou de responder",
+        "description": "{host} respondeu na porta da sua API local, mas parou de responder durante a troca do certificado, mesmo após uma nova tentativa. Alguns aparelhos fazem isso quando usam uma chave pré-compartilhada em vez de um certificado. Outros ainda mantêm uma conexão antiga, que é liberada ao reiniciar o aparelho. Se você acabou de reiniciá-lo, tente novamente. Caso contrário, importe uma chave pré-compartilhada que você já tenha: o LocalThings não consegue obtê-la por conta própria. Também há a opção de usar um certificado da autoridade certificadora AC14K_M, mas nenhum aparelho que ignorou o certificado automático foi relatado como compatível com ele.\n\nAinda estamos estudando os aparelhos que usam chave pré-compartilhada, e é provável que você encontre problemas com eles. Nosso plano, as descobertas até agora e um espaço para comentários estão na [issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Tentar novamente",
+          "psk_owner": "Importar chave pré-compartilhada do proprietário",
+          "psk_peer": "Importar chave pré-compartilhada de um par",
+          "fallback_ca": "Tentar um certificado da autoridade certificadora AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certificado recusado novamente",
         "description": "{host} também recusou o certificado assinado por essa autoridade certificadora. Isso corresponde a todos os relatos até agora: nenhum aparelho que recusou o certificado automático aceitou a autoridade certificadora AC14K_M. Talvez ele use uma chave pré-compartilhada. O log do Home Assistant registra o alerta exato.\n\nAinda estamos estudando os aparelhos que usam chave pré-compartilhada, e é provável que você encontre problemas com eles. Nosso plano, as descobertas até agora e um espaço para comentários estão na [issue #435]({issue_url}).",

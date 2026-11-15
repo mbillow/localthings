@@ -2640,6 +2640,16 @@
           "fallback_ca": "Een AC14K_M-CA-certificaat proberen"
         }
       },
+      "credential_timeout": {
+        "title": "Apparaat reageert niet meer",
+        "description": "{host} antwoordde op de poort van zijn lokale API, maar reageerde tijdens de certificaathandshake niet meer, ook niet na een nieuwe poging. Sommige apparaten doen dat wanneer ze een pre-shared key gebruiken in plaats van een certificaat. Andere houden nog een oude verbinding vast, die een herstart van het apparaat vrijgeeft. Heb je het apparaat net herstart, probeer het dan opnieuw. Importeer anders een pre-shared key die je al hebt: LocalThings kan die niet zelf verkrijgen. Er wordt ook een AC14K_M-CA-certificaat aangeboden, maar er is nog geen apparaat gemeld dat het automatische certificaat negeerde en dat wel accepteerde.\n\nApparaten met een pre-shared key proberen we nog te begrijpen, en je loopt er waarschijnlijk tegen problemen aan. Ons plan, wat we tot nu toe hebben ontdekt en een plek om feedback te geven staan in [issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Opnieuw proberen",
+          "psk_owner": "Een owner-pre-shared key importeren",
+          "psk_peer": "Een peer-pre-shared key importeren",
+          "fallback_ca": "Een AC14K_M-CA-certificaat proberen"
+        }
+      },
       "ca_rejected": {
         "title": "Certificaat nog steeds geweigerd",
         "description": "{host} heeft ook het certificaat geweigerd dat met die CA is ondertekend. Dat klopt met alle meldingen tot nu toe: geen apparaat dat het automatische certificaat weigerde, heeft een AC14K_M-CA geaccepteerd. Mogelijk gebruikt het een pre-shared key. Het Home Assistant-logboek bevat de exacte alert.\n\nApparaten met een pre-shared key proberen we nog te begrijpen, en je loopt er waarschijnlijk tegen problemen aan. Ons plan, wat we tot nu toe hebben ontdekt en een plek om feedback te geven staan in [issue #435]({issue_url}).",

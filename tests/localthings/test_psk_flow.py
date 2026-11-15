@@ -343,22 +343,34 @@ def silent_appliance(monkeypatch, appliance):
     return SilentAppliance
 
 
-async def test_a_timeout_on_a_confirmed_port_still_offers_the_credential_step(
-    hass: HomeAssistant, monkeypatch, silent_appliance
+@pytest.mark.parametrize("sct", [1, None])
+async def test_a_timeout_offers_a_retry_ahead_of_the_credentials(
+    hass: HomeAssistant, monkeypatch, silent_appliance, sct
 ) -> None:
-    _hint(monkeypatch, CredentialHint(sct=1))
+    """A timeout isn't a refusal, so it gets its own menu whatever the hint:
+    a unit holding an old association needs a retry, not a key."""
+    _hint(monkeypatch, CredentialHint(sct=sct))
     result = await _refused(hass)
     assert result["type"] == FlowResultType.MENU
-    assert result["step_id"] == "credential_psk"
-    assert result["menu_options"] == ["psk_owner", "psk_peer", "fallback_ca"]
+    assert result["step_id"] == "credential_timeout"
+    assert result["menu_options"] == ["retry_probe", "psk_owner", "psk_peer", "fallback_ca"]
 
 
-async def test_no_hint_after_a_timeout_falls_back_to_the_generic_menu(
+async def test_retry_probes_the_same_address_again(
     hass: HomeAssistant, monkeypatch, silent_appliance
 ) -> None:
     _hint(monkeypatch, CredentialHint(sct=None))
     result = await _refused(hass)
-    assert result["type"] == FlowResultType.MENU
+    assert result["step_id"] == "credential_timeout"
+    # Still silent: the retry lands back on the same menu.
+    opened = len(PskAppliance.opened)
+    result = await _choose(hass, result, "retry_probe")
+    assert result["step_id"] == "credential_timeout"
+    assert len(PskAppliance.opened) > opened
+    assert {t.port for t in PskAppliance.opened[opened:]} == {PORT}
+    # Now it answers, and refuses the certificate: the refused menu.
+    monkeypatch.setattr(config_flow, "DtlsTransport", PskAppliance)
+    result = await _choose(hass, result, "retry_probe")
     assert result["step_id"] == "credential"
 
 

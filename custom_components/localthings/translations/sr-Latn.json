@@ -2640,6 +2640,16 @@
           "fallback_ca": "Isprobajte AC14K_M CA sertifikat"
         }
       },
+      "credential_timeout": {
+        "title": "Uređaj je prestao da odgovara",
+        "description": "{host} je odgovorio na portu svog lokalnog API-ja, ali je prestao da odgovara tokom razmene sertifikata, čak i posle ponovnog pokušaja. Neki uređaji se tako ponašaju kada umesto sertifikata koriste unapred deljeni ključ (PSK). Drugi još uvek drže staru vezu, koju ponovno pokretanje uređaja oslobađa. Ako ste ga upravo ponovo pokrenuli, pokušajte ponovo. U suprotnom, uvezite unapred deljeni ključ koji već posedujete: LocalThings ne može samostalno da ga pribavi. Takođe je ponuđen i AC14K_M CA sertifikat, ali do sada nije prijavljeno da ga je prihvatio nijedan uređaj koji je ignorisao automatski sertifikat.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Pokušajte ponovo",
+          "psk_owner": "Uvezite unapred deljeni ključ vlasnika",
+          "psk_peer": "Uvezite unapred deljeni ključ klijenta",
+          "fallback_ca": "Isprobajte AC14K_M CA sertifikat"
+        }
+      },
       "ca_rejected": {
         "title": "Sertifikat je i dalje odbijen",
         "description": "{host} je takođe odbio sertifikat koji je potpisalo to sertifikaciono telo (CA). To se poklapa sa svim dosadašnjim izveštajima: nijedan uređaj koji je odbio automatski sertifikat nije prihvatio AC14K_M CA. Moguće je da umesto toga koristi unapred deljeni ključ. Dnevnik (log) Home Assistant-a beleži tačno upozorenje.\n\nUređaje koji koriste unapred deljeni ključ još uvek pokušavamo da u potpunosti razumemo i verovatno ćete naići na probleme sa njima. Naš plan, ono što smo do sada otkrili, kao i mesto za ostavljanje povratnih informacija nalaze se u [issue #435]({issue_url}).",

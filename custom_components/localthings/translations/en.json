@@ -2640,6 +2640,16 @@
           "fallback_ca": "Try an AC14K_M CA certificate"
         }
       },
+      "credential_timeout": {
+        "title": "Appliance stopped answering",
+        "description": "{host} answered on its local API port but stopped responding during the certificate handshake, even after a retry. Some appliances do this when they take a pre-shared key instead of a certificate. Others are still holding an old connection, which restarting the appliance clears. If you've just restarted it, try again. Otherwise, import a pre-shared key you already hold: LocalThings can't obtain one itself. An AC14K_M CA certificate is also offered, but no appliance that ignored the automatic certificate has been reported to accept one.\n\nAppliances that use a pre-shared key are ones we're still working to understand, and you're likely to run into problems with them. Our plan, what we've found so far, and a place to leave feedback are in [issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Try again",
+          "psk_owner": "Import an owner pre-shared key",
+          "psk_peer": "Import a peer pre-shared key",
+          "fallback_ca": "Try an AC14K_M CA certificate"
+        }
+      },
       "ca_rejected": {
         "title": "Certificate still refused",
         "description": "{host} also refused the certificate signed by that CA. That matches every report so far: no appliance that refused the automatic certificate has accepted an AC14K_M CA. It may take a pre-shared key instead. The Home Assistant log records the exact alert.\n\nAppliances that use a pre-shared key are ones we're still working to understand, and you're likely to run into problems with them. Our plan, what we've found so far, and a place to leave feedback are in [issue #435]({issue_url}).",
