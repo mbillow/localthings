@@ -39,6 +39,16 @@
           "fallback_ca": "Probar un certificado de CA AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "El electrodoméstico dejó de responder",
+        "description": "{host} respondió en el puerto de su API local, pero dejó de responder durante el intercambio del certificado, incluso tras un reintento. Algunos electrodomésticos lo hacen cuando usan una clave precompartida en lugar de un certificado. Otros aún mantienen una conexión antigua, que se libera al reiniciar el electrodoméstico. Si acabas de reiniciarlo, inténtalo de nuevo. Si no, importa una clave precompartida que ya tengas: LocalThings no puede obtenerla por sí mismo. También se ofrece un certificado de CA AC14K_M, pero no se ha informado de ningún electrodoméstico que ignorara el certificado automático y lo aceptara.\n\nLos electrodomésticos que usan una clave precompartida son algo que aún estamos intentando entender, y es probable que tengas problemas con ellos. Nuestro plan, lo que hemos descubierto hasta ahora y un lugar para dejar tus comentarios están en la [incidencia #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Intentar de nuevo",
+          "psk_owner": "Importar una clave precompartida de propietario",
+          "psk_peer": "Importar una clave precompartida de par",
+          "fallback_ca": "Probar un certificado de CA AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certificado rechazado de nuevo",
         "description": "{host} también rechazó el certificado firmado por esa CA. Coincide con todos los informes hasta ahora: ningún electrodoméstico que rechazó el certificado automático ha aceptado una CA AC14K_M. Puede que use una clave precompartida. El registro de Home Assistant contiene la alerta exacta.\n\nLos electrodomésticos que usan una clave precompartida son algo que aún estamos intentando entender, y es probable que tengas problemas con ellos. Nuestro plan, lo que hemos descubierto hasta ahora y un lugar para dejar tus comentarios están en la [incidencia #435]({issue_url}).",

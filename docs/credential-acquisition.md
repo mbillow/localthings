@@ -180,8 +180,9 @@ record in your own backup:
 On this unit, the recovered key completed a DTLS handshake and an authenticated
 `GET /oic/sec/acl` returned `2.05 Content`; the owner then added the washer to
 Home Assistant. LocalThings 0.35.0 needed a local config-flow change to offer
-the credential menu after its automatic certificate probe timed out; a stock
-installation may instead return to the IP form. No OCF security write was
+the credential menu after its automatic certificate probe timed out. Setup now
+offers that menu itself, with a retry, when the probe times out (#822). No OCF
+security write was
 made. This proves local credential access for one appliance, not that every
 washer control works or that every SmartThings version stores credentials in
 the same format.

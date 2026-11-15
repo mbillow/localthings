@@ -2640,6 +2640,16 @@
           "fallback_ca": "Spróbuj certyfikatu CA AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "Urządzenie przestało odpowiadać",
+        "description": "{host} odpowiedział na porcie swojego lokalnego API, ale przestał odpowiadać podczas wymiany certyfikatu, także po ponownej próbie. Niektóre urządzenia tak się zachowują, gdy zamiast certyfikatu używają klucza współdzielonego (PSK). Inne wciąż utrzymują stare połączenie, które zwalnia ponowne uruchomienie urządzenia. Jeśli właśnie je uruchomiłeś ponownie, spróbuj jeszcze raz. W przeciwnym razie zaimportuj klucz współdzielony, który już masz: LocalThings nie może go sam uzyskać. Dostępny jest też certyfikat CA AC14K_M, ale nie zgłoszono żadnego urządzenia, które zignorowało automatyczny certyfikat, a przyjęło taki.\n\nUrządzenia używające klucza współdzielonego wciąż staramy się zrozumieć i prawdopodobnie napotkasz z nimi problemy. Nasz plan, dotychczasowe ustalenia i miejsce na opinie znajdziesz w [zgłoszeniu #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Spróbuj ponownie",
+          "psk_owner": "Zaimportuj klucz współdzielony właściciela",
+          "psk_peer": "Zaimportuj klucz współdzielony peera",
+          "fallback_ca": "Spróbuj certyfikatu CA AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certyfikat nadal odrzucony",
         "description": "{host} odrzucił również certyfikat podpisany przez to CA. To zgadza się ze wszystkimi dotychczasowymi zgłoszeniami: żadne urządzenie, które odrzuciło automatyczny certyfikat, nie przyjęło CA AC14K_M. Możliwe, że używa klucza współdzielonego. Dokładny alert znajdziesz w logu Home Assistant.\n\nUrządzenia używające klucza współdzielonego wciąż staramy się zrozumieć i prawdopodobnie napotkasz z nimi problemy. Nasz plan, dotychczasowe ustalenia i miejsce na opinie znajdziesz w [zgłoszeniu #435]({issue_url}).",

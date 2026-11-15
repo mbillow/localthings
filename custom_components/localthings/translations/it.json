@@ -2640,6 +2640,16 @@
           "fallback_ca": "Prova un certificato CA AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "L'elettrodomestico ha smesso di rispondere",
+        "description": "{host} ha risposto sulla porta della sua API locale, ma ha smesso di rispondere durante lo scambio del certificato, anche dopo un nuovo tentativo. Alcuni elettrodomestici lo fanno quando usano una chiave precondivisa invece di un certificato. Altri mantengono ancora una vecchia connessione, che il riavvio dell'elettrodomestico libera. Se l'hai appena riavviato, riprova. Altrimenti importa una chiave precondivisa che possiedi già: LocalThings non può ottenerla da solo. Viene offerto anche un certificato CA AC14K_M, ma non è stato segnalato alcun elettrodomestico che, dopo aver ignorato il certificato automatico, lo abbia accettato.\n\nGli elettrodomestici che usano una chiave precondivisa sono qualcosa che stiamo ancora cercando di capire, ed è probabile che tu incontri problemi. Il nostro piano, quanto scoperto finora e un posto dove lasciare un riscontro sono nella [segnalazione #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Riprova",
+          "psk_owner": "Importa una chiave precondivisa del proprietario",
+          "psk_peer": "Importa una chiave precondivisa peer",
+          "fallback_ca": "Prova un certificato CA AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certificato ancora rifiutato",
         "description": "{host} ha rifiutato anche il certificato firmato da quella CA. Corrisponde a tutte le segnalazioni finora: nessun elettrodomestico che ha rifiutato il certificato automatico ha accettato una CA AC14K_M. Potrebbe usare una chiave precondivisa. Il log di Home Assistant riporta l'avviso esatto.\n\nGli elettrodomestici che usano una chiave precondivisa sono qualcosa che stiamo ancora cercando di capire, ed è probabile che tu incontri problemi. Il nostro piano, quanto scoperto finora e un posto dove lasciare un riscontro sono nella [segnalazione #435]({issue_url}).",

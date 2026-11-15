@@ -2640,6 +2640,16 @@
           "fallback_ca": "Skúsiť certifikát CA AC14K_M"
         }
       },
+      "credential_timeout": {
+        "title": "Spotrebič prestal odpovedať",
+        "description": "{host} odpovedal na porte svojho lokálneho API, ale počas výmeny certifikátu prestal reagovať, a to aj po opakovanom pokuse. Niektoré spotrebiče sa tak správajú, keď namiesto certifikátu používajú vopred zdieľaný kľúč (PSK). Iné ešte držia staré spojenie, ktoré uvoľní reštart spotrebiča. Ak ste ho práve reštartovali, skúste to znova. Inak importujte vopred zdieľaný kľúč, ktorý už máte: LocalThings ho nedokáže získať sám. Ponúka sa aj certifikát CA AC14K_M, ale zatiaľ nebol nahlásený žiadny spotrebič, ktorý by ignoroval automatický certifikát a tento prijal.\n\nSpotrebiče s vopred zdieľaným kľúčom sa ešte len snažíme pochopiť a pravdepodobne s nimi narazíte na problémy. Náš plán, doterajšie zistenia a miesto na spätnú väzbu nájdete v [issue #435]({issue_url}).",
+        "menu_options": {
+          "retry_probe": "Skúsiť znova",
+          "psk_owner": "Importovať vopred zdieľaný kľúč vlastníka",
+          "psk_peer": "Importovať vopred zdieľaný kľúč peera",
+          "fallback_ca": "Skúsiť certifikát CA AC14K_M"
+        }
+      },
       "ca_rejected": {
         "title": "Certifikát stále odmietnutý",
         "description": "{host} odmietol aj certifikát podpísaný touto CA. To zodpovedá všetkým doterajším hláseniam: žiadny spotrebič, ktorý odmietol automatický certifikát, neprijal CA AC14K_M. Možno používa vopred zdieľaný kľúč. Presný alert je v logu Home Assistant.\n\nSpotrebiče s vopred zdieľaným kľúčom sa ešte len snažíme pochopiť a pravdepodobne s nimi narazíte na problémy. Náš plán, doterajšie zistenia a miesto na spätnú väzbu nájdete v [issue #435]({issue_url}).",

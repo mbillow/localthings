@@ -1240,7 +1240,8 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # does: some DA_WM_TP1_21 units (oxms [65282] only) just stop
                 # answering (#822), so the credential step must be reachable here.
                 _LOGGER.warning("Probe of %s: %s; offering the credential step", self._host, exc)
-                return await self.async_step_credential()
+                self._plaintext_port = None
+                return await self.async_step_credential_timeout()
             except (CannotConnect, InvalidCA) as exc:
                 # Every probe failure carries the message that fits it (see
                 # CannotConnect); the log line is where the specifics live.
@@ -1415,6 +1416,30 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             menu_options=["psk_owner", "psk_peer", "fallback_ca"],
             description_placeholders=self._psk_placeholders(),
         )
+
+    async def async_step_credential_timeout(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The credential choice after a confirmed port went quiet, with a retry.
+
+        A timeout is not a refusal: a PSK-only unit does it (#822), and so does
+        one still holding an old association, which a retry or a restart
+        clears. The hint is read as on the refused path, for the PSK forms.
+        """
+        self._credential_hint = await self.hass.async_add_executor_job(
+            probing.read_credential_hint, self._host, self._plaintext_port
+        )
+        return self.async_show_menu(
+            step_id="credential_timeout",
+            menu_options=["retry_probe", "psk_owner", "psk_peer", "fallback_ca"],
+            description_placeholders=self._psk_placeholders(),
+        )
+
+    async def async_step_retry_probe(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Probe the same address again, as resubmitting the address form would."""
+        return await self.async_step_user({CONF_HOST: self._host})
 
     async def async_step_credential_psk(
         self, user_input: dict[str, Any] | None = None
