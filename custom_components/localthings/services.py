@@ -415,6 +415,8 @@ async def _async_check_cooking_permission(
         raise UnknownUser(context=call.context)
     if not user.is_active:
         raise Unauthorized(context=call.context)
+    if user.is_admin:
+        return
     registry = er.async_get(hass)
     for bound in coordinator.bound:
         if (

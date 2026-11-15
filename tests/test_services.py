@@ -1721,7 +1721,7 @@ async def test_cooking_allows_authorized_users(
     user = {"regular": hass_user, "admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
     await _call_cooking(hass, device_id, user.id)
     coordinator.async_start_cooking.assert_awaited_once_with(
-        MAIN, mode=None, temperature=None, duration=None
+        MAIN, mode=None, temperature=None, duration=None, require_idle=True
     )
 
 
@@ -1784,22 +1784,29 @@ async def test_cooking_allows_device_control_permission(
     coordinator.async_start_cooking.assert_awaited_once()
 
 
-@pytest.mark.parametrize("user_kind", ["regular", "admin", "owner"])
-async def test_cooking_refuses_user_when_start_button_is_deleted_from_registry(
+async def test_cooking_refuses_non_admin_when_start_button_is_deleted_from_registry(
+    hass, coordinator, device_id, cooking_button, hass_user
+):
+    er.async_get(hass).async_remove(cooking_button.entity_id)
+    with pytest.raises(Unauthorized):
+        await _call_cooking(hass, device_id, hass_user.id)
+    coordinator.async_start_cooking.assert_not_awaited()
+
+
+@pytest.mark.parametrize("user_kind", ["admin", "owner"])
+async def test_cooking_allows_admin_when_start_button_is_deleted_from_registry(
     hass,
     coordinator,
     device_id,
     cooking_button,
-    hass_user,
     hass_admin_user,
     hass_owner_user,
     user_kind,
 ):
-    user = {"regular": hass_user, "admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
+    user = {"admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
     er.async_get(hass).async_remove(cooking_button.entity_id)
-    with pytest.raises(Unauthorized):
-        await _call_cooking(hass, device_id, user.id)
-    coordinator.async_start_cooking.assert_not_awaited()
+    await _call_cooking(hass, device_id, user.id)
+    coordinator.async_start_cooking.assert_awaited_once()
 
 
 async def test_cooking_allows_internal_automation_when_start_button_is_deleted_from_registry(
@@ -1823,12 +1830,21 @@ def test_cooking_entity_unique_id_matches_registered_entity(coordinator, sibling
     assert LocalThingsEntity(coordinator, bound).unique_id == expected
 
 
+@pytest.mark.parametrize("user_kind", ["regular", "admin", "owner"])
 async def test_cooking_refuses_inactive_user(
-    hass, coordinator, device_id, cooking_button, hass_user
+    hass,
+    coordinator,
+    device_id,
+    cooking_button,
+    hass_user,
+    hass_admin_user,
+    hass_owner_user,
+    user_kind,
 ):
-    hass_user.is_active = False
+    user = {"regular": hass_user, "admin": hass_admin_user, "owner": hass_owner_user}[user_kind]
+    user.is_active = False
     with pytest.raises(Unauthorized):
-        await _call_cooking(hass, device_id, hass_user.id)
+        await _call_cooking(hass, device_id, user.id)
     coordinator.async_start_cooking.assert_not_awaited()
 
 
@@ -1870,5 +1886,9 @@ async def test_cooking_cannot_use_another_cavity_permission(
     )
     await _call_cooking(hass, target, hass_user.id)
     coordinator.async_start_cooking.assert_awaited_once_with(
-        subdevice if target_sibling else MAIN, mode=None, temperature=None, duration=None
+        subdevice if target_sibling else MAIN,
+        mode=None,
+        temperature=None,
+        duration=None,
+        require_idle=True,
     )
