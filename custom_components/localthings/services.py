@@ -1,5 +1,6 @@
-"""Home Assistant services: `start_cooking` (issue #473), and direct OCF
-resource read/write access (issue #300) -- a raw-transport escape hatch for
+"""Home Assistant services: `start_cooking` (issue #473), the TV's
+`search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`, and
+direct OCF resource read/write access (issue #300) -- a raw-transport escape hatch for
 reverse-engineering a device's write contract, as an ordered multi-write
 sequence with settle delays and a delayed re-read, which the single-write
 options-flow debug panel can't express. Both raw services sit on the same
@@ -29,13 +30,19 @@ from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
     DOMAIN,
+    SERVICE_FORGET_KNOWN_APPS,
     SERVICE_OBSERVE_RESOURCE,
+    SERVICE_OPEN_SETTINGS,
     SERVICE_READ_RESOURCE,
+    SERVICE_SEARCH,
+    SERVICE_SET_SLEEP_TIMER,
     SERVICE_START_COOKING,
     SERVICE_WRITE_RESOURCE,
 )
 from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
 from .registry.capabilities import cook
+from .registry.capabilities import tv as tv_caps
+from .registry.capabilities.tv import SEARCH_SITES
 from .registry.encode import json_safe
 from .registry.subdevices import MAIN, Subdevice
 
@@ -103,6 +110,35 @@ _START_COOKING_SCHEMA = vol.Schema(
         vol.Optional(ATTR_MODE): cv.string,
         vol.Optional(ATTR_TEMPERATURE): vol.Coerce(float),
         vol.Optional(ATTR_DURATION): cv.positive_time_period,
+    }
+)
+
+
+_FORGET_KNOWN_APPS_SCHEMA = vol.Schema({**cv.TARGET_SERVICE_FIELDS})
+
+ATTR_QUERY = "query"
+ATTR_SITE = "site"
+ATTR_PAGE = "page"
+ATTR_MINUTES = "minutes"
+# Any page id goes through: the list in services.yaml is the firmware's, and
+# models differ.
+_OPEN_SETTINGS_SCHEMA = vol.Schema(
+    {
+        **cv.TARGET_SERVICE_FIELDS,
+        vol.Required(ATTR_PAGE): vol.All(cv.string, vol.Strip, vol.Length(min=1)),
+    }
+)
+_SET_SLEEP_TIMER_SCHEMA = vol.Schema(
+    {
+        **cv.TARGET_SERVICE_FIELDS,
+        vol.Required(ATTR_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=0, max=240)),
+    }
+)
+_SEARCH_SCHEMA = vol.Schema(
+    {
+        **cv.TARGET_SERVICE_FIELDS,
+        vol.Required(ATTR_QUERY): vol.All(cv.string, vol.Strip, vol.Length(min=1)),
+        vol.Optional(ATTR_SITE, default="youtube"): vol.In(list(SEARCH_SITES)),
     }
 )
 
@@ -322,8 +358,8 @@ def _admin_only(
 
 
 def async_setup_services(hass: HomeAssistant) -> None:
-    """Register start_cooking (issue #473), write_resource/read_resource
-    (issue #300) and observe_resource (issue #607).
+    """Register start_cooking (issue #473), the TV services,
+    write_resource/read_resource (issue #300) and observe_resource (issue #607).
 
     Called once from `async_setup`, not per config entry: services are
     process-global, and `hass.services.async_register` on an
@@ -343,6 +379,22 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _handle_start_cooking(call: ServiceCall) -> None:
         await _async_start_cooking(hass, call)
+
+    async def _handle_search(call: ServiceCall) -> None:
+        coordinator, _subdevice, _device_id = _resolve_target(hass, call)
+        await coordinator.av.async_search(call.data[ATTR_SITE], call.data[ATTR_QUERY])
+
+    async def _handle_open_settings(call: ServiceCall) -> None:
+        coordinator, _subdevice, _device_id = _resolve_target(hass, call)
+        await coordinator.av.async_show_menu(tv_caps.show_menu_body(call.data[ATTR_PAGE]))
+
+    async def _handle_set_sleep_timer(call: ServiceCall) -> None:
+        coordinator, _subdevice, _device_id = _resolve_target(hass, call)
+        await coordinator.av.async_show_menu(tv_caps.sleep_timer_body(call.data[ATTR_MINUTES]))
+
+    async def _handle_forget_known_apps(call: ServiceCall) -> None:
+        coordinator, _subdevice, _device_id = _resolve_target(hass, call)
+        coordinator.forget_known_apps()
 
     # The raw actions are admin-only: a write skips the Remote Control
     # block and every entity check, and a read returns resources entities
@@ -373,4 +425,28 @@ def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_START_COOKING,
         _handle_start_cooking,
         schema=_START_COOKING_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SEARCH,
+        _handle_search,
+        schema=_SEARCH_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_OPEN_SETTINGS,
+        _handle_open_settings,
+        schema=_OPEN_SETTINGS_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_SLEEP_TIMER,
+        _handle_set_sleep_timer,
+        schema=_SET_SLEEP_TIMER_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_FORGET_KNOWN_APPS,
+        _handle_forget_known_apps,
+        schema=_FORGET_KNOWN_APPS_SCHEMA,
     )

@@ -187,3 +187,131 @@ observe_resource:
           step: 1
           unit_of_measurement: seconds
           mode: box
+
+forget_known_apps:
+  name: Forget learned TV apps
+  description: >-
+    Clear the apps a TV has been seen running, which the Open app select and
+    media_player.play_media offer by name. The built-in screens stay. Apps
+    are learned again as the TV shows them, starting with whatever is open
+    right now.
+  fields:
+    device_id:
+      name: Device
+      description: The TV whose learned apps to forget.
+      required: true
+      selector:
+        device:
+          integration: localthings
+          entity:
+            - domain: remote
+
+search:
+  name: Search on the TV
+  description: >-
+    Open a search on a Samsung TV: YouTube opens on the results; the other
+    sites open in the TV's browser.
+  fields:
+    device_id:
+      name: Device
+      description: The TV to search on.
+      required: true
+      selector:
+        device:
+          integration: localthings
+          entity:
+            - domain: remote
+    query:
+      name: Query
+      description: What to search for.
+      required: true
+      example: big buck bunny
+      selector:
+        text:
+    site:
+      name: Site
+      description: Where to search. Defaults to YouTube.
+      required: false
+      default: youtube
+      selector:
+        select:
+          options:
+            - youtube
+            - bing
+            - wikipedia
+            - naver
+            - daum
+
+open_settings:
+  name: Open a TV settings page
+  description: >-
+    Open a page of a Samsung TV's settings menu. The list comes from Samsung's
+    firmware; not every TV has every page, and another page id can be typed in.
+  fields:
+    device_id:
+      name: Device
+      description: The TV to open the page on.
+      required: true
+      selector:
+        device:
+          integration: localthings
+          entity:
+            - domain: remote
+    page:
+      name: Page
+      description: The settings page to open.
+      required: true
+      example: picturemode
+      selector:
+        select:
+          custom_value: true
+          options:
+            - picturemode
+            - picturesize-mode
+            - expert-settings
+            - white-balance
+            - sound
+            - soundoutput
+            - accessibility
+            - caption
+            - clock
+            - eco-solution
+            - network
+            - networkstatus
+            - networksettings
+            - devicename
+            - osd-language
+            - softwareupdate
+            - self-diagnosis
+            - signal-information
+            - support
+            - broadcasting
+            - AutoTuningItem
+
+set_sleep_timer:
+  name: Set the TV's sleep timer
+  description: >-
+    Turn a Samsung TV off after this many minutes; 0 turns the sleep timer
+    off. The TV doesn't report the time left, so check it in its menu
+    (General, System Manager, Time, Sleep Timer).
+  fields:
+    device_id:
+      name: Device
+      description: The TV to set the sleep timer on.
+      required: true
+      selector:
+        device:
+          integration: localthings
+          entity:
+            - domain: remote
+    minutes:
+      name: Minutes
+      description: Minutes until the TV turns off; 0 turns the sleep timer off.
+      required: true
+      example: 60
+      selector:
+        number:
+          min: 0
+          max: 240
+          step: 1
+          unit_of_measurement: min

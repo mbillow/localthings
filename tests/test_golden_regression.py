@@ -6,6 +6,16 @@ import pytest
 GOLDEN = Path(__file__).parent / "fixtures" / "golden"
 
 
+def test_registry_reproduces_golden_state_keys_for_tv_qn90a():
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / "tv_qn90a.json").read_text())
+    assert (
+        _new_state_keys("tv_qn90a", _load_device("tv_qn90a"), device_types=("oic.wk.d", "oic.d.tv"))
+        == golden["state_keys"]
+    )
+
+
 def _new_state_keys(name, resources, device_types=()):
     from custom_components.localthings.registry.adapter import flatten
     from custom_components.localthings.registry.by_type import resolve
@@ -36,6 +46,19 @@ def test_registry_reproduces_golden_state_keys(name, ip, request):
     resources = _load_resources(ip)
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_state_keys(name, resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_tv_ue50tu7172():
+    from tests.conftest import _load_device
+
+    resources = _load_device("tv_ue50tu7172")
+    golden = json.loads((GOLDEN / "tv_ue50tu7172.json").read_text())
+    state_keys = _new_state_keys("tv_ue50tu7172", resources, device_types=("oic.wk.d", "oic.d.tv"))
     assert set(state_keys) == set(golden["state_keys"]), (
         f"state_keys mismatch:\n"
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
@@ -237,6 +260,22 @@ def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64():
     from tests.conftest import _load_device
 
     name = "washer_dryer_awm_m64"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64_25():
+    """AWM-US-M64-25-WD80 / WD90F53AVS washer-dryer (issue #786)."""
+    from tests.conftest import _load_device
+
+    name = "washer_dryer_awm_m64_25"
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_state_keys(
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
@@ -2253,6 +2292,37 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q700c():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_soundbar_q935gf():
+    """2025 bar with settings under /sec/networkaudio/av/ (#853)."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q935gf")
+    golden = json.loads((GOLDEN / "soundbar_q935gf.json").read_text())
+    state_keys = _new_state_keys(
+        "soundbar_q935gf", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_r18_bixby_fac():
+    """Bixby floor-standing AC with a speaker and always-on display (#839)."""
+    from tests.conftest import _load_device
+
+    name = "airconditioner_r18_bixby_fac_time_23k"
+    resources = _load_device(name)
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, resources, device_types=("oic.wk.d", "oic.d.airconditioner"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
     """AIM-H04N indoor subdevice (#789): locks in current_temperature_c from
     the flat /temperatures/indoor/vs/0 and the Wh-scale meter selection. Routed
@@ -2268,3 +2338,31 @@ def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+@pytest.mark.parametrize("name", ["monitor_ls32dm702", "monitor_ls43dm703"])
+def test_registry_reproduces_golden_state_keys_for_monitor(name):
+    """M7 Smart Monitors (#815): a flat Tizen TV board routed by /oic/d alone."""
+    from tests.conftest import _load_device
+
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q990h():
+    """A reconstructed Q990H contract fixture adds three settings, not a new registry."""
+    from tests.conftest import _load_device
+
+    name = "soundbar_q990h"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"])

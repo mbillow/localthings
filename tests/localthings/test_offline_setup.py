@@ -5,9 +5,9 @@ up offline means replaying the last successful discovery from a stored
 snapshot. These tests pin the five things that makes load-bearing: the
 snapshot gets written, it produces the same entity set offline, the
 coordinator keeps polling until the device answers, a live discovery that
-disagrees with the snapshot reloads the entry rather than silently keeping a
-stale set, and each of those retries costs one handshake and one log line
-rather than repeating both every cycle (issue #269).
+disagrees with the snapshot changes registration in place rather than
+reloading (issue #807), and each of those retries costs one handshake and one
+log line rather than repeating both every cycle (issue #269).
 """
 
 from __future__ import annotations
@@ -16,7 +16,9 @@ import json
 import logging
 import time
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import timedelta
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -30,7 +32,9 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from smartthings_local.errors import SessionTimeoutError
 
 from custom_components.localthings.const import DOMAIN, SUMMARY_INTERVAL_S
-from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.coordinator import LocalThingsCoordinator, bound_id
+from custom_components.localthings.registration import is_included
+from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.identity import DeviceIdentity
 
@@ -357,11 +361,12 @@ async def test_offline_load_keeps_polling_and_recovers(hass: HomeAssistant, mock
     assert any(s.state != "unavailable" for s in hass.states.async_all())
 
 
-async def test_reconcile_reloads_when_live_discovery_differs(
+async def test_live_discovery_missing_an_href_keeps_its_entities(
     hass: HomeAssistant, mock_entry, hass_storage
 ) -> None:
-    """Platforms enumerate `bound` once, so a live set that disagrees with the
-    snapshot can only be adopted by bringing the entry back up."""
+    """A first live read that misses an href says nothing about whether the
+    appliance lost it (issue #807). Its entities stay registered and
+    unavailable, nothing reloads, and the snapshot keeps the href."""
     resources = _load_fridge()
 
     with _reachable(resources):
@@ -375,6 +380,8 @@ async def test_reconcile_reloads_when_live_discovery_differs(
     with _unreachable():
         await hass.config_entries.async_setup(mock_entry.entry_id)
         await hass.async_block_till_done()
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    registered = {s.entity_id for s in hass.states.async_all()}
 
     reduced = {href: rep for href, rep in resources.items() if href != victim}
     with (
@@ -383,12 +390,19 @@ async def test_reconcile_reloads_when_live_discovery_differs(
     ):
         await _tick(hass)
 
-    reload.assert_called_once_with(mock_entry.entry_id)
-    # Banked before the reload is scheduled, so the entry that comes back up
-    # replays this discovery rather than the one it is replacing -- otherwise
-    # a device that goes quiet again mid-reload rehydrates the stale set and
-    # reconciles all over again.
-    assert victim not in hass_storage[_store_key(mock_entry)]["data"]["resources"]
+    reload.assert_not_called()
+    assert {s.entity_id for s in hass.states.async_all()} == registered
+    registry = er.async_get(hass)
+    retained = [b for b in coordinator.bound if b.href == victim]
+    assert retained
+    for bound in retained:
+        entity_id = registry.async_get_entity_id(
+            bound_id(bound)[0], DOMAIN, f"{DOMAIN}_{coordinator.device_key}_{_key(bound)}"
+        )
+        assert entity_id is not None
+        state = hass.states.get(entity_id)
+        assert state is not None and state.state == "unavailable"
+    assert victim in hass_storage[_store_key(mock_entry)]["data"]["resources"]
 
 
 async def test_reconcile_is_quiet_when_live_discovery_agrees(
@@ -412,15 +426,14 @@ async def test_reconcile_is_quiet_when_live_discovery_agrees(
     reload.assert_not_called()
 
 
-async def test_reconcile_reloads_when_only_exists_fn_differs(
+async def test_entity_live_discovery_includes_is_added_in_place(
     hass: HomeAssistant, mock_entry, hass_storage
 ) -> None:
     """An entity can stay bound while its exists_fn result changes -- an
-    options token appearing after a firmware update, say. The bound sets
-    then agree, but the platforms would register a different entity set, so
-    an online device that disagrees with its snapshot only here must still
-    reload. Once the first live poll lands, nothing is judged against the
-    snapshot any more."""
+    options token appearing after a firmware update, say. The snapshot left
+    it out at setup; the live discovery that includes it adds it in place.
+    Once the first live poll lands, nothing is judged against the snapshot
+    any more."""
     resources = _load_fridge()
 
     with _reachable(resources):
@@ -455,7 +468,12 @@ async def test_reconcile_reloads_when_only_exists_fn_differs(
         await hass.async_block_till_done(wait_background_tasks=True)
 
     coordinator = hass.data[DOMAIN][mock_entry.entry_id]
-    reload.assert_called_once_with(mock_entry.entry_id)
+    reload.assert_not_called()
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(gated)}"
+    entity_id = er.async_get(hass).async_get_entity_id(bound_id(gated)[0], DOMAIN, unique_id)
+    assert entity_id is not None
+    state = hass.states.get(entity_id)
+    assert state is not None and state.state != "unavailable"
     assert not coordinator.rehydrated
     assert coordinator.discovery_resources == coordinator.last_resources
 
@@ -694,3 +712,688 @@ async def test_broken_session_still_reconnects_within_the_cycle(
 
     assert poll.call_count == 2
     close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# A Collection board's href that missed the first live read (issue #833)
+# ---------------------------------------------------------------------------
+
+_EHS_TYPES = ("oic.wk.d", "oic.d.airconditioner")
+_EHS_CYCLE = "/0a1b2c3d-0000-4000-8000-000001200000/ehscycle/vs/0"
+
+
+async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_read(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Issue #833: the MIM-H04EN's heat pump answered its seed without
+    /ehscycle/vs/0 on the first live read after a load from the snapshot.
+    Discovering from that read alone dropped the cycle log's 11 entities and
+    reconciled the entry down to the smaller set, orphaning them until a
+    manual reload. The entities registered from the snapshot are kept and
+    the snapshot keeps the href; its value stays out of the state cache
+    until it answers."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    assert _EHS_CYCLE in full
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    cycle_keys = {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE}
+    assert len(cycle_keys) == 11
+
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+    reload = await _first_live_cycle(hass, coordinator, missed, materialized)
+
+    reload.assert_not_called()
+    assert {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE} == cycle_keys
+    assert _EHS_CYCLE not in coordinator.last_resources
+    assert _EHS_CYCLE in hass_storage[_store_key(mock_entry)]["data"]["resources"]
+
+
+def _ehs_snapshot(hass_storage, entry, resources=None):
+    """The MIM-H04EN's full discovery banked as `entry`'s snapshot; returns
+    (full resources, materialized subdevices)."""
+    from dataclasses import asdict
+
+    from custom_components.localthings.registry.encode import json_safe
+    from tests.conftest import _discover_full, _load_device_full
+
+    main, oic_res, seeds = _load_device_full("ehs_mim_h04en")
+    _, materialized, _, full, _ = _discover_full(main, oic_res, seeds, _EHS_TYPES)
+    identity = DeviceIdentity(
+        manufacturer="Samsung Electronics",
+        model="MIM-H04EN",
+        name="EHS",
+        serial=None,
+        device_id="7b1f0c9e-2a44-4d6b-9f10-4c8e2b5a0d31",
+        device_types=_EHS_TYPES,
+        raw={"/oic/res": oic_res},
+    )
+    hass_storage[_store_key(entry)] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": _store_key(entry),
+        "data": {
+            "resources": json_safe(full if resources is None else resources),
+            "subdevice_candidates": [asdict(s) for s in materialized],
+            "identity": asdict(identity),
+        },
+    }
+    return full, materialized, identity
+
+
+async def _first_live_cycle(hass, coordinator, live, subdevices):
+    def _enumerate(resources):
+        coordinator.subdevices = list(subdevices)
+        return resources
+
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_enumerate_subdevices_blocking", side_effect=_enumerate),
+        patch.object(coordinator, "_attempt_observe_mode") as subscribe,
+        patch.object(hass.config_entries, "async_schedule_reload") as reload,
+    ):
+        await coordinator._async_update_data()
+    reload.subscribe = subscribe
+    return reload
+
+
+async def _later_cycles(hass, coordinator, live, cycles):
+    with (
+        patch.object(coordinator, "_poll_once", return_value=live),
+        patch.object(coordinator, "_attempt_observe_mode"),
+        patch.object(coordinator, "_maybe_retry_observe_mode"),
+    ):
+        for _ in range(cycles):
+            await coordinator._async_update_data()
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+
+async def test_snapshot_lets_go_of_an_href_its_owner_answered_without(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """An href is let go only once its owner has answered
+    _PRUNE_AFTER_CYCLES cycles without it, and then only from the
+    snapshot: the entity stays registered this run."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+    await _first_live_cycle(hass, coordinator, missed, materialized)
+    banked = lambda: hass_storage[_store_key(mock_entry)]["data"]["resources"]  # noqa: E731
+
+    with patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 3):
+        await _later_cycles(hass, coordinator, missed, 2)
+        assert _EHS_CYCLE in banked()
+        await _later_cycles(hass, coordinator, missed, 1)
+    assert _EHS_CYCLE not in banked()
+    assert any(b.href == _EHS_CYCLE for b in coordinator.bound)
+
+
+async def test_snapshot_keeps_an_href_that_answers_later(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
+    await _first_live_cycle(hass, coordinator, missed, materialized)
+
+    with patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 3):
+        await _later_cycles(hass, coordinator, full, 1)
+        await _later_cycles(hass, coordinator, missed, 5)
+    assert _EHS_CYCLE in hass_storage[_store_key(mock_entry)]["data"]["resources"]
+
+
+async def test_silent_sibling_keeps_its_entities_however_long_main_answers(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A sibling whose seed doesn't answer -- an indoor unit switched off
+    for the season -- keeps its entities registered and unavailable, and
+    the main unit answering doesn't count against its hrefs."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    sibling = {bound_id(b) for b in coordinator.bound if b.subdevice == heat_pump}
+    assert sibling
+
+    reload = await _first_live_cycle(hass, coordinator, main_only, [])
+    with patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 3):
+        await _later_cycles(hass, coordinator, main_only, 10)
+
+    reload.assert_not_called()
+    assert sibling <= {bound_id(b) for b in coordinator.bound}
+    assert not any(coordinator.provides(b) for b in coordinator.bound if bound_id(b) in sibling)
+    banked = hass_storage[_store_key(mock_entry)]
+    assert {href for href in full if heat_pump.owns(href)} <= set(banked["data"]["resources"])
+    assert heat_pump.key in {su["key"] for su in banked["data"]["subdevice_candidates"]}
+
+
+async def test_collection_board_keeps_nothing_for_a_sibling_whose_seed_did_not_answer(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A sibling whose seed timed out isn't enumerated this cycle. Its
+    remembered hrefs stay out: kept, they would land in MAIN's view as
+    coverage gaps or bind as MAIN's own entities."""
+    full, materialized, identity = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._identity = identity
+    await _first_live_cycle(hass, coordinator, main_only, [])
+
+    assert coordinator.subdevices == []
+    assert not any(heat_pump.owns(b.href) for b in coordinator.bound)
+    assert not any(heat_pump.owns(href) for href in coordinator._unbound_hrefs)
+    assert not any(heat_pump.owns(href) for href in coordinator._discovery_extra)
+
+
+def _two_unit_ac_snapshot(hass_storage, entry):
+    """Issue #807's shape: a UUID-prefixed indoor sub-unit that /oic/res
+    doesn't advertise, with a full resource set. Returns (full, short,
+    materialized), where `short` is the sub-unit answering only humidity,
+    mode and current temperature."""
+    from dataclasses import asdict
+
+    from custom_components.localthings.registry.encode import json_safe
+    from tests.conftest import _discover_full, _load_device_full
+
+    main, oic_res, seeds = _load_device_full("airconditioner_fac_bora_2in1")
+    _, materialized, _, full, _ = _discover_full(main, oic_res, seeds)
+    (sub,) = materialized
+    for href, rep in list(full.items()):
+        if not sub.owns(href) and not href.startswith(("/oic", "/information", "/device")):
+            full.setdefault(sub.to_actual(href), rep)
+    short = {
+        href: rep
+        for href, rep in full.items()
+        if not sub.owns(href)
+        or any(part in href for part in ("/humidity/", "/mode/", "/temperature/current"))
+    }
+    identity = DeviceIdentity(
+        manufacturer="Samsung Electronics",
+        model="AC",
+        name="AC",
+        serial=None,
+        device_id="5d0f3c2e-8a1b-4c6d-9e7f-0a1b2c3d4e5f",
+        device_types=(),
+        raw={"/oic/res": oic_res},
+    )
+    hass_storage[_store_key(entry)] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": _store_key(entry),
+        "data": {
+            "resources": json_safe(full),
+            "subdevice_candidates": [asdict(s) for s in materialized],
+            "identity": asdict(identity),
+        },
+    }
+    return full, short, materialized
+
+
+async def test_a_sub_unit_answering_short_never_reloads(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Issue #807: the sub-unit alternated between its full set and three
+    resources on consecutive first reads. Each difference from the snapshot
+    reloaded the entry, which closed the session mid-subscribe and loaded a
+    snapshot the next read disagreed with again, forever."""
+    full, short, materialized = _two_unit_ac_snapshot(hass_storage, mock_entry)
+    expected = None
+    for live in (short, full, short, short, full):
+        coordinator = LocalThingsCoordinator(hass, mock_entry)
+        assert await coordinator.async_rehydrate()
+        registered = {bound_id(b) for b in coordinator.bound}
+        expected = expected or registered
+        assert registered == expected
+        reload = await _first_live_cycle(hass, coordinator, live, materialized)
+        reload.assert_not_called()
+        # The short read really binds less; what it missed is kept, not lost.
+        assert bool(coordinator.registration.retained) is (live is short)
+        assert {bound_id(b) for b in coordinator.bound} == expected
+        assert set(full) <= set(hass_storage[_store_key(mock_entry)]["data"]["resources"])
+
+
+async def test_a_short_first_read_catches_up_without_a_reload(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Issue #807, after the loop: the run that started on the short read
+    provides, polls and subscribes what a run that started on the full read
+    does, once the full set answers."""
+    from custom_components.localthings.observe import MODE_OBSERVE
+
+    full, short, materialized = _two_unit_ac_snapshot(hass_storage, mock_entry)
+    reference = LocalThingsCoordinator(hass, mock_entry)
+    assert await reference.async_rehydrate()
+    await _first_live_cycle(hass, reference, full, materialized)
+
+    _two_unit_ac_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, short, materialized)
+    tiered = set(coordinator._hot_hrefs) | set(coordinator._warm_hrefs)
+    assert tiered < set(reference._hot_hrefs) | set(reference._warm_hrefs)
+    coordinator._observe._set_mode(MODE_OBSERVE)
+    coordinator._session = cast(Any, object())
+
+    with (
+        patch.object(coordinator._observe, "add_hrefs") as add_hrefs,
+        patch.object(coordinator, "_run_subpolls"),
+        patch.object(coordinator, "_close_session"),
+    ):
+        await _later_cycles(hass, coordinator, full, 2)
+    coordinator._session = None
+
+    def provided(c: LocalThingsCoordinator) -> set:
+        return {bound_id(b) for b in c.bound if c.provides(b)}
+
+    assert provided(coordinator) == provided(reference)
+    assert coordinator._hot_hrefs == reference._hot_hrefs
+    assert coordinator._warm_hrefs == reference._warm_hrefs
+    # Subscribed once, with exactly what the short read left out.
+    add_hrefs.assert_called_once()
+    tiers = {"hot": reference._hot_hrefs, "warm": reference._warm_hrefs}
+    wanted = {h for t in coordinator._subscribe_tiers for h in tiers.get(t, ())} - tiered
+    assert set(add_hrefs.call_args.args[1]) == wanted
+
+
+async def test_a_changed_device_type_reloads_once_per_run(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Nothing registered for the old type belongs to the appliance now
+    answering, so this is the one difference that still reloads -- once,
+    so a type that flips between reads can't loop."""
+    _ehs_snapshot(hass_storage, mock_entry)
+    fridge = _load_fridge()
+    for expected_calls in (1, 0):
+        coordinator = LocalThingsCoordinator(hass, mock_entry)
+        assert await coordinator.async_rehydrate()
+        snapshot_type = coordinator.device_type_name
+        # The appliance now answering reports no OCF type, so its modelNum routes it.
+        assert coordinator._identity is not None
+        coordinator._identity = replace(coordinator._identity, device_types=())
+        reload = await _first_live_cycle(hass, coordinator, fridge, [])
+        assert coordinator.device_type_name != snapshot_type
+        assert reload.call_count == expected_calls
+        # The reload closes this session, so nothing subscribes on it.
+        assert reload.subscribe.called is not expected_calls
+        if not expected_calls:
+            # Refused: the old type's entities are kept, unavailable, rather
+            # than left registered with nothing to show.
+            old = [b for b in coordinator.bound if b.href not in fridge]
+            assert old
+            assert not any(coordinator.provides(b) for b in old)
+        _ehs_snapshot(hass_storage, mock_entry)
+
+
+async def test_an_unresolved_type_is_a_short_read_not_a_new_appliance(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A first read whose /information/vs/0 timed out resolves no type. That
+    says nothing about the appliance, so it neither reloads nor replaces
+    the snapshot with the short read."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    assert coordinator._identity is not None
+    coordinator._identity = replace(coordinator._identity, device_types=())
+    short = {href: rep for href, rep in full.items() if not href.endswith("/information/vs/0")}
+
+    reload = await _first_live_cycle(hass, coordinator, short, materialized)
+
+    assert coordinator.device_type_name is None
+    reload.assert_not_called()
+    assert set(full) <= set(hass_storage[_store_key(mock_entry)]["data"]["resources"])
+
+
+async def test_an_owner_that_lost_most_of_its_resources_still_prunes_them(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """The awake bar is what the owner answered on the read discovery ran
+    on, not everything bound, or a sub-unit that really lost most of its
+    resources (a firmware update, say) would never count as answering."""
+    full, short, materialized = _two_unit_ac_snapshot(hass_storage, mock_entry)
+    (sub,) = materialized
+    gone = {href for href in full if href not in short}
+    assert len(gone) > len(short) - len([h for h in short if not sub.owns(h)])
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, short, materialized)
+
+    with patch.object(LocalThingsCoordinator, "_PRUNE_AFTER_CYCLES", 3):
+        await _later_cycles(hass, coordinator, short, 3)
+
+    banked = set(hass_storage[_store_key(mock_entry)]["data"]["resources"])
+    assert not gone & banked
+
+
+async def test_an_entity_live_discovery_excludes_is_unavailable(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """The snapshot registered it; the live read keeps its href but drops the
+    field its exists_fn needs. It stays registered for the run, but shows as
+    unavailable rather than with a stale or empty value."""
+    resources = _load_fridge()
+    with _reachable(resources):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+        gated = next(
+            b
+            for b in coordinator.bound
+            if b.desc.exists_fn is not None
+            and b.desc.field
+            and b.desc.field in resources.get(b.href, {})
+            and len(resources[b.href]) > 1
+            and not b.desc.exists_fn(
+                {k: v for k, v in resources[b.href].items() if k != b.desc.field}, resources
+            )
+        )
+        await hass.config_entries.async_unload(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+    live = {**resources, gated.href: dict(resources[gated.href])}
+    del live[gated.href][gated.desc.field]
+    with _reachable(live):
+        await _tick(hass)
+
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(gated)}"
+    entity_id = er.async_get(hass).async_get_entity_id(bound_id(gated)[0], DOMAIN, unique_id)
+    assert entity_id is not None
+    state = hass.states.get(entity_id)
+    assert state is not None and state.state == "unavailable"
+
+
+async def test_a_snapshot_load_cleans_the_registry_again_once_live(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Setup cleans stale rows against the snapshot; the first live cycle
+    runs the same pass against what it found, as the old reload did."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    with patch(
+        "custom_components.localthings.coordinator.async_reconcile_entities", return_value=[]
+    ) as reconcile:
+        await _first_live_cycle(hass, coordinator, full, materialized)
+        reconcile.assert_called_once()
+        await _later_cycles(hass, coordinator, full, 1)
+        reconcile.assert_called_once()
+
+
+async def test_a_dormant_sub_unit_is_added_once_it_answers(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A heat pump that was off when HA started keeps its entities from the
+    snapshot, unavailable. When its seed answers with live state it joins
+    polling and its entities show values again, without a restart."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    seed = {href: rep for href, rep in full.items() if heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+    sibling = [b for b in coordinator.bound if b.subdevice == heat_pump]
+    assert sibling and not any(coordinator.provides(b) for b in sibling)
+
+    with (
+        patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 2),
+        patch.object(coordinator, "_read_dormant_seed", return_value=seed),
+    ):
+        await _later_cycles(hass, coordinator, main_only, 2)
+
+    assert heat_pump in coordinator.subdevices
+    # What the seed includes is provided again; what it excludes stays
+    # retained, showing whatever live data shows (nothing).
+    retained = [b for b in coordinator.bound if bound_id(b) in coordinator.registration.retained]
+    assert not any(is_included(b, coordinator, live=True) for b in retained)
+    assert any(coordinator.provides(b) for b in sibling)
+    banked = hass_storage[_store_key(mock_entry)]["data"]
+    assert heat_pump.key in {su["key"] for su in banked["subdevice_candidates"]}
+
+
+async def test_a_quiet_sub_unit_is_read_with_backoff(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+
+    with (
+        patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 2),
+        patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_MAX_CYCLES", 8),
+        patch.object(coordinator, "_read_dormant_seed", return_value={}) as seed,
+    ):
+        await _later_cycles(hass, coordinator, main_only, 30)
+
+    # Due at cycles 2, 4, 8, 16, 24: doubling to the cap, never every cycle.
+    assert seed.call_count == 5
+    assert heat_pump not in coordinator.subdevices
+
+
+async def test_live_registry_cleanup_leaves_a_missed_href_alone(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """prune_when_excluded removes a row when its exists_fn excludes a rep
+    that's there. A first live read that missed the href entirely is no
+    evidence, so the live cleanup pass must keep the row (#807)."""
+    resources = _load_fridge()
+    await _setup_online_then_unload(hass, mock_entry, resources)
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+    coordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    rapid = next(b for b in coordinator.bound if b.desc.key == "rapid_fridge")
+    unique_id = f"{DOMAIN}_{coordinator.device_key}_{_key(rapid)}"
+    registry = er.async_get(hass)
+    assert registry.async_get_entity_id("switch", DOMAIN, unique_id) is not None
+
+    missed = {href: rep for href, rep in resources.items() if href != rapid.href}
+    with _reachable(missed):
+        await _tick(hass)
+
+    assert registry.async_get_entity_id("switch", DOMAIN, unique_id) is not None
+
+
+async def test_a_type_change_whose_snapshot_cannot_be_saved_does_not_reload(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """The reload must come back up on the new discovery. If that can't be
+    banked, reloading would only replay the old type."""
+    _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    assert coordinator._identity is not None
+    coordinator._identity = replace(coordinator._identity, device_types=())
+    with patch.object(coordinator._snapshot_store, "async_save", side_effect=OSError("disk")):
+        reload = await _first_live_cycle(hass, coordinator, _load_fridge(), [])
+    reload.assert_not_called()
+
+
+async def test_an_entity_a_read_excludes_is_retained_unavailable(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A registered entity this read bound and excluded is retained, not
+    dropped: a short read can answer an href without the entity's field.
+    It shows whatever live data shows, which is nothing yet."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    registered = list(coordinator.bound)
+    previous = replace(coordinator.registration)
+    await _first_live_cycle(hass, coordinator, full, materialized)
+    dropped = next(b for b in registered if bound_id(b) in previous.static)
+    # As if this live discovery had excluded it.
+    coordinator._judge_registration(full)
+    coordinator.registration.static -= {bound_id(dropped)}
+
+    coordinator._retain(registered, previous)
+    assert bound_id(dropped) in coordinator.registration.retained
+    with patch("custom_components.localthings.coordinator.is_included", return_value=False):
+        assert not coordinator.provides(dropped)
+
+
+async def test_an_owner_with_nothing_to_measure_never_counts_as_awake(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._awake_baseline = {"": frozenset(), "unit": frozenset({"/a"})}
+    assert coordinator._owners_awake({}) == set()
+    assert coordinator._owners_awake({"/a": {}}) == {"unit"}
+
+
+async def test_a_failed_recovery_leaves_the_sub_unit_dormant(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Nothing changes until everything that can fail has run, so a failed
+    attempt is retried rather than leaving the unit half-added."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    seed = {href: rep for href, rep in full.items() if heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+    bound_before = list(coordinator.bound)
+
+    with (
+        patch.object(LocalThingsCoordinator, "_DORMANT_RETRY_CYCLES", 1),
+        patch.object(coordinator, "_read_dormant_seed", return_value=seed),
+        patch.object(coordinator, "_judged", side_effect=RuntimeError("odd rep")),
+    ):
+        await _later_cycles(hass, coordinator, main_only, 1)
+
+    assert heat_pump not in coordinator.subdevices
+    assert coordinator.bound == bound_before
+    assert heat_pump.key in coordinator._dormant_due
+
+
+async def test_a_recovered_sub_unit_is_subscribed_in_observe_mode(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Subscriptions are made once, after first discovery; a sub-unit that
+    joins later subscribes its own hot and warm hrefs."""
+    from custom_components.localthings.observe import MODE_OBSERVE
+
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    (heat_pump,) = materialized
+    main_only = {href: rep for href, rep in full.items() if not heat_pump.owns(href)}
+    seed = {href: rep for href, rep in full.items() if heat_pump.owns(href)}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    await _first_live_cycle(hass, coordinator, main_only, [])
+    coordinator._observe._set_mode(MODE_OBSERVE)
+    coordinator._session = cast(Any, object())
+
+    with (
+        patch.object(coordinator._observe, "add_hrefs") as add_hrefs,
+        patch.object(coordinator, "_close_session"),
+    ):
+        assert await coordinator._materialize(heat_pump, seed)
+
+    add_hrefs.assert_called_once()
+    subscribed = add_hrefs.call_args.args[1]
+    assert subscribed and all(heat_pump.owns(href) for href in subscribed)
+    coordinator._session = None
+
+
+async def test_a_rep_answered_short_keeps_its_entities_in_the_snapshot(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """An href that answers without a registered entity's field mustn't
+    take that entity from the next start: the banked rep keeps the field."""
+    full, materialized, _ = _ehs_snapshot(hass_storage, mock_entry)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    assert await coordinator.async_rehydrate()
+    target = next(
+        b
+        for b in coordinator.bound
+        if bound_id(b) in coordinator.registration.static
+        and b.desc.field
+        and b.desc.exists_fn is None
+        and not b.desc.dynamic_presence
+        and len(full.get(b.href, {})) > 2
+    )
+    partial = {
+        **full,
+        target.href: {k: v for k, v in full[target.href].items() if k != target.desc.field},
+    }
+    await _first_live_cycle(hass, coordinator, partial, materialized)
+
+    banked = hass_storage[_store_key(mock_entry)]["data"]["resources"]
+    assert target.desc.field in banked[target.href]
+    again = LocalThingsCoordinator(hass, mock_entry)
+    assert await again.async_rehydrate()
+    assert again.registrable(next(b for b in again.bound if bound_id(b) == bound_id(target)))
+
+
+_TV_IDENTITY = DeviceIdentity(
+    manufacturer="Samsung Electronics",
+    model="UE50TU7172UXXH",
+    name="Samsung 7 Series (50)",
+    serial=None,
+    device_types=("oic.wk.d", "oic.d.tv"),
+)
+
+
+def _load_tv() -> dict:
+    data = json.loads((FIXTURES / "tv_ue50tu7172_device.json").read_text())
+    return parse_device0_batch(data["device0"])
+
+
+async def test_tv_offline_load_recovers_everything_including_the_remote(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Set up while the TV is off, every entity recovers once it answers, the remote included."""
+    resources = _load_tv()
+    with _reachable(resources, identity=_TV_IDENTITY):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        entity_ids = sorted(s.entity_id for s in hass.states.async_all())
+        await hass.config_entries.async_unload(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    remote_ids = [eid for eid in entity_ids if eid.startswith("remote.")]
+    assert remote_ids, f"no remote in the live set: {entity_ids}"
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+
+    with _reachable(resources, identity=_TV_IDENTITY):
+        await _tick(hass)
+
+    def _state_of(eid: str) -> str:
+        state = hass.states.get(eid)
+        assert state is not None, f"{eid} not in the state machine at all"
+        return state.state
+
+    stuck = [eid for eid in entity_ids if _state_of(eid) == "unavailable"]
+    assert stuck == [], f"entities still unavailable after recovery: {stuck}"
+    # A RemoteEntity without is_on stays "unknown", which looks unrecovered.
+    remote_state = _state_of(remote_ids[0])
+    assert remote_state in ("on", "off"), f"remote renders {remote_state!r}"
+
+    coordinator: LocalThingsCoordinator = hass.data[DOMAIN][mock_entry.entry_id]
+    with patch.object(coordinator, "_async_put") as put:
+        await hass.services.async_call(
+            "remote",
+            "send_command",
+            {"entity_id": remote_ids[0], "command": ["volume_up"]},
+            blocking=True,
+        )
+    put.assert_called_once()
+    call_body = put.call_args[0][1]
+    assert put.call_args[0][0] == ["sec", "tv", "remotecontrol"]
+    assert call_body.get("x.com.samsung.tv.keyvalue") == "KEY_VOLUP"

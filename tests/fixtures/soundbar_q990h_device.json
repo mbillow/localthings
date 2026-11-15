@@ -1,0 +1,20 @@
+{
+  "seeds_note": "Reconstructed minimal HW-Q990H contract fixture from authenticated read/write/readback observations. Field names and value types were confirmed on hardware; example states are synthetic. This is not a complete or untouched device capture and contains no identity or network resources.",
+  "device0": [
+    {
+      "href": "/sec/networkaudio/av/soundsetting",
+      "rep": {
+        "activevoiceamplifier": 0,
+        "spacefitsound": 1
+      }
+    },
+    {
+      "href": "/sec/networkaudio/surroundspeaker",
+      "rep": {
+        "x.com.samsung.networkaudio.isSupport": 1,
+        "x.com.samsung.networkaudio.currentRearPosition": "Rear",
+        "x.com.samsung.networkaudio.rearPositionList": ["Rear", "Front"]
+      }
+    }
+  ]
+}

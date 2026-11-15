@@ -1,0 +1,1344 @@
+{
+  "seeds_note": "LS32DM702UKXKR Smart Monitor (issue #815), verbatim from the reporter's redacted diagnostics. The appdata x.com.samsung.tv.tvtomobile mailboxes (an account list and a remote token) were redacted and the contentinfo thumbnail PNG emptied. Device types: ['oic.wk.d', 'x.com.st.d.monitor'].",
+  "device0": [
+    {
+      "href": "/WiFiConfResURI",
+      "rep": {
+        "rt": [
+          "oic.r.wificonf"
+        ],
+        "if": [
+          "oic.if.baseline"
+        ],
+        "swmt": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "swa": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "swf": 2,
+        "tnn": "**REDACTED**",
+        "wat": 0,
+        "wet": 0,
+        "x.com.samsung.chn": 0,
+        "swb": [
+          "2.4G",
+          "5G"
+        ]
+      }
+    },
+    {
+      "href": "/calmconnection/command",
+      "rep": {
+        "rt": [
+          "x.com.samsung.calmconnection.command"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.calmconnection.supportcommands": [
+          "enablePowerOnWithMobile",
+          "enableThing",
+          "launchSmartHubConnectionTest",
+          "restartThing",
+          "updateWifi"
+        ]
+      }
+    },
+    {
+      "href": "/capability/bixby/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.bixby"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/capability/bixbyCommand/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.bixby"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/capability/custom.ocfResourceVersion/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.r.custom.ocfResourceVersion"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "ocfResourceVersion": "T-NKLDWWC-0090-2131.1;T-INFOLINK2025-1008;Tizen 9.0;A6.25.101;T3.5.1;",
+        "ocfResourceUpdatedTime": "2026-11-05T23:38:15+0900"
+      }
+    },
+    {
+      "href": "/capability/motion/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.sensor.motion"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/capability/samsungim.findNodeGeolocation/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.r.samsungim.findNodeGeolocation"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "method": "",
+        "heading": 0.0,
+        "latitude": 0.0,
+        "accuracy": 0.0,
+        "speed": 0.0,
+        "longitude": 0.0
+      }
+    },
+    {
+      "href": "/capability/samsungim.fixedFindNode/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.r.samsungim.fixedFindNode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/capability/sec.diagnosticsInformation/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.r.sec.diagnosticsInformation"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "logType": [
+          "errCode",
+          "dump"
+        ],
+        "endpoint": "NONE",
+        "minVersion": "3.0",
+        "setupId": "401",
+        "protocolType": "ble_ocf",
+        "tsId": "VD01",
+        "mnId": "0AJK",
+        "dumpType": "id",
+        "signinPermission": "E"
+      }
+    },
+    {
+      "href": "/capability/sec.wifiConfiguration/main/0",
+      "rep": {
+        "rt": [
+          "x.com.st.r.sec.wifiConfiguration"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "minVersion": "1.0",
+        "autoReconnection": true,
+        "protocolType": [
+          "ble_ocf"
+        ],
+        "supportedAuthType": [
+          "OPEN",
+          "WEP",
+          "WPA-PSK",
+          "WPA2-PSK",
+          "EAP",
+          "SAE",
+          "OWE",
+          "FT-PSK"
+        ],
+        "supportedWiFiFreq": [
+          "2.4G",
+          "5G"
+        ]
+      }
+    },
+    {
+      "href": "/childdevices/lifecycle",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.childdevices.lifecycle"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/content/renderer",
+      "rep": {
+        "rt": [
+          "x.com.samsung.contents.renderer",
+          "x.com.samsung.contents.renderer.image",
+          "x.com.samsung.contents.renderer.video",
+          "x.com.samsung.contents.renderer.live_cast"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.transport": [
+          "http",
+          "https"
+        ],
+        "x.com.samsung.mimetype": [
+          "video/youtube",
+          "application/x.com.samsung.contents.provider"
+        ],
+        "x.com.samsung.actions": [
+          "play"
+        ],
+        "x.com.samsung.capability.type": [
+          "video"
+        ]
+      }
+    },
+    {
+      "href": "/devicelog/command",
+      "rep": {
+        "rt": [
+          "x.com.samsung.devicelog.command"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.devicelog.supportcommands": [
+          "enablePowerOnWithMobile",
+          "enableThing",
+          "launchSmartHubConnectionTest",
+          "restartThing"
+        ]
+      }
+    },
+    {
+      "href": "/devicelog/connectioninfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.devicelog"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.devicelog.version": "1.0",
+        "x.com.samsung.devicelog.connectioninfo": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/devicelog/dump",
+      "rep": {
+        "rt": [
+          "x.com.samsung.devicelog.dump"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.devicelog.dump.timestamp": "",
+        "x.com.samsung.devicelog.dump.logid": ""
+      }
+    },
+    {
+      "href": "/irblasterRemoteControl",
+      "rep": {
+        "rt": [
+          "x.com.samsung.irblasterRemoteControl"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/irblasterRemoteDevice",
+      "rep": {
+        "rt": [
+          "x.com.samsung.irblasterRemoteDevice"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/light/sensor/brightness/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.ligntsensor.brightness"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "brightness.level": 4,
+        "brightness.lux": 602
+      }
+    },
+    {
+      "href": "/sec/mde",
+      "rep": {
+        "rt": [
+          "x.com.samsung.mde"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.mde.localservices": [
+          "a2dp_sink",
+          "a2dp_src",
+          "hid_host"
+        ],
+        "x.com.samsung.mde.addressinfo": {
+          "ble": "**REDACTED**",
+          "bt": "**REDACTED**",
+          "p2p": "**REDACTED**",
+          "wifi": "**REDACTED**"
+        },
+        "x.com.samsung.mde.devicetypeinfo": {
+          "icon": "1",
+          "type": "23"
+        },
+        "x.com.samsung.mde.updatetime": "2026-11-08T21:39:20+0900"
+      }
+    },
+    {
+      "href": "/sec/tv/ambient/info",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.generic.property"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/ambient-ua-agent",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/ambientapp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.tvtomobile": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/aodBrowser",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/contentsapp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/csftservice",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/ezcalapp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/lighthomeapp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/mledmultiview",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/mobilebff",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/oobe",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/remote-server",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.tvtomobile": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/ssoservice",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/stmap",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/tlog-ua-agent",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.tvtomobile": "**REDACTED**"
+      }
+    },
+    {
+      "href": "/sec/tv/appdata/ub",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.appdata"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/audio",
+      "rep": {
+        "rt": [
+          "oic.r.audio",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "volume": 20,
+        "mute": false
+      }
+    },
+    {
+      "href": "/sec/tv/automation/light/control",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.light.control"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/camera/context",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.camera.status"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "disableReason": "cameraDisconnect",
+        "soundSupported": true
+      }
+    },
+    {
+      "href": "/sec/tv/camera/status",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.camera.status"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "disableReason": "cameraDisconnect",
+        "soundSupported": true
+      }
+    },
+    {
+      "href": "/sec/tv/category/monitor",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.category"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.category": "monitor",
+        "x.com.samsung.tv.subcategory": "monitor"
+      }
+    },
+    {
+      "href": "/sec/tv/channel",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.channel",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/connectioncontrol/info",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.connectioncontrol.info"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "info": {
+          "expirationTime": "1793204480"
+        }
+      }
+    },
+    {
+      "href": "/sec/tv/contentinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.contentinfo"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.input": "HDMI1",
+        "x.com.samsung.tv.inputname": "HDMI 1",
+        "x.com.samsung.tv.number": "",
+        "x.com.samsung.tv.title": "PC",
+        "x.com.samsung.tv.subtitle": "",
+        "x.com.samsung.tv.starttime": "",
+        "x.com.samsung.tv.endtime": "",
+        "x.com.samsung.tv.currenttime": "",
+        "x.com.samsung.tv.thumbnailpath": ""
+      }
+    },
+    {
+      "href": "/sec/tv/contentinfo/thumbnail",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.contentinfo.thumbnail"
+        ],
+        "if": [
+          "oic.if.r",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.thumbnail": "",
+        "x.com.samsung.tv.thumbnailpath": ""
+      }
+    },
+    {
+      "href": "/sec/tv/deviceinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.deviceinfo"
+        ],
+        "if": [
+          "oic.if.r",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.btmac": "**REDACTED**",
+        "x.com.samsung.tv.blemac": "**REDACTED**",
+        "x.com.samsung.tv.wifimac": "**REDACTED**",
+        "x.com.samsung.tv.ethmac": "**REDACTED**",
+        "x.com.samsung.tv.p2pmac": "**REDACTED**",
+        "x.com.samsung.tv.udn": "**REDACTED**",
+        "x.com.samsung.tv.category": "monitor",
+        "x.com.samsung.tv.subcategory": "monitor",
+        "x.com.samsung.tv.onsupport": true,
+        "x.com.samsung.tv.ambientsupport": false,
+        "x.com.samsung.country": "KOR",
+        "x.com.samsung.modelid": "24_NKL_SMT7_T09",
+        "x.com.samsung.infolinkversion": "T-INFOLINK2025-1008",
+        "x.com.samsung.tv.countrycode": "KR",
+        "x.com.samsung.tv.swmodel": "M70D",
+        "x.com.samsung.tv.sn": "**REDACTED**",
+        "x.com.samsung.tv.paneltime": 4084,
+        "x.com.samsung.tv.thingversion": "3.5.1",
+        "x.com.samsung.tv.mnid": "0AJK",
+        "x.com.samsung.tv.setupid": "401",
+        "x.com.samsung.tv.vendorcode": "Samsung",
+        "x.com.samsung.tv.language": "ko_KR",
+        "x.com.samsung.tv.year": 2024,
+        "x.com.samsung.tv.duid": "**REDACTED**",
+        "x.com.samsung.tv.encryptedduid": "**REDACTED**",
+        "x.com.samsung.tv.productcode": "LS32DM702UKXKR",
+        "x.com.samsung.tv.artsupport": false,
+        "x.com.samsung.tv.ipv4": "192.168.0.67",
+        "x.com.samsung.tv.ipv6": "fd53:508c:1391:8c9:2aaf:42ff:fe41:485e",
+        "x.com.samsung.tv.ds": "",
+        "x.com.samsung.tv.remoteless": {
+          "ds": "",
+          "deviceindex": 0,
+          "iconindex": 0
+        }
+      }
+    },
+    {
+      "href": "/sec/tv/display/orientation",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.display.orientation",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "orientation": 1,
+        "status": -1
+      }
+    },
+    {
+      "href": "/sec/tv/imagecapture",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.imageCapture",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/ime",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.ime"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.keyboardInputType": "",
+        "x.com.samsung.tv.keyboardEventType": "hideKeyboard",
+        "x.com.samsung.tv.text": "",
+        "x.com.samsung.tv.textEventType": "",
+        "x.com.samsung.tv.returnKeyDisabled": false,
+        "x.com.samsung.tv.entrylimit": -1,
+        "x.com.samsung.tv.mobileId": "",
+        "x.com.samsung.tv.multiline": false,
+        "x.com.samsung.tv.timestamp": "1793889494232"
+      }
+    },
+    {
+      "href": "/sec/tv/inputsource",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "HDMI1"
+          },
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "USB-C"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "HDMI1"
+      }
+    },
+    {
+      "href": "/sec/tv/inputsourcelist",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "HDMI1"
+          },
+          {
+            "x.com.samsung.tv.name": "PC",
+            "x.com.samsung.tv.id": "USB-C"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "HDMI1"
+      }
+    },
+    {
+      "href": "/sec/tv/iotHub",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.iot.hub"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "isSupported": true,
+        "hubInfo": {
+          "isOnboarded": false,
+          "isOnboarding": false,
+          "isDongleConnected": false,
+          "isBuiltinModuleConnected": false,
+          "hubEUI": "",
+          "isBuiltinModel": false,
+          "hubVersion": "6.62.13",
+          "thingClientCorrespondence": true,
+          "deviceID": "**REDACTED**"
+        }
+      }
+    },
+    {
+      "href": "/sec/tv/launchapp",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.launchapp",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedNativeApps": [
+          "apps",
+          "browser",
+          "channel list",
+          "connection guide",
+          "guide",
+          "home",
+          "menu",
+          "schedule manager",
+          "search all",
+          "setup remote controller",
+          "sources",
+          "tvplus",
+          "usb"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/light/control",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.light.control"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/logTrigger",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.logTrigger"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "logState": "idle",
+        "logRequestState": "idle"
+      }
+    },
+    {
+      "href": "/sec/tv/logcapture",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.logCapture"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/mediaInput",
+      "rep": {
+        "rt": [
+          "oic.r.media.input"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "sources": [
+          {
+            "sourceName": "PC",
+            "status": true
+          },
+          {
+            "sourceName": "PC",
+            "status": false
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/mediaOutput",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.media.output",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "outputList": [
+          {
+            "id": "internal",
+            "name": "스마트 모니터 스피커",
+            "type": "DEFAULT",
+            "description": ""
+          }
+        ],
+        "curMediaOutput": "internal"
+      }
+    },
+    {
+      "href": "/sec/tv/mode/picture",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "그래픽 화면",
+            "x.com.samsung.tv.id": "modeStandardPC"
+          },
+          {
+            "x.com.samsung.tv.name": "동영상",
+            "x.com.samsung.tv.id": "modeEntertainment"
+          },
+          {
+            "x.com.samsung.tv.name": "에코 화면",
+            "x.com.samsung.tv.id": "modeGen_458775"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "modeGen_458775"
+      }
+    },
+    {
+      "href": "/sec/tv/mode/sound",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.mode",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.supportedModes": [
+          {
+            "x.com.samsung.tv.name": "AI 사운드",
+            "x.com.samsung.tv.id": "modeAdaptive"
+          },
+          {
+            "x.com.samsung.tv.name": "또렷하게 들을 때",
+            "x.com.samsung.tv.id": "modeAmplify"
+          },
+          {
+            "x.com.samsung.tv.name": "표준으로 들을 때",
+            "x.com.samsung.tv.id": "modeStandard"
+          }
+        ],
+        "x.com.samsung.tv.currentMode": "modeAdaptive"
+      }
+    },
+    {
+      "href": "/sec/tv/msoinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.msoinfo"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.countrycode": "KR",
+        "x.com.samsung.tv.city": "",
+        "x.com.samsung.tv.zipcode": "",
+        "x.com.samsung.tv.devicetype": "",
+        "x.com.samsung.tv.headendid": "",
+        "x.com.samsung.tv.mbrname": "",
+        "x.com.samsung.tv.msoid": "",
+        "x.com.samsung.tv.msoname": "",
+        "x.com.samsung.tv.msotype": "",
+        "x.com.samsung.tv.providername": "",
+        "x.com.samsung.tv.msosource": "알수 없음",
+        "x.com.samsung.tv.setupstatus": "invalid_source",
+        "x.com.samsung.tv.lineupid": ""
+      }
+    },
+    {
+      "href": "/sec/tv/networkinfo",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.networkInfo"
+        ],
+        "if": [
+          "oic.if.r",
+          "oic.if.baseline"
+        ],
+        "connectionType": "wifi_connected",
+        "ip": "**REDACTED**",
+        "rssi": 3,
+        "ch": 1,
+        "wifidirectch": 1,
+        "frequency": 2412
+      }
+    },
+    {
+      "href": "/sec/tv/onsupport",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.onsupport"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.onsupport": true
+      }
+    },
+    {
+      "href": "/sec/tv/optioncontrol",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.optioncontrol",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/plugin/first_launch",
+      "rep": {
+        "rt": [
+          "x.com.samsung.plugin.first_launch"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "os_type": "ios",
+        "plugin_ver": "4.IR02.0922"
+      }
+    },
+    {
+      "href": "/sec/tv/searchall",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.searchall"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.searchQuery": "",
+        "x.com.samsung.tv.searchResults": ""
+      }
+    },
+    {
+      "href": "/sec/tv/searchonweb",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.searchonweb"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.searchQuery": "",
+        "x.com.samsung.tv.searchUrl": "",
+        "x.com.samsung.tv.searchSite": ""
+      }
+    },
+    {
+      "href": "/sec/tv/showmenu",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.showmenu"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.accessibility": [
+          {
+            "menuid": "voiceguide_on",
+            "value": "0",
+            "visible": true,
+            "enable": true
+          },
+          {
+            "menuid": "highcontrast",
+            "value": "0",
+            "visible": true,
+            "enable": true
+          },
+          {
+            "menuid": "color-inversion",
+            "value": "0",
+            "visible": true,
+            "enable": true
+          },
+          {
+            "menuid": "grayscale",
+            "value": "0",
+            "visible": true,
+            "enable": true
+          },
+          {
+            "menuid": "audio-description-atsc",
+            "value": "0",
+            "visible": true,
+            "enable": false
+          },
+          {
+            "menuid": "caption-setting",
+            "value": "0",
+            "visible": true,
+            "enable": true
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/support/features",
+      "rep": {
+        "rt": [
+          "x.com.samsung.support.features"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "imeAdvSupported": true,
+        "mobileCamSupported": true,
+        "mapEditSupported": false,
+        "sensorCardSupported": true,
+        "mediaOutputSupported": true,
+        "remotelessSupported": false,
+        "executableServiceList": [
+          "launchTVPlus"
+        ],
+        "artSupported": false,
+        "wifiUpdateSupported": false
+      }
+    },
+    {
+      "href": "/sec/tv/switch/binary",
+      "rep": {
+        "rt": [
+          "oic.r.switch.binary",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "value": true
+      }
+    },
+    {
+      "href": "/sec/tv/tapview",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.tapview"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.tapviewversion": "2.0"
+      }
+    },
+    {
+      "href": "/sec/tv/thingstatus",
+      "rep": {
+        "rt": [
+          "x.com.samsung.sesupdate"
+        ],
+        "if": [
+          "oic.if.r",
+          "oic.if.baseline"
+        ],
+        "state": ""
+      }
+    },
+    {
+      "href": "/sec/tv/tvonwithmobile/enable",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.tvonwithmobile.enable"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/uicontrol",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.uicontrol",
+          "x.com.samsung.tv.errorcode"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ]
+      }
+    },
+    {
+      "href": "/sec/tv/virtualgamepad/info",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.virtualgamepad.info"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "productType": "TV",
+        "isAOT": false,
+        "isInstalledSmartControl": true
+      }
+    },
+    {
+      "href": "/sec/tv/virtualremote",
+      "rep": {
+        "rt": [
+          "x.com.samsung.tv.virtualremote"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.tv.name": "NUM_DEFAULT",
+        "x.com.samsung.tv.state": "hide"
+      }
+    },
+    {
+      "href": "/selfhealing/session",
+      "rep": {
+        "x.com.samsung.selfhealing.session.expirytime": 0
+      }
+    },
+    {
+      "href": "/sensor/state/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.sensorStates"
+        ],
+        "if": [
+          "oic.if.a",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.vd.sensorType": [
+          {
+            "name": "Light",
+            "enabled": false,
+            "deviceId": "**REDACTED**"
+          },
+          {
+            "name": "SoundRecognition",
+            "enabled": false,
+            "deviceId": "**REDACTED**"
+          },
+          {
+            "name": "CameraMotion",
+            "enabled": false,
+            "deviceId": "**REDACTED**"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/sound/detection/vs/0",
+      "rep": {
+        "rt": [
+          "x.com.samsung.vd.soundDetection"
+        ],
+        "if": [
+          "oic.if.s",
+          "oic.if.baseline"
+        ],
+        "x.com.samsung.vd.soundDetectionState": true,
+        "x.com.samsung.vd.soundDetected": "noSound",
+        "x.com.samsung.vd.supportedSoundTypes": [
+          "noSound",
+          "dogBarking"
+        ],
+        "x.com.samsung.vd.supportedSensitivities": [
+          "low",
+          "Medium",
+          "high"
+        ]
+      }
+    }
+  ]
+}

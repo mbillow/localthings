@@ -91,9 +91,6 @@
       "paired_hood_power": {
         "name": "Napájení spárovaného odsavače"
       },
-      "periodic_air_sensing": {
-        "name": "Pravidelné měření kvality vzduchu"
-      },
       "pouring": {
         "name": "Nalévání"
       },
@@ -187,6 +184,12 @@
       "woofer_connection": {
         "name": "Připojení wooferu"
       },
+      "bluetooth_speaker": {
+        "name": "Reproduktor Bluetooth"
+      },
+      "ip_control": {
+        "name": "Ovládání přes IP"
+      },
       "lamp": {
         "name": "Lampa"
       },
@@ -245,6 +248,9 @@
       },
       "pair_bluetooth": {
         "name": "Spárovat Bluetooth"
+      },
+      "screen_off": {
+        "name": "Vypnout obrazovku"
       }
     },
     "climate": {
@@ -304,6 +310,9 @@
       },
       "paired_hood_light": {
         "name": "Světlo spárovaného odsavače"
+      },
+      "drum_light": {
+        "name": "Osvětlení bubnu"
       }
     },
     "number": {
@@ -342,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Hlasitost zvuku"
+      },
+      "speaker_volume": {
+        "name": "Hlasitost reproduktoru"
       },
       "target_humidity": {
         "name": "Požadovaná vlhkost"
@@ -1215,7 +1227,12 @@
           "180": "3 h",
           "240": "4 h",
           "none": "Vypnuto",
-          "cupboard": "Do skříně"
+          "cupboard": "Do skříně",
+          "damp": "Vlhké",
+          "less": "Méně",
+          "normal": "Normální",
+          "more": "Více",
+          "very": "Velmi"
         }
       },
       "zone_mode": {
@@ -1265,6 +1282,13 @@
           "smart": "Chytrý",
           "high": "Vysoký",
           "low": "Nízký"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Režim stále zapnutého displeje",
+        "state": {
+          "always": "Vždy",
+          "scheduled": "Podle plánu"
         }
       },
       "ventilation_mode": {
@@ -1360,6 +1384,14 @@
           "ita": "italština"
         }
       },
+      "tv_remote": {
+        "name": "Dálkový ovladač TV",
+        "state": {
+          "tv_remote_all": "Všechny ovladače",
+          "tv_remote_off": "Vypnuto",
+          "tv_remote_samsung": "Pouze ovladače Samsung"
+        }
+      },
       "equalizer": {
         "name": "Ekvalizér",
         "state": {
@@ -1388,6 +1420,27 @@
           "mute": "Ztlumeno",
           "voice": "Hlas"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Režim chytrého větrání",
+        "state": {
+          "sensing": "Pouze detekce",
+          "alarm": "Dostávat oznámení",
+          "airpurify": "Tiché větrání"
+        }
+      },
+      "picture_mode": {
+        "name": "Režim obrazu"
+      },
+      "rear_speaker_position": {
+        "name": "Umístění zadních reproduktorů",
+        "state": {
+          "front": "Vpředu",
+          "rear": "Vzadu"
+        }
+      },
+      "open_app": {
+        "name": "Otevřít aplikaci"
       }
     },
     "sensor": {
@@ -1426,9 +1479,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akce automatického větrání"
-      },
-      "automatic_ventilation_state": {
-        "name": "Stav automatického větrání"
       },
       "battery": {
         "name": "Baterie"
@@ -1580,6 +1630,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Poslední čištění bubnu"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Čištění bubnu (sušení) za"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Poslední čištění bubnu (sušení)"
       },
       "quick_wash": {
         "name": "Rychlé praní",
@@ -1777,6 +1833,15 @@
       },
       "progress_percentage": {
         "name": "Průběh v procentech"
+      },
+      "wash_progress_percentage": {
+        "name": "Průběh praní v procentech"
+      },
+      "dry_progress_percentage": {
+        "name": "Průběh sušení v procentech"
+      },
+      "wash_remaining_minutes": {
+        "name": "Zbývající čas praní"
       },
       "selfcheck_error": {
         "name": "Chyba vlastní kontroly"
@@ -2044,6 +2109,9 @@
       "installation_type": {
         "name": "Typ instalace"
       },
+      "audio_codec": {
+        "name": "Zvukový kodek"
+      },
       "micom_version": {
         "name": "Verze micom"
       },
@@ -2082,6 +2150,72 @@
       },
       "oven_setpoint": {
         "name": "Požadovaná teplota"
+      },
+      "air_sensing_interval": {
+        "name": "Interval měření vzduchu"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 kvalita vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná",
+          "processing": "Zpracování"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Poslední úroveň měření vzduchu",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Úroveň čištění",
+        "state": {
+          "good": "Dobrá",
+          "normal": "Normální",
+          "poor": "Špatná",
+          "very_poor": "Velmi špatná"
+        }
+      },
+      "illuminance": {
+        "name": "Osvětlení"
+      },
+      "channel": {
+        "name": "Kanál"
+      },
+      "now_showing": {
+        "name": "Právě vysílané"
+      },
+      "cast_session": {
+        "name": "Relace castingu"
+      },
+      "cast_item": {
+        "name": "Položka castingu"
       }
     },
     "switch": {
@@ -2304,6 +2438,12 @@
       "indicator_light": {
         "name": "Kontrolka"
       },
+      "always_on_display": {
+        "name": "Stále zapnutý displej"
+      },
+      "bluetooth_discoverable": {
+        "name": "Viditelnost Bluetooth"
+      },
       "windfree": {
         "name": "Režim Wind-Free"
       },
@@ -2372,6 +2512,15 @@
       },
       "repeated_cleaning": {
         "name": "Opakovat úklid"
+      },
+      "buzzer_sound": {
+        "name": "Zvuk bzučáku"
+      },
+      "smart_ventilate": {
+        "name": "Chytré větrání"
+      },
+      "hood_do_not_disturb": {
+        "name": "Nerušit"
       }
     },
     "time": {
@@ -2405,8 +2554,20 @@
       "sensing_skip_end": {
         "name": "Konec přeskočení měření AI Purify"
       },
+      "always_on_display_start": {
+        "name": "Začátek stále zapnutého displeje"
+      },
+      "always_on_display_end": {
+        "name": "Konec stále zapnutého displeje"
+      },
       "sensing_skip_start": {
         "name": "Začátek přeskočení měření AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Začátek režimu Nerušit"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Konec režimu Nerušit"
       }
     },
     "water_heater": {
@@ -2426,6 +2587,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Dálkové ovládání"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Oznámení"
       }
     }
   },
@@ -2590,7 +2761,8 @@
           "subdevices": "Podřízená zařízení",
           "cloud_courses": "Stažené cykly",
           "forget_learned_modes": "Zapomenout zapamatované režimy",
-          "debug_write": "Ladění: zápis do prostředku"
+          "debug_write": "Ladění: zápis do prostředku",
+          "camera_casting": "Přenos kamer"
         }
       },
       "settings": {
@@ -2668,6 +2840,13 @@
         "menu_options": {
           "cloud_guided": "Počkat znovu",
           "cloud_finish": "Dokončit"
+        }
+      },
+      "camera_casting": {
+        "title": "Přenos kamer s nízkou latencí",
+        "description": "Když na tuto televizi přenášíte kameru, Home Assistant ji běžně poskytuje přes vlastní stream, který si televize ukládá do vyrovnávací paměti asi 20 sekund. Po zapnutí spustí LocalThings ffmpeg a kameru poskytne sám, čímž se zpoždění zkrátí na několik sekund.\n\nTím se na webový server Home Assistantu přidají dva koncové body. Televize stream otevírá náhodným jednorázovým odkazem, protože se nemůže přihlásit. Nechte vypnuté, pokud nepřenášíte kamery a zpoždění vám nevadí: nic jiného v televizi to nepotřebuje. Vyžaduje ffmpeg a adresu Home Assistantu dostupnou z televize.",
+        "data": {
+          "camera_casting": "Přenášet kamery přes LocalThings (ffmpeg)"
         }
       }
     },
@@ -2827,6 +3006,54 @@
     },
     "media_option_not_supported": {
       "message": "Zařízení tuto možnost právě nenabízí."
+    },
+    "unknown_remote_command": {
+      "message": "Neznámý příkaz dálkového ovládání: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Ovládání napájení není pro toto zařízení k dispozici"
+    },
+    "wake_on_lan_failed": {
+      "message": "Nepodařilo se odeslat Wake-on-LAN do televize: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Tato televize umí přehrát kanály, aplikace, obrázky, video soubory, HLS streamy, kamery a videa z YouTube (channel, app, image, video, url nebo youtube), ne {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} není číslo kanálu; použijte číslice, např. 5 nebo 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Zadejte ID aplikace (např. kIciSQlYEM.plex) nebo název aplikace, kterou už televize spustila."
+    },
+    "search_unsupported": {
+      "message": "Toto zařízení neumí vyhledávat; umí to jen televize Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} není http(s) odkaz na obrázek, video soubor ani HLS stream, ani odkaz či ID videa z YouTube (MJPEG streamy a DASH manifesty .mpd nejsou podporovány)."
+    },
+    "cast_unsupported": {
+      "message": "Toto zařízení neumí zobrazit obrázky ani přehrát videa z YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Toto zařízení neumí zobrazovat oznámení."
+    },
+    "notify_message_empty": {
+      "message": "Text oznámení je prázdný."
+    },
+    "settings_unsupported": {
+      "message": "Toto zařízení nemá ovladatelnou nabídku nastavení televize."
+    },
+    "apps_unsupported": {
+      "message": "Toto zařízení si nepamatuje žádné aplikace televize."
+    },
+    "invalid_ask": {
+      "message": "extra.ask musí být true nebo false, ne {value}."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} odpovídala příliš dlouho."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Wake-on-LAN se nepodařilo odeslat: žádná síťová cesta k {targets}."
     }
   },
   "selector": {
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "Doba trvání",
           "description": "Kolik sekund naslouchat, nejvýše 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zapomenout naučené aplikace TV",
+      "description": "Smaže aplikace, které televizor spustil a které výběr Otevřít aplikaci a media_player.play_media nabízejí podle názvu. Vestavěné obrazovky zůstanou. Aplikace se naučí znovu, jak je televizor zobrazí, počínaje tou, která je právě otevřená.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, jehož naučené aplikace se mají zapomenout."
+        }
+      }
+    },
+    "search": {
+      "name": "Hledat na TV",
+      "description": "Otevře vyhledávání na televizoru Samsung: YouTube se otevře na výsledcích, ostatní weby v prohlížeči televizoru.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se hledá."
+        },
+        "query": {
+          "name": "Dotaz",
+          "description": "Co se má hledat."
+        },
+        "site": {
+          "name": "Web",
+          "description": "Kde hledat. Výchozí je YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otevřít stránku nastavení TV",
+      "description": "Otevře stránku nabídky nastavení televizoru Samsung. Seznam pochází z firmwaru Samsungu; ne každý televizor má každou stránku a lze zadat i jiné id stránky.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se stránka otevře."
+        },
+        "page": {
+          "name": "Stránka",
+          "description": "Stránka nastavení, která se má otevřít."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Nastavit časovač vypnutí TV",
+      "description": "Vypne televizor Samsung po tomto počtu minut; 0 časovač vypne. Televizor zbývající čas nehlásí, ověřte ho v jeho nabídce (Obecné, Správce systému, Čas, Časovač vypnutí).",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "Televizor, na kterém se časovač nastaví."
+        },
+        "minutes": {
+          "name": "Minuty",
+          "description": "Minuty do vypnutí televizoru; 0 časovač vypne."
         }
       }
     }

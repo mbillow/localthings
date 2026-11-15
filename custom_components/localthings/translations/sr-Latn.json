@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Napajanje uparenog aspiratora"
       },
-      "periodic_air_sensing": {
-        "name": "Periodično uzorkovanje vazduha"
-      },
       "pouring": {
         "name": "Sipanje"
       },
@@ -187,6 +184,12 @@
       "woofer_connection": {
         "name": "Povezivanje vufera"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth zvučnik"
+      },
+      "ip_control": {
+        "name": "IP kontrola"
+      },
       "lamp": {
         "name": "Lampa"
       },
@@ -245,6 +248,9 @@
       },
       "pair_bluetooth": {
         "name": "Upari Bluetooth"
+      },
+      "screen_off": {
+        "name": "Isključi ekran"
       }
     },
     "climate": {
@@ -304,6 +310,9 @@
       },
       "paired_hood_light": {
         "name": "Svetlo uparenog aspiratora"
+      },
+      "drum_light": {
+        "name": "Svetlo bubnja"
       }
     },
     "number": {
@@ -342,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Jačina zvuka"
+      },
+      "speaker_volume": {
+        "name": "Jačina zvučnika"
       },
       "target_humidity": {
         "name": "Ciljna vlažnost"
@@ -1215,7 +1227,12 @@
           "180": "3 sata",
           "240": "4 sata",
           "none": "Isključeno",
-          "cupboard": "Suvo za ormar"
+          "cupboard": "Suvo za ormar",
+          "damp": "Vlažno",
+          "less": "Manje",
+          "normal": "Normalno",
+          "more": "Više",
+          "very": "Veoma"
         }
       },
       "zone_mode": {
@@ -1265,6 +1282,13 @@
           "smart": "Pametno",
           "high": "Jako",
           "low": "Slabo"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Režim uvek uključenog ekrana",
+        "state": {
+          "always": "Uvek",
+          "scheduled": "Po rasporedu"
         }
       },
       "ventilation_mode": {
@@ -1360,6 +1384,14 @@
           "ita": "Italijanski"
         }
       },
+      "tv_remote": {
+        "name": "Daljinski upravljač televizora",
+        "state": {
+          "tv_remote_all": "Svi daljinski upravljači",
+          "tv_remote_off": "Isključeno",
+          "tv_remote_samsung": "Samo Samsung daljinski upravljači"
+        }
+      },
       "equalizer": {
         "name": "Ekvilajzer",
         "state": {
@@ -1388,6 +1420,27 @@
           "mute": "Utišano",
           "voice": "Glas"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Režim pametne ventilacije",
+        "state": {
+          "sensing": "Samo provera",
+          "alarm": "Primaj obaveštenja",
+          "airpurify": "Tiha ventilacija"
+        }
+      },
+      "picture_mode": {
+        "name": "Režim slike"
+      },
+      "rear_speaker_position": {
+        "name": "Položaj zadnjih zvučnika",
+        "state": {
+          "front": "Napred",
+          "rear": "Pozadi"
+        }
+      },
+      "open_app": {
+        "name": "Otvori aplikaciju"
       }
     },
     "sensor": {
@@ -1426,9 +1479,6 @@
       },
       "auto_ventilation_action": {
         "name": "Akcija automatske ventilacije"
-      },
-      "automatic_ventilation_state": {
-        "name": "Status automatske ventilacije"
       },
       "battery": {
         "name": "Baterija"
@@ -1580,6 +1630,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Bubanj je poslednji put očišćen"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Čišćenje bubnja (sušenje) potrebno za"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Bubanj je poslednji put očišćen (sušenje)"
       },
       "quick_wash": {
         "name": "Brzo pranje",
@@ -1777,6 +1833,15 @@
       },
       "progress_percentage": {
         "name": "Procenat napretka"
+      },
+      "wash_progress_percentage": {
+        "name": "Procenat napretka pranja"
+      },
+      "dry_progress_percentage": {
+        "name": "Procenat napretka sušenja"
+      },
+      "wash_remaining_minutes": {
+        "name": "Preostalo vreme pranja"
       },
       "selfcheck_error": {
         "name": "Greška pri samoproveri"
@@ -2044,6 +2109,9 @@
       "installation_type": {
         "name": "Tip instalacije"
       },
+      "audio_codec": {
+        "name": "Audio kodek"
+      },
       "micom_version": {
         "name": "Verzija mikrokontrolera (Micom)"
       },
@@ -2082,6 +2150,72 @@
       },
       "oven_setpoint": {
         "name": "Zadana vrednost"
+      },
+      "air_sensing_interval": {
+        "name": "Interval provere kvaliteta vazduha"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "Kvalitet vazduha PM10",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "Kvalitet vazduha PM2.5",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "Kvalitet vazduha PM1.0",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš",
+          "processing": "Obrada"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Poslednja ocena kvaliteta vazduha",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Nivo kvaliteta vazduha",
+        "state": {
+          "good": "Dobar",
+          "normal": "Normalan",
+          "poor": "Loš",
+          "very_poor": "Veoma loš"
+        }
+      },
+      "illuminance": {
+        "name": "Osvetljenost"
+      },
+      "channel": {
+        "name": "Kanal"
+      },
+      "now_showing": {
+        "name": "Trenutno na programu"
+      },
+      "cast_session": {
+        "name": "Sesija prebacivanja"
+      },
+      "cast_item": {
+        "name": "Prebačena stavka"
       }
     },
     "switch": {
@@ -2304,6 +2438,12 @@
       "indicator_light": {
         "name": "Indikatorsko svetlo"
       },
+      "always_on_display": {
+        "name": "Uvek uključen ekran"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth vidljivost"
+      },
       "windfree": {
         "name": "Wind-Free režim"
       },
@@ -2372,6 +2512,15 @@
       },
       "repeated_cleaning": {
         "name": "Ponovi čišćenje"
+      },
+      "buzzer_sound": {
+        "name": "Zvučni signal"
+      },
+      "smart_ventilate": {
+        "name": "Pametna ventilacija"
+      },
+      "hood_do_not_disturb": {
+        "name": "Ne uznemiravaj"
       }
     },
     "time": {
@@ -2405,8 +2554,20 @@
       "sensing_skip_end": {
         "name": "Kraj preskakanja AI Purify uzorkovanja"
       },
+      "always_on_display_start": {
+        "name": "Početak uvek uključenog ekrana"
+      },
+      "always_on_display_end": {
+        "name": "Kraj uvek uključenog ekrana"
+      },
       "sensing_skip_start": {
         "name": "Početak preskakanja AI Purify uzorkovanja"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Početak režima „Ne uznemiravaj“"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Kraj režima „Ne uznemiravaj“"
       }
     },
     "water_heater": {
@@ -2426,6 +2587,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Daljinski upravljač"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Obaveštenja"
       }
     }
   },
@@ -2590,7 +2761,8 @@
           "subdevices": "Poduređaji",
           "cloud_courses": "Preuzmi cikluse",
           "forget_learned_modes": "Zaboravi zapamćene režime",
-          "debug_write": "Otklanjanje grešaka: upisivanje u resurs"
+          "debug_write": "Otklanjanje grešaka: upisivanje u resurs",
+          "camera_casting": "Prenos kamera"
         }
       },
       "settings": {
@@ -2668,6 +2840,13 @@
         "menu_options": {
           "cloud_guided": "Čekaj ponovo",
           "cloud_finish": "Završi"
+        }
+      },
+      "camera_casting": {
+        "title": "Prenos kamera sa malim kašnjenjem",
+        "description": "Kada prenesete kameru na ovaj televizor, Home Assistant je obično služi preko sopstvenog strima, koji televizor baferuje oko 20 sekundi. Uključite ovo da bi LocalThings pokrenuo ffmpeg i sam služio kameru, čime se kašnjenje smanjuje na nekoliko sekundi.\n\nOvo dodaje dve krajnje tačke na veb server Home Assistant-a. Televizor otvara strim nasumičnim jednokratnim linkom, jer ne može da se prijavi. Ostavite isključeno osim ako prenosite kamere i kašnjenje vam je bitno: ništa drugo na televizoru to ne zahteva. Potrebni su ffmpeg i Home Assistant URL dostupan televizoru.",
+        "data": {
+          "camera_casting": "Prenosi kamere preko LocalThings-a (ffmpeg)"
         }
       }
     },
@@ -2827,6 +3006,54 @@
     },
     "media_option_not_supported": {
       "message": "Uređaj trenutno ne nudi ovu opciju."
+    },
+    "unknown_remote_command": {
+      "message": "Nepoznata komanda daljinskog upravljača: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Upravljanje napajanjem nije dostupno za ovaj uređaj"
+    },
+    "wake_on_lan_failed": {
+      "message": "Slanje Wake-on-LAN televizoru nije uspelo: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Ovaj televizor može da reprodukuje kanale, aplikacije, slike, video datoteke, HLS tokove, kamere i YouTube video snimke (channel, app, image, video, url ili youtube), ne {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} nije broj kanala; koristite cifre kao što su 5 ili 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Navedite id aplikacije (npr. kIciSQlYEM.plex) ili naziv aplikacije koju je televizor već pokrenuo."
+    },
+    "search_unsupported": {
+      "message": "Ovaj uređaj ne može da pretražuje; to mogu samo Samsung televizori."
+    },
+    "invalid_media_url": {
+      "message": "{url} nije http(s) veza ka slici, video datoteci ili HLS toku, niti YouTube veza ili id video snimka (MJPEG tokovi i DASH .mpd manifesti nisu podržani)."
+    },
+    "cast_unsupported": {
+      "message": "Ovaj uređaj ne može da prikazuje slike niti da reprodukuje YouTube video snimke."
+    },
+    "notify_unsupported": {
+      "message": "Ovaj uređaj ne može da prikazuje obaveštenja."
+    },
+    "notify_message_empty": {
+      "message": "Poruka obaveštenja je prazna."
+    },
+    "settings_unsupported": {
+      "message": "Ovaj uređaj nema meni podešavanja televizora kojim bi se upravljalo."
+    },
+    "apps_unsupported": {
+      "message": "Ovaj uređaj ne vodi spisak aplikacija televizora."
+    },
+    "invalid_ask": {
+      "message": "extra.ask mora biti true ili false, a ne „{value}”."
+    },
+    "camera_timeout": {
+      "message": "Kamera {camera} je predugo odgovarala."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Slanje Wake-on-LAN televizoru nije uspelo: nema mrežne rute do {targets}."
     }
   },
   "selector": {
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "Trajanje",
           "description": "Broj sekundi tokom kojih se slušaju obaveštenja, najviše do 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Zaboravi naučene aplikacije televizora",
+      "description": "Briše aplikacije koje su viđene pokrenute na televizoru, a koje izbor „Otvori aplikaciju” i media_player.play_media nude po nazivu. Ugrađeni ekrani ostaju. Aplikacije se ponovo uče kako ih televizor prikazuje, počevši od one koja je sada otvorena.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor čije naučene aplikacije treba zaboraviti."
+        }
+      }
+    },
+    "search": {
+      "name": "Pretraga na televizoru",
+      "description": "Otvara pretragu na Samsung televizoru: YouTube se otvara na rezultatima, a ostali sajtovi u pregledaču televizora.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se pretražuje."
+        },
+        "query": {
+          "name": "Upit",
+          "description": "Šta treba pretražiti."
+        },
+        "site": {
+          "name": "Sajt",
+          "description": "Gde pretraživati. Podrazumevano YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Otvori stranicu podešavanja televizora",
+      "description": "Otvara stranicu menija podešavanja Samsung televizora. Spisak potiče iz Samsung firmvera; nema svaki televizor svaku stranicu, a može se uneti i drugi id stranice.",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se otvara stranica."
+        },
+        "page": {
+          "name": "Stranica",
+          "description": "Stranica podešavanja koju treba otvoriti."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Podesi tajmer za isključivanje televizora",
+      "description": "Isključuje Samsung televizor posle navedenog broja minuta; 0 isključuje tajmer. Televizor ne prijavljuje preostalo vreme, pa ga proverite u njegovom meniju (Opšte, Upravljanje sistemom, Vreme, Tajmer za isključivanje).",
+      "fields": {
+        "device_id": {
+          "name": "Uređaj",
+          "description": "Televizor na kome se podešava tajmer za isključivanje."
+        },
+        "minutes": {
+          "name": "Minuti",
+          "description": "Minuti do isključivanja televizora; 0 isključuje tajmer."
         }
       }
     }

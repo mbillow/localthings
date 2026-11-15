@@ -92,6 +92,8 @@ async def test_lower_start_survives_divider_changes_without_reload(
     assert writes and all(path == "/devices/0" for path, _ in writes)
     assert writes[0][1] is not None
     assert writes[0][1]["Device"]["Mode"] == {"modes": ["Bake"]}
+    # The platform's listener keeps the coordinator's refresh timer armed.
+    await entry._async_process_on_unload(hass)
 
 
 @pytest.mark.parametrize("spec", [[], [{"mode": "LowerBake", "control": "Setting"}], "malformed"])

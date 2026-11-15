@@ -143,7 +143,7 @@ def _judged_on_populated(bound: BoundEntity, coordinator: LocalThingsCoordinator
 def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, str, str]]:
     """(platform, unique_id, reason) for rows the bound descriptors rule out."""
     # entity.py imports this module's caller, so this one can't import it at the top.
-    from .entity import _is_included
+    from .registration import is_included as _is_included
 
     prefix = f"{DOMAIN}_{coordinator.device_key}_"
     by_uid: dict[str, list[BoundEntity]] = defaultdict(list)
@@ -187,8 +187,10 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
                 yield platform, uid, f"replaced by its {replaced_by} entity"
 
         for bound in siblings:
+            # An absent href is a read that missed, not evidence (#807).
             if (
                 bound.desc.prune_when_excluded
+                and bound.href in resources
                 and _platform(bound) not in kept
                 and _judged_on_populated(bound, coordinator)
             ):
@@ -211,6 +213,7 @@ def _bound_removals(coordinator: LocalThingsCoordinator) -> Iterator[tuple[str, 
             # excluded, unless it can still appear.
             if not any(
                 b.desc.dynamic_presence
+                or b.href not in resources
                 or _is_included(b, coordinator)
                 or not _judged_on_populated(b, coordinator)
                 for b in old

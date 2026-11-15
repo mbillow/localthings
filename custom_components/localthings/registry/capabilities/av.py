@@ -153,6 +153,8 @@ IGNORED: list[Capability] = [
     # Samsung Content Panel (art-store style frame content) support flags.
     Capability(href="/sec/contentPanel/support"),
     Capability(href="/sec/contentPanel/info"),
+    # Cloud-session self-healing timer.
+    Capability(href="/selfhealing/session"),
     # Phone-notification mirror (incoming calls/messages), not device state.
     Capability(href="/x.com.samsung/notification/receiver"),
 ]

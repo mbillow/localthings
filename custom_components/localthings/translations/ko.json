@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "연동 후드 전원"
       },
-      "periodic_air_sensing": {
-        "name": "주기적 공기 감지"
-      },
       "pouring": {
         "name": "출수 중"
       },
@@ -187,6 +184,12 @@
       "woofer_connection": {
         "name": "우퍼 연결"
       },
+      "bluetooth_speaker": {
+        "name": "블루투스 스피커"
+      },
+      "ip_control": {
+        "name": "IP 제어"
+      },
       "lamp": {
         "name": "램프"
       },
@@ -245,6 +248,9 @@
       },
       "pair_bluetooth": {
         "name": "블루투스 페어링"
+      },
+      "screen_off": {
+        "name": "화면 끄기"
       }
     },
     "climate": {
@@ -304,6 +310,9 @@
       },
       "paired_hood_light": {
         "name": "연동 후드 조명"
+      },
+      "drum_light": {
+        "name": "통 조명"
       }
     },
     "number": {
@@ -342,6 +351,9 @@
       },
       "sound_volume": {
         "name": "음량"
+      },
+      "speaker_volume": {
+        "name": "스피커 볼륨"
       },
       "target_humidity": {
         "name": "목표 습도"
@@ -1215,7 +1227,12 @@
           "180": "3시간",
           "240": "4시간",
           "none": "끄기",
-          "cupboard": "옷장 보관"
+          "cupboard": "옷장 보관",
+          "damp": "촉촉",
+          "less": "적게",
+          "normal": "표준",
+          "more": "많이",
+          "very": "매우 많이"
         }
       },
       "zone_mode": {
@@ -1265,6 +1282,13 @@
           "smart": "스마트",
           "high": "높음",
           "low": "낮음"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "상시 표시 모드",
+        "state": {
+          "always": "항상",
+          "scheduled": "예약"
         }
       },
       "ventilation_mode": {
@@ -1360,6 +1384,14 @@
           "ita": "이탈리아어"
         }
       },
+      "tv_remote": {
+        "name": "TV 리모컨",
+        "state": {
+          "tv_remote_all": "모든 리모컨",
+          "tv_remote_off": "끄기",
+          "tv_remote_samsung": "삼성 리모컨만"
+        }
+      },
       "equalizer": {
         "name": "이퀄라이저",
         "state": {
@@ -1388,6 +1420,27 @@
           "mute": "음소거",
           "voice": "음성"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "스마트 환기 모드",
+        "state": {
+          "sensing": "감지만",
+          "alarm": "알림 받기",
+          "airpurify": "조용히 환기"
+        }
+      },
+      "picture_mode": {
+        "name": "화면 모드"
+      },
+      "rear_speaker_position": {
+        "name": "후면 스피커 배치",
+        "state": {
+          "front": "전면",
+          "rear": "후면"
+        }
+      },
+      "open_app": {
+        "name": "앱 열기"
       }
     },
     "sensor": {
@@ -1426,9 +1479,6 @@
       },
       "auto_ventilation_action": {
         "name": "자동 환기 동작"
-      },
-      "automatic_ventilation_state": {
-        "name": "자동 환기 상태"
       },
       "battery": {
         "name": "배터리"
@@ -1580,6 +1630,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "마지막 통세척"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "건조 통세척까지 남은 횟수"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "마지막 건조 통세척"
       },
       "quick_wash": {
         "name": "빠른 세탁",
@@ -1777,6 +1833,15 @@
       },
       "progress_percentage": {
         "name": "진행률"
+      },
+      "wash_progress_percentage": {
+        "name": "세탁 진행률"
+      },
+      "dry_progress_percentage": {
+        "name": "건조 진행률"
+      },
+      "wash_remaining_minutes": {
+        "name": "세탁 남은 시간"
       },
       "selfcheck_error": {
         "name": "자가 점검 오류"
@@ -2044,6 +2109,9 @@
       "installation_type": {
         "name": "설치 유형"
       },
+      "audio_codec": {
+        "name": "오디오 코덱"
+      },
       "micom_version": {
         "name": "마이컴 버전"
       },
@@ -2082,6 +2150,72 @@
       },
       "oven_setpoint": {
         "name": "설정 온도"
+      },
+      "air_sensing_interval": {
+        "name": "공기 감지 간격"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 공기질",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨",
+          "processing": "처리 중"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "마지막 공기질 감지 단계",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "청정도",
+        "state": {
+          "good": "좋음",
+          "normal": "보통",
+          "poor": "나쁨",
+          "very_poor": "매우 나쁨"
+        }
+      },
+      "illuminance": {
+        "name": "조도"
+      },
+      "channel": {
+        "name": "채널"
+      },
+      "now_showing": {
+        "name": "현재 방송"
+      },
+      "cast_session": {
+        "name": "캐스팅 세션"
+      },
+      "cast_item": {
+        "name": "캐스팅 항목"
       }
     },
     "switch": {
@@ -2304,6 +2438,12 @@
       "indicator_light": {
         "name": "표시등"
       },
+      "always_on_display": {
+        "name": "상시 표시"
+      },
+      "bluetooth_discoverable": {
+        "name": "블루투스 검색 허용"
+      },
       "windfree": {
         "name": "무풍 모드"
       },
@@ -2372,6 +2512,15 @@
       },
       "repeated_cleaning": {
         "name": "반복 청소"
+      },
+      "buzzer_sound": {
+        "name": "부저음"
+      },
+      "smart_ventilate": {
+        "name": "스마트 환기"
+      },
+      "hood_do_not_disturb": {
+        "name": "방해 금지"
       }
     },
     "time": {
@@ -2405,8 +2554,20 @@
       "sensing_skip_end": {
         "name": "AI Purify 감지 건너뛰기 종료"
       },
+      "always_on_display_start": {
+        "name": "상시 표시 시작"
+      },
+      "always_on_display_end": {
+        "name": "상시 표시 종료"
+      },
       "sensing_skip_start": {
         "name": "AI Purify 감지 건너뛰기 시작"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "방해 금지 시작"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "방해 금지 종료"
       }
     },
     "water_heater": {
@@ -2426,6 +2587,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "리모컨"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "알림"
       }
     }
   },
@@ -2590,7 +2761,8 @@
           "subdevices": "하위 기기",
           "cloud_courses": "다운로드 코스",
           "forget_learned_modes": "기억된 모드 지우기",
-          "debug_write": "디버그: 리소스에 쓰기"
+          "debug_write": "디버그: 리소스에 쓰기",
+          "camera_casting": "카메라 전송"
         }
       },
       "settings": {
@@ -2668,6 +2840,13 @@
         "menu_options": {
           "cloud_guided": "다시 대기",
           "cloud_finish": "완료"
+        }
+      },
+      "camera_casting": {
+        "title": "저지연 카메라 전송",
+        "description": "이 TV로 카메라를 전송하면 Home Assistant는 보통 자체 스트림으로 제공하며, TV는 약 20초 동안 버퍼링합니다. 이 옵션을 켜면 LocalThings가 ffmpeg를 실행해 카메라를 직접 제공하므로 지연이 몇 초로 줄어듭니다.\n\n이 옵션은 Home Assistant 웹 서버에 엔드포인트 두 개를 추가합니다. TV는 로그인할 수 없으므로 임의의 일회용 링크로 스트림을 엽니다. 카메라를 전송하고 지연이 중요한 경우가 아니라면 꺼 두세요. TV의 다른 기능에는 필요하지 않습니다. ffmpeg와 TV에서 접근할 수 있는 Home Assistant URL이 필요합니다.",
+        "data": {
+          "camera_casting": "LocalThings로 카메라 전송 (ffmpeg)"
         }
       }
     },
@@ -2827,6 +3006,54 @@
     },
     "media_option_not_supported": {
       "message": "기기에서 지금은 이 옵션을 제공하지 않습니다."
+    },
+    "unknown_remote_command": {
+      "message": "알 수 없는 리모컨 명령: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "이 기기에서는 전원 제어를 사용할 수 없습니다"
+    },
+    "wake_on_lan_failed": {
+      "message": "TV에 Wake-on-LAN을 보낼 수 없습니다: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "이 TV는 채널, 앱, 이미지, 동영상 파일, HLS 스트림, 카메라, YouTube 동영상(channel, app, image, video, url 또는 youtube)을 재생할 수 있으며 {media_type}은(는) 지원하지 않습니다."
+    },
+    "invalid_channel_number": {
+      "message": "{channel}은(는) 채널 번호가 아닙니다. 5 또는 5-1처럼 숫자를 사용하세요."
+    },
+    "invalid_app_id": {
+      "message": "앱 ID(예: kIciSQlYEM.plex) 또는 TV에서 실행된 적 있는 앱 이름을 입력하세요."
+    },
+    "search_unsupported": {
+      "message": "이 기기는 검색할 수 없습니다. 삼성 TV만 가능합니다."
+    },
+    "invalid_media_url": {
+      "message": "{url}은(는) 이미지, 동영상 파일 또는 HLS 스트림의 http(s) 링크나 YouTube 링크 또는 동영상 ID가 아닙니다(MJPEG 스트림과 DASH .mpd 매니페스트는 지원되지 않습니다)."
+    },
+    "cast_unsupported": {
+      "message": "이 기기는 이미지를 표시하거나 YouTube 동영상을 재생할 수 없습니다."
+    },
+    "notify_unsupported": {
+      "message": "이 기기는 알림을 표시할 수 없습니다."
+    },
+    "notify_message_empty": {
+      "message": "알림 메시지가 비어 있습니다."
+    },
+    "settings_unsupported": {
+      "message": "이 기기에는 제어할 수 있는 TV 설정 메뉴가 없습니다."
+    },
+    "apps_unsupported": {
+      "message": "이 기기는 TV 앱 목록을 보관하지 않습니다."
+    },
+    "invalid_ask": {
+      "message": "extra.ask는 true 또는 false여야 합니다({value} 아님)."
+    },
+    "camera_timeout": {
+      "message": "카메라 {camera}의 응답이 너무 오래 걸렸습니다."
+    },
+    "wake_on_lan_no_route": {
+      "message": "TV에 Wake-on-LAN을 보낼 수 없습니다: {targets}(으)로 가는 네트워크 경로가 없습니다."
     }
   },
   "selector": {
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "기간",
           "description": "수신 대기할 초 수로, 최대 120입니다."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "학습된 TV 앱 지우기",
+      "description": "TV에서 실행된 것으로 확인되어 앱 열기 선택과 media_player.play_media에서 이름으로 제공되는 앱을 지웁니다. 기본 제공 화면은 유지됩니다. 앱은 TV에 표시될 때 다시 학습되며, 지금 열려 있는 앱부터 시작합니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "학습된 앱을 지울 TV입니다."
+        }
+      }
+    },
+    "search": {
+      "name": "TV에서 검색",
+      "description": "삼성 TV에서 검색을 엽니다. YouTube는 검색 결과로 열리고, 다른 사이트는 TV 브라우저에서 열립니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "검색할 TV입니다."
+        },
+        "query": {
+          "name": "검색어",
+          "description": "검색할 내용입니다."
+        },
+        "site": {
+          "name": "사이트",
+          "description": "검색할 곳입니다. 기본값은 YouTube입니다."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "TV 설정 페이지 열기",
+      "description": "삼성 TV 설정 메뉴의 페이지를 엽니다. 목록은 삼성 펌웨어에서 가져온 것으로, 모든 TV에 모든 페이지가 있는 것은 아니며 다른 페이지 id를 입력할 수도 있습니다.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "페이지를 열 TV입니다."
+        },
+        "page": {
+          "name": "페이지",
+          "description": "열 설정 페이지입니다."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "TV 취침 예약 설정",
+      "description": "지정한 분이 지나면 삼성 TV를 끕니다. 0이면 취침 예약을 끕니다. TV는 남은 시간을 알려 주지 않으므로 메뉴(일반, 시스템 관리자, 시간, 취침 예약)에서 확인하세요.",
+      "fields": {
+        "device_id": {
+          "name": "기기",
+          "description": "취침 예약을 설정할 TV입니다."
+        },
+        "minutes": {
+          "name": "분",
+          "description": "TV가 꺼질 때까지의 분입니다. 0이면 취침 예약을 끕니다."
         }
       }
     }

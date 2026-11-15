@@ -1,8 +1,8 @@
 """AirDresser device registry (issue #162).
 
 Reuses washer/dryer/dishwasher's shared laundry surface -- job-beginning
-status, operational state, diagnosis, and (issue #208) the buzzer-sound
-select -- /buzzersound/vs/0's rep on this board is the plain
+status, operational state, diagnosis, and (issue #208) the Boolean buzzer
+switch -- /buzzersound/vs/0's rep on this board is the plain
 {setBuzzerSound, supportedBuzzerSound} shape laundry.BUZZER_SOUND already
 expects, no AirDresser-specific wiring needed. air_dresser.py holds the two
 pieces specific to this device type: a minimal wrinkle-prevent-only

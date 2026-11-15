@@ -50,6 +50,7 @@ from .const import (
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_CA_CERT_PEM,
     CONF_CA_KEY_PEM,
+    CONF_CAMERA_CASTING,
     CONF_CLOUD_COURSES_ENABLED,
     CONF_DEVICE_KEY,
     CONF_DEVICE_TOKEN,
@@ -72,6 +73,7 @@ from .const import (
     CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
+    DEFAULT_CAMERA_CASTING,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
@@ -748,6 +750,7 @@ def _read_device(transport, host: str, port: int) -> dict:
     (issue #236).
     """
     from .registry.batch import parse_device0_batch
+    from .registry.by_type import for_device_by_oic_type
     from .registry.by_type import resolve as resolve_registry
     from .registry.flat import read_all
     from .registry.identity import (
@@ -767,7 +770,13 @@ def _read_device(transport, host: str, port: int) -> dict:
         # No /device/0 Collection: read /oic/res's hrefs as the coordinator
         # will poll them (registry/flat.py). A batch board stored this way
         # while booting is moved back by the coordinator's /device/0 check.
-        resources = read_all(transport, identity.raw.get("/oic/res") or [], logger=_LOGGER)
+        family = for_device_by_oic_type(identity.device_types)
+        resources = read_all(
+            transport,
+            identity.raw.get("/oic/res") or [],
+            logger=_LOGGER,
+            awake=family.awake_href if family is not None else None,
+        )
         usable = bool(resources)
     else:
         usable = code == 0x45 and body is not None
@@ -1986,7 +1995,31 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             coord.subdevices or self.config_entry.options.get(CONF_DISABLED_SUBDEVICES)
         ):
             menu.insert(1, "subdevices")
+        if (coord is not None and coord.device_type_name == "tv") or (
+            self.config_entry.data.get(CONF_DEVICE_TYPE) == "tv"
+        ):
+            menu.insert(1, "camera_casting")
         return self.async_show_menu(step_id="init", menu_options=menu)
+
+    async def async_step_camera_casting(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """CONF_CAMERA_CASTING: see its comment, and docs/samsung-tv.md."""
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+        return self.async_show_form(
+            step_id="camera_casting",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CAMERA_CASTING,
+                        default=self.config_entry.options.get(
+                            CONF_CAMERA_CASTING, DEFAULT_CAMERA_CASTING
+                        ),
+                    ): bool,
+                }
+            ),
+        )
 
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None

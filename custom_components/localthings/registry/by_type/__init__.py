@@ -17,11 +17,13 @@ from . import (
     ehs,
     microfiber_filter,
     microwave,
+    monitor,
     oven,
     range_hood,
     refrigerator,
     robot_vacuum,
     soundbar,
+    tv,
     vacuum_station,
     washer,
     water_purifier,
@@ -58,12 +60,14 @@ _REGISTRY_BY_KEY: dict[str, DeviceRegistry] = {
     "ehs": ehs.REGISTRY,
     "microfiber_filter": microfiber_filter.REGISTRY,
     "microwave": microwave.REGISTRY,
+    "monitor": monitor.REGISTRY,
     "oven": oven.REGISTRY,
     "range": _range.REGISTRY,
     "range_hood": range_hood.REGISTRY,
     "refrigerator": refrigerator.REGISTRY,
     "robot_vacuum": robot_vacuum.REGISTRY,
     "soundbar": soundbar.REGISTRY,
+    "tv": tv.REGISTRY,
     "vacuum_station": vacuum_station.REGISTRY,
     "washer": washer.REGISTRY,
     "water_purifier": water_purifier.REGISTRY,
@@ -246,7 +250,7 @@ def _consumer_model_key(description: str) -> str | None:
 # Every value must already be a key in `_REGISTRY_BY_KEY` (checked by
 # `test_every_oic_type_resolves_to_a_real_registry`) -- this deliberately
 # stops short of the full OCF/SmartThings vocabulary, since most of it (lights,
-# locks, cameras, TVs, ...) has no registry here to point at, and
+# locks, cameras, ...) has no registry here to point at, and
 # 'oic.d.robotcleaner' names an actual robot vacuum, a different product from
 # the clean/auto-empty *station* `vacuum_station` covers.
 #
@@ -268,6 +272,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     "oic.d.krefrigerator": "refrigerator",  # issue #328 -- kimchi refrigerator
     # AV boards report no /information/vs/0, so /oic/d is their only route.
     "oic.d.networkaudio": "soundbar",
+    "oic.d.tv": "tv",
     "oic.d.washer": "washer",
     "x.com.st.d.airqualitysensor": "air_monitor",
     "x.com.st.d.dehumidifier": "dehumidifier",
@@ -275,6 +280,7 @@ _OIC_TYPE_TO_KEY: dict[str, str] = {
     # Microfiber laundry-lint filter (AMF-WW-TP1-22-COMMON, issue #475). It
     # reports washer resources too, but nothing that runs a cycle (#626).
     "x.com.st.d.microfiberfilter": "microfiber_filter",
+    "x.com.st.d.monitor": "monitor",  # issue #815
     "x.com.st.d.stickcleaner": "vacuum_station",
     "x.com.st.d.steamcloset": "air_dresser",
     "x.com.st.d.winecellar": "refrigerator",  # issue #328 -- same TP1X_REF_21K board
@@ -322,7 +328,7 @@ _DEFAULT = DeviceRegistry(name="", capabilities={})
 
 def registry_for(name: str | None) -> DeviceRegistry:
     """A family's registry by name, for its settings (subscribe_tiers,
-    write_settle_s); an unrecognized device gets the defaults."""
+    write_settle_s, awake_href); an unrecognized device gets the defaults."""
     return _REGISTRY_BY_KEY.get(name or "", _DEFAULT)
 
 

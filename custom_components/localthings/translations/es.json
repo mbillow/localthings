@@ -160,7 +160,8 @@
           "subdevices": "Subdispositivos",
           "cloud_courses": "Ciclos descargados",
           "forget_learned_modes": "Olvidar los modos recordados",
-          "debug_write": "Depuración: escribir en un recurso"
+          "debug_write": "Depuración: escribir en un recurso",
+          "camera_casting": "Transmisión de cámaras"
         }
       },
       "settings": {
@@ -238,6 +239,13 @@
         "menu_options": {
           "cloud_guided": "Esperar de nuevo",
           "cloud_finish": "Finalizar"
+        }
+      },
+      "camera_casting": {
+        "title": "Transmisión de cámaras con baja latencia",
+        "description": "Cuando envías una cámara a este televisor, Home Assistant la sirve normalmente a través de su propio stream, que el televisor almacena en búfer unos 20 segundos. Actívalo para que LocalThings ejecute ffmpeg y sirva la cámara por sí mismo, lo que reduce el retraso a unos pocos segundos.\n\nEsto añade dos endpoints al servidor web de Home Assistant. El televisor abre el stream con un enlace aleatorio de un solo uso, porque no puede iniciar sesión. Déjalo desactivado salvo que envíes cámaras y el retraso te importe: nada más del televisor lo necesita. Requiere ffmpeg y una URL de Home Assistant accesible desde el televisor.",
+        "data": {
+          "camera_casting": "Enviar cámaras a través de LocalThings (ffmpeg)"
         }
       }
     },
@@ -397,6 +405,54 @@
     },
     "media_option_not_supported": {
       "message": "El dispositivo no ofrece esa opción en este momento."
+    },
+    "unknown_remote_command": {
+      "message": "Comando de mando desconocido: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "El control de encendido no está disponible para este dispositivo"
+    },
+    "wake_on_lan_failed": {
+      "message": "No se pudo enviar Wake-on-LAN al televisor: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Este televisor puede reproducir canales, apps, imágenes, archivos de vídeo, streams HLS, cámaras y vídeos de YouTube (channel, app, image, video, url o youtube), no {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} no es un número de canal; usa dígitos como 5 o 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Indica el id de la app (p. ej. kIciSQlYEM.plex) o el nombre de una app que el televisor ya haya abierto."
+    },
+    "search_unsupported": {
+      "message": "Este dispositivo no puede buscar; solo pueden los televisores Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} no es un enlace http(s) a una imagen, un archivo de vídeo o un stream HLS, ni un enlace o id de vídeo de YouTube (los streams MJPEG y los manifiestos DASH .mpd no son compatibles)."
+    },
+    "cast_unsupported": {
+      "message": "Este dispositivo no puede mostrar imágenes ni reproducir vídeos de YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Este dispositivo no puede mostrar notificaciones."
+    },
+    "notify_message_empty": {
+      "message": "El mensaje de la notificación está vacío."
+    },
+    "settings_unsupported": {
+      "message": "Este dispositivo no tiene un menú de ajustes de TV que se pueda controlar."
+    },
+    "apps_unsupported": {
+      "message": "Este dispositivo no guarda una lista de aplicaciones de TV."
+    },
+    "invalid_ask": {
+      "message": "extra.ask debe ser true o false, no {value}."
+    },
+    "camera_timeout": {
+      "message": "La cámara {camera} tardó demasiado en responder."
+    },
+    "wake_on_lan_no_route": {
+      "message": "No se pudo enviar Wake-on-LAN al televisor: no hay ruta de red a {targets}."
     }
   },
   "entity": {
@@ -491,9 +547,6 @@
       "paired_hood_power": {
         "name": "Energía de la campana emparejada"
       },
-      "periodic_air_sensing": {
-        "name": "Detección de aire periódica"
-      },
       "pouring": {
         "name": "Sirviendo"
       },
@@ -587,6 +640,12 @@
       "woofer_connection": {
         "name": "Conexión del woofer"
       },
+      "bluetooth_speaker": {
+        "name": "Altavoz Bluetooth"
+      },
+      "ip_control": {
+        "name": "Control por IP"
+      },
       "lamp": {
         "name": "Lámpara"
       },
@@ -645,6 +704,9 @@
       },
       "pair_bluetooth": {
         "name": "Emparejar Bluetooth"
+      },
+      "screen_off": {
+        "name": "Apagar pantalla"
       }
     },
     "climate": {
@@ -704,6 +766,9 @@
       },
       "paired_hood_light": {
         "name": "Luz de la campana emparejada"
+      },
+      "drum_light": {
+        "name": "Luz del tambor"
       }
     },
     "number": {
@@ -742,6 +807,9 @@
       },
       "sound_volume": {
         "name": "Volumen del sonido"
+      },
+      "speaker_volume": {
+        "name": "Volumen del altavoz"
       },
       "target_humidity": {
         "name": "Humedad objetivo"
@@ -1615,7 +1683,12 @@
           "180": "3 horas",
           "240": "4 horas",
           "none": "Desactivado",
-          "cupboard": "Armario"
+          "cupboard": "Armario",
+          "damp": "Húmedo",
+          "less": "Menos",
+          "normal": "Normal",
+          "more": "Más",
+          "very": "Muy"
         }
       },
       "zone_mode": {
@@ -1665,6 +1738,13 @@
           "smart": "Inteligente",
           "high": "Alto",
           "low": "Bajo"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Modo de pantalla siempre activa",
+        "state": {
+          "always": "Siempre",
+          "scheduled": "Programado"
         }
       },
       "ventilation_mode": {
@@ -1760,6 +1840,14 @@
           "ita": "italiano"
         }
       },
+      "tv_remote": {
+        "name": "Mando del televisor",
+        "state": {
+          "tv_remote_all": "Todos los mandos",
+          "tv_remote_off": "Apagado",
+          "tv_remote_samsung": "Solo mandos Samsung"
+        }
+      },
       "equalizer": {
         "name": "Ecualizador",
         "state": {
@@ -1788,6 +1876,27 @@
           "mute": "Silencio",
           "voice": "Voz"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Modo de ventilación inteligente",
+        "state": {
+          "sensing": "Solo detección",
+          "alarm": "Recibir notificaciones",
+          "airpurify": "Ventilar silenciosamente"
+        }
+      },
+      "picture_mode": {
+        "name": "Modo de imagen"
+      },
+      "rear_speaker_position": {
+        "name": "Ubicación de los altavoces traseros",
+        "state": {
+          "front": "Delante",
+          "rear": "Detrás"
+        }
+      },
+      "open_app": {
+        "name": "Abrir aplicación"
       }
     },
     "sensor": {
@@ -1823,9 +1932,6 @@
       },
       "auto_ventilation_action": {
         "name": "Acción de ventilación automática"
-      },
-      "automatic_ventilation_state": {
-        "name": "Estado de ventilación automática"
       },
       "battery": {
         "name": "Batería"
@@ -1977,6 +2083,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Última limpieza del tambor"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Limpieza de tambor (secado) en"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Última limpieza del tambor (secado)"
       },
       "quick_wash": {
         "name": "Lavado rápido",
@@ -2174,6 +2286,15 @@
       },
       "progress_percentage": {
         "name": "Porcentaje de progreso"
+      },
+      "wash_progress_percentage": {
+        "name": "Porcentaje de progreso del lavado"
+      },
+      "dry_progress_percentage": {
+        "name": "Porcentaje de progreso del secado"
+      },
+      "wash_remaining_minutes": {
+        "name": "Tiempo de lavado restante"
       },
       "selfcheck_error": {
         "name": "Error de autocomprobación"
@@ -2444,6 +2565,9 @@
       "installation_type": {
         "name": "Tipo de instalación"
       },
+      "audio_codec": {
+        "name": "Códec de audio"
+      },
       "micom_version": {
         "name": "Versión de micom"
       },
@@ -2482,6 +2606,72 @@
       },
       "oven_setpoint": {
         "name": "Punto de ajuste"
+      },
+      "air_sensing_interval": {
+        "name": "Intervalo de medición del aire"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 calidad del aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala",
+          "processing": "Procesando"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Último nivel de detección de aire",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Nivel de limpieza",
+        "state": {
+          "good": "Buena",
+          "normal": "Normal",
+          "poor": "Mala",
+          "very_poor": "Muy mala"
+        }
+      },
+      "illuminance": {
+        "name": "Iluminancia"
+      },
+      "channel": {
+        "name": "Canal"
+      },
+      "now_showing": {
+        "name": "En emisión"
+      },
+      "cast_session": {
+        "name": "Sesión de casting"
+      },
+      "cast_item": {
+        "name": "Elemento de casting"
       }
     },
     "switch": {
@@ -2704,6 +2894,12 @@
       "indicator_light": {
         "name": "Luz indicadora"
       },
+      "always_on_display": {
+        "name": "Pantalla siempre activa"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth visible"
+      },
       "windfree": {
         "name": "Modo Wind-Free"
       },
@@ -2772,6 +2968,15 @@
       },
       "repeated_cleaning": {
         "name": "Repetir limpieza"
+      },
+      "buzzer_sound": {
+        "name": "Sonido del zumbador"
+      },
+      "smart_ventilate": {
+        "name": "Ventilación inteligente"
+      },
+      "hood_do_not_disturb": {
+        "name": "No molestar"
       }
     },
     "time": {
@@ -2805,8 +3010,20 @@
       "sensing_skip_end": {
         "name": "Fin de la omisión de medición de AI Purify"
       },
+      "always_on_display_start": {
+        "name": "Inicio de pantalla siempre activa"
+      },
+      "always_on_display_end": {
+        "name": "Fin de pantalla siempre activa"
+      },
       "sensing_skip_start": {
         "name": "Inicio de la omisión de medición de AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Inicio de No molestar"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Fin de No molestar"
       }
     },
     "water_heater": {
@@ -2826,6 +3043,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Mando"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Notificaciones"
       }
     }
   },
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "Duración",
           "description": "Cuántos segundos escuchar, hasta 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Olvidar las apps aprendidas del TV",
+      "description": "Borra las apps que se han visto en ejecución en un televisor, que la selección Abrir app y media_player.play_media ofrecen por nombre. Las pantallas integradas se mantienen. Las apps se vuelven a aprender a medida que el televisor las muestra, empezando por la que está abierta ahora.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor cuyas apps aprendidas se olvidan."
+        }
+      }
+    },
+    "search": {
+      "name": "Buscar en el TV",
+      "description": "Abre una búsqueda en un televisor Samsung: YouTube se abre con los resultados; los demás sitios se abren en el navegador del televisor.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que buscar."
+        },
+        "query": {
+          "name": "Consulta",
+          "description": "Qué buscar."
+        },
+        "site": {
+          "name": "Sitio",
+          "description": "Dónde buscar. YouTube por defecto."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Abrir una página de ajustes del TV",
+      "description": "Abre una página del menú de ajustes de un televisor Samsung. La lista viene del firmware de Samsung; no todos los televisores tienen todas las páginas, y se puede escribir otro id de página.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que abrir la página."
+        },
+        "page": {
+          "name": "Página",
+          "description": "La página de ajustes que abrir."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Programar el temporizador de apagado del TV",
+      "description": "Apaga un televisor Samsung tras estos minutos; 0 desactiva el temporizador. El televisor no informa del tiempo restante, así que compruébelo en su menú (General, Administrador del sistema, Hora, Temporizador de apagado).",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El televisor en el que programar el temporizador."
+        },
+        "minutes": {
+          "name": "Minutos",
+          "description": "Minutos hasta que el televisor se apague; 0 desactiva el temporizador."
         }
       }
     }

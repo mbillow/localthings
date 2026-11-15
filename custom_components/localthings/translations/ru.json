@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Питание связанной вытяжки"
       },
-      "periodic_air_sensing": {
-        "name": "Периодический анализ воздуха"
-      },
       "pouring": {
         "name": "Налив"
       },
@@ -187,6 +184,12 @@
       "woofer_connection": {
         "name": "Подключение сабвуфера"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth-динамик"
+      },
+      "ip_control": {
+        "name": "Управление по IP"
+      },
       "lamp": {
         "name": "Лампа"
       },
@@ -245,6 +248,9 @@
       },
       "pair_bluetooth": {
         "name": "Выполнить сопряжение Bluetooth"
+      },
+      "screen_off": {
+        "name": "Выключить экран"
       }
     },
     "climate": {
@@ -304,6 +310,9 @@
       },
       "paired_hood_light": {
         "name": "Подсветка связанной вытяжки"
+      },
+      "drum_light": {
+        "name": "Подсветка барабана"
       }
     },
     "number": {
@@ -342,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Громкость звука"
+      },
+      "speaker_volume": {
+        "name": "Громкость динамика"
       },
       "target_humidity": {
         "name": "Целевая влажность"
@@ -1215,7 +1227,12 @@
           "180": "3 ч",
           "240": "4 ч",
           "none": "Выкл.",
-          "cupboard": "Шкаф"
+          "cupboard": "Шкаф",
+          "damp": "Влажное",
+          "less": "Меньше",
+          "normal": "Обычный",
+          "more": "Больше",
+          "very": "Очень сильный"
         }
       },
       "zone_mode": {
@@ -1265,6 +1282,13 @@
           "smart": "Умный",
           "high": "Высокий",
           "low": "Низкий"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Режим всегда включенного экрана",
+        "state": {
+          "always": "Всегда",
+          "scheduled": "По расписанию"
         }
       },
       "ventilation_mode": {
@@ -1360,6 +1384,14 @@
           "ita": "Итальянский"
         }
       },
+      "tv_remote": {
+        "name": "Пульт телевизора",
+        "state": {
+          "tv_remote_all": "Все пульты",
+          "tv_remote_off": "Выкл.",
+          "tv_remote_samsung": "Только пульты Samsung"
+        }
+      },
       "equalizer": {
         "name": "Эквалайзер",
         "state": {
@@ -1388,6 +1420,27 @@
           "mute": "Без звука",
           "voice": "Голос"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Режим умной вентиляции",
+        "state": {
+          "sensing": "Только проверка",
+          "alarm": "Получать уведомления",
+          "airpurify": "Тихая вентиляция"
+        }
+      },
+      "picture_mode": {
+        "name": "Режим изображения"
+      },
+      "rear_speaker_position": {
+        "name": "Расположение тыловых динамиков",
+        "state": {
+          "front": "Спереди",
+          "rear": "Сзади"
+        }
+      },
+      "open_app": {
+        "name": "Открыть приложение"
       }
     },
     "sensor": {
@@ -1426,9 +1479,6 @@
       },
       "auto_ventilation_action": {
         "name": "Действие автовентиляции"
-      },
-      "automatic_ventilation_state": {
-        "name": "Состояние автоматической вентиляции"
       },
       "battery": {
         "name": "Батарея"
@@ -1580,6 +1630,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Последняя очистка барабана"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "До очистки барабана (сушка)"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Последняя очистка барабана (сушка)"
       },
       "quick_wash": {
         "name": "Быстрая стирка",
@@ -1777,6 +1833,15 @@
       },
       "progress_percentage": {
         "name": "Прогресс в процентах"
+      },
+      "wash_progress_percentage": {
+        "name": "Прогресс стирки в процентах"
+      },
+      "dry_progress_percentage": {
+        "name": "Прогресс сушки в процентах"
+      },
+      "wash_remaining_minutes": {
+        "name": "Оставшееся время стирки"
       },
       "selfcheck_error": {
         "name": "Ошибка самопроверки"
@@ -2044,6 +2109,9 @@
       "installation_type": {
         "name": "Тип установки"
       },
+      "audio_codec": {
+        "name": "Аудиокодек"
+      },
       "micom_version": {
         "name": "Версия микроконтроллера"
       },
@@ -2082,6 +2150,72 @@
       },
       "oven_setpoint": {
         "name": "Уставка"
+      },
+      "air_sensing_interval": {
+        "name": "Интервал проверки качества воздуха"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "Качество воздуха PM10",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "Качество воздуха PM2.5",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "Качество воздуха PM1.0",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое",
+          "processing": "Обработка"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Последняя оценка качества воздуха",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Уровень качества воздуха",
+        "state": {
+          "good": "Хорошее",
+          "normal": "Нормальное",
+          "poor": "Плохое",
+          "very_poor": "Очень плохое"
+        }
+      },
+      "illuminance": {
+        "name": "Освещённость"
+      },
+      "channel": {
+        "name": "Канал"
+      },
+      "now_showing": {
+        "name": "Сейчас в эфире"
+      },
+      "cast_session": {
+        "name": "Сеанс трансляции"
+      },
+      "cast_item": {
+        "name": "Транслируемый элемент"
       }
     },
     "switch": {
@@ -2304,6 +2438,12 @@
       "indicator_light": {
         "name": "Световой индикатор"
       },
+      "always_on_display": {
+        "name": "Всегда включенный экран"
+      },
+      "bluetooth_discoverable": {
+        "name": "Видимость Bluetooth"
+      },
       "windfree": {
         "name": "Режим Wind-Free"
       },
@@ -2372,6 +2512,15 @@
       },
       "repeated_cleaning": {
         "name": "Повторная уборка"
+      },
+      "buzzer_sound": {
+        "name": "Звуковой сигнал"
+      },
+      "smart_ventilate": {
+        "name": "Умная вентиляция"
+      },
+      "hood_do_not_disturb": {
+        "name": "Не беспокоить"
       }
     },
     "time": {
@@ -2405,8 +2554,20 @@
       "sensing_skip_end": {
         "name": "Окончание пропуска измерений AI Purify"
       },
+      "always_on_display_start": {
+        "name": "Начало всегда включенного экрана"
+      },
+      "always_on_display_end": {
+        "name": "Окончание всегда включенного экрана"
+      },
       "sensing_skip_start": {
         "name": "Начало пропуска измерений AI Purify"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Начало режима «Не беспокоить»"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Окончание режима «Не беспокоить»"
       }
     },
     "water_heater": {
@@ -2426,6 +2587,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Пульт"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Уведомления"
       }
     }
   },
@@ -2590,7 +2761,8 @@
           "subdevices": "Подустройства",
           "cloud_courses": "Загруженные программы",
           "forget_learned_modes": "Забыть запомненные режимы",
-          "debug_write": "Отладка: запись в ресурс"
+          "debug_write": "Отладка: запись в ресурс",
+          "camera_casting": "Трансляция камер"
         }
       },
       "settings": {
@@ -2668,6 +2840,13 @@
         "menu_options": {
           "cloud_guided": "Подождать ещё",
           "cloud_finish": "Завершить"
+        }
+      },
+      "camera_casting": {
+        "title": "Трансляция камер с малой задержкой",
+        "description": "Когда вы транслируете камеру на этот телевизор, Home Assistant обычно отдаёт её через собственный поток, который телевизор буферизует около 20 секунд. Включите этот параметр, чтобы LocalThings запускал ffmpeg и отдавал камеру сам — задержка сократится до нескольких секунд.\n\nЭто добавляет две конечные точки на веб-сервер Home Assistant. Телевизор открывает поток по случайной одноразовой ссылке, так как не может войти в систему. Оставьте выключенным, если вы не транслируете камеры или задержка не важна: другим функциям телевизора это не нужно. Требуется ffmpeg и адрес Home Assistant, доступный с телевизора.",
+        "data": {
+          "camera_casting": "Транслировать камеры через LocalThings (ffmpeg)"
         }
       }
     },
@@ -2827,6 +3006,54 @@
     },
     "media_option_not_supported": {
       "message": "Устройство сейчас не предлагает этот вариант."
+    },
+    "unknown_remote_command": {
+      "message": "Неизвестная команда пульта: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Управление питанием недоступно для этого устройства"
+    },
+    "wake_on_lan_failed": {
+      "message": "Не удалось отправить Wake-on-LAN на телевизор: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Этот телевизор воспроизводит каналы, приложения, изображения, видеофайлы, потоки HLS, камеры и видео YouTube (channel, app, image, video, url или youtube), но не {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} — не номер канала; используйте цифры, например 5 или 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Укажите идентификатор приложения (например, kIciSQlYEM.plex) или название приложения, которое уже запускалось на телевизоре."
+    },
+    "search_unsupported": {
+      "message": "Это устройство не поддерживает поиск; это умеют только телевизоры Samsung."
+    },
+    "invalid_media_url": {
+      "message": "{url} не является ссылкой http(s) на изображение, видеофайл или поток HLS, а также ссылкой или идентификатором видео YouTube (потоки MJPEG и манифесты DASH .mpd не поддерживаются)."
+    },
+    "cast_unsupported": {
+      "message": "Это устройство не может показывать изображения или воспроизводить видео YouTube."
+    },
+    "notify_unsupported": {
+      "message": "Это устройство не может показывать уведомления."
+    },
+    "notify_message_empty": {
+      "message": "Текст уведомления пуст."
+    },
+    "settings_unsupported": {
+      "message": "У этого устройства нет меню настроек телевизора."
+    },
+    "apps_unsupported": {
+      "message": "Это устройство не хранит список приложений телевизора."
+    },
+    "invalid_ask": {
+      "message": "extra.ask должен быть true или false, а не «{value}»."
+    },
+    "camera_timeout": {
+      "message": "Камера {camera} слишком долго не отвечала."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Не удалось отправить Wake-on-LAN на телевизор: нет сетевого маршрута к {targets}."
     }
   },
   "selector": {
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "Длительность",
           "description": "Сколько секунд слушать, максимум 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Забыть изученные приложения телевизора",
+      "description": "Очищает список приложений, запускавшихся на телевизоре, которые выбор «Открыть приложение» и media_player.play_media предлагают по названию. Встроенные экраны остаются. Приложения изучаются заново по мере того, как телевизор их показывает, начиная с открытого сейчас.",
+      "fields": {
+        "device_id": {
+          "name": "Устройство",
+          "description": "Телевизор, изученные приложения которого нужно забыть."
+        }
+      }
+    },
+    "search": {
+      "name": "Поиск на телевизоре",
+      "description": "Открывает поиск на телевизоре Samsung: YouTube открывается на результатах, остальные сайты — в браузере телевизора.",
+      "fields": {
+        "device_id": {
+          "name": "Устройство",
+          "description": "Телевизор, на котором выполняется поиск."
+        },
+        "query": {
+          "name": "Запрос",
+          "description": "Что искать."
+        },
+        "site": {
+          "name": "Сайт",
+          "description": "Где искать. По умолчанию YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Открыть страницу настроек телевизора",
+      "description": "Открывает страницу меню настроек телевизора Samsung. Список взят из прошивки Samsung; не на каждом телевизоре есть все страницы, можно ввести и другой идентификатор страницы.",
+      "fields": {
+        "device_id": {
+          "name": "Устройство",
+          "description": "Телевизор, на котором откроется страница."
+        },
+        "page": {
+          "name": "Страница",
+          "description": "Страница настроек, которую нужно открыть."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "Установить таймер сна телевизора",
+      "description": "Выключает телевизор Samsung через указанное число минут; 0 отключает таймер сна. Телевизор не сообщает оставшееся время, проверьте его в меню (Общие, Диспетчер системы, Время, Таймер сна).",
+      "fields": {
+        "device_id": {
+          "name": "Устройство",
+          "description": "Телевизор, на котором устанавливается таймер сна."
+        },
+        "minutes": {
+          "name": "Минуты",
+          "description": "Минуты до выключения телевизора; 0 отключает таймер сна."
         }
       }
     }

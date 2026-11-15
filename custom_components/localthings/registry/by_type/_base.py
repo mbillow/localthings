@@ -23,6 +23,10 @@ class DeviceRegistry:
     # Write-settle window in seconds; None keeps the coordinator's default,
     # sized for boards that settle well after the ACK (washer course).
     write_settle_s: float | None = None
+    # An href that answers only while the board is fully on. A board that
+    # answers others but not this one is in network standby: it is polled
+    # as off, and never discovered from.
+    awake_href: str | None = None
 
 
 def unpolled(*groups: Iterable[Capability]) -> list[Capability]:
@@ -68,6 +72,19 @@ def _build(caps: list[Capability]) -> dict[str, list[Capability]]:
             )
 
     return out
+
+
+def replacing(base: Iterable[Capability], replacements: Iterable[Capability]) -> list[Capability]:
+    """`base` with every capability on a replacement's href swapped for the
+    replacement. A replacement whose href `base` doesn't bind is an error, so
+    a renamed base href can't leave both bound or the override silently idle."""
+    replacements = list(replacements)
+    base = list(base)
+    hrefs = {cap.href for cap in replacements}
+    missing = hrefs - {cap.href for cap in base}
+    if missing:
+        raise ValueError(f"replacing hrefs the base doesn't bind: {sorted(map(str, missing))}")
+    return [*(cap for cap in base if cap.href not in hrefs), *replacements]
 
 
 def exclude_when(cap: Capability, placeholder: Callable[[dict], bool]) -> Capability:

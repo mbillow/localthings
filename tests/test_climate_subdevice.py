@@ -12,6 +12,8 @@ subdevices.
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 from homeassistant.components.climate import HVACMode
 from homeassistant.core import HomeAssistant
@@ -104,3 +106,14 @@ async def test_subdevice_climate_writes_are_scoped_to_its_own_bound_entity(clima
     assert main._bound.href == "/mode/vs/0"
     assert sub1._bound.href == "/mode/vs/1"
     assert main._bound is not sub1._bound
+
+
+async def test_auto_clean_modes_are_mapped_and_gear_still_reported(climates, caplog):
+    """#844: CoolClean/DryClean fold into COOL/DRY; Gear has no known meaning
+    yet, so it keeps the unmapped-code warning."""
+    with caplog.at_level(logging.WARNING):
+        modes = climates[None].hvac_modes
+    assert {HVACMode.COOL, HVACMode.DRY} <= set(modes)
+    assert "'CoolClean'" not in caplog.text
+    assert "'DryClean'" not in caplog.text
+    assert "'Gear'" in caplog.text

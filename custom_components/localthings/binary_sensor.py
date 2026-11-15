@@ -23,7 +23,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, BinarySensorDesc)),
+        lambda b: isinstance(b.desc, BinarySensorDesc),
         lambda b: LocalThingsBinarySensor(coordinator, b),
     )
 

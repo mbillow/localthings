@@ -59,6 +59,14 @@ def _int_on(p) -> int:
     return 1 if p == "On" else 0
 
 
+_APD_FIELD = "x.com.samsung.networkaudio.autoPowerDown"
+HREF_AV_AUTO_POWER_DOWN = "/sec/networkaudio/av/autoPowerDown"
+
+
+def _has_av_auto_power_down(resources: dict) -> bool:
+    return type((resources.get(HREF_AV_AUTO_POWER_DOWN) or {}).get(_APD_FIELD)) is bool
+
+
 def _on_off(p) -> str:
     return "on" if p == "On" else "off"
 
@@ -80,6 +88,35 @@ MEDIA_SURFACE_COVERAGE: list[Capability] = [
         poll_tier="hot",
     ),
 ]
+
+
+HREF_AV_SOUNDSETTING = "/sec/networkaudio/av/soundsetting"
+
+
+def _has_av_setting(resources: dict, field: str) -> bool:
+    value = (resources.get(HREF_AV_SOUNDSETTING) or {}).get(field)
+    return type(value) is int and value in (0, 1)
+
+
+def _legacy_av_setting(rep: dict, resources: dict, legacy_field: str, field: str) -> bool:
+    """The older per-setting resource owns a setting only when the combined
+    resource has no valid field for it. Both forms need a populated rep: a
+    flat bar never serves a stub, and one that misses the combined resource
+    on its first read keeps the older binding until the next start, as any
+    short read does (registration.py)."""
+    return not _has_av_setting(resources, field) and legacy_field in rep
+
+
+def _has_rear_position(rep: dict, resources: dict) -> bool:
+    current = rep.get("x.com.samsung.networkaudio.currentRearPosition")
+    choices = rep.get("x.com.samsung.networkaudio.rearPositionList")
+    return (
+        isinstance(current, str)
+        and current.lower() != "none"
+        and isinstance(choices, list)
+        and current in choices
+    )
+
 
 # ------------------------------------------------------------------
 # Configuration
@@ -359,6 +396,12 @@ ACTIVE_VOICE_AMPLIFIER = Capability(
         SwitchDesc(
             key="active_voice_amplifier",
             field="x.com.samsung.networkaudio.activeVoiceAmplifier",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep,
+                resources,
+                "x.com.samsung.networkaudio.activeVoiceAmplifier",
+                "activevoiceamplifier",
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.activeVoiceAmplifier", _int_on),
@@ -373,9 +416,53 @@ SPACEFIT_SOUND = Capability(
         SwitchDesc(
             key="spacefit_sound",
             field="x.com.samsung.networkaudio.spacefitSound",
+            exists_fn=lambda rep, resources: _legacy_av_setting(
+                rep, resources, "x.com.samsung.networkaudio.spacefitSound", "spacefitsound"
+            ),
             value_fn=lambda v: v == 1,
             entity_category="config",
             write_fn=_write("x.com.samsung.networkaudio.spacefitSound", _int_on),
+        ),
+    ),
+)
+
+AV_SOUND_SETTING = Capability(
+    href=HREF_AV_SOUNDSETTING,
+    poll_tier="warm",
+    # HW-Q990H confirms these unprefixed fields; prefer them to legacy aliases.
+    entities=(
+        SwitchDesc(
+            key="active_voice_amplifier",
+            field="activevoiceamplifier",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "activevoiceamplifier"),
+            write_fn=_write("activevoiceamplifier", _int_on),
+        ),
+        SwitchDesc(
+            key="spacefit_sound",
+            field="spacefitsound",
+            value_fn=lambda v: v == 1,
+            entity_category="config",
+            exists_fn=lambda rep, resources: _has_av_setting(resources, "spacefitsound"),
+            write_fn=_write("spacefitsound", _int_on),
+        ),
+    ),
+)
+
+# isSupport is ignored, as for REAR_FAMILY: the current value being one of
+# the advertised options is the evidence (HW-Q990H; the S61B reports none).
+REAR_SPEAKER_POSITION = Capability(
+    href="/sec/networkaudio/surroundspeaker",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="rear_speaker_position",
+            field="x.com.samsung.networkaudio.currentRearPosition",
+            options_field="x.com.samsung.networkaudio.rearPositionList",
+            entity_category="config",
+            exists_fn=_has_rear_position,
+            write_fn=_write("x.com.samsung.networkaudio.currentRearPosition", str),
         ),
     ),
 )
@@ -388,10 +475,71 @@ AUTO_POWER_DOWN = Capability(
     entities=(
         SwitchDesc(
             key="auto_power_down",
-            field="x.com.samsung.networkaudio.autoPowerDown",
+            field=_APD_FIELD,
+            # Same precedence as the /av/ sound settings: the older href owns
+            # the switch only when the /av/ one carries no valid field.
+            exists_fn=lambda rep, resources: (
+                not _has_av_auto_power_down(resources) and _APD_FIELD in rep
+            ),
             value_fn=lambda v: bool(v),
             entity_category="config",
-            write_fn=_write("x.com.samsung.networkaudio.autoPowerDown", _is_on),
+            write_fn=_write(_APD_FIELD, _is_on),
+        ),
+    ),
+)
+
+# The HW-Q935GF (2025, #853) serves the setting under /av/ only.
+AUTO_POWER_DOWN_AV = Capability(
+    href=HREF_AV_AUTO_POWER_DOWN,
+    poll_tier="warm",
+    entities=(
+        SwitchDesc(
+            key="auto_power_down",
+            field=_APD_FIELD,
+            exists_fn=lambda rep, resources: _has_av_auto_power_down(resources),
+            value_fn=lambda v: bool(v),
+            entity_category="config",
+            write_fn=_write(_APD_FIELD, _is_on),
+        ),
+    ),
+)
+
+# Which remotes the bar answers (HW-Q935GF, #853). The write is guessed from
+# the rw interface and the /av/ sound settings' unprefixed fields; it needs
+# live confirmation.
+TV_REMOTE = Capability(
+    href="/sec/networkaudio/av/tvremote",
+    poll_tier="warm",
+    entities=(
+        SelectDesc(
+            key="tv_remote",
+            field="currentRemote",
+            options_field="supportedRemote",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                rep.get("currentRemote") in (rep.get("supportedRemote") or ())
+            ),
+            write_fn=_write("currentRemote"),
+        ),
+    ),
+)
+
+PLAYER_INFO = Capability(
+    href="/sec/networkaudio/av/playerinfo",
+    poll_tier="warm",
+    entities=(SensorDesc(key="audio_codec", field="codecinfo", entity_category="diagnostic"),),
+)
+
+IP_CONTROL = Capability(
+    href="/sec/networkaudio/ipcontrol/state",
+    poll_tier="cold",
+    entities=(
+        BinarySensorDesc(
+            key="ip_control",
+            field="value",
+            value_fn=bool,
+            entity_category="diagnostic",
+            exists_fn=lambda rep, resources: type(rep.get("value")) is bool,
         ),
     ),
 )
@@ -708,12 +856,24 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/lastConnections"),
     # Static "has a mic" flag.
     Capability(href="/sec/networkaudio/mic"),
-    # Rear-speaker steering (isSupport says whether the bar has it).
-    Capability(href="/sec/networkaudio/surroundspeaker"),
     # Static "has a VFD" flag.
     Capability(href="/sec/networkaudio/vfd"),
     # Relative volume steps, command-only.
     Capability(href="/sec/networkaudio/volumeUpDown"),
+    # Cloud, voice-assistant and log plumbing on the HW-Q935GF (#853), the
+    # same set the TVs carry (capabilities/tv.py).
+    Capability(href="/calmconnection/command"),
+    Capability(href="/capability/sec.calmConnectionCare/main/0"),
+    Capability(href="/capability/sec.diagnosticsInformation/main/0"),
+    Capability(href="/capability/sec.wifiConfiguration/main/0"),
+    Capability(href="/devicelog/connectioninfo"),
+    Capability(href="/devicelog/dump"),
+    Capability(href="/edgeclient/info/vs/0"),
+    Capability(href="/sec/networkaudio/av/logTrigger"),
+    Capability(href="/sec/networkaudio/av/remotecontrol"),
+    Capability(href="/sec/networkaudio/av/support"),
+    Capability(href="/sec/networkaudio/bixbyonboarding"),
+    Capability(href="/sec/networkaudio/bixbysettings"),
     # Multiroom grouping state and nearby speakers (HW-Q700C, #796).
     Capability(href="/sec/networkaudio/av/groupconf"),
     Capability(href="/sec/networkaudio/av/groupdiscovery"),
@@ -724,6 +884,4 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/networkaudio/infoLink"),
     Capability(href="/sec/networkaudio/sesInfo"),
     Capability(href="/sec/networkaudio/smartThingsHub"),
-    # Cloud-session self-healing timer.
-    Capability(href="/selfhealing/session"),
 ]

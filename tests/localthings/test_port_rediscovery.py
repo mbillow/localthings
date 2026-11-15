@@ -175,7 +175,7 @@ async def test_the_backoff_is_capped(hass: HomeAssistant, appliance, monkeypatch
 async def test_a_flat_board_off_for_hours_is_looked_up_every_minute(
     hass: HomeAssistant, appliance, monkeypatch
 ) -> None:
-    """A soundbar's port moves on every power-on, so after a night off the
+    """A flat board's port moves on every power-on, so after a night off the
     next lookup must not sit 30 minutes out: it would stay unavailable that
     long after being switched on."""
     appliance.live_port = None

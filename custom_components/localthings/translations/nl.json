@@ -94,9 +94,6 @@
       "paired_hood_power": {
         "name": "Gekoppelde afzuigkap actief"
       },
-      "periodic_air_sensing": {
-        "name": "Periodieke luchtmeting"
-      },
       "pouring": {
         "name": "Schenken"
       },
@@ -187,6 +184,12 @@
       "woofer_connection": {
         "name": "Woofer-verbinding"
       },
+      "bluetooth_speaker": {
+        "name": "Bluetooth-luidspreker"
+      },
+      "ip_control": {
+        "name": "IP-bediening"
+      },
       "lamp": {
         "name": "Lamp"
       },
@@ -245,6 +248,9 @@
       },
       "pair_bluetooth": {
         "name": "Bluetooth koppelen"
+      },
+      "screen_off": {
+        "name": "Scherm uit"
       }
     },
     "climate": {
@@ -304,6 +310,9 @@
       },
       "paired_hood_light": {
         "name": "Verlichting gekoppelde afzuigkap"
+      },
+      "drum_light": {
+        "name": "Trommellicht"
       }
     },
     "number": {
@@ -342,6 +351,9 @@
       },
       "sound_volume": {
         "name": "Geluidsvolume"
+      },
+      "speaker_volume": {
+        "name": "Luidsprekervolume"
       },
       "target_humidity": {
         "name": "Doelvochtigheid"
@@ -1215,7 +1227,12 @@
           "180": "3 uur",
           "240": "4 uur",
           "none": "Uit",
-          "cupboard": "Kastdroog"
+          "cupboard": "Kastdroog",
+          "damp": "Vochtig",
+          "less": "Minder",
+          "normal": "Normaal",
+          "more": "Meer",
+          "very": "Zeer"
         }
       },
       "zone_mode": {
@@ -1265,6 +1282,13 @@
           "smart": "Slim",
           "high": "Hoog",
           "low": "Laag"
+        }
+      },
+      "always_on_display_mode": {
+        "name": "Modus altijd-aan-scherm",
+        "state": {
+          "always": "Altijd",
+          "scheduled": "Gepland"
         }
       },
       "ventilation_mode": {
@@ -1360,6 +1384,14 @@
           "ita": "Italiaans"
         }
       },
+      "tv_remote": {
+        "name": "Tv-afstandsbediening",
+        "state": {
+          "tv_remote_all": "Alle afstandsbedieningen",
+          "tv_remote_off": "Uit",
+          "tv_remote_samsung": "Alleen Samsung-afstandsbedieningen"
+        }
+      },
       "equalizer": {
         "name": "Equalizer",
         "state": {
@@ -1388,6 +1420,27 @@
           "mute": "Gedempt",
           "voice": "Stem"
         }
+      },
+      "smart_ventilate_mode": {
+        "name": "Modus voor slim ventileren",
+        "state": {
+          "sensing": "Alleen detecteren",
+          "alarm": "Meldingen ontvangen",
+          "airpurify": "Stil ventileren"
+        }
+      },
+      "picture_mode": {
+        "name": "Beeldmodus"
+      },
+      "rear_speaker_position": {
+        "name": "Plaatsing achterluidsprekers",
+        "state": {
+          "front": "Voor",
+          "rear": "Achter"
+        }
+      },
+      "open_app": {
+        "name": "App openen"
       }
     },
     "sensor": {
@@ -1426,9 +1479,6 @@
       },
       "auto_ventilation_action": {
         "name": "Actie automatische ventilatie"
-      },
-      "automatic_ventilation_state": {
-        "name": "Status automatische ventilatie"
       },
       "battery": {
         "name": "Batterij"
@@ -1580,6 +1630,12 @@
       },
       "drum_clean_last_cleaned": {
         "name": "Trommel laatst gereinigd"
+      },
+      "combo_dry_clean_cycles_remaining": {
+        "name": "Trommelreiniging (drogen) over"
+      },
+      "combo_dry_clean_last_cleaned": {
+        "name": "Trommel laatst gereinigd (drogen)"
       },
       "quick_wash": {
         "name": "Snelwas",
@@ -1777,6 +1833,15 @@
       },
       "progress_percentage": {
         "name": "Voortgangspercentage"
+      },
+      "wash_progress_percentage": {
+        "name": "Voortgangspercentage wassen"
+      },
+      "dry_progress_percentage": {
+        "name": "Voortgangspercentage drogen"
+      },
+      "wash_remaining_minutes": {
+        "name": "Resterende wastijd"
       },
       "selfcheck_error": {
         "name": "Fout zelfcontrole"
@@ -2044,6 +2109,9 @@
       "installation_type": {
         "name": "Installatietype"
       },
+      "audio_codec": {
+        "name": "Audiocodec"
+      },
       "micom_version": {
         "name": "Micom-versie"
       },
@@ -2082,6 +2150,72 @@
       },
       "oven_setpoint": {
         "name": "Instelpunt"
+      },
+      "air_sensing_interval": {
+        "name": "Interval luchtmeting"
+      },
+      "range_hood_pm10_air_quality": {
+        "name": "PM10 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_pm25_air_quality": {
+        "name": "PM2.5 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_pm1_air_quality": {
+        "name": "PM1.0 luchtkwaliteit",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht",
+          "processing": "Bezig met verwerken"
+        }
+      },
+      "range_hood_last_air_sensing_level": {
+        "name": "Laatste luchtmeetniveau",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht"
+        }
+      },
+      "range_hood_clean_level": {
+        "name": "Reinigingsniveau",
+        "state": {
+          "good": "Goed",
+          "normal": "Normaal",
+          "poor": "Slecht",
+          "very_poor": "Zeer slecht"
+        }
+      },
+      "illuminance": {
+        "name": "Verlichtingssterkte"
+      },
+      "channel": {
+        "name": "Kanaal"
+      },
+      "now_showing": {
+        "name": "Speelt nu"
+      },
+      "cast_session": {
+        "name": "Cast-sessie"
+      },
+      "cast_item": {
+        "name": "Cast-item"
       }
     },
     "switch": {
@@ -2304,6 +2438,12 @@
       "indicator_light": {
         "name": "Indicatorlampje"
       },
+      "always_on_display": {
+        "name": "Altijd-aan-scherm"
+      },
+      "bluetooth_discoverable": {
+        "name": "Bluetooth zichtbaar"
+      },
       "windfree": {
         "name": "Wind-Free modus"
       },
@@ -2372,6 +2512,15 @@
       },
       "repeated_cleaning": {
         "name": "Reiniging herhalen"
+      },
+      "buzzer_sound": {
+        "name": "Zoemergeluid"
+      },
+      "smart_ventilate": {
+        "name": "Slim ventileren"
+      },
+      "hood_do_not_disturb": {
+        "name": "Niet storen"
       }
     },
     "time": {
@@ -2405,8 +2554,20 @@
       "sensing_skip_end": {
         "name": "Einde AI Purify meting overslaan"
       },
+      "always_on_display_start": {
+        "name": "Start altijd-aan-scherm"
+      },
+      "always_on_display_end": {
+        "name": "Einde altijd-aan-scherm"
+      },
       "sensing_skip_start": {
         "name": "Start AI Purify meting overslaan"
+      },
+      "hood_do_not_disturb_start": {
+        "name": "Begin niet storen"
+      },
+      "hood_do_not_disturb_end": {
+        "name": "Einde niet storen"
       }
     },
     "water_heater": {
@@ -2426,6 +2587,16 @@
             }
           }
         }
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Afstandsbediening"
+      }
+    },
+    "notify": {
+      "notification": {
+        "name": "Meldingen"
       }
     }
   },
@@ -2590,7 +2761,8 @@
           "subdevices": "Subapparaten",
           "cloud_courses": "Gedownloade programma's",
           "forget_learned_modes": "Onthouden modi vergeten",
-          "debug_write": "Foutopsporing: naar een resource schrijven"
+          "debug_write": "Foutopsporing: naar een resource schrijven",
+          "camera_casting": "Camera casten"
         }
       },
       "settings": {
@@ -2668,6 +2840,13 @@
         "menu_options": {
           "cloud_guided": "Opnieuw wachten",
           "cloud_finish": "Voltooien"
+        }
+      },
+      "camera_casting": {
+        "title": "Camera casten met lage vertraging",
+        "description": "Als je een camera naar deze tv cast, levert Home Assistant die normaal via een eigen stream, die de tv ongeveer 20 seconden buffert. Zet dit aan om LocalThings ffmpeg te laten draaien en de camera zelf te laten leveren; de vertraging daalt dan tot enkele seconden.\n\nDit voegt twee endpoints toe aan de webserver van Home Assistant. De tv opent de stream met een willekeurige eenmalige link, omdat hij niet kan inloggen. Laat het uit tenzij je camera's cast en de vertraging ertoe doet: niets anders op de tv heeft het nodig. Vereist ffmpeg en een Home Assistant-URL die de tv kan bereiken.",
+        "data": {
+          "camera_casting": "Camera's casten via LocalThings (ffmpeg)"
         }
       }
     },
@@ -2827,6 +3006,54 @@
     },
     "media_option_not_supported": {
       "message": "Het apparaat biedt deze optie nu niet aan."
+    },
+    "unknown_remote_command": {
+      "message": "Onbekend afstandsbedieningscommando: {command}"
+    },
+    "remote_power_unavailable": {
+      "message": "Aan/uit-bediening is niet beschikbaar voor dit apparaat"
+    },
+    "wake_on_lan_failed": {
+      "message": "Kan Wake-on-LAN niet naar de tv sturen: {error}"
+    },
+    "unsupported_media_type": {
+      "message": "Deze tv kan kanalen, apps, afbeeldingen, videobestanden, HLS-streams, camera's en YouTube-video's afspelen (channel, app, image, video, url of youtube), niet {media_type}."
+    },
+    "invalid_channel_number": {
+      "message": "{channel} is geen kanaalnummer; gebruik cijfers zoals 5 of 5-1."
+    },
+    "invalid_app_id": {
+      "message": "Geef de id van de app (bijv. kIciSQlYEM.plex) of de naam van een app die de tv al heeft gedraaid."
+    },
+    "search_unsupported": {
+      "message": "Dit apparaat kan niet zoeken; alleen Samsung-tv's kunnen dat."
+    },
+    "invalid_media_url": {
+      "message": "{url} is geen http(s)-link naar een afbeelding, videobestand of HLS-stream en geen YouTube-link of video-id (MJPEG-streams en DASH-manifesten (.mpd) worden niet ondersteund)."
+    },
+    "cast_unsupported": {
+      "message": "Dit apparaat kan geen afbeeldingen tonen of YouTube-video's afspelen."
+    },
+    "notify_unsupported": {
+      "message": "Dit apparaat kan geen meldingen tonen."
+    },
+    "notify_message_empty": {
+      "message": "Het meldingsbericht is leeg."
+    },
+    "settings_unsupported": {
+      "message": "Dit apparaat heeft geen bedienbaar tv-instellingenmenu."
+    },
+    "apps_unsupported": {
+      "message": "Dit apparaat houdt geen lijst met tv-apps bij."
+    },
+    "invalid_ask": {
+      "message": "extra.ask moet true of false zijn, niet {value}."
+    },
+    "camera_timeout": {
+      "message": "Camera {camera} deed er te lang over om te antwoorden."
+    },
+    "wake_on_lan_no_route": {
+      "message": "Kan Wake-on-LAN niet naar de tv sturen: geen netwerkroute naar {targets}."
     }
   },
   "selector": {
@@ -2928,6 +3155,62 @@
         "duration": {
           "name": "Duur",
           "description": "Hoeveel seconden er geluisterd wordt, tot 120."
+        }
+      }
+    },
+    "forget_known_apps": {
+      "name": "Geleerde tv-apps vergeten",
+      "description": "Wist de apps die op een tv zijn gezien en die de selectie App openen en media_player.play_media op naam aanbieden. De ingebouwde schermen blijven. Apps worden opnieuw geleerd zodra de tv ze toont, te beginnen met wat nu open is.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarvan de geleerde apps worden vergeten."
+        }
+      }
+    },
+    "search": {
+      "name": "Zoeken op de tv",
+      "description": "Opent een zoekopdracht op een Samsung-tv: YouTube opent met de resultaten; de andere sites openen in de browser van de tv.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop wordt gezocht."
+        },
+        "query": {
+          "name": "Zoekterm",
+          "description": "Waarnaar wordt gezocht."
+        },
+        "site": {
+          "name": "Site",
+          "description": "Waar wordt gezocht. Standaard YouTube."
+        }
+      }
+    },
+    "open_settings": {
+      "name": "Een instellingenpagina van de tv openen",
+      "description": "Opent een pagina van het instellingenmenu van een Samsung-tv. De lijst komt uit de firmware van Samsung; niet elke tv heeft elke pagina, en een ander pagina-id kan worden ingevoerd.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop de pagina wordt geopend."
+        },
+        "page": {
+          "name": "Pagina",
+          "description": "De instellingenpagina die wordt geopend."
+        }
+      }
+    },
+    "set_sleep_timer": {
+      "name": "De slaaptimer van de tv instellen",
+      "description": "Zet een Samsung-tv na dit aantal minuten uit; 0 zet de slaaptimer uit. De tv meldt de resterende tijd niet, controleer die in het menu (Algemeen, Systeembeheer, Tijd, Slaaptimer).",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "De tv waarop de slaaptimer wordt ingesteld."
+        },
+        "minutes": {
+          "name": "Minuten",
+          "description": "Minuten tot de tv uitgaat; 0 zet de slaaptimer uit."
         }
       }
     }

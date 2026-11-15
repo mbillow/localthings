@@ -39,6 +39,9 @@ class _FakeCoordinator:
     def resource(self, href):
         return self.last_resources.get(href, {})
 
+    def capability_canonical(self, subdevice):
+        return self.canonical_resources(subdevice)
+
     def canonical_resources(self, subdevice):
         # Every bound entity in this test uses the default MAIN
         # subdevice, so the canonical view is just the raw snapshot

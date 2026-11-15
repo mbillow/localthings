@@ -48,7 +48,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, SensorDesc)),
+        lambda b: isinstance(b.desc, SensorDesc),
         lambda b: LocalThingsSensor(coordinator, b),
         extra=(
             LocalThingsConnectionModeSensor(coordinator),

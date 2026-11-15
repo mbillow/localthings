@@ -27,7 +27,7 @@ from homeassistant.util.percentage import (
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .entity import LocalThingsEntity, _is_included
+from .entity import LocalThingsEntity, async_add_bound_entities
 from .registry.capabilities.air_purifier import AIRFLOW_LEVEL_FAN, HREF_AIRFLOW
 from .registry.capabilities.air_purifier import HREF_MODE as AIR_PURIFIER_FAN_HREF
 from .registry.capabilities.air_purifier import (
@@ -39,6 +39,7 @@ from .registry.capabilities.cooktop import (
     LEGACY_HOOD_POWER,
     paired_hood_running,
 )
+from .registry.discovery import BoundEntity
 from .registry.entities import FanDesc
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,19 +65,19 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: LocalThingsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities = []
-    for bound in coordinator.bound:
-        if not (isinstance(bound.desc, FanDesc) and _is_included(bound, coordinator)):
-            continue
+
+    def _fan(bound: BoundEntity) -> FanEntity:
         if bound.capability is LEGACY_HOOD_POWER:
-            entities.append(LocalThingsPairedHoodFan(coordinator, bound))
-        elif bound.href in (AIR_PURIFIER_FAN_HREF, AIR_PURIFIER_WIND_STRENGTH_HREF):
-            entities.append(LocalThingsAirPurifierFan(coordinator, bound))
-        elif bound.href == HREF_AIRFLOW or bound.capability is AIRFLOW_LEVEL_FAN:
-            entities.append(LocalThingsAirflowFan(coordinator, bound))
-        else:
-            entities.append(LocalThingsRangeHoodFan(coordinator, bound))
-    async_add_entities(entities)
+            return LocalThingsPairedHoodFan(coordinator, bound)
+        if bound.href in (AIR_PURIFIER_FAN_HREF, AIR_PURIFIER_WIND_STRENGTH_HREF):
+            return LocalThingsAirPurifierFan(coordinator, bound)
+        if bound.href == HREF_AIRFLOW or bound.capability is AIRFLOW_LEVEL_FAN:
+            return LocalThingsAirflowFan(coordinator, bound)
+        return LocalThingsRangeHoodFan(coordinator, bound)
+
+    async_add_bound_entities(
+        entry, coordinator, async_add_entities, lambda b: isinstance(b.desc, FanDesc), _fan
+    )
 
 
 class LocalThingsRangeHoodFan(LocalThingsEntity, FanEntity):

@@ -1,13 +1,27 @@
 """Refrigerator device registry."""
 
 from ..capabilities import common, dishwasher, fridge, ignored, water_purifier
+from ..capability import Capability
 from ._base import DeviceRegistry, _build
+
+# The Family Hub screen's own resources (issue #823's 25K_REF_LCD_FHUB10.0),
+# none of them refrigeration state.
+_FAMILY_HUB_SCREEN = (
+    # Display accessibility (voice guide, grayscale, color inversion, font
+    # size) in the nested {value, supportedValues} shape the washer panel
+    # reports too, with no write contract seen on either.
+    Capability(href="/accessibility/vs/0"),
+    # The photo frame's content list: file ids, MIME types and expiry
+    # times of the images the screen shows.
+    Capability(href="/udo/contents/provider/vs/0"),
+)
 
 REGISTRY = DeviceRegistry(
     name="refrigerator",
     capabilities=_build(
         [
             *ignored.IGNORED,
+            *_FAMILY_HUB_SCREEN,
             *common.UNIVERSAL,
             *common.POWER,
             fridge.STATUS_LOCK,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from contextlib import nullcontext
 from typing import cast
 
 from homeassistant.components.select import SelectEntity
@@ -27,7 +28,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, SelectDesc)),
+        lambda b: isinstance(b.desc, SelectDesc),
         lambda b: LocalThingsSelect(coordinator, b),
     )
 
@@ -136,4 +137,9 @@ class LocalThingsSelect(LocalThingsEntity, SelectEntity):
             (o for o in self._raw_options() if self._display_option(o) == option),
             option,
         )
-        await self.coordinator.async_send_command(self._bound, raw)
+        async with (
+            self.coordinator.playback.async_change()
+            if cast(SelectDesc, self._bound.desc).affects_playback
+            else nullcontext()
+        ):
+            await self.coordinator.async_send_command(self._bound, raw)

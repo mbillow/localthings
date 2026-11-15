@@ -15,7 +15,7 @@ REGISTRY = DeviceRegistry(
     capabilities=_build(
         [
             *ignored.IGNORED,
-            range_hood.HOOD_ALARMS,
+            common.ALARMS,
             common.ENERGY_METER,
             common.FIRMWARE_UPDATE,
             # registry.PROBE_HREFS is global, so every registry has to cover

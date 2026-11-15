@@ -27,7 +27,7 @@ async def async_setup_entry(
         entry,
         coordinator,
         async_add_entities,
-        (b for b in coordinator.bound if isinstance(b.desc, NumberDesc)),
+        lambda b: isinstance(b.desc, NumberDesc),
         lambda b: (
             LocalThingsPairedHoodTimer(coordinator, b)
             if b.capability is LEGACY_HOOD_MODE
