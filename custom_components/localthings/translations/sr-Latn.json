@@ -656,7 +656,13 @@
           "7f": "Vremensko sušenje",
           "98": "Brzo sušenje 35",
           "eb": "Osetljivo",
-          "b6": "Sintetika"
+          "b6": "Sintetika",
+          "94": "Peškiri",
+          "a1": "Uklanjanje nabora",
+          "ad": "Košulja/bluza",
+          "ae": "Donji veš",
+          "af": "Džemper",
+          "b0": "Dodaci"
         }
       },
       "dryer_cycle_table_03": {
@@ -1048,6 +1054,17 @@
           "high": "Visoka",
           "extra_low": "Veoma niska",
           "extra_high": "Veoma visoka"
+        }
+      },
+      "dryer_temperature": {
+        "name": "Temperatura",
+        "state": {
+          "none": "Nema",
+          "extra_low": "Veoma niska",
+          "low": "Niska",
+          "medium_low": "Srednje niska",
+          "medium": "Srednja",
+          "high": "Visoka"
         }
       },
       "wash_temperature": {

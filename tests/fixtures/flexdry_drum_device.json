@@ -1,0 +1,140 @@
+{
+  "seeds_note": "Sanitized from the current Home Assistant LocalThings diagnostics. Operational, course, and washer fields are retained; device-specific identifiers and unrelated metadata are redacted or omitted.",
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": []
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.options": [
+          "EnergyKW_396",
+          "TimeSync_NotSupported",
+          "NoCheck_SC",
+          "QRatorInfo_DM9900M/REDACTED",
+          "Course_01",
+          "DeviceType_0148",
+          "RackDry_Disable",
+          "DrytimeValue_0",
+          "UsagesDB_ok",
+          "LaundryOutTime_0",
+          "MixedLoadBell_Disable",
+          "EnergyLevelSet_05040504040202020503030401",
+          "MixedLoadBellSet_0303030303FFFFFFFFFFFFFF",
+          "SeamlessControl_Disable",
+          "KidsLockBypass_On",
+          "DetergentOnce_0",
+          "DetergentLeft_0",
+          "DetergentBase_0",
+          "DetergentAlarm_Off",
+          "AvailableDelayTime_60",
+          "DetergentType_0",
+          "DetergentTotal_0",
+          "LaundryPlannerUserSetTime_0",
+          "ProgressTimeSet_B20D5CB400B4",
+          "WrinklePreventRunning_Off"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "3018410D33EE0009C8520D33EE000948520D33EE000A58520D33EE000A28102D33EE000278520D000E000A18520D000E13E9B8520D520E0009E8410D33EE000A38410D308E000A4853ED000E33EA08000D000E13E"
+        ]
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.description": "TP6X_DRYER_DRUM",
+        "x.com.samsung.da.deviceSubType": "Dual_Dry",
+        "x.com.samsung.da.manufacturer": "Samsung Electronics",
+        "x.com.samsung.da.modelNum": "TP6X_DM9900M"
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.delayEndTime": "00:00:00",
+        "x.com.samsung.da.progress": "Drying",
+        "x.com.samsung.da.progressPercentage": 51,
+        "x.com.samsung.da.remainingTime": "00:47:00",
+        "x.com.samsung.da.state": "Run",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Drying",
+          "Cooling",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "On"
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": false
+      }
+    },
+    {
+      "href": "/washer/vs/0",
+      "rep": {
+        "x.com.samsung.da.dryLevel": "Very",
+        "x.com.samsung.da.dryTime": "00:00:00",
+        "x.com.samsung.da.dryerType": "Electricity",
+        "x.com.samsung.da.supportedDryLevel": [
+          "None",
+          "Damp",
+          "Less",
+          "Normal",
+          "More",
+          "Very"
+        ],
+        "x.com.samsung.da.supportedDryTime": [
+          "00:00:00",
+          "00:20:00",
+          "00:30:00",
+          "00:40:00",
+          "00:50:00",
+          "01:00:00"
+        ],
+        "x.com.samsung.da.supportedWaterTemperature": [
+          "None",
+          "ExtraLow",
+          "Low",
+          "MediumLow",
+          "Medium",
+          "High"
+        ],
+        "x.com.samsung.da.waterTemperature": "Medium",
+        "x.com.samsung.da.wrinklePrevent": "Off"
+      }
+    }
+  ]
+}
