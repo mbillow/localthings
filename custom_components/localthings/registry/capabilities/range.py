@@ -367,6 +367,7 @@ COOKTOP_MONITORING = Capability(
             state_class="measurement",
             rep_fn=_active_burners,
             exists_fn=_mask_decoded,
+            supersedes=(("sensor", "cooktop_monitoring"),),
         ),
         *(
             BinarySensorDesc(
