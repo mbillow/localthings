@@ -2628,6 +2628,9 @@
       },
       "robot_lighting": {
         "name": "Osvetljenje"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3172,6 +3175,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Slanje Wake-on-LAN televizoru nije uspelo: nema mrežne rute do {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive nije dostupan za izabrani ciklus."
     }
   },
   "selector": {

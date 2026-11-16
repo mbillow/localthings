@@ -2628,6 +2628,9 @@
       },
       "robot_lighting": {
         "name": "Beleuchtung"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3172,6 +3175,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Wake-on-LAN konnte nicht gesendet werden: keine Netzwerkroute zu {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive ist beim ausgew?hlten Programm nicht verf?gbar."
     }
   },
   "selector": {

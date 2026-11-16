@@ -2628,6 +2628,9 @@
       },
       "robot_lighting": {
         "name": "조명"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3172,6 +3175,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "TV에 Wake-on-LAN을 보낼 수 없습니다: {targets}(으)로 가는 네트워크 경로가 없습니다."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "??? ????? QuickDrive? ??? ? ????."
     }
   },
   "selector": {

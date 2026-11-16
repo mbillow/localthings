@@ -2628,6 +2628,9 @@
       },
       "robot_lighting": {
         "name": "Verlichting"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3172,6 +3175,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Kan Wake-on-LAN niet naar de tv sturen: geen netwerkroute naar {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive is niet beschikbaar voor het geselecteerde programma."
     }
   },
   "selector": {
