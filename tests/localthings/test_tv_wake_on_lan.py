@@ -11,6 +11,7 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.components import network
 from homeassistant.components.media_player import MediaPlayerEntityFeature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -87,6 +88,69 @@ async def test_targets_fall_back_to_the_limited_broadcast(hass: HomeAssistant) -
         "homeassistant.components.network.async_get_ipv4_broadcast_addresses",
         side_effect=RuntimeError("no network"),
     ):
+        assert await wol.async_targets(hass, "192.0.2.103") == [
+            "255.255.255.255",
+            "192.0.2.103",
+        ]
+
+
+async def test_targets_include_the_default_adapter_subnet_broadcast(hass: HomeAssistant) -> None:
+    """HA's real helper omits the subnet broadcast with only the default adapter enabled."""
+    adapters = [
+        {
+            "enabled": True,
+            "default": True,
+            "ipv4": [{"address": "192.0.2.10", "network_prefix": 24}],
+        }
+    ]
+    with patch.object(network, "async_get_adapters", AsyncMock(return_value=adapters)):
+        assert await wol.async_targets(hass, "192.0.2.103") == [
+            "192.0.2.255",
+            "255.255.255.255",
+            "192.0.2.103",
+        ]
+
+
+async def test_targets_deduplicate_enabled_subnets_and_skip_disabled_adapters(
+    hass: HomeAssistant,
+) -> None:
+    adapters = [
+        {
+            "enabled": True,
+            "default": True,
+            "ipv4": [
+                {"address": "192.0.2.10", "network_prefix": 24},
+                {"address": "192.0.2.11", "network_prefix": 24},
+            ],
+        },
+        {
+            "enabled": False,
+            "default": False,
+            "ipv4": [{"address": "198.51.100.10", "network_prefix": 24}],
+        },
+    ]
+    with patch.object(network, "async_get_adapters", AsyncMock(return_value=adapters)):
+        assert await wol.async_targets(hass, "192.0.2.103") == [
+            "192.0.2.255",
+            "255.255.255.255",
+            "192.0.2.103",
+        ]
+
+
+@pytest.mark.parametrize(
+    ("address", "prefix"), [("127.0.0.1", 8), ("192.0.2.10", 31), ("192.0.2.10", 32)]
+)
+async def test_targets_do_not_add_subnet_broadcasts_for_loopback_or_point_to_point(
+    hass: HomeAssistant, address: str, prefix: int
+) -> None:
+    adapters = [
+        {
+            "enabled": True,
+            "default": True,
+            "ipv4": [{"address": address, "network_prefix": prefix}],
+        }
+    ]
+    with patch.object(network, "async_get_adapters", AsyncMock(return_value=adapters)):
         assert await wol.async_targets(hass, "192.0.2.103") == [
             "255.255.255.255",
             "192.0.2.103",
