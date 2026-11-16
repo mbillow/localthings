@@ -31,6 +31,7 @@ from .common import (
     has_sensor_type,
     normalize_temp_unit,
 )
+from .ehs import OUTDOOR_TEMPERATURE as _EHS_OUTDOOR_TEMPERATURE
 from .laundry import option_write
 
 
@@ -1736,22 +1737,16 @@ WINDSLEEP = Capability(
     ),
 )
 
-# Long-wind reach option on system-AC indoor units (AIM-H04N, issue #789).
-WINDLONG = Capability(
-    href="/modeoption/windlong/vs/0",
-    poll_tier="warm",
-    entities=(
-        SwitchDesc(
-            key="windlong",
-            field="x.com.samsung.da.windlong",
-            icon="mdi:weather-windy",
-            entity_category="config",
-            value_fn=lambda v: v == "On",
-            write_fn=lambda p, rep, href=None: (
-                ["modeoption", "windlong", "vs", "0"],
-                {"x.com.samsung.da.windlong": "On" if p == "On" else "Off"},
-            ),
-        ),
+# Outdoor-unit temperature on system-AC indoor subdevices (AIM-H04N, #789).
+# Every indoor subdevice reports the same outdoor-unit reading, so a multi-room
+# kit surfaces one identical outdoor_temperature sensor per room. Keep the
+# copies diagnostic and disabled by default so the duplicates don't clutter the
+# dashboard; a user can enable one to graph it.
+OUTDOOR_TEMPERATURE = replace(
+    _EHS_OUTDOOR_TEMPERATURE,
+    entities=tuple(
+        replace(e, entity_category="diagnostic", enabled_default=False)
+        for e in _EHS_OUTDOOR_TEMPERATURE.entities
     ),
 )
 
@@ -1979,9 +1974,12 @@ _AC_IGNORED = [
     # populates it.
     "/auxiliaryheater/vs/0",
     # System-AC per-indoor-subdevice records (AIM-H04N): the subdevice identity
-    # (read by registry.subdevices) and an empty action endpoint (#789).
+    # (read by registry.subdevices), an empty action endpoint, and the windlong
+    # mode option. The AIM-H04N indoor subdevices advertise no /modeoption/*
+    # resource at all, so windlong can't be verified or exposed yet (#789).
     "/subdevice/vs/0",
     "/actions/vs/0",
+    "/modeoption/windlong/vs/0",
 ]
 
 # Built as bare no-entity caps; folded into the AC registry (not global).

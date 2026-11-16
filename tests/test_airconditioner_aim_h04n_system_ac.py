@@ -34,14 +34,12 @@ from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.capabilities.airconditioner import (
     ENERGY_METER_GENERIC,
     ENERGY_METER_LEGACY,
-    WINDLONG,
     _climate_write,
     _declares_plain_wh,
     _temperature_step,
     _temps_indoor_item,
 )
 from custom_components.localthings.registry.discovery import discover
-from custom_components.localthings.registry.entities import SwitchDesc
 
 FIXTURE = (
     Path(__file__).resolve().parent / "fixtures" / "airconditioner_aim_h04n_system_ac_device.json"
@@ -175,35 +173,3 @@ def test_wh_scale_corrects_the_hundredfold_underread():
     legacy = next(e for e in ENERGY_METER_LEGACY.entities if e.key == "energy_kwh")
     assert generic.value_fn("1771403.0") == 1771.4
     assert legacy.value_fn("1771403.0") == 17.71
-
-
-# -- windlong mode option --------------------------------------------------
-
-
-def test_windlong_reads_and_writes_resource():
-    """The long-wind reach option (issue #789) exposes an on/off switch targeting
-    /modeoption/windlong/vs/0."""
-    resources = {
-        "/modeoption/windlong/vs/0": {
-            "rt": ["x.com.samsung.da.modeoption.windlong"],
-            "if": ["oic.if.a"],
-            "x.com.samsung.da.windlong": "Off",
-            "x.com.samsung.da.displaycondition": "Disable",
-        }
-    }
-    reg = resolve(resources, device_types=("oic.d.airconditioner",))
-    assert reg is not None
-    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
-    state = flatten(bound, resources)
-    assert state.get("windlong") is False
-
-    entity_desc = WINDLONG.entities[0]
-    assert isinstance(entity_desc, SwitchDesc) and entity_desc.write_fn is not None
-    assert entity_desc.write_fn("On", resources["/modeoption/windlong/vs/0"]) == (
-        ["modeoption", "windlong", "vs", "0"],
-        {"x.com.samsung.da.windlong": "On"},
-    )
-    assert entity_desc.write_fn("Off", resources["/modeoption/windlong/vs/0"]) == (
-        ["modeoption", "windlong", "vs", "0"],
-        {"x.com.samsung.da.windlong": "Off"},
-    )
