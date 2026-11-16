@@ -1910,7 +1910,7 @@
         "name": "탐침 온도계 현재 온도"
       },
       "progress": {
-        "name": "진행률",
+        "name": "진행 단계",
         "state": {
           "idle": "대기",
           "delaywash": "예약 시작",

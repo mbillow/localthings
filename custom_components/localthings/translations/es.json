@@ -2358,7 +2358,7 @@
         "name": "Estado del temporizador de apagado de la campana emparejada"
       },
       "power_energy_kwh": {
-        "name": "Energía"
+        "name": "Energía consumida"
       },
       "power_watts": {
         "name": "Potencia"

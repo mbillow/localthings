@@ -1057,7 +1057,7 @@
         }
       },
       "wash_temperature": {
-        "name": "Temperatura",
+        "name": "Temperatura di lavaggio",
         "state": {
           "none": "Nessuna",
           "cold": "Freddo",
@@ -1895,7 +1895,7 @@
         "name": "Stato timer di spegnimento cappa abbinata"
       },
       "power_energy_kwh": {
-        "name": "Energia"
+        "name": "Energia consumata"
       },
       "power_watts": {
         "name": "Potenza"
