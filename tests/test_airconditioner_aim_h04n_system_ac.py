@@ -85,6 +85,15 @@ def test_current_temperature_bound_from_indoor_vendor():
     assert state.get("current_temperature_c") == 20.7
 
 
+def test_outdoor_temperature_bound_from_outside_vendor():
+    """outdoor_temperature comes from /temperatures/outside/vs/0 on each indoor subdevice."""
+    resources = _resources()
+    reg = _registry(resources)
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    state = flatten(bound, resources)
+    assert state.get("outdoor_temperature") == 10.4
+
+
 def test_temps_indoor_item_returns_flat_rep():
     rep = {
         "x.com.samsung.da.current": 20.7,

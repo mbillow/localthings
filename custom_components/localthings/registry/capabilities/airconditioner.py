@@ -34,6 +34,7 @@ from .common import (
     int_or_none,
     normalize_temp_unit,
 )
+from .ehs import OUTDOOR_TEMPERATURE as _EHS_OUTDOOR_TEMPERATURE
 from .laundry import option_write
 
 
@@ -1856,6 +1857,19 @@ WINDSLEEP = Capability(
     ),
 )
 
+# Outdoor-unit temperature on system-AC indoor subdevices (AIM-H04N, #789).
+# Every indoor subdevice reports the same outdoor-unit reading, so a multi-room
+# kit surfaces one identical outdoor_temperature sensor per room. Keep the
+# copies diagnostic and disabled by default so the duplicates don't clutter the
+# dashboard; a user can enable one to graph it.
+OUTDOOR_TEMPERATURE = replace(
+    _EHS_OUTDOOR_TEMPERATURE,
+    entities=tuple(
+        replace(e, entity_category="diagnostic", enabled_default=False)
+        for e in _EHS_OUTDOOR_TEMPERATURE.entities
+    ),
+)
+
 # /sensors/vs/0 items[] carry live air-quality readings. CleanLevel is
 # corroborated as numeric by a top-level x.com.samsung.da.cleanLevel scalar,
 # so it's a measurement. Dust/FineDust/SuperFineDust are PM10/PM2.5/PM1 in
@@ -2080,12 +2094,11 @@ _AC_IGNORED = [
     # populates it.
     "/auxiliaryheater/vs/0",
     # System-AC per-indoor-subdevice records (AIM-H04N): the subdevice identity
-    # (read by registry.subdevices), an empty action endpoint, the outdoor-unit
-    # temperature, and the windlong mode option -- none a user entity yet. The
-    # outdoor temp is a candidate follow-up sensor (#789).
+    # (read by registry.subdevices), an empty action endpoint, and the windlong
+    # mode option. The AIM-H04N indoor subdevices advertise no /modeoption/*
+    # resource at all, so windlong can't be verified or exposed yet (#789).
     "/subdevice/vs/0",
     "/actions/vs/0",
-    "/temperatures/outside/vs/0",
     "/modeoption/windlong/vs/0",
 ]
 
