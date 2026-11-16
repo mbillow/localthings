@@ -2268,3 +2268,25 @@ def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac():
         f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
         f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
     )
+
+
+def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac_kit():
+    """The whole AIM-H04N kit (#789): the genuine diagnostics capture, master
+    plus five UUID-prefixed indoor subdevices enumerated from subdeviceIdList
+    (Pattern B). Unlike the single-subdevice fixture above, this runs the full
+    subdevice-aware pipeline, so the golden carries every sibling's keys under a
+    `subdevice_<uuid>_` prefix. The master (the Wi-Fi kit itself) surfaces no
+    entities of its own -- its /temperatures/indoor is the Hide placeholder and
+    it has no mode/energy -- so there are no unprefixed keys, which is correct
+    for a hub that only fronts the indoor units. Every subdevice carries its own
+    `outdoor_temperature`: all five report the same outdoor-unit reading, which
+    is why that sensor is diagnostic + disabled by default (asserted in
+    test_airconditioner_aim_h04n_system_ac.py)."""
+    name = "airconditioner_aim_h04n_system_ac_kit"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.airconditioner"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )

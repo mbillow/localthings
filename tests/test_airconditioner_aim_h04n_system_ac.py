@@ -32,6 +32,7 @@ from custom_components.localthings.registry.adapter import flatten
 from custom_components.localthings.registry.batch import parse_device0_batch
 from custom_components.localthings.registry.by_type import resolve
 from custom_components.localthings.registry.capabilities.airconditioner import (
+    _AC_IGNORED,
     ENERGY_METER_GENERIC,
     ENERGY_METER_LEGACY,
     _climate_write,
@@ -40,10 +41,16 @@ from custom_components.localthings.registry.capabilities.airconditioner import (
     _temps_indoor_item,
 )
 from custom_components.localthings.registry.discovery import discover
+from custom_components.localthings.registry.subdevices import canonical_view
 
 FIXTURE = (
     Path(__file__).resolve().parent / "fixtures" / "airconditioner_aim_h04n_system_ac_device.json"
 )
+
+# The whole-kit capture: the master Wi-Fi kit plus its five UUID-prefixed indoor
+# subdevices (the single fixture above is one indoor subdevice on its own).
+KIT = "airconditioner_aim_h04n_system_ac_kit"
+_KIT_FIXTURE = Path(__file__).resolve().parent / "fixtures" / f"{KIT}_device.json"
 
 
 def _resources():
@@ -173,3 +180,118 @@ def test_wh_scale_corrects_the_hundredfold_underread():
     legacy = next(e for e in ENERGY_METER_LEGACY.entities if e.key == "energy_kwh")
     assert generic.value_fn("1771403.0") == 1771.4
     assert legacy.value_fn("1771403.0") == 17.71
+
+
+# -- whole kit: five indoor subdevices behind one Wi-Fi kit -----------------
+#
+# The genuine diagnostics capture (tests/fixtures/airconditioner_aim_h04n_system_
+# ac_kit_device.json). The master is the AIM-H04N Wi-Fi kit itself; the five
+# indoor units are UUID-prefixed subdevices enumerated from the master's
+# subdeviceIdList (Pattern B). This exercises the real subdevice-aware pipeline
+# (enumerate_subdevices + discover_partitioned), not a single discover() call,
+# so it covers the outdoor-temperature de-duplication this PR adds.
+
+
+def _kit():
+    """Run the whole subdevice-aware pipeline against the kit fixture, HA-free.
+
+    Returns (bound, materialized, skipped, full_resources)."""
+    from tests.conftest import _discover_full, _load_device_full
+
+    resources, oic_res, seeds = _load_device_full(KIT)
+    bound, materialized, skipped, full_resources, _name = _discover_full(
+        resources,
+        oic_res,
+        seeds,
+        ("oic.wk.d", "oic.d.airconditioner"),
+    )
+    return bound, materialized, skipped, full_resources
+
+
+def test_kit_materializes_five_indoor_subdevices():
+    """The kit enumerates five indoor subdevices and rejects none -- the master
+    reports numofsubdevice 5 and every /<uuid>/device/0 answers."""
+    _bound, materialized, skipped, _full = _kit()
+    assert len(materialized) == 5
+    assert skipped == []
+    assert all(s.kind == "prefixed" for s in materialized)
+
+
+def test_kit_master_surfaces_no_entities_of_its_own():
+    """The Wi-Fi kit only fronts the indoor units: its /temperatures/indoor is
+    the Hide placeholder and it has no mode/energy, so it must add no unprefixed
+    entity. Every state key belongs to a subdevice."""
+    bound, _materialized, _skipped, full = _kit()
+    state = flatten(bound, full)
+    assert state, "expected the subdevices to produce entities"
+    assert all(k.startswith("subdevice_") for k in state), sorted(
+        k for k in state if not k.startswith("subdevice_")
+    )
+
+
+def test_kit_leaves_no_unbound_hrefs():
+    """Every resource on the master and on each indoor subdevice binds or is
+    covered, so the coverage-gap repair stays clear across the whole kit."""
+    _bound, materialized, _skipped, full = _kit()
+    # The master Wi-Fi kit, judged on its own canonical resources.
+    master = parse_device0_batch(json.loads(_KIT_FIXTURE.read_text())["device0"])
+    master_reg = resolve(master, device_types=("oic.wk.d", "oic.d.airconditioner"))
+    master_unbound = []
+    discover(
+        master,
+        master_reg.capabilities,
+        master_reg.pattern_capabilities,
+        log=master_unbound.append,
+    )
+    assert master_unbound == [], master_unbound
+    # Each indoor subdevice, judged on its own canonical view.
+    for sub in materialized:
+        view = canonical_view(sub, full, materialized)
+        sub_reg = resolve(view, device_types=()) or master_reg
+        unbound = []
+        discover(view, sub_reg.capabilities, sub_reg.pattern_capabilities, log=unbound.append)
+        assert unbound == [], f"{sub.key}: {unbound}"
+
+
+def test_kit_outdoor_temperature_is_diagnostic_and_disabled():
+    """Each of the five indoor subdevices reports the *same* outdoor-unit
+    reading on /temperatures/outside/vs/0, so a five-room kit would surface five
+    identical outdoor_temperature sensors. This PR keeps the sensor but makes it
+    diagnostic and disabled by default, so the duplicates don't clutter the
+    dashboard and a user can enable just one."""
+    bound, _materialized, _skipped, full = _kit()
+    outside = [
+        b
+        for b in bound
+        if b.desc.key == "outdoor_temperature" and b.capability.href == "/temperatures/outside/vs/0"
+    ]
+    assert len(outside) == 5, "one outdoor_temperature per indoor subdevice"
+    for b in outside:
+        assert b.desc.entity_category == "diagnostic", b.href
+        assert b.desc.enabled_default is False, b.href
+
+    # All five actually produce a reading (not four pruned and one survivor),
+    # and it is this /temperatures/outside sensor's concrete value -- the /mode
+    # OutdoorTemp copy is pruned by its exists_fn on this board, which has no
+    # such token, so it creates no competing entity. The identical 13.9 across
+    # all five is the de-duplication rationale.
+    state = flatten(bound, full)
+    outdoor = {k: v for k, v in state.items() if k.endswith("_outdoor_temperature")}
+    assert len(outdoor) == 5, sorted(outdoor)
+    assert set(outdoor.values()) == {13.9}, outdoor
+
+
+def test_kit_exposes_no_windlong():
+    """windlong was dropped (issue #816 review): the reporter's units advertise
+    no /modeoption/* resource at all, so there was nothing to drive a WINDLONG
+    switch and no rep to capture. The href stays on the AC ignore list so a unit
+    that *does* advertise it never reopens the coverage gap, and no windlong
+    entity leaks onto these subdevices."""
+    bound, _materialized, _skipped, full = _kit()
+    # The real artifact the PR keeps: the href is ignored, not unbound.
+    assert "/modeoption/windlong/vs/0" in _AC_IGNORED
+    # This capture genuinely has no /modeoption resource to test a write against.
+    assert not any("modeoption" in href for href in full), [h for h in full if "modeoption" in h]
+    assert not any("windlong" in (b.desc.key or "").lower() for b in bound)
+    state = flatten(bound, full)
+    assert not any("windlong" in k.lower() for k in state)
