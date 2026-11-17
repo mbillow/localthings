@@ -1,0 +1,54 @@
+{
+  "seeds_note": "Selected verbatim /sec/networkaudio/channelVolume response from HW-Q800A diagnostics, 2026-11-17. This is a channel-level regression fixture, not a complete device capture. The resource omits x.com.samsung.networkaudio.isSupported; that absence is preserved. Identity, network, account and content resources are not included.",
+  "device0": [
+    {
+      "href": "/sec/networkaudio/channelVolume",
+      "rep": {
+        "if": [
+          "oic.if.rw",
+          "oic.if.baseline"
+        ],
+        "rt": [
+          "x.com.samsung.networkaudio.channelVolume"
+        ],
+        "x.com.samsung.networkaudio.channelVolume": [
+          {
+            "name": "Spk_Center",
+            "status": 1,
+            "value": 0
+          },
+          {
+            "name": "Spk_Side",
+            "status": -1,
+            "value": 0
+          },
+          {
+            "name": "Spk_Wide",
+            "status": -1,
+            "value": 0
+          },
+          {
+            "name": "Spk_Front_Top",
+            "status": 1,
+            "value": 0
+          },
+          {
+            "name": "Spk_Rear",
+            "status": 1,
+            "value": 3
+          },
+          {
+            "name": "Spk_Rear_Top",
+            "status": 1,
+            "value": 3
+          },
+          {
+            "name": "Spk_Rear_Side",
+            "status": -1,
+            "value": 0
+          }
+        ]
+      }
+    }
+  ]
+}
