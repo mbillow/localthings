@@ -9,6 +9,7 @@
     "cycle_outdoor_temperature",
     "cycle_pump_speed",
     "cycle_return_temperature",
+    "cycle_three_way_valve",
     "cycle_updated",
     "discharge_temperature",
     "energy_kwh",

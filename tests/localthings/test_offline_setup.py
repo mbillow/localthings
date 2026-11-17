@@ -738,7 +738,7 @@ async def test_collection_board_keeps_a_subdevice_href_that_missed_the_first_rea
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     assert await coordinator.async_rehydrate()
     cycle_keys = {b.desc.key for b in coordinator.bound if b.href == _EHS_CYCLE}
-    assert len(cycle_keys) == 11
+    assert len(cycle_keys) == 12
 
     missed = {href: rep for href, rep in full.items() if href != _EHS_CYCLE}
     reload = await _first_live_cycle(hass, coordinator, missed, materialized)

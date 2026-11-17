@@ -10,6 +10,7 @@ from https://www.dwellsee.com/decoding-guide/ (0-indexed, temperatures are
       3     flow water temperature
       6-7   flow rate, uint16 BE / 10 L/min
       8     water pump speed, %
+      9     3-way valve, 0 room / 1 DHW tank
       27    DHW tank temperature (not bound, duplicates /temperatures/dhw/vs/0)
     outdoor, 28 bytes
       0-1   compressor frequency, int16 BE, Hz
@@ -19,12 +20,13 @@ from https://www.dwellsee.com/decoding-guide/ (0-indexed, temperatures are
       7     suction temperature
       8     outdoor temperature
 
-Indoor byte 27 matches `/temperatures/dhw/vs/0` on the 01001 and MIM-H04EN
-dumps, outdoor byte 8 matches the MIM-H04EN's `/temperatures/outside/vs/0`,
-and the S905D3 sample in #697 matches its `/overview/vs/0` flow, return, flow
-rate and outdoor readings. The guide's 24-byte indoor and 18-byte outdoor
-records aren't in any local dump yet, so they and any other length read as
-unknown.
+Indoor byte 9 reads 0 where the MIM-H04EN's `/controllerstatus/ehs/vs/0`
+reports its 3-way valve at "Room", indoor byte 27 matches
+`/temperatures/dhw/vs/0` on the 01001 and MIM-H04EN dumps, outdoor byte 8
+matches the MIM-H04EN's `/temperatures/outside/vs/0`, and the S905D3 sample in
+#697 matches its `/overview/vs/0` flow, return, flow rate and outdoor
+readings. The guide's 24-byte indoor and 18-byte outdoor records aren't in any
+local dump yet, so they and any other length read as unknown.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ from .common import normalize_temp_unit, parse_iso_utc
 _INDOOR_LENGTHS = (31, 36)
 _MAX_FLOW_LPM = 100
 _OUTDOOR_LENGTHS = (28,)
+_VALVE_POSITIONS = {0: "Room", 1: "Tank"}
 
 # The log stops advancing while the unit is switched off (decoding guide,
 # "System Off Behaviour"), so an old sample would otherwise read as live. The
@@ -103,6 +106,10 @@ def _flow_rate(b: bytes) -> float | None:
     # 100 L/min reads as unknown.
     lpm = int.from_bytes(b[6:8], "big") / 10
     return lpm if lpm <= _MAX_FLOW_LPM else None
+
+
+def _three_way_valve(b: bytes) -> str | None:
+    return _VALVE_POSITIONS.get(b[9])
 
 
 def _cycle_temp_unit(rep):
@@ -171,6 +178,16 @@ EHS_CYCLE = Capability(
             state_class="measurement",
             entity_category="diagnostic",
             enabled_default=False,
+        ),
+        # Spelled like the MIM-H04EN's /controllerstatus/ehs/vs/0 3wayValve
+        # ("Room"), which this stays off.
+        SensorDesc(
+            key="cycle_three_way_valve",
+            rep_fn=_indoor(_three_way_valve),
+            translation_key="three_way_valve",
+            icon="mdi:valve",
+            entity_category="diagnostic",
+            exists_fn=lambda rep, resources: "/controllerstatus/ehs/vs/0" not in resources,
         ),
         _diagnostic_temperature("discharge_temperature", _outdoor(_temp(5))),
         _diagnostic_temperature("evaporator_saturation_temperature", _outdoor(_temp(6))),

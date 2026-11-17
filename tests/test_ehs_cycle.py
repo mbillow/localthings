@@ -99,6 +99,30 @@ def test_indoor_byte_27_matches_the_dhw_tank_temperature(name):
     assert abs((newest[27] - 55) - dhw) <= 0.5
 
 
+@pytest.mark.parametrize(("name", "position"), [("ehs", "Room"), ("ehs_01002", "Tank")])
+def test_indoor_byte_9_is_the_three_way_valve(monkeypatch, name, position):
+    state, _ = _state(name, monkeypatch)
+    assert state["cycle_three_way_valve"] == position
+
+
+def test_indoor_byte_9_matches_the_wifi_kits_three_way_valve(monkeypatch):
+    state, resources = _state("ehs_mim_h04en", monkeypatch)
+    newest = bytes.fromhex(resources[HREF]["indoor"][-1]["cycledata"])
+    assert newest[9] == 0
+    assert state["three_way_valve"] == "Room"
+    # The kit reports the valve itself, so the cycle-log copy isn't bound.
+    assert "cycle_three_way_valve" not in state
+
+
+@pytest.mark.parametrize("value", [0x02, 0xFF])
+def test_an_unknown_three_way_valve_byte_reads_unknown(monkeypatch, value):
+    record = bytearray.fromhex(_S905D3_REP["indoor"][0]["cycledata"])
+    record[9] = value
+    rep = {**_S905D3_REP, "indoor": [{**_S905D3_REP["indoor"][0], "cycledata": record.hex()}]}
+    _at(monkeypatch, _newest_time(rep))
+    assert _desc("cycle_three_way_valve").rep_fn(rep) is None
+
+
 def test_outdoor_byte_8_matches_the_wifi_kits_outside_temperature(monkeypatch):
     state, resources = _state("ehs_mim_h04en", monkeypatch)
     outside = resources["/temperatures/outside/vs/0"]["x.com.samsung.da.current"]
@@ -202,4 +226,5 @@ def test_only_the_primary_readings_are_enabled_by_default():
         "cycle_pump_speed",
         "compressor_frequency",
         "cycle_outdoor_temperature",
+        "cycle_three_way_valve",
     }
