@@ -141,6 +141,34 @@ def test_flow_rate_spans_bytes_6_and_7(monkeypatch, high, low, lpm):
     assert _desc("cycle_flow_rate").rep_fn(rep) == lpm
 
 
+@pytest.mark.parametrize("sentinel", [0x00, 0xFF])
+@pytest.mark.parametrize(
+    ("key", "offset"),
+    [
+        ("discharge_temperature", 5),
+        ("evaporator_saturation_temperature", 6),
+        ("suction_temperature", 7),
+        ("cycle_outdoor_temperature", 8),
+    ],
+)
+def test_a_no_reading_temperature_byte_reads_unknown(monkeypatch, key, offset, sentinel):
+    record = bytearray.fromhex(_S905D3_REP["outdoor"][0]["cycledata"])
+    record[offset] = sentinel
+    rep = {**_S905D3_REP, "outdoor": [{**_S905D3_REP["outdoor"][0], "cycledata": record.hex()}]}
+    _at(monkeypatch, _newest_time(rep))
+    assert _desc(key).rep_fn(rep) is None
+
+
+@pytest.mark.parametrize("sentinel", [0x00, 0xFF])
+def test_a_no_reading_indoor_temperature_byte_reads_unknown(monkeypatch, sentinel):
+    record = bytearray.fromhex(_S905D3_REP["indoor"][0]["cycledata"])
+    record[3] = sentinel
+    rep = {**_S905D3_REP, "indoor": [{**_S905D3_REP["indoor"][0], "cycledata": record.hex()}]}
+    _at(monkeypatch, _newest_time(rep))
+    assert _desc("cycle_flow_temperature").rep_fn(rep) is None
+    assert _desc("cycle_return_temperature").rep_fn(rep) == 31.0
+
+
 def test_the_newest_sample_is_read(monkeypatch):
     resources = _load_device("ehs")
     rep = resources[HREF]
