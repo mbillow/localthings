@@ -1,0 +1,9 @@
+{
+  "state_keys": [
+    "channel_level_center",
+    "channel_level_front_top",
+    "channel_level_rear",
+    "channel_level_rear_top",
+    "rear_speakers"
+  ]
+}
