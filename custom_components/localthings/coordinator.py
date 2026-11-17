@@ -2016,7 +2016,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             collection_timeout=self._SUBDEVICE_COLLECTION_TIMEOUT_S,
             property_timeout=self._SUBDEVICE_PROPERTY_TIMEOUT_S,
         )
-        self.subdevices = subdevices
+        # A sibling the snapshot knew already answered its seed on this poll;
+        # a probe that ran out of time on a slow bridge doesn't undo that.
+        # Dropped, its hrefs would fall into the master's view unbound.
+        answered = [
+            su
+            for su in self.subdevices
+            if su not in subdevices and any(su.owns(href) for href in resources)
+        ]
+        self.subdevices = [*subdevices, *answered]
         self._subdevice_probes = probes
         # /multidevice/vs/0 is corroborating metadata, not appliance state,
         # and is probed on every device -- it must not join `resources`, or
