@@ -60,7 +60,7 @@ def _walk_strings(value, path=()):
         yield path, value
 
 
-def _all_descriptions():
+def _all_capabilities():
     capabilities_dir = INTEGRATION / "registry" / "capabilities"
     seen: set[int] = set()
     for module_path in capabilities_dir.glob("*.py"):
@@ -75,13 +75,18 @@ def _all_descriptions():
                 if id(value) in seen:
                     return
                 seen.add(id(value))
-                yield from value.entities
+                yield value
             elif isinstance(value, (tuple, list, set)):
                 for child in value:
                     yield from visit(child)
 
         for value in vars(module).values():
             yield from visit(value)
+
+
+def _all_descriptions():
+    for capability in _all_capabilities():
+        yield from capability.entities
 
 
 def test_every_language_mirrors_the_english_catalog():
@@ -780,6 +785,36 @@ def test_every_descriptor_has_an_entity_catalog_entry():
     select_strings = entity_strings["select"]
     for key in ("cycle", "washer_cycle_table_02", "dryer_cycle_table_03"):
         assert key in select_strings
+
+
+@pytest.mark.parametrize("language", _languages())
+def test_entities_of_one_capability_have_distinct_names(language):
+    """Two entities a capability creates side by side can't share a name.
+
+    Home Assistant would show both under the same label and suffix the second
+    entity_id with '_2' (energy_kwh and power_energy_kwh were both 'Energia'
+    in Italian on a TP1X_REF_21K fridge).
+    """
+    entity_strings = _load(language)["entity"]
+    clashes = []
+    for capability in _all_capabilities():
+        names: dict[tuple[str, str], set[str]] = {}
+        for desc in capability.entities:
+            translation_key = desc.translation_key
+            if callable(translation_key):
+                continue
+            platform = PLATFORM_OF[type(desc)]
+            translation_key = translation_key or desc.key
+            name = entity_strings.get(platform, {}).get(translation_key, {}).get("name")
+            if name is None or _placeholders(name):
+                continue
+            names.setdefault((platform, name), set()).add(translation_key)
+        clashes.extend(
+            (capability.href, platform, name, sorted(keys))
+            for (platform, name), keys in names.items()
+            if len(keys) > 1
+        )
+    assert clashes == []
 
 
 def test_all_entity_state_translation_keys_are_lowercase():
