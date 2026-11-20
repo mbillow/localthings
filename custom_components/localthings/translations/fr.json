@@ -662,7 +662,10 @@
           "ad": "Chemises/blouses",
           "ae": "Sous-vêtements",
           "af": "Pulls",
-          "b0": "Accessoires"
+          "b0": "Accessoires",
+          "92": "Lavage à l'air",
+          "b4": "Vêtements d'extérieur",
+          "95": "Séchage minuté"
         }
       },
       "dryer_cycle_table_03": {

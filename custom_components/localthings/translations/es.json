@@ -1128,7 +1128,10 @@
           "ad": "Camisas/blusas",
           "ae": "Ropa interior",
           "af": "Suéteres",
-          "b0": "Accesorios"
+          "b0": "Accesorios",
+          "92": "Aireación",
+          "b4": "Cuidado para exterior",
+          "95": "Secado por tiempo"
         }
       },
       "dryer_cycle_table_03": {

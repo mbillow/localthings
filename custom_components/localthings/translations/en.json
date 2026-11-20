@@ -662,7 +662,10 @@
           "ad": "Shirt/Blouse",
           "ae": "Undergarment",
           "af": "Sweater",
-          "b0": "Accessory"
+          "b0": "Accessory",
+          "92": "Air Wash",
+          "b4": "Outdoor Care",
+          "95": "Time Dry"
         }
       },
       "dryer_cycle_table_03": {

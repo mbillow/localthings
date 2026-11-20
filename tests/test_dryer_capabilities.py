@@ -335,3 +335,22 @@ def test_gas_dryer_type_is_named():
     assert desc.value_fn("Gas") == "gas"
     assert "gas" in desc.options
     assert "gas" in translated_states("sensor", "dryer_type")
+
+
+def test_the_tp6x_dryer_labels_its_cycles_from_dryer_table_00():
+    """#888: the DV80M8214AW serves no course table, so its cycle select
+    showed raw codes such as 93 (Iron Dry) until the family declared one."""
+    from custom_components.localthings.legacy_http import course_table
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.discovery import discover
+    from tests.conftest import _load_device
+
+    resources = _load_device("dryer_tp6x_8888")
+    family = resources["/information/vs/0"]["x.com.samsung.da.description"]
+    resources.update(course_table(family))
+    registry = resolve(resources)
+    assert registry is not None and registry.name == "dryer"
+    bound = discover(resources, registry.capabilities, registry.pattern_capabilities)
+    cycle = next(b.desc for b in bound if b.href == "/course/vs/0" and b.desc.key == "cycle")
+    assert callable(cycle.translation_key)
+    assert cycle.translation_key(resources) == "dryer_cycle_table_00"

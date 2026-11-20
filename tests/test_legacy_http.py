@@ -22,6 +22,7 @@ from custom_components.localthings.legacy_http import (
     CAVITY_LOWER,
     CAVITY_UPPER,
     COURSE_TABLE_HREF,
+    DRYER_COURSE_TABLE_HREF,
     PREFIX,
     StagedKey,
     add_staged,
@@ -235,6 +236,12 @@ class TestCourseTable:
         rep = course_table(family)[COURSE_TABLE_HREF]
 
         assert rep[PREFIX + "st.courseTable"] == "Table_00"
+
+    def test_the_tp6x_dryer_is_dryer_table_00(self):
+        """#888: a DV80M8214AW's 14 panel names, read against their codes."""
+        assert course_table("TP6X_DRYER") == {
+            DRYER_COURSE_TABLE_HREF: {PREFIX + "st.courseTable": "Table_00"}
+        }
 
     @pytest.mark.parametrize("family", ["WW9000HEX", "WW9000", None])
     def test_a_near_miss_or_missing_family_gets_none(self, family):

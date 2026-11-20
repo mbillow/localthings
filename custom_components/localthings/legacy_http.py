@@ -411,10 +411,12 @@ _COURSE_TABLE_FIELD = PREFIX + "st.courseTable"
 # 0x6C is Denim by elimination. The WW9000HE's 22 codes, named by its owner
 # (#635), share none with Table_00, so they join it. FlexDry's Table_00
 # assignments are provisional: its bridge reports course codes but no table id
-# (issue #649).
+# (issue #649). On a TP6X_DRYER DV80M8214AW the owner read all 14 panel names
+# against their codes (#888): 11 match Table_00, and 92/B4/95 join it.
 FAMILY_COURSE_TABLES: dict[str, tuple[str, str]] = {
     "TP6X_WASHER": (COURSE_TABLE_HREF, "Table_00"),
     "WW9000HE": (COURSE_TABLE_HREF, "Table_00"),
+    "TP6X_DRYER": (DRYER_COURSE_TABLE_HREF, "Table_00"),
     "TP6X_DRYER_DRUM": (DRYER_COURSE_TABLE_HREF, "Table_00"),
     "TP6X_DRYER_TOPLOAD": (DRYER_COURSE_TABLE_HREF, "Table_00"),
 }
