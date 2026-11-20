@@ -39,8 +39,8 @@ def _write(field: str, encode=lambda p: p):
 
 
 def _supported(rep: dict, resources: dict) -> bool:
-    """0 means "no such control on this unit"."""
-    return rep.get("x.com.samsung.networkaudio.isSupported") == 1
+    """HW-Q800A omits the flag; an explicit unsupported value still wins."""
+    return rep.get("x.com.samsung.networkaudio.isSupported", 1) == 1
 
 
 def _network_info(rep: dict) -> dict:

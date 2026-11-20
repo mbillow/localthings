@@ -2453,3 +2453,17 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q990h():
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q800a():
+    """Selected Q800A channel resource, routed by its OCF device type."""
+    from tests.conftest import _load_device
+
+    resources = _load_device("soundbar_q800a")
+    golden = json.loads((GOLDEN / "soundbar_q800a.json").read_text())
+    assert (
+        _new_state_keys(
+            "soundbar_q800a", resources, device_types=("oic.wk.d", "oic.d.networkaudio")
+        )
+        == golden["state_keys"]
+    )
