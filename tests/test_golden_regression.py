@@ -2477,3 +2477,13 @@ def test_registry_reproduces_golden_state_keys_for_tp1x_ref_21k_stateless_icemak
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.refrigerator")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_tv_qn50ls03a_frame():
+    """The Frame 2021 (#868): its category flag is covered."""
+    from tests.conftest import _load_device
+
+    name = "tv_qn50ls03a_frame"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.tv"))
+    assert set(state_keys) == set(golden["state_keys"])
