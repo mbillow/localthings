@@ -74,7 +74,7 @@ from .devices import set_via_device
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .playback import PlaybackController
-from .registration import Registration, bound_id, is_included, is_late
+from .registration import Registration, bound_id, by_id, is_included, is_late
 from .registry import CAPABILITIES
 from .registry.adapter import flatten
 from .registry.batch import is_stub_rep, parse_device0_batch
@@ -2633,20 +2633,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         judged = self._judged(resources)
         decisions: dict[tuple[str, str, str], bool] = {}
         grown: list[BoundEntity] = []
-        for b in bound:
+        # One per id: an excluded alternative mustn't decide for the one
+        # this read includes (#879).
+        for b in by_id((b for b in bound if bound_id(b) not in provided), judged).values():
             ident = bound_id(b)
-            if ident in provided or ident in decisions:
-                continue
             decisions[ident] = judged(b)
             # A known entity is rebound only onto evidence that includes it.
             if ident not in current or decisions[ident]:
                 grown.append(b)
         bank = self._keep_registered_fields(bank)
 
-        by_id = {bound_id(b): b for b in grown}
+        grown_by_id = {bound_id(b): b for b in grown}
         self.bound = [
-            *(by_id.pop(bound_id(b), b) for b in self.bound),
-            *by_id.values(),
+            *(grown_by_id.pop(bound_id(b), b) for b in self.bound),
+            *grown_by_id.values(),
         ]
         self.subdevices = [
             *self.subdevices,

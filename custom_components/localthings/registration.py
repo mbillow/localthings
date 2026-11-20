@@ -40,6 +40,21 @@ def bound_id(bound: BoundEntity) -> EntityId:
     return (PLATFORM_OF[type(bound.desc)], bound.subdevice.key, _key(bound))
 
 
+def by_id(
+    bounds: Iterable[BoundEntity], included: Callable[[BoundEntity], bool]
+) -> dict[EntityId, BoundEntity]:
+    """One bound per entity id. Alternative descriptors share an id on purpose
+    (one key over two hrefs or option tokens, each gated by its exists_fn), so
+    the one its own evidence includes wins, not whichever came last: the
+    ME7500D's Lamp light was built from the UpperLamp descriptor (#879)."""
+    chosen: dict[EntityId, BoundEntity] = {}
+    for bound in bounds:
+        ident = bound_id(bound)
+        if ident not in chosen or (not included(chosen[ident]) and included(bound)):
+            chosen[ident] = bound
+    return chosen
+
+
 def is_included(
     bound: BoundEntity,
     coordinator: LocalThingsCoordinator,
@@ -107,15 +122,21 @@ def _field_included(bound: BoundEntity, rep: dict) -> bool:
     return True  # rep_fn or no-field entities (ButtonDesc) are always included
 
 
+def _code(fn) -> object:
+    return getattr(fn, "__code__", fn)
+
+
 def binding(bound: BoundEntity) -> tuple:
-    """What a bound's entity is built from, compared without the
-    descriptor's callables: an expand_fn descriptor is a new object on
-    every discovery, so two bindings of the same entity are never equal."""
+    """What a bound's entity is built from. Callables compare by their code,
+    not identity: an expand_fn descriptor is a new object on every discovery,
+    but alternatives sharing an id (#879) differ in exists_fn and write_fn."""
     return (
         bound.href,
         bound.capability.href,
         type(bound.desc),
         bound.desc.key,
+        _code(bound.desc.exists_fn),
+        _code(getattr(bound.desc, "write_fn", None)),
         bound.instance,
         bound.key_override,
         bound.instance_name,
