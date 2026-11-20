@@ -2453,3 +2453,15 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q990h():
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q850a():
+    """HW-Q850A (#877): every href binds, btConnectionType included."""
+    from tests.conftest import _load_device
+
+    name = "soundbar_q850a"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"])

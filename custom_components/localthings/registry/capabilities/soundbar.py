@@ -637,6 +637,21 @@ BT_PAIRING = Capability(
     ),
 )
 
+# A bare code (only "none" seen, on the HW-Q850A and HW-Q950A, #867/#877) and
+# no supported list to bound a write, so it is shown, not set.
+BT_CONNECTION_TYPE = Capability(
+    href="/sec/networkaudio/btConnectionType",
+    poll_tier="cold",
+    entities=(
+        SensorDesc(
+            key="bluetooth_connection_type",
+            field="x.com.samsung.networkaudio.btConnType",
+            icon="mdi:bluetooth",
+            entity_category="diagnostic",
+        ),
+    ),
+)
+
 CURRENT_EQ_MODE = Capability(
     href="/sec/networkaudio/currentEQMode",
     poll_tier="cold",

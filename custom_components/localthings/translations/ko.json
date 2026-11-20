@@ -2209,6 +2209,9 @@
       "installation_type": {
         "name": "설치 유형"
       },
+      "bluetooth_connection_type": {
+        "name": "블루투스 연결 유형"
+      },
       "audio_codec": {
         "name": "오디오 코덱"
       },

@@ -2209,6 +2209,9 @@
       "installation_type": {
         "name": "Tipo de instalação"
       },
+      "bluetooth_connection_type": {
+        "name": "Tipo de conexão Bluetooth"
+      },
       "audio_codec": {
         "name": "Codec de áudio"
       },

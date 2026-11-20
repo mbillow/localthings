@@ -2209,6 +2209,9 @@
       "installation_type": {
         "name": "Тип инсталације"
       },
+      "bluetooth_connection_type": {
+        "name": "Тип Bluetooth везе"
+      },
       "audio_codec": {
         "name": "Аудио кодек"
       },

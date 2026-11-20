@@ -2209,6 +2209,9 @@
       "installation_type": {
         "name": "Typ instalace"
       },
+      "bluetooth_connection_type": {
+        "name": "Typ připojení Bluetooth"
+      },
       "audio_codec": {
         "name": "Zvukový kodek"
       },
