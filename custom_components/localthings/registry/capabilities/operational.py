@@ -179,6 +179,14 @@ def _completion_minutes(rep):
     if rep.get("x.com.samsung.da.progress") == "Finish":
         return 0
 
+    # Once idle, laundry reloads remainingTime with the selected course's
+    # full duration, so the countdown reached 0 and then jumped back up to
+    # e.g. 169. Nothing is running, so nothing remains. Only an explicit idle
+    # state counts: a paused cycle keeps its remaining time, and a rep with
+    # no state at all is not evidence that the appliance is idle.
+    if _to_ocf(rep.get("x.com.samsung.da.state")) == "idle":
+        return 0
+
     return math.ceil(total_s / 60)
 
 
