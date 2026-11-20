@@ -2487,3 +2487,15 @@ def test_registry_reproduces_golden_state_keys_for_tv_qn50ls03a_frame():
     golden = json.loads((GOLDEN / f"{name}.json").read_text())
     state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.tv"))
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_monitor_ls27c902p():
+    """ViewFinity S9 (#891): the UUID-nested light-sensor copy is covered."""
+    from tests.conftest import _load_device
+
+    name = "monitor_ls27c902p"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
+    )
+    assert set(state_keys) == set(golden["state_keys"])

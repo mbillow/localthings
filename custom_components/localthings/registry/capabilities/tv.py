@@ -208,6 +208,14 @@ COVERAGE: list[Capability] = [
 APPDATA_PREFIX = "/sec/tv/appdata/"
 APPDATA = Capability(href_prefix=APPDATA_PREFIX, poll_tier="never")
 
+# The light sensor's own SmartThings device, nested under a per-unit UUID
+# (ViewFinity S9, #891): a second copy of /light/sensor/brightness/vs/0 and
+# its parent category. Matched by rt, since the prefix differs on every unit.
+SENSOR_CHILD = [
+    Capability(rt_filter="x.com.samsung.vd.ligntsensor.brightness", poll_tier="never"),
+    Capability(rt_filter="x.com.samsung.vd.sensor.parent.category", poll_tier="never"),
+]
+
 
 # ---------------------------------------------------------------------------
 # TV (oic.d.tv)

@@ -169,12 +169,12 @@ record in your own backup:
    does not include this private app store.
 2. Decode that file as CBOR. The `cred` section may itself be CBOR-encoded
    bytes; inspect its `creds` array. Select exactly one PSK record whose
-   `subjectuuid` matches the intended washer's OCF device UUID. The client
+   `subjectuuid` matches the intended appliance's OCF device UUID. The client
    identity is `cred.rowneruuid`, not the device UUID. Decode that record's
    `privatedata.data` according to its `encoding` (raw bytes or base64).
 3. Convert the 16- or 32-byte key to 32 or 64 hexadecimal characters and
    import it through LocalThings' **Owner** option. Verify an authenticated
-   `/oic/d` read identifies the expected washer before relying on any
+   `/oic/d` read identifies the expected appliance before relying on any
    protected data or controls. Never publish the backup, key or UUIDs.
 
 On this unit, the recovered key completed a DTLS handshake and an authenticated
@@ -186,6 +186,10 @@ security write was
 made. This proves local credential access for one appliance, not that every
 washer control works or that every SmartThings version stores credentials in
 the same format.
+
+The backup holds a record for every appliance paired from that phone, not only
+washers. Owners have since added a ViewFinity S9 monitor (#891) and The Frame
+2021 TV (#868) with an OwnerPSK recovered the same way.
 
 ## Samsung AF18DX936WFN AC with rooted Android 13
 

@@ -298,3 +298,20 @@ def test_tv_overrides_are_explicit_replacements_of_the_monitor_surface():
         assert TV.capabilities[cap.href] == [cap]
     with pytest.raises(ValueError, match="/sec/tv/nothing"):
         replacing([tv.PICTURE_MODE], [Capability(href="/sec/tv/nothing")])
+
+
+def test_the_uuid_nested_light_sensor_copy_is_covered_without_a_second_entity():
+    """ViewFinity S9 (#891): the light sensor's own SmartThings device repeats
+    /light/sensor/brightness/vs/0 under a per-unit UUID. The unprefixed copy
+    is the illuminance sensor; the nested one binds nothing."""
+    resources = _load_device("monitor_ls27c902p")
+    reg = registry_for("monitor")
+    gaps: list[str] = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=gaps.append)
+    assert gaps == []
+    nested = [h for h in resources if h.startswith("/00000000-")]
+    assert len(nested) == 2
+    assert not [b for b in bound if b.href in nested]
+    assert [b.href for b in bound if b.desc.key == "illuminance"] == [
+        "/light/sensor/brightness/vs/0"
+    ]
