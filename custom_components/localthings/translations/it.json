@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Avviso di umidità"
       },
+      "stay_connect": {
+        "name": "Resta connesso"
+      },
       "extra_rinse": {
         "name": "Risciacquo extra"
       },

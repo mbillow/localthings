@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Upozornenie na vlhké prádlo"
       },
+      "stay_connect": {
+        "name": "Zostať pripojený"
+      },
       "extra_rinse": {
         "name": "Extra plákanie"
       },

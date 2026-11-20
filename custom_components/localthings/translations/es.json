@@ -3053,6 +3053,9 @@
       "damp_alert": {
         "name": "Alerta de humedad"
       },
+      "stay_connect": {
+        "name": "Mantener conectado"
+      },
       "extra_rinse": {
         "name": "Aclarado extra"
       },

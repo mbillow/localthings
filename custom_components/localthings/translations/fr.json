@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Alerte linge humide"
       },
+      "stay_connect": {
+        "name": "Rester connecté"
+      },
       "extra_rinse": {
         "name": "Rinçage supplémentaire"
       },

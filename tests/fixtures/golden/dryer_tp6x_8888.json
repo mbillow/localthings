@@ -12,11 +12,13 @@
     "dry_time",
     "dryer_type",
     "finish_time",
+    "laundry_out_time",
     "machine_state",
     "power_switch",
     "progress",
     "progress_percentage",
     "remote_control",
+    "stay_connect",
     "wrinkle_prevent"
   ]
 }

@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Upozorenje na vlagu"
       },
+      "stay_connect": {
+        "name": "Ostani povezan"
+      },
       "extra_rinse": {
         "name": "Dodatno ispiranje"
       },

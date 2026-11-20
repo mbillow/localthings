@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Waarschuwing vochtige was"
       },
+      "stay_connect": {
+        "name": "Verbonden blijven"
+      },
       "extra_rinse": {
         "name": "Extra spoelen"
       },

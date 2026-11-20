@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "다림질 알림"
       },
+      "stay_connect": {
+        "name": "연결 유지"
+      },
       "extra_rinse": {
         "name": "헹굼 추가"
       },

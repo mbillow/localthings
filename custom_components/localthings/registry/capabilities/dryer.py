@@ -5,8 +5,8 @@ remote-control fallback pairs, buzzer, energy meter, job-beginning-status, and
 the /course/vs/0 cycle select -- lives in laundry.py.
 
   /washer/vs/0   -> DRYER_SETTINGS (dryLevel, dryTime, dryerType, wrinklePrevent)
-  /course/vs/0   -> DRYER_COURSE (cycle select, damp alert, wrinkle-prevent
-                    active; see below)
+  /course/vs/0   -> DRYER_COURSE (cycle select, damp alert, stay connect,
+                    laundry-out reminder, wrinkle-prevent active; see below)
   /diagnosis/vs/0 -> DRYER_DIAGNOSIS
 """
 
@@ -14,6 +14,7 @@ from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status, option_value
 from .laundry import (
+    LAUNDRY_OUT_TIME,
     OPTION_KIND_DRY,
     OPTION_KIND_DRY_TIME,
     OPTION_KIND_WATER_TEMPERATURE,
@@ -171,18 +172,32 @@ DRYER_SETTINGS = Capability(
 # Damp Alert maps to MixedLoadBell; its Enable/Disable vocabulary requires a
 # dedicated writer. The per-course bitmap is not confirmed enough to safely
 # reject a write, so this control stays ungated.
-def _damp_alert_write(p, rep, href=None):
-    if p == "On":
-        value = "Enable"
-    elif p == "Off":
-        value = "Disable"
-    else:
-        return None
-    if not rep.get("x.com.samsung.da.options"):
-        return None
-    return ["course", "vs", "0"], {
-        "x.com.samsung.da.options": option_write("MixedLoadBell", value),
-    }
+def _enable_option_write(prefix):
+    def write(p, rep, href=None):
+        if p == "On":
+            value = "Enable"
+        elif p == "Off":
+            value = "Disable"
+        else:
+            return None
+        if not rep.get("x.com.samsung.da.options"):
+            return None
+        return ["course", "vs", "0"], {
+            "x.com.samsung.da.options": option_write(prefix, value),
+        }
+
+    return write
+
+
+def _enable_option_switch(key: str, icon: str, prefix: str) -> SwitchDesc:
+    return SwitchDesc(
+        key=key,
+        icon=icon,
+        entity_category="config",
+        exists_fn=bool_option_exists(prefix),
+        rep_fn=lambda rep: option_value(rep.get("x.com.samsung.da.options"), prefix) == "Enable",
+        write_fn=_enable_option_write(prefix),
+    )
 
 
 DRYER_COURSE = Capability(
@@ -201,16 +216,13 @@ DRYER_COURSE = Capability(
         ),
         # DVE53BB8900TA3 reports door/panel lamp changes and accepts this while off.
         bool_option_light("drum_light", "mdi:lightbulb", "DrumLight"),
-        SwitchDesc(
-            key="damp_alert",
-            icon="mdi:bell-ring-outline",
-            entity_category="config",
-            exists_fn=bool_option_exists("MixedLoadBell"),
-            rep_fn=lambda rep: (
-                option_value(rep.get("x.com.samsung.da.options"), "MixedLoadBell") == "Enable"
-            ),
-            write_fn=_damp_alert_write,
-        ),
+        _enable_option_switch("damp_alert", "mdi:bell-ring-outline", "MixedLoadBell"),
+        # SeamlessControl keeps Smart Control on after a cycle. A TP6X_DRYER
+        # DV80M8214AW held each write across a reload and readback (#889).
+        # Both writes are unconfirmed on any other dryer, CoAP ones included,
+        # which offer them from the same tokens.
+        _enable_option_switch("stay_connect", "mdi:wifi-lock", "SeamlessControl"),
+        LAUNDRY_OUT_TIME,
         # Reports the active post-cycle tumble, distinct from the
         # wrinkle_prevent switch on /washer/vs/0 that arms it.
         BinarySensorDesc(

@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Alerta de umidade"
       },
+      "stay_connect": {
+        "name": "Manter conectado"
+      },
       "extra_rinse": {
         "name": "Enxágue extra"
       },

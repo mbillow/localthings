@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Signal Mischbeladung"
       },
+      "stay_connect": {
+        "name": "Verbunden bleiben"
+      },
       "extra_rinse": {
         "name": "Extra-Spülen"
       },

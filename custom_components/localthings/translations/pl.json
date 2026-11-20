@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Alert wilgotnego wsadu"
       },
+      "stay_connect": {
+        "name": "Pozostań połączony"
+      },
       "extra_rinse": {
         "name": "Dodatkowe płukanie"
       },

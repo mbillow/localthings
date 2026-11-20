@@ -2587,6 +2587,9 @@
       "damp_alert": {
         "name": "Damp alert"
       },
+      "stay_connect": {
+        "name": "Stay connected"
+      },
       "extra_rinse": {
         "name": "Extra rinse"
       },
