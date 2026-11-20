@@ -612,14 +612,20 @@ def _add_wash_indicator(rep):
 # LaundryOutTime_<minutes> is the app's reminder that a finished load is
 # still in the drum, repeated every 30, 60 or 90 minutes; 0 is off (issue
 # #515). A plain one-token write, measured on a WD91N642OOW and a WW6500.
-# Bound only on those four values: a onebody combo reports LaundryOutTime_158,
-# which is something else.
+# Some boards add 128 to the minutes: a WW11DB8B95GBU4 set to 30 then read
+# 158 (#871), as a onebody combo also reports. What the flag means is
+# unconfirmed, so it is masked off and never written.
 _LAUNDRY_OUT_TIMES = ("0", "30", "60", "90")
+_LAUNDRY_OUT_FLAG = 0x80
 
 
 def _laundry_out_time(rep):
     raw = option_value(rep.get("x.com.samsung.da.options"), "LaundryOutTime")
-    return raw if raw in _LAUNDRY_OUT_TIMES else None
+    try:
+        minutes = str(int(raw) & ~_LAUNDRY_OUT_FLAG)
+    except (TypeError, ValueError):
+        return None
+    return minutes if minutes in _LAUNDRY_OUT_TIMES else None
 
 
 def _laundry_out_time_write(p, rep, href=None):

@@ -7,6 +7,8 @@ fallback pairs and the energy meter in test_common_capabilities.py.
 
 from datetime import UTC
 
+import pytest
+
 from custom_components.localthings.registry.capabilities import washer
 from custom_components.localthings.registry.entities import SelectDesc, SwitchDesc
 from tests.conftest import _load_device
@@ -1035,9 +1037,22 @@ class TestLaundryOutTime:
 
         assert _course_desc("laundry_out_time").rep_fn(rep) == "0"
 
-    def test_a_value_outside_the_four_intervals_binds_nothing(self):
-        """A onebody combo reports LaundryOutTime_158, which is not this."""
-        rep = {"x.com.samsung.da.options": ["LaundryOutTime_158"]}
+    def test_the_128_flag_is_masked_off(self):
+        """#871: a WW11DB8B95GBU4 set to 30 then read LaundryOutTime_158,
+        which is 30 with 128 added; it stays a 30-minute reminder."""
+        desc = _course_desc("laundry_out_time")
+        rep = {"x.com.samsung.da.options": ["Course_24", "LaundryOutTime_158"]}
+
+        assert desc.exists_fn(rep, {}) is True
+        assert desc.rep_fn(rep) == "30"
+        assert desc.write_fn("0", rep) == (
+            ["course", "vs", "0"],
+            {"x.com.samsung.da.options": ["LaundryOutTime_0"]},
+        )
+
+    @pytest.mark.parametrize("raw", ["45", "173", "Off", ""])
+    def test_a_value_outside_the_four_intervals_binds_nothing(self, raw):
+        rep = {"x.com.samsung.da.options": [f"LaundryOutTime_{raw}"]}
 
         assert _course_desc("laundry_out_time").exists_fn(rep, {}) is False
 
