@@ -11,8 +11,9 @@ from typing import cast
 
 import pytest
 
+from custom_components.localthings.const import DOMAIN
 from custom_components.localthings.coordinator import LocalThingsCoordinator
-from custom_components.localthings.entity import _is_included
+from custom_components.localthings.entity import _is_included, entity_unique_id
 from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.entities import PLATFORM_OF
 from tests.conftest import FIXTURES, _discover_full, _load_device_full
@@ -70,6 +71,8 @@ def test_key_is_unique_across_all_bound_entities(name):
     )
     coordinator = cast(LocalThingsCoordinator, _FakeCoordinator(full_resources, materialized))
     included = [b for b in bound if _is_included(b, coordinator)]
+    for entity in included:
+        assert entity_unique_id("test-device", entity) == f"{DOMAIN}_test-device_{_key(entity)}"
     keys = [(PLATFORM_OF[type(b.desc)], _key(b)) for b in included]
     dupes = {k: n for k, n in Counter(keys).items() if n > 1}
     assert not dupes, (

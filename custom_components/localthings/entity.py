@@ -25,6 +25,11 @@ from .registry.adapter import _key
 from .registry.discovery import BoundEntity, _snake_to_title
 
 
+def entity_unique_id(device_key: str, bound: BoundEntity) -> str:
+    """Return the stable entity registry identity for a bound entity."""
+    return f"{DOMAIN}_{device_key}_{_key(bound)}"
+
+
 def async_add_bound_entities(
     entry: ConfigEntry,
     coordinator: LocalThingsCoordinator,
@@ -157,7 +162,7 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
         self._bound = bound
         self._bound_id = bound_id(bound)
         self._state_key = _key(bound)
-        self._attr_unique_id = f"{DOMAIN}_{coordinator.device_key}_{self._state_key}"
+        self._attr_unique_id = entity_unique_id(coordinator.device_key, bound)
         if bound.desc.translation_placeholders is not None:
             self._attr_translation_placeholders = dict(bound.desc.translation_placeholders)
         elif bound.desc.use_instance_name:

@@ -24,11 +24,13 @@ from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 import voluptuous as vol
+from homeassistant.auth.permissions.const import POLICY_CONTROL
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError, Unauthorized, UnknownUser
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
@@ -44,6 +46,7 @@ from .const import (
     SERVICE_WRITE_RESOURCE,
 )
 from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
+from .entity import entity_unique_id
 from .registry.capabilities import cook
 from .registry.capabilities import tv as tv_caps
 from .registry.capabilities.tv import SEARCH_SITES
@@ -398,8 +401,40 @@ async def _async_observe_resource(hass: HomeAssistant, call: ServiceCall) -> Ser
     return cast(ServiceResponse, json_safe(result))
 
 
+async def _async_check_cooking_permission(
+    hass: HomeAssistant,
+    call: ServiceCall,
+    coordinator: LocalThingsCoordinator,
+    subdevice: Subdevice,
+) -> None:
+    """Apply the same target permission as pressing this cavity's start button."""
+    if not call.context.user_id:
+        return
+    user = await hass.auth.async_get_user(call.context.user_id)
+    if user is None:
+        raise UnknownUser(context=call.context)
+    if not user.is_active:
+        raise Unauthorized(context=call.context)
+    if user.is_admin:
+        return
+    registry = er.async_get(hass)
+    for bound in coordinator.bound:
+        if (
+            bound.subdevice != subdevice
+            or getattr(bound.desc, "cook_param", None) != cook.PARAM_START
+        ):
+            continue
+        unique_id = entity_unique_id(coordinator.device_key, bound)
+        entity_id = registry.async_get_entity_id("button", DOMAIN, unique_id)
+        if entity_id and user.permissions.check_entity(entity_id, POLICY_CONTROL):
+            return
+    # An unrelated entity or another cavity must never grant permission to cook.
+    raise Unauthorized(context=call.context, permission=POLICY_CONTROL)
+
+
 async def _async_start_cooking(hass: HomeAssistant, call: ServiceCall) -> None:
     coordinator, subdevice, _device_id = _resolve_target(hass, call)
+    await _async_check_cooking_permission(hass, call, coordinator, subdevice)
     temperature = call.data.get(ATTR_TEMPERATURE)
     if temperature is not None:
         # Given in Home Assistant's unit, as the setpoint entity shows it;
