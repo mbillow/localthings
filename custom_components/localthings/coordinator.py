@@ -3029,12 +3029,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             # modelNum alone doesn't identify every type, and device_types
             # is often empty even on hardware we don't map yet -- log all
-            # three so a user can paste this into an issue.
-            self._log.warning(
-                "unknown device type modelNum=%r description=%r device_types=%r; using common caps",
+            # three so a user can paste this into an issue. An entry typed
+            # before was given a read that named nothing, not a new appliance
+            # (DONGLE_0260, #882), so that is only worth a debug line.
+            known_type = self._entry.data.get(CONF_DEVICE_TYPE)
+            (self._log.debug if known_type else self._log.warning)(
+                "unknown device type modelNum=%r description=%r device_types=%r; "
+                "using common caps%s",
                 model_num,
                 description,
                 self._identity.device_types if self._identity else (),
+                f" (set up as {known_type})" if known_type else "",
             )
         self.device_type_name = device_type_name
         self.bound = bound

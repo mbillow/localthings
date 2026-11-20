@@ -22,6 +22,7 @@ from smartthings_local.errors import SessionClosedError, SessionError, SessionTi
 from custom_components.localthings.const import (
     CONF_BYPASS_REMOTE_CONTROL,
     CONF_DEVICE_TOKEN,
+    CONF_DEVICE_TYPE,
     CONF_HOST,
     CONF_LEGACY_FAMILY,
     CONF_TRANSPORT,
@@ -160,6 +161,31 @@ def test_run_discovery_detects_washer_via_model_fallback(hass: HomeAssistant, mo
     assert coordinator.device_type_name == "washer"
 
 
+@pytest.mark.parametrize(("known_type", "level"), [("refrigerator", "DEBUG"), (None, "WARNING")])
+def test_an_unresolved_read_warns_only_for_an_untyped_entry(
+    hass: HomeAssistant, caplog, known_type, level
+) -> None:
+    """#882: a DONGLE_0260 fridge typed at setup logged "unknown device type"
+    on every start, from a read that named nothing. Only an entry never typed
+    is worth the warning that asks for a report."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={**ENTRY_DATA, CONF_DEVICE_TYPE: known_type},
+        unique_id="localthings_untyped_read",
+        version=4,
+    )
+    entry.add_to_hass(hass)
+    coordinator = LocalThingsCoordinator(hass, entry)
+    with caplog.at_level("DEBUG"):
+        coordinator._run_discovery({"/power/vs/0": {"x.com.samsung.da.power": "On"}})
+
+    assert coordinator.device_type_name is None
+    (record,) = [r for r in caplog.records if "unknown device type" in r.getMessage()]
+    assert record.levelname == level
+
+
 def test_run_discovery_routes_an_unmapped_legacy_family_like_any_device(
     hass: HomeAssistant,
 ) -> None:
@@ -293,7 +319,7 @@ def test_discovery_backfills_a_legacy_entry_identity(hass: HomeAssistant, legacy
     """An entry migrated from before identity was stored learns it on its
     first poll and keeps it, so the *next* restart registers the device fully
     named before any entity exists instead of renaming it a second time."""
-    from custom_components.localthings.const import CONF_DEVICE_TYPE, CONF_MODEL, CONF_SERIAL
+    from custom_components.localthings.const import CONF_MODEL, CONF_SERIAL
 
     coordinator = LocalThingsCoordinator(hass, legacy_entry)
     coordinator._run_discovery(_load_fridge())
