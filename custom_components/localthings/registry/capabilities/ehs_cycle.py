@@ -38,6 +38,7 @@ from .common import normalize_temp_unit, parse_iso_utc
 _INDOOR_LENGTHS = (31, 36)
 _MAX_FLOW_LPM = 100
 _OUTDOOR_LENGTHS = (28,)
+_NO_READING = (0x00, 0xFF)
 
 # The log stops advancing while the unit is switched off (decoding guide,
 # "System Off Behaviour"), so an old sample would otherwise read as live. The
@@ -89,7 +90,10 @@ def _outdoor(decode):
 
 
 def _temp(offset: int):
-    return lambda b: float(b[offset] - 55)
+    # 0x00 and 0xFF are "no reading" (decoding guide): discharge byte 5 is
+    # 0xFF on about 1 in 5 SAC_EHS_MONO units and 0x00 on S905D3 units, which
+    # would otherwise read 200 °C and -55 °C.
+    return lambda b: None if b[offset] in _NO_READING else float(b[offset] - 55)
 
 
 def _i16(offset: int):
