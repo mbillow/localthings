@@ -8,6 +8,7 @@ pattern capability that auto-derives distinct keys from the href segments.
 
 from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.by_type import refrigerator
+from custom_components.localthings.registry.capabilities.fridge import ICEMAKER_GENERIC
 from custom_components.localthings.registry.discovery import discover
 from tests.conftest import _load_resources
 
@@ -34,3 +35,21 @@ def test_two_ice_makers_get_distinct_keys():
     assert set(ice_one_keys).isdisjoint(set(ice_two_keys)), (
         f"icemaker_one and icemaker_two keys overlap: {ice_one_keys} vs {ice_two_keys}"
     )
+
+
+def test_an_ice_maker_without_a_state_still_binds():
+    """TP1X_REF_21K (#876) reported /icemaker/one/vs/0 with its making
+    status but no iceMaker.state; the nighttime resource has neither."""
+    from custom_components.localthings.registry.adapter import flatten
+    from tests.conftest import _load_device
+
+    resources = _load_device("refrigerator_tp1x_ref_21k_stateless_icemaker")
+    assert "x.com.samsung.da.iceMaker.state" not in resources["/icemaker/one/vs/0"]
+    reg = refrigerator.REGISTRY
+    unbound: list[str] = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=unbound.append)
+    assert unbound == []
+    assert flatten(bound, resources)["icemaker_one_making_status"] == "icestatus_stop"
+    night = {"ice.night.status": "Off", "ice.night.starttime": "22:00"}
+    assert ICEMAKER_GENERIC.match_fn is not None
+    assert not ICEMAKER_GENERIC.match_fn(night, {})

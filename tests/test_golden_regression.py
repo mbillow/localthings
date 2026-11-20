@@ -2465,3 +2465,15 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q850a():
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_tp1x_ref_21k_stateless_icemaker():
+    """TP1X_REF_21K (#876): an ice maker reporting no iceMaker.state binds."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_tp1x_ref_21k_stateless_icemaker"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.refrigerator")
+    )
+    assert set(state_keys) == set(golden["state_keys"])
