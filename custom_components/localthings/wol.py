@@ -10,6 +10,7 @@ import logging
 import socket
 import time
 from collections.abc import Callable, Iterable
+from ipaddress import IPv4Interface
 
 from homeassistant.core import HomeAssistant
 
@@ -71,6 +72,16 @@ async def async_targets(hass: HomeAssistant, host: str) -> list[str]:
         from homeassistant.components import network
 
         broadcasts = [str(a) for a in await network.async_get_ipv4_broadcast_addresses(hass)]
+        # HA returns only 255.255.255.255 when the default adapter alone is
+        # enabled. Also send the directed subnet broadcast: some Wi-Fi TVs
+        # wake from that packet but ignore limited broadcasts and unicast.
+        for adapter in await network.async_get_adapters(hass):
+            if not adapter["enabled"]:
+                continue
+            for info in adapter["ipv4"]:
+                interface = IPv4Interface(f"{info['address']}/{info['network_prefix']}")
+                if not interface.ip.is_loopback and interface.network.prefixlen < 31:
+                    broadcasts.append(str(interface.network.broadcast_address))
     except Exception as err:  # network unavailable: the limited broadcast still works
         _LOGGER.debug("broadcast addresses unavailable (%s); using %s", err, IPV4_BROADCAST)
         broadcasts = [IPV4_BROADCAST]
