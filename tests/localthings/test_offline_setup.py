@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from dataclasses import replace
 from datetime import timedelta
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
@@ -32,10 +32,15 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from smartthings_local.errors import SessionTimeoutError
 
 from custom_components.localthings.const import DOMAIN, SUMMARY_INTERVAL_S
-from custom_components.localthings.coordinator import LocalThingsCoordinator, bound_id
+from custom_components.localthings.coordinator import (
+    LocalThingsCoordinator,
+    _powered_off,
+    bound_id,
+)
 from custom_components.localthings.registration import is_included
 from custom_components.localthings.registry.adapter import _key
 from custom_components.localthings.registry.batch import parse_device0_batch
+from custom_components.localthings.registry.encode import from_json_safe
 from custom_components.localthings.registry.identity import DeviceIdentity
 
 from .conftest import FIXTURES
@@ -662,6 +667,48 @@ async def test_last_state_removed_when_entry_removed(
     await hass.config_entries.async_remove(mock_entry.entry_id)
     await hass.async_block_till_done()
     assert hass_storage.get(key, {}).get("data") is None
+
+
+async def test_last_state_saved_through_homeassistant_stop(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """A real restart saves from the EVENT_HOMEASSISTANT_STOP handler while
+    HA is stopping, when Store holds the write until the final-write stage,
+    not from an explicit unload. Go through the whole hass.async_stop()."""
+    key = f"{DOMAIN}.{mock_entry.entry_id}.last_state"
+    with _reachable(_washer_powered("Off")):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        assert hass_storage.get(key, {}).get("data") is None
+        await hass.async_stop()
+
+    assert _powered_off(from_json_safe(hass_storage[key]["data"]["resources"]))
+
+
+async def test_last_state_discarded_once_the_appliance_answers(
+    hass: HomeAssistant, mock_entry, hass_storage
+) -> None:
+    """Only the most recent close may be restored. Saved off, then seen
+    running, then stopped without a close (a crash or power loss) while the
+    appliance is dark: the earlier off must not come back."""
+    key = f"{DOMAIN}.{mock_entry.entry_id}.last_state"
+    await _setup_online_then_unload(hass, mock_entry, _washer_powered("Off"))
+    assert hass_storage[key]["data"]["resources"]
+
+    with _reachable(_washer_powered("On")):
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done()
+        assert hass_storage.get(key, {}).get("data") is None
+        # Stands in for the unclean stop: async_close never gets to save.
+        with patch(f"{_COORD}._async_save_last_state", AsyncMock()):
+            await hass.config_entries.async_unload(mock_entry.entry_id)
+            await hass.async_block_till_done()
+
+    with _unreachable():
+        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert all(s.state == "unavailable" for s in hass.states.async_all())
 
 
 # ---------------------------------------------------------------------------

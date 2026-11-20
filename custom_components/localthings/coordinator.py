@@ -612,6 +612,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Set by async_restore_off_state: the cache holds the state saved at
         # the last close, carried through outages as a discovered device's is.
         self._carrying_off_state = False
+        # Removes the saved state once the appliance answers live; see
+        # _mark_device_answered.
+        self._last_state_discard: asyncio.Task[None] | None = None
         # Loaded by async_load_mode_specs before the first refresh.
         self._mode_specs: dict[str, Any] = {}
         self._mode_specs_lock = threading.Lock()
@@ -1563,6 +1566,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_save_last_state(self) -> None:
         if self._closed or self._flat:
             return
+        if self._last_state_discard is not None:
+            # Never let a removal still in flight land after this save.
+            await asyncio.shield(self._last_state_discard)
         resources = self._cache.snapshot()
         if not resources:
             return
@@ -3399,6 +3405,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._persist_moved_port()
         self._persist_read_mode()
         self._consecutive_poll_timeouts = 0
+        if self._last_state_discard is None and not self._flat:
+            # Only the most recent close may be restored. Once the appliance
+            # answers live, a state saved at an earlier close is stale: if HA
+            # then stopped without async_close (a crash or power loss) while
+            # the appliance was dark, the next start would bring it back.
+            self._last_state_discard = self.hass.async_create_task(
+                self._last_state_store.async_remove(), "localthings discard last state"
+            )
         if self._failed_cycles:
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
             self._failed_cycles = 0
