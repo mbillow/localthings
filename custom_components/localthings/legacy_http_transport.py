@@ -35,6 +35,7 @@ from .legacy_http import (
     CAVITY_UPPER,
     CLOCK_ENDPOINT,
     CLOCK_HREF,
+    SETTINGS_BEFORE_OPERATION,
     Resource,
     StagedKey,
     add_staged,
@@ -43,11 +44,13 @@ from .legacy_http import (
     clock_write,
     course_table,
     divider_in,
+    family_key,
     http_status_to_coap,
     is_disconnected,
     is_flexdry_family,
     is_start,
     model_settings,
+    operation_last,
     split_start_only,
     staged_current,
     table_for,
@@ -592,6 +595,8 @@ class LegacyHttpTransport:
         held = self._state_at(index).staged
         base = _device_path(index)
         body = add_staged(aggregate, {key: value for key, (value, _) in held.items()})
+        if family_key(self._family) in SETTINGS_BEFORE_OPERATION:
+            body = operation_last(body)
         deadline = time.monotonic() + timeout
         if settings_first:
             operation = body["Device"]["Operation"]

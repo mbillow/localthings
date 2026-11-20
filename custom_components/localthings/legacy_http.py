@@ -166,25 +166,45 @@ _FLEXDRY_IMMEDIATE = (
     Resource(endpoint="mode", wrapper="Mode", href="/course/vs/0"),
     Resource(endpoint="washer", wrapper="Washer", href="/washer/vs/0"),
 )
+# A TP6X_DRYER DV80M8214AW accepted a lone dry level or time without applying
+# it, and ran with both when they came in the start body, settings before
+# Operation (#890). FlexDry takes them at once and keeps its own row above.
+_TP6X_DRYER_AT_START = (
+    Resource(
+        endpoint="washer",
+        wrapper="Washer",
+        href="/washer/vs/0",
+        start_only=frozenset({"dryLevel", "dryTime"}),
+    ),
+)
 _BY_FAMILY: dict[str, tuple[Resource, ...]] = {
     "TP6X_DRYER_DRUM": _FLEXDRY_IMMEDIATE,
     "TP6X_DRYER_TOPLOAD": _FLEXDRY_IMMEDIATE,
+    "TP6X_DRYER": _TP6X_DRYER_AT_START,
 }
+
+# Families whose start body carries its settings ahead of Operation, in the
+# order their start was tested in (#890).
+SETTINGS_BEFORE_OPERATION = frozenset({"TP6X_DRYER"})
 
 
 @cache
 def table_for(device_type: str | None, family: str | None = None) -> tuple[Resource, ...]:
     """The resource table for an appliance reporting `device_type`."""
     overrides = {resource.wrapper: resource for resource in _BY_TYPE.get(device_type or "", ())}
-    overrides.update({resource.wrapper: resource for resource in _BY_FAMILY.get(family or "", ())})
+    overrides.update(
+        {resource.wrapper: resource for resource in _BY_FAMILY.get(family_key(family), ())}
+    )
     return tuple(overrides.get(resource.wrapper, resource) for resource in RESOURCES)
 
 
 _CAPACITY = re.compile(r"_\d+K$")
 
 
-def _family_key(family: str | None) -> str:
-    return _CAPACITY.sub("", family or "")
+def family_key(family: str | None) -> str:
+    """A family as the per-family tables key it: without a capacity suffix
+    (`_16K`) or the WW9000HE's per-unit "(...)" one (#635)."""
+    return _CAPACITY.sub("", (family or "").split("(", 1)[0])
 
 
 # A divided oven's cavities, told apart by what each slot reports for itself:
@@ -460,7 +480,7 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
     )
     if is_lcd_ov_wall_16k(model_id) and (subtype == "WallOven" or combo_oven):
         return {SETINFO_HREF: {_POWER_ON_OFF_FIELD: "false"}}
-    if _family_key(family) not in _SETINFO_FAMILIES:
+    if family_key(family) not in _SETINFO_FAMILIES:
         return {}
     if not isinstance(model_id, str):
         return {}
@@ -477,8 +497,7 @@ def model_settings(family: str | None, bodies: Mapping[str, Any]) -> dict[str, d
 def course_table(family: str | None) -> dict[str, dict]:
     """A course-table rep for `family`; empty (raw course codes) for a family
     nobody has walked the dial on."""
-    # The WW9000HE's description carries a unit-specific "(...)" suffix.
-    course_table = FAMILY_COURSE_TABLES.get(_family_key((family or "").split("(", 1)[0]))
+    course_table = FAMILY_COURSE_TABLES.get(family_key(family))
     if not course_table:
         return {}
     href, table = course_table
@@ -487,7 +506,7 @@ def course_table(family: str | None) -> dict[str, dict]:
 
 def is_flexdry_family(family: str | None) -> bool:
     """Whether this family is one of the two FlexDry sections."""
-    return _family_key(family) in FLEXDRY_FAMILIES
+    return family_key(family) in FLEXDRY_FAMILIES
 
 
 # Every slot on a bridge shares one panel, so one unit. The TP6X_OV combo's
@@ -708,6 +727,15 @@ def add_staged(aggregate: Mapping[str, Any], staged: Mapping[StagedKey, Any]) ->
             fields[name] = value
         else:
             fields[name] = [*fields.get(name, []), value]
+    return {"Device": device}
+
+
+def operation_last(aggregate: Mapping[str, Any]) -> dict[str, Any]:
+    """`aggregate` with its Operation after every other wrapper."""
+    device = dict(aggregate.get("Device") or {})
+    operation = device.pop("Operation", None)
+    if operation is not None:
+        device["Operation"] = operation
     return {"Device": device}
 
 

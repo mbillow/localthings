@@ -757,6 +757,93 @@ class TestStartOnlyWrites:
         assert self._puts() == [{"Device": {"Mode": {"options": ["LaundryOutTime_60"]}}}]
 
 
+class TestTp6xDryerStart:
+    """#890: a TP6X_DRYER DV80M8214AW took a lone dry level or time without
+    applying it, and ran with both in the start body, settings first."""
+
+    DRYER: ClassVar[dict] = {
+        "Device": {
+            "InformationLink": {"href": "/devices/0/information"},
+            "Mode": {"options": ["Course_9A", "SeamlessControl_Disable"]},
+            "Operation": {"state": "Ready", "power": "On", "kidsLock": "Ready"},
+            "Washer": {
+                "dryLevel": "2",
+                "dryTime": "00:00:00",
+                "supportedDryLevel": ["None", "1", "2", "3"],
+                "supportedDryTime": ["00:00:00", "00:30:00", "01:00:00"],
+            },
+            "description": "TP6X_DRYER",
+            "id": "0",
+            "type": "Dryer",
+        }
+    }
+
+    def _dryer(self, transport, monkeypatch, family):
+        monkeypatch.setattr(
+            "custom_components.localthings.legacy_http_transport.time.sleep", lambda s: None
+        )
+        _FakeConnection.routes = {
+            "/devices/0": (200, self.DRYER),
+            ("PUT", "/devices/0"): (204, None),
+            "/devices/0/information": (200, {"Information": {"description": family}}),
+            "/devices/0/operation": (200, {"Operation": {"state": "Run"}}),
+            "/devices/0/washer": (200, {"Washer": self.DRYER["Device"]["Washer"]}),
+        }
+        transport._family = family
+        _swept_as(transport, "Dryer")
+        transport.read(["device", "0"], timeout=10.0)
+        _FakeConnection.log.clear()
+        return transport
+
+    @staticmethod
+    def _puts():
+        return [body for method, _, body, _ in _FakeConnection.log if method == "PUT"]
+
+    def test_a_dry_level_is_held_and_read_back(self, transport, monkeypatch):
+        dryer = self._dryer(transport, monkeypatch, "TP6X_DRYER")
+
+        code, _ = dryer.write(["washer", "vs", "0"], {PREFIX + "dryLevel": "3"}, 8.0)
+        _, rep = dryer.read(["washer", "vs", "0"], timeout=10.0)
+
+        assert code == 0x44
+        assert self._puts() == []
+        assert rep[PREFIX + "dryLevel"] == "3"
+
+    @pytest.mark.parametrize("family", ["TP6X_DRYER", "TP6X_DRYER_9K"])
+    def test_start_sends_the_settings_ahead_of_operation(self, transport, monkeypatch, family):
+        """A capacity suffix is the same family, as it is for the course table."""
+        dryer = self._dryer(transport, monkeypatch, family)
+        dryer.write(["course", "vs", "0"], {PREFIX + "options": ["Course_95"]}, 8.0)
+        dryer.write(["washer", "vs", "0"], {PREFIX + "dryTime": "01:00:00"}, 8.0)
+        dryer.write(["washer", "vs", "0"], {PREFIX + "dryLevel": "3"}, 8.0)
+
+        dryer.write(["operational", "state", "vs", "0"], {PREFIX + "state": "Run"}, 8.0)
+
+        (body,) = self._puts()
+        assert body == {
+            "Device": {
+                "Mode": {"options": ["Course_95"]},
+                "Washer": {"dryTime": "01:00:00", "dryLevel": "3"},
+                "Operation": {"state": "Run"},
+            }
+        }
+        assert list(body["Device"]) == ["Mode", "Washer", "Operation"]
+
+    def test_an_unrelated_option_still_writes_at_once(self, transport, monkeypatch):
+        dryer = self._dryer(transport, monkeypatch, "TP6X_DRYER")
+
+        dryer.write(["course", "vs", "0"], {PREFIX + "options": ["SeamlessControl_Enable"]}, 8.0)
+
+        assert self._puts() == [{"Device": {"Mode": {"options": ["SeamlessControl_Enable"]}}}]
+
+    def test_flexdry_keeps_writing_dry_settings_at_once(self, transport, monkeypatch):
+        dryer = self._dryer(transport, monkeypatch, "TP6X_DRYER_DRUM")
+
+        dryer.write(["washer", "vs", "0"], {PREFIX + "dryLevel": "3"}, 8.0)
+
+        assert self._puts() == [{"Device": {"Washer": {"dryLevel": "3"}}}]
+
+
 class TestCapabilities:
     def test_this_transport_has_no_push(self):
         assert LegacyHttpTransport.supports_observe is False
