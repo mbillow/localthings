@@ -641,3 +641,24 @@ async def test_the_cavity_label_also_covers_the_flex_range(hass: HomeAssistant) 
 
     labels = [(coordinator.device_info_for(s)["name"] or "") for s in coordinator.subdevices]
     assert any(label.endswith("Lower oven") for label in labels), labels
+
+
+async def test_a_known_sibling_whose_seed_answered_survives_a_timed_out_probe(
+    hass: HomeAssistant,
+) -> None:
+    """A restart polls the remembered hood's seed, then enumeration's own
+    /device/1 probe runs out of time on a slow bridge. The hood answered,
+    so it stays a candidate: dropping it left its hrefs in the cooktop's
+    view, unbound, raising the coverage repair on every restart."""
+    from custom_components.localthings.registry.subdevices import Subdevice
+
+    resources, oic_res, seeds = _load_device_full("cooktop_tp6x_ct_16k_hood_8888")
+    hood = Subdevice(kind="indexed", key="1", seed_path=("device", "1"))
+    polled = {**resources, **{e["href"]: e["rep"] for e in seeds["/device/1"]}}
+    coordinator = _coordinator(hass)
+    coordinator.subdevices = [hood]
+
+    await _discover_with(coordinator, polled, oic_res, {})
+
+    assert [s.key for s in coordinator.subdevices] == ["1"]
+    assert coordinator._unbound_hrefs == []
