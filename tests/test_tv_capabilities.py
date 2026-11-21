@@ -333,3 +333,26 @@ def test_the_frame_binds_an_ambient_mode_button():
     plain = _load_device("tv_ue50tu7172")
     bound = discover(plain, reg.capabilities, reg.pattern_capabilities)
     assert not any(b.desc.key == "ambient_mode" for b in bound)
+
+
+def test_the_un55du7200s_empty_and_utility_resources_are_covered():
+    """#895's reps, added to the UE50TU7172 capture: empty Q-Symphony and
+    energy resources, and utility demand response, bind with no entity."""
+    reg = registry_for("tv")
+    plain = _load_device("tv_ue50tu7172")
+    added = {
+        "/sec/tv/qsymphony": {"rt": ["x.com.samsung.vd.qsymphony"]},
+        "/energy/consumption/vs/0": {"rt": ["x.com.samsung.da.energyconsumption"]},
+        "/energy/demandResponseLoadControl/vs/0": {
+            "drlcType": 1,
+            "drlcLevel": 0,
+            "duration": 99999999,
+            "override": False,
+        },
+    }
+    resources = {**plain, **added}
+    gaps = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=gaps.append)
+    assert not set(added) & set(gaps)
+    before = discover(plain, reg.capabilities, reg.pattern_capabilities)
+    assert set(flatten(bound, resources)) == set(flatten(before, plain))
