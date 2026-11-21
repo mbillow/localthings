@@ -739,6 +739,9 @@
       "pair_bluetooth": {
         "name": "Emparejar Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Modo Ambient"
+      },
       "screen_off": {
         "name": "Apagar pantalla"
       },

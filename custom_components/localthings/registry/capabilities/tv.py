@@ -346,6 +346,26 @@ REMOTE = Capability(
     ),
 )
 
+# A one-way "enter Ambient Mode" command: it works from live TV and from Art
+# Mode, can't power the TV on, and its rep holds no state (The Frame 2021,
+# #868). KEY_EXIT on the remote leaves Ambient Mode.
+HREF_AMBIENT = "/sec/tv/switch/ambient"
+AMBIENT_MODE = Capability(
+    href=HREF_AMBIENT,
+    poll_tier="never",
+    entities=(
+        ButtonDesc(
+            key="ambient_mode",
+            icon="mdi:image-frame",
+            write_fn=lambda p, rep, href=None: (
+                ["sec", "tv", "switch", "ambient"],
+                {"x.com.samsung.tv.requestor": "user"},
+            ),
+            write_only=True,
+        ),
+    ),
+)
+
 # Notifications: launchnativeapp hands the TV's notification service app an
 # "ocf_noti" bundle holding a JSON payload. A notification needs a registered
 # service and a non-empty title and message; Home Assistant registers its own
@@ -773,6 +793,7 @@ TV_ONLY: list[Capability] = [
     Capability(href=HREF_VIDEO_TRACK, poll_tier="hot"),
     CAST_SESSION,
     CAST_ITEM,
+    AMBIENT_MODE,
 ]
 
 TV_COVERAGE: list[Capability] = [

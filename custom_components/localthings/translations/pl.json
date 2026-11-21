@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Paruj Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Tryb Ambient"
+      },
       "screen_off": {
         "name": "Wyłącz ekran"
       },

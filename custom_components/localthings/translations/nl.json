@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Bluetooth koppelen"
       },
+      "ambient_mode": {
+        "name": "Ambient-modus"
+      },
       "screen_off": {
         "name": "Scherm uit"
       },

@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Spárovať Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Režim Ambient"
+      },
       "screen_off": {
         "name": "Vypnúť obrazovku"
       },

@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Упари Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Ambient режим"
+      },
       "screen_off": {
         "name": "Искључи екран"
       },

@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "블루투스 페어링"
       },
+      "ambient_mode": {
+        "name": "앰비언트 모드"
+      },
       "screen_off": {
         "name": "화면 끄기"
       },

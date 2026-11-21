@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Выполнить сопряжение Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Режим Ambient"
+      },
       "screen_off": {
         "name": "Выключить экран"
       },

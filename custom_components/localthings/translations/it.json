@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Associa Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Modalità Ambient"
+      },
       "screen_off": {
         "name": "Spegni schermo"
       },

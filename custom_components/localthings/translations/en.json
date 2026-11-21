@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Pair Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Ambient mode"
+      },
       "screen_off": {
         "name": "Screen off"
       },
