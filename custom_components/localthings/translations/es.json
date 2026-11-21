@@ -463,6 +463,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "No se pudo enviar Wake-on-LAN al televisor: no hay ruta de red a {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive no est? disponible en el ciclo seleccionado."
     }
   },
   "entity": {
@@ -3106,6 +3109,9 @@
       },
       "robot_lighting": {
         "name": "Iluminación"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
