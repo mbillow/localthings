@@ -2453,3 +2453,49 @@ def test_registry_reproduces_golden_state_keys_for_soundbar_q990h():
         name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_soundbar_q850a():
+    """HW-Q850A (#877): every href binds, btConnectionType included."""
+    from tests.conftest import _load_device
+
+    name = "soundbar_q850a"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.networkaudio")
+    )
+    assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_tp1x_ref_21k_stateless_icemaker():
+    """TP1X_REF_21K (#876): an ice maker reporting no iceMaker.state binds."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_tp1x_ref_21k_stateless_icemaker"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.refrigerator")
+    )
+    assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_tv_qn50ls03a_frame():
+    """The Frame 2021 (#868): its category flag is covered."""
+    from tests.conftest import _load_device
+
+    name = "tv_qn50ls03a_frame"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.tv"))
+    assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_registry_reproduces_golden_state_keys_for_monitor_ls27c902p():
+    """ViewFinity S9 (#891): the UUID-nested light-sensor copy is covered."""
+    from tests.conftest import _load_device
+
+    name = "monitor_ls27c902p"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
+    )
+    assert set(state_keys) == set(golden["state_keys"])

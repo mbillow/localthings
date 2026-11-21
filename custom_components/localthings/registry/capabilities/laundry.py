@@ -895,6 +895,45 @@ def cycle_select(*, translation_key, icon, table_href=None, display_fn=None, var
 # prefixes and presence/validation needs on top.
 
 
+# LaundryOutTime_<minutes> is the app's reminder that a finished load is
+# still in the drum, repeated every 30, 60 or 90 minutes; 0 is off (issue
+# #515). A plain one-token write, measured on a WD91N642OOW and a WW6500,
+# and on a TP6X_DRYER DV80M8214AW (#889).
+# Some boards add 128 to the minutes: a WW11DB8B95GBU4 set to 30 then read
+# 158 (#871), as a onebody combo also reports. What the flag means is
+# unconfirmed, so it is masked off and never written.
+_LAUNDRY_OUT_TIMES = ("0", "30", "60", "90")
+_LAUNDRY_OUT_FLAG = 0x80
+
+
+def _laundry_out_time(rep):
+    raw = option_value(rep.get("x.com.samsung.da.options"), "LaundryOutTime")
+    try:
+        minutes = str(int(raw) & ~_LAUNDRY_OUT_FLAG)
+    except (TypeError, ValueError):
+        return None
+    return minutes if minutes in _LAUNDRY_OUT_TIMES else None
+
+
+def _laundry_out_time_write(p, rep, href=None):
+    if p not in _LAUNDRY_OUT_TIMES:
+        return None
+    return ["course", "vs", "0"], {
+        "x.com.samsung.da.options": option_write("LaundryOutTime", p),
+    }
+
+
+LAUNDRY_OUT_TIME = SelectDesc(
+    key="laundry_out_time",
+    icon="mdi:bell-alert-outline",
+    entity_category="config",
+    options=_LAUNDRY_OUT_TIMES,
+    exists_fn=lambda rep, resources: _laundry_out_time(rep) is not None,
+    rep_fn=_laundry_out_time,
+    write_fn=_laundry_out_time_write,
+)
+
+
 def bool_option_write(prefix):
     def write(p, rep, href=None):
         if p not in ("On", "Off"):

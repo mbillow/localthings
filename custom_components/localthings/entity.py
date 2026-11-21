@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
-from .registration import binding, bound_id
+from .registration import binding, bound_id, by_id, is_included
 
 # Tests import it from here, where it lived before registration.py.
 from .registration import is_included as _is_included  # noqa: F401
@@ -75,7 +75,10 @@ def async_add_bound_entities(
     def _new() -> list[Entity]:
         if seen[0] != coordinator.registration.generation:
             seen[0] = coordinator.registration.generation
-            current = {bound_id(b): b for b in coordinator.bound if select(b)}
+            current = by_id(
+                (b for b in coordinator.bound if select(b)),
+                lambda b: is_included(b, coordinator) or is_included(b, coordinator, live=True),
+            )
             _rebind(current)
             candidates = [b for ident, b in current.items() if ident not in added]
             pending[:] = [b for b in candidates if b.desc.dynamic_presence]

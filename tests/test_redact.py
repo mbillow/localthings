@@ -309,3 +309,24 @@ def test_soundbar_group_and_alexa_identifiers_are_redacted():
     assert redacted["/sec/alexa/avsDeviceInfo"] == {"x.com.samsung.alexa.code_challenge": REDACTED}
     # Only a speaker row's di is someone else's; /oic/d's own stays.
     assert redacted["/oic/d"] == {"di": "own-id"}
+
+
+def test_the_alexa_user_profile_and_embedded_emails_are_redacted():
+    """HW-Q850A (#877): /sec/alexa/userprofile is embedded JSON with the
+    signed-in Amazon account's name, e-mail and postal code. Its keys are
+    never walked, so the field goes whole, and an e-mail in any other
+    embedded string is matched by shape."""
+    profile = '{"user_id":"amzn1.account.X","name":"A Person","email":"a.person@example.com"}'
+    redacted = redact_resources(
+        {
+            "/sec/alexa/userprofile": {"x.com.samsung.alexa.userprofile": profile},
+            "/sec/other": {"x.com.samsung.blob": '{"owner":"someone@example.org","n":1}'},
+        }
+    )
+    assert redacted["/sec/alexa/userprofile"] == {"x.com.samsung.alexa.userprofile": REDACTED}
+    assert redacted["/sec/other"]["x.com.samsung.blob"] == f'{{"owner":"{REDACTED}","n":1}}'
+
+
+def test_a_version_tag_shaped_like_an_address_is_kept():
+    redacted = redact_resources({"/sec/fw": {"x.com.samsung.build": "fw@1.0.3"}})
+    assert redacted["/sec/fw"]["x.com.samsung.build"] == "fw@1.0.3"

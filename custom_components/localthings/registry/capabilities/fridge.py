@@ -204,7 +204,9 @@ DEFROST_PREDICTION = Capability(
 
 # Icemaker (generic -- covers /icemaker/one/vs/0, /icemaker/two/vs/0).
 # /icemaker/status/vs/0 is an exact-href cap and binds first;
-# /icemaker/nighttime/vs/0 is excluded by match_fn (lacks iceMaker.state).
+# /icemaker/nighttime/vs/0 is excluded by match_fn (it has neither field).
+# A TP1X_REF_21K reported its maker without iceMaker.state after re-joining
+# Wi-Fi (#876), so the making status alone is enough to bind.
 # Entity names interpolate x.com.samsung.da.iceMaker.name ("CUBED_ICE",
 # "ICE_BITES") via name_field, not the href's "one"/"two" segment -- these
 # two makers can both be enabled at once (issue #27), so they stay
@@ -220,7 +222,10 @@ def _icemaker_write(field):
 ICEMAKER_GENERIC = Capability(
     href=None,
     href_prefix="/icemaker/",
-    match_fn=lambda rep, resources: "x.com.samsung.da.iceMaker.state" in rep,
+    match_fn=lambda rep, resources: (
+        "x.com.samsung.da.iceMaker.state" in rep
+        or "x.com.samsung.da.iceMaker.iceMakingStatus" in rep
+    ),
     name_field="x.com.samsung.da.iceMaker.name",
     poll_tier="warm",
     entities=(

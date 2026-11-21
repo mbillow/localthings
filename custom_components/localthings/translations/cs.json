@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Spárovat Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Režim Ambient"
+      },
       "screen_off": {
         "name": "Vypnout obrazovku"
       },
@@ -662,7 +665,10 @@
           "ad": "Košile/halenky",
           "ae": "Spodní prádlo",
           "af": "Svetry",
-          "b0": "Doplňky"
+          "b0": "Doplňky",
+          "92": "Provětrání",
+          "b4": "Outdoor péče",
+          "95": "Časové sušení"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "Typ instalace"
       },
+      "bluetooth_connection_type": {
+        "name": "Typ připojení Bluetooth"
+      },
       "audio_codec": {
         "name": "Zvukový kodek"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "Upozornění na vlhké prádlo"
+      },
+      "stay_connect": {
+        "name": "Zůstat připojeno"
       },
       "extra_rinse": {
         "name": "Extra máchání"

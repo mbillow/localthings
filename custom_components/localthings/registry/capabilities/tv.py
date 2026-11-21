@@ -153,6 +153,7 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/tv/deviceinfo"),
     Capability(href="/sec/tv/category/monitor"),
     Capability(href="/sec/tv/category/tv"),
+    Capability(href="/sec/tv/category/frametv"),
     Capability(href="/sec/tv/support/features"),
     Capability(href="/sec/tv/onsupport"),
     Capability(href="/sec/tv/tapview"),
@@ -206,6 +207,14 @@ COVERAGE: list[Capability] = [
 # them; bound for captures that carry them.
 APPDATA_PREFIX = "/sec/tv/appdata/"
 APPDATA = Capability(href_prefix=APPDATA_PREFIX, poll_tier="never")
+
+# The light sensor's own SmartThings device, nested under a per-unit UUID
+# (ViewFinity S9, #891): a second copy of /light/sensor/brightness/vs/0 and
+# its parent category. Matched by rt, since the prefix differs on every unit.
+SENSOR_CHILD = [
+    Capability(rt_filter="x.com.samsung.vd.ligntsensor.brightness", poll_tier="never"),
+    Capability(rt_filter="x.com.samsung.vd.sensor.parent.category", poll_tier="never"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +341,26 @@ REMOTE = Capability(
             icon="mdi:monitor-off",
             write_fn=_screen_off_write,
             requires_href=HREF_SHOW_MENU,
+            write_only=True,
+        ),
+    ),
+)
+
+# A one-way "enter Ambient Mode" command: it works from live TV and from Art
+# Mode, can't power the TV on, and its rep holds no state (The Frame 2021,
+# #868). KEY_EXIT on the remote leaves Ambient Mode.
+HREF_AMBIENT = "/sec/tv/switch/ambient"
+AMBIENT_MODE = Capability(
+    href=HREF_AMBIENT,
+    poll_tier="never",
+    entities=(
+        ButtonDesc(
+            key="ambient_mode",
+            icon="mdi:image-frame",
+            write_fn=lambda p, rep, href=None: (
+                ["sec", "tv", "switch", "ambient"],
+                {"x.com.samsung.tv.requestor": "user"},
+            ),
             write_only=True,
         ),
     ),
@@ -764,6 +793,7 @@ TV_ONLY: list[Capability] = [
     Capability(href=HREF_VIDEO_TRACK, poll_tier="hot"),
     CAST_SESSION,
     CAST_ITEM,
+    AMBIENT_MODE,
 ]
 
 TV_COVERAGE: list[Capability] = [

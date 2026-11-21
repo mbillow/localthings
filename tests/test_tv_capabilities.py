@@ -15,6 +15,7 @@ from custom_components.localthings.registry.by_type import (
 from custom_components.localthings.registry.capabilities import tv
 from custom_components.localthings.registry.discovery import discover
 from custom_components.localthings.registry.entities import (
+    ButtonDesc,
     MediaPlayerDesc,
     RemoteDesc,
     SelectDesc,
@@ -269,7 +270,6 @@ def test_full_capture_reuses_plumbing_without_hiding_unsupported_controls():
         "/capability/weatherContents/main/0",
         "/sec/tv/launchnativeapp",
         "/sec/tv/remotecontrol",
-        "/sec/tv/switch/ambient",
     ]
     assert set(flatten(bound, resources)) == {
         "channel",
@@ -298,3 +298,38 @@ def test_tv_overrides_are_explicit_replacements_of_the_monitor_surface():
         assert TV.capabilities[cap.href] == [cap]
     with pytest.raises(ValueError, match="/sec/tv/nothing"):
         replacing([tv.PICTURE_MODE], [Capability(href="/sec/tv/nothing")])
+
+
+def test_the_uuid_nested_light_sensor_copy_is_covered_without_a_second_entity():
+    """ViewFinity S9 (#891): the light sensor's own SmartThings device repeats
+    /light/sensor/brightness/vs/0 under a per-unit UUID. The unprefixed copy
+    is the illuminance sensor; the nested one binds nothing."""
+    resources = _load_device("monitor_ls27c902p")
+    reg = registry_for("monitor")
+    gaps: list[str] = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=gaps.append)
+    assert gaps == []
+    nested = [h for h in resources if h.startswith("/00000000-")]
+    assert len(nested) == 2
+    assert not [b for b in bound if b.href in nested]
+    assert [b.href for b in bound if b.desc.key == "illuminance"] == [
+        "/light/sensor/brightness/vs/0"
+    ]
+
+
+def test_the_frame_binds_an_ambient_mode_button():
+    """/sec/tv/switch/ambient enters Ambient Mode (The Frame 2021, #868)."""
+    reg = registry_for("tv")
+    resources = _load_device("tv_qn50ls03a_frame")
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
+    button = next(b for b in bound if b.desc.key == "ambient_mode")
+    assert isinstance(button.desc, ButtonDesc) and button.desc.write_only
+    assert button.desc.write_fn is not None
+    assert button.desc.write_fn("", resources[tv.HREF_AMBIENT]) == (
+        ["sec", "tv", "switch", "ambient"],
+        {"x.com.samsung.tv.requestor": "user"},
+    )
+
+    plain = _load_device("tv_ue50tu7172")
+    bound = discover(plain, reg.capabilities, reg.pattern_capabilities)
+    assert not any(b.desc.key == "ambient_mode" for b in bound)

@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Bluetooth koppeln"
       },
+      "ambient_mode": {
+        "name": "Ambient-Modus"
+      },
       "screen_off": {
         "name": "Bildschirm aus"
       },
@@ -662,7 +665,10 @@
           "ad": "Hemden/Blusen",
           "ae": "Unterwäsche",
           "af": "Pullover",
-          "b0": "Accessoires"
+          "b0": "Accessoires",
+          "92": "Frischluft",
+          "b4": "Outdoor-Pflege",
+          "95": "Zeittrocknen"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "Installationstyp"
       },
+      "bluetooth_connection_type": {
+        "name": "Bluetooth-Verbindungstyp"
+      },
       "audio_codec": {
         "name": "Audio-Codec"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "Signal Mischbeladung"
+      },
+      "stay_connect": {
+        "name": "Verbunden bleiben"
       },
       "extra_rinse": {
         "name": "Extra-Spülen"

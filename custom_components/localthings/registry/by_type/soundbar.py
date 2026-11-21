@@ -46,6 +46,7 @@ REGISTRY = DeviceRegistry(
             soundbar.AUDIOPROMPT,
             soundbar.PASS_THROUGH,
             soundbar.BT_PAIRING,
+            soundbar.BT_CONNECTION_TYPE,
             soundbar.NETWORK_INFO,
             soundbar.CURRENT_EQ_MODE,
             soundbar.INSTALLATION_TYPE,

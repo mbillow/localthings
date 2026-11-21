@@ -335,3 +335,73 @@ def test_gas_dryer_type_is_named():
     assert desc.value_fn("Gas") == "gas"
     assert "gas" in desc.options
     assert "gas" in translated_states("sensor", "dryer_type")
+
+
+def test_the_tp6x_dryer_labels_its_cycles_from_dryer_table_00():
+    """#888: the DV80M8214AW serves no course table, so its cycle select
+    showed raw codes such as 93 (Iron Dry) until the family declared one."""
+    from custom_components.localthings.legacy_http import course_table
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.discovery import discover
+    from tests.conftest import _load_device
+
+    resources = _load_device("dryer_tp6x_8888")
+    family = resources["/information/vs/0"]["x.com.samsung.da.description"]
+    resources.update(course_table(family))
+    registry = resolve(resources)
+    assert registry is not None and registry.name == "dryer"
+    bound = discover(resources, registry.capabilities, registry.pattern_capabilities)
+    cycle = next(b.desc for b in bound if b.href == "/course/vs/0" and b.desc.key == "cycle")
+    assert callable(cycle.translation_key)
+    assert cycle.translation_key(resources) == "dryer_cycle_table_00"
+
+
+def _course_entity(key):
+    return next(e for e in dryer.DRYER_COURSE.entities if e.key == key)
+
+
+class TestStayConnect:
+    """#889: SeamlessControl_Enable/Disable on the dryer's course options."""
+
+    def test_reads_enable_as_on(self):
+        desc = _course_entity("stay_connect")
+        rep = {"x.com.samsung.da.options": ["Course_96", "SeamlessControl_Enable"]}
+
+        assert desc.exists_fn is not None and desc.exists_fn(rep, {})
+        assert desc.rep_fn is not None and desc.rep_fn(rep) is True
+
+    def test_writes_only_its_own_token(self):
+        desc = _course_entity("stay_connect")
+        rep = {"x.com.samsung.da.options": ["Course_96", "SeamlessControl_Disable"]}
+
+        assert desc.write_fn is not None
+        assert desc.write_fn("On", rep) == (
+            ["course", "vs", "0"],
+            {"x.com.samsung.da.options": ["SeamlessControl_Enable"]},
+        )
+        assert desc.write_fn("Maybe", rep) is None
+
+    def test_absent_without_the_token(self):
+        desc = _course_entity("stay_connect")
+        assert desc.exists_fn is not None
+        assert not desc.exists_fn({"x.com.samsung.da.options": ["Course_96"]}, {})
+
+
+def test_the_tp6x_dryer_exposes_both_course_controls():
+    """#889: the DV80M8214AW reports SeamlessControl_Disable and
+    LaundryOutTime_0; the reminder is the washer's own select."""
+    resources = _load_device("dryer_tp6x_8888")
+    registry = resolve(resources)
+    assert registry is not None
+    bound = discover(resources, registry.capabilities, registry.pattern_capabilities)
+    state = flatten(bound, resources)
+    assert state["stay_connect"] is False
+    assert state["laundry_out_time"] == "0"
+    reminder = _course_entity("laundry_out_time")
+    assert reminder.write_fn is not None
+    assert reminder.write_fn("30", resources["/course/vs/0"]) == (
+        ["course", "vs", "0"],
+        {"x.com.samsung.da.options": ["LaundryOutTime_30"]},
+    )
+    assert reminder.exists_fn is not None
+    assert not reminder.exists_fn({"x.com.samsung.da.options": ["LaundryOutTime_45"]}, {})

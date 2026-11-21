@@ -64,7 +64,8 @@ _SENSITIVE_SUBSTRINGS = (
 # connectioninfo: provisioning ids and an on/off history. groupName,
 # masterName, masterDi and nick are the soundbar's multiroom group and nearby
 # speakers' owner-set names and ids (HW-Q700C, #796); code_challenge is the
-# Alexa sign-in's PKCE challenge.
+# Alexa sign-in's PKCE challenge, and userprofile the signed-in Amazon
+# account's name, e-mail and postal code as embedded JSON (HW-Q850A, #877).
 _SENSITIVE_EXACT = frozenset(
     {
         "n",
@@ -75,6 +76,7 @@ _SENSITIVE_EXACT = frozenset(
         "mastername",
         "masterdi",
         "x.com.samsung.alexa.code_challenge",
+        "x.com.samsung.alexa.userprofile",
         "x.com.samsung.networkaudio.name",
         "x.com.samsung.rmd",
         "x.com.samsung.provisioning.sessionid",
@@ -112,6 +114,11 @@ def _is_sensitive_key(key: str) -> bool:
 # like 'bm', which is also an /oic/res link key, so match MACs by value shape.
 _MAC_VALUE_RE = re.compile(r"\b(?:[0-9a-fA-F]{2}:){3,5}[0-9a-fA-F]{2}\b")
 
+# Embedded JSON hides its keys from the walk above, so an e-mail address is
+# also matched by shape wherever it lands. The letters-only TLD keeps a
+# version tag like fw@1.0.3 readable.
+_EMAIL_VALUE_RE = re.compile(r"[\w.+-]+@(?:[\w-]+\.)+[A-Za-z]{2,}\b")
+
 
 def redact_resources(resources):
     """Recursively redact sensitive values, matched by key name or by shape.
@@ -135,5 +142,5 @@ def redact_resources(resources):
     if isinstance(resources, list):
         return [redact_resources(item) for item in resources]
     if isinstance(resources, str):
-        return _MAC_VALUE_RE.sub(REDACTED, resources)
+        return _EMAIL_VALUE_RE.sub(REDACTED, _MAC_VALUE_RE.sub(REDACTED, resources))
     return resources

@@ -22,6 +22,7 @@
     "finish_time",
     "firmware_update",
     "job_beginning_status",
+    "laundry_out_time",
     "machine_state",
     "power_switch",
     "progress",
@@ -30,6 +31,7 @@
     "selfcheck_error",
     "selfcheck_result",
     "selfcheck_status",
+    "stay_connect",
     "wrinkle_prevent",
     "wrinkle_prevent_active"
   ]

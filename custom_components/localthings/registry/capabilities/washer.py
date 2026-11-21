@@ -21,6 +21,7 @@ from dataclasses import replace
 from ..capability import Capability
 from ..entities import BinarySensorDesc, SelectDesc, SensorDesc, SwitchDesc
 from .laundry import (
+    LAUNDRY_OUT_TIME,
     OPTION_KIND_RINSE,
     OPTION_KIND_SOIL,
     OPTION_KIND_SPIN,
@@ -609,27 +610,6 @@ def _add_wash_indicator(rep):
     return raw.lower() == "on" if isinstance(raw, str) else None
 
 
-# LaundryOutTime_<minutes> is the app's reminder that a finished load is
-# still in the drum, repeated every 30, 60 or 90 minutes; 0 is off (issue
-# #515). A plain one-token write, measured on a WD91N642OOW and a WW6500.
-# Bound only on those four values: a onebody combo reports LaundryOutTime_158,
-# which is something else.
-_LAUNDRY_OUT_TIMES = ("0", "30", "60", "90")
-
-
-def _laundry_out_time(rep):
-    raw = option_value(rep.get("x.com.samsung.da.options"), "LaundryOutTime")
-    return raw if raw in _LAUNDRY_OUT_TIMES else None
-
-
-def _laundry_out_time_write(p, rep, href=None):
-    if p not in _LAUNDRY_OUT_TIMES:
-        return None
-    return ["course", "vs", "0"], {
-        "x.com.samsung.da.options": option_write("LaundryOutTime", p),
-    }
-
-
 # QuickWash_<Not_Used|Off|On>: Not_Used means the model has no QuickWash at
 # all, the other two whether it is selected. Read-only; nothing writes it,
 # the app included.
@@ -819,15 +799,7 @@ WASHER_COURSE = Capability(
             exists_fn=bool_option_exists("AddWashIndicator"),
             rep_fn=_add_wash_indicator,
         ),
-        SelectDesc(
-            key="laundry_out_time",
-            icon="mdi:bell-alert-outline",
-            entity_category="config",
-            options=_LAUNDRY_OUT_TIMES,
-            exists_fn=lambda rep, resources: _laundry_out_time(rep) is not None,
-            rep_fn=_laundry_out_time,
-            write_fn=_laundry_out_time_write,
-        ),
+        LAUNDRY_OUT_TIME,
         SensorDesc(
             key="quick_wash",
             icon="mdi:timer-fast-outline",

@@ -12,6 +12,7 @@
     "dryer_type",
     "drying_temperature",
     "finish_time",
+    "laundry_out_time",
     "machine_state",
     "power_switch",
     "progress",

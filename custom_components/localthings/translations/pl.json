@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Paruj Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Tryb Ambient"
+      },
       "screen_off": {
         "name": "Wyłącz ekran"
       },
@@ -662,7 +665,10 @@
           "ad": "Koszule/bluzki",
           "ae": "Bielizna",
           "af": "Swetry",
-          "b0": "Akcesoria"
+          "b0": "Akcesoria",
+          "92": "Air Wash",
+          "b4": "Odzież outdoorowa",
+          "95": "Suszenie czasowe"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "Typ instalacji"
       },
+      "bluetooth_connection_type": {
+        "name": "Typ połączenia Bluetooth"
+      },
       "audio_codec": {
         "name": "Kodek audio"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "Alert wilgotnego wsadu"
+      },
+      "stay_connect": {
+        "name": "Pozostań połączony"
       },
       "extra_rinse": {
         "name": "Dodatkowe płukanie"

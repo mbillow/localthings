@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Bluetooth koppelen"
       },
+      "ambient_mode": {
+        "name": "Ambient-modus"
+      },
       "screen_off": {
         "name": "Scherm uit"
       },
@@ -662,7 +665,10 @@
           "ad": "Overhemden/blouses",
           "ae": "Ondergoed",
           "af": "Truien",
-          "b0": "Accessoires"
+          "b0": "Accessoires",
+          "92": "Luchtverfrissing",
+          "b4": "Outdoorverzorging",
+          "95": "Tijdprogramma"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "Installatietype"
       },
+      "bluetooth_connection_type": {
+        "name": "Bluetooth-verbindingstype"
+      },
       "audio_codec": {
         "name": "Audiocodec"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "Waarschuwing vochtige was"
+      },
+      "stay_connect": {
+        "name": "Verbonden blijven"
       },
       "extra_rinse": {
         "name": "Extra spoelen"

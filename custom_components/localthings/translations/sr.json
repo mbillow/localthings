@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "Упари Bluetooth"
       },
+      "ambient_mode": {
+        "name": "Ambient режим"
+      },
       "screen_off": {
         "name": "Искључи екран"
       },
@@ -662,7 +665,10 @@
           "ad": "Кошуља/блуза",
           "ae": "Доњи веш",
           "af": "Џемпер",
-          "b0": "Додаци"
+          "b0": "Додаци",
+          "92": "Освежавање ваздухом",
+          "b4": "Одећа за спољне активности",
+          "95": "Временско сушење"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "Тип инсталације"
       },
+      "bluetooth_connection_type": {
+        "name": "Тип Bluetooth везе"
+      },
       "audio_codec": {
         "name": "Аудио кодек"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "Упозорење на влагу"
+      },
+      "stay_connect": {
+        "name": "Остани повезан"
       },
       "extra_rinse": {
         "name": "Додатно испирање"

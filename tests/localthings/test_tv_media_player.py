@@ -170,3 +170,18 @@ async def test_tv_refusal_needs_fresh_matching_native_resource(hass, mode, confi
         assert write.call_count == 1  # explicit refusals are not resent
     assert tv.HREF_SOUND in session.reads
     assert session.resources[tv.HREF_SOUND][tv.CURRENT_MODE] == "modeGame"
+
+
+async def test_the_ambient_mode_button_writes_the_switch(hass: HomeAssistant):
+    """Pressing it posts the requestor the reporter confirmed on The Frame (#868)."""
+    session, _, _ = await _setup_tv(hass)
+    button = next(
+        s.entity_id for s in hass.states.async_all("button") if s.entity_id.endswith("ambient_mode")
+    )
+
+    await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+
+    assert (
+        ["sec", "tv", "switch", "ambient"],
+        {"x.com.samsung.tv.requestor": "user"},
+    ) in session.writes

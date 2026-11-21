@@ -273,6 +273,9 @@
       "pair_bluetooth": {
         "name": "블루투스 페어링"
       },
+      "ambient_mode": {
+        "name": "앰비언트 모드"
+      },
       "screen_off": {
         "name": "화면 끄기"
       },
@@ -662,7 +665,10 @@
           "ad": "셔츠/블라우스",
           "ae": "속옷",
           "af": "스웨터",
-          "b0": "액세서리"
+          "b0": "액세서리",
+          "92": "송풍",
+          "b4": "아웃도어케어",
+          "95": "시간건조"
         }
       },
       "dryer_cycle_table_03": {
@@ -2209,6 +2215,9 @@
       "installation_type": {
         "name": "설치 유형"
       },
+      "bluetooth_connection_type": {
+        "name": "블루투스 연결 유형"
+      },
       "audio_codec": {
         "name": "오디오 코덱"
       },
@@ -2580,6 +2589,9 @@
       },
       "damp_alert": {
         "name": "다림질 알림"
+      },
+      "stay_connect": {
+        "name": "연결 유지"
       },
       "extra_rinse": {
         "name": "헹굼 추가"

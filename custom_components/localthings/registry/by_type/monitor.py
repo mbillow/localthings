@@ -22,7 +22,7 @@ TIZEN_BASE: list[Capability] = [
 REGISTRY = DeviceRegistry(
     name="monitor",
     capabilities=_build([*TIZEN_BASE, *tv.MEDIA_SURFACE_COVERAGE]),
-    pattern_capabilities=[tv.APPDATA],
+    pattern_capabilities=[tv.APPDATA, *tv.SENSOR_CHILD],
     # As on the soundbar: OBSERVE has not been shown to leave the
     # SmartThings app's session alone.
     subscribe_tiers=(),
