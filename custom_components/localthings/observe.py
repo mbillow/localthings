@@ -27,6 +27,9 @@ from .registry.capabilities.common import merge_options_field
 _LOGGER = logging.getLogger(__name__)
 
 REFRESH_INTERVAL_S = 6 * 3600.0
+# The thread exits as soon as its stop event is set unless a refresh is in
+# flight. It's a daemon, so one that outlives this simply dies with HA.
+REFRESH_JOIN_TIMEOUT_S = 5.0
 
 MODE_OBSERVE = "observe"
 MODE_POLL = "poll"
@@ -550,12 +553,18 @@ class ObserveManager:
         )
         self._refresh_thread.start()
 
-    def _stop_refresh_task(self) -> None:
+    def _stop_refresh_task(self) -> threading.Thread | None:
         if self._refresh_stop is not None:
             self._refresh_stop.set()
+        thread = self._refresh_thread
         self._refresh_thread = None
         self._refresh_task = None
         self._refresh_stop = None
+        return thread
 
     def close(self) -> None:
-        self._stop_refresh_task()
+        """Stop the refresh thread and wait for it. Blocks for as long as an
+        in-flight refresh takes, so call it off the event loop."""
+        thread = self._stop_refresh_task()
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(REFRESH_JOIN_TIMEOUT_S)

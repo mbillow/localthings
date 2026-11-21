@@ -1533,7 +1533,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._subpoll_task = None
         self.av.close()
         await self.playback.async_close()
-        self._observe.close()
+        await self.hass.async_add_executor_job(self._observe.close)
         await self.hass.async_add_executor_job(self._close_session)
 
     def _on_cache_changed(self, changed: bool, source: str) -> None:
