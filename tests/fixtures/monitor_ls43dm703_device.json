@@ -713,8 +713,8 @@
         "x.com.samsung.tv.encryptedduid": "**REDACTED**",
         "x.com.samsung.tv.productcode": "LS43DM703UKXKR",
         "x.com.samsung.tv.artsupport": false,
-        "x.com.samsung.tv.ipv4": "192.168.0.66",
-        "x.com.samsung.tv.ipv6": "fd53:508c:1391:8c9:e4b7:d2e0:1874:6840",
+        "x.com.samsung.tv.ipv4": "<tv-ip>",
+        "x.com.samsung.tv.ipv6": "<tv-ipv6>",
         "x.com.samsung.tv.ds": "",
         "x.com.samsung.tv.remoteless": {
           "ds": "",

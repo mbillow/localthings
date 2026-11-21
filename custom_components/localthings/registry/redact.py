@@ -97,8 +97,10 @@ _SPEAKER_ROW_KEYS = frozenset({"di"})
 # Whole-segment matches (the whole key, or its tail after "." or "_"):
 # UPnP's udn is a per-unit UUID, and sn/dsn are serial numbers (the TV's
 # x.com.samsung.tv.sn, the soundbar's Alexa product_dsn). As substrings they
-# show up inside harmless keys (autoLoudness and the like).
-_SENSITIVE_SUFFIXES = ("udn", "sn", "dsn")
+# show up inside harmless keys (autoLoudness and the like). A TV's msoinfo
+# city and zipcode, its deviceinfo ipv4/ipv6 (an EUI-64 IPv6 also encodes
+# the MAC) and iotHub's hubEUI identify the home or the unit (#895).
+_SENSITIVE_SUFFIXES = ("udn", "sn", "dsn", "city", "zipcode", "ipv4", "ipv6", "hubeui")
 
 
 def _is_sensitive_key(key: str) -> bool:

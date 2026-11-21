@@ -330,3 +330,34 @@ def test_the_alexa_user_profile_and_embedded_emails_are_redacted():
 def test_a_version_tag_shaped_like_an_address_is_kept():
     redacted = redact_resources({"/sec/fw": {"x.com.samsung.build": "fw@1.0.3"}})
     assert redacted["/sec/fw"]["x.com.samsung.build"] == "fw@1.0.3"
+
+
+def test_tv_location_and_address_fields_are_redacted():
+    """msoinfo's city and zipcode, deviceinfo's addresses and iotHub's hubEUI
+    (UN55DU7200, #895)."""
+    redacted = redact_resources(
+        {
+            "/sec/tv/msoinfo": {
+                "x.com.samsung.tv.city": "Springfield",
+                "x.com.samsung.tv.zipcode": "12345",
+                "x.com.samsung.tv.countrycode": "US",
+            },
+            "/sec/tv/deviceinfo": {
+                "x.com.samsung.tv.ipv4": "192.0.2.10",
+                "x.com.samsung.tv.ipv6": "2001:db8::1",
+                "x.com.samsung.tv.year": 2024,
+            },
+            "/sec/tv/iotHub": {"hubInfo": {"hubEUI": "0123456789ABCDEF", "hubVersion": "6.62.13"}},
+        }
+    )
+    assert redacted["/sec/tv/msoinfo"] == {
+        "x.com.samsung.tv.city": REDACTED,
+        "x.com.samsung.tv.zipcode": REDACTED,
+        "x.com.samsung.tv.countrycode": "US",
+    }
+    assert redacted["/sec/tv/deviceinfo"] == {
+        "x.com.samsung.tv.ipv4": REDACTED,
+        "x.com.samsung.tv.ipv6": REDACTED,
+        "x.com.samsung.tv.year": 2024,
+    }
+    assert redacted["/sec/tv/iotHub"]["hubInfo"] == {"hubEUI": REDACTED, "hubVersion": "6.62.13"}
