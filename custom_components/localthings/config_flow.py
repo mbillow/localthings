@@ -207,6 +207,12 @@ class HandshakeTimeout(CannotConnect):
     error_key = "handshake_timeout"
 
 
+class DeviceReadTimeout(CannotConnect):
+    """The secure session opened, but reading the device description timed out."""
+
+    error_key = "device_read_timeout"
+
+
 class ExecMemoryDenied(CannotConnect):
     """Home Assistant's own process may not map write+execute memory, which
     cffi needs for the DTLS library's callbacks (#740: systemd's
@@ -871,7 +877,9 @@ def _worth_retrying(exc: Exception, confirmed: bool, local_port: int | None) -> 
     """
     if isinstance(exc, PeerInitiatedHandshakeError):
         return True
-    return isinstance(exc, TimeoutError) and confirmed and local_port is not None
+    return (
+        isinstance(exc, (TimeoutError, DeviceReadTimeout)) and confirmed and local_port is not None
+    )
 
 
 def _source_port_bindable(host: str, local_port: int) -> bool:
@@ -907,7 +915,12 @@ def _connect_and_read(
             )
         )
         transport.connect()
-        return _read_device(transport, host, port)
+        try:
+            return _read_device(transport, host, port)
+        except TimeoutError as exc:
+            raise DeviceReadTimeout(
+                f"Connected to {host}:{port} over DTLS but reading the device description timed out"
+            ) from exc
     finally:
         if transport is not None:
             with contextlib.suppress(Exception):
@@ -940,19 +953,21 @@ def _handshake_and_read(
         _LOGGER.debug("source port %d unavailable; using an ephemeral one", local_port)
         local_port = None
     failures: list[tuple[int, Exception]] = []
+    read_timeout = None
     for port in scan.candidates:
         retried = False
         while True:
             try:
                 return _connect_and_read(host, port, cert_pem, key_pem, local_port, auth=psk)
-            except CannotConnect as err:
-                # The device answered, just not with something we can use --
-                # trying the remaining ports can't improve on that.
-                failure = _stack_failure(host, scan, err)
-                if failure is err:
-                    raise
-                raise failure from err
             except Exception as exc:
+                if isinstance(exc, DeviceReadTimeout):
+                    read_timeout = exc
+                elif isinstance(exc, CannotConnect):
+                    # The device answered, just not with something we can use.
+                    failure = _stack_failure(host, scan, exc)
+                    if failure is exc:
+                        raise
+                    raise failure from exc
                 if _exec_memory_denied(exc):
                     raise ExecMemoryDenied(
                         f"this host denies the write+execute memory cffi needs: {exc}"
@@ -964,6 +979,8 @@ def _handshake_and_read(
                 failures.append((port, exc))
                 _LOGGER.debug("port %d failed: %s", port, exc)
                 break
+    if read_timeout is not None:
+        raise _stack_failure(host, scan, read_timeout)
     alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem, auth=psk)
     raise _stack_failure(
         host, scan, _classify_handshake_failure(host, scan, failures, alerts, psk=psk is not None)

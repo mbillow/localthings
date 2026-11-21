@@ -2043,6 +2043,40 @@ def test_timeout_is_not_retried_from_an_ephemeral_port(monkeypatch) -> None:
     assert len(FakeSession.instances) == 1
 
 
+@pytest.mark.parametrize(("local_port", "attempts"), [(None, 1), (61042, 2)])
+def test_timeout_reading_description_after_connect(monkeypatch, local_port, attempts) -> None:
+    config_flow = _handshake_fixture(monkeypatch)
+    original_read = FakeSession.read
+
+    def stall_description(self, path, timeout):
+        if path == ["device", "0"]:
+            raise TimeoutError("read timed out")
+        return original_read(self, path, timeout)
+
+    monkeypatch.setattr(FakeSession, "read", stall_description)
+    with pytest.raises(config_flow.CannotConnect) as failure:
+        config_flow._handshake_and_read(
+            MOCK_HOST, _scan(confirmed=[49154]), MOCK_LEAF_CERT_PEM, "KEY", local_port
+        )
+    assert failure.value.error_key == "device_read_timeout"
+    assert len(FakeSession.instances) == attempts
+
+
+def test_read_timeout_still_allows_the_next_candidate_to_succeed(monkeypatch) -> None:
+    config_flow = _handshake_fixture(monkeypatch)
+    original_read = FakeSession.read
+
+    def read(self, path, timeout):
+        if self.port == 49154 and path == ["device", "0"]:
+            raise TimeoutError
+        return original_read(self, path, timeout)
+
+    monkeypatch.setattr(FakeSession, "read", read)
+    scan = _scan(confirmed=[49154, 49155], candidates=[49154, 49155])
+    info = config_flow._handshake_and_read(MOCK_HOST, scan, MOCK_LEAF_CERT_PEM, "KEY")
+    assert info["port"] == 49155
+
+
 def test_timeout_is_retried_only_once(monkeypatch) -> None:
     from smartthings_local.errors import SessionTimeoutError
 
