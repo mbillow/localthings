@@ -519,7 +519,7 @@
         "x.com.samsung.tv.productcode": "LS27C902PAUXEN",
         "x.com.samsung.tv.artsupport": false,
         "x.com.samsung.tv.ipv4": "<tv-ip>",
-        "x.com.samsung.tv.ipv6": "2a00:6d43:108:f000:bd22:2307:4bb4:6df8",
+        "x.com.samsung.tv.ipv6": "<tv-ipv6>",
         "x.com.samsung.tv.aiActionCurationSupport": false,
         "x.com.samsung.tv.aiActionImageSupport": false
       }

@@ -171,6 +171,12 @@ COVERAGE: list[Capability] = [
     Capability(href="/sec/tv/display/orientation"),
     Capability(href="/irblasterRemoteControl"),
     Capability(href="/irblasterRemoteDevice"),
+    # Empty on the UN55DU7200 (#895): the Q-Symphony flag carries no state,
+    # and the TV reports no power. Bind common.ENERGY_METER if one ever does.
+    Capability(href="/sec/tv/qsymphony"),
+    Capability(href="/energy/consumption/vs/0"),
+    # Utility demand response, unsupported locally like /drlc/vs/0 (#895).
+    Capability(href="/energy/demandResponseLoadControl/vs/0"),
     # Ambient mode, lighting automations and the built-in SmartThings hub.
     Capability(href="/sec/tv/ambient/info"),
     Capability(href="/sec/tv/automation/light/control"),

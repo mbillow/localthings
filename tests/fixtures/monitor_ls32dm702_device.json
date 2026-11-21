@@ -706,8 +706,8 @@
         "x.com.samsung.tv.encryptedduid": "**REDACTED**",
         "x.com.samsung.tv.productcode": "LS32DM702UKXKR",
         "x.com.samsung.tv.artsupport": false,
-        "x.com.samsung.tv.ipv4": "192.168.0.67",
-        "x.com.samsung.tv.ipv6": "fd53:508c:1391:8c9:2aaf:42ff:fe41:485e",
+        "x.com.samsung.tv.ipv4": "<tv-ip>",
+        "x.com.samsung.tv.ipv6": "<tv-ipv6>",
         "x.com.samsung.tv.ds": "",
         "x.com.samsung.tv.remoteless": {
           "ds": "",
