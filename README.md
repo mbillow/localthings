@@ -111,6 +111,10 @@ An appliance that exposes more than one device, such as each indoor unit of a mu
 
 If Home Assistant restarts while an appliance is off, LocalThings loads the appliance's device and entities from the last successful setup. They show `unavailable` until the appliance answers, then recover without any action from you. This works for any appliance LocalThings has reached at least once. A new appliance must be reachable to set it up.
 
+If the appliance was already reported powered off when Home Assistant stopped, its entities instead keep that last state, showing it off, until it answers. Some washers stop answering on the local network a few minutes after they power themselves off, and stay silent until they are switched on at the machine or from the SmartThings app. Only the state saved when Home Assistant last stopped cleanly is used, and it is discarded as soon as the appliance answers again.
+
+This means a powered-off appliance does not show `unavailable` after a restart until it is next switched on. That includes one that is genuinely unreachable, for example because its IP address changed or its Wi-Fi is down: it shows off, just as an appliance that drops off the network while running keeps showing its last state.
+
 ### When an appliance's IP address changes
 
 About half of Samsung's appliances report their Wi-Fi MAC address. For those, Home Assistant's DHCP discovery spots the new address and LocalThings updates the entry. For other appliances, select **Reconfigure** on the entry and enter the new address. LocalThings checks that the appliance at that address is the right one, and keeps its entities, history and automations. Deleting and re-adding the appliance would lose all three.
