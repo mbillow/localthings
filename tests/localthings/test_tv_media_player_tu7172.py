@@ -270,9 +270,7 @@ async def test_broadcast_position_timestamp_tracks_the_schedule(
 async def test_remote_power_reuses_the_deterministic_write(
     hass: HomeAssistant,
 ) -> None:
-    """The remote's off writes the power switch, never KEY_POWER; without a
-    MAC to wake, on is refused rather than toggled blind (#834)."""
-    from homeassistant.exceptions import ServiceValidationError
+    """Both remote power directions write an absolute value, never KEY_POWER."""
 
     entry = _entry(hass)
     session = await _setup_tv(hass, entry)
@@ -280,8 +278,8 @@ async def test_remote_power_reuses_the_deterministic_write(
 
     await hass.services.async_call("remote", "turn_off", {"entity_id": remote_id}, blocking=True)
     assert (["sec", "tv", "switch", "binary"], {"value": False}) in session.writes
-    with pytest.raises(ServiceValidationError):
-        await hass.services.async_call("remote", "turn_on", {"entity_id": remote_id}, blocking=True)
+    await hass.services.async_call("remote", "turn_on", {"entity_id": remote_id}, blocking=True)
+    assert (["sec", "tv", "switch", "binary"], {"value": True}) in session.writes
     assert all(
         body.get("x.com.samsung.tv.keyvalue") != "KEY_POWER" for _path, body in session.writes
     )

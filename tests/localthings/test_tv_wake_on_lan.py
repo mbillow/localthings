@@ -1,9 +1,4 @@
-"""Turning a switched-off TV on with Wake-on-LAN.
-
-A TV that is off has no OCF stack, so the power write can't reach it; the
-media player and the remote send a magic packet instead, and the
-coordinator then polls quickly for the TV to come back on its new port.
-"""
+"""TV turn-on through reachable OCF, with Wake-on-LAN for deeper standby."""
 
 from __future__ import annotations
 
@@ -20,6 +15,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings import wol
 from custom_components.localthings.const import CONF_MAC, DOMAIN
+from custom_components.localthings.registry.capabilities import tv
 from custom_components.localthings.registry.entities import MediaPlayerDesc
 from tests.localthings.test_soundbar import ENTRY_DATA as SOUNDBAR_DATA
 from tests.localthings.test_soundbar import _setup_soundbar
@@ -318,19 +314,18 @@ async def test_the_registry_mac_wakes_an_entry_that_stores_none(
     assert packets == [(TV_MAC, ["255.255.255.255"])]
 
 
-async def test_a_tv_with_no_mac_keeps_the_write_and_its_error(hass: HomeAssistant, packets) -> None:
+async def test_an_unreachable_tv_with_no_mac_cannot_be_woken(hass: HomeAssistant, packets) -> None:
     entry = _tv_entry(hass)
     await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     _switch_off(coordinator)
 
     with (
-        patch.object(
-            coordinator, "async_send_command", AsyncMock(side_effect=HomeAssistantError("off"))
-        ),
-        pytest.raises(HomeAssistantError),
+        patch.object(coordinator, "async_send_command", AsyncMock()) as write,
+        pytest.raises(ServiceValidationError),
     ):
         await coordinator.av.async_power_on(_media_bound(coordinator))
+    write.assert_not_awaited()
     assert packets == []
 
 
@@ -349,17 +344,113 @@ async def test_a_tv_switched_off_since_the_last_poll_is_woken(
     assert _POWER not in session.writes
 
 
-async def test_a_tv_without_a_mac_cannot_be_turned_on(hass: HomeAssistant, packets) -> None:
-    """OCF can't wake a TV, so turn-on isn't offered or sent (#834)."""
-    entry = _tv_entry(hass)
+@pytest.mark.parametrize("with_mac", [True, False])
+@pytest.mark.parametrize("domain", ["media_player", "remote"])
+async def test_reachable_standby_uses_ocf_before_wol(
+    hass: HomeAssistant, packets, with_mac: bool, domain: str
+) -> None:
+    entry = _tv_entry(hass, **({CONF_MAC: TV_MAC} if with_mac else {}))
     session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources[tv.HREF_SWITCH]["value"] = False
+    coordinator._observe.apply(tv.HREF_SWITCH, {"value": False}, source="optimistic")
     player = next(iter(hass.data["media_player"].entities))
 
-    assert not player.supported_features & MediaPlayerEntityFeature.TURN_ON
-    with pytest.raises(ServiceValidationError):
-        await player.async_turn_on()
-    assert _POWER not in session.writes
+    assert player.supported_features & MediaPlayerEntityFeature.TURN_ON
+    entity_id = hass.states.async_all(domain)[0].entity_id
+    await hass.services.async_call(domain, "turn_on", {"entity_id": entity_id}, blocking=True)
+
+    assert session.writes.count(_POWER) == 1
+    assert session.resources[tv.HREF_SWITCH]["value"] is True
     assert packets == []
+
+
+@pytest.mark.parametrize("with_mac", [True, False])
+async def test_an_ocf_refusal_uses_wol_only_with_a_mac(
+    hass: HomeAssistant, packets, no_follow, with_mac: bool
+) -> None:
+    entry = _tv_entry(hass, **({CONF_MAC: TV_MAC} if with_mac else {}))
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources[tv.HREF_SWITCH]["value"] = False
+    coordinator._observe.apply(tv.HREF_SWITCH, {"value": False}, source="optimistic")
+
+    def refuse(path, body, timeout=None):
+        session.writes.append((list(path), body))
+        return 0x44, {"controlResponse": {"result": False, "errorCode": "not_supported"}}
+
+    with (
+        patch.object(session, "write", refuse),
+        patch.object(coordinator, "_CONFIRM_DELAY_S", 0),
+    ):
+        if with_mac:
+            await coordinator.av.async_turn_on(_media_bound(coordinator))
+        else:
+            with pytest.raises(HomeAssistantError) as err:
+                await coordinator.av.async_turn_on(_media_bound(coordinator))
+            assert err.value.translation_key == "command_refused"
+
+    assert session.writes.count(_POWER) == 1
+    assert packets == ([(TV_MAC, ["255.255.255.255"])] if with_mac else [])
+
+
+async def test_an_ocf_transport_failure_falls_back_to_wol(
+    hass: HomeAssistant, packets, no_follow
+) -> None:
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources[tv.HREF_SWITCH]["value"] = False
+    coordinator._observe.apply(tv.HREF_SWITCH, {"value": False}, source="optimistic")
+
+    with patch.object(
+        coordinator, "async_send_command", AsyncMock(side_effect=HomeAssistantError("unreachable"))
+    ) as write:
+        await coordinator.av.async_turn_on(_media_bound(coordinator))
+
+    write.assert_awaited_once()
+    assert packets == [(TV_MAC, ["255.255.255.255"])]
+
+
+async def test_cancelling_an_ocf_power_on_does_not_send_wol(hass: HomeAssistant, packets) -> None:
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources[tv.HREF_SWITCH]["value"] = False
+    coordinator._observe.apply(tv.HREF_SWITCH, {"value": False}, source="optimistic")
+
+    with (
+        patch.object(
+            coordinator, "async_send_command", AsyncMock(side_effect=asyncio.CancelledError)
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await coordinator.av.async_turn_on(_media_bound(coordinator))
+
+    assert packets == []
+
+
+@pytest.mark.parametrize("with_mac", [True, False])
+async def test_read_only_power_uses_wol_or_refuses_turn_on(
+    hass: HomeAssistant, packets, no_follow, with_mac: bool
+) -> None:
+    entry = _tv_entry(hass, **({CONF_MAC: TV_MAC} if with_mac else {}))
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    rep = {**session.resources[tv.HREF_SWITCH], "value": False, "if": ["oic.if.baseline"]}
+    session.resources[tv.HREF_SWITCH] = rep
+    coordinator._observe.apply(tv.HREF_SWITCH, rep, source="optimistic")
+    player = next(iter(hass.data["media_player"].entities))
+
+    assert bool(player.supported_features & MediaPlayerEntityFeature.TURN_ON) is with_mac
+    if with_mac:
+        await player.async_turn_on()
+    else:
+        with pytest.raises(ServiceValidationError):
+            await player.async_turn_on()
+
+    assert _POWER not in session.writes
+    assert packets == ([(TV_MAC, ["255.255.255.255"])] if with_mac else [])
 
 
 async def test_a_soundbar_is_never_woken(hass: HomeAssistant, packets) -> None:

@@ -8,9 +8,14 @@ with Smart Monitors, plus its own entities:
   programme and position come from the broadcast schedule on live TV; title and
   artwork from the content info and thumbnail otherwise. `play_media` tunes a
   channel, launches an app, or casts an image, video, HLS stream or YouTube link.
-- **Turn-on** by Wake-on-LAN, offered once the entry knows the TV's MAC. The OCF
-  endpoint is gone in standby, so no OCF power-on write is sent. Wi-Fi wake
-  needs the TV's "Power On with Mobile" setting.
+- **Turn-on** through OCF while the TV still answers and reports a writable
+  power switch, with Wake-on-LAN as a fallback when its MAC is known. Some
+  TVs stop answering OCF in standby; those use Wake-on-LAN directly. Wi-Fi
+  wake needs the TV's "Power On with Mobile" setting. A TV without a known
+  MAC offers turn-on only while its writable OCF switch is reachable.
+  On the tested KQ75QNB85AFXKR, enabling Bixby responses while the TV is off
+  kept it in a standby state that allowed OCF turn-on. This is a manual TV
+  setting; LocalThings does not read or change it.
 - **Remote** (`remote.send_command` with `KEY_*` names or aliases), **notify**
   (an on-screen pop-up), an **Open app** select and a **screen off** button.
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
@@ -80,6 +85,30 @@ option off the endpoints stay registered but refuse every request. Turning it
 off also ends any camera this TV is casting.
 
 ## Scope and evidence
+
+On a KQ75QNB85AFXKR, two authenticated standby tests read
+`/sec/tv/switch/binary` as `value: false`, posted `{"value": true}`, received
+`2.04 Changed` with `controlResponse.result: true` and `errorCode: ok`, then
+read `value: true`. A separate standby attempt received no DTLS or public
+CoAP response. These results establish OCF turn-on while this model remains
+reachable, not a way to wake its OCF stack from deep standby.
+
+The owner reported that allowing Bixby to respond while the TV is off kept
+this model available in standby. The setting was not tested in a controlled
+on/off comparison, so this is a model-specific observation rather than a
+guarantee for other TVs or firmware.
+
+An independent 100-second Observe test received seven subsequent
+notifications without polling: one power change from off to on, one content
+update and five audio-output updates. The TV also accepted an app-content
+subscription, but it emitted no subsequent notification during that window.
+Audio, channel, media-input and renderer requests returned ordinary responses
+without an Observe option. During the test, SmartThings continued to show the
+TV online but could no longer control it. Closing the test connection did not
+restore control; restarting the TV did. Cancellation requests were sent, but
+their acceptance was not verified. The exact interference mechanism remains
+unconfirmed. TV Observe subscriptions therefore remain disabled; this change
+keeps the existing polling behavior.
 
 The fixture is the full 49-resource cached diagnostics snapshot from a
 QE50QN90AATXXU on 2026-11-12, with account, network, identity and content values
