@@ -93,6 +93,11 @@ read `value: true`. A separate standby attempt received no DTLS or public
 CoAP response. These results establish OCF turn-on while this model remains
 reachable, not a way to wake its OCF stack from deep standby.
 
+The owner subsequently confirmed that Wake-on-LAN worked after resetting
+the TV. The earlier WOL failure does not establish a limitation of this
+model; its cause was not isolated. OCF turn-on is an additional local path,
+and the WOL fallback remains available.
+
 The owner reported that allowing Bixby to respond while the TV is off kept
 this model available in standby. The setting was not tested in a controlled
 on/off comparison, so this is a model-specific observation rather than a
