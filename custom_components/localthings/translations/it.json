@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "Il messaggio della notifica è vuoto."
     },
+    "audio_notification_unsupported": {
+      "message": "Questo dispositivo non può riprodurre notifiche audio."
+    },
+    "audio_notification_media_type": {
+      "message": "La soundbar riproduce l'audio come notifica (music, url o un tipo audio/*), non {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} non è un link http(s) a un file audio."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "Impossibile convertire l'audio per la soundbar: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant non ha un URL locale da cui la soundbar possa scaricare l'audio. Imposta l'URL della rete locale in Impostazioni > Sistema > Rete."
+    },
     "settings_unsupported": {
       "message": "Questo dispositivo non ha un menu delle impostazioni TV controllabile."
     },

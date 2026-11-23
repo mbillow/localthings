@@ -21,6 +21,12 @@ from . import wol
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_MAC, DOMAIN
 from .devices import find_entry_device
 from .registry.capabilities import tv as tv_caps
+from .registry.capabilities.av import (
+    AUDIO_NOTIFICATION_FIELD,
+    AUDIO_NOTIFICATION_PATH,
+    AUDIO_NOTIFICATION_TYPE,
+    HREF_AUDIO_NOTIFICATION,
+)
 from .registry.discovery import BoundEntity
 
 if TYPE_CHECKING:
@@ -223,6 +229,31 @@ class AVControl:
             tv_caps.NATIVE_APP_PATH,
             tv_caps.notify_body(seq, title or tv_caps.NOTIFY_DEFAULT_TITLE, message),
             tv_caps.HREF_NATIVE_APP,
+        )
+
+    def can_play_audio_notification(self) -> bool:
+        """True for a board that takes an audio URL as a notification."""
+        return self._coordinator.has_href(
+            HREF_AUDIO_NOTIFICATION
+        ) and self._coordinator.has_resource_type(HREF_AUDIO_NOTIFICATION, AUDIO_NOTIFICATION_TYPE)
+
+    async def async_play_audio_notification(self, url: str) -> None:
+        """Have the board download `url` (audio_notify) and play it.
+
+        The ack only says the write landed: the download and playback
+        follow, and a failed download is never reported back.
+        """
+        if not self.can_play_audio_notification():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="audio_notification_unsupported",
+            )
+        # Not resent after a lost reply, which would play the clip twice.
+        await self._coordinator._async_put(
+            AUDIO_NOTIFICATION_PATH,
+            {AUDIO_NOTIFICATION_FIELD: url},
+            HREF_AUDIO_NOTIFICATION,
+            retry=False,
         )
 
     async def async_show_menu(self, body: dict) -> None:

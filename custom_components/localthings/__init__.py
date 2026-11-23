@@ -17,7 +17,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from . import camera_dash
+from . import audio_notify, camera_dash
 from .cleanup import async_delete_removed_issues, async_notify_removed, async_reconcile_entities
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import (
@@ -437,4 +437,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unloaded:
         coordinator: LocalThingsCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_close()
+        if not hass.data[DOMAIN]:
+            audio_notify.async_clear(hass)
     return unloaded

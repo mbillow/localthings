@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "Text oznámení je prázdný."
     },
+    "audio_notification_unsupported": {
+      "message": "Toto zařízení neumí přehrávat zvuková oznámení."
+    },
+    "audio_notification_media_type": {
+      "message": "Soundbar přehrává zvuk jako oznámení (music, url nebo typ audio/*), ne {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} není http(s) odkaz na zvukový soubor."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "Zvuk se pro soundbar nepodařilo převést: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant nemá místní adresu URL, ze které by si soundbar mohl zvuk stáhnout. Nastavte adresu URL v místní síti v Nastavení > Systém > Síť."
+    },
     "settings_unsupported": {
       "message": "Toto zařízení nemá ovladatelnou nabídku nastavení televize."
     },

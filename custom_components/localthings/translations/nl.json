@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "Het meldingsbericht is leeg."
     },
+    "audio_notification_unsupported": {
+      "message": "Dit apparaat kan geen audiomeldingen afspelen."
+    },
+    "audio_notification_media_type": {
+      "message": "De soundbar speelt audio af als melding (music, url of een audio/*-type), niet {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} is geen http(s)-link naar een audiobestand."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "Kon de audio niet omzetten voor de soundbar: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant heeft geen lokale URL waar de soundbar de audio van kan downloaden. Stel de URL voor het lokale netwerk in via Instellingen > Systeem > Netwerk."
+    },
     "settings_unsupported": {
       "message": "Dit apparaat heeft geen bedienbaar tv-instellingenmenu."
     },

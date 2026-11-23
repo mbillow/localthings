@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "알림 메시지가 비어 있습니다."
     },
+    "audio_notification_unsupported": {
+      "message": "이 기기는 오디오 알림을 재생할 수 없습니다."
+    },
+    "audio_notification_media_type": {
+      "message": "사운드바는 오디오를 알림으로 재생합니다(music, url 또는 audio/* 형식). {media_type}은(는) 지원하지 않습니다."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url}은(는) 오디오 파일에 대한 http(s) 링크가 아닙니다."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "사운드바용 오디오를 변환하지 못했습니다: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant에 사운드바가 오디오를 다운로드할 수 있는 로컬 URL이 없습니다. 설정 > 시스템 > 네트워크에서 로컬 네트워크 URL을 설정하세요."
+    },
     "settings_unsupported": {
       "message": "이 기기에는 제어할 수 있는 TV 설정 메뉴가 없습니다."
     },

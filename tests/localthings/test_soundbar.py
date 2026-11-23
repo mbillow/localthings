@@ -621,14 +621,48 @@ async def test_airplay_frozen_feed_shows_no_progress_and_offers_no_seek(
     assert len(session.writes) == writes
 
 
-async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
+async def test_the_soundbar_plays_media_as_an_audio_notification(hass: HomeAssistant) -> None:
+    """play_media converts the clip and hands the board its URL; the TV's
+    channels, apps and casting stay the TV's."""
     from homeassistant.components.media_player import MediaPlayerEntityFeature
 
-    await _setup_soundbar(hass, _mock_entry(hass))
-    assert (
-        not next(iter(hass.data["media_player"].entities)).supported_features
-        & MediaPlayerEntityFeature.PLAY_MEDIA
+    session = await _setup_soundbar(hass, _mock_entry(hass))
+    player = next(iter(hass.data["media_player"].entities))
+    assert player.supported_features & MediaPlayerEntityFeature.MEDIA_ANNOUNCE
+    url = "http://192.0.2.10:8123/api/localthings/audio/clip.pcm"
+    with patch(
+        "custom_components.localthings.media_player.audio_notify.async_prepare",
+        return_value=url,
+    ) as prepare:
+        await hass.services.async_call(
+            "media_player",
+            "play_media",
+            {
+                "entity_id": player.entity_id,
+                "media_content_type": "music",
+                "media_content_id": "http://192.0.2.10:8123/clip.mp3",
+                "announce": True,
+            },
+            blocking=True,
+        )
+    prepare.assert_awaited_once()
+    assert session.writes[-1] == (
+        ["x.com.samsung", "notification", "receiver"],
+        {"x.com.samsung.audio": url},
     )
+    with pytest.raises(ServiceValidationError) as err:
+        await player.async_play_media("channel", "5")
+    assert err.value.translation_key == "audio_notification_media_type"
+
+
+async def test_unloading_the_last_entry_drops_the_audio_clips(hass: HomeAssistant) -> None:
+    from custom_components.localthings import audio_notify
+
+    entry = _mock_entry(hass)
+    await _setup_soundbar(hass, entry)
+    audio_notify.add_clip(hass, b"\x00\x00")
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert not hass.data.get(f"{DOMAIN}_audio_clips")
 
 
 # V4n1X's HW-Q950T state table (#719): what the bar reported in each state.
