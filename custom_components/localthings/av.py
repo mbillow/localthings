@@ -41,9 +41,7 @@ class AVControl:
 
     _NOTIFY_REGISTER_SETTLE_S = 3.0
     _WAKE_WINDOW_S = 120.0
-    # Least time between look-ups after a wake. A look-up whose handshake
-    # waits for the TV takes longer anyway; this only paces ones that fail
-    # at once (a port refusing while the TV boots, standby answering off).
+    # Least time between look-ups after a wake; paces only look-ups that fail at once.
     _WAKE_REFRESH_S = 2.0
     # The switch write in network standby; the TV answers it in under 0.5 s.
     _STANDBY_WRITE_TIMEOUT_S = 3.0
@@ -314,9 +312,9 @@ class AVControl:
         except (OSError, ValueError) as err:
             self._log.debug("Wake-on-LAN resend failed: %s", err)
 
-    async def _async_switch_on(self) -> bool:
+    async def _async_switch_on(self) -> bool | None:
         """Switch a TV awake in network standby on over OCF, on the session
-        that just read it. One attempt; returns whether the TV accepted it."""
+        that just read it. Whether the TV accepted it; None without an answer."""
         coordinator = self._coordinator
         path = [seg for seg in tv_caps.HREF_SWITCH.split("/") if seg]
 
@@ -332,7 +330,7 @@ class AVControl:
                 code = await self.hass.async_add_executor_job(_write)
             except Exception as err:  # the loop looks again either way
                 self._log.debug("switching the TV on from standby failed: %s", err)
-                return False
+                return None
         accepted = code >> 5 == 2
         self._log.info(
             "TV in network standby: switch-on %s (code %#04x)",
@@ -345,15 +343,9 @@ class AVControl:
         """Look up the woken TV until it answers, or the window closes.
 
         The handshake in flight started while the TV was off, so it is
-        cancelled rather than waited out; the first look-up starts at once,
-        its handshake retransmitting until the TV is up (about 1-2 s after
-        the packet). Drop a stale session and bypass rediscovery backoff:
-        a TV may return on a new port (#435).
-
-        A TV awake in network standby (a few seconds every few minutes)
-        ignores the magic packet and answers its switch off; it is switched
-        on over OCF instead. One that drops back to standby before that
-        write lands gets the packet again.
+        cancelled; a TV may return on a new port (#435). A TV awake in network
+        standby ignores the packet but takes a switch write (QE85QN95A), once
+        per standby wake; one gone dark again gets the packet again.
         """
         coordinator = self._coordinator
         coordinator.cancel_connect()
@@ -362,7 +354,7 @@ class AVControl:
                 await self.hass.async_add_executor_job(coordinator._close_session)
             coordinator._consecutive_poll_timeouts = 0
         deadline = time.monotonic() + self._WAKE_WINDOW_S
-        switched = seen_standby = False
+        written = seen_standby = False
         while (started := time.monotonic()) < deadline:
             coordinator._rediscovery_backoff_s = 0.0
             coordinator._next_rediscovery_ts = 0.0
@@ -370,14 +362,15 @@ class AVControl:
             if self._answering():
                 self._log.info("TV answered after Wake-on-LAN")
                 return
-            if coordinator._standby_cycle and coordinator._session is not None:
+            if coordinator._standby_cycle:
                 seen_standby = True
-                if not switched:
-                    switched = await self._async_switch_on()
-                    if switched:
+                if not written:
+                    accepted = await self._async_switch_on()
+                    written = accepted is not None
+                    if accepted:
                         continue
             elif seen_standby:
-                switched = seen_standby = False
+                written = seen_standby = False
                 self._log.debug("TV went back to standby; sending Wake-on-LAN again")
                 await self._async_send_packet(mac, targets)
             await asyncio.sleep(max(0.0, self._WAKE_REFRESH_S - (time.monotonic() - started)))

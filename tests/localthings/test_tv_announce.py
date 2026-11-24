@@ -14,7 +14,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from smartthings_local.errors import SessionClosedError, SessionError
 
 from custom_components.localthings.announce import async_watch_alive
-from custom_components.localthings.const import CONF_HOST, CONF_MAC, DOMAIN
+from custom_components.localthings.const import CONF_DEVICE_TYPE, CONF_HOST, CONF_MAC, DOMAIN
 from tests.localthings.test_tv_media_player_tu7172 import ENTRY_DATA, MOCK_TV_DI, _setup_tv
 
 TV_MAC = "02:00:00:00:00:0a"
@@ -234,17 +234,68 @@ async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
     assert coordinator.update_interval.total_seconds() == 30
 
 
-async def test_a_dark_appliance_keeps_the_summary_interval(hass: HomeAssistant, ssdp) -> None:
-    """Only a flat board backs off: an appliance's dark polls also keep its
-    last state, which the slower cadence would leave stale for longer."""
+@pytest.mark.parametrize("family", ["soundbar", "monitor", "washer"])
+async def test_a_dark_device_outside_the_tv_family_keeps_the_summary_interval(
+    hass: HomeAssistant, ssdp, family: str
+) -> None:
+    """Only a TV's power-on announcement is measured; anything else keeps
+    finding its power-on by polling."""
     entry = _entry(hass)
     await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     coordinator._announces = True
-    coordinator._flat = False
+    coordinator.device_type_name = family
 
     for _ in range(4):
         coordinator._pace_dark_polls(TimeoutError("timed out"))
         coordinator._failed_cycles += 1
 
     assert coordinator.update_interval.total_seconds() == 30
+
+
+async def test_unloading_cancels_a_look_and_the_handshake_in_flight(
+    hass: HomeAssistant, ssdp
+) -> None:
+    """A look queued behind the session lock is cancelled, not run against a
+    closed entry, and the handshake in flight is cut short."""
+    entry = _entry(hass)
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    coordinator._failed_cycles = 2
+    handshake = _Handshake()
+
+    with patch.object(coordinator, "async_refresh", AsyncMock()) as look:
+        async with coordinator._session_lock:
+            callback(None, _Change.ALIVE)
+            await asyncio.sleep(0)
+            task = coordinator._announce_task
+            assert task is not None
+            coordinator._connecting = handshake
+            closing = asyncio.ensure_future(coordinator.async_close())
+            await asyncio.sleep(0)
+        async with asyncio.timeout(5):
+            await closing
+            await asyncio.gather(task, return_exceptions=True)
+
+    assert task.cancelled()
+    look.assert_not_awaited()
+    assert handshake.cancelled >= 1
+
+
+async def test_only_a_tv_watches_for_its_announcements(hass: HomeAssistant, ssdp) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={**ENTRY_DATA, CONF_MAC: TV_MAC, CONF_DEVICE_TYPE: "soundbar"},
+        unique_id=f"localthings_{MOCK_TV_DI}",
+        version=4,
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.localthings.coordinator.LocalThingsCoordinator.is_tv",
+        return_value=False,
+    ):
+        await _setup_tv(hass, entry)
+
+    assert ssdp.registered == []

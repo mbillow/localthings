@@ -362,8 +362,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     coordinator.async_watch_late_evidence()
-    if unwatch := await async_watch_alive(
-        hass, entry.data[CONF_HOST], coordinator.async_device_announced
+    if coordinator.is_tv() and (
+        unwatch := await async_watch_alive(
+            hass, entry.data[CONF_HOST], coordinator.async_device_announced
+        )
     ):
         entry.async_on_unload(unwatch)
     return True

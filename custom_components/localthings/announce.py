@@ -1,10 +1,7 @@
-"""A device's own SSDP announcements, as the event that it came on.
+"""A TV's own SSDP alive, as the event that it came on.
 
-Samsung TVs and soundbars announce UPnP services (DIAL, a media renderer)
-when they come on. Home Assistant's SSDP scanner reports an alive for a
-device it did not already list: after a byebye, so on every power-on of a
-TV that announced its standby on switching off. Without the `ssdp`
-integration loaded this watches nothing, and polling alone finds the device.
+A TV announces its UPnP services on power-on, after the byebye it sent on
+switching off (QE85QN95A). Without the `ssdp` integration this watches nothing.
 """
 
 from __future__ import annotations

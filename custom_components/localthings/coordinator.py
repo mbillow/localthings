@@ -483,9 +483,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # their port on every power-on; at the general cap, one turned back on
     # would wait up to 30 minutes for the next lookup.
     _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
-    # Between polls of a dark flat board, doubling from the summary interval
-    # to this cap once the device has announced itself over SSDP: its
-    # power-on announcement is then what finds it (async_device_announced).
+    # Cap of the doubling poll interval of a dark TV whose SSDP announcements
+    # reach Home Assistant; its power-on announcement finds it (async_device_announced).
     _DARK_POLL_MAX_S: float = 300.0
 
     # A single reconnect is normal appliance behavior (README's "Known
@@ -1486,7 +1485,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # ClientHello probe finds its moved port. It holds the session
                 # lock for seconds, so only where needed.
                 probe_scan=self._flat,
-                include_current=True,
+                # A TV comes up during a handshake that started while it was off.
+                include_current=self.is_tv(),
             )
         except Exception as e:
             self._log.debug("secure port lookup failed: %s", e)
@@ -1822,6 +1822,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         awake = self._awake_href()
         return awake is not None and reads_off(self.resource(awake))
 
+    def is_tv(self) -> bool:
+        """True for the TV family, the live one or the one the entry stored."""
+        return (self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)) == "tv"
+
+    def _unread_hrefs(self) -> frozenset[str]:
+        """The family's advertised hrefs that discovery doesn't read."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        return registry_for(family).unread_hrefs
+
     def _awake_href(self) -> str | None:
         """The family's DeviceRegistry.awake_href, once an entity is bound
         to it (before discovery, read_all checks it against /oic/res)."""
@@ -1844,7 +1853,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         awake = self._awake_href()
         if not self._discovered:
-            results = read_all(sess, self._oic_res(), logger=self._log, awake=awake)
+            results = read_all(
+                sess,
+                self._oic_res(),
+                logger=self._log,
+                awake=awake,
+                unread=self._unread_hrefs(),
+            )
         else:
             # A board back from off (failed cycles) is read in full at once:
             # its settings may have changed while it was dark.
@@ -1897,8 +1912,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return {}
         if not results:
             raise DeviceSilent("flat poll: no resource answered")
-        if awake is not None and awake not in results:
-            raise DeviceSilent(f"flat poll: {awake} got no answer (network standby)")
         return results
 
     def _poll_hrefs_blocking(
@@ -3473,21 +3486,18 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # standby) is routine; only an unexpected error gets its trace.
             if not isinstance(e, _ROUTINE_UNREACHABLE):
                 self._log.debug("Full error:", exc_info=e)
-            # A flat board that stops answering is switched off or gone: its
-            # entities read unavailable through av.unreachable() rather than
-            # carrying its last state on as an appliance's do. Not a failed
-            # update either, so a TV switched off logs no error.
-            if not self._flat or self.last_update_success:
+            # A TV switched off is not a failed update: its entities read
+            # unavailable through av.unreachable(), and no error is logged.
+            if not self._flat or (self.is_tv() and self.last_update_success):
                 return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
 
     def _pace_dark_polls(self, e: Exception) -> None:
-        """Poll a dark flat board less often once it is known to announce
-        itself; anything else keeps the summary interval. A refused session
-        (a fatal alert) is a device that answers, so it is not dark."""
+        """Poll a dark TV whose announcements reach HA less often. A refused
+        session (a fatal alert) is a TV that answers, so it is not dark."""
         refused = isinstance(e, SessionError) and not isinstance(e, SessionClosedError)
         seconds = SUMMARY_INTERVAL_S
-        if self._flat and self._announces and not refused:
+        if self.is_tv() and self._announces and not refused:
             doublings = min(self._failed_cycles - 1, 8)
             seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
         self.update_interval = timedelta(seconds=seconds)
@@ -3513,7 +3523,6 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except BoardInStandby as e:
                 # The session answers; the board is off. Kept open, so the
                 # next cycle's awake read is the whole poll.
-                self._consecutive_poll_timeouts = 0
                 self._standby_cycle = True
                 return self._device_unreachable("device in standby", e)
             except Exception as e:
@@ -3562,6 +3571,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     resources = await self.hass.async_add_executor_job(self._poll_once)
+                except BoardInStandby as e2:
+                    self._standby_cycle = True
+                    return self._device_unreachable("device in standby", e2)
                 except Exception as e2:
                     return self._device_unreachable("poll failed after reconnect", e2)
                 else:

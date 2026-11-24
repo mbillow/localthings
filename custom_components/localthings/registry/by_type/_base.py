@@ -28,6 +28,8 @@ class DeviceRegistry:
     # one, or answers it off, is in network standby: it is polled as off,
     # and never discovered from.
     awake_href: str | None = None
+    # Advertised hrefs discovery doesn't read (registry/flat.read_all).
+    unread_hrefs: frozenset[str] = frozenset()
 
 
 def unpolled(*groups: Iterable[Capability]) -> list[Capability]:

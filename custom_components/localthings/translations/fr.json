@@ -2860,6 +2860,7 @@
       "handshake_failed": "L'appareil a refusé la négociation DTLS pour une raison sans rapport avec le certificat, très probablement une incompatibilité de protocole ou d'algorithme de chiffrement. Le journal de Home Assistant indique l'alerte exacte qu'il a envoyée.",
       "cloud_unreachable": "Impossible de joindre la passerelle cloud de Samsung pour récupérer l'UUID nécessaire à la création du certificat de cet appareil. Vérifiez l'accès à Internet de Home Assistant et réessayez.",
       "unexpected_response": "La connexion à l'appareil a réussi, mais il n'a pas renvoyé de description d'appareil exploitable. Il ne s'agit peut-être pas d'un appareil pris en charge par cette intégration. Le journal de Home Assistant indique ce qu'il a envoyé.",
+      "tv_in_standby": "Le téléviseur est en veille. Allumez-le, puis réessayez.",
       "cannot_connect": "Impossible de se connecter à l'appareil. Vérifiez que l'adresse IP est correcte et que l'appareil est allumé et connecté à votre réseau.",
       "invalid_ca": "Le certificat CA ou la clé privée n'a pas pu être chargé. Vérifiez que le contenu PEM est correct et que la clé correspond au certificat.",
       "unknown": "Erreur inattendue. Consultez les journaux de Home Assistant pour plus de détails.",

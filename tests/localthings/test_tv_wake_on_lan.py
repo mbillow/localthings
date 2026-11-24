@@ -25,6 +25,7 @@ from custom_components.localthings.const import CONF_MAC, DOMAIN
 from custom_components.localthings.coordinator import DeviceSilent
 from custom_components.localthings.registry.entities import MediaPlayerDesc
 from custom_components.localthings.registry.flat import BoardInStandby
+from custom_components.localthings.sensor import LocalThingsConnectionModeSensor
 from tests.localthings.test_soundbar import ENTRY_DATA as SOUNDBAR_DATA
 from tests.localthings.test_soundbar import _setup_soundbar
 from tests.localthings.test_tv_media_player_tu7172 import ENTRY_DATA, MOCK_TV_DI, _setup_tv
@@ -751,17 +752,21 @@ async def test_a_tv_awake_in_standby_is_switched_on_over_ocf(
 
 
 @pytest.mark.parametrize(
-    "first", [(0x80, None), (None, TimeoutError("timed out"))], ids=["refused", "lost"]
+    ("first", "writes"),
+    [((0x80, None), 1), ((None, TimeoutError("timed out")), 2)],
+    ids=["refused", "lost"],
 )
-async def test_a_switch_on_that_fails_is_sent_again_on_the_next_look(
-    hass: HomeAssistant, packets, first
+async def test_a_switch_on_is_sent_again_only_when_unanswered(
+    hass: HomeAssistant, packets, first, writes: int
 ) -> None:
-    """A refused or unanswered write leaves the TV in standby: the next look
-    finds it there and writes again."""
+    """An unanswered write is sent again on the next look; a refused one is
+    not repeated in the same standby wake."""
     coordinator, session = await _in_standby(hass)
     code, error = first
     real_write = session.write
+    real_refresh = coordinator.async_refresh
     calls: list[float | None] = []
+    looks = 0
 
     def _write(path, body, timeout=None):
         calls.append(timeout)
@@ -771,10 +776,20 @@ async def test_a_switch_on_that_fails_is_sent_again_on_the_next_look(
             return code, None
         return real_write(path, body, timeout)
 
-    with patch.object(session, "write", _write):
+    async def _look() -> None:
+        nonlocal looks
+        looks += 1
+        if looks == 4:  # turned on some other way, so the loop ends
+            session.resources[_SWITCH] = {"value": True}
+        await real_refresh()
+
+    with (
+        patch.object(session, "write", _write),
+        patch.object(coordinator, "async_refresh", _look),
+    ):
         await _turn_on(hass, coordinator)
 
-    assert len(calls) == 2
+    assert len(calls) == writes
     assert calls[0] == coordinator.av._STANDBY_WRITE_TIMEOUT_S
     assert coordinator._failed_cycles == 0
     assert len(packets) == 1
@@ -823,6 +838,105 @@ async def test_a_tv_back_in_standby_before_the_write_gets_the_packet_again(
     assert len(packets) == 2
     assert packets[0] == packets[1]
     assert coordinator._failed_cycles == 0
+
+
+async def test_an_accepted_switch_on_is_looked_at_without_a_pause(
+    hass: HomeAssistant, packets
+) -> None:
+    """The TV is coming on: the next look follows the write at once."""
+    coordinator, _session = await _in_standby(hass)
+    coordinator.av._WAKE_REFRESH_S = 30.0
+
+    async with asyncio.timeout(5):
+        await _turn_on(hass, coordinator)
+
+    assert coordinator._failed_cycles == 0
+
+
+async def test_each_standby_wake_gets_its_own_switch_on(hass: HomeAssistant, packets) -> None:
+    """A write refused in one standby wake is tried again in the next one,
+    after the TV has gone dark in between."""
+    coordinator, session = await _in_standby(hass)
+    real_read = session.read
+    real_write = session.write
+    real_refresh = coordinator.async_refresh
+    writes: list[int] = []
+    looks = 0
+    dark = False
+
+    def _read(path, timeout=None):
+        if dark:
+            raise TimeoutError("timed out")
+        return real_read(path, timeout)
+
+    def _write(path, body, timeout=None):
+        writes.append(looks)
+        if len(writes) == 1:
+            return 0x80, None
+        return real_write(path, body, timeout)
+
+    async def _look() -> None:
+        nonlocal looks, dark
+        looks += 1
+        dark = looks == 2
+        await real_refresh()
+
+    with (
+        patch.object(session, "read", _read),
+        patch.object(session, "write", _write),
+        patch.object(coordinator, "async_refresh", _look),
+        patch("custom_components.localthings.coordinator.create_transport", return_value=session),
+    ):
+        await _turn_on(hass, coordinator)
+
+    assert writes == [1, 3]
+    assert len(packets) == 2
+    assert coordinator._failed_cycles == 0
+
+
+async def test_a_standby_answer_after_a_reconnect_keeps_its_session(
+    hass: HomeAssistant,
+) -> None:
+    """A poll that fails, reconnects and then reads standby is a standby
+    cycle like any other: the session that read it stays for the switch write."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    session.resources[_SWITCH] = {"value": False}
+    real_poll = coordinator._poll_once
+    polls = 0
+
+    def _poll():
+        nonlocal polls
+        polls += 1
+        if polls == 1:
+            raise TimeoutError("timed out")
+        return real_poll()
+
+    with (
+        patch.object(coordinator, "_poll_once", _poll),
+        patch.object(coordinator, "_RECONNECT_PAUSE_S", 0),
+        patch("custom_components.localthings.coordinator.create_transport", return_value=session),
+    ):
+        await coordinator.async_refresh()
+
+    assert polls == 2
+    assert coordinator._standby_cycle
+    assert coordinator._session is session
+    assert coordinator._failed_cycles == 1
+
+
+async def test_the_connection_sensor_of_a_dark_tv_is_unavailable(hass: HomeAssistant) -> None:
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    sensor = LocalThingsConnectionModeSensor(coordinator)  # disabled by default
+    assert sensor.available
+
+    coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+
+    assert coordinator.last_update_success
+    assert not sensor.available
 
 
 @pytest.mark.parametrize(("standby", "closed"), [(True, False), (False, True)])

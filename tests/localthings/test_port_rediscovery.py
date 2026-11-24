@@ -68,6 +68,7 @@ class _Appliance:
         self.device_id = device_id
         self.dialled: list[int] = []
         self.lookups = 0
+        self.include_current: list[bool] = []
 
     def transport(self, data, **kwargs):
         appliance = self
@@ -94,6 +95,7 @@ class _Appliance:
         include_current: bool = False,
     ) -> int | None:
         self.lookups += 1
+        self.include_current.append(include_current)
         if self.live_port is None or (self.live_port == current and not include_current):
             return None
         return self.live_port
@@ -301,20 +303,35 @@ def test_the_probe_scan_reports_a_live_current_port_when_asked(
         assert _real_moved_secure_port(HOST, OLD_PORT, probe_scan=True) is None
 
 
-async def test_a_device_that_came_up_during_the_handshake_is_handshaken_again(
+async def test_a_tv_that_came_up_during_the_handshake_is_handshaken_again(
     hass: HomeAssistant, monkeypatch
 ) -> None:
-    """The lookup finds the stored port answering: one more handshake there,
-    in the same cycle, instead of a failed cycle and a wait for the next."""
+    """The lookup finds a TV's stored port answering: one more handshake
+    there, in the same cycle, instead of a failed cycle and a wait for the next."""
     device = _scripted(monkeypatch, [TimeoutError("handshake timed out")])
     device.live_port = OLD_PORT
-    coordinator = _coordinator(hass)
+    coordinator = _coordinator(hass, **{CONF_DEVICE_TYPE: "tv"})
 
     await hass.async_add_executor_job(coordinator._connect_session)
 
     assert device.dialled == [OLD_PORT, OLD_PORT]
     assert coordinator._session is not None
     assert coordinator._moved_port is None
+
+
+async def test_an_appliance_whose_port_still_answers_waits_for_the_next_cycle(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """Outside the TV family the lookup doesn't report the stored port."""
+    device = _scripted(monkeypatch, [TimeoutError("handshake timed out")])
+    device.live_port = OLD_PORT
+    coordinator = _coordinator(hass)
+
+    with pytest.raises(TimeoutError):
+        await hass.async_add_executor_job(coordinator._connect_session)
+
+    assert device.dialled == [OLD_PORT]
+    assert device.include_current == [False]
 
 
 async def test_the_handshake_in_flight_can_be_cancelled(hass: HomeAssistant, monkeypatch) -> None:

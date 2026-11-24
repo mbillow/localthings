@@ -139,6 +139,7 @@
       "handshake_failed": "El electrodoméstico rechazó el saludo DTLS por un motivo no relacionado con el certificado, probablemente una incompatibilidad de protocolo o de cifrado. El registro de Home Assistant recoge la alerta exacta que envió.",
       "cloud_unreachable": "No se pudo contactar con la pasarela en la nube de Samsung para obtener el UUID necesario para emitir el certificado de este dispositivo. Comprueba el acceso a internet de Home Assistant e inténtalo de nuevo.",
       "unexpected_response": "La conexión con el dispositivo se estableció correctamente, pero no devolvió una descripción de dispositivo utilizable. Puede que no sea un electrodoméstico compatible con esta integración. El registro de Home Assistant recoge lo que envió.",
+      "tv_in_standby": "El televisor está en espera. Enciéndalo y vuelva a intentarlo.",
       "cannot_connect": "No se puede conectar con el dispositivo. Comprueba que la dirección IP es correcta y que el electrodoméstico está encendido y conectado a tu red.",
       "invalid_ca": "No se ha podido cargar el certificado CA o la clave privada. Comprueba que el contenido PEM sea correcto y que la clave coincida con el certificado.",
       "unknown": "Error inesperado. Consulta los registros de Home Assistant para más detalles.",

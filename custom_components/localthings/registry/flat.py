@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from .capabilities.av import ONBOARDING_HREFS
-from .capabilities.tv import APPDATA_PREFIX, NO_GET_HREFS
+from .capabilities.tv import APPDATA_PREFIX
 from .subdevices import _iter_oic_res_hrefs
 
 if TYPE_CHECKING:
@@ -27,10 +27,9 @@ FLAT_ENUMERATION_BUDGET_S = 60.0
 
 # Never read: the onboarding resources (tokens, a paired phone, nearby
 # networks), /oic/sec/* (refused, no entities), identity (read_identity has
-# it), /device/<n> Collections (owned by the subdevice code), a TV's
-# appdata mailboxes (an account list and a remote token, #815) and the TV
-# resources that never answer a GET.
-_SKIP_EXACT = frozenset({"/oic/d", "/oic/p", "/oic/res", *ONBOARDING_HREFS, *NO_GET_HREFS})
+# it), /device/<n> Collections (owned by the subdevice code) and a TV's
+# appdata mailboxes (an account list and a remote token, #815).
+_SKIP_EXACT = frozenset({"/oic/d", "/oic/p", "/oic/res", *ONBOARDING_HREFS})
 _SKIP_PREFIXES = ("/oic/sec/", "/device/", APPDATA_PREFIX)
 
 
@@ -56,7 +55,12 @@ def reads_off(rep: dict | None) -> bool:
 
 
 def read_all(
-    transport, links, *, logger: logging.Logger, awake: str | None = None
+    transport,
+    links,
+    *,
+    logger: logging.Logger,
+    awake: str | None = None,
+    unread: frozenset[str] = frozenset(),
 ) -> dict[str, dict]:
     """Every resource /oic/res advertises, for discovery. Blocking.
 
@@ -66,8 +70,9 @@ def read_all(
     reads time out or report itself off; discovering from that would
     register only the entities that answered. `awake` is read first, so
     standby costs one read; an answer saying off raises `BoardInStandby`.
+    `unread` (DeviceRegistry.unread_hrefs) is skipped and not counted.
     """
-    hrefs = flat_hrefs(links)
+    hrefs = [href for href in flat_hrefs(links) if href not in unread]
     resources: dict[str, dict] = {}
     if awake in hrefs:
         resources = dict(iter_resources(transport, [awake], timeout=FLAT_TIMEOUT_S, logger=logger))

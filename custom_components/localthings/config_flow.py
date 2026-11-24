@@ -268,6 +268,12 @@ class UnexpectedResponse(CannotConnect):
     error_key = "unexpected_response"
 
 
+class DeviceInStandby(CannotConnect):
+    """A TV answered from network standby: its power switch reads off."""
+
+    error_key = "tv_in_standby"
+
+
 class TokenNotReceived(CannotConnect):
     """The legacy bridge never sent a device token back (issue #168).
 
@@ -777,9 +783,10 @@ def _read_device(transport, host: str, port: int) -> dict:
                 identity.raw.get("/oic/res") or [],
                 logger=_LOGGER,
                 awake=family.awake_href if family is not None else None,
+                unread=family.unread_hrefs if family is not None else frozenset(),
             )
-        except BoardInStandby:
-            resources = {}
+        except BoardInStandby as err:
+            raise DeviceInStandby(f"{host}:{port} is in standby: {err}") from err
         usable = bool(resources)
     else:
         usable = code == 0x45 and body is not None

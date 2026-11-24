@@ -48,22 +48,29 @@ finding concerned sound mode, not picture mode.
 - In standby the TV wakes for a moment every few minutes and answers with its
   power switch off (measured on a QE85QN95A: 15 to 18 s every 5 minutes).
   That answer reads as off, so those wakes don't bring its other entities
-  back with stale values.
-- After a Wake-on-LAN turn-on, LocalThings looks for the TV at once and
-  cancels a connection attempt still waiting on the TV that was off. The
-  measured TV was on the network 1 to 2 s after the packet.
+  back with stale values. Any TV whose switch answers off is shown off; Art
+  Mode on The Frame and Ambient Mode have not been measured.
+- After a Wake-on-LAN turn-on, LocalThings cancels a connection attempt still
+  waiting on the TV that was off and looks for the TV again. The measured TV
+  was on the network 1 to 2 s after the packet.
 - A TV awake in network standby ignores the magic packet (measured twice on a
   QE85QN95A) but turns on when its power switch is written. A turn-on that
-  finds the TV there writes the switch; if the TV drops back to standby before
-  that, the packet is sent again.
+  finds the TV there writes the switch, once per standby wake; if the TV drops
+  back to standby first, the packet is sent again.
 - A TV turned on with its own remote or an app announces itself over SSDP.
   With Home Assistant's SSDP integration loaded (part of the default
   configuration), that announcement makes LocalThings look at once; without
   it, the next poll finds the TV, within about 30 s.
-- Once Home Assistant has received such an announcement from the TV, a TV
-  that is off is polled less often: every 30 s at first, doubling to every
-  5 minutes. Its next power-on announcement finds it at once. A TV that
-  answers but refuses the connection is still polled every 30 s.
+- Once Home Assistant's SSDP integration has reported the TV (a device it
+  already knew counts), a TV that is off is polled less often: every 30 s at
+  first, doubling to every 5 minutes. Its next power-on announcement finds it
+  at once. A TV that answers but refuses the connection is still polled every
+  30 s. Other devices keep the 30 s poll.
+- Discovery doesn't read three resources the QE85QN95A lists but never
+  answers (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
+  `/autoreconnect/ap`), each of which would cost a read timeout.
+- Adding a TV during one of its standby wakes fails with "The TV is in
+  standby"; turn it on and try again.
 
 ## Camera casting
 

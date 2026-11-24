@@ -2860,6 +2860,7 @@
       "handshake_failed": "Urządzenie odrzuciło uzgadnianie DTLS z powodu niezwiązanego z certyfikatem, najprawdopodobniej przez niezgodność protokołu lub szyfru. Dokładny alert, który wysłało, znajdziesz w dzienniku Home Assistant.",
       "cloud_unreachable": "Nie udało się połączyć z bramą chmurową Samsunga, aby pobrać UUID potrzebny do wystawienia certyfikatu tego urządzenia. Sprawdź dostęp Home Assistant do internetu i spróbuj ponownie.",
       "unexpected_response": "Połączenie z urządzeniem powiodło się, ale nie zwróciło ono użytecznego opisu urządzenia. Może to nie być urządzenie obsługiwane przez tę integrację. To, co zostało wysłane, znajdziesz w dzienniku Home Assistant.",
+      "tv_in_standby": "Telewizor jest w trybie czuwania. Włącz go i spróbuj ponownie.",
       "cannot_connect": "Nie można połączyć się z urządzeniem. Sprawdź, czy adres IP jest poprawny oraz czy urządzenie jest włączone i podłączone do sieci.",
       "invalid_ca": "Nie udało się wczytać certyfikatu CA lub klucza prywatnego. Sprawdź, czy zawartość PEM jest poprawna i czy klucz pasuje do certyfikatu.",
       "unknown": "Nieoczekiwany błąd. Szczegóły znajdziesz w dziennikach Home Assistant.",

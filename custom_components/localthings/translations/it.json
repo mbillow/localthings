@@ -2860,6 +2860,7 @@
       "handshake_failed": "L'apparecchio ha rifiutato l'handshake DTLS per un motivo non legato al certificato, molto probabilmente un'incompatibilità di protocollo o di cifratura. Il log di Home Assistant riporta l'alert esatto inviato.",
       "cloud_unreachable": "Impossibile raggiungere il gateway cloud di Samsung per ottenere l'UUID necessario a emettere il certificato di questo dispositivo. Verifica l'accesso a internet di Home Assistant e riprova.",
       "unexpected_response": "Connessione al dispositivo riuscita, ma non ha restituito una descrizione del dispositivo utilizzabile. Potrebbe non essere un apparecchio supportato da questa integrazione. Il log di Home Assistant riporta ciò che ha inviato.",
+      "tv_in_standby": "Il televisore è in standby. Accendilo e riprova.",
       "cannot_connect": "Impossibile connettersi al dispositivo. Verifica che l'indirizzo IP sia corretto e che il dispositivo sia acceso e connesso alla rete.",
       "invalid_ca": "Impossibile caricare il certificato CA o la chiave privata. Verificare che il contenuto del file PEM sia corretto e che la chiave corrisponda al certificato.",
       "unknown": "Errore imprevisto. Controlla i registri di Home Assistant per i dettagli.",
