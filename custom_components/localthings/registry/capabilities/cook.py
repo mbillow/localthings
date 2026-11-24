@@ -367,6 +367,13 @@ def cavity(resources: dict) -> str | None:
         for prefix in _CAVITY_PREFIXES:
             if mode.startswith(prefix):
                 return prefix
+    # The NV7000BS lower cavity has no defaultMode, only Lower* modes. Lower
+    # only: the upper cavity's list widens to whole-oven modes without the divider.
+    live = rep.get(_SUPPORTED_MODES)
+    if isinstance(live, list):
+        modes = selectable_modes(live)
+        if modes and all(isinstance(m, str) and m.startswith("Lower") for m in modes):
+            return "Lower"
     description = (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.description")
     if isinstance(description, str) and description.endswith(_LOWER_CAVITY_SUFFIX):
         return "Lower"

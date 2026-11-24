@@ -2184,6 +2184,29 @@ def test_registry_reproduces_golden_state_keys_for_oven_nv75n_dual_cook():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_oven_nv7000bs_dual_cook():
+    """The NV7000BS/EUB Dual Cook wall oven: its lower cavity lists only
+    Lower* modes (no defaultMode, modeSpec or description), so the divider
+    sensor appears only because the mode list names the cavity."""
+    name = "oven_nv7000bs_dual_cook"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.oven"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_oven_nv7000bs_dual_cook_divided():
+    """The same NV7000BS/EUB with its divider inserted: both cavities then
+    name themselves, and the entity set matches the divider-out capture."""
+    name = "oven_nv7000bs_dual_cook_divided"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.oven"))
+    assert set(state_keys) == set(golden["state_keys"])
+
+
 def test_registry_reproduces_golden_state_keys_for_range_nx58k7850ss():
     """The issue #624 Flex Duo gas range: its lower cavity is an indexed
     subdevice, and both cavities report the oven's diagnosisStart shape,
