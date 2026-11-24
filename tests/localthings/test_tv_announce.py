@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from smartthings_local.errors import SessionClosedError, SessionError
 
 from custom_components.localthings.announce import async_watch_alive
 from custom_components.localthings.const import CONF_HOST, CONF_MAC, DOMAIN
@@ -200,15 +201,21 @@ async def test_a_tv_announcing_from_standby_is_read_on_its_open_session(
 
 
 @pytest.mark.parametrize(
-    ("announced", "intervals"),
-    [(True, [30, 60, 120, 240, 300, 300]), (False, [30] * 6)],
-    ids=["announces", "silent"],
+    ("announced", "error", "intervals"),
+    [
+        (True, TimeoutError("timed out"), [30, 60, 120, 240, 300, 300]),
+        (True, SessionClosedError(), [30, 60, 120, 240, 300, 300]),
+        (True, SessionError(), [30] * 6),
+        (False, TimeoutError("timed out"), [30] * 6),
+    ],
+    ids=["announces", "handshake-cancelled", "refused", "silent"],
 )
 async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
-    hass: HomeAssistant, ssdp, announced: bool, intervals: list[int]
+    hass: HomeAssistant, ssdp, announced: bool, error: Exception, intervals: list[int]
 ) -> None:
     """Its power-on announcement finds it; the polls back off to a cap and
-    return to the summary interval when it answers."""
+    return to the summary interval when it answers. A TV that refuses the
+    session (a fatal alert) answers, so it keeps the summary interval."""
     entry = _entry(hass)
     await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -219,7 +226,7 @@ async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
     seen = []
 
     for _ in intervals:
-        coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+        coordinator._device_unreachable("device unreachable", error)
         seen.append(coordinator.update_interval.total_seconds())
     coordinator._mark_device_answered()
 
@@ -237,7 +244,7 @@ async def test_a_dark_appliance_keeps_the_summary_interval(hass: HomeAssistant, 
     coordinator._flat = False
 
     for _ in range(4):
-        coordinator._pace_dark_polls()
+        coordinator._pace_dark_polls(TimeoutError("timed out"))
         coordinator._failed_cycles += 1
 
     assert coordinator.update_interval.total_seconds() == 30

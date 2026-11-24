@@ -62,7 +62,8 @@ finding concerned sound mode, not picture mode.
   it, the next poll finds the TV, within about 30 s.
 - Once Home Assistant has received such an announcement from the TV, a TV
   that is off is polled less often: every 30 s at first, doubling to every
-  5 minutes. Its next power-on announcement finds it at once.
+  5 minutes. Its next power-on announcement finds it at once. A TV that
+  answers but refuses the connection is still polled every 30 s.
 
 ## Camera casting
 

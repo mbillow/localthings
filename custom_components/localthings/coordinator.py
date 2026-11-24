@@ -27,7 +27,12 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
+from smartthings_local.errors import (
+    EndpointError,
+    PeerInitiatedHandshakeError,
+    SessionClosedError,
+    SessionError,
+)
 from smartthings_local.ocf.state_cache import StateCache
 
 from . import cloudcourse, finish, probing, tvapps
@@ -3439,7 +3444,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         `_defer_reconnect_for` (issue #254).
         """
         self._failed_cycles += 1
-        self._pace_dark_polls()
+        self._pace_dark_polls(e)
         if self._failed_cycles == 1:
             self._log.info("%s: %s", what, e)
         else:
@@ -3465,11 +3470,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
 
-    def _pace_dark_polls(self) -> None:
+    def _pace_dark_polls(self, e: Exception) -> None:
         """Poll a dark flat board less often once it is known to announce
-        itself; anything else keeps the summary interval."""
+        itself; anything else keeps the summary interval. A refused session
+        (a fatal alert) is a device that answers, so it is not dark."""
+        refused = isinstance(e, SessionError) and not isinstance(e, SessionClosedError)
         seconds = SUMMARY_INTERVAL_S
-        if self._flat and self._announces:
+        if self._flat and self._announces and not refused:
             doublings = min(self._failed_cycles - 1, 8)
             seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
         self.update_interval = timedelta(seconds=seconds)
