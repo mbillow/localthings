@@ -656,7 +656,8 @@ _PLAYBACK_COMMANDS = (
 
 def _supported_commands(resources: dict) -> frozenset[str]:
     """Commands whose resource the TV reports writable. Never power_on: the
-    OCF endpoint is gone in standby, so turn-on is Wake-on-LAN (av.py)."""
+    OCF endpoint is gone in standby, so turn-on is Wake-on-LAN, plus a
+    switch write while the TV wakes in network standby (av.py)."""
     commands = set()
     power = resources.get(HREF_SWITCH) or {}
     audio = resources.get(HREF_AUDIO) or {}

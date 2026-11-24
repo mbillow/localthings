@@ -149,3 +149,95 @@ async def test_unloading_stops_the_watch(hass: HomeAssistant, ssdp) -> None:
     await hass.async_block_till_done()
 
     assert ssdp.registered == []
+
+
+async def test_a_look_queued_behind_a_poll_that_found_the_tv_is_dropped(
+    hass: HomeAssistant, ssdp
+) -> None:
+    """The announcement arrived while a poll held the session; that poll
+    found the TV answering, so its session is kept and no look follows."""
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    coordinator._failed_cycles = 2
+
+    with patch.object(coordinator, "async_refresh", AsyncMock()) as look:
+        async with coordinator._session_lock:
+            callback(None, _Change.ALIVE)
+            await asyncio.sleep(0)
+            coordinator._failed_cycles = 0
+        async with asyncio.timeout(5):
+            await coordinator._announce_task
+
+    look.assert_not_awaited()
+    assert coordinator._session is session
+
+
+async def test_a_tv_announcing_from_standby_is_read_on_its_open_session(
+    hass: HomeAssistant, ssdp
+) -> None:
+    """A session that just read standby answers: the look reads on it
+    rather than handshaking again."""
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    session.resources["/sec/tv/switch/binary"] = {"value": False}
+    await coordinator.async_refresh()
+    assert coordinator._standby_cycle
+
+    with patch(
+        "custom_components.localthings.coordinator.create_transport", return_value=session
+    ) as connect:
+        callback(None, _Change.ALIVE)
+        async with asyncio.timeout(5):
+            await coordinator._announce_task
+
+    connect.assert_not_called()
+    assert coordinator._session is session
+    assert coordinator._standby_cycle
+
+
+@pytest.mark.parametrize(
+    ("announced", "intervals"),
+    [(True, [30, 60, 120, 240, 300, 300]), (False, [30] * 6)],
+    ids=["announces", "silent"],
+)
+async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
+    hass: HomeAssistant, ssdp, announced: bool, intervals: list[int]
+) -> None:
+    """Its power-on announcement finds it; the polls back off to a cap and
+    return to the summary interval when it answers."""
+    entry = _entry(hass)
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    if announced:
+        callback(None, _Change.ALIVE)  # replayed at registration: the TV is on
+    assert coordinator._announce_task is None
+    seen = []
+
+    for _ in intervals:
+        coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+        seen.append(coordinator.update_interval.total_seconds())
+    coordinator._mark_device_answered()
+
+    assert seen == intervals
+    assert coordinator.update_interval.total_seconds() == 30
+
+
+async def test_a_dark_appliance_keeps_the_summary_interval(hass: HomeAssistant, ssdp) -> None:
+    """Only a flat board backs off: an appliance's dark polls also keep its
+    last state, which the slower cadence would leave stale for longer."""
+    entry = _entry(hass)
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator._announces = True
+    coordinator._flat = False
+
+    for _ in range(4):
+        coordinator._pace_dark_polls()
+        coordinator._failed_cycles += 1
+
+    assert coordinator.update_interval.total_seconds() == 30

@@ -205,7 +205,7 @@ def no_follow():
     """Hold the post-wake loop open until the test releases it."""
     release = asyncio.Event()
 
-    async def _follow(self) -> None:
+    async def _follow(self, *_args) -> None:
         await release.wait()
 
     with patch(
@@ -640,6 +640,7 @@ async def test_a_tv_in_standby_reads_off_without_an_error(hass: HomeAssistant, c
     await coordinator.async_refresh()
     await hass.async_block_till_done()
 
+    assert not coordinator._standby_cycle
     assert _state(hass, "media_player").state != "off"
     assert all(s.state != "unavailable" for s in _others(hass))
 
@@ -673,6 +674,147 @@ async def test_a_tv_gone_silent_after_reading_off_is_not_reconnected(
     assert poll.call_count == (2 if reconnects else 1)
     assert coordinator._failed_cycles == 1
     assert _state(hass, "media_player").state == "off"
+
+
+async def _in_standby(hass: HomeAssistant):
+    """A woken-in-standby TV: its switch reads off on a session kept open."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator.av._WAKE_REFRESH_S = 0.0
+    session.resources[_SWITCH] = {"value": False}
+    await coordinator.async_refresh()
+    assert coordinator._standby_cycle
+    assert coordinator._session is session
+    return coordinator, session
+
+
+async def _turn_on(hass: HomeAssistant, coordinator) -> None:
+    await hass.services.async_call(
+        "media_player", "turn_on", {"entity_id": _state(hass, "media_player").entity_id}
+    )
+    await hass.async_block_till_done()
+    async with asyncio.timeout(5):
+        await coordinator.av._wake_task
+
+
+async def test_a_tv_awake_in_standby_is_switched_on_over_ocf(
+    hass: HomeAssistant, packets, caplog
+) -> None:
+    """The magic packet does nothing to a TV awake in network standby; the
+    switch write on the session that read it does, and that session is kept."""
+    coordinator, session = await _in_standby(hass)
+
+    with (
+        patch(
+            "custom_components.localthings.coordinator.create_transport", return_value=session
+        ) as connect,
+        caplog.at_level(logging.INFO),
+    ):
+        await _turn_on(hass, coordinator)
+
+    assert len(packets) == 1
+    assert session.writes == [_POWER]
+    connect.assert_not_called()
+    assert coordinator._failed_cycles == 0
+    assert _state(hass, "media_player").state != "off"
+    assert "TV answered after Wake-on-LAN" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "first", [(0x80, None), (None, TimeoutError("timed out"))], ids=["refused", "lost"]
+)
+async def test_a_switch_on_that_fails_is_sent_again_on_the_next_look(
+    hass: HomeAssistant, packets, first
+) -> None:
+    """A refused or unanswered write leaves the TV in standby: the next look
+    finds it there and writes again."""
+    coordinator, session = await _in_standby(hass)
+    code, error = first
+    real_write = session.write
+    calls: list[float | None] = []
+
+    def _write(path, body, timeout=None):
+        calls.append(timeout)
+        if len(calls) == 1:
+            if error is not None:
+                raise error
+            return code, None
+        return real_write(path, body, timeout)
+
+    with patch.object(session, "write", _write):
+        await _turn_on(hass, coordinator)
+
+    assert len(calls) == 2
+    assert calls[0] == coordinator.av._STANDBY_WRITE_TIMEOUT_S
+    assert coordinator._failed_cycles == 0
+    assert len(packets) == 1
+
+
+async def test_a_tv_back_in_standby_before_the_write_gets_the_packet_again(
+    hass: HomeAssistant, packets
+) -> None:
+    """A packet sent while the TV was awake in standby was ignored: once the
+    TV has gone dark it is sent again, and once only."""
+    coordinator, session = await _in_standby(hass)
+    real_read = session.read
+    dark = False
+
+    real_refresh = coordinator.async_refresh
+    dark_looks = 0
+
+    async def _look() -> None:
+        nonlocal dark, dark_looks
+        if dark and len(packets) >= 2:
+            # Still dark for two more looks after the packet, then up.
+            dark_looks += 1
+            if dark_looks > 2:
+                dark = False
+                session.resources[_SWITCH] = {"value": True}
+        await real_refresh()
+
+    def _read(path, timeout=None):
+        if dark:
+            raise TimeoutError("timed out")
+        return real_read(path, timeout)
+
+    def _write(path, body, timeout=None):
+        nonlocal dark
+        dark = True
+        raise TimeoutError("timed out")
+
+    with (
+        patch.object(session, "read", _read),
+        patch.object(session, "write", _write),
+        patch.object(coordinator, "async_refresh", _look),
+        patch("custom_components.localthings.coordinator.create_transport", return_value=session),
+    ):
+        await _turn_on(hass, coordinator)
+
+    assert len(packets) == 2
+    assert packets[0] == packets[1]
+    assert coordinator._failed_cycles == 0
+
+
+@pytest.mark.parametrize(("standby", "closed"), [(True, False), (False, True)])
+async def test_a_wake_keeps_only_a_session_that_just_read_standby(
+    hass: HomeAssistant, packets, standby: bool, closed: bool
+) -> None:
+    """The follow-up drops a stale session but not one the TV answers in
+    standby, which the switch write needs."""
+    coordinator, session = await _in_standby(hass)
+    coordinator._standby_cycle = standby
+    seen: list[object] = []
+
+    async def _look() -> None:
+        seen.append(coordinator._session)
+        coordinator._session = session
+        coordinator._failed_cycles = 0
+
+    with patch.object(coordinator, "async_refresh", _look):
+        await _turn_on(hass, coordinator)
+
+    assert seen == [None if closed else session]
 
 
 async def test_a_registry_mac_added_later_is_seen(hass: HomeAssistant) -> None:

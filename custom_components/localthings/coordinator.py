@@ -470,6 +470,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # their port on every power-on; at the general cap, one turned back on
     # would wait up to 30 minutes for the next lookup.
     _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
+    # Between polls of a dark flat board, doubling from the summary interval
+    # to this cap once the device has announced itself over SSDP: its
+    # power-on announcement is then what finds it (async_device_announced).
+    _DARK_POLL_MAX_S: float = 300.0
 
     # A single reconnect is normal appliance behavior (README's "Known
     # device behavior"); only escalate once they pile up in a trailing
@@ -706,6 +710,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # look a device announcing itself started (async_device_announced).
         self._connecting: Transport | None = None
         self._announce_task: asyncio.Task | None = None
+        # This device's SSDP announcements reach Home Assistant.
+        self._announces = False
+        # The last cycle found the board in network standby, session open.
+        self._standby_cycle = False
         # The last non-empty /oic/res answer: kept across a reconnect whose
         # identity read failed, since write-only hrefs are known only from it.
         self._last_oic_res: list = []
@@ -1419,6 +1427,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """The device announced itself on the network (SSDP alive). One that
         reads as dark is looked at now rather than at the next poll, with the
         port lookup due and any stale session dropped."""
+        self._announces = True
         if self._closed or not self._failed_cycles:
             return
         if self._announce_task is not None and not self._announce_task.done():
@@ -1431,9 +1440,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_look_now(self) -> None:
         async with self._session_lock:
-            if self._closed:
+            # A cycle that held the lock may have found it answering already.
+            if self._closed or not self._failed_cycles:
                 return
-            if self._session is not None:
+            # A session that just read standby still answers; any other is stale.
+            if self._session is not None and not self._standby_cycle:
                 await self.hass.async_add_executor_job(self._close_session)
             self._consecutive_poll_timeouts = 0
         self._rediscovery_backoff_s = 0.0
@@ -3412,6 +3423,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._failed_cycles:
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
             self._failed_cycles = 0
+            self.update_interval = timedelta(seconds=SUMMARY_INTERVAL_S)
 
     def _device_unreachable(self, what: str, e: Exception) -> dict[str, Any]:
         """End a cycle that got no data, either degraded or as a failure.
@@ -3427,6 +3439,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         `_defer_reconnect_for` (issue #254).
         """
         self._failed_cycles += 1
+        self._pace_dark_polls()
         if self._failed_cycles == 1:
             self._log.info("%s: %s", what, e)
         else:
@@ -3452,6 +3465,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
 
+    def _pace_dark_polls(self) -> None:
+        """Poll a dark flat board less often once it is known to announce
+        itself; anything else keeps the summary interval."""
+        seconds = SUMMARY_INTERVAL_S
+        if self._flat and self._announces:
+            doublings = min(self._failed_cycles - 1, 8)
+            seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
+        self.update_interval = timedelta(seconds=seconds)
+
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
     # ------------------------------------------------------------------
@@ -3463,6 +3485,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._subpoll_task = None
 
         async with self._session_lock:
+            self._standby_cycle = False
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
                 self._mark_device_answered()
@@ -3473,6 +3496,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # The session answers; the board is off. Kept open, so the
                 # next cycle's awake read is the whole poll.
                 self._consecutive_poll_timeouts = 0
+                self._standby_cycle = True
                 return self._device_unreachable("device in standby", e)
             except Exception as e:
                 if self._closed:
