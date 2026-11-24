@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from .capabilities.av import ONBOARDING_HREFS
-from .capabilities.tv import APPDATA_PREFIX
+from .capabilities.tv import APPDATA_PREFIX, NO_GET_HREFS
 from .subdevices import _iter_oic_res_hrefs
 
 if TYPE_CHECKING:
@@ -27,9 +27,10 @@ FLAT_ENUMERATION_BUDGET_S = 60.0
 
 # Never read: the onboarding resources (tokens, a paired phone, nearby
 # networks), /oic/sec/* (refused, no entities), identity (read_identity has
-# it), /device/<n> Collections (owned by the subdevice code) and a TV's
-# appdata mailboxes (an account list and a remote token, #815).
-_SKIP_EXACT = frozenset({"/oic/d", "/oic/p", "/oic/res", *ONBOARDING_HREFS})
+# it), /device/<n> Collections (owned by the subdevice code), a TV's
+# appdata mailboxes (an account list and a remote token, #815) and the TV
+# resources that never answer a GET.
+_SKIP_EXACT = frozenset({"/oic/d", "/oic/p", "/oic/res", *ONBOARDING_HREFS, *NO_GET_HREFS})
 _SKIP_PREFIXES = ("/oic/sec/", "/device/", APPDATA_PREFIX)
 
 

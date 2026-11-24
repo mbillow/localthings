@@ -333,6 +333,13 @@ def _screen_off_write(p, rep, href=None):
     return SHOW_MENU_PATH, show_menu_body("pictureOff", "on")
 
 
+# Advertised, but never answering a GET while the TV is on: reading one only
+# waits out a timeout. /autoreconnect/ap answers in network standby alone.
+# has_href finds them in /oic/res.
+NO_GET_HREFS = frozenset(
+    {"/sec/tv/remotecontrol", HREF_NATIVE_APP, HREF_SHOW_MENU, "/autoreconnect/ap"}
+)
+
 # Accepts KEY_* names; remote.py adds friendly aliases. The notify entity and
 # the screen-off button ride the same anchor: their resources
 # (HREF_NATIVE_APP, HREF_SHOW_MENU) never answer a GET.

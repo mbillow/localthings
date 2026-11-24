@@ -670,6 +670,14 @@ def test_only_an_explicit_off_is_standby(rep: dict, off: bool) -> None:
     assert reads_off(rep) is off
 
 
+def test_tv_resources_that_never_answer_a_get_are_not_read() -> None:
+    """Each would only wait out a read timeout in every discovery."""
+    never = ["/sec/tv/remotecontrol", "/sec/tv/launchnativeapp", "/sec/tv/showmenu"]
+    links = [{"href": href} for href in [*never, "/autoreconnect/ap", "/sec/tv/uicontrol"]]
+
+    assert flat_hrefs(links) == ["/sec/tv/uicontrol"]
+
+
 @pytest.mark.parametrize("failed_cycles", [0, 1], ids=["liveness", "full-sweep"])
 def test_a_tv_whose_switch_reads_off_is_in_standby(
     hass: HomeAssistant, mock_entry, failed_cycles: int
