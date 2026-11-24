@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Setpoint"
       },
+      "food_probe_target": {
+        "name": "Food probe target"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Paired hood shutoff timer"
       },

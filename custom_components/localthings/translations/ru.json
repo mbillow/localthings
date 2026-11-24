@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Уставка"
       },
+      "food_probe_target": {
+        "name": "Целевая температура термощупа"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Таймер отключения связанной вытяжки"
       },

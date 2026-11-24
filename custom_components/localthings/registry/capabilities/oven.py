@@ -512,6 +512,44 @@ def _probe_field(rep, field):
     return _int(item.get(field)) if item else None
 
 
+def _probe_target_bounds(rep, resources=None):
+    """(min, max, step) of the probe target from the board's own modeSpec."""
+    return cook.probe_bounds(resources) if resources else None
+
+
+def _probe_target_writable(rep, resources):
+    """A probe is plugged in, the board declares a probe range (none without a
+    modeSpec does) and a cook is under way. The probe's target is a second write
+    after the cavity's own, so it is never offered while the oven is idle."""
+    return (
+        _probe_connected(rep, resources)
+        and cook.probe_bounds(resources) is not None
+        and not cook.is_idle(resources)
+    )
+
+
+def _probe_target_write(p, rep, href=None, resources=None):
+    """Write the probe's target as item 1 of /temperatures/vs/0 on its own,
+    with the item's unit. Item 0 is the cavity's setpoint and is left alone."""
+    try:
+        temp = float(p)
+    except (TypeError, ValueError):
+        return None
+    item = _probe_item(rep)
+    bounds = _probe_target_bounds(rep, resources)
+    if item is None or bounds is None or cook.is_idle(resources or {}):
+        return None
+    min_v, max_v, step_v = bounds
+    value = int(round(temp / step_v) * step_v)
+    if not (min_v <= value <= max_v):
+        return None
+    body_item = {"x.com.samsung.da.id": _PROBE_ITEM_ID, "x.com.samsung.da.desired": str(value)}
+    unit = item.get("x.com.samsung.da.unit")
+    if unit:
+        body_item["x.com.samsung.da.unit"] = unit
+    return ["temperatures", "vs", "0"], {"x.com.samsung.da.items": [body_item]}
+
+
 def _probe_temp_unit(rep):
     item = _probe_item(rep)
     unit = item.get("x.com.samsung.da.unit") if item else None
@@ -580,9 +618,6 @@ OVEN_SETPOINT = Capability(
         ),
         # The food probe rides in the same items[] array as items[1], which
         # was being dropped (issue #490 -- only items[0] was ever read).
-        # Read-only on purpose: nothing in the corpus shows a probe target
-        # write being accepted, and this family discards even ordinary
-        # setpoint writes from idle (docs/investigations/oven-cycle-start.md).
         SensorDesc(
             key="food_probe_temp",
             dynamic_presence=True,
@@ -600,6 +635,28 @@ OVEN_SETPOINT = Capability(
             entity_category="diagnostic",
             exists_fn=_probe_connected,
             rep_fn=lambda rep: _probe_field(rep, "x.com.samsung.da.desired"),
+        ),
+        # Item 1 alone is accepted mid-cook on an NV7000BS. It follows the
+        # cavity's setpoint, which idle ovens discard, so it exists only mid-cook.
+        NumberDesc(
+            key="food_probe_target",
+            dynamic_presence=True,
+            mode="box",
+            field="x.com.samsung.da.items",
+            device_class="temperature",
+            unit_fn=_probe_temp_unit,
+            icon="mdi:thermometer-probe",
+            exists_fn=_probe_target_writable,
+            bounds_fn=_probe_target_bounds,
+            value_fn=lambda items: next(
+                (
+                    _int(i.get("x.com.samsung.da.desired"))
+                    for i in items or []
+                    if i.get("x.com.samsung.da.id") == _PROBE_ITEM_ID
+                ),
+                None,
+            ),
+            write_fn=_probe_target_write,
         ),
     ),
 )

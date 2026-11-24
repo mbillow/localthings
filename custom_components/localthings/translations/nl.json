@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Instelpunt"
       },
+      "food_probe_target": {
+        "name": "Doeltemperatuur voedselsonde"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Uitschakeltimer gekoppelde afzuigkap"
       },

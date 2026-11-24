@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "설정 온도"
       },
+      "food_probe_target": {
+        "name": "온도 프로브 목표"
+      },
       "paired_hood_shutoff_timer": {
         "name": "연동 후드 자동 꺼짐 타이머"
       },

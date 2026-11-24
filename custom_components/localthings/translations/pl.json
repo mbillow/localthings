@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Temperatura zadana"
       },
+      "food_probe_target": {
+        "name": "Docelowa temperatura sondy do żywności"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Timer wyłączenia sparowanego okapu"
       },

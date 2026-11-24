@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Задана вредност"
       },
+      "food_probe_target": {
+        "name": "Циљна температура сонде за храну"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Тајмер за искључивање упареног аспиратора"
       },

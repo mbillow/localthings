@@ -74,10 +74,20 @@ class TempSpec:
 
 
 @dataclass(frozen=True)
+class ProbeSpec:
+    minimum: int
+    maximum: int
+    step: int | None
+
+
+@dataclass(frozen=True)
 class ModeSpec:
     mode: str
     control: str
     temps: dict[str, TempSpec] = field(default_factory=dict)
+    # The food probe's own range for this mode, by unit; absent where the mode
+    # declares probeMin/Max as NotSupported.
+    probes: dict[str, ProbeSpec] = field(default_factory=dict)
     # Seconds.
     time_min: int | None = None
     time_max: int | None = None
@@ -125,6 +135,15 @@ def _temp_spec(entry: dict, unit: str) -> TempSpec | None:
         step=interval if interval and interval > 0 else None,
         choices=choices,
     )
+
+
+def _probe_spec(entry: dict, unit: str) -> ProbeSpec | None:
+    lo = int_or_none(entry.get(f"probeMin{unit}"))
+    hi = int_or_none(entry.get(f"probeMax{unit}"))
+    if lo is None or hi is None:
+        return None
+    interval = int_or_none(entry.get(f"probeInterval{unit}"))
+    return ProbeSpec(min(lo, hi), max(lo, hi), interval if interval and interval > 0 else None)
 
 
 # Modes that no board publishing a modeSpec declares Start&Setting, plus
@@ -228,11 +247,13 @@ def mode_specs(resources: dict) -> dict[str, ModeSpec]:
         if not isinstance(entry, dict) or not isinstance(entry.get("mode"), str):
             continue
         temps = {u: t for u in ("C", "F") if (t := _temp_spec(entry, u)) is not None}
+        probes = {u: pr for u in ("C", "F") if (pr := _probe_spec(entry, u)) is not None}
         declared = bool(_TIME_KEYS & entry.keys())
         specs[entry["mode"]] = ModeSpec(
             mode=entry["mode"],
             control=str(entry.get("control")),
             temps=temps,
+            probes=probes,
             time_min=parse_hms(entry.get("timeMin")) if declared else _UNDECLARED_TIME_MIN,
             time_max=parse_hms(entry.get("timeMax")) if declared else _OPEN_TIME_MAX,
             time_default=parse_hms(entry.get("timeDefault")),
@@ -442,6 +463,30 @@ def temp_bounds(resources: dict, mode: str | None = None) -> tuple[int, int, int
     if temp is None or temp.choices:
         return None
     return temp.minimum, temp.maximum, _step(temp, resources)
+
+
+def probe_bounds(resources: dict, mode: str | None = None) -> tuple[int, int, int] | None:
+    """(min, max, step) of the food probe target in the oven's own unit.
+
+    For `mode` (default: the current one) when the board's modeSpec lists it,
+    None where that mode declares no probe. With no spec for the mode, as
+    while idle, the widest range any mode declares; None when none does."""
+    specs = mode_specs(resources)
+    unit = _UNIT_KEYS.get(device_unit(resources) or "")
+    if not unit:
+        return None
+    spec = specs.get(mode or current_mode(resources) or "")
+    if spec is not None:
+        probe = spec.probes.get(unit)
+        return (probe.minimum, probe.maximum, probe.step or 1) if probe else None
+    declared = [s.probes[unit] for s in specs.values() if unit in s.probes]
+    if not declared:
+        return None
+    return (
+        min(p.minimum for p in declared),
+        max(p.maximum for p in declared),
+        min(p.step or 1 for p in declared),
+    )
 
 
 def _step(temp: TempSpec, resources: dict) -> int:

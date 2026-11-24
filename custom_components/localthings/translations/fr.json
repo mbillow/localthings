@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Consigne"
       },
+      "food_probe_target": {
+        "name": "Cible de la sonde de cuisson"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Minuterie d'arrêt de la hotte associée"
       },
