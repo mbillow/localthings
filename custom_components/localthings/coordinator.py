@@ -254,6 +254,14 @@ def _coap_accepted(code: int) -> bool:
     return (code >> 5) == 2
 
 
+class DeviceSilent(RuntimeError):
+    """The device stopped answering: switched off, asleep or gone."""
+
+
+# How a device that is off, asleep or refusing shows: no traceback for these.
+_ROUTINE_UNREACHABLE = (OSError, DeviceSilent, BoardInStandby)
+
+
 class _PrepareFailed(Exception):
     """A prepare_body callback raised; `error` is re-raised as is."""
 
@@ -1697,7 +1705,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # _defer_reconnect_for), so the probe would only add its wait.
             if self._discovered and not self._session_answers(sess):
                 self._close_session()
-                raise RuntimeError(f"poll timed out and the session no longer answers: {e}") from e
+                raise DeviceSilent(f"poll timed out and the session no longer answers: {e}") from e
             raise
         except AuthRejected:
             raise
@@ -1849,7 +1857,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     iter_resources(sess, [awake], timeout=self._FLAT_TIMEOUT_S, logger=self._log)
                 )
                 if awake not in results:
-                    raise RuntimeError(
+                    raise DeviceSilent(
                         f"flat poll: liveness read of {awake} got no answer (network standby)"
                     )
                 if reads_off(results[awake]):
@@ -1863,7 +1871,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # answer is kept; otherwise any answer to /oic/d counts.
                 if awake is not None or self._session_answers(sess):
                     return results
-                raise RuntimeError("flat poll: liveness read got no answer")
+                raise DeviceSilent("flat poll: liveness read got no answer")
             skip = set(self._hot_hrefs) | set(self._warm_hrefs) | {awake}
             # Hrefs not heard from this run go last, so their timeouts can't
             # use up the budget before the ones that answer are read.
@@ -1888,9 +1896,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             elif not results:
                 return {}
         if not results:
-            raise RuntimeError("flat poll: no resource answered")
+            raise DeviceSilent("flat poll: no resource answered")
         if awake is not None and awake not in results:
-            raise RuntimeError(f"flat poll: {awake} got no answer (network standby)")
+            raise DeviceSilent(f"flat poll: {awake} got no answer (network standby)")
         return results
 
     def _poll_hrefs_blocking(
@@ -3461,7 +3469,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._failed_cycles == 1 and self._flat:
             self.hass.loop.call_soon(self.async_update_listeners)
         if self._discovered and self._cache.snapshot():
-            self._log.debug("Full error:", exc_info=e)
+            # A device going quiet (a timeout, a refused or closed session,
+            # standby) is routine; only an unexpected error gets its trace.
+            if not isinstance(e, _ROUTINE_UNREACHABLE):
+                self._log.debug("Full error:", exc_info=e)
             # A flat board that stops answering is switched off or gone: its
             # entities read unavailable through av.unreachable() rather than
             # carrying its last state on as an appliance's do. Not a failed

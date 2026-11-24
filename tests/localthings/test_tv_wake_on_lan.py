@@ -22,7 +22,9 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.localthings import wol
 from custom_components.localthings.const import CONF_MAC, DOMAIN
+from custom_components.localthings.coordinator import DeviceSilent
 from custom_components.localthings.registry.entities import MediaPlayerDesc
+from custom_components.localthings.registry.flat import BoardInStandby
 from tests.localthings.test_soundbar import ENTRY_DATA as SOUNDBAR_DATA
 from tests.localthings.test_soundbar import _setup_soundbar
 from tests.localthings.test_tv_media_player_tu7172 import ENTRY_DATA, MOCK_TV_DI, _setup_tv
@@ -643,6 +645,33 @@ async def test_a_tv_in_standby_reads_off_without_an_error(hass: HomeAssistant, c
     assert not coordinator._standby_cycle
     assert _state(hass, "media_player").state != "off"
     assert all(s.state != "unavailable" for s in _others(hass))
+
+
+@pytest.mark.parametrize(
+    ("error", "traced"),
+    [
+        (TimeoutError("timed out"), False),
+        (ConnectionError("refused"), False),
+        (DeviceSilent("no answer"), False),
+        (BoardInStandby("reads off"), False),
+        (KeyError("bug"), True),
+    ],
+    ids=["timeout", "refused", "silent", "standby", "unexpected"],
+)
+async def test_a_tv_going_dark_logs_no_traceback(
+    hass: HomeAssistant, caplog, error: Exception, traced: bool
+) -> None:
+    """Off, asleep or refusing is routine and logs one line per cycle; only an
+    unexpected error carries its traceback, even at debug."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+
+    with caplog.at_level(logging.DEBUG):
+        for _ in range(2):
+            coordinator._device_unreachable("device unreachable", error)
+
+    assert any(r.exc_info for r in caplog.records) is traced
 
 
 @pytest.mark.parametrize(
