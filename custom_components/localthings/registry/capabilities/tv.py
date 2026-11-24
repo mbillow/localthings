@@ -333,7 +333,7 @@ def _screen_off_write(p, rep, href=None):
     return SHOW_MENU_PATH, show_menu_body("pictureOff", "on")
 
 
-# Advertised but not answering a GET on the QE85QN95A, so each costs
+# Advertised but not answering a GET while a QE85QN95A is on, so each costs
 # discovery a read timeout; no entity reads them (has_href uses /oic/res).
 UNREAD_HREFS = frozenset({"/sec/tv/remotecontrol", HREF_NATIVE_APP, "/autoreconnect/ap"})
 

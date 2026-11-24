@@ -18,7 +18,7 @@ from custom_components.localthings.config_flow import (
     UnexpectedResponse,
     _read_device,
 )
-from custom_components.localthings.const import READ_MODE_PER_HREF
+from custom_components.localthings.const import CONF_DEVICE_TYPE, READ_MODE_PER_HREF
 from custom_components.localthings.coordinator import DeviceSilent, LocalThingsCoordinator
 from custom_components.localthings.observe import MODE_POLL
 from custom_components.localthings.registry.by_type import registry_for
@@ -435,8 +435,9 @@ async def test_an_off_flat_board_stays_unavailable(
             assert coordinator.av.unreachable()
 
 
+@pytest.mark.parametrize("family", ["tv", "soundbar"])
 async def test_a_flat_board_never_seen_answering_still_fails(
-    hass: HomeAssistant, mock_entry
+    hass: HomeAssistant, mock_entry, family: str
 ) -> None:
     """An offline load starts failed; it stays a failed update until the
     board answers, so the base class logs no false recovery."""
@@ -445,6 +446,7 @@ async def test_a_flat_board_never_seen_answering_still_fails(
     from homeassistant.helpers.update_coordinator import UpdateFailed
 
     coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator.device_type_name = family
     coordinator._flat = coordinator._discovered = True
     coordinator._observe.apply("/sec/audio", {"volume": 3}, source="poll")
     coordinator.last_update_success = False
@@ -846,3 +848,33 @@ def test_a_tv_discovery_skips_its_unread_hrefs(hass: HomeAssistant, mock_entry) 
     sess = cast(FakeFlatSession, coordinator._session)
     assert "/sec/tv/remotecontrol" not in sess.reads
     assert coordinator.has_href("/sec/tv/remotecontrol")
+
+
+def test_a_tv_known_only_from_its_entry_skips_its_unread_hrefs(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Before discovery the family comes from the entry, as on every start."""
+    hass.config_entries.async_update_entry(
+        mock_entry, data={**mock_entry.data, CONF_DEVICE_TYPE: "tv"}
+    )
+    links = [*_TV_LINKS, {"href": "/sec/tv/remotecontrol"}]
+    coordinator = _tv(hass, mock_entry, _TV_ON)
+    coordinator.device_type_name = None
+    coordinator._identity = _identity(links, ("oic.wk.d", "oic.d.tv"))
+    coordinator._session = cast(Any, FakeFlatSession(resources=_TV_ON, links=links))
+
+    coordinator._poll_once()
+
+    assert "/sec/tv/remotecontrol" not in cast(FakeFlatSession, coordinator._session).reads
+
+
+def test_setup_of_a_tv_skips_its_unread_hrefs() -> None:
+    class _TvBoard(FakeFlatSession):
+        _OIC_D: ClassVar[dict] = {**FakeFlatSession._OIC_D, "rt": ["oic.wk.d", "oic.d.tv"]}
+
+    board = _TvBoard(resources=_TV_ON, links=[*_TV_LINKS, {"href": "/sec/tv/remotecontrol"}])
+
+    _read_device(board, "10.0.0.99", 49154)
+
+    assert "/sec/tv/remotecontrol" not in board.reads
+    assert "/sec/tv/audio" in board.reads

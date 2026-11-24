@@ -66,11 +66,11 @@ finding concerned sound mode, not picture mode.
   first, doubling to every 5 minutes. Its next power-on announcement finds it
   at once. A TV that answers but refuses the connection is still polled every
   30 s. Other devices keep the 30 s poll.
-- Discovery doesn't read three resources the QE85QN95A lists but never
-  answers (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
+- Discovery doesn't read three resources the QE85QN95A lists but doesn't
+  answer while on (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
   `/autoreconnect/ap`), each of which would cost a read timeout.
-- Adding a TV during one of its standby wakes fails with "The TV is in
-  standby"; turn it on and try again.
+- Adding a TV whose power switch answers off (a standby wake) fails with "The
+  TV is in standby"; turn it on and try again.
 
 ## Camera casting
 
