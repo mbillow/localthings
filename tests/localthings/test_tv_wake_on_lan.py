@@ -8,6 +8,8 @@ coordinator then polls quickly for the TV to come back on its new port.
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -407,6 +409,80 @@ async def test_after_a_wake_the_tv_is_looked_up_at_once_until_it_answers(
     assert coordinator.av._wake_task.done()
 
 
+class _Handshake:
+    """A transport whose handshake is in flight; records its cancellation."""
+
+    def __init__(self) -> None:
+        self.cancelled = 0
+
+    def cancel_connect(self) -> None:
+        self.cancelled += 1
+
+
+async def test_a_wake_cancels_the_handshake_in_flight_and_looks_at_once(
+    hass: HomeAssistant, packets
+) -> None:
+    """The handshake in flight started while the TV was off; the first look
+    after the packet starts at once, not after a fixed wait."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    _switch_off(coordinator)
+    coordinator.av._WAKE_REFRESH_S = 30.0
+    handshake = _Handshake()
+    coordinator._connecting = handshake
+    looks: list[float] = []
+
+    async def _refresh() -> None:
+        looks.append(time.monotonic())
+        coordinator._session = object()
+        coordinator._failed_cycles = 0
+
+    with patch.object(coordinator, "async_refresh", _refresh):
+        sent = time.monotonic()
+        await coordinator.av.async_power_on(_media_bound(coordinator))
+        async with asyncio.timeout(5):
+            await coordinator.av._wake_task
+
+    assert handshake.cancelled == 1
+    assert len(looks) == 1
+    assert looks[0] - sent < 1.0
+
+
+async def test_looks_after_a_wake_are_paced_only_when_they_fail_at_once(
+    hass: HomeAssistant, packets
+) -> None:
+    """A look that fails at once waits out the rest of the pacing step; one
+    that took longer than the step goes again straight away."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    _switch_off(coordinator)
+    step = 0.2
+    coordinator.av._WAKE_REFRESH_S = step
+    looks: list[tuple[float, float]] = []
+    durations = [0.0, 0.3, 0.0]
+
+    async def _refresh() -> None:
+        start = time.monotonic()
+        await asyncio.sleep(durations[len(looks)])
+        looks.append((start, time.monotonic()))
+        if len(looks) == len(durations):
+            coordinator._session = object()
+            coordinator._failed_cycles = 0
+
+    with patch.object(coordinator, "async_refresh", _refresh):
+        await coordinator.av.async_power_on(_media_bound(coordinator))
+        async with asyncio.timeout(5):
+            await coordinator.av._wake_task
+
+    assert len(looks) == 3
+    # Failed at once: the second look starts a step after the first began.
+    assert looks[1][0] - looks[0][0] >= step - 0.02
+    # Took longer than a step: the third look follows at once.
+    assert looks[2][0] - looks[1][1] < step / 2
+
+
 # --- a TV that is off reads as off, not unavailable -----------------------------
 
 
@@ -520,6 +596,83 @@ async def test_a_routine_reconnect_does_not_flicker_the_tv_off(hass: HomeAssista
 
     coordinator._handshake_failed = True  # the TV went dark under the reconnect
     assert coordinator.av.reads_as_off()
+
+
+# --- network standby -----------------------------------------------------------
+
+_SWITCH = "/sec/tv/switch/binary"
+
+
+def _others(hass: HomeAssistant) -> list:
+    return [
+        s
+        for s in hass.states.async_all()
+        if s.domain not in ("media_player", "remote") and not s.entity_id.endswith("last_response")
+    ]
+
+
+async def test_a_tv_in_standby_reads_off_without_an_error(hass: HomeAssistant, caplog) -> None:
+    """Between its periodic wakes from standby the TV answers its switch,
+    off: shown off, its other entities unavailable, the session kept, and
+    no error logged for it."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    assert all(s.state != "unavailable" for s in _others(hass))
+    session.resources[_SWITCH] = {"value": False}
+
+    with patch(
+        "custom_components.localthings.coordinator.create_transport", return_value=session
+    ) as connect:
+        await coordinator.async_refresh()
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    connect.assert_not_called()
+    assert coordinator._session is session
+    assert _state(hass, "media_player").state == "off"
+    assert _state(hass, "remote").state == "off"
+    assert _others(hass)
+    assert all(s.state == "unavailable" for s in _others(hass))
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+    session.resources[_SWITCH] = {"value": True}
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert _state(hass, "media_player").state != "off"
+    assert all(s.state != "unavailable" for s in _others(hass))
+
+
+@pytest.mark.parametrize(
+    ("switch", "reconnects"), [(False, False), (True, True)], ids=["read-off", "read-on"]
+)
+async def test_a_tv_gone_silent_after_reading_off_is_not_reconnected(
+    hass: HomeAssistant, switch: bool, reconnects: bool
+) -> None:
+    """Standby ends in dark: a switch that last read off means the silence is
+    the TV, not the session, so no reconnect that could only time out. A
+    switch last read on keeps the routine reconnect."""
+    entry = _tv_entry(hass, **{CONF_MAC: TV_MAC})
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator._observe.apply(_SWITCH, {"value": switch}, source="poll")
+
+    with (
+        patch.object(session, "read", side_effect=TimeoutError("timed out")),
+        patch(
+            "custom_components.localthings.coordinator.create_transport", return_value=session
+        ) as connect,
+        patch.object(coordinator, "_RECONNECT_PAUSE_S", 0),
+        patch.object(coordinator, "_poll_once", wraps=coordinator._poll_once) as poll,
+    ):
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    assert connect.called is reconnects
+    assert poll.call_count == (2 if reconnects else 1)
+    assert coordinator._failed_cycles == 1
+    assert _state(hass, "media_player").state == "off"
 
 
 async def test_a_registry_mac_added_later_is_seen(hass: HomeAssistant) -> None:

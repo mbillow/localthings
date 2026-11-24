@@ -39,6 +39,23 @@ A CoAP success carrying `controlResponse.result=false` is still a refusal.
 This picture select does not opt into confirmation-on-refusal: that hardware
 finding concerned sound mode, not picture mode.
 
+## Off, standby and turning on
+
+- A TV that is off shows `off` on its media player and remote (`unavailable`
+  when no MAC is known to wake it); its other entities are unavailable.
+  Switching it off logs no error.
+- In standby the TV wakes for a moment every few minutes and answers with its
+  power switch off (measured on a QE85QN95A: 15 to 18 s every 5 minutes).
+  That answer reads as off, so those wakes don't bring its other entities
+  back with stale values.
+- After a Wake-on-LAN turn-on, LocalThings looks for the TV at once and
+  cancels a connection attempt still waiting on the TV that was off. The
+  measured TV was on the network 1 to 2 s after the packet.
+- A TV turned on with its own remote or an app announces itself over SSDP.
+  With Home Assistant's SSDP integration loaded (part of the default
+  configuration), that announcement makes LocalThings look at once; without
+  it, the next poll finds the TV, within about 30 s.
+
 ## Camera casting
 
 `media_player.play_media` with a `media-source://camera/...` id casts a camera

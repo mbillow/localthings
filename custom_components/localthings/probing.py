@@ -511,7 +511,12 @@ def _discover_advertised_ports(host: str) -> tuple[tuple[int, ...], int | None]:
 
 
 def moved_secure_port(
-    host: str, current: int, device_id: str | None = None, *, probe_scan: bool = False
+    host: str,
+    current: int,
+    device_id: str | None = None,
+    *,
+    probe_scan: bool = False,
+    include_current: bool = False,
 ) -> int | None:
     """A different secure port the device now answers on, if there is one.
 
@@ -521,7 +526,8 @@ def moved_secure_port(
     is tried first, then, with `probe_scan`, the slower ClientHello probe
     (AV boards advertise nothing in plaintext). 5684 is never returned: it
     answers on any board, and on the S61B it served no PSK session at all
-    (#435).
+    (#435). With `include_current`, `current` is returned when it is the
+    port found: a device that came up during the failed handshake.
 
     When 5683 is answered by a non-appliance stack (#540), its ports are
     not the device's: the responder whose `di` is the entry's `device_id`
@@ -538,13 +544,18 @@ def moved_secure_port(
     moved = next((port for port in advertised if port not in skip), None)
     if moved is not None:
         return moved
+    if include_current and current in advertised:
+        return current
     if not probe_scan:
         return None
     try:
-        for port in _clienthello_scan(host, _probe_ports(advertised), _preferred_port(advertised)):
+        live = _clienthello_scan(host, _probe_ports(advertised), _preferred_port(advertised))
+        for port in live:
             if port not in skip:
                 _LOGGER.debug("port on %s moved via ClientHello probe: %s", host, port)
                 return port
+        if include_current and current in live:
+            return current
     except Exception as exc:
         _LOGGER.debug("ClientHello probe during port rediscovery on %s failed: %s", host, exc)
     return None

@@ -23,9 +23,10 @@ class DeviceRegistry:
     # Write-settle window in seconds; None keeps the coordinator's default,
     # sized for boards that settle well after the ACK (washer course).
     write_settle_s: float | None = None
-    # An href that answers only while the board is fully on. A board that
-    # answers others but not this one is in network standby: it is polled
-    # as off, and never discovered from.
+    # An href that answers only while the board is fully on (a power switch
+    # that may also answer off). A board that answers others but not this
+    # one, or answers it off, is in network standby: it is polled as off,
+    # and never discovered from.
     awake_href: str | None = None
 
 

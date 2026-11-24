@@ -278,10 +278,10 @@ async def test_remote_power_reuses_the_deterministic_write(
     session = await _setup_tv(hass, entry)
     remote_id = hass.states.async_all("remote")[0].entity_id
 
-    await hass.services.async_call("remote", "turn_off", {"entity_id": remote_id}, blocking=True)
-    assert (["sec", "tv", "switch", "binary"], {"value": False}) in session.writes
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call("remote", "turn_on", {"entity_id": remote_id}, blocking=True)
+    await hass.services.async_call("remote", "turn_off", {"entity_id": remote_id}, blocking=True)
+    assert (["sec", "tv", "switch", "binary"], {"value": False}) in session.writes
     assert all(
         body.get("x.com.samsung.tv.keyvalue") != "KEY_POWER" for _path, body in session.writes
     )

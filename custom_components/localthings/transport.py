@@ -21,7 +21,7 @@ from uuid import UUID
 
 import cbor2
 from smartthings_local.protocol.auth import AuthenticationProvider
-from smartthings_local.protocol.dtls_session import DtlsCoapSession
+from smartthings_local.protocol.dtls_session import ConnectCancellation, DtlsCoapSession
 
 from .const import (
     CONF_DEVICE_TOKEN,
@@ -208,6 +208,7 @@ class DtlsTransport:
         self._on_notification = on_notification
         self._local_port = local_port
         self._session: DtlsCoapSession | None = None
+        self._connect_cancel = ConnectCancellation()
         # /device/<n> paths that answered links and then a batch: asked for
         # the batch straight away from then on, one GET instead of two.
         self._batch_paths: set[tuple[str, ...]] = set()
@@ -231,9 +232,14 @@ class DtlsTransport:
         if self._local_port is not None:
             kwargs["local_port"] = self._local_port
         session = DtlsCoapSession(self._host, self._port, **kwargs)
-        session.connect()
+        session.connect(cancel=self._connect_cancel)
         session.start_reader()
         self._session = session
+
+    def cancel_connect(self) -> None:
+        """End a handshake in progress at once; it raises SessionClosedError.
+        Safe from any thread."""
+        self._connect_cancel.set()
 
     def close(self) -> None:
         session, self._session = self._session, None

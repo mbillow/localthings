@@ -221,7 +221,11 @@ class LocalThingsEntity(CoordinatorEntity[LocalThingsCoordinator]):
 
     @property
     def available(self) -> bool:
-        return super().available and self.coordinator.provides(self._bound, self._bound_id)
+        return (
+            super().available
+            and not self.coordinator.av.unreachable()
+            and self.coordinator.provides(self._bound, self._bound_id)
+        )
 
     @property
     def _resources(self) -> dict:

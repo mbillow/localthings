@@ -1,7 +1,7 @@
 {
   "domain": "localthings",
   "name": "LocalThings",
-  "after_dependencies": ["camera", "ffmpeg", "http", "media_source", "network", "recorder"],
+  "after_dependencies": ["camera", "ffmpeg", "http", "media_source", "network", "recorder", "ssdp"],
   "codeowners": ["@mbillow"],
   "config_flow": true,
   "dependencies": [],

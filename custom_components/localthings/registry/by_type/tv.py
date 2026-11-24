@@ -23,6 +23,6 @@ REGISTRY = DeviceRegistry(
     subscribe_tiers=MONITOR_REGISTRY.subscribe_tiers,
     write_settle_s=6.0,
     # In network standby the TV wakes every few minutes and answers most
-    # reads, but not its power switch or remote.
+    # reads; its power switch doesn't answer, or answers off (QE85QN95A).
     awake_href=tv.HREF_SWITCH,
 )

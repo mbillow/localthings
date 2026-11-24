@@ -752,7 +752,7 @@ def _read_device(transport, host: str, port: int) -> dict:
     from .registry.batch import parse_device0_batch
     from .registry.by_type import for_device_by_oic_type
     from .registry.by_type import resolve as resolve_registry
-    from .registry.flat import read_all
+    from .registry.flat import BoardInStandby, read_all
     from .registry.identity import (
         proven_ocf_device_id,
         read_identity,
@@ -771,12 +771,15 @@ def _read_device(transport, host: str, port: int) -> dict:
         # will poll them (registry/flat.py). A batch board stored this way
         # while booting is moved back by the coordinator's /device/0 check.
         family = for_device_by_oic_type(identity.device_types)
-        resources = read_all(
-            transport,
-            identity.raw.get("/oic/res") or [],
-            logger=_LOGGER,
-            awake=family.awake_href if family is not None else None,
-        )
+        try:
+            resources = read_all(
+                transport,
+                identity.raw.get("/oic/res") or [],
+                logger=_LOGGER,
+                awake=family.awake_href if family is not None else None,
+            )
+        except BoardInStandby:
+            resources = {}
         usable = bool(resources)
     else:
         usable = code == 0x45 and body is not None

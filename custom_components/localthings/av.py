@@ -41,7 +41,10 @@ class AVControl:
 
     _NOTIFY_REGISTER_SETTLE_S = 3.0
     _WAKE_WINDOW_S = 120.0
-    _WAKE_REFRESH_S = 5.0
+    # Least time between look-ups after a wake. A look-up whose handshake
+    # waits for the TV takes longer anyway; this only paces ones that fail
+    # at once (a port refusing while the TV boots, standby answering off).
+    _WAKE_REFRESH_S = 2.0
 
     def __init__(self, coordinator: LocalThingsCoordinator) -> None:
         self._coordinator = coordinator
@@ -302,24 +305,29 @@ class AVControl:
             )
 
     async def _async_follow_wake(self) -> None:
-        """Poll quickly until the woken TV answers, or the window closes.
+        """Look up the woken TV until it answers, or the window closes.
 
-        Drop the stale session and bypass rediscovery backoff: a TV may
-        return on a new port (#435).
+        The handshake in flight started while the TV was off, so it is
+        cancelled rather than waited out; the first look-up starts at once,
+        its handshake retransmitting until the TV is up (about 1-2 s after
+        the packet). Drop the stale session and bypass rediscovery backoff:
+        a TV may return on a new port (#435).
         """
-        async with self._coordinator._session_lock:
-            if self._coordinator._session is not None:
-                await self.hass.async_add_executor_job(self._coordinator._close_session)
-            self._coordinator._consecutive_poll_timeouts = 0
+        coordinator = self._coordinator
+        coordinator.cancel_connect()
+        async with coordinator._session_lock:
+            if coordinator._session is not None:
+                await self.hass.async_add_executor_job(coordinator._close_session)
+            coordinator._consecutive_poll_timeouts = 0
         deadline = time.monotonic() + self._WAKE_WINDOW_S
-        while time.monotonic() < deadline:
-            await asyncio.sleep(self._WAKE_REFRESH_S)
-            self._coordinator._rediscovery_backoff_s = 0.0
-            self._coordinator._next_rediscovery_ts = 0.0
-            await self._coordinator.async_refresh()
+        while (started := time.monotonic()) < deadline:
+            coordinator._rediscovery_backoff_s = 0.0
+            coordinator._next_rediscovery_ts = 0.0
+            await coordinator.async_refresh()
             if self._answering():
                 self._log.info("TV answered after Wake-on-LAN")
                 return
+            await asyncio.sleep(max(0.0, self._WAKE_REFRESH_S - (time.monotonic() - started)))
         self._log.info(
             "TV did not answer within %.0f s of Wake-on-LAN; is Power On with Mobile enabled?",
             self._WAKE_WINDOW_S,
