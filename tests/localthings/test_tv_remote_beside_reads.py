@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.localthings.const import DOMAIN
 from tests.localthings.test_tv_media_player_tu7172 import FakeTvSession, _entry, _setup_tv
@@ -182,3 +183,110 @@ async def test_a_key_with_no_open_session_connects_without_a_failure(
         for r in caplog.records
         if r.name.startswith("custom_components.localthings") and r.levelno >= logging.WARNING
     ]
+
+
+async def test_a_failed_key_closes_its_session_only_after_the_read_lets_go(
+    hass: HomeAssistant,
+) -> None:
+    coordinator, failing = await _setup(hass, _FailingOnce())
+    fresh = FakeTvSession()
+    fresh.resources = failing.resources
+
+    with patch("custom_components.localthings.coordinator.create_transport", return_value=fresh):
+        async with coordinator._session_lock:
+            task = hass.async_create_task(_press(hass, "KEY_CHUP"))
+            await asyncio.sleep(0.1)
+            assert failing.key_attempts == 1
+            assert failing.closed == 0
+            assert not task.done()
+        async with asyncio.timeout(5):
+            await task
+
+    assert failing.closed == 1
+    assert _keys(fresh) == ["KEY_CHUP"]
+
+
+async def test_a_key_after_a_failed_one_waits_for_its_resend(hass: HomeAssistant) -> None:
+    """The failed key's resend goes out first, then the next key."""
+    failed = threading.Event()
+    _coordinator, failing = await _setup(hass, _FailingOnce(on_fail=failed.set))
+    fresh = FakeTvSession()
+    fresh.resources = failing.resources
+
+    with patch("custom_components.localthings.coordinator.create_transport", return_value=fresh):
+        async with _coordinator._session_lock:
+            first = hass.async_create_task(_press(hass, "KEY_1"))
+            assert await hass.async_add_executor_job(failed.wait, 5)
+            second = hass.async_create_task(_press(hass, "KEY_2"))
+            await asyncio.sleep(0.1)
+            assert _keys(failing) == []
+            assert _keys(fresh) == []
+        async with asyncio.timeout(5):
+            await asyncio.gather(first, second)
+
+    assert _keys(fresh) == ["KEY_1", "KEY_2"]
+
+
+async def test_a_refused_key_is_reported_on_a_kept_session(hass: HomeAssistant) -> None:
+    """A refusal is the TV's answer, not a dead session: no reconnect."""
+
+    class _Refusing(_FailingOnce):
+        def write(self, path, body, timeout=None):
+            if list(path) == REMOTE_PATH:
+                self.key_attempts += 1
+                return 0x80, None
+            return super().write(path, body, timeout)
+
+    _coordinator, refusing = await _setup(hass, _Refusing())
+
+    with (
+        patch("custom_components.localthings.coordinator.create_transport") as connect,
+        pytest.raises(HomeAssistantError) as err,
+    ):
+        async with asyncio.timeout(5):
+            await _press(hass, "KEY_CHUP")
+
+    assert err.value.translation_key == "command_refused"
+    assert refusing.key_attempts == 1
+    assert refusing.closed == 0
+    connect.assert_not_called()
+
+
+async def test_a_key_failing_again_after_the_reconnect_is_reported(hass: HomeAssistant) -> None:
+    class _Dead(_FailingOnce):
+        def write(self, path, body, timeout=None):
+            if list(path) == REMOTE_PATH:
+                self.key_attempts += 1
+                raise TimeoutError("session operation timed out")
+            return super().write(path, body, timeout)
+
+    _coordinator, dead = await _setup(hass, _Dead())
+    again = _Dead()
+    again.resources = dead.resources
+
+    with (
+        patch("custom_components.localthings.coordinator.create_transport", return_value=again),
+        pytest.raises(HomeAssistantError) as err,
+    ):
+        async with asyncio.timeout(5):
+            await _press(hass, "KEY_CHUP")
+
+    assert err.value.translation_key == "command_failed"
+    assert (dead.key_attempts, again.key_attempts, dead.closed) == (1, 1, 1)
+
+
+async def test_a_held_key_presses_and_releases_beside_a_read(hass: HomeAssistant) -> None:
+    coordinator, session = await _setup(hass)
+    entity_id = hass.states.async_all("remote")[0].entity_id
+
+    async with coordinator._session_lock:
+        async with asyncio.timeout(5):
+            await hass.services.async_call(
+                "remote",
+                "send_command",
+                {"entity_id": entity_id, "command": ["KEY_VOLUP"], "hold_secs": 0.05},
+                blocking=True,
+            )
+
+    statuses = [b["x.com.samsung.tv.keystatus"] for p, b in session.writes if p == REMOTE_PATH]
+    assert statuses == ["press", "release"]
