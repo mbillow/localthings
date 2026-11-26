@@ -946,3 +946,43 @@ def test_moved_secure_port_reports_no_move_on_same_port_or_no_answer(
     assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) is None
     _patch_scan(monkeypatch, None)
     assert _real_moved_secure_port("10.0.0.1", 40294, probe_scan=True) is None
+
+
+def test_ocf_responders_resolves_a_hostname_first(monkeypatch) -> None:
+    """Multicast discovery takes an IPv4 literal, so a host entered by name
+    is resolved before it runs (#902)."""
+    import socket
+
+    from smartthings_local.protocol import ocf_multicast
+
+    from custom_components.localthings import probing
+
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port, family: [(family, 0, 0, "", ("10.0.0.7", 0))],
+    )
+    monkeypatch.setattr(probing, "_source_ip", lambda host: "10.0.0.2")
+    seen = {}
+
+    def _discover(target, **kwargs):
+        seen["target"], seen["interface"] = target, kwargs["interface_address"]
+        return type("Found", (), {"responders": (_AC,), "error_code": None})()
+
+    monkeypatch.setattr(ocf_multicast, "discover_ocf_responders", _discover)
+
+    assert probing._ocf_responders("soundbar.lan") == (_AC,)
+    assert seen == {"target": "10.0.0.7", "interface": "10.0.0.2"}
+
+
+def test_ocf_responders_is_empty_for_an_unresolvable_host(monkeypatch) -> None:
+    import socket
+
+    from custom_components.localthings import probing
+
+    def _fail(*_args):
+        raise socket.gaierror("no such host")
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fail)
+
+    assert probing._ocf_responders("nowhere.lan") == ()
