@@ -2023,22 +2023,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._flat
                 else {}
             )
-            async with self._session_lock:
-                stop = threading.Event()
-                job = self.hass.async_add_executor_job(
-                    functools.partial(self._poll_hrefs_blocking, hrefs, stop=stop, **limits)
-                )
-                try:
-                    await asyncio.shield(job)
-                except asyncio.CancelledError:
-                    # Cancelling doesn't stop the thread, and the summary poll
-                    # takes the lock straight after cancelling this task: hold
-                    # it until the read in flight returns, skipping the rest.
-                    stop.set()
-                    await asyncio.wait({job})
-                    raise
-                except Exception as e:
-                    self._log.debug("sub-poll batch failed: %s", e)
+            if self._flat:
+                await self._async_subpoll_batch(hrefs, limits)
+                continue
+            # One lock hold per href, not per pass: a forced pass on an 8-unit
+            # multi-split reads ~60 hrefs (~14 s), and a write waited out all
+            # of it. Same reasoning as _async_poll_subdevice_seeds.
+            for href in hrefs:
+                await self._async_subpoll_batch([href], limits)
+
+    async def _async_subpoll_batch(self, hrefs: list[str], limits: dict) -> None:
+        async with self._session_lock:
+            stop = threading.Event()
+            job = self.hass.async_add_executor_job(
+                functools.partial(self._poll_hrefs_blocking, hrefs, stop=stop, **limits)
+            )
+            try:
+                await asyncio.shield(job)
+            except asyncio.CancelledError:
+                # Cancelling doesn't stop the thread, and the summary poll
+                # takes the lock straight after cancelling this task: hold
+                # it until the read in flight returns, skipping the rest.
+                stop.set()
+                await asyncio.wait({job})
+                raise
+            except Exception as e:
+                self._log.debug("sub-poll batch failed: %s", e)
 
     # ------------------------------------------------------------------
     # Discovery (runs once on first successful poll)

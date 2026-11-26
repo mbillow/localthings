@@ -521,6 +521,38 @@ async def test_a_write_waits_for_one_sibling_seed_not_the_whole_pass(
     assert resources == {f"/{k}/mode/vs/0": {"mode": k} for k in keys}
 
 
+async def test_a_write_waits_for_one_sub_polled_href_not_the_whole_pass(
+    hass: HomeAssistant,
+) -> None:
+    """Same as the seed pass above, for the hot/warm sub-poll: a forced pass
+    on an 8-unit multi-split read ~60 hrefs under one hold, ~14 s."""
+    coordinator = _coordinator(hass)
+    coordinator._SUBPOLL_STEP_S = 0.0
+    coordinator._hot_hrefs = ["/a/vs/0", "/b/vs/0", "/c/vs/0"]
+    order: list[str] = []
+
+    def read(hrefs, **_kwargs):
+        order.extend(hrefs)
+        return {}
+
+    coordinator._poll_hrefs_blocking = read  # ty: ignore[invalid-assignment]
+
+    async def write() -> None:
+        async with coordinator._session_lock:
+            order.append("write")
+
+    async with coordinator._session_lock:
+        subpolls = hass.async_create_task(coordinator._run_subpolls())
+        for _ in range(3):
+            await asyncio.sleep(0)
+        queued = hass.async_create_task(write())
+        await asyncio.sleep(0)
+    await asyncio.gather(subpolls, queued)
+
+    assert order[:2] == ["/a/vs/0", "write"]
+    assert order.count("/c/vs/0") == 9
+
+
 def test_poll_subdevice_seed_flat_mode_polls_each_href_individually(
     hass: HomeAssistant,
 ):
