@@ -203,8 +203,52 @@ Importing it as **Owner** worked on LocalThings 0.33.0. The
 [hardware report in #435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
 records the recovery and verification details.
 
+## No-root Android patch (Morphe) that reads the OwnerPSK in-app
+
+A Morphe patch for the official Samsung SmartThings / OneConnect Android app
+(`com.samsung.android.oneconnect`, pinned to `1.8.52.23`) reads a locally
+onboarded device's existing OwnerPSK from the app's own credential store and
+shows it, with the owner identity, on the device's **Edit** screen. Unlike the
+routes above it needs no root, no desktop tooling and no device backup: the key
+is read on the phone, inside the app that already holds it. The
+[patch and procedure](https://github.com/neoKushan/smortthings) record the
+tested version, behaviour and limits.
+
+The patch reuses OneConnect's own `CryptoManager` to unwrap the IoTivity storage
+key, decrypts the account-specific `<UUID>.datenc` SVR store (AES-256-CBC +
+HMAC-SHA256, indefinite-length CBOR), and parses its `credtype:1` record — the
+same encrypted store the AC entry above identifies, not the plaintext
+`oic_svr_db_client.dat`, which holds only certificates. The device being edited
+is matched to its credential by the SmartThings cloud `deviceId`, which equals
+the OCF `di` (`subjectuuid`) for these devices; with no exact match it shows no
+key. Import the displayed **Owner PSK** through LocalThings' **Owner** option and
+the displayed **Identity** (the owner UUID / `rowneruuid`, not `subjectuuid`) as
+the client identity.
+
+To acquire a key:
+
+1. Install Morphe Manager, add `https://github.com/neoKushan/smortthings` as a
+   patch source, and apply the patch to SmartThings `1.8.52.23`.
+2. The key is only present if the device was **locally onboarded from this
+   phone**. If the Edit screen shows none, remove the device in SmartThings and
+   add it again from the same phone; a full factory reset is usually not needed,
+   and if re-registration loops on errors, add the device to a new Location.
+3. Open the device's **Edit** screen, copy the **Owner PSK** (32 hex / 16 bytes)
+   and **Identity**, and import them through LocalThings' **Owner** option.
+   Verify an authenticated `/oic/d` read identifies the expected appliance.
+
+Author-verified on one `HW-Q950A` soundbar: the displayed OwnerPSK imported as
+**Owner** and authenticated a live LocalThings session. Community reports in #435
+add `HW-Q990C` and `HW-Q850A` soundbars, a Samsung `S95B` TV, and a Family Hub
+refrigerator, recovered the same way. The patch only reads a credential the app
+already stored for the operator's own device; it performs no ownership transfer
+and no `/oic/sec/*` write, derives no new key, and sends nothing off the phone.
+It is a proof of concept pinned to one app version; cloud-only devices store no
+OwnerPSK and show nothing. Device ownership stays with SmartThings.
+
 ## References
 
 - [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)
 - [WD86 authenticated resource inspection](https://github.com/mbillow/localthings/issues/435#issuecomment-5504979053)
 - [Maintainer's scope and documentation request](https://github.com/mbillow/localthings/issues/435#issuecomment-5556562678)
+- [smortthings — no-root Morphe patch that reads the OwnerPSK in-app](https://github.com/neoKushan/smortthings)
