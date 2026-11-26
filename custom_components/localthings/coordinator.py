@@ -1720,12 +1720,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._close_session()
             reason = f" ({body})" if isinstance(body, str) else ""
             raise RuntimeError(f"poll: unexpected code {code:#04x}{reason}")
-        result = parse_device0_batch(body) if isinstance(body, list) else {}
-        # Refresh every enumerated sibling's seed on this same poll (issue
-        # #177) so its state doesn't freeze at enumeration time.
-        for subdevice in self.subdevices:
-            result.update(self._poll_subdevice_seed(subdevice))
-        return result
+        # Sibling seeds are read after this, see _async_poll_subdevice_seeds.
+        return parse_device0_batch(body) if isinstance(body, list) else {}
 
     def _session_answers(self, sess: Transport) -> bool:
         """True if `sess` still answers a request, whatever the answer.
@@ -1744,12 +1740,25 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         return True
 
+    async def _async_poll_subdevice_seeds(self, resources: dict[str, dict]) -> None:
+        """Refresh every enumerated sibling's seed into `resources` (issue
+        #177), taking the session lock per sibling rather than for the whole
+        pass. On an 8-unit multi-split kit (MIM-H04N) the poll held the lock
+        ~13 s, so a write could wait that long; now it waits for one seed. A seed
+        read before a write that lands mid-pass is dropped by its settle
+        window, like any other stale poll."""
+        for subdevice in list(self.subdevices):
+            async with self._session_lock:
+                resources.update(
+                    await self.hass.async_add_executor_job(self._poll_subdevice_seed, subdevice)
+                )
+
     def _poll_subdevice_seed(self, subdevice: Subdevice) -> dict[str, dict]:
         """GET one subdevice's seed Collection, normalized to real hrefs. A
         sibling failing to answer is a debug log, never a failed poll -- the
         issue #177 reporter's /device/2 (an unused SmartThings slot) may not
         always respond, and the master must not go unavailable for that.
-        Blocking -- called from _poll_once, already in executor."""
+        Blocking."""
         sess = self._session
         if sess is None:
             return {}
@@ -3558,6 +3567,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         )
                         self._observe.downgrade_to_poll()
                         self._resubscribe_due = True
+
+        if not self._flat:
+            await self._async_poll_subdevice_seeds(resources)
 
         if not self._discovered:
             # One-time (issue #177): find sibling subdevices before the

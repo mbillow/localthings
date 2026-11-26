@@ -8,6 +8,7 @@ together, including device_info_for/via_device and the "no phantom
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, cast
 
 from homeassistant.core import HomeAssistant
@@ -476,6 +477,48 @@ def test_poll_subdevice_seed_collection_mode_unaffected_by_flat_fallback(
 
     assert result == {f"/{_SUB_UUID}/mode/vs/0": {"mode": "cool"}}
     assert sess.calls == [(_SUB_UUID, "device", "0")]
+
+
+async def test_a_write_waits_for_one_sibling_seed_not_the_whole_pass(
+    hass: HomeAssistant,
+) -> None:
+    """A write queued while the poll holds the session lock goes out after the
+    seed in flight, not after every sibling's: an 8-unit multi-split's seeds
+    held the lock ~13 s per poll."""
+    from custom_components.localthings.registry.subdevices import Subdevice
+
+    coordinator = _coordinator(hass)
+    devcol_rep = {"rt": ["x.com.samsung.devcol", "oic.wk.col"]}
+    keys = ("a", "b", "c")
+    coordinator._session = cast(
+        Transport,
+        _FakeCollectionSession(
+            {
+                (k, "device", "0"): [devcol_rep, {"href": "/mode/vs/0", "rep": {"mode": k}}]
+                for k in keys
+            }
+        ),
+    )
+    coordinator.subdevices = [
+        Subdevice(kind="prefixed", key=k, seed_path=(k, "device", "0")) for k in keys
+    ]
+    sess = cast(_FakeCollectionSession, coordinator._session)
+    order: list[str] = []
+
+    async def write() -> None:
+        async with coordinator._session_lock:
+            order.append(f"write after {len(sess.calls)} seeds")
+
+    resources: dict[str, dict] = {}
+    async with coordinator._session_lock:
+        poll = hass.async_create_task(coordinator._async_poll_subdevice_seeds(resources))
+        await asyncio.sleep(0)
+        queued = hass.async_create_task(write())
+        await asyncio.sleep(0)
+    await asyncio.gather(poll, queued)
+
+    assert order == ["write after 1 seeds"]
+    assert resources == {f"/{k}/mode/vs/0": {"mode": k} for k in keys}
 
 
 def test_poll_subdevice_seed_flat_mode_polls_each_href_individually(
