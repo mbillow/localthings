@@ -364,6 +364,9 @@
       "oven_setpoint": {
         "name": "Sollwert"
       },
+      "food_probe_target": {
+        "name": "Bratenthermometer-Zieltemperatur"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Abschalttimer der gekoppelten Dunstabzugshaube"
       },

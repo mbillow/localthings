@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Požadovaná teplota"
       },
+      "food_probe_target": {
+        "name": "Cílová teplota sondy"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Časovač vypnutí spárovaného odsavače"
       },

@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Požadovaná teplota"
       },
+      "food_probe_target": {
+        "name": "Cieľová teplota sondy"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Časovač vypnutia spárovaného digestora"
       },

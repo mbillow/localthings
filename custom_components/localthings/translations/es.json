@@ -839,6 +839,9 @@
       "oven_setpoint": {
         "name": "Punto de ajuste"
       },
+      "food_probe_target": {
+        "name": "Objetivo de la sonda"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Temporizador de apagado de la campana emparejada"
       },

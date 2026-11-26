@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Zadana vrednost"
       },
+      "food_probe_target": {
+        "name": "Ciljna temperatura sonde za hranu"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Tajmer za isključivanje uparenog aspiratora"
       },

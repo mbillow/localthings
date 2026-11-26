@@ -373,6 +373,9 @@
       "oven_setpoint": {
         "name": "Temperatura de ajuste"
       },
+      "food_probe_target": {
+        "name": "Temperatura desejada da sonda de alimentos"
+      },
       "paired_hood_shutoff_timer": {
         "name": "Temporizador de desligamento da coifa pareada"
       },
