@@ -2541,3 +2541,20 @@ def test_flexdry_upper_section_binds_its_connection_flag():
 
     assert unbound == []
     assert flatten(bound, resources)["cloud_connected"] is True
+
+
+def test_registry_reproduces_golden_state_keys_for_refrigerator_25k_ref_lcd_fhub():
+    """25K_REF_LCD_FHUB10.0 Family Hub (RS6HA8880S9/EG): read per-href over
+    OwnerPSK after /device/0 answers links only and drops if=oic.if.b."""
+    from tests.conftest import _load_device
+
+    name = "refrigerator_25k_ref_lcd_fhub"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.refrigerator")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
