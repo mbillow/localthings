@@ -358,6 +358,36 @@ def test_registry_reproduces_golden_state_keys_for_washer_dryer_awm_m64_25():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_washer_wf90f53adsa5():
+    """AWM-US-M64-25-WF90 / WF90F53ADSA5 washer, added with an OwnerPSK (issue #435)."""
+    from tests.conftest import _load_device
+
+    name = "washer_wf90f53adsa5"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(
+        name, _load_device(name), device_types=("oic.wk.d", "oic.d.washer")
+    )
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
+def test_registry_reproduces_golden_state_keys_for_dryer_dv90f53aesac():
+    """AWM-US-M64-25-DV90 / DV90F53AESAC dryer, added with an OwnerPSK (issue #435)."""
+    from tests.conftest import _load_device
+
+    name = "dryer_dv90f53aesac"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_state_keys(name, _load_device(name), device_types=("oic.wk.d", "oic.d.dryer"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_airconditioner():
     from tests.conftest import _load_device
 
