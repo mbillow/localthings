@@ -77,6 +77,28 @@ SUCCESS_FRACTION = 0.8
 STALE_SWEEPS_TO_FALLBACK = 2
 
 
+_ALARM_ITEMS_FIELD = "x.com.samsung.da.items"
+_ALARM_TIME_FIELD = "x.com.samsung.da.triggeredTime"
+
+
+def _without_alarm_times(rep: dict) -> dict:
+    """An alarms rep without its items' triggeredTime. An 8-unit MIM-H04N kit
+    re-stamps it every few seconds with no alarm change, so every sweep read
+    as a missed notify and forced a full hot/warm sub-poll each cycle."""
+    items = rep.get(_ALARM_ITEMS_FIELD)
+    if not isinstance(items, list):
+        return rep
+    return {
+        **rep,
+        _ALARM_ITEMS_FIELD: [
+            {k: v for k, v in item.items() if k != _ALARM_TIME_FIELD}
+            if isinstance(item, dict)
+            else item
+            for item in items
+        ],
+    }
+
+
 def _is_alarms_href(href: str) -> bool:
     """True for /alarms/vs/<index> in any subdevice-translated shape --
     the canonical MAIN form (/alarms/vs/0), an indexed subdevice's
@@ -510,7 +532,10 @@ class ObserveManager:
             cached = self.cache.get(href)
             if cached is None:
                 continue
-            diff = _rep_diff(cached, sweep_resources[href])
+            swept = sweep_resources[href]
+            if _is_alarms_href(href):
+                cached, swept = _without_alarm_times(cached), _without_alarm_times(swept)
+            diff = _rep_diff(cached, swept)
             with self._notify_cond:
                 if not diff:
                     self._stale_sweeps.pop(href, None)

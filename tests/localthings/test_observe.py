@@ -490,6 +490,37 @@ def _sweep(mgr: ObserveManager, resources: dict[str, dict]) -> None:
         mgr.apply(href, rep, source="sweep")
 
 
+def test_an_alarm_re_stamped_with_no_change_is_not_a_missed_notify():
+    """An 8-unit MIM-H04N kit re-stamps each alarm's triggeredTime every few
+    seconds with the same alarms. Counting that as a miss forced a full
+    hot/warm sub-poll every cycle and put the href back on fallback."""
+    mgr = _manager()
+    href = "/a0e9b357-d330-f73b-83c8-000001200007/alarms/vs/0"
+    _observing(mgr, [href])
+
+    def alarms(stamp: str) -> dict:
+        return {
+            "x.com.samsung.da.items": [
+                {
+                    "x.com.samsung.da.code": "FilterAlarm_Off",
+                    "x.com.samsung.da.triggeredTime": stamp,
+                }
+            ]
+        }
+
+    try:
+        mgr.apply(href, alarms("2026-11-26 10:13:25"), source="poll")
+        for stamp in ("2026-11-26 10:13:37", "2026-11-26 10:14:12"):
+            assert mgr.log_sweep_discrepancies({href: alarms(stamp)}) is False
+            mgr.apply(href, alarms(stamp), source="sweep")
+        assert href not in mgr.fallback_hrefs
+
+        cleared = {"x.com.samsung.da.items": []}
+        assert mgr.log_sweep_discrepancies({href: cleared}) is True
+    finally:
+        mgr.close()
+
+
 def test_href_the_sweep_keeps_finding_stale_goes_back_on_fallback():
     """Issue #507: a range's /temperatures/vs/0 pushes once, then climbs
     through a preheat without another notify. Once the sweep has found it
