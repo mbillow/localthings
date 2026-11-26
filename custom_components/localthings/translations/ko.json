@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "스피드 부스터"
       },
+      "hi_temp_wash": {
+        "name": "고온 세척"
+      },
+      "zone_booster": {
+        "name": "부분 강력 세척"
+      },
       "damp_alert": {
         "name": "다림질 알림"
       },

@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Wassen op hoge temperatuur"
+      },
+      "zone_booster": {
+        "name": "Zonebooster"
+      },
       "damp_alert": {
         "name": "Waarschuwing vochtige was"
       },

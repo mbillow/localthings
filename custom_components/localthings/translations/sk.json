@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Umývanie Hi-Temp"
+      },
+      "zone_booster": {
+        "name": "Zone Booster"
+      },
       "damp_alert": {
         "name": "Upozornenie na vlhké prádlo"
       },

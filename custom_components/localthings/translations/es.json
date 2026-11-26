@@ -3053,6 +3053,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Lavado a alta temperatura"
+      },
+      "zone_booster": {
+        "name": "Zona Booster"
+      },
       "damp_alert": {
         "name": "Alerta de humedad"
       },

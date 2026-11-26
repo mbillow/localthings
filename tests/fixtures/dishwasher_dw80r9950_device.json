@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "note": "DW80R9950UT/AA (DA_DW_A51_20_COMMON). Resources verbatim from the owner's redacted diagnostics download, idle and powered off; /file/transfer/vs/0's usage blob emptied."
+  },
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol",
+        "oic.wk.col"
+      ],
+      "if": [
+        "oic.if.baseline",
+        "oic.if.ll",
+        "oic.if.b"
+      ]
+    },
+    {
+      "href": "/alarms/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/configuration/vs/0",
+      "rep": {
+        "x.com.samsung.da.region": "0000000000",
+        "x.com.samsung.da.countryCode": ""
+      }
+    },
+    {
+      "href": "/course/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "HOMECARE_WIZARD_V2"
+        ],
+        "x.com.samsung.da.options": [
+          "DeviceType_0812",
+          "UpdateAllow_NotAllowed",
+          "CourseDefaultTimeSet_00880094009B0070003C000E008B",
+          "CourseDefaultTempSet_323C2D3E41413232343428284646",
+          "Course_84",
+          "WashingTimes_56",
+          "DrumCleanProposal_20",
+          "DetergentOnce_0",
+          "DetergentLeft_0",
+          "DetergentBase_0",
+          "DetergentAlarm_Off",
+          "DetergentType_0",
+          "DetergentTotal_0",
+          "ProgressTimeSet_420E88820384B20834",
+          "SendToDevice_Off",
+          "AutoDoorRelease_On",
+          "Sound_On",
+          "WaterLevelSet_0503040503020104",
+          "EnergyLevelSet_0503030402020105",
+          "UsagesDB_ok",
+          "EnergyKW_396",
+          "DrumCleanLog_Empty",
+          "TimeSync_NotSupported"
+        ],
+        "x.com.samsung.da.supportedOptions": [
+          "582830C9002A002B002C00283830C9002A002B002C00284830C9002A002B002C00285830C9000A002B000C00086830C9002A000B002C00287830C9000A000B000C0008883089000A000B000C000"
+        ]
+      }
+    },
+    {
+      "href": "/diagnosis/vs/0",
+      "rep": {
+        "x.com.samsung.da.diagnosisStart": "Ready"
+      }
+    },
+    {
+      "href": "/dishwasher/vs/0",
+      "rep": {
+        "x.com.samsung.da.highTemperatureDry": "Off",
+        "x.com.samsung.da.sanitize": "Off",
+        "x.com.samsung.da.speedBooster": "Off",
+        "x.com.samsung.da.zoneBooster": "OFF_OFF",
+        "x.com.samsung.da.selectedZone": "ON_ON",
+        "x.com.samsung.da.supportedSpeedBooster": [
+          "Off",
+          "On"
+        ],
+        "x.com.samsung.da.supportedSelectedZone": [
+          "OFF_OFF",
+          "ON_OFF",
+          "OFF_ON",
+          "ON_ON"
+        ],
+        "x.com.samsung.da.supportedZoneBooster": [
+          "OFF_OFF",
+          "ON_OFF",
+          "OFF_ON",
+          "ON_ON"
+        ],
+        "x.com.samsung.da.supportedSanitize": [
+          "Off",
+          "On"
+        ],
+        "x.com.samsung.da.supportedHighTemperatureDry": [
+          "Off",
+          "On"
+        ]
+      }
+    },
+    {
+      "href": "/energy/consumption/0",
+      "rep": {}
+    },
+    {
+      "href": "/energy/consumption/vs/0",
+      "rep": {
+        "x.com.samsung.da.instantaneousPowerUnit": "W",
+        "x.com.samsung.da.instantaneousPower": "-500",
+        "x.com.samsung.da.cumulativePower": "477400",
+        "x.com.samsung.da.cumulativeUnit": "Wh",
+        "x.com.samsung.da.cumulativeDate": "1795644000",
+        "x.com.samsung.da.cumulativeDateUTC": "1795644000"
+      }
+    },
+    {
+      "href": "/file/information/vs/0",
+      "rep": {
+        "x.com.samsung.timeoffset": "+00:00"
+      }
+    },
+    {
+      "href": "/filter/waterfilter/vs/0",
+      "rep": {}
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "DA_DW_A51_20_COMMON|30007242|40010201001311000101000000000000",
+        "x.com.samsung.da.description": "DA_DW_A51_20_COMMON_DW80R9950UG/DD92-00072A_5",
+        "x.com.samsung.da.serialNum": "**REDACTED**",
+        "x.com.samsung.da.otnDUID": "**REDACTED**",
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "DA_DW_A51_20_COMMON|30007242|40010201001311000101000000000000",
+            "x.com.samsung.da.type": "Software",
+            "x.com.samsung.da.number": "00071A200807(E323)",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          },
+          {
+            "x.com.samsung.da.id": "1",
+            "x.com.samsung.da.description": "DA_DW_A51_20_COMMON",
+            "x.com.samsung.da.type": "Firmware",
+            "x.com.samsung.da.number": "19062401,FFFFFFFF",
+            "x.com.samsung.da.newVersionAvailable": "0"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/kidslock/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/kidslock/vs/0",
+      "rep": {
+        "x.com.samsung.da.kidsLock": "Ready"
+      }
+    },
+    {
+      "href": "/operational/state/0",
+      "rep": {
+        "currentMachineState": "**REDACTED**",
+        "machineStates": "**REDACTED**",
+        "jobStates": [
+          "None",
+          "Predrain",
+          "Prewash",
+          "Wash",
+          "Rinse",
+          "Drying",
+          "Finish"
+        ],
+        "currentJobState": "None",
+        "remainingTime": "02:35:00",
+        "progressPercentage": "1"
+      }
+    },
+    {
+      "href": "/operational/state/vs/0",
+      "rep": {
+        "x.com.samsung.da.state": "Ready",
+        "x.com.samsung.da.remainingTime": "02:35:00",
+        "x.com.samsung.da.progressPercentage": "1",
+        "x.com.samsung.da.delayStartTime": "00:00:00",
+        "x.com.samsung.da.progress": "None",
+        "x.com.samsung.da.supportedProgress": [
+          "None",
+          "Predrain",
+          "Prewash",
+          "Wash",
+          "Rinse",
+          "Drying",
+          "Finish"
+        ]
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/power/vs/0",
+      "rep": {
+        "x.com.samsung.da.power": "Off"
+      }
+    },
+    {
+      "href": "/realtimenotiforclient/vs/0",
+      "rep": {
+        "x.com.samsung.da.timeforshortnoti": "0",
+        "x.com.samsung.da.periodicnotisubscription": "true"
+      }
+    },
+    {
+      "href": "/remotectrl/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/remotectrl/vs/0",
+      "rep": {
+        "x.com.samsung.da.remoteControlEnabled": "false"
+      }
+    }
+  ],
+  "probes": {
+    "/file/list/vs/0": {
+      "x.com.samsung.items": [
+        {
+          "x.com.samsung.id": "0",
+          "x.com.samsung.name": "/opt/data/energy.db"
+        },
+        {
+          "x.com.samsung.id": "1",
+          "x.com.samsung.name": "/opt/data/hass.db"
+        }
+      ]
+    },
+    "/file/transfer/vs/0": {}
+  },
+  "probes_note": "Probe-tier hrefs from the same diagnostics download, read outside the /device/0 batch. /file/transfer/vs/0's usage blob emptied."
+}

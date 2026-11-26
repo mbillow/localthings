@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Ускоритель Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Мойка при высокой температуре"
+      },
+      "zone_booster": {
+        "name": "Zone Booster"
+      },
       "damp_alert": {
         "name": "Оповещение о влажности"
       },

@@ -14,7 +14,10 @@ from ..capability import Capability
 from ..entities import ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from .common import diagnosis_status
 from .laundry import (
+    bool_option_exists,
     bool_option_switch,
+    bool_option_value,
+    bool_option_write,
     cycle_select,
     drum_clean_cycles_remaining,
 )
@@ -58,6 +61,28 @@ DISHWASHER_SETTINGS = Capability(
             write_fn=lambda p, rep, href=None: (
                 ["dishwasher", "vs", "0"],
                 {"x.com.samsung.da.speedBooster": "On" if p == "On" else "Off"},
+            ),
+        ),
+        SwitchDesc(
+            key="hi_temp_wash",
+            field="x.com.samsung.da.highTemperatureDry",
+            icon="mdi:thermometer-high",
+            exists_fn=_has("x.com.samsung.da.highTemperatureDry"),
+            value_fn=lambda v: v == "On",
+            write_fn=lambda p, rep, href=None: (
+                ["dishwasher", "vs", "0"],
+                {"x.com.samsung.da.highTemperatureDry": "On" if p == "On" else "Off"},
+            ),
+        ),
+        SwitchDesc(
+            key="zone_booster",
+            field="x.com.samsung.da.zoneBooster",
+            icon="mdi:water-plus",
+            exists_fn=_has("x.com.samsung.da.zoneBooster"),
+            value_fn=lambda v: v != "OFF_OFF",
+            write_fn=lambda p, rep, href=None: (
+                ["dishwasher", "vs", "0"],
+                {"x.com.samsung.da.zoneBooster": "ON_OFF" if p == "On" else "OFF_OFF"},
             ),
         ),
         SelectDesc(
@@ -131,6 +156,17 @@ CYCLE_OPTIONS = Capability(
         bool_option_switch("storm_wash", "mdi:weather-lightning-rainy", "StormWashZone"),
         bool_option_switch(
             "auto_release_dry", "mdi:door-open", "AutoDoorRelease", gate_on_presence=True
+        ),
+        SwitchDesc(
+            key="sound",
+            icon="mdi:volume-high",
+            entity_category="config",
+            exists_fn=lambda rep, resources: (
+                "/settings/sound/mode/vs/0" not in resources
+                and bool_option_exists("Sound")(rep, resources)
+            ),
+            rep_fn=bool_option_value("Sound"),
+            write_fn=bool_option_write("Sound"),
         ),
         SensorDesc(
             key="drum_clean_cycles_remaining",
