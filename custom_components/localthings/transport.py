@@ -42,6 +42,21 @@ _SHARED_OCTET_BASE = DTLS_LOCAL_PORT_BASE + 256
 _SHARED_OCTET_SPAN = 65536 - _SHARED_OCTET_BASE
 
 
+def earlier_hosts(entries: Iterable[Any], entry: Any = None) -> list[str]:
+    """The hosts of the config entries set up before `entry`, for
+    local_source_port; every entry's host when `entry` is None (a new one)."""
+
+    def _order(e: Any) -> tuple:
+        return (e.created_at, e.entry_id)
+
+    return [
+        e.data["host"]
+        for e in entries
+        if "host" in e.data
+        and (entry is None or (e.entry_id != entry.entry_id and _order(e) < _order(entry)))
+    ]
+
+
 def _octet_port(host: str) -> int:
     try:
         offset = int(ipaddress.IPv4Address(host)) & 0xFF
@@ -50,7 +65,7 @@ def _octet_port(host: str) -> int:
     return DTLS_LOCAL_PORT_BASE + offset
 
 
-def local_source_port(host: str, others: Iterable[str] = ()) -> int:
+def local_source_port(host: str, earlier: Iterable[str] = ()) -> int:
     """Deterministic UDP source port for this device's DTLS socket.
 
     This firmware's peer table has no cap, no idle timeout and no LRU, so
@@ -64,12 +79,13 @@ def local_source_port(host: str, others: Iterable[str] = ()) -> int:
     The port is DTLS_LOCAL_PORT_BASE plus the last IPv4 octet (a CRC32 fold
     for a hostname), and must be unique among this host's sessions: two
     devices on one port broke each other's sessions every reconnect (#918).
-    `others` are the hosts of the other entries; when one shares this
-    host's port, this host takes a CRC32-derived port above that range
-    instead, so only colliding devices move.
+    `earlier` are the hosts of the entries set up before this one
+    (earlier_hosts); when one shares this host's port, this host takes a
+    CRC32-derived port above that range instead. Only the newer device of
+    a colliding pair moves, so adding a device never moves an existing one.
     """
     port = _octet_port(host)
-    if any(other != host and _octet_port(other) == port for other in others):
+    if any(other != host and _octet_port(other) == port for other in earlier):
         return _SHARED_OCTET_BASE + zlib.crc32(host.encode()) % _SHARED_OCTET_SPAN
     return port
 

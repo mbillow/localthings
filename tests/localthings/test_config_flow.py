@@ -2181,3 +2181,23 @@ def test_dtls_does_not_reuse_an_original_legacy_ca_identity(monkeypatch):
     mint.assert_called_once_with("CA-CERT", "CA-KEY")
     assert handshake.call_args.args[2:4] == ("NEW-LEAF", "NEW-KEY")
     assert result["leaf_cert_pem"] == "NEW-LEAF"
+
+
+async def test_setup_source_port_matches_the_coordinator_for_a_reconfigured_entry(
+    hass: HomeAssistant,
+) -> None:
+    """#918: a reconfigured entry doesn't count its own old host as an
+    earlier device, so the probe dials from the port its coordinator will;
+    a new device whose octet an existing entry's host shares moves."""
+    from custom_components.localthings.config_flow import LocalThingsConfigFlow
+    from custom_components.localthings.const import DTLS_LOCAL_PORT_BASE
+    from custom_components.localthings.transport import local_source_port
+
+    entry = MockConfigEntry(domain=DOMAIN, data={**ENTRY_DATA, CONF_HOST: "10.0.0.99"})
+    entry.add_to_hass(hass)
+    flow = LocalThingsConfigFlow()
+    flow.hass = hass
+
+    assert flow._setup_source_port("10.0.1.99", entry) == DTLS_LOCAL_PORT_BASE + 99
+    assert flow._setup_source_port("10.0.1.99") == local_source_port("10.0.1.99", ["10.0.0.99"])
+    assert flow._setup_source_port("10.0.0.99") is None

@@ -2407,35 +2407,57 @@ def test_local_source_port_non_ipv4_falls_back_to_hash() -> None:
     assert DTLS_LOCAL_PORT_BASE <= port <= DTLS_LOCAL_PORT_BASE + 0xFF
 
 
-def test_local_source_port_moves_only_hosts_whose_octet_collides() -> None:
+def test_local_source_port_moves_only_the_newer_of_a_colliding_pair() -> None:
     """#918: 10.0.0.99 and 10.0.1.99 shared a port and broke each other's
-    sessions. Each takes its own port above the last-octet range once the
-    other is configured; a host with a unique octet keeps its port."""
-    pair = ("10.0.0.99", "10.0.1.99")
-    a = _local_source_port(pair[0], [pair[1], "10.0.0.97"])
-    b = _local_source_port(pair[1], [pair[0], "10.0.0.97"])
+    sessions. The newer device takes a port above the last-octet range; the
+    earlier one, and a host with a unique octet, keep theirs."""
+    older, newer = "10.0.0.99", "10.0.1.99"
+    moved = _local_source_port(newer, [older, "10.0.0.97"])
 
-    assert a != b
-    assert min(a, b) > DTLS_LOCAL_PORT_BASE + 0xFF and max(a, b) <= 65535
-    assert a == _local_source_port(pair[0], [pair[1]])
-    assert _local_source_port("10.0.0.97", pair) == DTLS_LOCAL_PORT_BASE + 97
-    assert _local_source_port(pair[0], [pair[0]]) == DTLS_LOCAL_PORT_BASE + 99
+    assert _local_source_port(older, ["10.0.0.97"]) == DTLS_LOCAL_PORT_BASE + 99
+    assert DTLS_LOCAL_PORT_BASE + 0xFF < moved <= 65535
+    assert moved == _local_source_port(newer, [older])
+    assert _local_source_port("10.0.0.97", [older, newer]) == DTLS_LOCAL_PORT_BASE + 97
+    assert _local_source_port(older, [older]) == DTLS_LOCAL_PORT_BASE + 99
 
 
-async def test_the_session_dials_from_a_port_no_other_entry_shares(
-    hass: HomeAssistant, mock_entry
+def test_earlier_hosts_orders_entries_by_creation() -> None:
+    from datetime import UTC, datetime, timedelta
+    from types import SimpleNamespace
+
+    from custom_components.localthings.transport import earlier_hosts
+
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    a, b, c = (
+        SimpleNamespace(entry_id=n, created_at=start + timedelta(days=i), data={"host": h})
+        for i, (n, h) in enumerate((("a", "10.0.0.99"), ("b", "10.0.1.99"), ("c", "10.0.2.99")))
+    )
+
+    assert earlier_hosts([a, b, c]) == ["10.0.0.99", "10.0.1.99", "10.0.2.99"]
+    assert earlier_hosts([a, b, c], b) == ["10.0.0.99"]
+    assert earlier_hosts([a, b, c], a) == []
+
+
+@pytest.mark.parametrize("twin_is_older", [True, False])
+async def test_the_newer_of_two_entries_dials_from_its_own_port(
+    hass: HomeAssistant, mock_entry, twin_is_older: bool
 ) -> None:
-    """The coordinator passes the other entries' hosts, read on the event
-    loop, to the port choice made in the executor (#918)."""
+    """The coordinator reads the earlier entries on the event loop for the
+    port its connect picks in the executor (#918)."""
+    from datetime import timedelta
+
     from homeassistant.const import CONF_HOST
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 
     from custom_components.localthings.const import DOMAIN
 
-    host = mock_entry.data[CONF_HOST]
-    twin = "10.0.1.254"
+    host, twin = mock_entry.data[CONF_HOST], "10.0.1.254"
     assert host == "10.0.0.254"
-    MockConfigEntry(domain=DOMAIN, data={**mock_entry.data, CONF_HOST: twin}).add_to_hass(hass)
+    shift = timedelta(days=-1 if twin_is_older else 1)
+    twin_entry = MockConfigEntry(domain=DOMAIN, data={**mock_entry.data, CONF_HOST: twin})
+    # ConfigEntry guards its attributes; MockConfigEntry takes no created_at.
+    object.__setattr__(twin_entry, "created_at", mock_entry.created_at + shift)
+    twin_entry.add_to_hass(hass)
     coordinator = LocalThingsCoordinator(hass, mock_entry)
 
     with patch("custom_components.localthings.coordinator.create_transport") as create:
@@ -2443,8 +2465,8 @@ async def test_the_session_dials_from_a_port_no_other_entry_shares(
         with pytest.raises(OSError):
             coordinator._open_session(49154)
 
-    assert create.call_args.kwargs["local_port"] == _local_source_port(host, [twin])
-    assert create.call_args.kwargs["local_port"] != _local_source_port(host)
+    port = create.call_args.kwargs["local_port"]
+    assert (port != _local_source_port(host)) is twin_is_older
 
 
 # ----------------------------------------------------------------------

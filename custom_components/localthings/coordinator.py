@@ -122,6 +122,7 @@ from .transport import (
     OvenStartUnconfirmed,
     Transport,
     create_transport,
+    earlier_hosts,
 )
 from .transport import local_source_port as _local_source_port
 
@@ -1466,13 +1467,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @callback
     def _note_other_hosts(self) -> None:
-        """Snapshot the other entries' hosts on the event loop, for
+        """Snapshot the earlier entries' hosts on the event loop, for
         _open_session in the executor: no two sessions share a source port."""
-        self._other_hosts = [
-            entry.data[CONF_HOST]
-            for entry in self.hass.config_entries.async_entries(DOMAIN)
-            if entry.entry_id != self._entry.entry_id and CONF_HOST in entry.data
-        ]
+        self._other_hosts = earlier_hosts(
+            self.hass.config_entries.async_entries(DOMAIN), self._entry
+        )
 
     def _open_session(self, port: int) -> None:
         host = self._entry.data[CONF_HOST]
