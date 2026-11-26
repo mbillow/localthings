@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "Het commando naar {href} is verzonden terwijl afstandsbediening uit staat, maar het apparaat toont het nog niet. Als het niet reageert, schakel dan afstandsbediening in op het apparaat."
     },
+    "command_dropped": {
+      "message": "Het apparaat heeft het commando naar {href} geaccepteerd, maar een nieuwe uitlezing toont het nog niet. Controleer het apparaat en probeer het opnieuw."
+    },
     "debug_read_failed": {
       "message": "Het lezen van {href} is mislukt: {error}"
     },

@@ -748,6 +748,8 @@ WASHER_COURSE = Capability(
                 option_value(rep.get("x.com.samsung.da.options"), "WrinklePreventRunning") == "On"
             ),
         ),
+        # A dose the washer dropped would be used silently on the next cycle,
+        # so each dosing write is read back (confirm_write).
         SelectDesc(
             key="detergent_quantity",
             icon="mdi:cup-water",
@@ -757,6 +759,7 @@ WASHER_COURSE = Capability(
             exists_fn=lambda rep, resources: bool(_level_options("DetergentLevelCtrl")(resources)),
             rep_fn=_dosing_level("DetergentLevelCtrl"),
             write_fn=_level_write("DetergentLevelCtrl"),
+            confirm_write=True,
         ),
         SelectDesc(
             key="detergent_water_hardness",
@@ -767,6 +770,7 @@ WASHER_COURSE = Capability(
             exists_fn=lambda rep, resources: bool(_level_options("DetergentLevel2Ctrl")(resources)),
             rep_fn=_dosing_level("DetergentLevel2Ctrl"),
             write_fn=_level_write("DetergentLevel2Ctrl"),
+            confirm_write=True,
         ),
         SelectDesc(
             key="softener_quantity",
@@ -777,6 +781,7 @@ WASHER_COURSE = Capability(
             exists_fn=lambda rep, resources: bool(_level_options("SoftenerLevelCtrl")(resources)),
             rep_fn=_dosing_level("SoftenerLevelCtrl"),
             write_fn=_level_write("SoftenerLevelCtrl"),
+            confirm_write=True,
         ),
         SelectDesc(
             key="softener_concentration",
@@ -787,6 +792,7 @@ WASHER_COURSE = Capability(
             exists_fn=lambda rep, resources: bool(_level_options("SoftenerLevel2Ctrl")(resources)),
             rep_fn=_dosing_level("SoftenerLevel2Ctrl"),
             write_fn=_level_write("SoftenerLevel2Ctrl"),
+            confirm_write=True,
         ),
         BinarySensorDesc(
             key="detergent_low",

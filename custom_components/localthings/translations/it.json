@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "Il comando per {href} è stato inviato con Smart Control disattivato, ma l'elettrodomestico non lo mostra ancora. Se non risponde, attivare Smart Control sull'elettrodomestico."
     },
+    "command_dropped": {
+      "message": "L'elettrodomestico ha accettato il comando per {href}, ma una nuova lettura non lo mostra ancora. Controllare l'elettrodomestico e riprovare."
+    },
     "debug_read_failed": {
       "message": "La lettura da {href} è fallita: {error}"
     },

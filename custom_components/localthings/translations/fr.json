@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "La commande vers {href} a été envoyée avec le contrôle à distance désactivé, mais l'appareil ne l'affiche pas encore. Si elle n'est pas appliquée, activez le contrôle à distance sur l'appareil."
     },
+    "command_dropped": {
+      "message": "L'appareil a accepté la commande vers {href}, mais une nouvelle lecture ne l'affiche toujours pas. Vérifiez l'appareil et réessayez."
+    },
     "debug_read_failed": {
       "message": "La lecture de {href} a échoué : {error}"
     },

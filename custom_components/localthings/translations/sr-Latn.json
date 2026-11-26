@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "Komanda za {href} je poslata dok je daljinsko upravljanje isključeno, ali je aparat još uvek ne prikazuje. Ako je ne izvrši, uključite daljinsko upravljanje na samom aparatu."
     },
+    "command_dropped": {
+      "message": "Aparat je prihvatio komandu za {href}, ali je ponovno očitavanje još uvek ne prikazuje. Proverite aparat i pokušajte ponovo."
+    },
     "debug_read_failed": {
       "message": "Čitanje sa {href} nije uspelo: {error}"
     },

@@ -326,6 +326,9 @@
     "command_not_confirmed": {
       "message": "El comando para {href} se envió con el control remoto desactivado, pero el electrodoméstico aún no lo refleja. Si no responde, activa el control remoto en el electrodoméstico."
     },
+    "command_dropped": {
+      "message": "El electrodoméstico aceptó el comando para {href}, pero una nueva lectura aún no lo refleja. Comprueba el electrodoméstico y vuelve a intentarlo."
+    },
     "debug_read_failed": {
       "message": "La lectura desde {href} falló: {error}"
     },
