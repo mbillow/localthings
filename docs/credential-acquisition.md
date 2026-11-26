@@ -98,7 +98,13 @@ unencrypted Finder backup of the iPhone that originally paired it. The washer
 was not removed, reset or re-registered. Owners have since added a ViewFinity
 S9 monitor (#891) and The Frame 2021 TV (#868) the same way.
 
-1. Keep the backup private. In its `Manifest.db`, query `Files` for
+An unencrypted backup is readable by anyone with access to the computer, and
+it holds far more than the SmartThings key. Make one only for this, keep it
+private, and delete it once the key is imported. Turning Finder's **Encrypt
+local backup** off applies to every later backup too, so turn it back on
+afterwards.
+
+1. In the backup's `Manifest.db`, query `Files` for
    `domain = 'AppDomain-com.samsung.oneconnect4ios'` and
    `relativePath = 'Library/Security/oic_svr_db_client.dat'`. Require exactly
    one match. Its `fileID` names the file at
