@@ -1,0 +1,27 @@
+{
+  "state_keys": [
+    "ai_energy_level",
+    "alarm_code",
+    "cooler_setpoint",
+    "cooler_temperature",
+    "defrost_active",
+    "diagnosis_status",
+    "door_cooler_open",
+    "door_freezer_open",
+    "energy_kwh",
+    "energy_last_month_kwh",
+    "energy_saved_kwh",
+    "energy_this_month_kwh",
+    "filter_status",
+    "filter_usage",
+    "firmware_update",
+    "freezer_setpoint",
+    "freezer_temperature",
+    "icemaker_one_enabled",
+    "icemaker_one_making_status",
+    "power_watts",
+    "rapid_freezing",
+    "rapid_fridge",
+    "vacation_mode"
+  ]
+}

@@ -724,6 +724,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._moved_port: int | None = None
         self._other_hosts: list[str] = []
         self._note_other_hosts()
+        # Flipped after a fixed-port handshake timeout succeeds from an
+        # ephemeral port (25K_REF_LCD_FHUB10.0), so reconnects don't pay the
+        # fixed-port timeout again.
+        self._use_ephemeral_port = False
         # The last non-empty /oic/res answer: kept across a reconnect whose
         # identity read failed, since write-only hrefs are known only from it.
         self._last_oic_res: list = []
@@ -1369,6 +1373,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def observe_mode(self) -> str:
         return self._observe.mode
 
+    def _can_retry_ephemeral(self) -> bool:
+        return (
+            not self._use_ephemeral_port
+            and self._entry.data.get(CONF_TRANSPORT) != TRANSPORT_LEGACY_HTTP
+        )
+
     def _connect_session(self) -> None:
         """Open a session on the stored port, following it if it moved.
 
@@ -1395,28 +1405,49 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Only silence or an unreachable endpoint suggests the port moved;
             # an appliance that answered with an alert is still on this one.
             moved = self._rediscover_port(port)
-            if moved is None:
+            if moved is not None:
+                self._log.info(
+                    "secure port moved from %d to %d after %s; reconnecting there",
+                    port,
+                    moved,
+                    type(e).__name__,
+                )
+                try:
+                    self._open_session_retrying_collision(moved)
+                except TimeoutError:
+                    if not self._can_retry_ephemeral():
+                        raise
+                    self._log.debug(
+                        "handshake to %s:%d timed out on fixed port; retrying ephemeral",
+                        self._entry.data[CONF_HOST],
+                        moved,
+                    )
+                    self._open_session_retrying_collision(moved, ephemeral=True)
+                    self._use_ephemeral_port = True
+                self._moved_port = moved
+            elif isinstance(e, TimeoutError) and self._can_retry_ephemeral():
+                self._log.debug(
+                    "handshake to %s:%d timed out on fixed port; retrying ephemeral",
+                    self._entry.data[CONF_HOST],
+                    port,
+                )
+                self._open_session_retrying_collision(port, ephemeral=True)
+                self._use_ephemeral_port = True
+                self._moved_port = None
+            else:
                 raise
-            self._log.info(
-                "secure port moved from %d to %d after %s; reconnecting there",
-                port,
-                moved,
-                type(e).__name__,
-            )
-            self._open_session_retrying_collision(moved)
-            self._moved_port = moved
         self._rediscovery_backoff_s = 0.0
         self._next_rediscovery_ts = 0.0
 
-    def _open_session_retrying_collision(self, port: int) -> None:
+    def _open_session_retrying_collision(self, port: int, *, ephemeral: bool = False) -> None:
         """A handshake the appliance started at the same moment clears its
         peer, so one immediate retry normally succeeds (issue #567, the same
         rule as config_flow._worth_retrying)."""
         try:
-            self._open_session(port)
+            self._open_session(port, ephemeral=ephemeral)
         except PeerInitiatedHandshakeError as e:
             self._log.debug("handshake collided with the appliance's own; retrying: %s", e)
-            self._open_session(port)
+            self._open_session(port, ephemeral=ephemeral)
 
     def _rediscover_port(self, current: int) -> int | None:
         """The port the device now answers on, when a lookup is due (see
@@ -1473,8 +1504,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.hass.config_entries.async_entries(DOMAIN), self._entry
         )
 
-    def _open_session(self, port: int) -> None:
+    def _open_session(self, port: int, *, ephemeral: bool = False) -> None:
         host = self._entry.data[CONF_HOST]
+        local_port = (
+            None
+            if ephemeral or self._use_ephemeral_port
+            else _local_source_port(host, self._other_hosts)
+        )
 
         # Which credential this entry uses is decided from the entry
         # (transport.create_transport, session.py), not here -- adding a
@@ -1483,7 +1519,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = create_transport(
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
-            local_port=_local_source_port(host, self._other_hosts),
+            local_port=local_port,
         )
         sess.connect()
         identity = None
