@@ -2757,8 +2757,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # This partition saw the whole run, so its unbound list replaces the
         # first pass's: a sibling that materialized since binds hrefs that pass
         # reported (#911), and a type resolved since clears the unknown-type
-        # gap. The device name stays generic until the next start.
-        if resolved or unbound != self._unbound_hrefs:
+        # gap. A skipped sub-unit this growth didn't partition keeps its hrefs
+        # out of the list, as first discovery kept them. The device name stays
+        # generic until the next start.
+        quiet = [s.subdevice for s in self._skipped_subdevices if s.subdevice not in subdevices]
+        unbound = [href for href in unbound if not any(q.owns(href) for q in quiet)]
+        if resolved or sorted(unbound) != sorted(self._unbound_hrefs):
             self._unbound_hrefs = unbound
             self._update_coverage_gap_issue(
                 self.device_type_name is None,

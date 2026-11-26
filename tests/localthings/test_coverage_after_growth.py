@@ -39,3 +39,28 @@ async def test_a_sibling_that_joins_later_clears_its_unbound_hrefs(
 
     assert coordinator._unbound_hrefs == []
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
+
+
+async def test_growth_leaves_a_skipped_slot_out_of_the_repair(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """An unused slot first discovery skipped stays out of the unbound list
+    when a later read grows the run without it."""
+    from custom_components.localthings.coordinator import LocalThingsCoordinator
+    from custom_components.localthings.registry.subdevices import enumerate_subdevices
+    from tests.conftest import FakeCoapSession
+
+    resources, oic_res, seeds = _load_device_full("airconditioner_artik051_dongle_fac_18k")
+    candidates, extra = enumerate_subdevices(FakeCoapSession(seeds), resources, oic_res)
+    full = {**resources, **extra}
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator.subdevices = list(candidates)
+    coordinator._run_discovery(full)
+    coordinator._judge_registration(full)
+    assert coordinator._skipped_subdevices and coordinator._unbound_hrefs == []
+
+    await coordinator._grow(full, list(coordinator.subdevices), bank=full)
+
+    assert coordinator._unbound_hrefs == []
+    issue_id = f"device_gap_{mock_entry.entry_id}"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
