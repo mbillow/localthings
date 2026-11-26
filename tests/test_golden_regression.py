@@ -2522,3 +2522,22 @@ def test_registry_reproduces_golden_state_keys_for_monitor_ls27c902p():
         name, _load_device(name), device_types=("oic.wk.d", "x.com.st.d.monitor")
     )
     assert set(state_keys) == set(golden["state_keys"])
+
+
+def test_flexdry_upper_section_binds_its_connection_flag():
+    """#906: the upper section's /connected/vs/0 left the coverage repair open."""
+    from custom_components.localthings.registry.adapter import flatten
+    from custom_components.localthings.registry.by_type import resolve
+    from custom_components.localthings.registry.discovery import discover
+    from tests.conftest import _load_device
+
+    resources = _load_device("flexdry_topload")
+    registry = resolve(resources)
+    assert registry is not None and registry.name == "flexdry"
+    unbound: list[str] = []
+    bound = discover(
+        resources, registry.capabilities, registry.pattern_capabilities, log=unbound.append
+    )
+
+    assert unbound == []
+    assert flatten(bound, resources)["cloud_connected"] is True

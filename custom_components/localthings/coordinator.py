@@ -122,6 +122,7 @@ from .transport import (
     OvenStartUnconfirmed,
     Transport,
     create_transport,
+    earlier_hosts,
 )
 from .transport import local_source_port as _local_source_port
 
@@ -721,6 +722,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._next_rediscovery_ts = 0.0
         self._rediscovery_backoff_s = 0.0
         self._moved_port: int | None = None
+        self._other_hosts: list[str] = []
+        self._note_other_hosts()
         # The last non-empty /oic/res answer: kept across a reconnect whose
         # identity read failed, since write-only hrefs are known only from it.
         self._last_oic_res: list = []
@@ -1462,6 +1465,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._entry, data={**self._entry.data, CONF_PORT: port}
         )
 
+    @callback
+    def _note_other_hosts(self) -> None:
+        """Snapshot the earlier entries' hosts on the event loop, for
+        _open_session in the executor: no two sessions share a source port."""
+        self._other_hosts = earlier_hosts(
+            self.hass.config_entries.async_entries(DOMAIN), self._entry
+        )
+
     def _open_session(self, port: int) -> None:
         host = self._entry.data[CONF_HOST]
 
@@ -1472,7 +1483,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = create_transport(
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
-            local_port=_local_source_port(host),
+            local_port=_local_source_port(host, self._other_hosts),
         )
         sess.connect()
         identity = None
@@ -2742,11 +2753,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._subscribe_tiers = family.subscribe_tiers
             if family.write_settle_s is not None:
                 self._write_settle_s = family.write_settle_s
-            # The type first discovery couldn't resolve raised a coverage gap.
-            # The device name stays generic until the next start.
+        # This partition saw the whole run, so its unbound list replaces the
+        # first pass's: a sibling that materialized since binds hrefs that pass
+        # reported (#911), and a type resolved since clears the unknown-type
+        # gap. A skipped sub-unit this growth didn't partition keeps its hrefs
+        # out of the list, as first discovery kept them. The device name stays
+        # generic until the next start.
+        quiet = [s.subdevice for s in self._skipped_subdevices if s.subdevice not in subdevices]
+        unbound = [href for href in unbound if not any(q.owns(href) for q in quiet)]
+        if resolved or sorted(unbound) != sorted(self._unbound_hrefs):
             self._unbound_hrefs = unbound
             self._update_coverage_gap_issue(
-                False, unbound, self.device_info.get("name") or "This appliance"
+                self.device_type_name is None,
+                unbound,
+                self.device_info.get("name") or "This appliance",
             )
         if grown or any(added.values()):
             self._log.info(
@@ -3468,6 +3488,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
+        self._note_other_hosts()
 
         async with self._session_lock:
             try:

@@ -438,6 +438,15 @@ def _source_ip(host: str) -> str | None:
             return None
 
 
+def _ipv4(host: str) -> str | None:
+    """`host` as an IPv4 literal: multicast discovery takes no hostname (#902)."""
+    try:
+        return str(socket.getaddrinfo(host, None, socket.AF_INET)[0][4][0])
+    except (OSError, IndexError) as exc:
+        _LOGGER.debug("No IPv4 address for %s; skipping multicast discovery: %s", host, exc)
+        return None
+
+
 def _ocf_responders(host: str) -> tuple:
     """Every OCF responder at `host`, found over multicast (#540).
 
@@ -448,12 +457,13 @@ def _ocf_responders(host: str) -> tuple:
     """
     from smartthings_local.protocol.ocf_multicast import discover_ocf_responders
 
-    interface = _source_ip(host)
-    if interface is None:
+    address = _ipv4(host)
+    interface = _source_ip(address) if address is not None else None
+    if address is None or interface is None:
         return ()
     try:
         found = discover_ocf_responders(
-            host,
+            address,
             interface_address=interface,
             per_read_timeout=PLAINTEXT_READ_TIMEOUT_S,
             retries=PLAINTEXT_DISCOVERY_RETRIES,
