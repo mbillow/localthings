@@ -119,8 +119,10 @@ def test_media_player_is_the_only_power_volume_source_surface():
     )
     assert write(("volume", 10), {}, None, resources) == (["sec", "tv", "audio"], {"volume": 10})
     assert write(("mute", True), {}, None, resources) == (["sec", "tv", "audio"], {"mute": True})
-    # Turn-on is Wake-on-LAN (av.py); OCF can't reach a TV in standby.
-    assert write(("power", True), {}, None, resources) is None
+    assert write(("power", True), {}, None, resources) == (
+        ["sec", "tv", "switch", "binary"],
+        {"value": True},
+    )
 
 
 def test_media_player_writes_resolve_names_and_commands():

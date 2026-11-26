@@ -316,8 +316,8 @@ class MediaPlayerDesc(SamsungEntityDescription):
     thumbnail_href: str | None = None
     # play_media tunes a channel, launches an app or casts media (TV).
     play_media: bool = False
-    # Turn-on goes through av.AVControl.async_power_on, offered only with a
-    # MAC to wake: the TV's OCF endpoint is gone in standby.
+    # Turn-on goes through av.AVControl: live OCF first, then Wake-on-LAN
+    # when the TV has a MAC and its OCF endpoint cannot turn it on.
     wake_on_lan: bool = False
     # resources -> the commands the device takes now (the TV's); None takes
     # every command, as the soundbars do.

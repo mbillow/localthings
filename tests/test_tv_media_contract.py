@@ -9,7 +9,6 @@ from tests.conftest import _load_device
 @pytest.mark.parametrize(
     "payload",
     [
-        ("power", True),
         ("power", "off"),
         ("volume", -1),
         ("volume", 101),
@@ -28,3 +27,12 @@ def test_unsupported_payloads_never_become_writes(payload):
     resources = _load_device("tv_qn90a")
     assert tv._validate_media(payload, {}, resources) == "media_option_not_supported"
     assert tv._media_write(payload, {}, resources=resources) is None
+
+
+@pytest.mark.parametrize("value", [True, False])
+@pytest.mark.parametrize("power", [{"value": False}, {"if": ["oic.if.a"]}])
+def test_power_requires_a_writable_boolean_switch(value, power):
+    resources = _load_device("tv_qn90a")
+    resources[tv.HREF_SWITCH] = power
+
+    assert tv._media_write(("power", value), {}, resources=resources) is None

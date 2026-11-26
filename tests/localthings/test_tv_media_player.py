@@ -65,7 +65,8 @@ async def test_tv_state_and_only_reported_controls(hass: HomeAssistant):
     assert player.sound_mode_list == ["Amplify", "Standard", "Game"]
     assert (
         player.supported_features
-        == F.TURN_OFF
+        == F.TURN_ON
+        | F.TURN_OFF
         | F.VOLUME_SET
         | F.VOLUME_MUTE
         | F.SELECT_SOURCE
@@ -121,10 +122,9 @@ async def test_options_change_live_and_disappeared_labels_are_rejected(hass: Hom
     assert session.writes == [(["sec", "tv", "inputsource"], {tv.CURRENT_MODE: "HDMI2"})]
 
 
-async def test_no_ocf_wake_or_blind_relative_playback_commands(hass: HomeAssistant):
+async def test_no_blind_relative_playback_commands(hass: HomeAssistant):
     session, _, player = await _setup_tv(hass)
     for command in (
-        player.async_turn_on,
         player.async_media_play,
         player.async_media_pause,
         player.async_media_stop,
@@ -132,7 +132,7 @@ async def test_no_ocf_wake_or_blind_relative_playback_commands(hass: HomeAssista
         with pytest.raises(ServiceValidationError):
             await command()
     assert session.writes == []
-    assert not player.supported_features & (F.TURN_ON | F.PLAY | F.PAUSE | F.STOP | F.SEEK)
+    assert not player.supported_features & (F.PLAY | F.PAUSE | F.STOP | F.SEEK)
 
 
 async def test_writable_fields_control_features_and_direct_writes(hass: HomeAssistant):

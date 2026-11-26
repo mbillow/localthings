@@ -112,6 +112,16 @@ class AVControl:
         """True for a TV with a MAC to wake (async_power_on)."""
         return self._wake_mac() is not None
 
+    def _ocf_power_on_supported(self, bound_entity: BoundEntity) -> bool:
+        commands = getattr(bound_entity.desc, "supported_commands_fn", None)
+        return commands is not None and "power_on" in commands(
+            self._coordinator.canonical_resources(bound_entity.subdevice)
+        )
+
+    def can_turn_on(self, bound_entity: BoundEntity) -> bool:
+        """A TV needs either a live writable OCF switch or a MAC to wake."""
+        return self.wakeable() or (self._answering() and self._ocf_power_on_supported(bound_entity))
+
     def _answering(self) -> bool:
         """True while the last poll got through on a live session."""
         return (
@@ -164,11 +174,10 @@ class AVControl:
             await coordinator.async_request_refresh()
 
     async def async_turn_on(self, bound_entity: BoundEntity) -> None:
-        """Turn on through the media player's descriptor: Wake-on-LAN for a
-        TV (MediaPlayerDesc.wake_on_lan), refused when there's no MAC."""
+        """Use a TV's live OCF switch, with Wake-on-LAN when it cannot answer."""
         if not getattr(bound_entity.desc, "wake_on_lan", False):
             await self.async_media_command(bound_entity, "power", True)
-        elif self.wakeable():
+        elif self.can_turn_on(bound_entity):
             await self.async_power_on(bound_entity)
         else:
             raise ServiceValidationError(
@@ -257,17 +266,25 @@ class AVControl:
         await self._coordinator._async_put(["content", "renderer"], body, tv_caps.HREF_RENDERER)
 
     async def async_power_on(self, bound_entity: BoundEntity) -> None:
-        """Wake a TV with a known MAC; other devices take an OCF power write.
-
-        OCF can't turn a TV on (#834): its endpoint is gone in standby, and
-        one whose switch answers on is on already.
-        """
+        """Some TVs retain OCF in standby (KQ75QNB85AFXKR); others need WOL."""
         mac = self._wake_mac()
-        if mac is None:
+        if not getattr(bound_entity.desc, "wake_on_lan", False):
             await self._coordinator.async_send_command(bound_entity, ("power", True))
             return
         if self._answering() and self._coordinator.resource(tv_caps.HREF_SWITCH).get("value"):
             return
+        if self._answering() and self._ocf_power_on_supported(bound_entity):
+            try:
+                await self.async_media_command(bound_entity, "power", True)
+                return
+            except HomeAssistantError as err:
+                if mac is None:
+                    raise
+                self._log.debug("OCF power-on failed; falling back to Wake-on-LAN: %s", err)
+        if mac is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="media_option_not_supported"
+            )
         await self._async_wake_on_lan(mac)
 
     async def _async_wake_on_lan(self, mac: str) -> None:

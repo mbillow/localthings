@@ -233,7 +233,7 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
 
     def _turn_on_available(self) -> bool:
         if self._desc.wake_on_lan:
-            return self.coordinator.av.wakeable()
+            return self.coordinator.av.can_turn_on(self._bound)
         return self._supports_command("power_on")
 
     def _wire_value(self, surface: MediaModeSurface | None, label: str) -> str:
