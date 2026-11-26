@@ -307,6 +307,36 @@ def test_probe_flat_device_answering_nothing_is_unusable() -> None:
         _read_device(sess, "10.0.0.99", 49154)
 
 
+def test_probe_reads_a_links_only_device_per_href() -> None:
+    """/device/0 answering 2.05 with a links map (after if=oic.if.b timed out)
+    takes the per-href path."""
+
+    class _LinksOnly(FakeFlatSession):
+        def read(self, path, timeout=None):
+            if list(path) == ["device", "0"]:
+                self.reads.append("/device/0")
+                return 0x45, {"links": [{"href": h} for h in _RESOURCES]}
+            return super().read(path, timeout)
+
+    info = _read_device(_LinksOnly(links=_AV_LINKS), "10.0.0.99", 49154)
+    assert info["read_mode"] == READ_MODE_PER_HREF
+
+
+@pytest.mark.parametrize("exc", [TimeoutError("timed out"), RuntimeError("session closed")])
+def test_probe_does_not_go_per_href_on_device0_exception(exc: Exception) -> None:
+    """An exception on /device/0 must propagate rather than silently storing a
+    batch board as per-href."""
+
+    class _FailingDevice0(FakeFlatSession):
+        def read(self, path, timeout=None):
+            if list(path) == ["device", "0"]:
+                raise exc
+            return super().read(path, timeout)
+
+    with pytest.raises(type(exc)):
+        _read_device(_FailingDevice0(links=_AV_LINKS), "10.0.0.99", 49154)
+
+
 def test_flat_liveness_without_an_answer_fails_the_cycle(hass: HomeAssistant, mock_entry) -> None:
     """A soundbar switched off by its own remote: the off-cadence liveness GET gets
     nothing, and the cycle fails at once instead of being taken for a slow

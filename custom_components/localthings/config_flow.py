@@ -765,7 +765,10 @@ def _read_device(transport, host: str, port: int) -> dict:
     identity = read_identity(transport, None)
 
     code, body = transport.read(["device", "0"], timeout=PROBE_GET_TIMEOUT_S)
-    per_href = code == 0x84
+    # 4.04 is a board with no /device/0 at all (AV); a 2.05 links map is one
+    # whose /device/0 Collection didn't answer if=oic.if.b (25K_REF_LCD_FHUB10.0).
+    links_only = code == 0x45 and isinstance(body, dict) and isinstance(body.get("links"), list)
+    per_href = code == 0x84 or links_only
     if per_href:
         # No /device/0 Collection: read /oic/res's hrefs as the coordinator
         # will poll them (registry/flat.py). A batch board stored this way

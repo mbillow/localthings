@@ -234,6 +234,9 @@ class DtlsTransport:
         # /device/<n> paths that answered links and then a batch: asked for
         # the batch straight away from then on, one GET instead of two.
         self._batch_paths: set[tuple[str, ...]] = set()
+        # /device/<n> paths that answered links but timed out on if=oic.if.b
+        # (25K_REF_LCD_FHUB10.0): skip the batch GET on later reads.
+        self._no_batch_paths: set[tuple[str, ...]] = set()
 
     @property
     def host(self) -> str:
@@ -299,14 +302,24 @@ class DtlsTransport:
             if value is not None
         }
         code, body = _decode_read(*session.get(path, query=tuple(query), timeout=timeout, **caps))
-        if seed and code == 0x45 and isinstance(body, dict) and isinstance(body.get("links"), list):
+        if (
+            seed
+            and tuple(path) not in self._no_batch_paths
+            and code == 0x45
+            and isinstance(body, dict)
+            and isinstance(body.get("links"), list)
+        ):
             session.pace()
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError("device batch read exhausted its timeout")
-            code, body = _decode_read(
-                *session.get(path, query=list(_BATCH_QUERY), timeout=remaining)
-            )
+            try:
+                code, body = _decode_read(
+                    *session.get(path, query=list(_BATCH_QUERY), timeout=remaining)
+                )
+            except TimeoutError:
+                self._no_batch_paths.add(tuple(path))
+                return code, body
             if code == 0x45 and isinstance(body, list):
                 self._batch_paths.add(tuple(path))
         return code, body

@@ -87,6 +87,9 @@ class PskAppliance:
             return 0x45, WASHER_DEVICE0
         return 0x84, None
 
+    def pace(self):
+        pass
+
     def close(self):
         pass
 
@@ -521,3 +524,39 @@ async def test_every_psk_screen_links_the_tracking_issue(
     assert menu["description_placeholders"]["issue_url"] == PSK_TRACKING_ISSUE_URL
     form = await _choose(hass, menu, "psk_peer")
     assert form["description_placeholders"]["issue_url"] == PSK_TRACKING_ISSUE_URL
+
+
+class LinksOnlyPskAppliance(PskAppliance):
+    """A PSK board whose /device/0 answers links only (25K_REF_LCD_FHUB10.0)
+    after DtlsTransport falls back from a timed-out if=oic.if.b read."""
+
+    _RESOURCES: ClassVar[dict[str, dict]] = {
+        "/information/vs/0": {"x.com.samsung.da.modelNum": "25K_REF_LCD_FHUB10.0"},
+        "/temperature/current/cooler/0": {"temperature": 3.0, "units": "C"},
+        "/temperature/current/freezer/0": {"temperature": -19.0, "units": "C"},
+    }
+
+    def read(self, path, timeout=15.0):
+        href = "/" + "/".join(path)
+        if href == "/oic/d":
+            return 0x45, {"di": self.device_id, "rt": ["oic.wk.d", "oic.d.refrigerator"]}
+        if href == "/oic/res":
+            return 0x45, [{"href": h} for h in self._RESOURCES]
+        if href == "/device/0":
+            return 0x45, {"links": [{"href": h} for h in self._RESOURCES]}
+        if href in self._RESOURCES:
+            return 0x45, dict(self._RESOURCES[href])
+        return super().read(path, timeout)
+
+
+async def test_a_board_whose_device0_answers_only_links_is_stored_per_href(
+    hass: HomeAssistant, monkeypatch, appliance
+) -> None:
+    monkeypatch.setattr(config_flow, "DtlsTransport", LinksOnlyPskAppliance)
+    _hint(monkeypatch, CredentialHint(sct=1, owner_uuid=OWNER_UUID))
+    result = await _choose(hass, await _refused(hass), "psk_owner")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PSK_IDENTITY: OWNER_UUID, CONF_PSK_KEY: KEY}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_READ_MODE] == READ_MODE_PER_HREF

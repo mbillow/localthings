@@ -352,6 +352,52 @@ class TestRead:
             assert transport.read(path, timeout=10.0) == (0x45, [])
             assert timeouts == [10.0, 7.0]
 
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_a_batch_timeout_returns_links_and_remembers_no_batch(
+        self, transport, monkeypatch, path
+    ):
+        """Boards that answer /device/0 with links but drop if=oic.if.b
+        (25K_REF_LCD_FHUB10.0) fall back to the links reply once and skip the
+        batch query on later reads."""
+        from smartthings_local.errors import SessionTimeoutError
+
+        directory = {"links": [{"href": "/temperature/current/cooler/0"}]}
+        queries = []
+
+        def get(path_segs, *, timeout, query=()):
+            queries.append(tuple(query))
+            if query:
+                raise SessionTimeoutError()
+            return 0x45, cbor2.dumps(directory)
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        assert transport.read(path, timeout=10.0) == (0x45, directory)
+        assert queries == [(), ("if=oic.if.b",)]
+
+        queries.clear()
+        assert transport.read(path, timeout=10.0) == (0x45, directory)
+        assert queries == [()]
+
+    @pytest.mark.parametrize("path", _COLLECTION_PATHS)
+    def test_a_batch_non_timeout_error_still_raises_and_is_not_remembered(
+        self, transport, monkeypatch, path
+    ):
+        """A closed session or other non-timeout failure must propagate, not
+        masquerade as a board without batch support."""
+        queries = []
+
+        def get(path_segs, *, timeout, query=()):
+            queries.append(tuple(query))
+            if query:
+                raise RuntimeError("session closed")
+            return 0x45, cbor2.dumps({"links": []})
+
+        monkeypatch.setattr(fake_of(transport), "get", get)
+        with pytest.raises(RuntimeError, match="session closed"):
+            transport.read(path, timeout=10.0)
+        assert tuple(path) not in transport._no_batch_paths
+        assert queries == [(), ("if=oic.if.b",)]
+
 
 class TestWrite:
     def test_takes_a_body_and_returns_the_code(self, transport):
