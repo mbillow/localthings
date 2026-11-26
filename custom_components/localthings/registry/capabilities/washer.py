@@ -166,7 +166,7 @@ def _rinse_options(resources):
 # which is also the value it takes back; Samsung's app shows 70 there. Keyed
 # by course table, because course codes mean different courses per table:
 # 0x63 is Drum Clean on Table_00 (a WW6500's dial walk).
-_DRUM_CLEAN_COURSES = {"Table_00": frozenset({"63"})}
+_DRUM_CLEAN_COURSES = {"Table_00": frozenset({"63"}), "Table_02": frozenset({"29"})}
 _DRUM_CLEAN_HOT_SUPPORT = frozenset({"70", "75", "80", "90", "95"})
 
 
@@ -180,6 +180,40 @@ def _temperature_label(value, resources):
     if not isinstance(course, str) or course.upper() not in _DRUM_CLEAN_COURSES.get(table, ()):
         return None
     return "70" if _DRUM_CLEAN_HOT_SUPPORT.intersection(supported) else None
+
+
+# The app greys out some wash dials on a Table_02 course although the board's
+# option mask still leaves two values for them (a WD90DG6G94BKU3: Eco 40-60
+# and AI Wash fix their temperature, Wash+Dry also its spin, Drum Clean+ all
+# three). The select then keeps only its live value, as it does where the
+# mask already allows one, so Home Assistant can't offer a pick the app
+# refuses. Keyed by table because course codes mean different courses per
+# table.
+_APP_LOCKED_DIALS = {
+    "Table_02": {
+        "1C": frozenset({"temperature"}),
+        "2B": frozenset({"temperature"}),
+        "36": frozenset({"temperature", "spin"}),
+        "29": frozenset({"temperature", "spin", "rinse"}),
+    }
+}
+
+
+def _app_locked(dial, field, options):
+    def _options(resources):
+        narrowed = options(resources)
+        course_rep = resources.get("/course/vs/0") or {}
+        course = option_value(course_rep.get("x.com.samsung.da.options"), "Course")
+        course_table = resources.get("/st/washercourse/vs/0") or {}
+        table = course_table.get("x.com.samsung.da.st.courseTable")
+        if not isinstance(course, str):
+            return narrowed
+        if dial not in _APP_LOCKED_DIALS.get(table, {}).get(course.upper(), ()):
+            return narrowed
+        live = (resources.get("/washer/vs/0") or {}).get(field)
+        return [live] if isinstance(live, str) and live in narrowed else narrowed
+
+    return _options
 
 
 WASHER_SETTINGS = Capability(
@@ -197,7 +231,7 @@ WASHER_SETTINGS = Capability(
             field=_TEMPERATURE,
             icon="mdi:thermometer-water",
             entity_category="config",
-            options=_temperature_options,
+            options=_app_locked("temperature", _TEMPERATURE, _temperature_options),
             display_fn=_temperature_label,
             exists_fn=_wash_control_present("waterTemperature"),
             write_fn=lambda p, rep, href=None: (
@@ -210,10 +244,14 @@ WASHER_SETTINGS = Capability(
             field="x.com.samsung.da.spinLevel",
             icon="mdi:sync",
             entity_category="config",
-            options=course_narrowed_options(
-                OPTION_KIND_SPIN,
+            options=_app_locked(
+                "spin",
                 "x.com.samsung.da.spinLevel",
-                "x.com.samsung.da.supportedSpinLevel",
+                course_narrowed_options(
+                    OPTION_KIND_SPIN,
+                    "x.com.samsung.da.spinLevel",
+                    "x.com.samsung.da.supportedSpinLevel",
+                ),
             ),
             exists_fn=_wash_control_present("spinLevel"),
             write_fn=lambda p, rep, href=None: (
@@ -226,7 +264,7 @@ WASHER_SETTINGS = Capability(
             field=_RINSE,
             icon="mdi:water-sync",
             entity_category="config",
-            options=_rinse_options,
+            options=_app_locked("rinse", _RINSE, _rinse_options),
             exists_fn=_wash_control_present("rinseCycles"),
             write_fn=lambda p, rep, href=None: (
                 ["washer", "vs", "0"],
