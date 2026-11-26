@@ -1427,18 +1427,15 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._open_session(port)
 
     def cancel_connect(self) -> None:
-        """End the handshake in flight, if any: it started before the device
-        came up (woken, or announcing itself), so it can only time out. The
-        cycle it belongs to fails at once and releases the session lock."""
+        """End the handshake in flight: one started before the device came up
+        can only time out, holding the session lock until it does."""
         cancel = getattr(self._connecting, "cancel_connect", None)
         if cancel is not None:
             cancel()
 
     @callback
     def async_device_announced(self) -> None:
-        """The device announced itself on the network (SSDP alive). One that
-        reads as dark is looked at now rather than at the next poll, with the
-        port lookup due and any stale session dropped."""
+        """SSDP alive from the device: one that reads as dark is looked at now."""
         self._announces = True
         if self._closed or not self._failed_cycles:
             return
@@ -1845,11 +1842,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Before discovery this reads everything /oic/res advertises; after it,
         bound and cold-tier hrefs minus hot/warm ones, which _run_subpolls
-        refreshes. No answer at all is treated as a dead session, and so is
-        no answer from the family's awake href. The awake href is read
-        first: an answer saying off is a board in network standby (a TV
-        between its periodic background wakes), raised as `BoardInStandby`
-        without reading the rest.
+        refreshes. No answer at all is a dead session, and so is none from the
+        family's awake href, which is read first; its answer saying off raises
+        `BoardInStandby`.
         """
         awake = self._awake_href()
         if not self._discovered:

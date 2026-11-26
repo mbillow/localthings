@@ -340,13 +340,9 @@ class AVControl:
         return accepted
 
     async def _async_follow_wake(self, mac: str, targets: list[str]) -> None:
-        """Look up the woken TV until it answers, or the window closes.
-
-        The handshake in flight started while the TV was off, so it is
-        cancelled; a TV may return on a new port (#435). A TV awake in network
-        standby ignores the packet but takes a switch write (QE85QN95A), once
-        per standby wake; one gone dark again gets the packet again.
-        """
+        """Look up the woken TV until it answers, or the window closes; it may
+        return on a new port (#435). A TV awake in network standby ignores the
+        packet but takes a switch write (QE85QN95A)."""
         coordinator = self._coordinator
         coordinator.cancel_connect()
         async with coordinator._session_lock:

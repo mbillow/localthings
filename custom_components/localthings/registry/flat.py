@@ -46,11 +46,8 @@ class BoardInStandby(RuntimeError):
 
 
 def reads_off(rep: dict | None) -> bool:
-    """True for an awake href's answer that says the board is off.
-
-    A TV in network standby answers its power switch with `value: false`;
-    picture-off keeps it true.
-    """
+    """True for an awake href's answer saying off, as a TV's power switch does in
+    network standby (picture-off keeps it true)."""
     return isinstance(rep, dict) and rep.get("value") is False
 
 
@@ -68,9 +65,8 @@ def read_all(
     family's DeviceRegistry.awake_href) among them when advertised. A
     board in network standby can complete the handshake and then let
     reads time out or report itself off; discovering from that would
-    register only the entities that answered. `awake` is read first, so
-    standby costs one read; an answer saying off raises `BoardInStandby`.
-    `unread` (DeviceRegistry.unread_hrefs) is skipped and not counted.
+    register only the entities that answered. `awake` is read first; its
+    answer saying off raises `BoardInStandby`. `unread` hrefs are skipped.
     """
     hrefs = [href for href in flat_hrefs(links) if href not in unread]
     resources: dict[str, dict] = {}
