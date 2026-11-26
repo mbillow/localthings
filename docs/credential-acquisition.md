@@ -190,6 +190,82 @@ the same format.
 The backup holds a record for every appliance paired from that phone, not only
 washers. Owners have since added a ViewFinity S9 monitor (#891) and The Frame
 2021 TV (#868) with an OwnerPSK recovered the same way.
+The next section covers an encrypted backup.
+
+## AWM-US-M64-25 washer and dryer with an encrypted iPhone backup
+
+Existing OwnerPSKs for one `WF90F53ADSA5` washer and one `DV90F53AESAC` dryer
+were recovered from an encrypted iMazing backup of the iPhone that paired them,
+by the route in the WD11 section above with one added step: decrypting the
+backup. Neither appliance was removed, reset or re-registered after pairing.
+
+### Equipment and software
+
+| Where | What was used |
+| --- | --- |
+| Appliances | `WF90F53ADSA5` washer (`AWM-US-M64-25-WF90`, firmware `20260320.155817`) and `DV90F53AESAC` dryer (`AWM-US-M64-25-DV90`, firmware `20260205.123956`). Both refuse the automatic certificate and report `sct: 1` in plaintext `/oic/sec/doxm`. |
+| Phone | iPhone 14 on iOS 18.7.8 with SmartThings 1.7.52, which paired both appliances. |
+| Mac | macOS 11 with iMazing, for the encrypted backup. |
+| Decryption | A local Python script using `cryptography` and the standard library, run on a Linux machine. It is not part of LocalThings. |
+| LocalThings | 0.39.0 with `smartthings-local` 0.1.25 on Home Assistant 2026.6.1 (Container). |
+
+### 1. Pair the appliances
+
+Pair each appliance in SmartThings from the iPhone whose backup will be used.
+Here pairing only completed with Tailscale switched off on the iPhone. The
+cause isn't known.
+
+### 2. Make an encrypted backup of the iPhone
+
+Here the backup was made with iMazing on the Mac, with backup encryption on. It
+is in Apple's backup format, and only three files from its folder are needed:
+
+- `Manifest.plist`
+- `Manifest.db`
+- `f8/f838d92eedf51cc435481f58169d8288cc505895`, whose name is the SHA-1 of
+  `AppDomain-com.samsung.oneconnect4ios-Library/Security/oic_svr_db_client.dat`
+
+### 3. Decrypt the backup index and the one file
+
+1. Derive the key from the backup password: PBKDF2-SHA256 over `DPSL` and
+   `DPIC` from `Manifest.plist`'s `BackupKeyBag`, then PBKDF2-SHA1 over `SALT`
+   and `ITER`. Unwrap the keybag's class keys with it (RFC 3394 AES key wrap).
+   A wrong password fails the unwrap.
+2. Unwrap `ManifestKey` (a 4-byte little-endian class, then the wrapped key)
+   with its class key and decrypt `Manifest.db` with AES-256-CBC and a zero IV.
+   The result is SQLite in WAL mode. Loaded into memory with
+   `sqlite3.Connection.deserialize()`, its first query fails with "unable to
+   open database file" until header bytes 18 and 19 are changed from `2` to `1`.
+3. Look up the file's row as in step 1 of the WD11 section. Its `file` column is
+   an archived `MBFile` whose `EncryptionKey` is a 4-byte class followed by the
+   wrapped key. Unwrap it with that class key and decrypt the file the same way.
+
+The password was typed at a no-echo prompt and held only in memory. Only the
+decrypted security file and a list of the app's file names were written to
+disk, and both were deleted after import.
+
+### 4. Select each appliance's record and import it
+
+Steps 2 and 3 of the WD11 section apply unchanged. In this file `cred.creds`
+held 13 records: 11 certificates (`credtype` 8) and one `credtype` 1 record per
+appliance, its `subjectuuid` the appliance's OCF device UUID and its
+`privatedata.data` a 128-bit key encoded `oic.sec.encoding.base64`. The
+records carried no `rowneruuid` of their own. `cred.rowneruuid` matched both
+appliances' plaintext `devowneruuid` and was the identity.
+
+Each appliance was added by IP. The automatic certificate was refused with
+`tlsv1 alert unknown ca`, setup offered the pre-shared-key menu, and **Owner**
+took the identity and the key as 32 hex characters.
+
+### Results and verification limits
+
+| Check | Result | Limit |
+| --- | --- | --- |
+| Encrypted backup | Both records recovered from one encrypted backup. | One SmartThings version. Others may store the record differently. |
+| Local authentication | Setup accepted both keys after its authenticated `/oic/d` read returned each appliance's `di`. Both entries switched to Observe and kept updating. | Read-only use. No control, write or `/oic/sec/*` write was sent, so no control was tested. |
+| Re-pairing | Not tested. | Setting an appliance up again in SmartThings is expected to replace its key (#784). A fresh backup of the pairing phone would then be needed. |
+| Door state | Neither appliance has a door state resource. The washer reports only an auto door open setting. | |
+| Coverage | The washer leaves `/subdevices/vs/0` unbound. The dryer leaves seven hrefs unbound, listed with the fixtures (#921). | |
 
 ## Samsung AF18DX936WFN AC with rooted Android 13
 
