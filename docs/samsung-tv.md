@@ -63,9 +63,12 @@ finding concerned sound mode, not picture mode.
   it, the next poll finds the TV, within about 30 s.
 - Once Home Assistant's SSDP integration has reported the TV (a device it
   already knew counts), a TV that is off is polled less often: every 30 s at
-  first, doubling to every 5 minutes. Its next power-on announcement finds it
-  at once. A TV that answers but refuses the connection is still polled every
-  30 s. Other devices keep the 30 s poll.
+  first, doubling to every 2 minutes. Its next power-on announcement finds it
+  at once. If a poll finds the TV on and no announcement came within a minute
+  either side of it, the announcement was lost on the way (a switch filtering
+  multicast, a Wi-Fi drop), and the TV is polled every 30 s while it is off
+  until the integration reloads. A TV that answers but refuses the connection
+  is still polled every 30 s. Other devices keep the 30 s poll.
 - Discovery doesn't read three resources the QE85QN95A lists but doesn't
   answer while on (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
   `/autoreconnect/ap`), each of which would cost a read timeout.

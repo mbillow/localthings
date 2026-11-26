@@ -485,7 +485,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
     # Cap of the doubling poll interval of a dark TV whose SSDP announcements
     # reach Home Assistant; its power-on announcement finds it (async_device_announced).
-    _DARK_POLL_MAX_S: float = 300.0
+    _DARK_POLL_MAX_S: float = 120.0
+    # An alive this close to a TV's answer after a dark spell announced that power-on;
+    # the QE85QN95A's came 0.5-4 s after it was on, and discovery after a restart takes ~15 s.
+    _ANNOUNCE_GRACE_S: float = 60.0
 
     # A single reconnect is normal appliance behavior (README's "Known
     # device behavior"); only escalate once they pile up in a trailing
@@ -724,6 +727,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._announce_task: asyncio.Task | None = None
         # This device's SSDP announcements reach Home Assistant.
         self._announces = False
+        # When the last alive came, and when an answer ending a dark spell came with no
+        # alive near it; a power-on announcement once missed stops the dark back-off.
+        self._last_alive: float | None = None
+        self._unannounced_at: float | None = None
+        self._announce_missed = False
+        # The last failed cycle found the device dark, not refusing the session.
+        self._dark_cycle = False
         # The last cycle found the board in network standby, session open.
         self._standby_cycle = False
         # The last non-empty /oic/res answer: kept across a reconnect whose
@@ -1437,6 +1447,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def async_device_announced(self) -> None:
         """SSDP alive from the device: one that reads as dark is looked at now."""
         self._announces = True
+        now = time.monotonic()
+        self._last_alive = now
+        if self._unannounced_at is not None and now - self._unannounced_at <= (
+            self._ANNOUNCE_GRACE_S
+        ):
+            self._unannounced_at = None
         if self._closed or not self._failed_cycles:
             return
         if self._announce_task is not None and not self._announce_task.done():
@@ -3442,9 +3458,32 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._persist_read_mode()
         self._consecutive_poll_timeouts = 0
         if self._failed_cycles:
+            if self._dark_cycle:
+                self._check_announced()
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
             self._failed_cycles = 0
             self.update_interval = timedelta(seconds=SUMMARY_INTERVAL_S)
+
+    def _check_announced(self) -> None:
+        """An answer ending a dark spell with no alive shortly before it waits for one
+        shortly after (_settle_announced)."""
+        now = time.monotonic()
+        heard = self._last_alive is not None and now - self._last_alive <= self._ANNOUNCE_GRACE_S
+        if self._announces and not self._announce_missed and not heard:
+            self._unannounced_at = now
+
+    def _settle_announced(self) -> None:
+        """An unannounced answer no alive followed within the grace: one was missed."""
+        if self._unannounced_at is None:
+            return
+        if time.monotonic() - self._unannounced_at > self._ANNOUNCE_GRACE_S:
+            self._unannounced_at = None
+            self._announce_missed = True
+            self._log.info(
+                "TV came on without its SSDP announcement reaching Home Assistant; "
+                "polling it every %d s while it is off",
+                SUMMARY_INTERVAL_S,
+            )
 
     def _device_unreachable(self, what: str, e: Exception) -> dict[str, Any]:
         """End a cycle that got no data, either degraded or as a failure.
@@ -3491,8 +3530,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Poll a dark TV whose announcements reach HA less often. A refused
         session (a fatal alert) is a TV that answers, so it is not dark."""
         refused = isinstance(e, SessionError) and not isinstance(e, SessionClosedError)
+        self._dark_cycle = not refused
+        self._settle_announced()
         seconds = SUMMARY_INTERVAL_S
-        if self.is_tv() and self._announces and not refused:
+        if self.is_tv() and self._announces and not self._announce_missed and not refused:
             doublings = min(self._failed_cycles - 1, 8)
             seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
         self.update_interval = timedelta(seconds=seconds)
