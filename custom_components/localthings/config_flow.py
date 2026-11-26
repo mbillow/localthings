@@ -1100,10 +1100,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         second socket there would share its address pair and our ClientHello
         would tear down its live session.
         """
-        entries = self.hass.config_entries.async_entries(DOMAIN)
-        if any(entry.data.get(CONF_HOST) == host for entry in entries):
+        hosts = [
+            entry.data.get(CONF_HOST) for entry in self.hass.config_entries.async_entries(DOMAIN)
+        ]
+        if host in hosts:
             return None
-        return local_source_port(host)
+        return local_source_port(host, [h for h in hosts if h])
 
     @staticmethod
     @callback

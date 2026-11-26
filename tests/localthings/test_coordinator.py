@@ -2407,6 +2407,46 @@ def test_local_source_port_non_ipv4_falls_back_to_hash() -> None:
     assert DTLS_LOCAL_PORT_BASE <= port <= DTLS_LOCAL_PORT_BASE + 0xFF
 
 
+def test_local_source_port_moves_only_hosts_whose_octet_collides() -> None:
+    """#918: 10.0.0.99 and 10.0.1.99 shared a port and broke each other's
+    sessions. Each takes its own port above the last-octet range once the
+    other is configured; a host with a unique octet keeps its port."""
+    pair = ("10.0.0.99", "10.0.1.99")
+    a = _local_source_port(pair[0], [pair[1], "10.0.0.97"])
+    b = _local_source_port(pair[1], [pair[0], "10.0.0.97"])
+
+    assert a != b
+    assert min(a, b) > DTLS_LOCAL_PORT_BASE + 0xFF and max(a, b) <= 65535
+    assert a == _local_source_port(pair[0], [pair[1]])
+    assert _local_source_port("10.0.0.97", pair) == DTLS_LOCAL_PORT_BASE + 97
+    assert _local_source_port(pair[0], [pair[0]]) == DTLS_LOCAL_PORT_BASE + 99
+
+
+async def test_the_session_dials_from_a_port_no_other_entry_shares(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """The coordinator passes the other entries' hosts, read on the event
+    loop, to the port choice made in the executor (#918)."""
+    from homeassistant.const import CONF_HOST
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.localthings.const import DOMAIN
+
+    host = mock_entry.data[CONF_HOST]
+    twin = "10.0.1.254"
+    assert host == "10.0.0.254"
+    MockConfigEntry(domain=DOMAIN, data={**mock_entry.data, CONF_HOST: twin}).add_to_hass(hass)
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+
+    with patch("custom_components.localthings.coordinator.create_transport") as create:
+        create.return_value.connect.side_effect = OSError("stop here")
+        with pytest.raises(OSError):
+            coordinator._open_session(49154)
+
+    assert create.call_args.kwargs["local_port"] == _local_source_port(host, [twin])
+    assert create.call_args.kwargs["local_port"] != _local_source_port(host)
+
+
 # ----------------------------------------------------------------------
 # Issue #254: a pre-discovery poll failure must never look like a
 # successful first refresh. See `_defer_reconnect_for` for the mechanism.

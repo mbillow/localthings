@@ -15,7 +15,7 @@ from __future__ import annotations
 import ipaddress
 import time
 import zlib
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -36,35 +36,42 @@ from .const import (
 )
 from .session import authentication_provider_from_entry, entry_endpoint
 
+# Ports for a host whose last octet another entry's host shares (#918): above
+# every last-octet port, up to the top of the range.
+_SHARED_OCTET_BASE = DTLS_LOCAL_PORT_BASE + 256
+_SHARED_OCTET_SPAN = 65536 - _SHARED_OCTET_BASE
 
-def local_source_port(host: str) -> int:
+
+def _octet_port(host: str) -> int:
+    try:
+        offset = int(ipaddress.IPv4Address(host)) & 0xFF
+    except (ipaddress.AddressValueError, ValueError):
+        offset = zlib.crc32(host.encode()) & 0xFF
+    return DTLS_LOCAL_PORT_BASE + offset
+
+
+def local_source_port(host: str, others: Iterable[str] = ()) -> int:
     """Deterministic UDP source port for this device's DTLS socket.
 
     This firmware's peer table has no cap, no idle timeout and no LRU, so
     reconnecting from a fresh ephemeral port each time leaves the old entry
     live and accumulates contexts. Reconnecting over an entry the device
     still holds destroys the stale peer instead, because a ClientHello is
-    not application data it can read (issue #486, correcting an earlier
-    RFC 6347 §4.2.8 rationale that does not apply to this stack). See
-    DTLS_LOCAL_PORT_BASE. Requires smartthings-local >= 0.1.1. Shared by the
-    coordinator and the config flow, so setup attempts land on the same peer
-    entry the entry's session later replaces (issue #504).
+    not application data it can read (issue #486). Shared by the coordinator
+    and the config flow, so setup attempts land on the same peer entry the
+    entry's session later replaces (issue #504).
 
-    Must stay unique per device on this host too. That used to be load-
-    bearing for demuxing: an unconnected socket handed every device's
-    datagrams to whichever recvfrom() happened to be listening on their
-    shared port. smartthings-local >= 0.1.3 connect()s its UDP socket
-    instead (see endpoint.py's open_connected_udp_socket), so the kernel
-    already filters incoming datagrams to each session's own resolved peer
-    -- but a distinct port per device keeps that guarantee from ever
-    depending on it, and keeps captures/logs unambiguous. Last IPv4 octet
-    as offset for the common case; a stable CRC32 fold otherwise.
+    The port is DTLS_LOCAL_PORT_BASE plus the last IPv4 octet (a CRC32 fold
+    for a hostname), and must be unique among this host's sessions: two
+    devices on one port broke each other's sessions every reconnect (#918).
+    `others` are the hosts of the other entries; when one shares this
+    host's port, this host takes a CRC32-derived port above that range
+    instead, so only colliding devices move.
     """
-    try:
-        offset = int(ipaddress.IPv4Address(host)) & 0xFF
-    except (ipaddress.AddressValueError, ValueError):
-        offset = zlib.crc32(host.encode()) & 0xFF
-    return DTLS_LOCAL_PORT_BASE + offset
+    port = _octet_port(host)
+    if any(other != host and _octet_port(other) == port for other in others):
+        return _SHARED_OCTET_BASE + zlib.crc32(host.encode()) % _SHARED_OCTET_SPAN
+    return port
 
 
 class DecodeError(ValueError):
