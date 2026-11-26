@@ -356,3 +356,81 @@ def test_the_un55du7200s_empty_and_utility_resources_are_covered():
     assert not set(added) & set(gaps)
     before = discover(plain, reg.capabilities, reg.pattern_capabilities)
     assert set(flatten(bound, resources)) == set(flatten(before, plain))
+
+
+MEDIA_OUTPUT = {
+    "rt": ["x.com.samsung.tv.media.output", "x.com.samsung.tv.errorcode"],
+    "if": ["oic.if.a", "oic.if.baseline"],
+    "outputList": [
+        {"id": "internal", "name": "TV Speaker", "type": "DEFAULT", "description": ""},
+        {"id": "RCV-1", "name": "Soundbar(HDMI-eARC)", "type": "HDMI", "description": ""},
+        {"id": "optical", "name": "Receiver (Optical)", "type": "OPTICAL", "description": ""},
+    ],
+    "curMediaOutput": "RCV-1",
+}
+ENERGY_TYPE = {
+    "energyType": "2.0",
+    "energySavingSupport": True,
+    "energySavingOperation": False,
+    "energySavingOperationSupport": True,
+    "drMaxDuration": 99999999,
+    "energySavingLevel": 1,
+    "supportedEnergySavingLevels": [1],
+}
+
+
+def test_the_kq77sc95a_sound_output_and_energy_type_are_bound():
+    """KQ77SC95A: mediaOutput is a read-only sensor (writes answer 2.04 and
+    change nothing); custom.energyType is covered with no entity (#895)."""
+    reg = registry_for("tv")
+    plain = _load_device("tv_ue50tu7172")
+    added = {
+        tv.HREF_MEDIA_OUTPUT: MEDIA_OUTPUT,
+        "/capability/custom.energyType/main/0": ENERGY_TYPE,
+    }
+    resources = {**plain, **added}
+    gaps = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=gaps.append)
+    assert not set(added) & set(gaps)
+
+    sensor = next(b.desc for b in bound if b.desc.key == "sound_output")
+    assert isinstance(sensor, SensorDesc)
+    assert sensor.rep_fn is not None and sensor.extra_state_attributes_fn is not None
+    assert sensor.rep_fn(MEDIA_OUTPUT) == "Soundbar(HDMI-eARC)"
+    assert sensor.extra_state_attributes_fn(MEDIA_OUTPUT, resources) == {
+        "output_id": "RCV-1",
+        "output_type": "HDMI",
+        "outputs": ["TV Speaker", "Soundbar(HDMI-eARC)", "Receiver (Optical)"],
+    }
+    assert flatten(bound, resources)["sound_output"] == "Soundbar(HDMI-eARC)"
+
+    before = discover(plain, reg.capabilities, reg.pattern_capabilities)
+    assert set(flatten(bound, resources)) == set(flatten(before, plain)) | {"sound_output"}
+
+
+def test_sound_output_falls_back_and_survives_malformed_rows():
+    sensor = next(c for c in tv.TV_REPLACES if c.href == tv.HREF_MEDIA_OUTPUT).entities[0]
+    assert isinstance(sensor, SensorDesc)
+    rep_fn, attrs = sensor.rep_fn, sensor.extra_state_attributes_fn
+    assert rep_fn is not None and attrs is not None
+    unlisted = {**MEDIA_OUTPUT, "curMediaOutput": "RCV-9"}
+    assert rep_fn(unlisted) == "RCV-9"
+    assert attrs(unlisted, {})["output_type"] is None
+    assert rep_fn({"outputList": MEDIA_OUTPUT["outputList"]}) is None
+    assert attrs({}, {}) == {"output_id": None, "output_type": None, "outputs": []}
+    messy = {
+        "outputList": ["x", {"id": "a"}, {"name": "B"}, {"id": "c", "name": 3}],
+        "curMediaOutput": "a",
+    }
+    assert rep_fn(messy) == "a"
+    assert attrs(messy, {})["outputs"] == ["B"]
+    assert rep_fn({"outputList": "bad", "curMediaOutput": "a"}) == "a"
+
+
+def test_the_monitor_keeps_mediaoutput_as_coverage_only():
+    reg = registry_for("monitor")
+    resources = {**_load_device("monitor_ls32dm702"), tv.HREF_MEDIA_OUTPUT: MEDIA_OUTPUT}
+    gaps = []
+    bound = discover(resources, reg.capabilities, reg.pattern_capabilities, log=gaps.append)
+    assert tv.HREF_MEDIA_OUTPUT not in gaps
+    assert "sound_output" not in flatten(bound, resources)

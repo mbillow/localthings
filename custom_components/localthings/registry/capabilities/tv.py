@@ -177,6 +177,9 @@ COVERAGE: list[Capability] = [
     Capability(href="/energy/consumption/vs/0"),
     # Utility demand response, unsupported locally like /drlc/vs/0 (#895).
     Capability(href="/energy/demandResponseLoadControl/vs/0"),
+    # Writing energySavingOperation true answers 2.04 but the TV's energy saving
+    # stays off and the readback stays false (KQ77SC95A, #895), so no switch.
+    Capability(href="/capability/custom.energyType/main/0"),
     # Ambient mode, lighting automations and the built-in SmartThings hub.
     Capability(href="/sec/tv/ambient/info"),
     Capability(href="/sec/tv/automation/light/control"),
@@ -271,6 +274,57 @@ CONTENT_INFO = Capability(
                     else {}
                 ),
             },
+        ),
+    ),
+)
+
+HREF_MEDIA_OUTPUT = "/sec/tv/mediaOutput"
+
+
+def _current_output(rep: dict) -> dict | None:
+    """The outputList row that curMediaOutput points at, if there is one."""
+    rows = rep.get("outputList")
+    if not isinstance(rows, list):
+        return None
+    current = rep.get("curMediaOutput")
+    return next((r for r in rows if isinstance(r, dict) and r.get("id") == current), None)
+
+
+def _output_name(rep: dict) -> str | None:
+    """The selected output's name; the id when no row matches, which keeps an
+    unlisted output visible instead of unknown."""
+    current = rep.get("curMediaOutput")
+    if not isinstance(current, str) or not current:
+        return None
+    row = _current_output(rep)
+    name = row.get("name") if row else None
+    return name if isinstance(name, str) and name else current
+
+
+def _output_attributes(rep: dict, resources: dict) -> dict:
+    row = _current_output(rep) or {}
+    rows = rep.get("outputList")
+    return {
+        "output_id": rep.get("curMediaOutput"),
+        "output_type": row.get("type"),
+        "outputs": [
+            r["name"] for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)
+        ]
+        if isinstance(rows, list)
+        else [],
+    }
+
+
+# Read-only: a KQ77SC95A answers 2.04 to output writes but never switches. With a
+# receiver selected, /sec/tv/audio is the TV speaker's level, not the receiver's.
+SOUND_OUTPUT = Capability(
+    href=HREF_MEDIA_OUTPUT,
+    poll_tier="warm",
+    entities=(
+        SensorDesc(
+            key="sound_output",
+            rep_fn=_output_name,
+            extra_state_attributes_fn=_output_attributes,
         ),
     ),
 )
@@ -787,6 +841,7 @@ TV_REPLACES: list[Capability] = [
     Capability(href=HREF_SOUND, poll_tier="warm"),
     CHANNEL,
     CONTENT_INFO,
+    SOUND_OUTPUT,
     THUMBNAIL,
     FIRMWARE_COVERAGE,
     REMOTE,
