@@ -2640,6 +2640,9 @@
       },
       "robot_lighting": {
         "name": "Illuminazione"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3184,6 +3187,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Impossibile inviare Wake-on-LAN al televisore: nessun percorso di rete verso {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive non ? disponibile nel ciclo selezionato."
     }
   },
   "selector": {

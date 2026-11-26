@@ -2640,6 +2640,9 @@
       },
       "robot_lighting": {
         "name": "Osvetlenie"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3184,6 +3187,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Wake-on-LAN sa nepodarilo odoslať do televízora: žiadna sieťová cesta k {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive nie je k dispoz?cii pri vybranom cykle."
     }
   },
   "selector": {

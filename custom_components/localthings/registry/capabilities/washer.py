@@ -30,6 +30,8 @@ from .laundry import (
     bool_option_exists,
     bool_option_light,
     bool_option_switch,
+    bool_option_value,
+    bool_option_write,
     course_narrowed_options,
     cycle_options,
     cycle_select,
@@ -460,6 +462,71 @@ def _is_hex(value):
     )
 
 
+# WW11DB7B94GEU4 reports a shared board modelNum, so its live identity also
+# needs the WD7000B description and Table_02 course table before this control
+# is exposed. These are the specific identifiers this washer reports.
+_QUICK_DRIVE_BOARD = "DA_WM_TP1_21_COMMON"
+_QUICK_DRIVE_DESCRIPTION = "DA_WM_TP1_21_COMMON_WD7000B"
+_QUICK_DRIVE_COURSE_TABLE = "Table_02"
+_QUICK_DRIVE_SUPPORTED_COURSES = frozenset(
+    {
+        "1b",  # Cotton
+        "23",  # Outdoor
+        "25",  # Synthetics
+        "33",  # Towels
+        "24",  # Bedding
+        "32",  # Shirts
+        "20",  # Hygiene Steam
+        "21",  # Colors
+        "2a",  # Denim (translated as Jeans by LocalThings)
+        "2e",  # Baby Care
+        "2d",  # Silent Wash
+        "30",  # Cloudy Day
+    }
+)
+
+
+def _quick_drive_matches_model(resources):
+    information = resources.get("/information/vs/0") or {}
+    model_num = information.get("x.com.samsung.da.modelNum")
+    description = information.get("x.com.samsung.da.description")
+    course_table = (resources.get("/st/washercourse/vs/0") or {}).get(
+        "x.com.samsung.da.st.courseTable"
+    )
+    if not isinstance(model_num, str) or not isinstance(description, str):
+        return False
+    board = model_num.split("|", 1)[0].strip().upper()
+    product_family = description.split("/", 1)[0].strip().upper()
+    return (
+        board == _QUICK_DRIVE_BOARD
+        and product_family == _QUICK_DRIVE_DESCRIPTION
+        and course_table == _QUICK_DRIVE_COURSE_TABLE
+    )
+
+
+def _quick_drive_exists(rep, resources):
+    return _quick_drive_matches_model(resources) and bool_option_exists("QuickDrive")(
+        rep, resources
+    )
+
+
+def _quick_drive_supported(rep, resources):
+    if not _quick_drive_matches_model(resources):
+        return False
+    course = option_value(rep.get("x.com.samsung.da.options"), "Course")
+    return isinstance(course, str) and course.lower() in _QUICK_DRIVE_SUPPORTED_COURSES
+
+
+def _quick_drive_validate(payload, rep, resources):
+    if payload == "On" and not _quick_drive_supported(rep, resources):
+        return "quick_drive_unavailable_for_cycle"
+    return None
+
+
+def _quick_drive_attributes(rep, resources):
+    return {"course_supported": _quick_drive_supported(rep, resources)}
+
+
 # Bubble soak / pre-wash / intensive-wash toggles, from the same options[]
 # array (issue #22 follow-up). Each rides as a plain '<Prefix>_On'/'_Off'
 # token, confirmed against a dump taken with Bubble Soak switched on in the
@@ -805,6 +872,16 @@ WASHER_COURSE = Capability(
         _bool_option_switch("bubble_soak", "mdi:chart-bubble", "BubbleSoak", "BubbleSoakSet"),
         _bool_option_switch(
             "pre_wash", "mdi:washing-machine", "PreWashSetting", "PreWashAvailableSet"
+        ),
+        SwitchDesc(
+            key="quick_drive",
+            icon="mdi:speedometer",
+            entity_category="config",
+            exists_fn=_quick_drive_exists,
+            rep_fn=bool_option_value("QuickDrive"),
+            write_fn=bool_option_write("QuickDrive"),
+            validate_fn=_quick_drive_validate,
+            extra_state_attributes_fn=_quick_drive_attributes,
         ),
         _bool_option_switch(
             "intensive", "mdi:washing-machine", "IntensiveSetting", "IntensiveAvailableSet"

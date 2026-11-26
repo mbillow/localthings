@@ -2640,6 +2640,9 @@
       },
       "robot_lighting": {
         "name": "Подсветка"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       }
     },
     "time": {
@@ -3184,6 +3187,9 @@
     },
     "wake_on_lan_no_route": {
       "message": "Не удалось отправить Wake-on-LAN на телевизор: нет сетевого маршрута к {targets}."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive ?????????? ??? ?????????? ?????."
     }
   },
   "selector": {
