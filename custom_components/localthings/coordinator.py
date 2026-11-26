@@ -702,6 +702,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model=entry.data.get(CONF_MODEL) or None,
         )
         self._session_lock = asyncio.Lock()
+        # Key presses in the order they were asked for; they skip _session_lock.
+        self._key_lock = asyncio.Lock()
         self._subpoll_task: asyncio.Task | None = None
         self._hot_hrefs: list[str] = []
         self._warm_hrefs: list[str] = []
@@ -4017,6 +4019,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 prepare_body=_prepare_body if prepare_payload is not None else None,
                 confirm_on_refusal=desc.confirm_on_refusal and not write_only,
                 control_response=desc.control_response,
+                beside_reads=isinstance(desc, RemoteDesc),
             )
             if not sent:
                 if cache_before_send:
@@ -4076,6 +4079,27 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return not strict
         return (not strict) if rep is None else _payload_present_in(body, rep)
 
+    async def _send_beside_reads(
+        self, path_segs: list[str], body: dict | list, write_href: str
+    ) -> tuple[tuple[int, Any] | None, tuple[Any, Exception] | None]:
+        """PUT on the open session without _session_lock, beside a read in
+        flight; the TV answers both (QE85QN95A, 60/60 keys). Returns the
+        answer, or the session the PUT failed on with the error."""
+        sess = self._session
+        if sess is None:
+            return None, None
+
+        def _put() -> tuple[int, Any]:
+            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            self._log.info("PUT %s → code %#04x", write_href, code)
+            return code, response
+
+        try:
+            return await self.hass.async_add_executor_job(_put), None
+        except Exception as err:
+            self._log.debug("PUT %s beside the reads failed: %s", write_href, err)
+            return None, (sess, err)
+
     async def _async_put(
         self,
         path_segs: list[str],
@@ -4087,9 +4111,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         prepare_body: Callable[[], dict | None] | None = None,
         confirm_on_refusal: bool = False,
         control_response: bool = False,
+        beside_reads: bool = False,
+        answered: tuple[int, Any] | None = None,
+        failed: tuple[Any, Exception] | None = None,
     ) -> bool:
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too.
+
+        With beside_reads (a key press) the PUT first goes out on the open
+        session beside a background read in flight; `answered` is that answer,
+        and `failed` the session it failed on, with the error.
 
         With retry=False the session is proven live with one GET first, so
         a session the firmware closed between polls is replaced before the
@@ -4099,6 +4130,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         prepare_body, when given, replaces `body` once the session is up, and
         again before a retry; None means the command no longer applies, and
         nothing is sent (returns False)."""
+        if beside_reads:
+            async with self._key_lock:
+                answered, failed = await self._send_beside_reads(path_segs, body, write_href)
+                return await self._async_put(
+                    path_segs,
+                    body,
+                    write_href,
+                    on_retry,
+                    retry=retry,
+                    prepare_body=prepare_body,
+                    confirm_on_refusal=confirm_on_refusal,
+                    control_response=control_response,
+                    answered=answered,
+                    failed=failed,
+                )
         sent = False
 
         def _do_put():
@@ -4141,9 +4187,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
-        async with self._session_lock:
+        async with contextlib.nullcontext() if answered is not None else self._session_lock:
             try:
-                result = await _attempt()
+                if failed is not None and failed[0] is self._session:
+                    # The open session just failed this PUT: the dead-session path.
+                    raise failed[1]
+                result = answered if answered is not None else await _attempt()
             except _PrepareFailed as e:
                 # A bug in the payload, not a dead session.
                 raise e.error from None

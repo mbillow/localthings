@@ -12,7 +12,8 @@ with Smart Monitors, plus its own entities:
   endpoint is gone in standby, except during the TV's short wakes from network
   standby, when the power switch is written instead (see below). Wi-Fi wake
   needs the TV's "Power On with Mobile" setting.
-- **Remote** (`remote.send_command` with `KEY_*` names or aliases), **notify**
+- **Remote** (`remote.send_command` with `KEY_*` names or aliases; a key goes
+  out at once, alongside any read of the TV's state in progress), **notify**
   (an on-screen pop-up), an **Open app** select and a **screen off** button.
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
   actions.
