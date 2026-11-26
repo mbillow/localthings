@@ -64,7 +64,8 @@ finding concerned sound mode, not picture mode.
 - Once Home Assistant's SSDP integration has reported the TV (a device it
   already knew counts), a TV that is off is polled less often: every 30 s at
   first, doubling to every 2 minutes. Its next power-on announcement finds it
-  at once; one whose answer it doesn't get yet is polled again within 30 s.
+  at once; a TV that doesn't answer yet when it announces itself is polled
+  again within 30 s.
   When a poll finds the TV on after at least two polls without an answer, and
   no announcement came within a minute either side of it, LocalThings takes the
   announcement as lost on the way (a switch filtering multicast, a Wi-Fi drop)

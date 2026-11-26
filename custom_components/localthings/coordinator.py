@@ -487,7 +487,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Assistant: the longest a TV switched on waits to be seen when its power-on alive is lost.
     _DARK_POLL_MAX_S: float = 120.0
     # An alive this long before or after the answer ending a dark spell announced that
-    # power-on; the QE85QN95A's came 0.5-4 s after a Wake-on-LAN packet.
+    # power-on, and keeps dark polls at 30 s this long after it; the QE85QN95A's came
+    # 0.5-4 s after a Wake-on-LAN packet.
     _ANNOUNCE_GRACE_S: float = 60.0
 
     # A single reconnect is normal appliance behavior (README's "Known

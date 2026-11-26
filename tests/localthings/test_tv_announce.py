@@ -405,7 +405,9 @@ async def test_an_alive_whose_look_finds_the_tv_not_up_yet_is_followed_soon(
         await coordinator._announce_task
     assert coordinator._failed_cycles == 4
     assert coordinator.update_interval.total_seconds() == 30
-    clock.offset += 30
+    clock.offset += 31
+    assert await _dark(coordinator, session, 1) == [30]  # still within a minute of the alive
+    clock.offset += 20
     await _cycle(coordinator, session, True)
     clock.offset += GRACE + 1
 
