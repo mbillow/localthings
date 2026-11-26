@@ -442,7 +442,8 @@ def _ipv4(host: str) -> str | None:
     """`host` as an IPv4 literal: multicast discovery takes no hostname (#902)."""
     try:
         return str(socket.getaddrinfo(host, None, socket.AF_INET)[0][4][0])
-    except (OSError, IndexError):
+    except (OSError, IndexError) as exc:
+        _LOGGER.debug("No IPv4 address for %s; skipping multicast discovery: %s", host, exc)
         return None
 
 
