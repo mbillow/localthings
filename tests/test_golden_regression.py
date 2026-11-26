@@ -2069,6 +2069,19 @@ def test_registry_reproduces_golden_state_keys_for_dishwasher_dw60bg750():
     )
 
 
+def test_registry_reproduces_golden_state_keys_for_dishwasher_dw80r9950():
+    from tests.conftest import _load_device
+
+    resources = _load_device("dishwasher_dw80r9950")
+    golden = json.loads((GOLDEN / "dishwasher_dw80r9950.json").read_text())
+    state_keys = _new_state_keys("dishwasher_dw80r9950", resources)
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
+
+
 def test_registry_reproduces_golden_state_keys_for_washer_wf80h():
     """A KR-market WF80H (DA_WM_TP1_21_COMMON, Table_02) captured mid-cycle
     on a delayed start (issues #437/#438 came from the same reporter, a

@@ -84,6 +84,34 @@ class TestDishwasherOptions:
         assert desc.exists_fn({"x.com.samsung.da.options": []}, {}) is False
         assert desc.exists_fn({"x.com.samsung.da.options": ["AutoDoorRelease_On"]}, {}) is True
 
+    def test_sound_read_and_write(self):
+        desc = next(
+            e
+            for e in dishwasher.CYCLE_OPTIONS.entities
+            if e.key == "sound" and isinstance(e, SwitchDesc)
+        )
+        assert desc.rep_fn is not None
+        assert desc.rep_fn({"x.com.samsung.da.options": ["Sound_On"]}) is True
+        assert desc.rep_fn({"x.com.samsung.da.options": ["Sound_Off"]}) is False
+        assert desc.write_fn is not None
+        result = desc.write_fn("Off", {"x.com.samsung.da.options": ["Sound_On"]})
+        assert result is not None
+        path, body = result
+        assert path == ["course", "vs", "0"]
+        assert "Sound_Off" in body["x.com.samsung.da.options"]
+
+    def test_sound_defers_to_a_sound_mode_resource(self):
+        desc = next(
+            e
+            for e in dishwasher.CYCLE_OPTIONS.entities
+            if e.key == "sound" and isinstance(e, SwitchDesc)
+        )
+        assert desc.exists_fn is not None
+        rep = {"x.com.samsung.da.options": ["Sound_On"]}
+        assert desc.exists_fn({"x.com.samsung.da.options": []}, {}) is False
+        assert desc.exists_fn(rep, {}) is True
+        assert desc.exists_fn(rep, {"/settings/sound/mode/vs/0": {}}) is False
+
 
 class TestDrumClean:
     """Drum Clean+ maintenance tracking shares washer.py's (issue #9) /
@@ -153,10 +181,42 @@ class TestDishwasherSettings:
             {"x.com.samsung.da.selectedZone": "OFF_ON"},
         )
 
-    @pytest.mark.parametrize("key", ["sanitize", "speed_booster", "heated_dry", "wash_zone"])
+    def test_hi_temp_wash_reads_and_writes(self):
+        desc = self._desc("hi_temp_wash")
+        assert desc.value_fn("On") is True
+        assert desc.value_fn("Off") is False
+        assert desc.write_fn("On", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.highTemperatureDry": "On"},
+        )
+        assert desc.write_fn("Off", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.highTemperatureDry": "Off"},
+        )
+
+    def test_zone_booster_reads_and_writes(self):
+        desc = self._desc("zone_booster")
+        assert desc.value_fn("ON_OFF") is True
+        assert desc.value_fn("OFF_OFF") is False
+        assert desc.write_fn("On", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.zoneBooster": "ON_OFF"},
+        )
+        assert desc.write_fn("Off", {}) == (
+            ["dishwasher", "vs", "0"],
+            {"x.com.samsung.da.zoneBooster": "OFF_OFF"},
+        )
+
+    @pytest.mark.parametrize(
+        "key",
+        ["sanitize", "speed_booster", "hi_temp_wash", "heated_dry", "wash_zone", "zone_booster"],
+    )
     def test_absent_field_binds_nothing(self, key):
         assert self._desc(key).exists_fn({}, {}) is False
 
-    @pytest.mark.parametrize("key", ["sanitize", "speed_booster", "heated_dry", "wash_zone"])
+    @pytest.mark.parametrize(
+        "key",
+        ["sanitize", "speed_booster", "hi_temp_wash", "heated_dry", "wash_zone", "zone_booster"],
+    )
     def test_not_yet_fetched_stub_still_binds(self, key):
         assert self._desc(key).exists_fn({"href": "/dishwasher/vs/0"}, {}) is True

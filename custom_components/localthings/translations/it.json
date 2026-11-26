@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Lavaggio alta temp"
+      },
+      "zone_booster": {
+        "name": "Zona lavaggio intensivo"
+      },
       "damp_alert": {
         "name": "Avviso di umidità"
       },

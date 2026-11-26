@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Spülen bei hohen Temperaturen"
+      },
+      "zone_booster": {
+        "name": "Intensivzone"
+      },
       "damp_alert": {
         "name": "Signal Mischbeladung"
       },

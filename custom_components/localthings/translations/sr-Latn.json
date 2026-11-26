@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Brzi booster (Speed Booster)"
       },
+      "hi_temp_wash": {
+        "name": "Pranje na visokoj temperaturi"
+      },
+      "zone_booster": {
+        "name": "Zone Booster"
+      },
       "damp_alert": {
         "name": "Upozorenje na vlagu"
       },

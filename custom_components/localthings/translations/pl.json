@@ -2587,6 +2587,12 @@
       "speed_booster": {
         "name": "Speed Booster"
       },
+      "hi_temp_wash": {
+        "name": "Zmywanie w wysokiej temperaturze"
+      },
+      "zone_booster": {
+        "name": "Wzmocnienie strefowe"
+      },
       "damp_alert": {
         "name": "Alert wilgotnego wsadu"
       },
