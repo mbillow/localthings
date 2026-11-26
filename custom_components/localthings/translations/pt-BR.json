@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "O comando para {href} foi enviado com o controle remoto desativado, mas o aparelho ainda não mostra a alteração. Se ela não ocorrer, ative o controle remoto no aparelho."
     },
+    "command_dropped": {
+      "message": "O aparelho aceitou o comando para {href}, mas uma nova leitura ainda não mostra a alteração. Verifique o aparelho e tente novamente."
+    },
     "debug_read_failed": {
       "message": "A leitura de {href} falhou: {error}"
     },

@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "The command to {href} was sent with Remote Control off, but the appliance doesn't show it yet. If it doesn't follow, turn on Remote Control at the appliance."
     },
+    "command_dropped": {
+      "message": "The appliance accepted the command to {href}, but a fresh read still doesn't show it. Check the appliance and try again."
+    },
     "debug_read_failed": {
       "message": "The read from {href} failed: {error}"
     },

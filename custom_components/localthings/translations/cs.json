@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "Příkaz pro {href} byl odeslán s vypnutým dálkovým ovládáním, ale spotřebič ho zatím nezobrazuje. Pokud nezareaguje, zapněte na spotřebiči dálkové ovládání."
     },
+    "command_dropped": {
+      "message": "Spotřebič příkaz pro {href} přijal, ale nové čtení ho zatím nezobrazuje. Zkontrolujte spotřebič a zkuste to znovu."
+    },
     "debug_read_failed": {
       "message": "Čtení z {href} selhalo: {error}"
     },

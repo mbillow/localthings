@@ -343,7 +343,7 @@ def _main_cavity_label(device_type: str | None, siblings: Iterable[dict[str, dic
 
 # Write errors after which the session is fine and a re-poll shows the
 # appliance's real state; a dead session isn't re-polled (see _async_put).
-_APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed"})
+_APPLIANCE_ANSWERED = frozenset({"command_refused", "command_not_confirmed", "command_dropped"})
 # hass.data key: entries already reloaded this run for a changed device type,
 # so a type that flips between reads can't reload in a loop.
 _TYPE_RELOADS = f"{DOMAIN}_type_reloads"
@@ -508,9 +508,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # async_send_command can be sized to outlast both round trips a write
     # triggers: the PUT itself, then the confirming summary poll.
     _POST_TIMEOUT_S: float = 8.0
-    # How long a write sent with Remote Control off is given before it is
-    # read back (_took_effect).
+    # How long a write sent with Remote Control off, or a confirm_write one,
+    # is given before it is read back (_took_effect).
     _CONFIRM_DELAY_S: float = 3.0
+    # A confirm_write read that doesn't match yet is repeated this much later:
+    # issue #9's washer showed a /course/vs/0 change a few seconds after a
+    # read that still had the old value.
+    _CONFIRM_RETRY_S: float = 6.0
     # Cycles a banked href's owner must answer without it before the
     # snapshot lets it go (_track_unconfirmed): about two hours on a
     # Collection board, and several times _PROBE_EVERY_N_CYCLES so a probe
@@ -3939,19 +3943,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._observe.restore_write_pending(write_href, previous_settle, armed_settle)
                 return False
             if (
-                remote_control_off
+                (remote_control_off or desc.confirm_write)
                 and not write_only
-                and not await self._took_effect(path_segs, body)
+                and not await self._took_effect(path_segs, body, settle_retry=desc.confirm_write)
             ):
-                # Sent only because the descriptor waives Remote Control. Some
-                # boards answer 2.04 and drop a write with it off
+                # Sent with Remote Control off only because the descriptor
+                # waives it, or opted in with confirm_write. Some boards
+                # answer 2.04 and drop a write with it off
                 # (docs/investigations/oven-cycle-start.md); others take it
                 # but are still winding down (a drain) when read back. A
                 # write-only resource (the clock) never reads back what it
                 # took, so there is nothing to confirm.
                 raise HomeAssistantError(
                     translation_domain=DOMAIN,
-                    translation_key="command_not_confirmed",
+                    translation_key=(
+                        "command_not_confirmed" if remote_control_off else "command_dropped"
+                    ),
                     translation_placeholders={"href": write_href},
                 )
         except (HomeAssistantError, asyncio.CancelledError) as err:
@@ -3972,10 +3979,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return True
 
     async def _took_effect(
-        self, path_segs: list[str], body: dict | list, *, strict: bool = False
+        self,
+        path_segs: list[str],
+        body: dict | list,
+        *,
+        strict: bool = False,
+        settle_retry: bool = False,
     ) -> bool:
-        """Whether a fresh read shows `body`; strict confirmation requires a successful read."""
-        await asyncio.sleep(self._CONFIRM_DELAY_S)
+        """Whether a fresh read shows `body`; strict confirmation requires a successful read.
+
+        settle_retry repeats a read that shows something else once,
+        _CONFIRM_RETRY_S later. A failed read decides as `strict` says."""
+        delays = [self._CONFIRM_DELAY_S]
+        if settle_retry:
+            delays.append(self._CONFIRM_RETRY_S)
 
         def _read() -> Any:
             sess = self._session
@@ -3984,13 +4001,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             code, rep = sess.read(path_segs, timeout=self._POST_TIMEOUT_S)
             return rep if _coap_accepted(code) and isinstance(rep, dict) else None
 
-        async with self._session_lock:
-            try:
-                rep = await self.hass.async_add_executor_job(_read)
-            except Exception as err:
-                self._log.debug("confirming read of %s failed: %s", path_segs, err)
+        for attempt, delay in enumerate(delays):
+            if attempt:
+                self._log.debug("confirming read of %s doesn't match yet, retrying", path_segs)
+            await asyncio.sleep(delay)
+            async with self._session_lock:
+                try:
+                    rep = await self.hass.async_add_executor_job(_read)
+                except Exception as err:
+                    self._log.debug("confirming read of %s failed: %s", path_segs, err)
+                    return not strict
+            if rep is None:
                 return not strict
-        return (not strict) if rep is None else _payload_present_in(body, rep)
+            if _payload_present_in(body, rep):
+                return True
+        return False
 
     async def _async_put(
         self,

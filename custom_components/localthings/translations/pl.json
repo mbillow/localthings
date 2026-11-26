@@ -3047,6 +3047,9 @@
     "command_not_confirmed": {
       "message": "Polecenie do {href} zostało wysłane przy wyłączonym zdalnym sterowaniu, ale urządzenie jeszcze go nie pokazuje. Jeśli nie zareaguje, włącz zdalne sterowanie w urządzeniu."
     },
+    "command_dropped": {
+      "message": "Urządzenie przyjęło polecenie do {href}, ale ponowny odczyt nadal go nie pokazuje. Sprawdź urządzenie i spróbuj ponownie."
+    },
     "debug_read_failed": {
       "message": "Odczyt z {href} nie powiódł się: {error}"
     },

@@ -96,6 +96,9 @@ class SamsungEntityDescription:
     # before accepting it, including a refusal of a value already set (a no-op).
     # Raw writes retain the device's response.
     confirm_on_refusal: bool = False
+    # Some boards answer 2.04 and then drop a write; require a fresh matching
+    # GET before accepting it, even with Remote Control on.
+    confirm_write: bool = False
     # The write carries one `<Group>_<Value>` token of a multi-group
     # x.com.samsung.da.modes list (robot_vacuum). The coordinator merges it
     # by prefix into the cached list, as it does for options, instead of
