@@ -209,7 +209,9 @@ DRYER_COURSE = Capability(
         cycle_select(
             translation_key="dryer_cycle",
             icon="mdi:tumble-dryer",
-            table_href="/st/dryercourse/vs/0",
+            # AWM-M64 dryers (DV90F09F4SU2) report only AutoLinkCycle_<code>
+            # on /st/dryercourse and put the course table on /st/washercourse.
+            table_href=("/st/dryercourse/vs/0", "/st/washercourse/vs/0"),
             # Verbatim: an unknown code renders as-is instead of falling
             # into select._display's cosmetic camel-split (`3E` → `3 E`).
             display_fn=lambda value, resources: value,

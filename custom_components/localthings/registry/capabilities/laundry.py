@@ -803,8 +803,12 @@ def washer_cycle_fallback(value, resources):
 
 
 def _table_id(resources, table_href):
-    rep = resources.get(table_href) or {}
-    return rep.get("x.com.samsung.da.st.courseTable")
+    hrefs = (table_href,) if isinstance(table_href, str) else table_href
+    for href in hrefs:
+        table = (resources.get(href) or {}).get("x.com.samsung.da.st.courseTable")
+        if isinstance(table, str) and table:
+            return table
+    return None
 
 
 def cycle_select(*, translation_key, icon, table_href=None, display_fn=None, variant_fn=None):
@@ -823,7 +827,8 @@ def cycle_select(*, translation_key, icon, table_href=None, display_fn=None, var
     the same hex code could mean a different course. An absent or
     unrecognized table id falls back to the name-only ``cycle`` key
     instead of borrowing a label from another board generation --
-    translating a new table is a translations-only change.
+    translating a new table is a translations-only change. A tuple of
+    hrefs is tried in order; the first that reports a table wins.
 
     The raw course code remains writable regardless; its display uses
     display_fn when supplied, otherwise it remains raw. display_fn is an

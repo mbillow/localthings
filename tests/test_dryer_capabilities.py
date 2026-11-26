@@ -110,6 +110,45 @@ def test_course_bound_to_shared_course_vs_0():
     assert desc.rep_fn(rep) == "16"
 
 
+def test_awm_m64_dryer_reads_its_course_table_from_st_washercourse():
+    """A DV90F09F4SU2 (AWM-EU-M64-24-DV94) reports only AutoLinkCycle_<code>
+    on /st/dryercourse and its Table_03 on /st/washercourse, so the cycle
+    select falls back to that href. Every course its editCourseList
+    advertises is already named in dryer_cycle_table_03."""
+    from custom_components.localthings.catalog import translated_states
+
+    desc = next(
+        e for e in dryer.DRYER_COURSE.entities if e.key == "cycle" and isinstance(e, SelectDesc)
+    )
+    resources = {
+        "/st/dryercourse/vs/0": {"x.com.samsung.da.st.dryerMode": "AutoLinkCycle_51"},
+        "/st/washercourse/vs/0": {
+            "x.com.samsung.da.st.washerMode": "Table_03_Course_51",
+            "x.com.samsung.da.st.courseTable": "Table_03",
+        },
+        "/wm/editcourse/vs/0": {
+            "x.com.samsung.da.editCourseList": (
+                "EditCourseList_51531B4E182017224C211A1D191E1C27242523"
+            )
+        },
+    }
+    assert desc.translation_key(resources) == "dryer_cycle_table_03"
+    codes = {code.lower() for code in desc.options(resources)}
+    assert len(codes) == 19
+    assert codes <= translated_states("select", "dryer_cycle_table_03")
+
+
+def test_st_dryercourse_table_wins_over_st_washercourse():
+    desc = next(
+        e for e in dryer.DRYER_COURSE.entities if e.key == "cycle" and isinstance(e, SelectDesc)
+    )
+    resources = {
+        "/st/dryercourse/vs/0": {"x.com.samsung.da.st.courseTable": "Table_00"},
+        "/st/washercourse/vs/0": {"x.com.samsung.da.st.courseTable": "Table_03"},
+    }
+    assert desc.translation_key(resources) == "dryer_cycle_table_00"
+
+
 def test_reported_table_00_course_codes_are_translated():
     """The DVE45R6300W/A3 reporter confirmed these codes by selecting each
     cycle and reading back the raw course code (issue #357). A DV6800N --
