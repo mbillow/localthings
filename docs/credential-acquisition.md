@@ -1,13 +1,36 @@
 # Credential acquisition
 
-This document records credential-acquisition routes reported by device owners:
-what each route required, what worked on the tested hardware, and what remains
-unverified.
+> [!WARNING]
+> **This page is a record of testing, not a supported process.** No accepted
+> way to get a credential for an appliance that refuses LocalThings' automatic
+> certificate is available today. Each route below is one or a few owners'
+> report of what worked on their own hardware, and none has been reviewed or
+> endorsed by the LocalThings project.
+>
+> - **Removing, re-registering or resetting an appliance carries risk.** Several
+>   routes need the appliance removed from SmartThings and added again.
+>   Registration can fail or loop, the appliance can be unusable from
+>   SmartThings until it succeeds, and Routines, Scenes and history tied to it
+>   can be lost. None of the routes below tested a restore.
+> - **External tools are not part of LocalThings.** The scripts, patched apps
+>   and repositories linked here belong to their authors. LocalThings doesn't
+>   review, maintain or vouch for them and can't guarantee their safety. A
+>   patched or instrumented SmartThings app runs with your Samsung account
+>   signed in. Read anything you run, and prefer a spare phone and account.
+> - **Rooting a phone, patching an app or decrypting its storage** may break
+>   the device's security model, its warranty or Samsung's service terms. Nothing
+>   here establishes that any route is permitted where you live.
+>
+> Proceed only with appliances and accounts you own, and at your own risk.
 
-The [current LocalThings scope](https://github.com/mbillow/localthings/issues/435#issuecomment-5556562678)
-is to import an already-provisioned credential. Acquisition happens separately;
-the integration does not perform ownership transfer (OTM) or write `/oic/sec/*`
-security resources.
+## Scope
+
+LocalThings imports a credential that already exists. It doesn't run an
+ownership transfer (OTM), derive keys or write the appliance's `/oic/sec/*`
+security resources ([scope](https://github.com/mbillow/localthings/issues/435#issuecomment-5556562678)).
+Where a credential comes from is outside the integration. This page collects
+what owners have reported so far. [#435](https://github.com/mbillow/localthings/issues/435)
+is the place to report a new route or a result.
 
 ## Importing a credential
 
@@ -26,185 +49,165 @@ menu says so.
 The identity is a UUID and the key is 32 or 64 hex characters. Setup adds the
 appliance only after the key completes a handshake and the appliance reports its
 `/oic/d` `di` over that session. That `di` is recorded, and later connections
-must match it.
+must match it. If the automatic certificate probe times out, setup offers the
+credential menu with a retry (#822).
 
 The secure port can change when the appliance restarts. When a handshake on
 the stored port fails, LocalThings asks the appliance which port it now
 advertises and reconnects there, waiting longer between lookups while it stays
 unreachable.
 
-## WD86 washer/dryer
+## Where the credential lives
 
-An OwnerPSK recovered after SmartThings removal and re-registration authenticated
-one `AWM-KR-M64-24-WD86` washer/dryer. A fresh local session returned the expected
-device identity and the washer's protected resources. SmartThings access also
-remained available after re-registration ([test notes](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)).
+Every route so far reads an OwnerPSK that the SmartThings app already stored;
+none creates one.
 
-### Equipment and software
+- **Only the phone that onboarded the appliance locally holds it.** An
+  appliance added from another phone, or a cloud-only one, has no OwnerPSK on
+  this phone. That is why some routes remove the appliance and add it again
+  from the phone being read, with the risks in the warning above.
+- **The identity is the owner UUID, not the appliance's.** Import the record's
+  `rowneruuid` (which matches the appliance's `devowneruuid`) as the identity.
+  The appliance's own UUID is `subjectuuid`, and it equals the OCF `di` and,
+  for these devices, the SmartThings cloud `deviceId`. Use it to pick the right
+  record, never as the identity.
+- **The store differs by platform.** On Android (SmartThings 1.8.52.23) the PSK
+  was in an encrypted, account-specific `<UUID>.datenc` IoTivity store; the
+  plaintext SVR stores inspected held certificates only. On iOS it was in
+  `Library/Security/oic_svr_db_client.dat` inside the app's data.
+- **One phone holds a record for every appliance it paired**, not only the one
+  you're after. Select exactly one record and never publish the store.
 
-| Where | What to prepare |
-| --- | --- |
-| Appliance | The WD86 to be registered, with access to its panel for onboarding. This test used one `AWM-KR-M64-24-WD86`. |
-| Phone | A rooted physical Samsung Galaxy S10 on which SmartThings opens and the appliance owner's Samsung account can sign in. |
-| USB connection | A data-capable cable connecting the S10 to the Mac, with USB debugging enabled and the Mac authorized on the phone. |
-| Mac | Android Platform-Tools (`adb`), a Python environment for the recovery helpers, and Node.js/npm for building their Frida Java agent. |
-| Mac and phone | Frida host tools on the Mac and a matching Android arm64 Frida server on the rooted S10. The prepared toolchain used Frida 17.17.0 and `frida-tools` 14.10.4. |
-| Recovery tools on the Mac | Helpers that recover the selected washer's stored IoTivity credential, save it to Keychain, and verify it with a fresh PSK session. |
-| Network | Internet access for SmartThings registration and a local network on which the Mac can reach the washer for authenticated OCF reads. |
-| Private storage on the Mac | A location for the pre-removal SmartThings exports and macOS Keychain for the recovered credential. |
+## Reported routes
 
-The recovery and verification helpers used in this test are local research
-tools, not part of LocalThings. A public download and installation procedure is
-not provided here. The removal steps below assume that working recovery and
-verification helpers have already been prepared on the Mac.
+Ordered from least to most invasive. "Re-registration" means removing the
+appliance from SmartThings and adding it again.
 
-Root access and independent local tooling for the app's encrypted IoTivity
-security data were part of this test. The account and device ownership describe
-the test environment; they do not establish Samsung's approval of the recovery
-method or permission under applicable service terms or law.
+| Route | Phone | Root | Re-registration | Reported on | Tooling |
+| --- | --- | --- | --- | --- | --- |
+| [Local iPhone backup](#local-iphone-backup) | iPhone | No | No | `WD11BB944DGBGU` washer, ViewFinity S9 monitor, The Frame 2021 TV | Steps on this page |
+| [Patched Android app (Morphe)](#patched-android-app-morphe) | Android | No | Sometimes | `HW-Q950A`, `HW-Q990C`, `HW-Q850A` soundbars, `S95B` TV, a Family Hub | [smortthings](https://github.com/neoKushan/smortthings), external |
+| [Rooted Android: native credential list](#rooted-android-native-credential-list) | Android | Yes | Not reported | `AF18DX936WFN` air conditioner | Described in [#435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363) |
+| [Rooted Android: oven scripts](#rooted-android-oven-scripts) | Android 17 | Yes | See its procedure | A Samsung LCD oven | [Owner's scripts](https://github.com/KRZ303/locathings-oven-psk-retrieval), external |
+| [Rooted Android with Frida](#rooted-android-with-frida) | Galaxy S10 | Yes | Yes | `AWM-KR-M64-24-WD86` washer/dryer | Private helpers, not published |
 
-### 1. Prepare the phone and Mac
+### Local iPhone backup
 
-1. On the rooted S10, open SmartThings and sign in to the same Samsung account
-   that owns the WD86. Confirm that the app opens normally and that the intended
-   washer can be identified in the account.
-2. Connect the S10 to the Mac over USB, accept the phone's debugging prompt, and
-   confirm that `adb` can access the intended test phone and that root is
-   available.
-3. Prepare the matching Frida server on the phone and the host tools on the Mac.
-   Build the recovery helper's Java agent and check that the helper can connect
-   to the intended SmartThings process.
-4. Prepare the private backup location and the helper's Keychain storage before
-   proceeding to removal.
+An existing OwnerPSK for one `WD11BB944DGBGU` washer was read from a finished,
+unencrypted Finder backup of the iPhone that originally paired it. The washer
+was not removed, reset or re-registered. Owners have since added a ViewFinity
+S9 monitor (#891) and The Frame 2021 TV (#868) the same way.
 
-### 2. Save the current SmartThings state
+An unencrypted backup is readable by anyone with access to the computer, and
+it holds far more than the SmartThings key. Make one only for this, keep it
+private, and delete it once the key is imported. Turning Finder's **Encrypt
+local backup** off applies to every later backup too, so turn it back on
+afterwards.
 
-The pre-removal backup was saved on the Mac. It included the washer's device
-record and status, room information, Rules, and the available Scene records.
-Record the washer's cloud `deviceId` and known OCF `di` so that the re-registered
-device and recovered credential can be checked against the intended appliance.
+1. In the backup's `Manifest.db`, query `Files` for
+   `domain = 'AppDomain-com.samsung.oneconnect4ios'` and
+   `relativePath = 'Library/Security/oic_svr_db_client.dat'`. Require exactly
+   one match. Its `fileID` names the file at
+   `<backup>/<first two fileID characters>/<fileID>`. Finder's *Files* export
+   doesn't include this private app store.
+2. Decode the file as CBOR. The `cred` section may itself be CBOR-encoded
+   bytes; inspect its `creds` array. Select exactly one PSK record whose
+   `subjectuuid` matches the appliance's OCF device UUID. Decode its
+   `privatedata.data` according to its `encoding` (raw bytes or base64).
+3. Convert the 16- or 32-byte key to 32 or 64 hex characters and import it as
+   **Owner**, with `cred.rowneruuid` as the identity. Then
+   [verify it](#verifying-a-credential).
 
-Keep the exports private. They provide a baseline for comparison; an export is
-not a tested restore procedure for a failed registration or lost automation.
+On the washer the key completed a handshake and an authenticated
+`GET /oic/sec/acl` returned `2.05 Content`, with no security write. That shows
+local access for one appliance, not that every control works or that every
+SmartThings version stores credentials this way.
 
-### 3. Remove the WD86 and register it again
+### Patched Android app (Morphe)
 
-1. In SmartThings on the prepared S10, the WD86 device entry was removed from
-   the account. The SmartThings app itself remained installed on the phone.
-2. In that same app, using the same Samsung account, the washer was added again
-   through the normal add-device flow. The washer's onboarding steps were
-   completed as prompted by SmartThings. No separate physical factory reset
-   was performed on the appliance.
-3. Registration completed and the washer was accessible again in SmartThings.
-   Keep this app installation and its stored data available for the recovery
-   step.
+[smortthings](https://github.com/neoKushan/smortthings) is a Morphe patch for
+the SmartThings Android app (`com.samsung.android.oneconnect`), pinned to
+version `1.8.52.23`. It is maintained by its author, not by LocalThings. It uses
+the app's own `CryptoManager` to decrypt the `<UUID>.datenc` store and shows the
+OwnerPSK and its identity on the device's **Edit** screen. It reports that it
+sends nothing off the phone and makes no `/oic/sec/*` write; LocalThings hasn't
+audited that.
 
-### 4. Recover the stored credential on the Mac
+1. Install Morphe Manager, add the smortthings repository as a patch source,
+   and apply the patch to SmartThings `1.8.52.23`.
+2. Open the device's **Edit** screen. If it shows no key, the appliance wasn't
+   onboarded locally from this phone. The author's workaround is removing the
+   appliance and adding it again from the same phone, in a new Location if
+   registration loops; that is re-registration, with its risks.
+3. Import the **Owner PSK** as **Owner**, with the displayed **Identity** (the
+   owner UUID). Then [verify it](#verifying-a-credential).
 
-1. With the registered S10 connected to the Mac, the local recovery helper read
-   and decrypted SmartThings' persisted IoTivity security data.
-2. The helper selected the stored credential whose device identity matched the
-   intended washer. Exactly one matching credential was found. The successful
-   result came from this stored record, not from a live capture of newly
-   generated OwnerPSK material.
-3. The recovered key and its associated PSK identity were saved to macOS
-   Keychain and read back for verification. Credential material was not printed
-   to the terminal or saved in a plaintext capture file.
+The author verified it on one `HW-Q950A` soundbar. Reports in #435 add
+`HW-Q990C` and `HW-Q850A` soundbars, an `S95B` TV and a Family Hub. Cloud-only
+devices show no key.
 
-This recovery did not require another removal or registration. The local
-recovery tools reused the stored credential; they did not perform a separate
-manufacturer-OTM transaction, derive or install a new OwnerPSK, or write
-`/oic/sec/*`. SmartThings performed its normal registration flow; the security
-changes made internally by the app were not independently audited.
+### Rooted Android: native credential list
 
-### 5. Verify the credential and compare SmartThings state
+An owner read an `AF18DX936WFN` air conditioner's PSK
+(`R18_BIXBY_FAC_TIME_23K`, MAIN and RAC subdevices) from SmartThings' native
+credential list on rooted Android 13. A later look on SmartThings 1.8.52.23
+found the same key in the `<UUID>.datenc` store. Imported as **Owner**, it
+worked on LocalThings 0.33.0. The
+[report in #435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
+has the details.
 
-1. On the Mac, the verification helper loaded the credential from Keychain and
-   opened a fresh PSK-authenticated session to the selected WD86.
-2. An authenticated `GET /oic/d` checked that the returned `di` matched the
-   expected washer and that the device type included `oic.d.washer`.
-3. The same session read `/device/0?if=oic.if.b` to confirm access to the washer's
-   protected resources. This verification used reads and sent no appliance
-   control or OCF security writes.
-4. The post-registration SmartThings identity and available Rule and Scene
-   records were compared with the pre-removal baseline, with the limits below.
+### Rooted Android: oven scripts
 
-The PSK identity authenticates the session; the `di` in the authenticated
-`/oic/d` response identifies the appliance. They serve different roles, even
-where a cloud device ID happens to match the appliance's `di`.
+An owner read a Samsung LCD oven's existing OwnerPSK from SmartThings on rooted
+Android 17. Their [scripts and procedure](https://github.com/KRZ303/locathings-oven-psk-retrieval)
+record the tested versions, backups, results and limits; they are maintained by
+that owner, not by LocalThings. Import the identity unchanged. One containing a
+zero byte needs `smartthings-local` 0.1.23 or newer, which LocalThings requires.
 
-### Results and verification limits
+### Rooted Android with Frida
 
-The table summarizes observations from this WD86 test and what remains
-unverified.
+The most invasive route reported, and the only one that needs re-registration
+every time. On one `AWM-KR-M64-24-WD86` washer/dryer, an owner:
+
+1. Exported the washer's SmartThings record, Rules and Scenes as a baseline,
+   noting its cloud `deviceId` and OCF `di`. The export is a comparison point,
+   not a tested restore.
+2. Removed the washer from SmartThings on a rooted Galaxy S10 and added it
+   again from the same app and account, with no factory reset.
+3. Read and decrypted the app's stored IoTivity credential with local helpers
+   built on Frida 17.17.0, selected the one record matching the washer, and kept
+   the key in macOS Keychain, never in a plaintext file.
+4. Verified it with a fresh PSK session.
+
+The helpers are private research tools; no download is offered. The
+[test notes](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)
+and [resource inspection](https://github.com/mbillow/localthings/issues/435#issuecomment-5504979053)
+have the details.
 
 | Check | Result | Limit |
 | --- | --- | --- |
-| Local authentication | A fresh PSK session succeeded; authenticated `GET /oic/d` returned `2.05 Content` with the expected `di`. | The check covered credential validity for this appliance; it did not test every control. |
-| Protected resource read | `/device/0?if=oic.if.b` returned one flat batch with 38 child resources over the same session. | This is authenticated read evidence, not a test of every resource's write behavior. |
-| SmartThings | The washer remained accessible. The before-and-after comparison recorded unchanged cloud `deviceId` and OCF `di` values; the authenticated local `di` matched. | This is one unit's result, not proof that every registration preserves identity or every cloud command works. |
-| Rules | The before-and-after comparison recorded unchanged IDs and exported definitions for 13 Rules, apart from normal execution timestamps. | None of the 13 exported Rule definitions directly referenced the washer, so washer-specific routine preservation was not tested. |
-| Scenes | The before-and-after comparison recorded unchanged IDs and available exported records for 14 Scenes. | The saved Scene responses contain metadata, not action definitions. Full Scene-definition preservation, washer dependencies, and execution behavior were not verified. |
+| Local authentication | Authenticated `GET /oic/d` returned `2.05 Content` with the expected `di`. | Covers this appliance's credential, not every control. |
+| Protected read | `/device/0?if=oic.if.b` returned a batch of 38 resources. | Read evidence only; no writes were tested. |
+| SmartThings | The washer stayed usable, with unchanged `deviceId` and `di`. | One unit; not proof that every re-registration keeps identity. |
+| Rules | 13 Rules kept their IDs and definitions. | None referenced the washer, so washer routines weren't tested. |
+| Scenes | 14 Scenes kept their IDs and metadata. | The exports hold no actions, so Scene contents and execution weren't tested. |
 
-## Samsung LCD oven with rooted Android 17
+## Verifying a credential
 
-A device owner recovered a Samsung LCD oven's existing OwnerPSK from SmartThings
-on rooted Android 17. Their [recovery scripts and procedure](https://github.com/KRZ303/locathings-oven-psk-retrieval)
-record the tested versions, backups, results, and limits. Import the recovered
-identity unchanged. An identity containing a zero byte needs `smartthings-local`
-0.1.23 or newer, which LocalThings requires.
+Before relying on an imported credential:
 
-## WD11 washer with a local iPhone backup
-
-An existing OwnerPSK for one `WD11BB944DGBGU` washer was recovered from a
-finished, unencrypted Finder backup of the iPhone that originally paired it.
-The washer was not removed, reset or re-registered. To locate the same kind of
-record in your own backup:
-
-1. Keep the backup private. In its `Manifest.db`, query `Files` for
-   `domain = 'AppDomain-com.samsung.oneconnect4ios'` and
-   `relativePath = 'Library/Security/oic_svr_db_client.dat'`. Require exactly
-   one match. Its `fileID` identifies the backup file at
-   `<backup>/<first two fileID characters>/<fileID>`; Finder's *Files* export
-   does not include this private app store.
-2. Decode that file as CBOR. The `cred` section may itself be CBOR-encoded
-   bytes; inspect its `creds` array. Select exactly one PSK record whose
-   `subjectuuid` matches the intended appliance's OCF device UUID. The client
-   identity is `cred.rowneruuid`, not the device UUID. Decode that record's
-   `privatedata.data` according to its `encoding` (raw bytes or base64).
-3. Convert the 16- or 32-byte key to 32 or 64 hexadecimal characters and
-   import it through LocalThings' **Owner** option. Verify an authenticated
-   `/oic/d` read identifies the expected appliance before relying on any
-   protected data or controls. Never publish the backup, key or UUIDs.
-
-On this unit, the recovered key completed a DTLS handshake and an authenticated
-`GET /oic/sec/acl` returned `2.05 Content`; the owner then added the washer to
-Home Assistant. LocalThings 0.35.0 needed a local config-flow change to offer
-the credential menu after its automatic certificate probe timed out. Setup now
-offers that menu itself, with a retry, when the probe times out (#822). No OCF
-security write was
-made. This proves local credential access for one appliance, not that every
-washer control works or that every SmartThings version stores credentials in
-the same format.
-
-The backup holds a record for every appliance paired from that phone, not only
-washers. Owners have since added a ViewFinity S9 monitor (#891) and The Frame
-2021 TV (#868) with an OwnerPSK recovered the same way.
-
-## Samsung AF18DX936WFN AC with rooted Android 13
-
-An owner recovered an `AF18DX936WFN` air conditioner's PSK
-(`R18_BIXBY_FAC_TIME_23K`, MAIN and RAC subdevices) from SmartThings' native
-credential list. Follow-up recovery on SmartThings 1.8.52.23 found the same PSK
-in an encrypted, account-specific `<UUID>.datenc` store omitted by the original
-file scan; the two inspected plaintext SVR stores contained no PSK. Its identity
-was the app's owner UUID, matching the appliance's `devowneruuid` and `rowneruuid`.
-Importing it as **Owner** worked on LocalThings 0.33.0. The
-[hardware report in #435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
-records the recovery and verification details.
+- Confirm that an authenticated `/oic/d` read returns the `di` of the appliance
+  you meant, and the expected device type. LocalThings' setup does this and
+  refuses a mismatch; do the same in any external tool before using a key.
+  The PSK identity authenticates the session; the `di` identifies the appliance.
+- Read before you write. Every report above verified reads; few tested controls.
+- Never publish a key, an identity, a backup, a credential store or the UUIDs
+  in them, including in a diagnostics download or an issue.
 
 ## References
 
-- [WD86 acquisition and SmartThings observations (issue comment)](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434)
-- [WD86 authenticated resource inspection](https://github.com/mbillow/localthings/issues/435#issuecomment-5504979053)
+- [#435: plan, findings and reports](https://github.com/mbillow/localthings/issues/435)
 - [Maintainer's scope and documentation request](https://github.com/mbillow/localthings/issues/435#issuecomment-5556562678)
+- [WD86 test notes](https://github.com/mbillow/localthings/issues/435#issuecomment-5519459434) and [authenticated resource inspection](https://github.com/mbillow/localthings/issues/435#issuecomment-5504979053)
+- [AF18DX936WFN hardware report](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363)
+- External, not maintained by LocalThings: [smortthings](https://github.com/neoKushan/smortthings), [LCD oven PSK retrieval](https://github.com/KRZ303/locathings-oven-psk-retrieval)

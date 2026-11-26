@@ -167,6 +167,30 @@ class TestCompletionMinutes:
         }
         assert desc.rep_fn(rep) == 0
 
+    @pytest.mark.parametrize("state", ["Ready", "End", "Stop"])
+    def test_completion_minutes_idle_reads_zero(self, state):
+        """Once idle, laundry reloads remainingTime with the selected course's
+        full duration: the countdown hit 0 and then jumped to 169."""
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == "completion_minutes")
+        assert desc.rep_fn is not None
+        rep = {
+            "x.com.samsung.da.state": state,
+            "x.com.samsung.da.progress": "None",
+            "x.com.samsung.da.remainingTime": "02:49:00",
+        }
+        assert desc.rep_fn(rep) == 0
+
+    @pytest.mark.parametrize("state", ["Run", "Pause"])
+    def test_completion_minutes_kept_while_running_or_paused(self, state):
+        desc = next(e for e in OPERATIONAL_STATE.entities if e.key == "completion_minutes")
+        assert desc.rep_fn is not None
+        rep = {
+            "x.com.samsung.da.state": state,
+            "x.com.samsung.da.progress": "Wash",
+            "x.com.samsung.da.remainingTime": "02:49:00",
+        }
+        assert desc.rep_fn(rep) == 169
+
     def test_completion_minutes_missing_or_invalid(self):
         desc = next(e for e in OPERATIONAL_STATE.entities if e.key == "completion_minutes")
         assert desc.rep_fn is not None

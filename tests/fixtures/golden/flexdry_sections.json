@@ -40,6 +40,7 @@
     "state_keys": [
       "alarm_code",
       "child_lock",
+      "cloud_connected",
       "completion_minutes",
       "cycle",
       "cycle_active",

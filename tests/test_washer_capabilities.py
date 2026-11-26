@@ -1153,3 +1153,49 @@ def test_wf8900b_spin_and_temperature_options_are_named():
     for key, options in (("spin_speed", spin), ("wash_temperature", temperature)):
         known = translated_states("select", key)
         assert all(_display(option, key) in known for option in options), key
+
+
+class TestTable02AppLockedDials:
+    """Dials the Samsung app greys out on a Table_02 course keep only their
+    live value, although the board's mask leaves two values for them."""
+
+    def test_wash_dry_locks_temperature_and_spin_but_not_rinses(self):
+        resources = _on_course(
+            "washer_ww90dg6u25le",
+            "36",
+            waterTemperature="Cold",
+            spinLevel="1400",
+            rinseCycles="2",
+        )
+
+        assert _settings("wash_temperature").options(resources) == ["Cold"]
+        assert _settings("spin_speed").options(resources) == ["1400"]
+        assert len(_settings("rinse_cycles").options(resources)) > 1
+
+    def test_drum_clean_locks_all_three_dials(self):
+        resources = _on_course(
+            "washer_ww90dg6u25le",
+            "29",
+            waterTemperature="60",
+            spinLevel="1200",
+            rinseCycles="2",
+        )
+
+        assert _settings("wash_temperature").options(resources) == ["60"]
+        assert _settings("spin_speed").options(resources) == ["1200"]
+        assert _settings("rinse_cycles").options(resources) == ["2"]
+
+    def test_drum_clean_reads_70_where_the_board_says_60(self):
+        resources = _on_course("washer_ww90dg6u25le", "29", waterTemperature="60")
+
+        assert _settings("wash_temperature").display_fn("60", resources) == "70"
+
+    def test_a_free_course_is_not_locked(self):
+        resources = _on_course("washer_ww90dg6u25le", "1B", waterTemperature="40")
+
+        assert len(_settings("wash_temperature").options(resources)) > 1
+
+    def test_another_course_table_is_not_locked(self):
+        resources = _ww6500("36", waterTemperature="40")
+
+        assert len(_settings("wash_temperature").options(resources)) > 1

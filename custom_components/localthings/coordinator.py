@@ -134,6 +134,7 @@ from .transport import (
     OvenStartUnconfirmed,
     Transport,
     create_transport,
+    earlier_hosts,
 )
 from .transport import local_source_port as _local_source_port
 
@@ -170,6 +171,25 @@ def mode_spec_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str, 
     """This entry's last modeSpec with entries, per actual mode href (#600);
     see cook.with_cached_specs."""
     return Store(hass, _MODE_SPEC_STORE_VERSION, f"{DOMAIN}.{entry.entry_id}.mode_specs")
+
+
+_LAST_STATE_VERSION = 1
+
+
+def last_state_store(hass: HomeAssistant, entry: ConfigEntry) -> Store[dict[str, Any]]:
+    """The live state as it stood when this entry last closed; see
+    LocalThingsCoordinator.async_restore_off_state."""
+    return Store(hass, _LAST_STATE_VERSION, f"{DOMAIN}.{entry.entry_id}.last_state")
+
+
+def _powered_off(resources: dict[str, dict]) -> bool:
+    """Whether these reps have the appliance off, read from the same resource
+    the power entity binds to (POWER_GENERIC first, then POWER_VS_FALLBACK)."""
+    generic = resources.get("/power/0")
+    if generic is not None and "value" in generic:
+        return generic["value"] is False
+    power = (resources.get("/power/vs/0") or {}).get("x.com.samsung.da.power")
+    return isinstance(power, str) and power.lower() == "off"
 
 
 class _NoOpDescriptor:
@@ -616,6 +636,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._dormant_backoff: dict[str, int] = {}
         self._snapshot_store = snapshot_store(hass, entry)
         self._mode_spec_store = mode_spec_store(hass, entry)
+        self._last_state_store = last_state_store(hass, entry)
+        # Set by async_restore_off_state: the cache holds the state saved at
+        # the last close, carried through outages as a discovered device's is.
+        self._carrying_off_state = False
+        # Removes the saved state once the appliance answers live; see
+        # _mark_device_answered.
+        self._last_state_discard: asyncio.Task[None] | None = None
         # Loaded by async_load_mode_specs before the first refresh.
         self._mode_specs: dict[str, Any] = {}
         self._mode_specs_lock = threading.Lock()
@@ -724,6 +751,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._next_rediscovery_ts = 0.0
         self._rediscovery_backoff_s = 0.0
         self._moved_port: int | None = None
+        self._other_hosts: list[str] = []
+        self._note_other_hosts()
         # The transport whose handshake is in flight (cancel_connect), and the
         # look a device announcing itself started (async_device_announced).
         self._connecting: Transport | None = None
@@ -1528,6 +1557,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._entry, data={**self._entry.data, CONF_PORT: port}
         )
 
+    @callback
+    def _note_other_hosts(self) -> None:
+        """Snapshot the earlier entries' hosts on the event loop, for
+        _open_session in the executor: no two sessions share a source port."""
+        self._other_hosts = earlier_hosts(
+            self.hass.config_entries.async_entries(DOMAIN), self._entry
+        )
+
     def _open_session(self, port: int) -> None:
         host = self._entry.data[CONF_HOST]
 
@@ -1538,7 +1575,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sess = create_transport(
             {**self._entry.data, CONF_PORT: port},
             on_notification=self._observe.on_notification,
-            local_port=_local_source_port(host),
+            local_port=_local_source_port(host, self._other_hosts),
         )
         self._connecting = sess
         try:
@@ -1623,6 +1660,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 sess.close()
 
     async def async_close(self) -> None:
+        await self._async_save_last_state()
         self._closed = True
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
@@ -1635,6 +1673,51 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.playback.async_close()
         await self.hass.async_add_executor_job(self._observe.close)
         await self.hass.async_add_executor_job(self._close_session)
+
+    async def _async_save_last_state(self) -> None:
+        if self._closed or self._flat:
+            return
+        if self._last_state_discard is not None:
+            # Never let a removal still in flight land after this save.
+            await asyncio.shield(self._last_state_discard)
+        resources = self._cache.snapshot()
+        if not resources:
+            return
+        try:
+            await self._last_state_store.async_save({"resources": json_safe(resources)})
+        except Exception as e:
+            self._log.debug("could not write the last state: %s", e)
+
+    async def async_restore_off_state(self) -> bool:
+        """Seed the cache from the state saved at the last close when it has
+        the appliance powered off. A washer that powers itself off stops
+        answering locally a few minutes later, so a restart after that would
+        otherwise show it unavailable until someone wakes it by hand; carrying
+        "off" is what an outage mid-run already shows. Any other saved state
+        still loads unavailable."""
+        if self._flat:
+            return False
+        try:
+            stored = await self._last_state_store.async_load()
+        except Exception as e:  # corrupt or unreadable store
+            self._log.debug("could not read the last state: %s", e)
+            return False
+        if not stored or not stored.get("resources"):
+            return False
+        resources = from_json_safe(stored["resources"])
+        if not _powered_off(resources):
+            return False
+        # Unhooked so seeding doesn't schedule a push before any entity exists.
+        self._cache.set_on_change(lambda _changed, _source: None)
+        try:
+            for href, rep in resources.items():
+                self._cache.apply_rep(href, rep, "restored")
+        finally:
+            self._cache.set_on_change(self._on_cache_changed)
+        self._carrying_off_state = True
+        self.data = flatten(self.bound, self.entity_resources())
+        self._log.info("restored the last known state (powered off) until the device answers")
+        return True
 
     def _on_cache_changed(self, changed: bool, source: str) -> None:
         """StateCache.set_on_change callback. Runs on whatever thread
@@ -2792,11 +2875,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._subscribe_tiers = family.subscribe_tiers
             if family.write_settle_s is not None:
                 self._write_settle_s = family.write_settle_s
-            # The type first discovery couldn't resolve raised a coverage gap.
-            # The device name stays generic until the next start.
+        # This partition saw the whole run, so its unbound list replaces the
+        # first pass's: a sibling that materialized since binds hrefs that pass
+        # reported (#911), and a type resolved since clears the unknown-type
+        # gap. A skipped sub-unit this growth didn't partition keeps its hrefs
+        # out of the list, as first discovery kept them. The device name stays
+        # generic until the next start.
+        quiet = [s.subdevice for s in self._skipped_subdevices if s.subdevice not in subdevices]
+        unbound = [href for href in unbound if not any(q.owns(href) for q in quiet)]
+        if resolved or sorted(unbound) != sorted(self._unbound_hrefs):
             self._unbound_hrefs = unbound
             self._update_coverage_gap_issue(
-                False, unbound, self.device_info.get("name") or "This appliance"
+                self.device_type_name is None,
+                unbound,
+                self.device_info.get("name") or "This appliance",
             )
         if grown or any(added.values()):
             self._log.info(
@@ -3460,6 +3552,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._persist_moved_port()
         self._persist_read_mode()
         self._consecutive_poll_timeouts = 0
+        if self._last_state_discard is None and not self._flat:
+            # Only the most recent close may be restored. Once the appliance
+            # answers live, a state saved at an earlier close is stale: if HA
+            # then stopped without async_close (a crash or power loss) while
+            # the appliance was dark, the next start would bring it back.
+            self._last_state_discard = self.hass.async_create_task(
+                self._last_state_store.async_remove(), "localthings discard last state"
+            )
         if self._failed_cycles:
             # Two dark polls or more, none refused, is a TV that was off; one is a blip.
             if self._dark_cycles == self._failed_cycles >= 2:
@@ -3520,7 +3620,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # offline load whose entities registered before this first one.
         if self._failed_cycles == 1 and self._flat:
             self.hass.loop.call_soon(self.async_update_listeners)
-        if self._discovered and self._cache.snapshot():
+        carried = self._discovered or self._carrying_off_state
+        if carried and self._cache.snapshot():
             # A device going quiet (a timeout, a refused or closed session,
             # standby) is routine; only an unexpected error gets its trace.
             if not isinstance(e, _ROUTINE_UNREACHABLE):
@@ -3564,6 +3665,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
+        self._note_other_hosts()
 
         async with self._session_lock:
             self._standby_cycle = False

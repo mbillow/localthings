@@ -1,5 +1,5 @@
 {
-  "seeds_note": "Sanitized from the current Home Assistant LocalThings diagnostics. Operational, course, and washer fields are retained; device-specific identifiers and unrelated metadata are redacted or omitted.",
+  "seeds_note": "Sanitized from the current Home Assistant LocalThings diagnostics. Operational, course, and washer fields are retained; device-specific identifiers and unrelated metadata are redacted or omitted. /connected/vs/0 is the upper section's rep from issue #906's diagnostics.",
   "device0": [
     {
       "rt": [
@@ -46,6 +46,12 @@
         "x.com.samsung.da.supportedOptions": [
           "0ADAEAFB0"
         ]
+      }
+    },
+    {
+      "href": "/connected/vs/0",
+      "rep": {
+        "x.com.samsung.da.connected": "On"
       }
     },
     {

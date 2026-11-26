@@ -82,7 +82,7 @@ When you add your first appliance, LocalThings contacts Samsung's servers once t
 
 A few appliances need one more step:
 
-- **Some appliances refuse the automatic certificate.** Setup then offers to import a pre-shared key, which LocalThings can't obtain for you. [Credential acquisition](docs/credential-acquisition.md) covers where one comes from. We're still working to understand these appliances, and [#435](https://github.com/mbillow/localthings/issues/435) has the plan, what we've found so far, and a place to report how it went. Setup also offers the public `AC14K_M` CA certificate, which the `smartthings-local` project's [`setup_cert.py --fallback`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py) shows how to get, but no appliance that refused the automatic certificate has been reported to accept it.
+- **Some appliances refuse the automatic certificate.** Setup then offers to import a pre-shared key, which LocalThings can't obtain for you. [Credential acquisition](docs/credential-acquisition.md) records what owners have tried; none of it is a supported process yet, and some routes mean re-registering the appliance. We're still working to understand these appliances, and [#435](https://github.com/mbillow/localthings/issues/435) has the plan, what we've found so far, and a place to report how it went. Setup also offers the public `AC14K_M` CA certificate, which the `smartthings-local` project's [`setup_cert.py --fallback`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py) shows how to get, but no appliance that refused the automatic certificate has been reported to accept it.
 - **Older appliances on TCP 8888 ask for a device token.** See [Older appliances on TCP 8888](#older-appliances-on-tcp-8888).
 
 You can rename devices. LocalThings identifies each appliance by its OCF device ID, not by its name or serial number. Some models ship the same serial number on every unit.
@@ -110,6 +110,10 @@ An appliance that exposes more than one device, such as each indoor unit of a mu
 ### Restarting while an appliance is powered off
 
 If Home Assistant restarts while an appliance is off, LocalThings loads the appliance's device and entities from the last successful setup. They show `unavailable` until the appliance answers, then recover without any action from you. This works for any appliance LocalThings has reached at least once. A new appliance must be reachable to set it up.
+
+If the appliance was already reported powered off when Home Assistant stopped, its entities instead keep that last state, showing it off, until it answers. Some washers stop answering on the local network a few minutes after they power themselves off, and stay silent until they are switched on at the machine or from the SmartThings app. Only the state saved when Home Assistant last stopped cleanly is used, and it is discarded as soon as the appliance answers again.
+
+This means a powered-off appliance does not show `unavailable` after a restart until it is next switched on. That includes one that is genuinely unreachable, for example because its IP address changed or its Wi-Fi is down: it shows off, just as an appliance that drops off the network while running keeps showing its last state.
 
 ### When an appliance's IP address changes
 

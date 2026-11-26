@@ -110,7 +110,7 @@ from .legacy_http_token import (
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
 from .session import psk_provider
-from .transport import AuthRejected, DtlsTransport, local_source_port
+from .transport import AuthRejected, DtlsTransport, earlier_hosts, local_source_port
 
 _TEXT = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
 _MULTILINE = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, multiline=True))
@@ -1100,7 +1100,9 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._plaintext_port: int | None = None
         self._credential_hint = probing.CredentialHint()
 
-    def _setup_source_port(self, host: str) -> int | None:
+    def _setup_source_port(
+        self, host: str, entry: config_entries.ConfigEntry | None = None
+    ) -> int | None:
         """The fixed source port to handshake from, or None for an ephemeral one.
 
         Fixed whenever no entry exists for `host`, so repeated setup attempts
@@ -1108,12 +1110,13 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         behind (issue #504). An existing entry's coordinator may be dialling
         from that same port, and the library binds it with SO_REUSEADDR, so a
         second socket there would share its address pair and our ClientHello
-        would tear down its live session.
+        would tear down its live session. `entry` is the one being
+        reconfigured, which picks its port as its coordinator will.
         """
         entries = self.hass.config_entries.async_entries(DOMAIN)
-        if any(entry.data.get(CONF_HOST) == host for entry in entries):
+        if any(e.data.get(CONF_HOST) == host for e in entries):
             return None
-        return local_source_port(host)
+        return local_source_port(host, earlier_hosts(entries, entry))
 
     @staticmethod
     @callback
@@ -1820,7 +1823,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         _probe_psk,
                         host,
                         *psk_credentials(entry.data),
-                        self._setup_source_port(host),
+                        self._setup_source_port(host, entry),
                     )
                 elif entry.data.get(CONF_TRANSPORT) == TRANSPORT_LEGACY_HTTP:
                     info = await self.hass.async_add_executor_job(

@@ -12,7 +12,7 @@ bespoke variant.
 
 from dataclasses import replace
 
-from ..capabilities import common, dryer, ignored, laundry, operational
+from ..capabilities import common, cooktop, dryer, ignored, laundry, operational
 from ..entities import BinarySensorDesc, ButtonDesc, SelectDesc, SensorDesc, SwitchDesc
 from ._base import DeviceRegistry, _build
 
@@ -99,6 +99,9 @@ def _flexdry_registry() -> DeviceRegistry:
                 )
             if entities or not cap.entities:
                 capabilities.append(replace(cap, entities=entities))
+    # The upper section's board connection flag, the same On/Off field the
+    # 8888 cooktop reports (#906).
+    capabilities.append(cooktop.COOKTOP_CONNECTED)
     return DeviceRegistry(name="flexdry", capabilities=_build(capabilities))
 
 
