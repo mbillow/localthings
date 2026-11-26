@@ -66,7 +66,8 @@ def read_all(
     board in network standby can complete the handshake and then let
     reads time out or report itself off; discovering from that would
     register only the entities that answered. `awake` is read first; its
-    answer saying off raises `BoardInStandby`. `unread` hrefs are skipped.
+    answer saying off raises `BoardInStandby`. `unread` hrefs are skipped
+    and not counted.
     """
     hrefs = [href for href in flat_hrefs(links) if href not in unread]
     resources: dict[str, dict] = {}

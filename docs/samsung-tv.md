@@ -46,13 +46,13 @@ finding concerned sound mode, not picture mode.
   when no MAC is known to wake it); its other entities are unavailable.
   Switching it off logs no error.
 - In standby the TV wakes for a moment every few minutes and answers with its
-  power switch off (measured on a QE85QN95A: 15 to 18 s every 5 minutes).
+  power switch off (measured on a QE85QN95A: 6 to 20 s every 5 minutes).
   That answer reads as off, so those wakes don't bring its other entities
   back with stale values. Any TV whose switch answers off is shown off; Art
   Mode on The Frame and Ambient Mode have not been measured.
 - After a Wake-on-LAN turn-on, LocalThings cancels a connection attempt still
   waiting on the TV that was off and looks for the TV again. The measured TV
-  was on the network 1 to 2 s after the packet.
+  was on the network 0.5 to 1.3 s after the packet.
 - A TV awake in network standby ignores the magic packet (measured twice on a
   QE85QN95A) but turns on when its power switch is written. A turn-on that
   finds the TV there writes the switch, once per standby wake; if the TV drops
@@ -64,11 +64,14 @@ finding concerned sound mode, not picture mode.
 - Once Home Assistant's SSDP integration has reported the TV (a device it
   already knew counts), a TV that is off is polled less often: every 30 s at
   first, doubling to every 2 minutes. Its next power-on announcement finds it
-  at once. If a poll finds the TV on and no announcement came within a minute
-  either side of it, the announcement was lost on the way (a switch filtering
-  multicast, a Wi-Fi drop), and the TV is polled every 30 s while it is off
-  until the integration reloads. A TV that answers but refuses the connection
-  is still polled every 30 s. Other devices keep the 30 s poll.
+  at once; one whose answer it doesn't get yet is polled again within 30 s.
+  When a poll finds the TV on after at least two polls without an answer, and
+  no announcement came within a minute either side of it, LocalThings takes the
+  announcement as lost on the way (a switch filtering multicast, a Wi-Fi drop)
+  and polls the TV every 30 s while it is off until the integration reloads.
+  A TV that refused the connection in between was on, so that case doesn't
+  count. A TV that answers but refuses the connection is still polled every
+  30 s. Other devices keep the 30 s poll.
 - Discovery doesn't read three resources the QE85QN95A lists but doesn't
   answer while on (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
   `/autoreconnect/ap`), each of which would cost a read timeout.

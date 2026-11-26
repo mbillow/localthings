@@ -483,11 +483,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # their port on every power-on; at the general cap, one turned back on
     # would wait up to 30 minutes for the next lookup.
     _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
-    # Cap of the doubling poll interval of a dark TV whose SSDP announcements
-    # reach Home Assistant; its power-on announcement finds it (async_device_announced).
+    # Cap of the doubling poll interval of a dark TV whose SSDP announcements reach Home
+    # Assistant: the longest a TV switched on waits to be seen when its power-on alive is lost.
     _DARK_POLL_MAX_S: float = 120.0
-    # An alive this close to a TV's answer after a dark spell announced that power-on;
-    # the QE85QN95A's came 0.5-4 s after it was on, and discovery after a restart takes ~15 s.
+    # An alive this long before or after the answer ending a dark spell announced that
+    # power-on; the QE85QN95A's came 0.5-4 s after a Wake-on-LAN packet.
     _ANNOUNCE_GRACE_S: float = 60.0
 
     # A single reconnect is normal appliance behavior (README's "Known
@@ -732,8 +732,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_alive: float | None = None
         self._unannounced_at: float | None = None
         self._announce_missed = False
-        # The last failed cycle found the device dark, not refusing the session.
-        self._dark_cycle = False
+        # Failed cycles of the current spell that found the device dark, not refusing.
+        self._dark_cycles = 0
         # The last cycle found the board in network standby, session open.
         self._standby_cycle = False
         # The last non-empty /oic/res answer: kept across a reconnect whose
@@ -3458,8 +3458,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._persist_read_mode()
         self._consecutive_poll_timeouts = 0
         if self._failed_cycles:
-            if self._dark_cycle:
+            # Two dark polls or more, none refused, is a TV that was off; one is a blip.
+            if self._dark_cycles == self._failed_cycles >= 2:
                 self._check_announced()
+            self._dark_cycles = 0
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
             self._failed_cycles = 0
             self.update_interval = timedelta(seconds=SUMMARY_INTERVAL_S)
@@ -3527,13 +3529,25 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         raise UpdateFailed(f"{what}: {e}") from e
 
     def _pace_dark_polls(self, e: Exception) -> None:
-        """Poll a dark TV whose announcements reach HA less often. A refused
-        session (a fatal alert) is a TV that answers, so it is not dark."""
+        """Poll a dark TV whose announcements reach HA less often, until one is missed.
+        A refused session (a fatal alert) is a TV that answers, so it is not dark."""
         refused = isinstance(e, SessionError) and not isinstance(e, SessionClosedError)
-        self._dark_cycle = not refused
+        if not refused:
+            self._dark_cycles += 1
         self._settle_announced()
+        # An alive whose look found nothing yet: the TV is still coming up.
+        now = time.monotonic()
+        coming_up = self._last_alive is not None and now - self._last_alive <= (
+            self._ANNOUNCE_GRACE_S
+        )
         seconds = SUMMARY_INTERVAL_S
-        if self.is_tv() and self._announces and not self._announce_missed and not refused:
+        if (
+            self.is_tv()
+            and self._announces
+            and not self._announce_missed
+            and not refused
+            and not coming_up
+        ):
             doublings = min(self._failed_cycles - 1, 8)
             seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
         self.update_interval = timedelta(seconds=seconds)

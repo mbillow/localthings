@@ -214,7 +214,12 @@ async def test_a_tv_announcing_from_standby_is_read_on_its_open_session(
     ids=["announces", "handshake-cancelled", "refused", "silent"],
 )
 async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
-    hass: HomeAssistant, ssdp, announced: bool, error: Exception, intervals: list[int]
+    hass: HomeAssistant,
+    ssdp,
+    clock: _Clock,
+    announced: bool,
+    error: Exception,
+    intervals: list[int],
 ) -> None:
     """Its power-on announcement finds it; the polls back off to a cap and
     return to the summary interval when it answers. A TV that refuses the
@@ -224,7 +229,7 @@ async def test_a_dark_tv_is_polled_less_often_once_it_announces_itself(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
     if announced:
-        callback(None, _Change.ALIVE)  # replayed at registration: the TV is on
+        _announced(callback, clock)
     assert coordinator._announce_task is None
     seen = []
 
@@ -285,16 +290,31 @@ async def _cycle(coordinator, session, on: bool) -> float:
     return coordinator.update_interval.total_seconds()
 
 
-async def _dark(coordinator, session, n: int) -> list[float]:
-    return [await _cycle(coordinator, session, False) for _ in range(n)]
+async def _dark(coordinator, session, n: int, kind: str = "standby") -> list[float]:
+    """`n` dark polls: standby reads, or handshakes that time out (the TV fully off)."""
+    seen = []
+    for _ in range(n):
+        if kind == "standby":
+            seen.append(await _cycle(coordinator, session, False))
+        else:
+            coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+            seen.append(coordinator.update_interval.total_seconds())
+    return seen
+
+
+def _announced(callback, clock: _Clock) -> None:
+    """The scanner replayed the TV at registration, longer ago than the grace."""
+    callback(None, _Change.ALIVE)
+    clock.offset += GRACE + 1
 
 
 def _missed_records(caplog) -> list:
     return [r for r in caplog.records if MISSED in r.getMessage()]
 
 
+@pytest.mark.parametrize("kind", ["standby", "timeout"])
 async def test_a_tv_a_poll_finds_on_unannounced_keeps_the_summary_interval(
-    hass: HomeAssistant, ssdp, clock: _Clock, caplog
+    hass: HomeAssistant, ssdp, clock: _Clock, caplog, kind: str
 ) -> None:
     """No alive within the grace of a poll finding the TV on is an announcement
     lost on the way: dark polls stay at the summary interval from then on,
@@ -303,19 +323,18 @@ async def test_a_tv_a_poll_finds_on_unannounced_keeps_the_summary_interval(
     session = await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
-    callback(None, _Change.ALIVE)  # replayed at registration
-    assert await _dark(coordinator, session, 3) == [30, 60, 120]
-    clock.offset += GRACE + 1
+    _announced(callback, clock)
+    assert await _dark(coordinator, session, 3, kind) == [30, 60, 120]
 
     assert await _cycle(coordinator, session, True) == 30
+    assert await _dark(coordinator, session, 1, kind) == [30]  # inside the grace
     clock.offset += GRACE + 1
-    assert await _dark(coordinator, session, 4) == [30] * 4
+    assert await _dark(coordinator, session, 3, kind) == [30] * 3
     assert len(_missed_records(caplog)) == 1
 
-    clock.offset += GRACE + 1
     await _cycle(coordinator, session, True)
     clock.offset += GRACE + 1
-    assert await _dark(coordinator, session, 2) == [30] * 2
+    assert await _dark(coordinator, session, 2, kind) == [30] * 2
     assert len(_missed_records(caplog)) == 1
 
 
@@ -329,9 +348,8 @@ async def test_a_tv_announced_near_its_answer_keeps_backing_off(
     session = await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
-    callback(None, _Change.ALIVE)
+    _announced(callback, clock)
     await _dark(coordinator, session, 3)
-    clock.offset += GRACE + 1
 
     if when == "before":
         session.resources[SWITCH] = {"value": True}
@@ -349,6 +367,52 @@ async def test_a_tv_announced_near_its_answer_keeps_backing_off(
     assert _missed_records(caplog) == []
 
 
+async def test_a_spell_after_an_announced_one_is_judged_on_its_own(
+    hass: HomeAssistant, ssdp, clock: _Clock, caplog
+) -> None:
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    _announced(callback, clock)
+    await _dark(coordinator, session, 3, "timeout")
+    await _cycle(coordinator, session, True)
+    callback(None, _Change.ALIVE)
+    clock.offset += GRACE + 1
+
+    await _dark(coordinator, session, 3, "timeout")
+    await _cycle(coordinator, session, True)
+    clock.offset += GRACE + 1
+
+    assert await _dark(coordinator, session, 2, "timeout") == [30] * 2
+    assert len(_missed_records(caplog)) == 1
+
+
+async def test_an_alive_whose_look_finds_the_tv_not_up_yet_is_followed_soon(
+    hass: HomeAssistant, ssdp, clock: _Clock, caplog
+) -> None:
+    """The alive can come before the TV answers: the next poll is due in 30 s,
+    not at the cap, and its answer counts as announced."""
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    _announced(callback, clock)
+    assert await _dark(coordinator, session, 3) == [30, 60, 120]
+
+    callback(None, _Change.ALIVE)  # its look reads standby
+    async with asyncio.timeout(5):
+        await coordinator._announce_task
+    assert coordinator._failed_cycles == 4
+    assert coordinator.update_interval.total_seconds() == 30
+    clock.offset += 30
+    await _cycle(coordinator, session, True)
+    clock.offset += GRACE + 1
+
+    assert await _dark(coordinator, session, 3) == [30, 60, 120]
+    assert _missed_records(caplog) == []
+
+
 async def test_an_alive_after_the_tv_went_dark_again_still_counts(
     hass: HomeAssistant, ssdp, clock: _Clock
 ) -> None:
@@ -357,9 +421,8 @@ async def test_an_alive_after_the_tv_went_dark_again_still_counts(
     session = await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
-    callback(None, _Change.ALIVE)
+    _announced(callback, clock)
     await _dark(coordinator, session, 2)
-    clock.offset += GRACE + 1
     await _cycle(coordinator, session, True)
     assert await _dark(coordinator, session, 1) == [30]
     clock.offset += GRACE / 2
@@ -379,38 +442,53 @@ async def test_an_alive_after_the_grace_is_a_missed_announcement(
     session = await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
-    callback(None, _Change.ALIVE)
+    _announced(callback, clock)
     await _dark(coordinator, session, 2)
-    clock.offset += GRACE + 1
     await _cycle(coordinator, session, True)
     clock.offset += GRACE + 1
-
-    callback(None, _Change.ALIVE)
+    _announced(callback, clock)
 
     assert await _dark(coordinator, session, 3) == [30] * 3
 
 
-async def test_a_tv_answering_after_refusing_the_session_is_not_judged(
-    hass: HomeAssistant, ssdp, clock: _Clock
+async def test_a_tv_on_through_one_failed_poll_is_not_judged(
+    hass: HomeAssistant, ssdp, clock: _Clock, caplog
 ) -> None:
-    """A refused session is a TV that is on: its next answer ends no dark spell."""
+    """One failed cycle is a blip of a TV that stayed on, with no alive due."""
     entry = _entry(hass)
-    await _setup_tv(hass, entry)
+    session = await _setup_tv(hass, entry)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     [(callback, _match)] = ssdp.registered
-    callback(None, _Change.ALIVE)
-    coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
-    clock.offset += GRACE + 1
-    coordinator._device_unreachable("session refused", SessionError())
-    coordinator._mark_device_answered()
+    _announced(callback, clock)
+    await _dark(coordinator, session, 1, "timeout")
+    await _cycle(coordinator, session, True)
     clock.offset += GRACE + 1
 
-    seen = []
-    for _ in range(3):
-        coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
-        seen.append(coordinator.update_interval.total_seconds())
+    assert await _dark(coordinator, session, 3, "timeout") == [30, 60, 120]
+    assert _missed_records(caplog) == []
 
-    assert seen == [30, 60, 120]
+
+@pytest.mark.parametrize(
+    "spell",
+    [["dark", "dark", "refused"], ["refused", "refused", "dark", "dark"]],
+    ids=["refused-last", "refused-first"],
+)
+async def test_a_tv_that_refused_the_session_in_the_spell_is_not_judged(
+    hass: HomeAssistant, ssdp, clock: _Clock, spell: list[str]
+) -> None:
+    """A refused session is a TV that is on: the spell was no power-off."""
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    [(callback, _match)] = ssdp.registered
+    _announced(callback, clock)
+    for cycle in spell:
+        error = SessionError() if cycle == "refused" else TimeoutError("timed out")
+        coordinator._device_unreachable("device unreachable", error)
+    await _cycle(coordinator, session, True)
+    clock.offset += GRACE + 1
+
+    assert await _dark(coordinator, session, 3, "timeout") == [30, 60, 120]
 
 
 async def test_a_tv_that_never_announced_reports_no_missed_announcement(
