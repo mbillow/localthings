@@ -370,3 +370,99 @@ def test_a_board_proven_to_have_device0_is_not_probe_scanned(hass: HomeAssistant
         coordinator._rediscover_port(40294)
 
     assert calls == [False]
+
+
+async def test_fixed_port_timeout_falls_back_to_ephemeral_port_and_remembers_it(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    """A device that drops handshakes from the fixed source port
+    (25K_REF_LCD_FHUB10.0) connects on an ephemeral port and keeps using it."""
+    from custom_components.localthings.transport import local_source_port
+
+    attempts: list[tuple[int, int | None]] = []
+
+    def _transport(data, *, local_port=None, **kwargs):
+        port = data[CONF_PORT]
+
+        class _T:
+            def connect(self) -> None:
+                attempts.append((port, local_port))
+                if local_port is not None:
+                    raise TimeoutError("handshake timed out")
+
+            def close(self) -> None:
+                pass
+
+        return _T()
+
+    monkeypatch.setattr(coordinator_module, "create_transport", _transport)
+    monkeypatch.setattr(probing, "moved_secure_port", lambda *a, **k: None)
+    monkeypatch.setattr(
+        coordinator_module,
+        "read_identity",
+        lambda sess, serial: DeviceIdentity(
+            manufacturer="Samsung Electronics",
+            model="25K_REF_LCD_FHUB10.0",
+            name="Samsung Refrigerator",
+            serial=None,
+            device_id=DEVICE_ID,
+        ),
+    )
+
+    coordinator = _coordinator(hass)
+    await hass.async_add_executor_job(coordinator._connect_session)
+
+    fixed = local_source_port(HOST)
+    assert attempts == [(OLD_PORT, fixed), (OLD_PORT, None)]
+    assert coordinator._session is not None
+    assert coordinator._use_ephemeral_port is True
+
+    # Reconnects go straight to an ephemeral port without paying another timeout.
+    await hass.async_add_executor_job(coordinator._close_session)
+    attempts.clear()
+    await hass.async_add_executor_job(coordinator._connect_session)
+    assert attempts == [(OLD_PORT, None)]
+
+
+async def test_moved_port_falls_back_to_ephemeral_only_if_fixed_port_times_out(
+    hass: HomeAssistant, monkeypatch
+) -> None:
+    from custom_components.localthings.transport import local_source_port
+
+    attempts: list[tuple[int, int | None]] = []
+
+    def _transport(data, *, local_port=None, **kwargs):
+        port = data[CONF_PORT]
+
+        class _T:
+            def connect(self) -> None:
+                attempts.append((port, local_port))
+                if port != NEW_PORT or local_port is not None:
+                    raise TimeoutError("handshake timed out")
+
+            def close(self) -> None:
+                pass
+
+        return _T()
+
+    monkeypatch.setattr(coordinator_module, "create_transport", _transport)
+    monkeypatch.setattr(probing, "moved_secure_port", lambda *a, **k: NEW_PORT)
+    monkeypatch.setattr(
+        coordinator_module,
+        "read_identity",
+        lambda sess, serial: DeviceIdentity(
+            manufacturer="Samsung Electronics",
+            model="25K_REF_LCD_FHUB10.0",
+            name="Samsung Refrigerator",
+            serial=None,
+            device_id=DEVICE_ID,
+        ),
+    )
+
+    coordinator = _coordinator(hass)
+    await hass.async_add_executor_job(coordinator._connect_session)
+
+    fixed = local_source_port(HOST)
+    assert attempts == [(OLD_PORT, fixed), (NEW_PORT, fixed), (NEW_PORT, None)]
+    assert coordinator._moved_port == NEW_PORT
+    assert coordinator._use_ephemeral_port is True

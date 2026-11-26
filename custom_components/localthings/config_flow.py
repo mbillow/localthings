@@ -1054,7 +1054,21 @@ def _probe_psk(host: str, identity: str, key: str, local_port: int | None = None
     (#435).
     """
     scan = probing.look(host)
-    info = _handshake_and_read(host, scan, None, None, local_port, psk=psk_provider(identity, key))
+    auth = psk_provider(identity, key)
+    try:
+        info = _handshake_and_read(host, scan, None, None, local_port, psk=auth)
+    except HandshakeTimeout:
+        if local_port is None:
+            raise
+        # Some PSK boards (25K_REF_LCD_FHUB10.0) drop handshakes from the
+        # fixed source port; fall back to an ephemeral port only after it
+        # times out.
+        _LOGGER.debug(
+            "PSK handshake to %s timed out from fixed port %d; retrying with an ephemeral port",
+            host,
+            local_port,
+        )
+        info = _handshake_and_read(host, scan, None, None, None, psk=auth)
     if info["ocf_device_id"] is None:
         raise IdentityUnproven(f"{host} authenticated but reported no usable /oic/d di")
     return info
