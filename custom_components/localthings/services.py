@@ -46,6 +46,7 @@ from .const import (
     SERVICE_WRITE_RESOURCE,
 )
 from .coordinator import LocalThingsCoordinator, normalize_href, split_href_query
+from .devices import device_info_fields
 from .entity import entity_unique_id
 from .registry.capabilities import cook
 from .registry.capabilities import tv as tv_caps
@@ -187,10 +188,14 @@ def _resolve_target(
         )
 
     for coordinator in hass.data.get(DOMAIN, {}).values():
-        if device.identifiers & coordinator.device_info.get("identifiers", set()):
+        if device.identifiers & device_info_fields(coordinator.device_info).get(
+            "identifiers", set()
+        ):
             return coordinator, MAIN, device_id
         for sub in coordinator.subdevices:
-            if device.identifiers & coordinator.device_info_for(sub).get("identifiers", set()):
+            if device.identifiers & device_info_fields(coordinator.device_info_for(sub)).get(
+                "identifiers", set()
+            ):
                 return coordinator, sub, device_id
 
     raise ServiceValidationError(

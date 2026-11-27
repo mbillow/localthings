@@ -27,6 +27,7 @@ from .coordinator import (
     mode_spec_store,
     snapshot_store,
 )
+from .devices import device_info_fields
 from .entity import async_load_instance_names
 from .registry.identity import resolve_serial
 from .rekey import rekey_entry
@@ -412,9 +413,11 @@ async def async_remove_config_entry_device(
     coordinator: LocalThingsCoordinator | None = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     if coordinator is None:
         return True  # entry not loaded -- nothing claims this device
-    live = set(coordinator.device_info.get("identifiers") or set())
+    live = set(device_info_fields(coordinator.device_info).get("identifiers") or set())
     for subdevice in coordinator.subdevices:
-        live |= set(coordinator.device_info_for(subdevice).get("identifiers") or set())
+        live |= set(
+            device_info_fields(coordinator.device_info_for(subdevice)).get("identifiers") or set()
+        )
     return not (device.identifiers & live)
 
 
