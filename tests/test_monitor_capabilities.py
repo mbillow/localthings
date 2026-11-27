@@ -1,4 +1,11 @@
-"""M7 Smart Monitors (#815): Tizen TV boards with the /sec/tv/* surface."""
+"""M7 Smart Monitors (#815): Tizen TV boards with the /sec/tv/* surface.
+
+They are tuner-less Samsung TVs, so they bind the TV's writable media
+surface -- media player (power, volume/mute, input source, sound mode),
+remote, open-app and casting -- not just picture mode (#936). Writes were
+confirmed live on an M70A (monitor_ls32am702): /sec/tv/audio and
+/sec/tv/mode/sound both answered 2.04 controlResponse result=true and held.
+"""
 
 from typing import Any
 
@@ -14,7 +21,7 @@ from custom_components.localthings.registry.redact import REDACTED, redact_resou
 from tests.conftest import _load_device
 
 DEVICE_TYPES = ("oic.wk.d", "x.com.st.d.monitor")
-FIXTURES = ("monitor_ls32dm702", "monitor_ls43dm703")
+FIXTURES = ("monitor_ls32dm702", "monitor_ls43dm703", "monitor_ls32am702")
 
 
 def _bound(name):
@@ -44,11 +51,40 @@ def test_routes_on_oic_d_alone():
     [
         (
             "monitor_ls32dm702",
-            {"network_connection": "wifi", "illuminance": 602, "picture_mode": "modeGen_458775"},
+            {
+                "network_connection": "wifi",
+                "illuminance": 602,
+                "picture_mode": "modeGen_458775",
+                "media_player": "on",
+                "now_showing": "PC",
+                "channel": None,
+                "open_app": None,
+            },
         ),
         (
             "monitor_ls43dm703",
-            {"network_connection": "wifi", "illuminance": 118, "picture_mode": "modeEco"},
+            {
+                "network_connection": "wifi",
+                "illuminance": 118,
+                "picture_mode": "modeEco",
+                "media_player": "on",
+                "now_showing": "삼성 TV Plus",
+                "channel": "MBC every1 어서와 한국은 처음이지?",
+                "open_app": None,
+            },
+        ),
+        (
+            # M70A (LS32AM702UUXEN, issue #936): a 2020 board with no ambient
+            # light sensor, so no illuminance key, idle on HDMI 2.
+            "monitor_ls32am702",
+            {
+                "network_connection": "wifi",
+                "picture_mode": "modeEntertainment",
+                "media_player": "on",
+                "now_showing": "",
+                "channel": None,
+                "open_app": None,
+            },
         ),
     ],
 )
