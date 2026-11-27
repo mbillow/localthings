@@ -90,6 +90,7 @@ REGISTRY = DeviceRegistry(
             # flag the EHS reports.
             airconditioner.INTERLOCK,
             ehs.AWAY_MODE,
+            airconditioner.OUTDOOR_TEMPERATURE,
             *airconditioner.COVERAGE,
         ]
     ),

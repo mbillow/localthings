@@ -2541,3 +2541,15 @@ def test_flexdry_upper_section_binds_its_connection_flag():
 
     assert unbound == []
     assert flatten(bound, resources)["cloud_connected"] is True
+
+
+def test_registry_reproduces_golden_state_keys_for_aim_h04n_system_ac_kit():
+    """The whole AIM-H04N kit (#789): master plus five indoor subdevices, every key prefixed."""
+    name = "airconditioner_aim_h04n_system_ac_kit"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    state_keys = _new_subdevice_aware_state_keys(name, ("oic.wk.d", "oic.d.airconditioner"))
+    assert set(state_keys) == set(golden["state_keys"]), (
+        f"state_keys mismatch:\n"
+        f"  extra:   {sorted(set(state_keys) - set(golden['state_keys']))}\n"
+        f"  missing: {sorted(set(golden['state_keys']) - set(state_keys))}"
+    )
