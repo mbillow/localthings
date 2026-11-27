@@ -26,12 +26,11 @@ from .laundry import (
     OPTION_KIND_SOIL,
     OPTION_KIND_SPIN,
     OPTION_KIND_WATER_TEMPERATURE,
-    _course_codes_from_supported_options,
+    QUICK_DRIVE,
     bool_option_exists,
     bool_option_light,
-    bool_option_switch,
     course_narrowed_options,
-    cycle_options,
+    course_option_switch,
     cycle_select,
     drum_clean_cycles_remaining,
     drum_clean_last_cleaned,
@@ -460,95 +459,6 @@ def _is_hex(value):
     )
 
 
-# Bubble soak / pre-wash / intensive-wash toggles, from the same options[]
-# array (issue #22 follow-up). Each rides as a plain '<Prefix>_On'/'_Off'
-# token, confirmed against a dump taken with Bubble Soak switched on in the
-# app -- the same shape as AiOption/KidsLockBypass in this array.
-#
-# Each also has a hex-pair availability field (BubbleSoakSet,
-# PreWashAvailableSet, IntensiveAvailableSet) with one byte per course: 'F0'
-# where the app enables the control, '00' where it is grayed out. The bytes
-# follow supportedOptions' course order, not editCourseList's (#511): on the
-# three dumps where the orders differ, editCourseList order would enable
-# bubble soak on Drain/Spin and gray out pre-wash on Cotton. exists_fn only
-# runs once at setup, so validate_fn does this per-course check on every
-# write instead, rejecting an on-write with a user-facing error rather than
-# silently no-opping. The read/write/presence machinery is
-# laundry.bool_option_switch, shared with dishwasher's toggles.
-#
-# Extra Rinse passes supported_options_only: its availability bytes follow
-# the supportedOptions record order, and a 25-record table against a
-# 21-entry editCourseList shows the two orders can differ -- so the
-# edit-list fallback below must not decide its bitmap. Unresolvable data
-# reports unknown and leaves the write to the appliance.
-def _bool_option_switch(key, icon, prefix, availability_field, *, supported_options_only=False):
-    def _supported_options_table(course_rep):
-        """The supportedOptions hex table, or None when it is missing or
-        malformed."""
-        table = course_rep.get("x.com.samsung.da.supportedOptions")
-        if isinstance(table, list):
-            table = table[0] if table else None
-        return table if _is_hex(table) else None
-
-    def course_supported(rep, resources):
-        """Whether the selected course allows this toggle; None when the
-        availability data can't be resolved (unrecognized course, missing
-        or mismatched-length bitmap)."""
-        opts = rep.get("x.com.samsung.da.options") or []
-        current = option_value(opts, "Course")
-        course_rep = resources.get("/course/vs/0") or {}
-        if supported_options_only:
-            table = _supported_options_table(course_rep)
-            if table is None:
-                return None
-            course_rep = {
-                **course_rep,
-                "x.com.samsung.da.supportedOptions": table,
-            }
-            courses = _course_codes_from_supported_options(course_rep)
-        else:
-            courses = _course_codes_from_supported_options(course_rep) or cycle_options(resources)
-        if not current or current not in courses:
-            return None
-        raw = option_value(opts, availability_field)
-        if supported_options_only:
-            if not _is_hex(raw) or len(raw) % 2:
-                return None
-        elif raw is None:
-            return None
-        pairs = hex_pairs(raw)
-        if len(pairs) != len(courses):
-            return None
-        return pairs[courses.index(current)] == "F0"
-
-    def validate(p, rep, resources):
-        """Reject turning on when the selected course's byte in
-        `availability_field` isn't 'F0'. Turning off is never blocked, and
-        unresolvable data allows the write -- a false rejection is worse
-        than an occasional no-op."""
-        if p != "On":
-            return None
-        supported = course_supported(rep, resources)
-        if supported is False:
-            return f"{key}_unavailable_for_cycle"
-        return None
-
-    def extra_attributes(rep, resources):
-        """Report whether this option is supported for the active course."""
-        supported = course_supported(rep, resources)
-        return {"course_supported": supported}
-
-    return bool_option_switch(
-        key,
-        icon,
-        prefix,
-        entity_category="config",
-        gate_on_presence=True,
-        validate_fn=validate,
-        extra_state_attributes_fn=extra_attributes,
-    )
-
-
 # AddWash -- the little door for adding a forgotten sock mid-cycle -- rides
 # three independent tokens on the same options[] array:
 #
@@ -697,7 +607,7 @@ WASHER_COURSE = Capability(
             "mdi:lightbulb",
             "DrumLight",
         ),
-        _bool_option_switch(
+        course_option_switch(
             "extra_rinse",
             "mdi:water-plus",
             "ExtraRinse",
@@ -802,11 +712,12 @@ WASHER_COURSE = Capability(
             exists_fn=bool_option_exists("SoftenerAlarm"),
             rep_fn=_dosing_low("SoftenerAlarm"),
         ),
-        _bool_option_switch("bubble_soak", "mdi:chart-bubble", "BubbleSoak", "BubbleSoakSet"),
-        _bool_option_switch(
+        QUICK_DRIVE,
+        course_option_switch("bubble_soak", "mdi:chart-bubble", "BubbleSoak", "BubbleSoakSet"),
+        course_option_switch(
             "pre_wash", "mdi:washing-machine", "PreWashSetting", "PreWashAvailableSet"
         ),
-        _bool_option_switch(
+        course_option_switch(
             "intensive", "mdi:washing-machine", "IntensiveSetting", "IntensiveAvailableSet"
         ),
         SwitchDesc(

@@ -458,12 +458,13 @@ class TestWashOptionToggles:
 
     @staticmethod
     def _keys():
-        return ("bubble_soak", "pre_wash", "intensive")
+        return ("bubble_soak", "pre_wash", "intensive", "quick_drive")
 
     @staticmethod
     def _prefix(key):
         return {
             "bubble_soak": "BubbleSoak",
+            "quick_drive": "QuickDrive",
             "pre_wash": "PreWashSetting",
             "intensive": "IntensiveSetting",
         }[key]

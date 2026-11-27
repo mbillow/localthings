@@ -986,6 +986,7 @@ def bool_option_switch(
     gate_on_presence=False,
     validate_fn=None,
     extra_state_attributes_fn=None,
+    needs_remote_control=True,
 ):
     """A SwitchDesc over a '<prefix>_On'/'<prefix>_Off' options[] token.
 
@@ -1007,7 +1008,109 @@ def bool_option_switch(
         write_fn=bool_option_write(prefix),
         validate_fn=validate_fn,
         extra_state_attributes_fn=extra_state_attributes_fn,
+        needs_remote_control=needs_remote_control,
     )
+
+
+# Availability bytes follow supportedOptions record order, not editCourseList
+# (#511). Extra Rinse and QuickDrive only use a well-formed supportedOptions
+# table; unknown availability leaves the decision to the appliance.
+def course_option_switch(
+    key,
+    icon,
+    prefix,
+    availability_field,
+    *,
+    supported_options_only=False,
+    needs_remote_control=True,
+):
+    """Build a course-dependent toggle from the device's option tokens and bitmap."""
+
+    def _is_hex(value):
+        return (
+            isinstance(value, str)
+            and bool(value)
+            and all(c in "0123456789abcdefABCDEF" for c in value)
+        )
+
+    def _supported_options_table(course_rep):
+        """The supportedOptions hex table, or None when it is missing or
+        malformed."""
+        table = course_rep.get("x.com.samsung.da.supportedOptions")
+        if isinstance(table, list):
+            table = table[0] if table else None
+        return table if _is_hex(table) else None
+
+    def course_supported(rep, resources):
+        """Whether the selected course allows this toggle; None when the
+        availability data can't be resolved (unrecognized course, missing
+        or mismatched-length bitmap)."""
+        opts = rep.get("x.com.samsung.da.options") or []
+        current = option_value(opts, "Course")
+        course_rep = resources.get("/course/vs/0") or {}
+        if supported_options_only:
+            table = _supported_options_table(course_rep)
+            if table is None:
+                return None
+            course_rep = {
+                **course_rep,
+                "x.com.samsung.da.supportedOptions": table,
+            }
+            courses = _course_codes_from_supported_options(course_rep)
+        else:
+            courses = _course_codes_from_supported_options(course_rep) or cycle_options(resources)
+        if not current or current not in courses:
+            return None
+        raw = option_value(opts, availability_field)
+        if supported_options_only:
+            if not _is_hex(raw) or len(raw) % 2:
+                return None
+        elif raw is None:
+            return None
+        pairs = hex_pairs(raw)
+        if len(pairs) != len(courses):
+            return None
+        return pairs[courses.index(current)] == "F0"
+
+    def validate(p, rep, resources):
+        """Reject turning on when the selected course's byte in
+        `availability_field` isn't 'F0'. Turning off is never blocked, and
+        unresolvable data allows the write -- a false rejection is worse
+        than an occasional no-op."""
+        if p != "On":
+            return None
+        supported = course_supported(rep, resources)
+        if supported is False:
+            return f"{key}_unavailable_for_cycle"
+        return None
+
+    def extra_attributes(rep, resources):
+        """Report whether this option is supported for the active course."""
+        supported = course_supported(rep, resources)
+        return {"course_supported": supported}
+
+    return bool_option_switch(
+        key,
+        icon,
+        prefix,
+        entity_category="config",
+        gate_on_presence=True,
+        validate_fn=validate,
+        extra_state_attributes_fn=extra_attributes,
+        needs_remote_control=needs_remote_control,
+    )
+
+
+# WW11DB7B94GEU4 and DV90DB7845GEU4 held both QuickDrive writes with Smart
+# Control off; only the changed token was sent, and neither cycle was started.
+QUICK_DRIVE = course_option_switch(
+    "quick_drive",
+    "mdi:fast-forward",
+    "QuickDrive",
+    "QuickDriveSet",
+    supported_options_only=True,
+    needs_remote_control=False,
+)
 
 
 # /wm/jobbeginingstatus/vs/0 -- the "why did the cycle not start" reason

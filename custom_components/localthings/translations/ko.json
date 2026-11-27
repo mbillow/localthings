@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "버블 불림"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "알림음 잠금"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "선택한 코스에서는 버블 불림을 사용할 수 없습니다."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "선택한 코스에서는 QuickDrive를 사용할 수 없습니다."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "선택한 코스에서는 예비 세탁을 사용할 수 없습니다."

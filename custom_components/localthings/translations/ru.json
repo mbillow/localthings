@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Пузырьковое замачивание"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Блокировка зуммера"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Пузырьковое замачивание недоступно в выбранной программе."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive недоступен для выбранного цикла."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Предварительная стирка недоступна в выбранной программе."

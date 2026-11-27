@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Натапање мехурићима (EcoBubble)"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Закључавање зујалице"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Натапање мехурићима (Bubble Soak) није доступно на изабраном циклусу."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive није доступан за изабрани циклус."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Претпрање није доступно на изабраном циклусу."

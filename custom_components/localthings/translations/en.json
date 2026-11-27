@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Bubble soak"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Buzzer lock"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Bubble Soak isn't available on the selected cycle."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive is not available for the selected cycle."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Pre-wash isn't available on the selected cycle."

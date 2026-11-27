@@ -2539,6 +2539,9 @@
       "bubble_soak": {
         "name": "Blasen-Einweichen"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "station_light": {
         "name": "Stationslicht"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Bubble Soak ist bei dem ausgewählten Programm nicht verfügbar."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive ist für das ausgewählte Programm nicht verfügbar."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Vorwäsche ist bei dem ausgewählten Programm nicht verfügbar."

@@ -18,6 +18,7 @@ from .laundry import (
     OPTION_KIND_DRY,
     OPTION_KIND_DRY_TIME,
     OPTION_KIND_WATER_TEMPERATURE,
+    QUICK_DRIVE,
     bool_option_exists,
     bool_option_light,
     course_narrowed_options,
@@ -216,6 +217,7 @@ DRYER_COURSE = Capability(
         ),
         # DVE53BB8900TA3 reports door/panel lamp changes and accepts this while off.
         bool_option_light("drum_light", "mdi:lightbulb", "DrumLight"),
+        QUICK_DRIVE,
         _enable_option_switch("damp_alert", "mdi:bell-ring-outline", "MixedLoadBell"),
         # SeamlessControl keeps Smart Control on after a cycle. A TP6X_DRYER
         # DV80M8214AW held each write across a reload and readback (#889).
@@ -223,6 +225,7 @@ DRYER_COURSE = Capability(
         # which offer them from the same tokens.
         _enable_option_switch("stay_connect", "mdi:wifi-lock", "SeamlessControl"),
         LAUNDRY_OUT_TIME,
+        QUICK_DRIVE,
         # Reports the active post-cycle tumble, distinct from the
         # wrinkle_prevent switch on /washer/vs/0 that arms it.
         BinarySensorDesc(

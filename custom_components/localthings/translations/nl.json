@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Bubble Soak"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Zoemerslot"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Bubble Soak is niet beschikbaar voor het geselecteerde programma."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive is niet beschikbaar voor het geselecteerde programma."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Voorwas is niet beschikbaar voor het geselecteerde programma."
