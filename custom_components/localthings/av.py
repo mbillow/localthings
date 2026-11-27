@@ -45,6 +45,8 @@ class AVControl:
     _WAKE_REFRESH_S = 2.0
     # The switch write in network standby; the TV answers it in under 0.5 s.
     _STANDBY_WRITE_TIMEOUT_S = 3.0
+    # A failure bound for a key waiting on a turn-on; the TV answered in 4-18 s.
+    _KEY_WAKE_WAIT_S = 30.0
 
     def __init__(self, coordinator: LocalThingsCoordinator) -> None:
         self._coordinator = coordinator
@@ -136,9 +138,28 @@ class AVControl:
         """
         if self._wake_mac() is None:
             return False
+        return self._dark()
+
+    def _dark(self) -> bool:
+        """True after a failed cycle or handshake: the TV is off or in standby."""
         return self._coordinator._failed_cycles > 0 or (
             self._coordinator._session is None and self._coordinator._handshake_failed
         )
+
+    async def async_check_keys(self) -> None:
+        """Raise tv_off for keys to a TV that is off, at once unless a turn-on
+        or an announced look is in flight; the keys then wait for it."""
+        if not self._coordinator.is_tv() or not self._dark():
+            return
+        pending = {
+            task
+            for task in (self._wake_task, self._coordinator._announce_task)
+            if task is not None and not task.done()
+        }
+        if pending:
+            await asyncio.wait(pending, timeout=self._KEY_WAKE_WAIT_S)
+        if self._dark():
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="tv_off")
 
     async def async_media_command(
         self,

@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Управление питанием недоступно для этого устройства"
     },
+    "tv_off": {
+      "message": "Телевизор выключен. Сначала включите его."
+    },
     "wake_on_lan_failed": {
       "message": "Не удалось отправить Wake-on-LAN на телевизор: {error}"
     },

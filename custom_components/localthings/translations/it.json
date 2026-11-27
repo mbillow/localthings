@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Il controllo dell'accensione non è disponibile per questo dispositivo"
     },
+    "tv_off": {
+      "message": "Il televisore è spento. Accendilo prima."
+    },
     "wake_on_lan_failed": {
       "message": "Impossibile inviare Wake-on-LAN al televisore: {error}"
     },

@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Power control isn't available for this device"
     },
+    "tv_off": {
+      "message": "The TV is off. Turn it on first."
+    },
     "wake_on_lan_failed": {
       "message": "Couldn't send Wake-on-LAN to the TV: {error}"
     },

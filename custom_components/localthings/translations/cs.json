@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Ovládání napájení není pro toto zařízení k dispozici"
     },
+    "tv_off": {
+      "message": "Televizor je vypnutý. Nejprve ho zapněte."
+    },
     "wake_on_lan_failed": {
       "message": "Nepodařilo se odeslat Wake-on-LAN do televize: {error}"
     },

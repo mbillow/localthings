@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Aan/uit-bediening is niet beschikbaar voor dit apparaat"
     },
+    "tv_off": {
+      "message": "De tv staat uit. Zet hem eerst aan."
+    },
     "wake_on_lan_failed": {
       "message": "Kan Wake-on-LAN niet naar de tv sturen: {error}"
     },

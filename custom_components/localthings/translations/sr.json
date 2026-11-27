@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Управљање напајањем није доступно за овај уређај"
     },
+    "tv_off": {
+      "message": "Телевизор је искључен. Прво га укључите."
+    },
     "wake_on_lan_failed": {
       "message": "Слање Wake-on-LAN телевизору није успело: {error}"
     },

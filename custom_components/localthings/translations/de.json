@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Die Ein-/Ausschaltsteuerung ist für dieses Gerät nicht verfügbar"
     },
+    "tv_off": {
+      "message": "Der Fernseher ist ausgeschaltet. Schalten Sie ihn zuerst ein."
+    },
     "wake_on_lan_failed": {
       "message": "Wake-on-LAN konnte nicht an den Fernseher gesendet werden: {error}"
     },

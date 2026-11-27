@@ -13,7 +13,9 @@ with Smart Monitors, plus its own entities:
   standby, when the power switch is written instead (see below). Wi-Fi wake
   needs the TV's "Power On with Mobile" setting.
 - **Remote** (`remote.send_command` with `KEY_*` names or aliases; a key goes
-  out at once, alongside any read of the TV's state in progress), **notify**
+  out at once, alongside any read of the TV's state in progress; while the TV
+  is off a key fails at once with "The TV is off", unless a turn-on is under
+  way, which it waits for, up to 30 s), **notify**
   (an on-screen pop-up), an **Open app** select and a **screen off** button.
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
   actions.

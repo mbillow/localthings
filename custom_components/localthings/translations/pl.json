@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "Sterowanie zasilaniem jest niedostępne dla tego urządzenia"
     },
+    "tv_off": {
+      "message": "Telewizor jest wyłączony. Najpierw go włącz."
+    },
     "wake_on_lan_failed": {
       "message": "Nie udało się wysłać Wake-on-LAN do telewizora: {error}"
     },

@@ -3144,6 +3144,9 @@
     "remote_power_unavailable": {
       "message": "La mise sous tension n'est pas disponible pour cet appareil"
     },
+    "tv_off": {
+      "message": "Le téléviseur est éteint. Allumez-le d'abord."
+    },
     "wake_on_lan_failed": {
       "message": "Impossible d'envoyer le Wake-on-LAN au téléviseur : {error}"
     },
