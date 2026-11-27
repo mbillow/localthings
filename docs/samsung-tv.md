@@ -32,6 +32,9 @@ failed or changed.
 
 Source and sound-mode names come from the TV; duplicate input names are
 disambiguated by their wire IDs. Options update as the device changes them.
+The TV can rename an input after the device on it (`AVR-X1800H`, then
+`HDMI 3`), so a script can select it by its wire ID instead (`source: HDMI3`),
+which stays the same.
 
 ## Setup
 
