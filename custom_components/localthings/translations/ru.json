@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "Текст уведомления пуст."
     },
+    "audio_notification_unsupported": {
+      "message": "Это устройство не может воспроизводить звуковые уведомления."
+    },
+    "audio_notification_media_type": {
+      "message": "Саундбар воспроизводит звук как уведомление (music, url или тип audio/*), а не {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} не является http(s)-ссылкой на аудиофайл."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "Не удалось преобразовать звук для саундбара: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "У Home Assistant нет локального URL, с которого саундбар мог бы загрузить звук. Укажите URL локальной сети в разделе Настройки > Система > Сеть."
+    },
     "settings_unsupported": {
       "message": "У этого устройства нет меню настроек телевизора."
     },

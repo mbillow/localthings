@@ -3170,6 +3170,21 @@
     "notify_message_empty": {
       "message": "Порука обавештења је празна."
     },
+    "audio_notification_unsupported": {
+      "message": "Овај уређај не може да пушта звучна обавештења."
+    },
+    "audio_notification_media_type": {
+      "message": "Саундбар пушта звук као обавештење (music, url или тип audio/*), а не {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} није http(s) веза ка звучној датотеци."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "Звук за саундбар није могао да се претвори: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant нема локални URL са којег саундбар може да преузме звук. Подесите URL локалне мреже у Подешавања > Систем > Мрежа."
+    },
     "settings_unsupported": {
       "message": "Овај уређај нема мени подешавања телевизора којим би се управљало."
     },

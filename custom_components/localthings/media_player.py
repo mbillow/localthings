@@ -4,7 +4,8 @@ One entity per device. Its MediaPlayerDesc names the sibling resources it
 reads (power, volume, source, sound mode, track data) and its write_fn turns
 (kind, value) pairs into writes, like climate.py. A feature is offered only
 while the device reports it. A TV's descriptor adds the broadcast channel
-and schedule, its thumbnail and play_media (channels, apps and casting).
+and schedule, its thumbnail and play_media (channels, apps and casting). A
+soundbar's play_media plays audio clips as notifications (audio_notify.py).
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from . import camera_dash, camera_stream
+from . import audio_notify, camera_dash, camera_stream
 from .const import DOMAIN
 from .coordinator import LocalThingsCoordinator
 from .entity import LocalThingsEntity, async_add_bound_entities
@@ -108,6 +109,17 @@ def _is_hls(media_type: str, url: str) -> bool:
 def _is_browsable(item) -> bool:
     media_type = item.media_content_type.lower()
     return media_type.startswith(("image/", "video/")) or media_type in _HLS_MIMETYPES
+
+
+def _is_audio(media_type: str) -> bool:
+    """What an audio notification takes: music (tts.speak's type), a URL, or
+    an audio/* mime type."""
+    media_type = media_type.lower()
+    return media_type in (MediaType.MUSIC, MediaType.URL) or media_type.startswith("audio/")
+
+
+def _is_browsable_audio(item) -> bool:
+    return item.media_content_type.lower().startswith("audio/")
 
 
 async def async_setup_entry(
@@ -236,6 +248,11 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             return self.coordinator.av.wakeable()
         return self._supports_command("power_on")
 
+    def _plays_audio_notifications(self) -> bool:
+        """A soundbar's play_media: clips through its notification receiver.
+        A TV's own play_media takes precedence."""
+        return not self._desc.play_media and self.coordinator.av.can_play_audio_notification()
+
     def _wire_value(self, surface: MediaModeSurface | None, label: str) -> str:
         return next(
             (value for value, shown in self._mode_labels(surface).items() if shown == label),
@@ -266,6 +283,12 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
             # Channels, apps and casting (async_play_media); the browser picks
             # from Home Assistant's media sources.
             features |= MediaPlayerEntityFeature.PLAY_MEDIA | MediaPlayerEntityFeature.BROWSE_MEDIA
+        elif self._plays_audio_notifications():
+            features |= (
+                MediaPlayerEntityFeature.PLAY_MEDIA
+                | MediaPlayerEntityFeature.BROWSE_MEDIA
+                | MediaPlayerEntityFeature.MEDIA_ANNOUNCE
+            )
         if not self._has_media():
             return features
         supported = self._playback().get("supportedModes")
@@ -597,13 +620,18 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
     async def async_browse_media(
         self, media_content_type: MediaType | str | None = None, media_content_id: str | None = None
     ) -> BrowseMedia:
-        """Home Assistant's media sources the TV can show: images, videos and cameras."""
+        """Home Assistant's media sources the TV can show (images, videos and
+        cameras), or a soundbar can play as a notification (audio)."""
+        content_filter = _is_browsable_audio if self._plays_audio_notifications() else _is_browsable
         return await media_source.async_browse_media(
-            self.hass, media_content_id, content_filter=_is_browsable
+            self.hass, media_content_id, content_filter=content_filter
         )
 
     async def async_play_media(self, media_type: MediaType | str, media_id: str, **kwargs) -> None:
         """Play media, superseding any pending camera retry."""
+        if self._plays_audio_notifications():
+            await self._async_play_audio_notification(str(media_type), media_id)
+            return
         async with self.coordinator.playback.async_change():
             await self._async_play_media(media_type, media_id, **kwargs)
 
@@ -687,6 +715,37 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
                 "x.com.samsung.tv.channelName": "",
             },
         )
+
+    async def _async_play_audio_notification(self, media_type: str, media_id: str) -> None:
+        """Play an audio clip after the board's chime, interrupting what plays.
+
+        Experimental: volume and what resumes afterwards are the board's own.
+        """
+        if not _is_audio(media_type):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="audio_notification_media_type",
+                translation_placeholders={"media_type": media_type},
+            )
+        if media_source.is_media_source_id(media_id):
+            sourced = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
+            if not _is_audio(sourced.mime_type):
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="audio_notification_media_type",
+                    translation_placeholders={"media_type": sourced.mime_type},
+                )
+            media_id = sourced.url
+        source = async_process_play_media_url(self.hass, media_id)
+        # ffmpeg would read a file:// or other local URL from the host too.
+        if urlsplit(source).scheme not in ("http", "https"):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="audio_notification_invalid_url",
+                translation_placeholders={"url": media_id},
+            )
+        url = await audio_notify.async_prepare(self.hass, source)
+        await self.coordinator.av.async_play_audio_notification(url)
 
     async def _async_cast(
         self,

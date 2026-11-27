@@ -39,6 +39,14 @@ CAPABILITY_MEDIA = _media_hrefs("/capability/{}/main/0")
 NETWORKAUDIO_MEDIA = _media_hrefs("/sec/networkaudio/av/{}")
 MEDIA_LAYOUTS = (CAPABILITY_MEDIA, NETWORKAUDIO_MEDIA)
 
+# SmartThings' notification receiver. Takes {AUDIO_NOTIFICATION_FIELD: url}:
+# the board downloads the file and plays it (audio_notify.py). A read returns
+# only its type and version, so nothing polls it.
+HREF_AUDIO_NOTIFICATION = "/x.com.samsung/notification/receiver"
+AUDIO_NOTIFICATION_PATH = ["x.com.samsung", "notification", "receiver"]
+AUDIO_NOTIFICATION_TYPE = "x.com.samsung.audionotification"
+AUDIO_NOTIFICATION_FIELD = "x.com.samsung.audio"
+
 HREF_MEDIA_PLAYBACK = CAPABILITY_MEDIA.playback
 HREF_TRACK_DATA = CAPABILITY_MEDIA.track_data
 HREF_SHUFFLE = CAPABILITY_MEDIA.shuffle
@@ -155,6 +163,6 @@ IGNORED: list[Capability] = [
     Capability(href="/sec/contentPanel/info"),
     # Cloud-session self-healing timer.
     Capability(href="/selfhealing/session"),
-    # Phone-notification mirror (incoming calls/messages), not device state.
-    Capability(href="/x.com.samsung/notification/receiver"),
+    # An action, not state: the media player plays notifications through it.
+    Capability(href=HREF_AUDIO_NOTIFICATION),
 ]

@@ -63,11 +63,15 @@ async def test_other_media_types_are_refused(hass: HomeAssistant, media_type) ->
     assert not any(path == _CHANNEL_PATH for path, _body in session.writes)
 
 
-async def test_the_soundbar_offers_no_play_media(hass: HomeAssistant) -> None:
-    await _setup_soundbar(hass, _soundbar_entry(hass))
-
-    assert not _player(hass).supported_features & MediaPlayerEntityFeature.PLAY_MEDIA
+async def test_the_soundbar_tunes_no_channel(hass: HomeAssistant) -> None:
+    """A soundbar's play_media plays audio notifications only."""
+    session = await _setup_soundbar(hass, _soundbar_entry(hass))
     assert hass.data[DOMAIN]
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _player(hass).async_play_media(MediaType.CHANNEL, "1")
+    assert err.value.translation_key == "audio_notification_media_type"
+    assert not any(path == _CHANNEL_PATH for path, _body in session.writes)
 
 
 async def test_the_old_station_name_is_not_shown_under_the_new_number(

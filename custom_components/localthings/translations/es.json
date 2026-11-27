@@ -449,6 +449,21 @@
     "notify_message_empty": {
       "message": "El mensaje de la notificación está vacío."
     },
+    "audio_notification_unsupported": {
+      "message": "Este dispositivo no puede reproducir notificaciones de audio."
+    },
+    "audio_notification_media_type": {
+      "message": "La barra de sonido reproduce audio como notificación (music, url o un tipo audio/*), no {media_type}."
+    },
+    "audio_notification_invalid_url": {
+      "message": "{url} no es un enlace http(s) a un archivo de audio."
+    },
+    "audio_notification_conversion_failed": {
+      "message": "No se pudo convertir el audio para la barra de sonido: {error}"
+    },
+    "audio_notification_no_url": {
+      "message": "Home Assistant no tiene una URL local desde la que la barra de sonido pueda descargar el audio. Configura la URL de la red local en Ajustes > Sistema > Red."
+    },
     "settings_unsupported": {
       "message": "Este dispositivo no tiene un menú de ajustes de TV que se pueda controlar."
     },

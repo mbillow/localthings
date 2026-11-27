@@ -4146,6 +4146,19 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return True
         return href in self._advertised_hrefs()
 
+    def has_resource_type(self, href: str, resource_type: str) -> bool:
+        """True when `href` reports `resource_type` in its rt, in its last
+        read or in its /oic/res link."""
+        rt = self.resource(href).get("rt")
+        if isinstance(rt, list) and resource_type in rt:
+            return True
+        return any(
+            link.get("href") == href
+            and isinstance(link.get("rt"), list)
+            and resource_type in link["rt"]
+            for link in _iter_oic_res_hrefs(self._oic_res())
+        )
+
     # ------------------------------------------------------------------
     # Oven and microwave cook start (issue #473). See cook.py.
     # ------------------------------------------------------------------
