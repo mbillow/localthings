@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.localthings.registry.by_type import _REGISTRY_BY_KEY
 from custom_components.localthings.registry.entities import MediaPlayerDesc
-from tests.localthings.test_tv_remote_beside_reads import _setup
+from tests.localthings.test_tv_remote_beside_reads import _keys, _press, _setup
 
 AUDIO = ["sec", "tv", "audio"]
 
@@ -25,8 +26,8 @@ def _picture(hass: HomeAssistant) -> str:
     )
 
 
-async def _held_call(hass, coordinator, domain, service, data) -> asyncio.Task:
-    """Start a blocking service call while a background read holds the session."""
+def _call(hass, domain, service, data) -> asyncio.Task:
+    """Start a blocking service call as a task."""
     return hass.async_create_task(hass.services.async_call(domain, service, data, blocking=True))
 
 
@@ -77,9 +78,7 @@ async def test_other_writes_wait_for_the_read(hass: HomeAssistant, service, data
     before = len(session.writes)
 
     async with coordinator._session_lock:
-        task = await _held_call(
-            hass, coordinator, "media_player", service, {"entity_id": _player(hass), **data}
-        )
+        task = _call(hass, "media_player", service, {"entity_id": _player(hass), **data})
         await asyncio.sleep(0.1)
         assert len(session.writes) == before
     async with asyncio.timeout(5):
@@ -139,3 +138,67 @@ async def test_a_tv_known_only_from_its_entry_writes_beside_reads(hass: HomeAssi
 
     assert coordinator._beside_reads("/sec/tv/audio")
     assert not coordinator._beside_reads("/sec/tv/switch/binary")
+
+
+async def test_the_live_family_wins_over_the_stored_one(hass: HomeAssistant) -> None:
+    coordinator, _session = await _setup(hass)
+    coordinator.device_type_name = "monitor"
+
+    assert not coordinator._beside_reads("/sec/tv/audio")
+
+
+async def test_a_refused_write_does_not_hold_up_the_keys_behind_it(hass: HomeAssistant) -> None:
+    """A refusal's confirming read waits for the background read; a key sent
+    meanwhile still goes out beside it."""
+    coordinator, session = await _setup(hass)
+    coordinator._CONFIRM_DELAY_S = 0
+    write = session.write
+
+    def _refuse_mute(path, body, timeout=None):
+        if list(path) == AUDIO:
+            session.writes.append((list(path), body))
+            return 0x44, {"controlResponse": {"result": False}}
+        return write(path, body, timeout)
+
+    session.write = _refuse_mute
+    async with coordinator._session_lock:
+        mute = _call(
+            hass,
+            "media_player",
+            "volume_mute",
+            {"entity_id": _player(hass), "is_volume_muted": True},
+        )
+        await asyncio.sleep(0.1)
+        assert not mute.done()
+        async with asyncio.timeout(2):
+            await _press(hass, "KEY_CHUP")
+        assert _keys(session) == ["KEY_CHUP"]
+    async with asyncio.timeout(5):
+        await asyncio.gather(mute, return_exceptions=True)
+
+
+async def test_unloading_cancels_a_pending_confirm(hass: HomeAssistant) -> None:
+    coordinator, _session = await _setup(hass)
+    entry = coordinator._entry
+    started, hang = asyncio.Event(), asyncio.Event()
+
+    async def _held_refresh() -> None:
+        started.set()
+        await hang.wait()
+
+    with patch.object(coordinator, "async_request_refresh", _held_refresh):
+        await hass.services.async_call(
+            "media_player",
+            "volume_mute",
+            {"entity_id": _player(hass), "is_volume_muted": True},
+            blocking=True,
+        )
+        async with asyncio.timeout(2):
+            await started.wait()
+        confirms = [t for t in entry._background_tasks if t.get_name() == "localthings_confirm"]
+        assert confirms
+        async with asyncio.timeout(5):
+            assert await hass.config_entries.async_unload(entry.entry_id)
+        await asyncio.sleep(0)
+
+    assert all(t.cancelled() for t in confirms)

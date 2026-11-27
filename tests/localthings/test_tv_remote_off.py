@@ -29,13 +29,17 @@ async def _standby(coordinator, session) -> None:
     await coordinator.async_refresh()
 
 
-@pytest.mark.parametrize("kind", ["standby", "dark"])
+@pytest.mark.parametrize("kind", ["standby", "no_handshake", "two_failed_polls"])
 async def test_a_key_to_a_tv_that_is_off_fails_at_once(hass: HomeAssistant, kind: str) -> None:
     coordinator, session = await _setup(hass)
     if kind == "standby":
         await _standby(coordinator, session)
+    elif kind == "no_handshake":
+        coordinator._session = None
+        coordinator._handshake_failed = True
     else:
-        coordinator._device_unreachable("device unreachable", TimeoutError("timed out"))
+        for _ in range(2):
+            coordinator._device_unreachable("poll failed", TimeoutError("timed out"))
 
     with pytest.raises(HomeAssistantError) as err:
         async with asyncio.timeout(1):
@@ -43,6 +47,17 @@ async def test_a_key_to_a_tv_that_is_off_fails_at_once(hass: HomeAssistant, kind
 
     assert err.value.translation_key == "tv_off"
     assert _keys(session) == []
+
+
+async def test_one_failed_poll_of_a_tv_that_answers_does_not_refuse_keys(
+    hass: HomeAssistant,
+) -> None:
+    coordinator, session = await _setup(hass)
+    coordinator._device_unreachable("poll failed", TimeoutError("timed out"))
+
+    await _press(hass, "KEY_VOLUP")
+
+    assert _keys(session) == ["KEY_VOLUP"]
 
 
 async def test_a_key_to_a_tv_that_is_on_goes_out(hass: HomeAssistant) -> None:

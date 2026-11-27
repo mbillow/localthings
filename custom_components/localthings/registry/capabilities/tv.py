@@ -337,9 +337,10 @@ def _screen_off_write(p, rep, href=None):
 # discovery a read timeout; no entity reads them (has_href uses /oic/res).
 UNREAD_HREFS = frozenset({"/sec/tv/remotecontrol", HREF_NATIVE_APP, "/autoreconnect/ap"})
 
-# Writes a QE85QN95A took beside back-to-back reads, two-part reads included:
-# every write answered, no read failed or changed, and each took effect as
-# often as the same writes with no reads running.
+# Writes a QE85QN95A took beside back-to-back reads, two-part reads included
+# (keys, mute, input, picture mode): every write answered, no read failed or
+# changed, and each took effect as often as with no reads running. A volume
+# write is the same single request to /sec/tv/audio as mute.
 BESIDE_READ_HREFS = frozenset({"/sec/tv/remotecontrol", HREF_AUDIO, HREF_INPUT, HREF_PICTURE})
 
 # Accepts KEY_* names; remote.py adds friendly aliases. The notify entity and

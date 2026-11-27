@@ -138,18 +138,24 @@ class AVControl:
         """
         if self._wake_mac() is None:
             return False
-        return self._dark()
-
-    def _dark(self) -> bool:
-        """True after a failed cycle or handshake: the TV is off or in standby."""
         return self._coordinator._failed_cycles > 0 or (
             self._coordinator._session is None and self._coordinator._handshake_failed
+        )
+
+    def _known_off(self) -> bool:
+        """The TV's switch read off, no handshake completed, or two cycles
+        failed; one failed cycle of a TV that answers is not enough."""
+        coordinator = self._coordinator
+        return (
+            coordinator._standby_cycle
+            or (coordinator._session is None and coordinator._handshake_failed)
+            or coordinator._failed_cycles >= 2
         )
 
     async def async_check_keys(self) -> None:
         """Raise tv_off for keys to a TV that is off, at once unless a turn-on
         or an announced look is in flight; the keys then wait for it."""
-        if not self._coordinator.is_tv() or not self._dark():
+        if not self._coordinator.is_tv() or not self._known_off():
             return
         pending = {
             task
@@ -158,7 +164,7 @@ class AVControl:
         }
         if pending:
             await asyncio.wait(pending, timeout=self._KEY_WAKE_WAIT_S)
-        if self._dark():
+        if self._known_off():
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="tv_off")
 
     async def async_media_command(

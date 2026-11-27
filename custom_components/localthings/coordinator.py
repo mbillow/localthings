@@ -4275,18 +4275,30 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if beside_reads:
             async with self._beside_lock:
                 answered, failed = await self._send_beside_reads(path_segs, body, write_href)
-                return await self._async_put(
-                    path_segs,
-                    body,
-                    write_href,
-                    on_retry,
-                    retry=retry,
-                    prepare_body=prepare_body,
-                    confirm_on_refusal=confirm_on_refusal,
-                    control_response=control_response,
-                    answered=answered,
-                    failed=failed,
-                )
+                if answered is None:
+                    # The locked reconnect and resend, before the next beside write.
+                    return await self._async_put(
+                        path_segs,
+                        body,
+                        write_href,
+                        on_retry,
+                        retry=retry,
+                        prepare_body=prepare_body,
+                        confirm_on_refusal=confirm_on_refusal,
+                        control_response=control_response,
+                        failed=failed,
+                    )
+            # Answered: a refusal's confirming read waits for the session, not the next write.
+            return await self._async_put(
+                path_segs,
+                body,
+                write_href,
+                on_retry,
+                retry=retry,
+                confirm_on_refusal=confirm_on_refusal,
+                control_response=control_response,
+                answered=answered,
+            )
         sent = False
 
         def _do_put():
