@@ -18,10 +18,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 
-# Set through a plain mapping either way: whichever key this core wants, the
-# other one is absent from its DeviceInfo TypedDict, so a static assignment
-# could only ever type-check against one HA generation.
 _HAS_VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
+
+
+def device_info_fields(info: DeviceInfo) -> dict[str, Any]:
+    """Read only set fields from either DeviceInfo representation."""
+    if as_dict := getattr(info, "as_dict", None):
+        return as_dict()
+    return cast("dict[str, Any]", info)
 
 
 def find_entry_device(
@@ -46,19 +50,13 @@ def find_entry_device(
     )
 
 
-def set_via_device(
-    hass: HomeAssistant, entry_id: str, info: DeviceInfo, parent: tuple[str, str]
-) -> None:
-    """Link `info` under the `parent` identifier's device row, in place.
-
-    A core new enough to want `via_device_id` needs the parent's registry id,
-    and drops the entity outright if that id names no registered device -- so
-    an unregistered parent leaves the link unset here, exactly as an
-    unresolvable `via_device` does on an older core. Either way the next
-    entity added under this device picks the link up once the parent exists.
-    """
+def via_device_fields(
+    hass: HomeAssistant, entry_id: str, parent: tuple[str, str]
+) -> dict[str, Any]:
+    """Return the parent link to include in a DeviceInfo constructor."""
     if not _HAS_VIA_DEVICE_ID:
-        cast("dict[str, Any]", info)["via_device"] = parent
-        return
+        return {"via_device": parent}
+    # Core drops the entity if via_device_id names an unregistered device.
     if (device := find_entry_device(hass, entry_id, (parent,))) is not None:
-        cast("dict[str, Any]", info)["via_device_id"] = device.id
+        return {"via_device_id": device.id}
+    return {}

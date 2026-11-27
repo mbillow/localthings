@@ -70,7 +70,7 @@ from .credentials import (
     check_device_binding,
     requires_authenticated_device_id,
 )
-from .devices import set_via_device
+from .devices import device_info_fields, via_device_fields
 from .learned import LEARNABLE, LearnedModes, persist
 from .observe import GRACE_PERIOD_S, MODE_OBSERVE, MODE_POLL, ObserveManager
 from .playback import PlaybackController
@@ -1281,7 +1281,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="cloud_courses_undiscovered",
                 translation_placeholders={
-                    "device_name": self.device_info.get("name") or "This appliance",
+                    "device_name": device_info_fields(self.device_info).get("name")
+                    or "This appliance",
                     "pending": str(len(pending)),
                     "total": str(len(slots)),
                 },
@@ -1305,13 +1306,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         answered yet. `serial_number` is set from it when it is a real one,
         but is informational only, not an identifier.
         """
-        base_name = self.device_info.get("name") or "Samsung Appliance"
+        parent_info = device_info_fields(self.device_info)
+        base_name = parent_info.get("name") or "Samsung Appliance"
         if subdevice.kind == "main":
             if label := _main_cavity_label(
                 self.device_type_name,
                 (self.discovery_canonical(child) for child in self.subdevices),
             ):
-                return {**self.device_info, "name": f"{base_name} {label}"}
+                return DeviceInfo(**{**parent_info, "name": f"{base_name} {label}"})
             return self.device_info
         resources = self.canonical_resources(subdevice)
         info = resources.get("/information/vs/0", {})
@@ -1344,18 +1346,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if subdevice.kind == "indexed"
                 else "Secondary Subdevice"
             )
-        info = DeviceInfo(
+        return DeviceInfo(
             identifiers={self.subdevice_identifier(subdevice.key)},
             name=f"{base_name} {label}",
-            manufacturer=self.device_info.get("manufacturer") or "Samsung",
+            manufacturer=parent_info.get("manufacturer") or "Samsung",
             model=model or None,
+            **({"serial_number": serial} if serial else {}),
+            **via_device_fields(self.hass, self._entry.entry_id, (DOMAIN, self.device_key)),
         )
-        if serial:
-            # As on the main card: a placeholder isn't shown, and a key left
-            # out keeps what the registry has.
-            info["serial_number"] = serial
-        set_via_device(self.hass, self._entry.entry_id, info, (DOMAIN, self.device_key))
-        return info
 
     def _device_model(self, subdevice: Subdevice, resources: dict[str, dict]) -> str | None:
         """A bound capability's model_fn's model for this subdevice, if any."""
@@ -2766,7 +2764,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._update_coverage_gap_issue(
                 self.device_type_name is None,
                 unbound,
-                self.device_info.get("name") or "This appliance",
+                device_info_fields(self.device_info).get("name") or "This appliance",
             )
         if grown or any(added.values()):
             self._log.info(
@@ -3163,21 +3161,22 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         name = device_display_name(device_type_name, model)
         mfr = (ident.manufacturer if ident else "") or "Samsung"
 
+        # An omitted field preserves the registry's value. Only use a real
+        # serial or firmware version reported by the device this entry adopted.
+        reported: dict[str, str] = {}
+        if adopted:
+            if serial_number := display_serial(info.get("x.com.samsung.da.serialNum")):
+                reported["serial_number"] = serial_number
+            if firmware := resolve_firmware(ident, resources):
+                reported["sw_version"] = firmware
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, key)},
             connections=_mac_connections(mac or self._entry.data.get(CONF_MAC)),
             name=name,
             manufacturer=mfr,
             model=model,
+            **reported,
         )
-        if adopted:
-            # Only what the device reported: a key left out keeps the
-            # registry's value, where None would clear it. The polled serial,
-            # not `serial`, which can be the host fallback.
-            if serial_number := display_serial(info.get("x.com.samsung.da.serialNum")):
-                self.device_info["serial_number"] = serial_number
-            if firmware := resolve_firmware(ident, resources):
-                self.device_info["sw_version"] = firmware
         # A snapshot replay passes None: it never reached the device, so
         # writing a key here would freeze a pre-v4 entry's legacy key in as
         # if a poll had confirmed it, and the real UUID would later look

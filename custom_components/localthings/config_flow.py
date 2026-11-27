@@ -36,7 +36,6 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
 from smartthings_local.errors import PeerInitiatedHandshakeError
 from smartthings_local.protocol.auth import AuthenticationProvider, PskAuth
 
@@ -99,7 +98,7 @@ from .credentials import (
     normalize_psk_key,
     psk_credentials,
 )
-from .devices import find_entry_device
+from .devices import device_info_fields, find_entry_device
 from .learned import persist as learned_persist
 from .learned import stored as learned_stored
 from .legacy_http_token import (
@@ -1697,7 +1696,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         entry: config_entries.ConfigEntry,
         *,
         data_updates: dict[str, Any],
-        title: str | UndefinedType = UNDEFINED,
+        title: str | None = None,
         drop: tuple[str, ...] = (),
     ) -> ConfigFlowResult:
         """async_update_reload_and_abort without its reload, which Core
@@ -1706,7 +1705,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         names keys to remove from the entry."""
         data = {k: v for k, v in entry.data.items() if k not in drop}
         self.hass.config_entries.async_update_entry(
-            entry, title=title, data={**data, **data_updates}
+            entry, title=entry.title if title is None else title, data={**data, **data_updates}
         )
         self.hass.config_entries.async_schedule_reload(entry.entry_id)
         if self.source == config_entries.SOURCE_RECONFIGURE:
@@ -1961,7 +1960,7 @@ def _identity_matches(entry: config_entries.ConfigEntry, info: dict, host: str) 
     return stored_serial is None or (_host_keyed(entry) and probed_key == host)
 
 
-def _followed_title(entry: config_entries.ConfigEntry, host: str) -> str | UndefinedType:
+def _followed_title(entry: config_entries.ConfigEntry, host: str) -> str:
     """The entry title with the address it names brought up to date.
 
     Titles are minted as "<device> (<host>)" but are also where a rename
@@ -1970,7 +1969,7 @@ def _followed_title(entry: config_entries.ConfigEntry, host: str) -> str | Undef
     """
     suffix = f" ({entry.data.get(CONF_HOST)})"
     if not entry.title.endswith(suffix):
-        return UNDEFINED
+        return entry.title
     return f"{entry.title[: -len(suffix)]} ({host})"
 
 
@@ -2644,7 +2643,9 @@ class LocalThingsOptionsFlow(config_entries.OptionsFlow):
             # coord.last_resources, and MAIN.to_actual is identity, so
             # this preserves the panel's existing behavior byte for byte.
             dev = find_entry_device(
-                self.hass, self.config_entry.entry_id, coord.device_info["identifiers"]
+                self.hass,
+                self.config_entry.entry_id,
+                device_info_fields(coord.device_info)["identifiers"],
             )
             if dev is None:
                 return self.async_abort(reason="not_loaded")
