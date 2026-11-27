@@ -173,8 +173,41 @@ async def test_a_refused_write_does_not_hold_up_the_keys_behind_it(hass: HomeAss
         async with asyncio.timeout(2):
             await _press(hass, "KEY_CHUP")
         assert _keys(session) == ["KEY_CHUP"]
+        assert [p for p, _ in session.writes][-2:] == [AUDIO, ["sec", "tv", "remotecontrol"]]
     async with asyncio.timeout(5):
-        await asyncio.gather(mute, return_exceptions=True)
+        [result] = await asyncio.gather(mute, return_exceptions=True)
+
+    assert getattr(result, "translation_key", None) == "command_refused"
+
+
+async def test_a_refused_write_the_tv_applied_is_confirmed_once_the_read_lets_go(
+    hass: HomeAssistant,
+) -> None:
+    """The TV answers result=false but mutes: the confirming read shows it, so
+    the call succeeds; that read waits for the background one."""
+    coordinator, session = await _setup(hass)
+    coordinator._CONFIRM_DELAY_S = 0
+    write = session.write
+
+    def _refuse_but_apply(path, body, timeout=None):
+        if list(path) == AUDIO:
+            write(path, body, timeout)
+            return 0x44, {"controlResponse": {"result": False}}
+        return write(path, body, timeout)
+
+    session.write = _refuse_but_apply
+    async with coordinator._session_lock:
+        mute = _call(
+            hass,
+            "media_player",
+            "volume_mute",
+            {"entity_id": _player(hass), "is_volume_muted": True},
+        )
+        await asyncio.sleep(0.1)
+        assert session.writes[-1] == (AUDIO, {"mute": True})
+        assert not mute.done()
+    async with asyncio.timeout(5):
+        await mute
 
 
 async def test_unloading_cancels_a_pending_confirm(hass: HomeAssistant) -> None:

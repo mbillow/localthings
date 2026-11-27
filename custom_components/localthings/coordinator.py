@@ -3704,11 +3704,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._note_other_hosts()
 
         async with self._session_lock:
-            self._standby_cycle = False
+            # _standby_cycle keeps the last cycle's outcome until this one ends:
+            # a key sent during the poll is judged by it (av._known_off).
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
+                self._standby_cycle = False
                 self._mark_device_answered()
             except AuthRejected as e:
+                self._standby_cycle = False
                 await self.hass.async_add_executor_job(self._close_session)
                 raise ConfigEntryAuthFailed(str(e)) from e
             except BoardInStandby as e:
@@ -3717,6 +3720,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._standby_cycle = True
                 return self._device_unreachable("device in standby", e)
             except Exception as e:
+                self._standby_cycle = False
                 if self._closed:
                     # async_close closed the session under this read: nothing
                     # to reconnect, and no device failure to report.
@@ -4288,7 +4292,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         control_response=control_response,
                         failed=failed,
                     )
-            # Answered: a refusal's confirming read waits for the session, not the next write.
+            # Answered: a refusal's confirming read waits for the session, not the
+            # next write, so a later write to the same field can land before it.
             return await self._async_put(
                 path_segs,
                 body,

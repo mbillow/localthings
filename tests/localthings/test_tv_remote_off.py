@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -151,3 +152,31 @@ async def test_only_the_tv_family_refuses_keys_when_dark(hass: HomeAssistant, mo
     monkeypatch.setattr(coordinator, "is_tv", lambda: False)
 
     await coordinator.av.async_check_keys()
+
+
+async def test_a_key_during_the_poll_after_a_standby_read_is_refused(hass: HomeAssistant) -> None:
+    """The last poll's standby read holds until the running poll ends."""
+    coordinator, session = await _setup(hass)
+    await _standby(coordinator, session)
+    entered, release = threading.Event(), threading.Event()
+    read = session.read
+
+    def _held_read(path, timeout=None):
+        if "/" + "/".join(path) == SWITCH:
+            entered.set()
+            release.wait(5)
+        return read(path, timeout)
+
+    session.read = _held_read
+    poll = asyncio.get_running_loop().create_task(coordinator.async_refresh())
+    try:
+        assert await hass.async_add_executor_job(entered.wait, 5)
+        with pytest.raises(HomeAssistantError) as err:
+            async with asyncio.timeout(1):
+                await _press(hass, "KEY_VOLUP")
+    finally:
+        release.set()
+        await poll
+
+    assert err.value.translation_key == "tv_off"
+    assert _keys(session) == []
