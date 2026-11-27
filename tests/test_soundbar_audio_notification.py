@@ -318,7 +318,8 @@ async def test_the_store_keeps_the_newest_clips(hass, clock):
         assert (await _get(hass, f"{token}.pcm")).status == 200
 
 
-async def test_prepare_returns_a_local_pcm_url(hass, clock, monkeypatch):
+async def test_prepare_returns_a_local_pcm_url(hass, clock, monkeypatch, caplog):
+    caplog.set_level("DEBUG", logger=audio_notify.__name__)
     get_url = MagicMock(return_value="http://192.0.2.10:8123")
     monkeypatch.setattr(audio_notify, "get_url", get_url)
     monkeypatch.setattr(audio_notify, "async_convert", AsyncMock(return_value=b"\x00\x00"))
@@ -327,6 +328,8 @@ async def test_prepare_returns_a_local_pcm_url(hass, clock, monkeypatch):
     assert url.startswith(prefix) and url.endswith(".pcm")
     assert (await _get(hass, url.removeprefix(prefix))).body == b"\x00\x00"
     assert get_url.call_args.kwargs == {"allow_cloud": False, "prefer_external": False}
+    assert "served from http://192.0.2.10:8123" in caplog.text
+    assert url.removeprefix(prefix).removesuffix(".pcm") not in caplog.text
 
 
 async def test_prepare_without_a_url_fails_before_converting(hass, monkeypatch):

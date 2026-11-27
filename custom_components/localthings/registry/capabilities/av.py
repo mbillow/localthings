@@ -39,8 +39,9 @@ CAPABILITY_MEDIA = _media_hrefs("/capability/{}/main/0")
 NETWORKAUDIO_MEDIA = _media_hrefs("/sec/networkaudio/av/{}")
 MEDIA_LAYOUTS = (CAPABILITY_MEDIA, NETWORKAUDIO_MEDIA)
 
-# Takes {AUDIO_NOTIFICATION_FIELD: url}: the board downloads the file and
-# plays it as a notification (audio_notify.py). Write-only, so nothing polls it.
+# SmartThings' notification receiver. Takes {AUDIO_NOTIFICATION_FIELD: url}:
+# the board downloads the file and plays it (audio_notify.py). A read returns
+# only its type and version, so nothing polls it.
 HREF_AUDIO_NOTIFICATION = "/x.com.samsung/notification/receiver"
 AUDIO_NOTIFICATION_PATH = ["x.com.samsung", "notification", "receiver"]
 AUDIO_NOTIFICATION_TYPE = "x.com.samsung.audionotification"

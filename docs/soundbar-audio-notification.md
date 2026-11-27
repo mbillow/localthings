@@ -23,6 +23,20 @@ The bar plays its own chime, then the clip, also from standby. It interrupts
 whatever is playing. Its volume and what resumes afterwards are the bar's own;
 LocalThings doesn't change either.
 
+Confirmed models: HW-S61B. Other bars that report the receiver get the feature
+too: SmartThings' cloud `audioNotification` (`playTrackAndResume`) sends them
+the same 24 kHz mono 16-bit PCM. Please report a model that works, or one that
+plays noise.
+
+## The receiver
+
+The firmware (HW-Q850A, `com.samsung.st-notification`) serves the receiver
+for SmartThings' notification service. It takes notification fields
+(`x.org.iotivity.ns.*`), whitelisted appliance and security alert codes
+(`x.com.samsung.code`) that the bar speaks, and an audio URL
+(`x.com.samsung.audio`). Nothing in it mirrors phone calls or messages; the
+bar has no screen, and an audio write only plays the chime and the clip.
+
 ## Contract
 
 | Step | Behavior |
@@ -42,6 +56,19 @@ cloud URL, which answers through a redirect the bar won't follow. Plain HTTP
 to an IP address and HTTPS through a public host name have been tested. A
 Home Assistant that serves HTTPS only doesn't fall back to its IP address: set
 a local URL the bar can reach, with a certificate it accepts.
+
+## When nothing plays
+
+The write is acknowledged as soon as the bar has it; the download and playback
+follow, and the bar reports neither. So a bar that can't fetch the clip, for
+example over HTTPS with a self-signed certificate or from a host name it can't
+resolve, plays nothing and Home Assistant shows no error. With debug logging
+on, `custom_components.localthings.audio_notify` logs the address the clip is
+served from (without its token); it must load from another device on the LAN.
+With no URL at all, `play_media` fails with "Home Assistant has no local URL
+the soundbar can download the audio from".
+
+## Limits
 
 Clips are cut to 40 s, with a warning in the log, since the bar stops there
 anyway. A live stream (internet radio) is read for 40 s and plays as a 40 s

@@ -157,7 +157,8 @@ def add_clip(hass: HomeAssistant, pcm: bytes) -> str:
 
 @callback
 def async_clear(hass: HomeAssistant) -> None:
-    """Drop every clip; expired ones otherwise wait for the next request."""
+    """Drop every clip, at the last unload: otherwise an expired clip is
+    only dropped on the next add or request."""
     hass.data.pop(_DATA_CLIPS, None)
 
 
@@ -186,6 +187,8 @@ async def async_prepare(hass: HomeAssistant, source: str) -> str:
             translation_placeholders={"error": str(err)},
         ) from err
     async_register_view(hass)
+    # The token stays out of the log: it is the clip's only credential.
+    _LOGGER.debug("Audio notification clip served from %s", base)
     return f"{base}{URL_PREFIX}{add_clip(hass, pcm)}{SUFFIX}"
 
 
