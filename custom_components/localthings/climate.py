@@ -817,10 +817,20 @@ class LocalThingsClimate(LocalThingsEntity, ClimateEntity):
         device = self._device_code_for_hvac(hvac_mode)
         if device is None:
             return
+        powered_on = False
         if not self._is_on():
-            await self.coordinator.async_send_command(self._bound, ("power", True))
+            # A board refuses a mode write while off (controlResponse
+            # "unavailable"), so power goes first -- and it powers on in its
+            # last mode. The mode write must follow at once, not after the
+            # confirming poll (10-20 s on a multi-split kit): off -> fan_only
+            # from a unit last in cool otherwise starts the outdoor unit.
+            powered_on = await self.coordinator.async_send_command(
+                self._bound, ("power", True), refresh=False
+            )
         # The board might answer 4.00 to a write of the mode it is already in
         if device == _first(self._rep(MODE_HREF).get(_MODES_FIELD)):
+            if powered_on:
+                await self.coordinator.async_request_refresh()
             return
         await self.coordinator.async_send_command(self._bound, ("mode", device))
 

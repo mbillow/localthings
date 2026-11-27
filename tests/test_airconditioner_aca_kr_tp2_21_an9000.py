@@ -49,6 +49,7 @@ def climate(hass: HomeAssistant, request) -> LocalThingsClimate:
     reg = _registry(resources)
     coordinator.bound = discover(resources, reg.capabilities, reg.pattern_capabilities)
     coordinator.async_send_command = AsyncMock()
+    coordinator.async_request_refresh = AsyncMock()
     bound = next(b for b in coordinator.bound if isinstance(b.desc, ClimateDesc))
     return LocalThingsClimate(coordinator, bound)
 
@@ -74,3 +75,4 @@ async def test_turning_on_keeps_the_chosen_ventilation_mode(climate):
 
     sent = [call.args[1] for call in climate.coordinator.async_send_command.call_args_list]
     assert sent == [("power", True)]
+    climate.coordinator.async_request_refresh.assert_awaited_once()

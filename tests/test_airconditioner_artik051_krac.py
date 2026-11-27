@@ -54,6 +54,8 @@ class _FakeCoordinator:
     def __init__(self, resources):
         self.last_resources = resources
         self.commands = []
+        self.unrefreshed = []
+        self.refreshes = 0
 
     def resource(self, href):
         return self.last_resources.get(href, {})
@@ -67,8 +69,14 @@ class _FakeCoordinator:
         # (issue #177 -- see LocalThingsEntity._resources).
         return self.last_resources
 
-    async def async_send_command(self, bound, payload):
+    async def async_send_command(self, bound, payload, *, refresh=True):
         self.commands.append((bound, payload))
+        if not refresh:
+            self.unrefreshed.append(payload)
+        return True
+
+    async def async_request_refresh(self):
+        self.refreshes += 1
 
     def learned_modes(self, href):
         return []
@@ -486,6 +494,33 @@ async def test_a_different_mode_is_still_written():
     await _climate(resources, coordinator).async_set_hvac_mode(HVACMode.HEAT)
 
     assert [payload for _, payload in coordinator.commands] == [("mode", "Heat")]
+
+
+async def test_turning_on_into_another_mode_writes_it_without_waiting_for_a_poll():
+    """The board refuses a mode write while off and powers on in its last
+    mode, so off -> fan_only on a unit last in Cool runs Cool until the mode
+    write lands. Waiting for the power write's confirming poll first left it
+    in Cool for 10-20 s, long enough to start the outdoor unit."""
+    resources = _load_device(FIXTURE)
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_hvac_mode(HVACMode.FAN_ONLY)
+
+    assert [payload for _, payload in coordinator.commands] == [
+        ("power", True),
+        ("mode", "Wind"),
+    ]
+    assert coordinator.unrefreshed == [("power", True)]
+
+
+async def test_turning_on_in_the_last_mode_still_refreshes():
+    resources = _load_device(FIXTURE)
+    coordinator = _FakeCoordinator(resources)
+
+    await _climate(resources, coordinator).async_set_hvac_mode(HVACMode.COOL)
+
+    assert [payload for _, payload in coordinator.commands] == [("power", True)]
+    assert coordinator.refreshes == 1
 
 
 async def test_turning_on_in_the_last_mode_still_sets_the_temperature():
