@@ -29,6 +29,9 @@ class DeviceRegistry:
     awake_href: str | None = None
     # Advertised hrefs discovery doesn't read (registry/flat.read_all).
     unread_hrefs: frozenset[str] = frozenset()
+    # Write targets measured to take a write while a read is in flight on the
+    # same session; writes to them skip the session lock.
+    beside_read_hrefs: frozenset[str] = frozenset()
 
 
 def unpolled(*groups: Iterable[Capability]) -> list[Capability]:

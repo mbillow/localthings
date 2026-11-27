@@ -12,14 +12,20 @@ with Smart Monitors, plus its own entities:
   endpoint is gone in standby, except during the TV's short wakes from network
   standby, when the power switch is written instead (see below). Wi-Fi wake
   needs the TV's "Power On with Mobile" setting.
-- **Remote** (`remote.send_command` with `KEY_*` names or aliases; a key goes
-  out at once, alongside any read of the TV's state in progress; while the TV
-  is off a key fails at once with "The TV is off", unless a turn-on is under
+- **Remote** (`remote.send_command` with `KEY_*` names or aliases; while the
+  TV is off a key fails at once with "The TV is off", unless a turn-on is under
   way, which it waits for, up to 30 s), **notify**
   (an on-screen pop-up), an **Open app** select and a **screen off** button.
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
   actions.
 - A **picture mode** select.
+
+Remote keys, volume, mute, input and picture mode go out at once, alongside
+any read of the TV's state in progress, and the call returns with the TV's
+answer; the entity shows the new value at once and a read confirms it
+afterwards. Other commands wait for the read to finish. Measured on a
+QE85QN95A: these writes answered and took effect as often as with no reads
+running, and no read failed or changed.
 - Optional low-latency **camera casting**, off by default (below).
 
 Source and sound-mode names come from the TV; duplicate input names are

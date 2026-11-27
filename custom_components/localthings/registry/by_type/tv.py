@@ -26,4 +26,5 @@ REGISTRY = DeviceRegistry(
     # reads; its power switch doesn't answer, or answers off (QE85QN95A).
     awake_href=tv.HREF_SWITCH,
     unread_hrefs=tv.UNREAD_HREFS,
+    beside_read_hrefs=tv.BESIDE_READ_HREFS,
 )

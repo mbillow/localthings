@@ -185,7 +185,10 @@ class AVControl:
                 refresh=False,
             )
         if sent:
-            await coordinator.async_request_refresh()
+            if coordinator.writes_beside_reads(bound_entity, (kind, value)):
+                coordinator.confirm_in_background()
+            else:
+                await coordinator.async_request_refresh()
 
     async def async_turn_on(self, bound_entity: BoundEntity) -> None:
         """Turn on through the media player's descriptor: Wake-on-LAN for a

@@ -729,8 +729,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model=entry.data.get(CONF_MODEL) or None,
         )
         self._session_lock = asyncio.Lock()
-        # Key presses in the order they were asked for; they skip _session_lock.
-        self._key_lock = asyncio.Lock()
+        # Writes that skip _session_lock (beside_read_hrefs), in the order asked.
+        self._beside_lock = asyncio.Lock()
         self._subpoll_task: asyncio.Task | None = None
         self._hot_hrefs: list[str] = []
         self._warm_hrefs: list[str] = []
@@ -1929,6 +1929,42 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """The family's advertised hrefs that discovery doesn't read."""
         family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
         return registry_for(family).unread_hrefs
+
+    def _beside_reads(self, write_href: str) -> bool:
+        """Whether a write to write_href skips the session lock (the family's
+        beside_read_hrefs)."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        return write_href in registry_for(family).beside_read_hrefs
+
+    def writes_beside_reads(self, bound_entity: BoundEntity, payload: Any) -> bool:
+        """Whether async_send_command sends this payload beside the reads."""
+        write_fn = getattr(bound_entity.desc, "write_fn", None)
+        if write_fn is None:
+            return False
+        href = bound_entity.href or ""
+        rep = self.entity_rep(href)
+        try:
+            try:
+                result = write_fn(
+                    payload,
+                    rep,
+                    bound_entity.href,
+                    self.canonical_resources(bound_entity.subdevice),
+                )
+            except TypeError:
+                result = write_fn(payload, rep, bound_entity.href)
+        except Exception:  # an invalid payload is async_send_command's to report
+            return False
+        if result is None:
+            return False
+        return self._beside_reads(bound_entity.subdevice.to_actual("/" + "/".join(result[0])))
+
+    def confirm_in_background(self) -> None:
+        """The confirming refresh of a write sent beside the reads: it waits for
+        the session lock, so the call returns with the write's answer instead."""
+        self._entry.async_create_background_task(
+            self.hass, self.async_request_refresh(), name="localthings_confirm"
+        )
 
     def _awake_href(self) -> str | None:
         """The family's DeviceRegistry.awake_href, once an entity is bound
@@ -4041,6 +4077,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         cache_before_send = not write_only and not cache_after_ack
         retry = not (desc.resend_unsafe_fn and desc.resend_unsafe_fn(payload))
+        beside_reads = retry and prepare_payload is None and self._beside_reads(write_href)
         explicit_optimistic = optimistic_body
 
         def _optimistic(body: dict) -> dict:
@@ -4121,7 +4158,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 prepare_body=_prepare_body if prepare_payload is not None else None,
                 confirm_on_refusal=desc.confirm_on_refusal and not write_only,
                 control_response=desc.control_response,
-                beside_reads=isinstance(desc, RemoteDesc),
+                beside_reads=beside_reads,
             )
             if not sent:
                 if cache_before_send:
@@ -4157,7 +4194,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # A key press changes nothing a poll would read back promptly, and
         # awaiting one per key stalls a send_command burst behind it.
         if refresh and not isinstance(desc, RemoteDesc):
-            await self.async_request_refresh()
+            if beside_reads:
+                self.confirm_in_background()
+            else:
+                await self.async_request_refresh()
         return True
 
     async def _took_effect(
@@ -4185,8 +4225,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self, path_segs: list[str], body: dict | list, write_href: str
     ) -> tuple[tuple[int, Any] | None, tuple[Any, Exception] | None]:
         """PUT on the open session without _session_lock, beside a read in
-        flight; the TV answers both (QE85QN95A, 60/60 keys). Returns the
-        answer, or the session the PUT failed on with the error."""
+        flight (the family's beside_read_hrefs). Returns the answer, or the
+        session the PUT failed on with the error."""
         sess = self._session
         if sess is None:
             return None, None
@@ -4220,7 +4260,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too.
 
-        With beside_reads (a key press) the PUT first goes out on the open
+        With beside_reads the PUT first goes out on the open
         session beside a background read in flight; `answered` is that answer,
         and `failed` the session it failed on, with the error.
 
@@ -4233,7 +4273,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         again before a retry; None means the command no longer applies, and
         nothing is sent (returns False)."""
         if beside_reads:
-            async with self._key_lock:
+            async with self._beside_lock:
                 answered, failed = await self._send_beside_reads(path_segs, body, write_href)
                 return await self._async_put(
                     path_segs,

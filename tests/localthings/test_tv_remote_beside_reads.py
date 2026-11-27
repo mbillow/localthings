@@ -75,29 +75,6 @@ async def test_a_key_goes_out_while_a_background_read_holds_the_session(
     assert _keys(session) == ["KEY_CHUP"]
 
 
-async def test_other_writes_still_wait_for_the_session(hass: HomeAssistant) -> None:
-    """Only key presses skip the session lock; a state write waits for the read."""
-    coordinator, session = await _setup(hass)
-    player = hass.states.async_all("media_player")[0].entity_id
-    before = len(session.writes)
-
-    async with coordinator._session_lock:
-        task = hass.async_create_task(
-            hass.services.async_call(
-                "media_player",
-                "volume_set",
-                {"entity_id": player, "volume_level": 0.3},
-                blocking=True,
-            )
-        )
-        await asyncio.sleep(0.1)
-        assert len(session.writes) == before
-    async with asyncio.timeout(5):
-        await task
-
-    assert len(session.writes) > before
-
-
 async def test_keys_keep_their_order_across_calls(hass: HomeAssistant) -> None:
     """A second call's key waits for the first call's key to be answered."""
     entered = threading.Event()
