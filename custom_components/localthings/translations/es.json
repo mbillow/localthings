@@ -308,6 +308,9 @@
     "bubble_soak_unavailable_for_cycle": {
       "message": "El remojo con burbujas no está disponible en el ciclo seleccionado."
     },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive no está disponible para el ciclo seleccionado."
+    },
     "pre_wash_unavailable_for_cycle": {
       "message": "El prelavado no está disponible en el ciclo seleccionado."
     },
@@ -2866,6 +2869,9 @@
       },
       "bubble_soak": {
         "name": "Baño de burbujas"
+      },
+      "quick_drive": {
+        "name": "QuickDrive"
       },
       "buzz_lock": {
         "name": "Bloqueo del zumbador"

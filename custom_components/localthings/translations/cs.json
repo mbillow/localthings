@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Bublinkové namáčení"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Zámek bzučáku"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Bublinkové namáčení není u vybraného cyklu k dispozici."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive není pro vybraný cyklus k dispozici."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Předpírka není u vybraného cyklu k dispozici."

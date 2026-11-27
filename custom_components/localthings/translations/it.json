@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Smacchia tutto+"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Blocco cicalino"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Smacchia tutto+ non è disponibile per il ciclo selezionato."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive non è disponibile per il ciclo selezionato."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Prelavaggio non è disponibile per il ciclo selezionato."

@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Trempage bulles"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Verrouillage du signal sonore"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Le trempage bulles n'est pas disponible avec le programme sélectionné."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive n’est pas disponible pour le cycle sélectionné."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Le prélavage n'est pas disponible avec le programme sélectionné."

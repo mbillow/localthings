@@ -2401,6 +2401,9 @@
       "bubble_soak": {
         "name": "Natapanje mehurićima"
       },
+      "quick_drive": {
+        "name": "QuickDrive"
+      },
       "buzz_lock": {
         "name": "Zaključavanje zujalice"
       },
@@ -3028,6 +3031,9 @@
     },
     "bubble_soak_unavailable_for_cycle": {
       "message": "Natapanje mehurićima (Bubble Soak) nije dostupno na izabranom ciklusu."
+    },
+    "quick_drive_unavailable_for_cycle": {
+      "message": "QuickDrive nije dostupan za izabrani ciklus."
     },
     "pre_wash_unavailable_for_cycle": {
       "message": "Pretpranje nije dostupno na izabranom ciklusu."
