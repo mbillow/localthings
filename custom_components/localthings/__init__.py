@@ -18,6 +18,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
 from . import camera_dash
+from .announce import async_watch_alive
 from .cleanup import async_delete_removed_issues, async_notify_removed, async_reconcile_entities
 from .const import CONF_DEVICE_TYPE, CONF_HOST, CONF_PORT, CONF_SERIAL, DOMAIN, PLATFORMS
 from .coordinator import (
@@ -364,6 +365,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.instance_names = await async_load_instance_names(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     coordinator.async_watch_late_evidence()
+    if coordinator.is_tv() and (
+        unwatch := await async_watch_alive(
+            hass, entry.data[CONF_HOST], coordinator.async_device_announced
+        )
+    ):
+        entry.async_on_unload(unwatch)
     return True
 
 

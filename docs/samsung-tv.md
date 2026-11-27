@@ -9,17 +9,32 @@ with Smart Monitors, plus its own entities:
   artwork from the content info and thumbnail otherwise. `play_media` tunes a
   channel, launches an app, or casts an image, video, HLS stream or YouTube link.
 - **Turn-on** by Wake-on-LAN, offered once the entry knows the TV's MAC. The OCF
-  endpoint is gone in standby, so no OCF power-on write is sent. Wi-Fi wake
+  endpoint is gone in standby, except during the TV's short wakes from network
+  standby, when the power switch is written instead (see below). Wi-Fi wake
   needs the TV's "Power On with Mobile" setting.
-- **Remote** (`remote.send_command` with `KEY_*` names or aliases), **notify**
+- **Remote** (`remote.send_command` with `KEY_*` names or aliases; while the
+  TV is off (in standby, unreachable, or two polls failed) a key fails at once
+  with "The TV is off", unless a turn-on is under way, which it waits for, up
+  to 30 s), **notify**
   (an on-screen pop-up), an **Open app** select and a **screen off** button.
 - The `search`, `open_settings`, `set_sleep_timer` and `forget_known_apps`
   actions.
 - A **picture mode** select.
 - Optional low-latency **camera casting**, off by default (below).
 
+Remote keys, volume, mute, input and picture mode go out at once, alongside
+any read of the TV's state in progress, and the call returns with the TV's
+answer; the entity shows the new value at once and a later read confirms it.
+Other commands wait for the read to finish. Measured on a QE85QN95A with keys,
+mute, input and picture mode (volume is the same request as mute): these
+writes answered and took effect as often as with no reads running, and no read
+failed or changed.
+
 Source and sound-mode names come from the TV; duplicate input names are
 disambiguated by their wire IDs. Options update as the device changes them.
+The TV can rename an input after the device on it (`AVR-X1800H`, then
+`HDMI 3`), so a script can select it by its wire ID instead (`source: HDMI3`),
+which stays the same.
 
 ## Setup
 
@@ -38,6 +53,45 @@ list. A temporarily absent list can appear later without re-adding the device.
 A CoAP success carrying `controlResponse.result=false` is still a refusal.
 This picture select does not opt into confirmation-on-refusal: that hardware
 finding concerned sound mode, not picture mode.
+
+## Off, standby and turning on
+
+- A TV that is off shows `off` on its media player and remote (`unavailable`
+  when no MAC is known to wake it); its other entities are unavailable.
+  Switching it off logs no error.
+- In standby the TV wakes for a moment every few minutes and answers with its
+  power switch off (measured on a QE85QN95A: 6 to 20 s every 5 minutes).
+  That answer reads as off, so those wakes don't bring its other entities
+  back with stale values. Any TV whose switch answers off is shown off; Art
+  Mode on The Frame and Ambient Mode have not been measured.
+- After a Wake-on-LAN turn-on, LocalThings cancels a connection attempt still
+  waiting on the TV that was off and looks for the TV again. The measured TV
+  was on the network 0.5 to 1.3 s after the packet.
+- A TV awake in network standby ignores the magic packet (measured twice on a
+  QE85QN95A) but turns on when its power switch is written. A turn-on that
+  finds the TV there writes the switch, once per standby wake; if the TV drops
+  back to standby first, the packet is sent again.
+- A TV turned on with its own remote or an app announces itself over SSDP.
+  With Home Assistant's SSDP integration loaded (part of the default
+  configuration), that announcement makes LocalThings look at once; without
+  it, the next poll finds the TV, within about 30 s.
+- Once Home Assistant's SSDP integration has reported the TV (a device it
+  already knew counts), a TV that is off is polled less often: every 30 s at
+  first, doubling to every 2 minutes. Its next power-on announcement finds it
+  at once; a TV that doesn't answer yet when it announces itself is polled
+  again within 30 s.
+  When a poll finds the TV on after at least two polls without an answer, and
+  no announcement came within a minute either side of it, LocalThings takes the
+  announcement as lost on the way (a switch filtering multicast, a Wi-Fi drop)
+  and polls the TV every 30 s while it is off until the integration reloads.
+  A TV that refused the connection in between was on, so that case doesn't
+  count. A TV that answers but refuses the connection is still polled every
+  30 s. Other devices keep the 30 s poll.
+- Discovery doesn't read three resources the QE85QN95A lists but doesn't
+  answer while on (`/sec/tv/remotecontrol`, `/sec/tv/launchnativeapp`,
+  `/autoreconnect/ap`), each of which would cost a read timeout.
+- Adding a TV whose power switch answers off (a standby wake) fails with "The
+  TV is in standby"; turn it on and try again.
 
 ## Camera casting
 

@@ -8,15 +8,27 @@ from __future__ import annotations
 
 import logging
 from typing import Any, ClassVar, cast
+from unittest.mock import patch
 
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.localthings.config_flow import UnexpectedResponse, _read_device
-from custom_components.localthings.const import READ_MODE_PER_HREF
-from custom_components.localthings.coordinator import LocalThingsCoordinator
+from custom_components.localthings.config_flow import (
+    DeviceInStandby,
+    UnexpectedResponse,
+    _read_device,
+)
+from custom_components.localthings.const import CONF_DEVICE_TYPE, READ_MODE_PER_HREF
+from custom_components.localthings.coordinator import DeviceSilent, LocalThingsCoordinator
 from custom_components.localthings.observe import MODE_POLL
-from custom_components.localthings.registry.flat import flat_hrefs, iter_resources
+from custom_components.localthings.registry.by_type import registry_for
+from custom_components.localthings.registry.flat import (
+    BoardInStandby,
+    flat_hrefs,
+    iter_resources,
+    read_all,
+    reads_off,
+)
 from custom_components.localthings.registry.identity import DeviceIdentity
 
 from .conftest import FakeObserveSession
@@ -231,7 +243,7 @@ def test_a_board_dozing_in_standby_is_not_discovered(hass: HomeAssistant, mock_e
     # One of the three advertised resources answers.
     coordinator._session = cast(Any, FakeFlatSession(resources={"/sec/audio": {"volume": 3}}))
 
-    with pytest.raises(RuntimeError, match="no resource answered"):
+    with pytest.raises(DeviceSilent, match="no resource answered"):
         coordinator._poll_once()
     assert coordinator._flat is True
 
@@ -243,7 +255,7 @@ def test_flat_poll_with_every_href_failing_raises(hass: HomeAssistant, mock_entr
     coordinator._identity = _identity()
     coordinator._session = cast(Any, FakeFlatSession(resources={}))
 
-    with pytest.raises(RuntimeError, match="no resource answered"):
+    with pytest.raises(DeviceSilent, match="no resource answered"):
         coordinator._poll_once()
 
 
@@ -321,7 +333,7 @@ def test_flat_liveness_without_an_answer_fails_the_cycle(hass: HomeAssistant, mo
     coordinator._discovered = True
     coordinator._session = cast(Any, _Silent())
 
-    with pytest.raises(RuntimeError, match="liveness"):
+    with pytest.raises(DeviceSilent, match="liveness"):
         coordinator._poll_once()
 
 
@@ -386,14 +398,19 @@ def test_iter_resources_survives_a_failing_pace() -> None:
     assert list(reps) == _GETTABLE[:1]
 
 
-async def test_an_off_flat_board_stays_unavailable(hass: HomeAssistant, mock_entry) -> None:
-    """Every cycle whose handshake times out fails: none is deferred as a slow
-    transfer, which would show the last state as live in between."""
+@pytest.mark.parametrize(("family", "failed_update"), [("tv", False), ("soundbar", True)])
+async def test_an_off_flat_board_stays_unavailable(
+    hass: HomeAssistant, mock_entry, family: str, failed_update: bool
+) -> None:
+    """Every cycle whose handshake times out counts as dark: none is deferred
+    as a slow transfer, which would show the last state as live in between.
+    Only a TV's is no failed update, so switching a TV off logs no error."""
     from unittest.mock import AsyncMock, patch
 
     from homeassistant.helpers.update_coordinator import UpdateFailed
 
     coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator.device_type_name = family
     coordinator._flat = coordinator._discovered = True
     coordinator._observe.apply("/sec/audio", {"volume": 3}, source="poll")
 
@@ -406,9 +423,43 @@ async def test_an_off_flat_board_stays_unavailable(hass: HomeAssistant, mock_ent
         patch.object(coordinator, "_close_session"),
         patch("custom_components.localthings.coordinator.asyncio.sleep", new_callable=AsyncMock),
     ):
-        for _ in range(LocalThingsCoordinator._POLL_TIMEOUT_LIMIT + 1):
-            with pytest.raises(UpdateFailed):
+        for cycle in range(1, LocalThingsCoordinator._POLL_TIMEOUT_LIMIT + 2):
+            try:
                 await coordinator._async_update_data()
+            except UpdateFailed:
+                coordinator.last_update_success = False
+                assert failed_update
+            else:
+                assert not failed_update
+            assert coordinator._failed_cycles == cycle
+            assert coordinator.av.unreachable()
+
+
+@pytest.mark.parametrize("family", ["tv", "soundbar"])
+async def test_a_flat_board_never_seen_answering_still_fails(
+    hass: HomeAssistant, mock_entry, family: str
+) -> None:
+    """An offline load starts failed; it stays a failed update until the
+    board answers, so the base class logs no false recovery."""
+    from unittest.mock import patch
+
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator.device_type_name = family
+    coordinator._flat = coordinator._discovered = True
+    coordinator._observe.apply("/sec/audio", {"volume": 3}, source="poll")
+    coordinator.last_update_success = False
+
+    def _off():
+        coordinator._handshake_failed = True
+        raise TimeoutError("handshake timed out")
+
+    with (
+        patch.object(coordinator, "_poll_once", side_effect=_off),
+        pytest.raises(UpdateFailed),
+    ):
+        await coordinator._async_update_data()
 
 
 def test_a_board_back_from_off_is_read_in_full_at_once(hass: HomeAssistant, mock_entry) -> None:
@@ -551,7 +602,7 @@ def test_a_tv_in_network_standby_is_not_discovered(hass: HomeAssistant, mock_ent
     """Most of it answers, so the half rule alone would discover it, without
     the entities on its power switch."""
     coordinator = _tv(hass, mock_entry, _TV_STANDBY)
-    with pytest.raises(RuntimeError, match="no resource answered"):
+    with pytest.raises(DeviceSilent, match="no resource answered"):
         coordinator._poll_once()
 
     coordinator._session = cast(Any, FakeFlatSession(resources=_TV_ON, links=_TV_LINKS))
@@ -573,7 +624,7 @@ def test_the_liveness_read_of_a_tv_is_its_switch(hass: HomeAssistant, mock_entry
     assert sess.reads == [_TV_SWITCH]
 
     coordinator._session = cast(Any, FakeFlatSession(resources=_TV_STANDBY, links=_TV_LINKS))
-    with pytest.raises(RuntimeError, match="liveness"):
+    with pytest.raises(DeviceSilent, match="liveness"):
         coordinator._poll_once()
 
 
@@ -626,6 +677,79 @@ def test_a_full_sweep_reads_the_switch_first(hass: HomeAssistant, mock_entry) ->
     assert sess.reads[0] == _TV_SWITCH
 
 
+# What the TV answers during its periodic wake from standby: its switch, off.
+_TV_STANDBY_OFF = {**_TV_STANDBY, _TV_SWITCH: {"value": False}}
+
+
+@pytest.mark.parametrize(
+    ("rep", "off"),
+    [({"value": False}, True), ({"value": True}, False), ({}, False), ({"value": None}, False)],
+)
+def test_only_an_explicit_off_is_standby(rep: dict, off: bool) -> None:
+    """A switch answer without a value says nothing about power."""
+    assert reads_off(rep) is off
+
+
+@pytest.mark.parametrize(("family", "skipped"), [("tv", True), ("monitor", False)])
+def test_a_tv_does_not_read_its_unanswered_resources(family: str, skipped: bool) -> None:
+    """Each would only wait out a read timeout in every TV discovery; other
+    families read them, and they still count as advertised."""
+    unread = ["/sec/tv/remotecontrol", "/sec/tv/launchnativeapp", "/autoreconnect/ap"]
+    hrefs = [*unread, "/sec/tv/showmenu", "/sec/tv/uicontrol"]
+    board = FakeFlatSession(
+        resources={h: {"v": 1} for h in hrefs}, links=[{"href": h} for h in hrefs]
+    )
+
+    found = read_all(
+        board,
+        board.links,
+        logger=logging.getLogger(__name__),
+        unread=registry_for(family).unread_hrefs,
+    )
+
+    assert set(found) == set(hrefs) - (set(unread) if skipped else set())
+    assert set(flat_hrefs(board.links)) == set(hrefs)
+
+
+@pytest.mark.parametrize("failed_cycles", [0, 1], ids=["liveness", "full-sweep"])
+def test_a_tv_whose_switch_reads_off_is_in_standby(
+    hass: HomeAssistant, mock_entry, failed_cycles: int
+) -> None:
+    """The switch answering off ends the poll after that one read, and the
+    off is kept for the media player."""
+    coordinator = _discovered_tv(hass, mock_entry, _TV_STANDBY_OFF)
+    coordinator._failed_cycles = failed_cycles
+
+    # No entities to push the kept answer to here.
+    with patch.object(coordinator, "_schedule_push"), pytest.raises(BoardInStandby):
+        coordinator._poll_once()
+
+    sess = cast(FakeFlatSession, coordinator._session)
+    assert sess.reads == [_TV_SWITCH]
+    assert coordinator.resource(_TV_SWITCH) == {"value": False}
+
+
+def test_a_tv_whose_switch_reads_off_is_not_discovered(hass: HomeAssistant, mock_entry) -> None:
+    """One read, not a pass over every advertised href."""
+    coordinator = _tv(hass, mock_entry, _TV_STANDBY_OFF)
+
+    with pytest.raises(BoardInStandby):
+        coordinator._poll_once()
+
+    sess = cast(FakeFlatSession, coordinator._session)
+    assert [href for href in sess.reads if not href.startswith("/oic/")] == [_TV_SWITCH]
+
+
+def test_setup_probe_of_a_tv_whose_switch_reads_off_is_unusable() -> None:
+    class _TvBoard(FakeFlatSession):
+        _OIC_D: ClassVar[dict] = {**FakeFlatSession._OIC_D, "rt": ["oic.wk.d", "oic.d.tv"]}
+
+    board = _TvBoard(resources=_TV_STANDBY_OFF, links=_TV_LINKS)
+    with pytest.raises(DeviceInStandby):
+        _read_device(board, "10.0.0.99", 49154)
+    assert "/sec/tv/audio" not in board.reads
+
+
 def test_advertised_hrefs_follow_a_new_oic_res_answer(hass: HomeAssistant, mock_entry) -> None:
     coordinator = LocalThingsCoordinator(hass, mock_entry)
     coordinator._identity = _identity(links=[])
@@ -649,3 +773,108 @@ async def test_the_snapshot_keeps_the_last_good_oic_res(hass: HomeAssistant, moc
     stored = await coordinator._snapshot_store.async_load()
     assert stored is not None
     assert stored["identity"]["raw"]["/oic/res"] == _AV_LINKS
+
+
+def test_a_collection_poll_on_a_session_gone_quiet_is_silent(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """A timed-out poll whose session no longer answers is the device gone
+    quiet, logged without a traceback (coordinator._ROUTINE_UNREACHABLE)."""
+
+    class _Quiet(FakeFlatSession):
+        def read(self, path, timeout=None):
+            raise TimeoutError("timed out")
+
+    coordinator = LocalThingsCoordinator(hass, mock_entry)
+    coordinator._discovered = coordinator._read_mode_checked = True
+    coordinator._session = cast(Any, _Quiet())
+
+    with (
+        patch.object(coordinator, "_session_answers", return_value=False),
+        pytest.raises(DeviceSilent, match="no longer answers"),
+    ):
+        coordinator._poll_once()
+
+
+def test_discovery_paces_after_the_awake_read(hass: HomeAssistant, mock_entry) -> None:
+    """The switch read is followed by the rate limiter's pause before the rest."""
+    events: list[str] = []
+
+    class _Paced(FakeFlatSession):
+        def read(self, path, timeout=None):
+            events.append("/" + "/".join(path))
+            return super().read(path, timeout)
+
+        def pace(self):
+            events.append("pace")
+
+    board = _Paced(resources=_TV_ON, links=_TV_LINKS)
+    read_all(board, _TV_LINKS, logger=logging.getLogger(__name__), awake=_TV_SWITCH)
+
+    assert events[:2] == [_TV_SWITCH, "pace"]
+    assert events.count(_TV_SWITCH) == 1
+
+
+def test_a_full_sweep_reads_the_awake_href_once_then_paces(hass: HomeAssistant, mock_entry) -> None:
+    events: list[str] = []
+
+    class _Paced(FakeFlatSession):
+        def read(self, path, timeout=None):
+            events.append("/" + "/".join(path))
+            return super().read(path, timeout)
+
+        def pace(self):
+            events.append("pace")
+
+    coordinator = _discovered_tv(hass, mock_entry, _TV_ON)
+    coordinator._hot_hrefs = []
+    coordinator._session = cast(Any, _Paced(resources=_TV_ON, links=_TV_LINKS))
+    coordinator._failed_cycles = 1  # back from dark: a full sweep
+
+    coordinator._poll_flat_blocking(coordinator._session)
+
+    assert events[:2] == [_TV_SWITCH, "pace"]
+    assert events.count(_TV_SWITCH) == 1
+
+
+def test_a_tv_discovery_skips_its_unread_hrefs(hass: HomeAssistant, mock_entry) -> None:
+    links = [*_TV_LINKS, {"href": "/sec/tv/remotecontrol"}]
+    coordinator = _tv(hass, mock_entry, _TV_ON)
+    coordinator._identity = _identity(links, ("oic.wk.d", "oic.d.tv"))
+    coordinator._session = cast(Any, FakeFlatSession(resources=_TV_ON, links=links))
+
+    assert coordinator._poll_once() == _TV_ON
+
+    sess = cast(FakeFlatSession, coordinator._session)
+    assert "/sec/tv/remotecontrol" not in sess.reads
+    assert coordinator.has_href("/sec/tv/remotecontrol")
+
+
+def test_a_tv_known_only_from_its_entry_skips_its_unread_hrefs(
+    hass: HomeAssistant, mock_entry
+) -> None:
+    """Before discovery the family comes from the entry, as on every start."""
+    hass.config_entries.async_update_entry(
+        mock_entry, data={**mock_entry.data, CONF_DEVICE_TYPE: "tv"}
+    )
+    links = [*_TV_LINKS, {"href": "/sec/tv/remotecontrol"}]
+    coordinator = _tv(hass, mock_entry, _TV_ON)
+    coordinator.device_type_name = None
+    coordinator._identity = _identity(links, ("oic.wk.d", "oic.d.tv"))
+    coordinator._session = cast(Any, FakeFlatSession(resources=_TV_ON, links=links))
+
+    coordinator._poll_once()
+
+    assert "/sec/tv/remotecontrol" not in cast(FakeFlatSession, coordinator._session).reads
+
+
+def test_setup_of_a_tv_skips_its_unread_hrefs() -> None:
+    class _TvBoard(FakeFlatSession):
+        _OIC_D: ClassVar[dict] = {**FakeFlatSession._OIC_D, "rt": ["oic.wk.d", "oic.d.tv"]}
+
+    board = _TvBoard(resources=_TV_ON, links=[*_TV_LINKS, {"href": "/sec/tv/remotecontrol"}])
+
+    _read_device(board, "10.0.0.99", 49154)
+
+    assert "/sec/tv/remotecontrol" not in board.reads
+    assert "/sec/tv/audio" in board.reads

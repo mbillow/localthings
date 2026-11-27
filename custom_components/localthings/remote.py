@@ -150,6 +150,7 @@ class LocalThingsRemote(LocalThingsEntity, RemoteEntity):
         # VAL_PRESSED/VAL_RELEASED); otherwise a single tap.
         hold_secs = float(kwargs.get("hold_secs", 0.0) or 0.0)
         keys = [self._resolve_key(c) for c in command]
+        await self.coordinator.av.async_check_keys()
         first = True
         for _ in range(num_repeats):
             for key in keys:

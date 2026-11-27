@@ -41,7 +41,12 @@ class AVControl:
 
     _NOTIFY_REGISTER_SETTLE_S = 3.0
     _WAKE_WINDOW_S = 120.0
-    _WAKE_REFRESH_S = 5.0
+    # Least time between look-ups after a wake; paces only look-ups that fail at once.
+    _WAKE_REFRESH_S = 2.0
+    # The switch write in network standby; the TV answers it in under 0.5 s.
+    _STANDBY_WRITE_TIMEOUT_S = 3.0
+    # A failure bound for a key waiting on a turn-on; the TV answered in 4-18 s.
+    _KEY_WAKE_WAIT_S = 30.0
 
     def __init__(self, coordinator: LocalThingsCoordinator) -> None:
         self._coordinator = coordinator
@@ -137,6 +142,31 @@ class AVControl:
             self._coordinator._session is None and self._coordinator._handshake_failed
         )
 
+    def _known_off(self) -> bool:
+        """The TV's switch read off, no handshake completed, or two cycles
+        failed; one failed cycle of a TV that answers is not enough."""
+        coordinator = self._coordinator
+        return (
+            coordinator._standby_cycle
+            or (coordinator._session is None and coordinator._handshake_failed)
+            or coordinator._failed_cycles >= 2
+        )
+
+    async def async_check_keys(self) -> None:
+        """Raise tv_off for keys to a TV that is off, at once unless a turn-on
+        or an announced look is in flight; the keys then wait for it."""
+        if not self._coordinator.is_tv() or not self._known_off():
+            return
+        pending = {
+            task
+            for task in (self._wake_task, self._coordinator._announce_task)
+            if task is not None and not task.done()
+        }
+        if pending:
+            await asyncio.wait(pending, timeout=self._KEY_WAKE_WAIT_S)
+        if self._known_off():
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="tv_off")
+
     async def async_media_command(
         self,
         bound_entity: BoundEntity,
@@ -161,7 +191,10 @@ class AVControl:
                 refresh=False,
             )
         if sent:
-            await coordinator.async_request_refresh()
+            if coordinator.writes_beside_reads(bound_entity, (kind, value)):
+                coordinator.confirm_in_background()
+            else:
+                await coordinator.async_request_refresh()
 
     async def async_turn_on(self, bound_entity: BoundEntity) -> None:
         """Turn on through the media player's descriptor: Wake-on-LAN for a
@@ -259,8 +292,9 @@ class AVControl:
     async def async_power_on(self, bound_entity: BoundEntity) -> None:
         """Wake a TV with a known MAC; other devices take an OCF power write.
 
-        OCF can't turn a TV on (#834): its endpoint is gone in standby, and
-        one whose switch answers on is on already.
+        A TV in standby has no OCF endpoint (#834), except while it wakes in
+        network standby (_async_follow_wake), and one whose switch answers on
+        is on already.
         """
         mac = self._wake_mac()
         if mac is None:
@@ -298,28 +332,74 @@ class AVControl:
                 return
             self._log.info("sent Wake-on-LAN to %s via %s", mac, ", ".join(targets))
             self._wake_task = self.hass.async_create_background_task(
-                self._async_follow_wake(), name="localthings_wake"
+                self._async_follow_wake(mac, targets), name="localthings_wake"
             )
 
-    async def _async_follow_wake(self) -> None:
-        """Poll quickly until the woken TV answers, or the window closes.
+    async def _async_send_packet(self, mac: str, targets: list[str]) -> None:
+        """Send the magic packet again from the follow-up; a failure is logged."""
+        try:
+            await self.hass.async_add_executor_job(wol.send_magic_packet, mac, targets)
+        except (OSError, ValueError) as err:
+            self._log.debug("Wake-on-LAN resend failed: %s", err)
 
-        Drop the stale session and bypass rediscovery backoff: a TV may
-        return on a new port (#435).
-        """
-        async with self._coordinator._session_lock:
-            if self._coordinator._session is not None:
-                await self.hass.async_add_executor_job(self._coordinator._close_session)
-            self._coordinator._consecutive_poll_timeouts = 0
+    async def _async_switch_on(self) -> bool | None:
+        """Switch a TV awake in network standby on over OCF, on the session
+        that just read it. Whether the TV accepted it; None without an answer."""
+        coordinator = self._coordinator
+        path = [seg for seg in tv_caps.HREF_SWITCH.split("/") if seg]
+
+        def _write() -> int:
+            sess = coordinator._session
+            if sess is None:
+                raise RuntimeError("no session")
+            code, _ = sess.write(path, {"value": True}, timeout=self._STANDBY_WRITE_TIMEOUT_S)
+            return code
+
+        async with coordinator._session_lock:
+            try:
+                code = await self.hass.async_add_executor_job(_write)
+            except Exception as err:  # the loop looks again either way
+                self._log.debug("switching the TV on from standby failed: %s", err)
+                return None
+        accepted = code >> 5 == 2
+        self._log.info(
+            "TV in network standby: switch-on %s (code %#04x)",
+            "accepted" if accepted else "refused",
+            code,
+        )
+        return accepted
+
+    async def _async_follow_wake(self, mac: str, targets: list[str]) -> None:
+        """Look up the woken TV until it answers, or the window closes; it may
+        return on a new port (#435). A TV awake in network standby ignores the
+        packet but takes a switch write (QE85QN95A)."""
+        coordinator = self._coordinator
+        coordinator.cancel_connect()
+        async with coordinator._session_lock:
+            if coordinator._session is not None and not coordinator._standby_cycle:
+                await self.hass.async_add_executor_job(coordinator._close_session)
+            coordinator._consecutive_poll_timeouts = 0
         deadline = time.monotonic() + self._WAKE_WINDOW_S
-        while time.monotonic() < deadline:
-            await asyncio.sleep(self._WAKE_REFRESH_S)
-            self._coordinator._rediscovery_backoff_s = 0.0
-            self._coordinator._next_rediscovery_ts = 0.0
-            await self._coordinator.async_refresh()
+        written = seen_standby = False
+        while (started := time.monotonic()) < deadline:
+            coordinator._rediscovery_backoff_s = 0.0
+            coordinator._next_rediscovery_ts = 0.0
+            await coordinator.async_refresh()
             if self._answering():
                 self._log.info("TV answered after Wake-on-LAN")
                 return
+            if coordinator._standby_cycle:
+                seen_standby = True
+                if not written:
+                    accepted = await self._async_switch_on()
+                    written = accepted is not None
+                    if accepted:
+                        continue
+            elif seen_standby:
+                written = seen_standby = False
+                self._log.debug("TV went back to standby; sending Wake-on-LAN again")
+                await self._async_send_packet(mac, targets)
+            await asyncio.sleep(max(0.0, self._WAKE_REFRESH_S - (time.monotonic() - started)))
         self._log.info(
             "TV did not answer within %.0f s of Wake-on-LAN; is Power On with Mobile enabled?",
             self._WAKE_WINDOW_S,

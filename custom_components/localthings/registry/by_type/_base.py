@@ -23,10 +23,15 @@ class DeviceRegistry:
     # Write-settle window in seconds; None keeps the coordinator's default,
     # sized for boards that settle well after the ACK (washer course).
     write_settle_s: float | None = None
-    # An href that answers only while the board is fully on. A board that
-    # answers others but not this one is in network standby: it is polled
-    # as off, and never discovered from.
+    # An href that answers on only while the board is fully on (a power switch). A board
+    # answering others but not this one, or this one off, is in network standby: polled as
+    # off, never discovered from.
     awake_href: str | None = None
+    # Advertised hrefs discovery doesn't read (registry/flat.read_all).
+    unread_hrefs: frozenset[str] = frozenset()
+    # Write targets measured to take a write while a read is in flight on the
+    # same session; writes to them skip the session lock.
+    beside_read_hrefs: frozenset[str] = frozenset()
 
 
 def unpolled(*groups: Iterable[Capability]) -> list[Capability]:

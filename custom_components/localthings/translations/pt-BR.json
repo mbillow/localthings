@@ -2860,6 +2860,7 @@
       "handshake_failed": "O aparelho recusou a negociação DTLS por um motivo não relacionado ao certificado, provavelmente uma incompatibilidade de protocolo ou cifra. O log do Home Assistant registra o alerta exato enviado por ele.",
       "cloud_unreachable": "Não foi possível acessar o gateway de nuvem da Samsung para obter o UUID necessário à emissão do certificado deste dispositivo. Verifique o acesso do Home Assistant à internet e tente novamente.",
       "unexpected_response": "A conexão com o dispositivo foi estabelecida, mas ele não retornou uma descrição de dispositivo utilizável. Talvez não seja um aparelho compatível com esta integração. O log do Home Assistant registra o que ele enviou.",
+      "tv_in_standby": "A TV está em modo de espera. Ligue-a e tente novamente.",
       "cannot_connect": "Não foi possível conectar ao dispositivo. Verifique se o endereço IP está correto e se o aparelho está ligado e conectado à sua rede.",
       "invalid_ca": "Não foi possível carregar o certificado ou a chave privada da autoridade certificadora. Verifique se o conteúdo PEM está correto e se a chave corresponde ao certificado.",
       "unknown": "Erro inesperado. Consulte os logs do Home Assistant para obter detalhes.",
@@ -3142,6 +3143,9 @@
     },
     "remote_power_unavailable": {
       "message": "O controle de energia não está disponível para este dispositivo"
+    },
+    "tv_off": {
+      "message": "A TV está desligada. Ligue-a primeiro."
     },
     "wake_on_lan_failed": {
       "message": "Não foi possível enviar o Wake-on-LAN para a TV: {error}"

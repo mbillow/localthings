@@ -2860,6 +2860,7 @@
       "handshake_failed": "The appliance refused the DTLS handshake for a reason unrelated to the certificate, most likely a protocol or cipher mismatch. The Home Assistant log records the exact alert it sent.",
       "cloud_unreachable": "Couldn't reach Samsung's cloud gateway to fetch the UUID needed to mint this device's certificate. Check Home Assistant's internet access and try again.",
       "unexpected_response": "Connected to the device successfully, but it didn't return a usable device description. It may not be an appliance this integration supports. The Home Assistant log records what it sent.",
+      "tv_in_standby": "The TV is in standby. Turn it on, then try again.",
       "cannot_connect": "Cannot connect to the device. Check that the IP address is correct and the appliance is switched on and connected to your network.",
       "invalid_ca": "The CA certificate or private key could not be loaded. Verify the PEM contents are correct and the key matches the certificate.",
       "unknown": "Unexpected error. Check the Home Assistant logs for details.",
@@ -3142,6 +3143,9 @@
     },
     "remote_power_unavailable": {
       "message": "Power control isn't available for this device"
+    },
+    "tv_off": {
+      "message": "The TV is off. Turn it on first."
     },
     "wake_on_lan_failed": {
       "message": "Couldn't send Wake-on-LAN to the TV: {error}"

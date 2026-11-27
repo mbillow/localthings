@@ -2860,6 +2860,7 @@
       "handshake_failed": "Uređaj je odbio DTLS rukovanje iz razloga koji nije povezan sa sertifikatom, najverovatnije zbog nepodudaranja protokola ili šifarskog skupa (cipher suite). Dnevnik (log) Home Assistant-a beleži tačno upozorenje koje je poslao.",
       "cloud_unreachable": "Nije moguće pristupiti Samsungovom cloud mrežnom prolazu (gateway) radi preuzimanja UUID-a potrebnog za izradu sertifikata ovog uređaja. Proverite pristup internetu za Home Assistant i pokušajte ponovo.",
       "unexpected_response": "Povezivanje sa uređajem je uspešno, ali on nije vratio upotrebljiv opis uređaja. Možda to nije uređaj koji ova integracija podržava. Dnevnik (log) Home Assistant-a beleži šta je uređaj poslao.",
+      "tv_in_standby": "Televizor je u stanju pripravnosti. Uključite ga, pa pokušajte ponovo.",
       "cannot_connect": "Nije moguće povezivanje sa uređajem. Proverite da li je IP adresa tačna i da li je uređaj uključen i povezan na vašu mrežu.",
       "invalid_ca": "CA sertifikat ili privatni ključ se ne mogu učitati. Proverite da li je PEM sadržaj ispravan i da li ključ odgovara sertifikatu.",
       "unknown": "Neočekivana greška. Pogledajte dnevnike (logs) Home Assistant-a za više detalja.",
@@ -3142,6 +3143,9 @@
     },
     "remote_power_unavailable": {
       "message": "Upravljanje napajanjem nije dostupno za ovaj uređaj"
+    },
+    "tv_off": {
+      "message": "Televizor je isključen. Prvo ga uključite."
     },
     "wake_on_lan_failed": {
       "message": "Slanje Wake-on-LAN televizoru nije uspelo: {error}"

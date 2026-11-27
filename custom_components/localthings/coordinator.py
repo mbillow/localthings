@@ -27,7 +27,12 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from smartthings_local.errors import EndpointError, PeerInitiatedHandshakeError
+from smartthings_local.errors import (
+    EndpointError,
+    PeerInitiatedHandshakeError,
+    SessionClosedError,
+    SessionError,
+)
 from smartthings_local.ocf.state_cache import StateCache
 
 from . import cloudcourse, finish, probing, tvapps
@@ -92,7 +97,14 @@ from .registry.capabilities.laundry import cycle_options
 from .registry.discovery import BoundEntity
 from .registry.encode import from_json_safe, json_safe
 from .registry.entities import ClimateDesc, RemoteDesc
-from .registry.flat import FLAT_TIMEOUT_S, flat_hrefs, iter_resources, read_all
+from .registry.flat import (
+    FLAT_TIMEOUT_S,
+    BoardInStandby,
+    flat_hrefs,
+    iter_resources,
+    read_all,
+    reads_off,
+)
 from .registry.identity import (
     DeviceIdentity,
     device_display_name,
@@ -260,6 +272,14 @@ _COAP_BAD_REQUEST = 0x80
 def _coap_accepted(code: int) -> bool:
     """True for a 2.xx class CoAP response."""
     return (code >> 5) == 2
+
+
+class DeviceSilent(RuntimeError):
+    """The device stopped answering: switched off, asleep or gone."""
+
+
+# How a device that is off, asleep or refusing shows: no traceback for these.
+_ROUTINE_UNREACHABLE = (OSError, DeviceSilent, BoardInStandby)
 
 
 class _PrepareFailed(Exception):
@@ -483,6 +503,13 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # their port on every power-on; at the general cap, one turned back on
     # would wait up to 30 minutes for the next lookup.
     _REDISCOVERY_BACKOFF_FLAT_MAX_S: float = 60.0
+    # Cap of the doubling poll interval of a dark TV whose SSDP announcements reach Home
+    # Assistant: the longest a TV switched on waits to be seen when its power-on alive is lost.
+    _DARK_POLL_MAX_S: float = 120.0
+    # An alive this long before or after the answer ending a dark spell announced that
+    # power-on, and keeps dark polls at 30 s this long after it; the QE85QN95A's came
+    # 0.5-4 s after a Wake-on-LAN packet.
+    _ANNOUNCE_GRACE_S: float = 60.0
 
     # A single reconnect is normal appliance behavior (README's "Known
     # device behavior"); only escalate once they pile up in a trailing
@@ -702,6 +729,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             model=entry.data.get(CONF_MODEL) or None,
         )
         self._session_lock = asyncio.Lock()
+        # Writes that skip _session_lock (beside_read_hrefs), in the order asked.
+        self._beside_lock = asyncio.Lock()
         self._subpoll_task: asyncio.Task | None = None
         self._hot_hrefs: list[str] = []
         self._warm_hrefs: list[str] = []
@@ -724,6 +753,21 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._moved_port: int | None = None
         self._other_hosts: list[str] = []
         self._note_other_hosts()
+        # The transport whose handshake is in flight (cancel_connect), and the
+        # look a device announcing itself started (async_device_announced).
+        self._connecting: Transport | None = None
+        self._announce_task: asyncio.Task | None = None
+        # This device's SSDP announcements reach Home Assistant.
+        self._announces = False
+        # When the last alive came, and when an answer ending a dark spell came with no
+        # alive near it; a power-on announcement once missed stops the dark back-off.
+        self._last_alive: float | None = None
+        self._unannounced_at: float | None = None
+        self._announce_missed = False
+        # Failed cycles of the current spell that found the device dark, not refusing.
+        self._dark_cycles = 0
+        # The last cycle found the board in network standby, session open.
+        self._standby_cycle = False
         # The last non-empty /oic/res answer: kept across a reconnect whose
         # identity read failed, since write-only hrefs are known only from it.
         self._last_oic_res: list = []
@@ -1397,14 +1441,20 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             moved = self._rediscover_port(port)
             if moved is None:
                 raise
-            self._log.info(
-                "secure port moved from %d to %d after %s; reconnecting there",
-                port,
-                moved,
-                type(e).__name__,
-            )
-            self._open_session_retrying_collision(moved)
-            self._moved_port = moved
+            if moved == port:
+                # Up now, on the same port: it came on during the handshake.
+                self._log.debug("port %d answers now; handshaking again", port)
+                self._open_session_retrying_collision(port)
+                self._moved_port = None
+            else:
+                self._log.info(
+                    "secure port moved from %d to %d after %s; reconnecting there",
+                    port,
+                    moved,
+                    type(e).__name__,
+                )
+                self._open_session_retrying_collision(moved)
+                self._moved_port = moved
         self._rediscovery_backoff_s = 0.0
         self._next_rediscovery_ts = 0.0
 
@@ -1417,6 +1467,46 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except PeerInitiatedHandshakeError as e:
             self._log.debug("handshake collided with the appliance's own; retrying: %s", e)
             self._open_session(port)
+
+    def cancel_connect(self) -> None:
+        """End the handshake in flight: one started before the device came up
+        can only time out, holding the session lock until it does."""
+        cancel = getattr(self._connecting, "cancel_connect", None)
+        if cancel is not None:
+            cancel()
+
+    @callback
+    def async_device_announced(self) -> None:
+        """SSDP alive from the device: one that reads as dark is looked at now."""
+        self._announces = True
+        now = time.monotonic()
+        self._last_alive = now
+        if self._unannounced_at is not None and now - self._unannounced_at <= (
+            self._ANNOUNCE_GRACE_S
+        ):
+            self._unannounced_at = None
+        if self._closed or not self._failed_cycles:
+            return
+        if self._announce_task is not None and not self._announce_task.done():
+            return
+        self._log.debug("device announced itself; looking now")
+        self.cancel_connect()
+        self._announce_task = self.hass.async_create_background_task(
+            self._async_look_now(), name="localthings_announced"
+        )
+
+    async def _async_look_now(self) -> None:
+        async with self._session_lock:
+            # A cycle that held the lock may have found it answering already.
+            if self._closed or not self._failed_cycles:
+                return
+            # A session that just read standby still answers; any other is stale.
+            if self._session is not None and not self._standby_cycle:
+                await self.hass.async_add_executor_job(self._close_session)
+            self._consecutive_poll_timeouts = 0
+        self._rediscovery_backoff_s = 0.0
+        self._next_rediscovery_ts = 0.0
+        await self.async_refresh()
 
     def _rediscover_port(self, current: int) -> int | None:
         """The port the device now answers on, when a lookup is due (see
@@ -1440,6 +1530,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # ClientHello probe finds its moved port. It holds the session
                 # lock for seconds, so only where needed.
                 probe_scan=self._flat,
+                # A TV comes up during a handshake that started while it was off.
+                include_current=self.is_tv(),
             )
         except Exception as e:
             self._log.debug("secure port lookup failed: %s", e)
@@ -1485,7 +1577,11 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             on_notification=self._observe.on_notification,
             local_port=_local_source_port(host, self._other_hosts),
         )
-        sess.connect()
+        self._connecting = sess
+        try:
+            sess.connect()
+        finally:
+            self._connecting = None
         identity = None
         try:
             identity = read_identity(sess, None)
@@ -1569,6 +1665,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
+        if self._announce_task is not None:
+            self._announce_task.cancel()
+            self._announce_task = None
+        self.cancel_connect()
         self.av.close()
         await self.playback.async_close()
         await self.hass.async_add_executor_job(self._observe.close)
@@ -1704,7 +1804,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # _defer_reconnect_for), so the probe would only add its wait.
             if self._discovered and not self._session_answers(sess):
                 self._close_session()
-                raise RuntimeError(f"poll timed out and the session no longer answers: {e}") from e
+                raise DeviceSilent(f"poll timed out and the session no longer answers: {e}") from e
             raise
         except AuthRejected:
             raise
@@ -1816,6 +1916,56 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._log.info("/device/0 answered 2.05; polling the Collection again")
         return True
 
+    def _reported_off(self) -> bool:
+        """True when the family's awake href last read off."""
+        awake = self._awake_href()
+        return awake is not None and reads_off(self.resource(awake))
+
+    def is_tv(self) -> bool:
+        """True for the TV family, the live one or the one the entry stored."""
+        return (self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)) == "tv"
+
+    def _unread_hrefs(self) -> frozenset[str]:
+        """The family's advertised hrefs that discovery doesn't read."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        return registry_for(family).unread_hrefs
+
+    def _beside_reads(self, write_href: str) -> bool:
+        """Whether a write to write_href skips the session lock (the family's
+        beside_read_hrefs)."""
+        family = self.device_type_name or self._entry.data.get(CONF_DEVICE_TYPE)
+        return write_href in registry_for(family).beside_read_hrefs
+
+    def writes_beside_reads(self, bound_entity: BoundEntity, payload: Any) -> bool:
+        """Whether async_send_command sends this payload beside the reads."""
+        write_fn = getattr(bound_entity.desc, "write_fn", None)
+        if write_fn is None:
+            return False
+        href = bound_entity.href or ""
+        rep = self.entity_rep(href)
+        try:
+            try:
+                result = write_fn(
+                    payload,
+                    rep,
+                    bound_entity.href,
+                    self.canonical_resources(bound_entity.subdevice),
+                )
+            except TypeError:
+                result = write_fn(payload, rep, bound_entity.href)
+        except Exception:  # an invalid payload is async_send_command's to report
+            return False
+        if result is None:
+            return False
+        return self._beside_reads(bound_entity.subdevice.to_actual("/" + "/".join(result[0])))
+
+    def confirm_in_background(self) -> None:
+        """The confirming refresh of a write sent beside the reads: it waits for
+        the session lock, so the call returns with the write's answer instead."""
+        self._entry.async_create_background_task(
+            self.hass, self.async_request_refresh(), name="localthings_confirm"
+        )
+
     def _awake_href(self) -> str | None:
         """The family's DeviceRegistry.awake_href, once an entity is bound
         to it (before discovery, read_all checks it against /oic/res)."""
@@ -1830,63 +1980,71 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Before discovery this reads everything /oic/res advertises; after it,
         bound and cold-tier hrefs minus hot/warm ones, which _run_subpolls
-        refreshes. No answer at all is treated as a dead session, and so is
-        no answer from the family's awake href: a board in network standby
-        answers the rest and is still off.
+        refreshes. No answer at all is a dead session, and so is none from the
+        family's awake href, which is read first; its answer saying off raises
+        `BoardInStandby`.
         """
         awake = self._awake_href()
         if not self._discovered:
-            results = read_all(sess, self._oic_res(), logger=self._log, awake=awake)
+            results = read_all(
+                sess,
+                self._oic_res(),
+                logger=self._log,
+                awake=awake,
+                unread=self._unread_hrefs(),
+            )
         else:
             # A board back from off (failed cycles) is read in full at once:
             # its settings may have changed while it was dark.
             self._flat_poll = (
                 0 if self._failed_cycles else (self._flat_poll + 1) % self._FLAT_FULL_EVERY_N_POLLS
             )
+            results = {}
+            if awake is not None:
+                results = dict(
+                    iter_resources(sess, [awake], timeout=self._FLAT_TIMEOUT_S, logger=self._log)
+                )
+                if awake not in results:
+                    raise DeviceSilent(
+                        f"flat poll: liveness read of {awake} got no answer (network standby)"
+                    )
+                if reads_off(results[awake]):
+                    with contextlib.suppress(Exception):
+                        self._observe.apply(awake, results[awake], source="poll")
+                    raise BoardInStandby(f"{awake} reads off")
             if self._flat_poll != 0:
                 # One liveness GET. No answer fails the cycle, so a device
                 # switched off by its own remote reads as unreachable on the
                 # next poll. The awake href when the family has one, whose
                 # answer is kept; otherwise any answer to /oic/d counts.
-                if awake is not None:
-                    results = dict(
-                        iter_resources(
-                            sess, [awake], timeout=self._FLAT_TIMEOUT_S, logger=self._log
-                        )
-                    )
-                    if awake in results:
-                        return results
-                elif self._session_answers(sess):
-                    return {}
-                raise RuntimeError("flat poll: liveness read got no answer")
-            skip = set(self._hot_hrefs) | set(self._warm_hrefs)
+                if awake is not None or self._session_answers(sess):
+                    return results
+                raise DeviceSilent("flat poll: liveness read got no answer")
+            skip = set(self._hot_hrefs) | set(self._warm_hrefs) | {awake}
             # Hrefs not heard from this run go last, so their timeouts can't
             # use up the budget before the ones that answer are read.
             hrefs = sorted(
                 ({bound.href for bound in self.bound} | set(self._cold_hrefs)) - skip,
                 key=lambda href: (href in self._unconfirmed or href in self._pruned, href),
             )
-            if awake is not None and awake not in hrefs:
-                # First: the poll fails without it, so the budget can't run
-                # out on timeouts before it is read.
-                hrefs.insert(0, awake)
-            if not hrefs:
-                return {}
-            results = dict(
-                iter_resources(
-                    sess,
-                    hrefs,
-                    timeout=self._FLAT_TIMEOUT_S,
-                    budget=self._FLAT_BUDGET_S,
-                    logger=self._log,
-                    # async_close drops the session without the lock.
-                    stop=lambda: self._session is not sess,
+            if hrefs:
+                if results:
+                    sess.pace()
+                results.update(
+                    iter_resources(
+                        sess,
+                        hrefs,
+                        timeout=self._FLAT_TIMEOUT_S,
+                        budget=self._FLAT_BUDGET_S,
+                        logger=self._log,
+                        # async_close drops the session without the lock.
+                        stop=lambda: self._session is not sess,
+                    )
                 )
-            )
+            elif not results:
+                return {}
         if not results:
-            raise RuntimeError("flat poll: no resource answered")
-        if awake is not None and awake not in results:
-            raise RuntimeError(f"flat poll: {awake} got no answer (network standby)")
+            raise DeviceSilent("flat poll: no resource answered")
         return results
 
     def _poll_hrefs_blocking(
@@ -3439,8 +3597,34 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._last_state_store.async_remove(), "localthings discard last state"
             )
         if self._failed_cycles:
+            # Two dark polls or more, none refused, is a TV that was off; one is a blip.
+            if self._dark_cycles == self._failed_cycles >= 2:
+                self._check_announced()
+            self._dark_cycles = 0
             self._log.info("device answered again after %d failed cycles", self._failed_cycles)
             self._failed_cycles = 0
+            self.update_interval = timedelta(seconds=SUMMARY_INTERVAL_S)
+
+    def _check_announced(self) -> None:
+        """An answer ending a dark spell with no alive shortly before it waits for one
+        shortly after (_settle_announced)."""
+        now = time.monotonic()
+        heard = self._last_alive is not None and now - self._last_alive <= self._ANNOUNCE_GRACE_S
+        if self._announces and not self._announce_missed and not heard:
+            self._unannounced_at = now
+
+    def _settle_announced(self) -> None:
+        """An unannounced answer no alive followed within the grace: one was missed."""
+        if self._unannounced_at is None:
+            return
+        if time.monotonic() - self._unannounced_at > self._ANNOUNCE_GRACE_S:
+            self._unannounced_at = None
+            self._announce_missed = True
+            self._log.info(
+                "TV came on without its SSDP announcement reaching Home Assistant; "
+                "polling it every %d s while it is off",
+                SUMMARY_INTERVAL_S,
+            )
 
     def _device_unreachable(self, what: str, e: Exception) -> dict[str, Any]:
         """End a cycle that got no data, either degraded or as a failure.
@@ -3456,6 +3640,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         `_defer_reconnect_for` (issue #254).
         """
         self._failed_cycles += 1
+        self._pace_dark_polls(e)
         if self._failed_cycles == 1:
             self._log.info("%s: %s", what, e)
         else:
@@ -3471,13 +3656,41 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # offline load whose entities registered before this first one.
         if self._failed_cycles == 1 and self._flat:
             self.hass.loop.call_soon(self.async_update_listeners)
-        # A flat board that stops answering is switched off or gone: its last
-        # state isn't carried on as an appliance's is.
         carried = self._discovered or self._carrying_off_state
-        if carried and self._cache.snapshot() and not self._flat:
-            self._log.debug("Full error:", exc_info=e)
-            return flatten(self.bound, self.entity_resources())
+        if carried and self._cache.snapshot():
+            # A device going quiet (a timeout, a refused or closed session,
+            # standby) is routine; only an unexpected error gets its trace.
+            if not isinstance(e, _ROUTINE_UNREACHABLE):
+                self._log.debug("Full error:", exc_info=e)
+            # A TV switched off is not a failed update: its entities read
+            # unavailable through av.unreachable(), and no error is logged.
+            if not self._flat or (self.is_tv() and self.last_update_success):
+                return flatten(self.bound, self.entity_resources())
         raise UpdateFailed(f"{what}: {e}") from e
+
+    def _pace_dark_polls(self, e: Exception) -> None:
+        """Poll a dark TV whose announcements reach HA less often, until one is missed.
+        A refused session (a fatal alert) is a TV that answers, so it is not dark."""
+        refused = isinstance(e, SessionError) and not isinstance(e, SessionClosedError)
+        if not refused:
+            self._dark_cycles += 1
+        self._settle_announced()
+        # An alive whose look found nothing yet: the TV is still coming up.
+        now = time.monotonic()
+        coming_up = self._last_alive is not None and now - self._last_alive <= (
+            self._ANNOUNCE_GRACE_S
+        )
+        seconds = SUMMARY_INTERVAL_S
+        if (
+            self.is_tv()
+            and self._announces
+            and not self._announce_missed
+            and not refused
+            and not coming_up
+        ):
+            doublings = min(self._failed_cycles - 1, 8)
+            seconds = min(SUMMARY_INTERVAL_S * 2**doublings, self._DARK_POLL_MAX_S)
+        self.update_interval = timedelta(seconds=seconds)
 
     # ------------------------------------------------------------------
     # DataUpdateCoordinator hook
@@ -3491,13 +3704,23 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._note_other_hosts()
 
         async with self._session_lock:
+            # _standby_cycle keeps the last cycle's outcome until this one ends:
+            # a key sent during the poll is judged by it (av._known_off).
             try:
                 resources = await self.hass.async_add_executor_job(self._poll_once)
+                self._standby_cycle = False
                 self._mark_device_answered()
             except AuthRejected as e:
+                self._standby_cycle = False
                 await self.hass.async_add_executor_job(self._close_session)
                 raise ConfigEntryAuthFailed(str(e)) from e
+            except BoardInStandby as e:
+                # The session answers; the board is off. Kept open, so the
+                # next cycle's awake read is the whole poll.
+                self._standby_cycle = True
+                return self._device_unreachable("device in standby", e)
             except Exception as e:
+                self._standby_cycle = False
                 if self._closed:
                     # async_close closed the session under this read: nothing
                     # to reconnect, and no device failure to report.
@@ -3521,12 +3744,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # per cycle, and the same wait again on every setup
                     # attempt while it stays dark (issue #269).
                     return self._device_unreachable("device unreachable", e)
-                if self._failed_cycles:
+                if self._failed_cycles or self._reported_off():
                     # Already reported dark, so the retry below can only
                     # repeat the failure. The 8888 transport needs this
                     # guard: its connect() never touches the network, so
                     # `_handshake_failed` never fires and a switched-off
                     # washer warned and polled twice every cycle (issue #269).
+                    # A board whose awake href last read off has gone from
+                    # standby to dark the same way.
                     await self.hass.async_add_executor_job(self._close_session)
                     return self._device_unreachable("device unreachable", e)
                 # A lone reconnect is routine (README's "Known device
@@ -3541,6 +3766,9 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await asyncio.sleep(self._RECONNECT_PAUSE_S)
                 try:
                     resources = await self.hass.async_add_executor_job(self._poll_once)
+                except BoardInStandby as e2:
+                    self._standby_cycle = True
+                    return self._device_unreachable("device in standby", e2)
                 except Exception as e2:
                     return self._device_unreachable("poll failed after reconnect", e2)
                 else:
@@ -3853,6 +4081,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         cache_before_send = not write_only and not cache_after_ack
         retry = not (desc.resend_unsafe_fn and desc.resend_unsafe_fn(payload))
+        beside_reads = retry and prepare_payload is None and self._beside_reads(write_href)
         explicit_optimistic = optimistic_body
 
         def _optimistic(body: dict) -> dict:
@@ -3933,6 +4162,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 prepare_body=_prepare_body if prepare_payload is not None else None,
                 confirm_on_refusal=desc.confirm_on_refusal and not write_only,
                 control_response=desc.control_response,
+                beside_reads=beside_reads,
             )
             if not sent:
                 if cache_before_send:
@@ -3968,7 +4198,10 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # A key press changes nothing a poll would read back promptly, and
         # awaiting one per key stalls a send_command burst behind it.
         if refresh and not isinstance(desc, RemoteDesc):
-            await self.async_request_refresh()
+            if beside_reads:
+                self.confirm_in_background()
+            else:
+                await self.async_request_refresh()
         return True
 
     async def _took_effect(
@@ -3992,6 +4225,27 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return not strict
         return (not strict) if rep is None else _payload_present_in(body, rep)
 
+    async def _send_beside_reads(
+        self, path_segs: list[str], body: dict | list, write_href: str
+    ) -> tuple[tuple[int, Any] | None, tuple[Any, Exception] | None]:
+        """PUT on the open session without _session_lock, beside a read in
+        flight (the family's beside_read_hrefs). Returns the answer, or the
+        session the PUT failed on with the error."""
+        sess = self._session
+        if sess is None:
+            return None, None
+
+        def _put() -> tuple[int, Any]:
+            code, response = sess.write(path_segs, body, timeout=self._POST_TIMEOUT_S)
+            self._log.info("PUT %s → code %#04x", write_href, code)
+            return code, response
+
+        try:
+            return await self.hass.async_add_executor_job(_put), None
+        except Exception as err:
+            self._log.debug("PUT %s beside the reads failed: %s", write_href, err)
+            return None, (sess, err)
+
     async def _async_put(
         self,
         path_segs: list[str],
@@ -4003,9 +4257,16 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         prepare_body: Callable[[], dict | None] | None = None,
         confirm_on_refusal: bool = False,
         control_response: bool = False,
+        beside_reads: bool = False,
+        answered: tuple[int, Any] | None = None,
+        failed: tuple[Any, Exception] | None = None,
     ) -> bool:
         """PUT `body`, reconnecting and retrying once on a dead session.
         Raises HomeAssistantError if the retry fails too.
+
+        With beside_reads the PUT first goes out on the open
+        session beside a background read in flight; `answered` is that answer,
+        and `failed` the session it failed on, with the error.
 
         With retry=False the session is proven live with one GET first, so
         a session the firmware closed between polls is replaced before the
@@ -4015,6 +4276,34 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         prepare_body, when given, replaces `body` once the session is up, and
         again before a retry; None means the command no longer applies, and
         nothing is sent (returns False)."""
+        if beside_reads:
+            async with self._beside_lock:
+                answered, failed = await self._send_beside_reads(path_segs, body, write_href)
+                if answered is None:
+                    # The locked reconnect and resend, before the next beside write.
+                    return await self._async_put(
+                        path_segs,
+                        body,
+                        write_href,
+                        on_retry,
+                        retry=retry,
+                        prepare_body=prepare_body,
+                        confirm_on_refusal=confirm_on_refusal,
+                        control_response=control_response,
+                        failed=failed,
+                    )
+            # Answered: a refusal's confirming read waits for the session, not the
+            # next write, so a later write to the same field can land before it.
+            return await self._async_put(
+                path_segs,
+                body,
+                write_href,
+                on_retry,
+                retry=retry,
+                confirm_on_refusal=confirm_on_refusal,
+                control_response=control_response,
+                answered=answered,
+            )
         sent = False
 
         def _do_put():
@@ -4057,9 +4346,12 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Mirrors the poll path's reconnect-and-retry (issue #294): a PUT
         # landing on a session Samsung's firmware closed between polls used
         # to be silently lost -- no retry, no user-facing error.
-        async with self._session_lock:
+        async with contextlib.nullcontext() if answered is not None else self._session_lock:
             try:
-                result = await _attempt()
+                if failed is not None and failed[0] is self._session:
+                    # The open session just failed this PUT: the dead-session path.
+                    raise failed[1]
+                result = answered if answered is not None else await _attempt()
             except _PrepareFailed as e:
                 # A bug in the payload, not a dead session.
                 raise e.error from None

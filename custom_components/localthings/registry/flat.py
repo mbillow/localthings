@@ -41,22 +41,48 @@ def flat_hrefs(links) -> list[str]:
     return sorted(h for h in hrefs if h not in _SKIP_EXACT and not h.startswith(_SKIP_PREFIXES))
 
 
+class BoardInStandby(RuntimeError):
+    """The board answered, and its awake href says it is off (network standby)."""
+
+
+def reads_off(rep: dict | None) -> bool:
+    """True for an awake href's answer saying off, as a TV's power switch does in
+    network standby (picture-off keeps it true)."""
+    return isinstance(rep, dict) and rep.get("value") is False
+
+
 def read_all(
-    transport, links, *, logger: logging.Logger, awake: str | None = None
+    transport,
+    links,
+    *,
+    logger: logging.Logger,
+    awake: str | None = None,
+    unread: frozenset[str] = frozenset(),
 ) -> dict[str, dict]:
     """Every resource /oic/res advertises, for discovery. Blocking.
 
     Nothing unless at least half of them answered, and `awake` (the
     family's DeviceRegistry.awake_href) among them when advertised. A
     board in network standby can complete the handshake and then let
-    reads time out; discovering from that would register only the
-    entities that answered.
+    reads time out or report itself off; discovering from that would
+    register only the entities that answered. `awake` is read first; its
+    answer saying off raises `BoardInStandby`. `unread` hrefs are skipped
+    and not counted.
     """
-    hrefs = flat_hrefs(links)
-    resources = dict(
+    hrefs = [href for href in flat_hrefs(links) if href not in unread]
+    resources: dict[str, dict] = {}
+    if awake in hrefs:
+        resources = dict(iter_resources(transport, [awake], timeout=FLAT_TIMEOUT_S, logger=logger))
+        if awake not in resources:
+            logger.debug("%s didn't answer; the board is in standby", awake)
+            return {}
+        if reads_off(resources[awake]):
+            raise BoardInStandby(f"{awake} reads off")
+        transport.pace()
+    resources.update(
         iter_resources(
             transport,
-            hrefs,
+            [href for href in hrefs if href != awake],
             timeout=FLAT_TIMEOUT_S,
             budget=FLAT_ENUMERATION_BUDGET_S,
             logger=logger,
@@ -64,9 +90,6 @@ def read_all(
     )
     if 2 * len(resources) < len(hrefs):
         logger.debug("only %d of %d resources answered; not ready", len(resources), len(hrefs))
-        return {}
-    if awake in hrefs and awake not in resources:
-        logger.debug("%s didn't answer; the board is in standby", awake)
         return {}
     return resources
 

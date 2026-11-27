@@ -278,10 +278,10 @@ async def test_remote_power_reuses_the_deterministic_write(
     session = await _setup_tv(hass, entry)
     remote_id = hass.states.async_all("remote")[0].entity_id
 
-    await hass.services.async_call("remote", "turn_off", {"entity_id": remote_id}, blocking=True)
-    assert (["sec", "tv", "switch", "binary"], {"value": False}) in session.writes
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call("remote", "turn_on", {"entity_id": remote_id}, blocking=True)
+    await hass.services.async_call("remote", "turn_off", {"entity_id": remote_id}, blocking=True)
+    assert (["sec", "tv", "switch", "binary"], {"value": False}) in session.writes
     assert all(
         body.get("x.com.samsung.tv.keyvalue") != "KEY_POWER" for _path, body in session.writes
     )
@@ -454,3 +454,22 @@ async def test_the_remote_and_the_player_share_one_power_path(hass: HomeAssistan
     for mock in (turn_on, turn_off):
         assert mock.await_count == 2
         assert all(isinstance(call.args[0].desc, MediaPlayerDesc) for call in mock.await_args_list)
+
+
+async def test_a_source_can_be_named_by_its_input_id(hass: HomeAssistant) -> None:
+    """The TV renames an input after the device on it; the input id stays."""
+    entry = _entry(hass)
+    session = await _setup_tv(hass, entry)
+    player = hass.states.async_all("media_player")[0].entity_id
+    state = hass.states.get(player)
+    assert state is not None
+    assert "HDMI1" not in state.attributes["source_list"]
+
+    await hass.services.async_call(
+        "media_player", "select_source", {"entity_id": player, "source": "HDMI1"}, blocking=True
+    )
+
+    assert session.writes[-1] == (
+        ["sec", "tv", "inputsource"],
+        {"x.com.samsung.tv.currentMode": "HDMI1"},
+    )

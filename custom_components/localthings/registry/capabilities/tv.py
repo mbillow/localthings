@@ -333,6 +333,16 @@ def _screen_off_write(p, rep, href=None):
     return SHOW_MENU_PATH, show_menu_body("pictureOff", "on")
 
 
+# Advertised but not answering a GET while a QE85QN95A is on, so each costs
+# discovery a read timeout; no entity reads them (has_href uses /oic/res).
+UNREAD_HREFS = frozenset({"/sec/tv/remotecontrol", HREF_NATIVE_APP, "/autoreconnect/ap"})
+
+# Writes a QE85QN95A took beside back-to-back reads, two-part reads included
+# (keys, mute, input, picture mode): every write answered, no read failed or
+# changed, and each took effect as often as with no reads running. A volume
+# write is the same single request to /sec/tv/audio as mute.
+BESIDE_READ_HREFS = frozenset({"/sec/tv/remotecontrol", HREF_AUDIO, HREF_INPUT, HREF_PICTURE})
+
 # Accepts KEY_* names; remote.py adds friendly aliases. The notify entity and
 # the screen-off button ride the same anchor: their resources
 # (HREF_NATIVE_APP, HREF_SHOW_MENU) never answer a GET.
@@ -656,7 +666,8 @@ _PLAYBACK_COMMANDS = (
 
 def _supported_commands(resources: dict) -> frozenset[str]:
     """Commands whose resource the TV reports writable. Never power_on: the
-    OCF endpoint is gone in standby, so turn-on is Wake-on-LAN (av.py)."""
+    OCF endpoint is gone in standby, so turn-on is Wake-on-LAN, plus a
+    switch write while the TV wakes in network standby (av.py)."""
     commands = set()
     power = resources.get(HREF_SWITCH) or {}
     audio = resources.get(HREF_AUDIO) or {}

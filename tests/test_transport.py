@@ -44,8 +44,8 @@ class _FakeCoapSession:
         self.post_code = 0x44
         self.post_payload = b""
 
-    def connect(self):
-        pass
+    def connect(self, *, cancel=None):
+        self.cancel = cancel
 
     def start_reader(self):
         self.reader_started = True
@@ -107,6 +107,16 @@ class TestLifetime:
 
         assert "local_port" not in session.kwargs
         assert "on_notification" not in session.kwargs
+
+    def test_cancel_connect_reaches_the_handshake(self, transport):
+        """The signal the handshake was given is the one cancel_connect sets."""
+        cancel = fake_of(transport).cancel
+        assert cancel is not None
+        assert not cancel.is_set()
+
+        transport.cancel_connect()
+
+        assert cancel.is_set()
 
     def test_close_drops_the_session(self, transport):
         session = fake_of(transport)

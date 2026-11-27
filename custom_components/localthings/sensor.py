@@ -218,6 +218,11 @@ class LocalThingsConnectionModeSensor(CoordinatorEntity[LocalThingsCoordinator],
         return self.coordinator.device_info_for(MAIN)
 
     @property
+    def available(self) -> bool:
+        # A TV switched off is not a failed update (coordinator._device_unreachable).
+        return super().available and not self.coordinator.av.unreachable()
+
+    @property
     def native_value(self) -> str:
         return self.coordinator.observe_mode
 

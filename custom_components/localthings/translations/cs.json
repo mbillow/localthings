@@ -2860,6 +2860,7 @@
       "handshake_failed": "Spotřebič odmítl DTLS handshake z důvodu, který nesouvisí s certifikátem — nejspíše kvůli neshodě protokolu nebo šifry. Přesný alert najdete v logu Home Assistanta.",
       "cloud_unreachable": "Nepodařilo se spojit s cloudovou bránou Samsung a získat UUID potřebné k vystavení certifikátu tohoto zařízení. Zkontrolujte přístup Home Assistanta k internetu a zkuste to znovu.",
       "unexpected_response": "Připojení k zařízení proběhlo úspěšně, ale nevrátilo použitelný popis zařízení. Nemusí jít o spotřebič, který tato integrace podporuje. Co zařízení odeslalo, najdete v logu Home Assistanta.",
+      "tv_in_standby": "Televizor je v pohotovostním režimu. Zapněte ho a zkuste to znovu.",
       "cannot_connect": "K zařízení se nelze připojit. Zkontrolujte, zda je IP adresa správná a zda je spotřebič zapnutý a připojený k vaší síti.",
       "invalid_ca": "Certifikát CA nebo privátní klíč se nepodařilo načíst. Ověřte, že obsah PEM je správný a že klíč odpovídá certifikátu.",
       "unknown": "Neočekávaná chyba. Podrobnosti najdete v protokolech Home Assistant.",
@@ -3142,6 +3143,9 @@
     },
     "remote_power_unavailable": {
       "message": "Ovládání napájení není pro toto zařízení k dispozici"
+    },
+    "tv_off": {
+      "message": "Televizor je vypnutý. Nejprve ho zapněte."
     },
     "wake_on_lan_failed": {
       "message": "Nepodařilo se odeslat Wake-on-LAN do televize: {error}"
