@@ -2541,3 +2541,13 @@ def test_flexdry_upper_section_binds_its_connection_flag():
 
     assert unbound == []
     assert flatten(bound, resources)["cloud_connected"] is True
+
+
+def test_registry_reproduces_golden_state_keys_for_artik051_time_2in1():
+    """Recorded Property responses bind a distinct floor and wall climate."""
+    name = "airconditioner_artik051_time_2in1"
+    golden = json.loads((GOLDEN / f"{name}.json").read_text())
+    keys = _new_subdevice_aware_state_keys(name)
+    assert keys == golden["state_keys"]
+    assert "climate" in keys
+    assert "subdevice_11111111222243338444000000000001_climate" in keys

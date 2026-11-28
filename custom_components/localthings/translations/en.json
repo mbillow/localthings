@@ -2726,7 +2726,8 @@
         "title": "Add Samsung appliance",
         "description": "Enter the IP address of your Samsung appliance. LocalThings sets it up automatically with a self-signed certificate — most appliances need nothing else.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "use_owner_psk": "Use an existing owner PSK (skip automatic certificate)"
         },
         "data_description": {
           "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "Add Samsung appliance",
         "description": "Enter the IP address of your Samsung appliance. The CA credentials from an existing LocalThings appliance will be reused.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "use_owner_psk": "Use an existing owner PSK (skip automatic certificate)"
         },
         "data_description": {
           "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."

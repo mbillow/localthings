@@ -110,7 +110,7 @@ def appliance(monkeypatch):
     PskAppliance.device_id = DEVICE_ID
     _hold(OWNER_UUID)
     scan = HostProbe(MOCK_HOST, [PORT], [PORT], advertised=(PORT,))
-    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    monkeypatch.setattr(config_flow.probing, "look", lambda host, **kwargs: scan)
     monkeypatch.setattr(config_flow, "DtlsTransport", PskAppliance)
     monkeypatch.setattr(config_flow, "psk_provider", _Psk)
     monkeypatch.setattr(config_flow, "_source_port_bindable", lambda host, port: True)
@@ -163,7 +163,7 @@ async def test_hint_is_read_on_the_appliances_own_plaintext_port(
     """Where another OCF stack answers 5683 (#540), the doxm that orders the
     menu is the appliance's, on the plaintext port the probe found it on."""
     scan = HostProbe(MOCK_HOST, [PORT], [PORT], advertised=(PORT,), plaintext_port=60137)
-    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    monkeypatch.setattr(config_flow.probing, "look", lambda host, **kwargs: scan)
     asked: list[int | None] = []
 
     def _read(host, port=None):

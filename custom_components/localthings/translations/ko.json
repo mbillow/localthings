@@ -2726,7 +2726,8 @@
         "title": "삼성 가전제품 추가",
         "description": "삼성 가전제품의 IP 주소를 입력하세요. LocalThings가 자체 서명 인증서로 자동으로 설정하며, 대부분의 가전제품은 그 외에 아무것도 필요하지 않습니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "use_owner_psk": "이미 가진 소유자 PSK 사용 (자동 인증서 시도 건너뛰기)"
         },
         "data_description": {
           "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "삼성 가전제품 추가",
         "description": "삼성 가전제품의 IP 주소를 입력하세요. 기존 LocalThings 가전제품의 CA 인증 정보를 다시 사용합니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "use_owner_psk": "이미 가진 소유자 PSK 사용 (자동 인증서 시도 건너뛰기)"
         },
         "data_description": {
           "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."

@@ -39,7 +39,7 @@ from __future__ import annotations
 import re
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .batch import parse_device0_batch
 from .by_type._base import DeviceRegistry
@@ -148,6 +148,23 @@ class Subdevice:
 
 
 MAIN = Subdevice(kind="main", key="", seed_path=("device", "0"))
+
+
+def merge_subdevices(*groups: Sequence[Subdevice]) -> list[Subdevice]:
+    """Merge discovery snapshots by indoor-unit identity, newest group first."""
+    merged: dict[tuple[str, str], Subdevice] = {}
+    for group in groups:
+        for subdevice in group:
+            key = (subdevice.kind, subdevice.key)
+            current = merged.get(key)
+            if current is None:
+                merged[key] = subdevice
+            elif current.flat_hrefs and subdevice.flat_hrefs:
+                merged[key] = replace(
+                    current,
+                    flat_hrefs=tuple(dict.fromkeys((*current.flat_hrefs, *subdevice.flat_hrefs))),
+                )
+    return list(merged.values())
 
 
 def canonical_view(
@@ -301,6 +318,12 @@ def enumerate_subdevices(
     """
     subdevices: list[Subdevice] = []
     fetched: dict[str, dict] = {}
+    model = str(
+        (resources.get("/information/vs/0") or {}).get("x.com.samsung.da.modelNum") or ""
+    ).split("|", 1)[0]
+    # This board was verified to serve its wall unit only as Property hrefs.
+    # Other families can have a working Collection absent from /oic/res.
+    property_only_prefixed = model == "ARTIK051_FAC_TIME_21K"
     # Case-insensitive -- the same UUID can reach here once from
     # subdeviceIdList and once from an /oic/res link prefix with different
     # casing, and probing it twice would materialize the same physical
@@ -344,11 +367,44 @@ def enumerate_subdevices(
             return
         probed_ids.add(sub_id.lower())
         seed = (sub_id, "device", "0")
-        timeout = _next_timeout(collection_timeout)
-        if timeout is None:
-            return
-        batch = _get_batch(transport, seed, timeout)
-        _probed(_seed_href(seed), batch)
+        flat_hrefs: list[str] = []
+        attempted_hrefs: set[str] = set()
+
+        def _probe_property(href: str) -> None:
+            if href not in resources or href in attempted_hrefs:
+                return
+            timeout = _next_timeout(property_timeout)
+            if timeout is None:
+                return
+            attempted_hrefs.add(href)
+            actual = f"/{sub_id}{href}"
+            rep = _get_property(transport, tuple(actual.strip("/").split("/")), timeout)
+            _probed(actual, rep)
+            if rep:
+                flat_hrefs.append(href)
+                fetched[actual] = rep
+
+        advertised_collection = any(
+            link.get("href") == _seed_href(seed) for link in _iter_oic_res_hrefs(oic_res_links)
+        )
+        if property_only_prefixed and time_budget is not None and not advertised_collection:
+            # A silent, unadvertised Collection must not consume the whole
+            # budget before a live property-only indoor unit is considered.
+            _probe_property("/information/vs/0")
+            if preferred_hrefs:
+                transport.pace()
+                _probe_property(preferred_hrefs[0])
+        primary_answered = any(href in preferred_hrefs for href in flat_hrefs)
+        if property_only_prefixed and not advertised_collection and primary_answered:
+            # ARTIK051 can stop serving subsequent prefixed reads after an
+            # unsupported Collection GET. A proven property namespace needs
+            # no speculative Collection request; keep polling it as flat.
+            batch = {}
+        else:
+            timeout = _next_timeout(collection_timeout)
+            batch = _get_batch(transport, seed, timeout) if timeout is not None else {}
+            if timeout is not None:
+                _probed(_seed_href(seed), batch)
         if batch:
             subdevice = Subdevice(kind="prefixed", key=sub_id, seed_path=seed)
             fetched.update(normalize_seed_batch(subdevice, batch))
@@ -372,21 +428,16 @@ def enumerate_subdevices(
         # #205's unit answered only 1 of 31 probes), so this hasn't been
         # guarded against -- the fix would compare a candidate's confirmed
         # reps against the master's own values for the same hrefs.
-        flat_hrefs = []
         first = True
         for href in _flat_probe_hrefs():
+            if href in attempted_hrefs:
+                continue
             if not first:
                 transport.pace()
             first = False
-            timeout = _next_timeout(property_timeout)
-            if timeout is None:
+            _probe_property(href)
+            if budget_exhausted:
                 break
-            actual = f"/{sub_id}{href}"
-            rep = _get_property(transport, tuple(actual.strip("/").split("/")), timeout)
-            _probed(actual, rep)
-            if rep:
-                flat_hrefs.append(href)
-                fetched[actual] = rep
         if not flat_hrefs:
             return
         subdevices.append(

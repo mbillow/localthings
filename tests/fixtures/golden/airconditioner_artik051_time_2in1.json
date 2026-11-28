@@ -1,0 +1,8 @@
+{
+  "state_keys": [
+    "climate",
+    "current_temperature_c",
+    "subdevice_11111111222243338444000000000001_climate",
+    "subdevice_11111111222243338444000000000001_current_temperature_c"
+  ]
+}

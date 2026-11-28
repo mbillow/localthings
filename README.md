@@ -80,6 +80,12 @@ LocalThings uses the standards the appliances implement:
 
 When you add your first appliance, LocalThings contacts Samsung's servers once to read a public identifier. It uses no account or login. Later appliances reuse that identifier, so adding them needs only an IP address and no internet access.
 
+If you already have an owner pre-shared key, select **Use an existing owner PSK**
+on the IP form to skip the automatic certificate attempt. The existing
+IP-only setup remains the default.
+[ARTIK051 2-in-1 testing notes](docs/iphone-artik051-2in1.md) include an iPhone
+backup extraction example and the observed two-device discovery result.
+
 A few appliances need one more step:
 
 - **Some appliances refuse the automatic certificate.** Setup then offers to import a pre-shared key, which LocalThings can't obtain for you. [Credential acquisition](docs/credential-acquisition.md) records what owners have tried; none of it is a supported process yet, and some routes mean re-registering the appliance. We're still working to understand these appliances, and [#435](https://github.com/mbillow/localthings/issues/435) has the plan, what we've found so far, and a place to report how it went. Setup also offers the public `AC14K_M` CA certificate, which the `smartthings-local` project's [`setup_cert.py --fallback`](https://github.com/QuiteYellow/SmartThings-Local/blob/main/setup_cert.py) shows how to get, but no appliance that refused the automatic certificate has been reported to accept it.

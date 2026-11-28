@@ -5,7 +5,8 @@
         "title": "Añadir electrodoméstico Samsung",
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung. LocalThings lo configura automáticamente con un certificado autofirmado; la mayoría de los electrodomésticos no necesitan nada más.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "use_owner_psk": "Usar una PSK de propietario existente (omitir el certificado automático)"
         },
         "data_description": {
           "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
@@ -15,7 +16,8 @@
         "title": "Añadir electrodoméstico Samsung",
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung. Se reutilizarán las credenciales CA de un electrodoméstico LocalThings existente.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "use_owner_psk": "Usar una PSK de propietario existente (omitir el certificado automático)"
         },
         "data_description": {
           "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
