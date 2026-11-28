@@ -2726,7 +2726,8 @@
         "title": "Dodajte Samsung uređaj",
         "description": "Unesite IP adresu vašeg Samsung uređaja. LocalThings ga automatski podešava pomoću samopotpisanog sertifikata — većini uređaja ništa drugo nije potrebno.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_owner_psk": "Koristi postojeći PSK vlasnika (preskoči automatski sertifikat)"
         },
         "data_description": {
           "host": "Lokalna IP adresa vašeg Samsung uređaja (npr. 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "Dodajte Samsung uređaj",
         "description": "Unesite IP adresu vašeg Samsung uređaja. Akreditivi sertifikacionog tela (CA) sa postojećeg LocalThings uređaja će biti ponovo iskorišćeni.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_owner_psk": "Koristi postojeći PSK vlasnika (preskoči automatski sertifikat)"
         },
         "data_description": {
           "host": "Lokalna IP adresa vašeg Samsung uređaja (npr. 192.168.1.50)."

@@ -2726,7 +2726,8 @@
         "title": "Samsung-apparaat toevoegen",
         "description": "Voer het IP-adres van je Samsung-apparaat in. LocalThings stelt het automatisch in met een zelfondertekend certificaat; de meeste apparaten hebben verder niets nodig.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "use_owner_psk": "Bestaande eigenaar-PSK gebruiken (automatisch certificaat overslaan)"
         },
         "data_description": {
           "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "Samsung-apparaat toevoegen",
         "description": "Voer het IP-adres van je Samsung-apparaat in. De CA-inloggegevens van een bestaand LocalThings-apparaat worden hergebruikt.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "use_owner_psk": "Bestaande eigenaar-PSK gebruiken (automatisch certificaat overslaan)"
         },
         "data_description": {
           "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."

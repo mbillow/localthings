@@ -113,6 +113,7 @@ from .registry.subdevices import (
     canonical_view,
     discover_partitioned,
     enumerate_subdevices,
+    merge_subdevices,
     normalize_seed_batch,
 )
 from .rekey import rekey_entry
@@ -2067,7 +2068,28 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 continue
             rank = min(tier_rank.get(capability.poll_tier, 2) for capability in primary_caps)
             ranked.append((rank, order, href))
-        return tuple(href for _, _, href in sorted(ranked))
+        priority = [href for _, _, href in sorted(ranked)]
+        climate_hrefs = [
+            href
+            for href in resources
+            if any(
+                isinstance(desc, ClimateDesc)
+                for capability in registry.capabilities.get(href, ())
+                for desc in capability.entities
+            )
+        ]
+        if climate_hrefs:
+            from .registry.capabilities.airconditioner import CLIMATE_CONSUMED_HREFS
+
+            # A composite climate needs power, temperatures and wind as well
+            # as its bound mode resource. Coverage-only dependencies otherwise
+            # sort behind meters and can be lost to the enumeration deadline.
+            priority = [
+                *climate_hrefs,
+                *(href for href in CLIMATE_CONSUMED_HREFS if href in resources),
+                *priority,
+            ]
+        return tuple(dict.fromkeys(priority))
 
     def _enumerate_subdevices_blocking(self, resources: dict[str, dict]) -> dict[str, dict]:
         """One-time (first discovery only) probe for sibling indoor
@@ -2102,12 +2124,14 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # A sibling the snapshot knew already answered its seed on this poll;
         # a probe that ran out of time on a slow bridge doesn't undo that.
         # Dropped, its hrefs would fall into the master's view unbound.
-        answered = [
-            su
+        answered = {
+            (su.kind, su.key): su
             for su in self.subdevices
-            if su not in subdevices and any(su.owns(href) for href in resources)
-        ]
-        self.subdevices = [*subdevices, *answered]
+            if any(su.owns(href) for href in resources)
+        }
+        # A flat unit's href set can grow between discoveries without it
+        # becoming another physical unit. Prefer the fresh candidate by ID.
+        self.subdevices = merge_subdevices(subdevices, list(answered.values()))
         self._subdevice_probes = probes
         # /multidevice/vs/0 is corroborating metadata, not appliance state,
         # and is probed on every device -- it must not join `resources`, or
@@ -2454,6 +2478,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         delayed write outlives whatever queued it: it lands after
         `async_remove_entry` has deleted the file and recreates it orphaned.
         """
+        candidates = merge_subdevices(candidates)
         self._banked_resources = dict(resources)
         self._banked_candidates = list(candidates)
         ident = self._identity
@@ -2731,10 +2756,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             *(grown_by_id.pop(bound_id(b), b) for b in self.bound),
             *grown_by_id.values(),
         ]
-        self.subdevices = [
-            *self.subdevices,
-            *(su for su in materialized if su not in self.subdevices),
-        ]
+        self.subdevices = merge_subdevices(materialized, self.subdevices)
         reg.grow(grown, lambda b: decisions[bound_id(b)])
         added = {
             "hot": tiers["hot"] - set(self._hot_hrefs),
@@ -2905,10 +2927,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             kept = {href: rep for href, rep in kept.items() if href in advertised}
             registered = [b for b in registered if b.href in advertised or b.href in found]
         self._retain(registered, previous)
-        self._known_subdevices = [
-            *candidates,
-            *(su for su in stored_candidates if su not in candidates),
-        ]
+        self._known_subdevices = merge_subdevices(candidates, stored_candidates)
         self._unconfirmed = {href: self._owner_key(href) for href in kept}
         self._awake_baseline = self._read_baseline(resources)
         await self._async_save_snapshot(
@@ -2950,7 +2969,7 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
             except (KeyError, TypeError):
                 continue
-        return remembered, candidates
+        return remembered, merge_subdevices(candidates)
 
     async def async_rehydrate(self) -> bool:
         """Register the last known entity set without reaching the device.
@@ -2992,15 +3011,17 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
             # JSON gives lists back where Subdevice declares tuples, and it's
             # a frozen (hashable) dataclass used as a dict key in flatten().
-            self.subdevices = [
-                Subdevice(
-                    kind=su["kind"],
-                    key=su["key"],
-                    seed_path=tuple(su.get("seed_path") or ()),
-                    flat_hrefs=tuple(su.get("flat_hrefs") or ()),
-                )
-                for su in stored.get("subdevice_candidates") or ()
-            ]
+            self.subdevices = merge_subdevices(
+                [
+                    Subdevice(
+                        kind=su["kind"],
+                        key=su["key"],
+                        seed_path=tuple(su.get("seed_path") or ()),
+                        flat_hrefs=tuple(su.get("flat_hrefs") or ()),
+                    )
+                    for su in stored.get("subdevice_candidates") or ()
+                ]
+            )
             self._run_discovery(resources, from_snapshot=True)
             self._registration_evidence = resources
         except Exception as e:

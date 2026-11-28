@@ -2726,7 +2726,8 @@
         "title": "Přidat spotřebič Samsung",
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung. LocalThings jej nastaví automaticky pomocí vlastnoručně podepsaného certifikátu – většina spotřebičů nepotřebuje nic dalšího.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_owner_psk": "Použít existující PSK vlastníka (přeskočit automatický certifikát)"
         },
         "data_description": {
           "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "Přidat spotřebič Samsung",
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung. Přihlašovací údaje CA z existujícího spotřebiče LocalThings budou znovu použity.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_owner_psk": "Použít existující PSK vlastníka (přeskočit automatický certifikát)"
         },
         "data_description": {
           "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."

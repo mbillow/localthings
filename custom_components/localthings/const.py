@@ -64,6 +64,7 @@ AUTH_CERTIFICATE = "certificate"
 AUTH_PSK = "psk"
 
 CONF_PSK_PROFILE = "psk_profile"
+CONF_USE_OWNER_PSK = "use_owner_psk"
 PSK_PROFILE_OWNER = "owner"
 PSK_PROFILE_PEER = "peer"
 
@@ -210,11 +211,10 @@ PROBE_GET_TIMEOUT_S = 10.0
 # to INADDR_ANY, so a unicast datagram lands on it on every board in this
 # family (issue #482). The device's unicast socket is kernel-assigned and
 # moves, so the advertisement is the only thing that names it -- and the only
-# thing that reaches a port outside PROBE_PORT_RANGE. 49153 is asked only
-# when 5683 advertised nothing, as one extra datagram for a board that does
-# not answer the standard port -- asking both at once corrupts the device's
-# per-peer transfer state (see _discover_advertised_ports).
-PLAINTEXT_DISCOVERY_PORTS = [5683, 49153]
+# thing that reaches a port outside PROBE_PORT_RANGE. Try 49153, then 49154
+# (observed on ARTIK051), only when earlier ports advertised nothing. Parallel
+# probes corrupt the device's per-peer state (see _discover_advertised_ports).
+PLAINTEXT_DISCOVERY_PORTS = [5683, 49153, 49154]
 
 # Budget for the advertisement lookup, and for the two identity reads behind
 # it. Retries are load-bearing and the budget barely is: at retries=1 a lost

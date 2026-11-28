@@ -284,7 +284,7 @@ def _preferred_port(advertised: tuple[int, ...]) -> int | None:
     return next((port for port in advertised if port != MULTICAST_SECURE_PORT), None)
 
 
-def look(host: str) -> HostProbe:
+def look(host: str, *, confirm_dtls: bool = True) -> HostProbe:
     """Find the device's DTLS port, preferring proof over absence of evidence.
 
     Tiered, cheapest and most authoritative first: the device's own
@@ -352,6 +352,21 @@ def look(host: str) -> HostProbe:
         # Both answered: CoAP wins and the flow proceeds as an ordinary
         # device, but the 8888 answer is unusual enough to want in the log.
         _LOGGER.debug("%s answered both legacy 8888 and plaintext CoAP; CoAP wins", host)
+
+    if advertised and not confirm_dtls:
+        # A PSK session will prove both the endpoint and device identity.
+        # Do not send an unrelated certificate ClientHello ahead of it:
+        # ARTIK051 can answer that preflight but drop the following PSK flight.
+        return HostProbe(
+            host=host,
+            candidates=order_candidates(list(advertised)),
+            confirmed=[],
+            advertised=advertised,
+            plaintext=plaintext,
+            plaintext_port=plaintext_port,
+            legacy_http=legacy_http,
+            typeless_stack=typeless_stack,
+        )
 
     try:
         confirmed = _clienthello_scan(host, _probe_ports(advertised), _preferred_port(advertised))

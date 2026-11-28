@@ -1,0 +1,166 @@
+{
+  "device0": [
+    {
+      "rt": [
+        "x.com.samsung.devcol"
+      ]
+    },
+    {
+      "href": "/information/vs/0",
+      "rep": {
+        "x.com.samsung.da.modelNum": "ARTIK051_FAC_TIME_21K",
+        "x.com.samsung.da.description": "ARTIK051_FAC_TIME_21K"
+      }
+    },
+    {
+      "href": "/mode/vs/0",
+      "rep": {
+        "x.com.samsung.da.supportedModes": [
+          "AIComfort",
+          "Cool",
+          "Dry",
+          "Wind"
+        ],
+        "x.com.samsung.da.modes": [
+          "Wind"
+        ]
+      }
+    },
+    {
+      "href": "/power/0",
+      "rep": {
+        "value": false
+      }
+    },
+    {
+      "href": "/temperatures/vs/0",
+      "rep": {
+        "x.com.samsung.da.items": [
+          {
+            "x.com.samsung.da.id": "0",
+            "x.com.samsung.da.description": "Temperature",
+            "x.com.samsung.da.desired": "24.0",
+            "x.com.samsung.da.current": "25.0",
+            "x.com.samsung.da.maximum": "30",
+            "x.com.samsung.da.minimum": "18",
+            "x.com.samsung.da.increment": "0.5",
+            "x.com.samsung.da.unit": "Celsius"
+          }
+        ]
+      }
+    },
+    {
+      "href": "/wind/strength/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": "0",
+        "x.com.samsung.da.supportedModes": [
+          "0",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16"
+        ],
+        "x.com.samsung.da.modesName": [
+          "Auto",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "Max"
+        ]
+      }
+    },
+    {
+      "href": "/wind/direction/vs/0",
+      "rep": {
+        "x.com.samsung.da.modes": "NotSupported",
+        "x.com.samsung.da.supportedModes": [
+          "NotSupported"
+        ]
+      }
+    },
+    {
+      "href": "/subdevices/vs/0",
+      "rep": {
+        "x.com.samsung.da.subdeviceIdList": [
+          "11111111-2222-4333-8444-000000000001"
+        ]
+      }
+    }
+  ],
+  "oic_res": [
+    {
+      "href": "/11111111-2222-4333-8444-000000000001/file/transfer/vs/0",
+      "rt": [
+        "x.com.samsung.file.transfer"
+      ]
+    }
+  ],
+  "probes": {
+    "/11111111-2222-4333-8444-000000000001/information/vs/0": {
+      "x.com.samsung.da.modelNum": "ARTIK051_FAC_TIME_RAC_21K",
+      "x.com.samsung.da.description": "ARTIK051_FAC_TIME_RAC_21K"
+    },
+    "/11111111-2222-4333-8444-000000000001/mode/vs/0": {
+      "x.com.samsung.da.supportedModes": [
+        "AIComfort",
+        "Cool",
+        "Dry",
+        "Wind"
+      ],
+      "x.com.samsung.da.modes": [
+        "AIComfort"
+      ]
+    },
+    "/11111111-2222-4333-8444-000000000001/power/0": {
+      "value": false
+    },
+    "/11111111-2222-4333-8444-000000000001/temperatures/vs/0": {
+      "x.com.samsung.da.items": [
+        {
+          "x.com.samsung.da.id": "0",
+          "x.com.samsung.da.description": "Temperature",
+          "x.com.samsung.da.desired": "24.0",
+          "x.com.samsung.da.current": "24.5",
+          "x.com.samsung.da.maximum": "30",
+          "x.com.samsung.da.minimum": "16",
+          "x.com.samsung.da.increment": "0.5",
+          "x.com.samsung.da.unit": "Celsius"
+        }
+      ]
+    },
+    "/11111111-2222-4333-8444-000000000001/wind/strength/vs/0": {
+      "x.com.samsung.da.modes": "0",
+      "x.com.samsung.da.supportedModes": [
+        "0",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35"
+      ],
+      "x.com.samsung.da.modesName": [
+        "Auto",
+        "1",
+        "2",
+        "3",
+        "4",
+        "Max"
+      ]
+    },
+    "/11111111-2222-4333-8444-000000000001/wind/direction/vs/0": {
+      "x.com.samsung.da.modes": "Fix",
+      "x.com.samsung.da.supportedModes": [
+        "Off",
+        "Up_And_Low",
+        "Fix",
+        "Left_And_Right",
+        "All"
+      ]
+    }
+  },
+  "seeds_note": "Subset of read-only ARTIK051_FAC_TIME_21K floor and ARTIK051_FAC_TIME_RAC_21K wall Property responses. The subdevice UUID is synthetic; identity reps retain only public board model names. The directory is reduced to its observed prefixed file-transfer link. No wall Collection or control write was confirmed."
+}

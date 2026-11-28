@@ -2726,7 +2726,8 @@
         "title": "Ajouter un appareil Samsung",
         "description": "Saisissez l'adresse IP de votre appareil Samsung. LocalThings le configure automatiquement avec un certificat auto-signé — la plupart des appareils n'ont besoin de rien d'autre.",
         "data": {
-          "host": "Adresse IP"
+          "host": "Adresse IP",
+          "use_owner_psk": "Utiliser une PSK propriétaire existante (ignorer le certificat automatique)"
         },
         "data_description": {
           "host": "Adresse IP locale de votre appareil Samsung (par exemple 192.168.1.50)."
@@ -2736,7 +2737,8 @@
         "title": "Ajouter un appareil Samsung",
         "description": "Saisissez l'adresse IP de votre appareil Samsung. Les identifiants de l'autorité de certification (CA) d'un appareil LocalThings existant seront réutilisés.",
         "data": {
-          "host": "Adresse IP"
+          "host": "Adresse IP",
+          "use_owner_psk": "Utiliser une PSK propriétaire existante (ignorer le certificat automatique)"
         },
         "data_description": {
           "host": "Adresse IP locale de votre appareil Samsung (par exemple 192.168.1.50)."

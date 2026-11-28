@@ -34,7 +34,10 @@ is the place to report a new route or a result.
 
 ## Importing a credential
 
-Add the appliance by IP as usual. If it refuses the automatic certificate, setup
+Add the appliance by IP as usual. If you already hold an OwnerPSK, the optional
+**Use an existing owner PSK** checkbox goes directly to its import form. Leave
+it off for the existing automatic-certificate path. If the appliance refuses
+the automatic certificate, setup
 offers an owner pre-shared key, a peer pre-shared key and, last, an AC14K_M CA
 certificate. No appliance that refused the automatic certificate has been
 reported to accept AC14K_M. When the appliance's unencrypted `/oic/sec/doxm`
@@ -85,7 +88,7 @@ appliance from SmartThings and adding it again.
 
 | Route | Phone | Root | Re-registration | Reported on | Tooling |
 | --- | --- | --- | --- | --- | --- |
-| [Local iPhone backup](#local-iphone-backup) | iPhone | No | No | `WD11BB944DGBGU` washer, ViewFinity S9 monitor, The Frame 2021 TV | Steps on this page |
+| [Local iPhone backup](#local-iphone-backup) | iPhone | No | Sometimes | `WD11BB944DGBGU` washer, ViewFinity S9 monitor, The Frame 2021 TV, `ARTIK051_FAC_TIME_21K` 2-in-1 AC | Steps on this page |
 | [Patched Android app (Morphe)](#patched-android-app-morphe) | Android | No | Sometimes | `HW-Q950A`, `HW-Q990C`, `HW-Q850A` soundbars, `S95B` TV, a Family Hub | [smortthings](https://github.com/neoKushan/smortthings), external |
 | [Rooted Android: native credential list](#rooted-android-native-credential-list) | Android | Yes | Not reported | `AF18DX936WFN` air conditioner | Described in [#435](https://github.com/mbillow/localthings/issues/435#issuecomment-6159673363) |
 | [Rooted Android: oven scripts](#rooted-android-oven-scripts) | Android 17 | Yes | See its procedure | A Samsung LCD oven | [Owner's scripts](https://github.com/KRZ303/locathings-oven-psk-retrieval), external |
@@ -122,6 +125,12 @@ On the washer the key completed a handshake and an authenticated
 `GET /oic/sec/acl` returned `2.05 Content`, with no security write. That shows
 local access for one appliance, not that every control works or that every
 SmartThings version stores credentials this way.
+
+For a worked backup-file lookup, offline CBOR extraction example, and the
+read-only result on a floor + wall air conditioner, see
+[iPhone backup and ARTIK051 2-in-1 testing notes](iphone-artik051-2in1.md).
+The AC report needed re-registration before a PSK appeared; the earlier reports
+above did not. Both cases remain owner reports under the warning on this page.
 
 ### Patched Android app (Morphe)
 

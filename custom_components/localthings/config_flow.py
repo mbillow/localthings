@@ -73,6 +73,7 @@ from .const import (
     CONF_READ_MODE,
     CONF_SERIAL,
     CONF_TRANSPORT,
+    CONF_USE_OWNER_PSK,
     DEFAULT_CAMERA_CASTING,
     DEFAULT_CLOUD_COURSES_ENABLED,
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
@@ -1050,7 +1051,7 @@ def _probe_psk(host: str, identity: str, key: str, local_port: int | None = None
     one would have nothing for the coordinator's check to compare against
     (#435).
     """
-    scan = probing.look(host)
+    scan = probing.look(host, confirm_dtls=False)
     info = _handshake_and_read(host, scan, None, None, local_port, psk=psk_provider(identity, key))
     if info["ocf_device_id"] is None:
         raise IdentityUnproven(f"{host} authenticated but reported no usable /oic/d di")
@@ -1178,6 +1179,10 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._host = user_input[CONF_HOST].strip()
+            if user_input.get(CONF_USE_OWNER_PSK, False):
+                # Some ARTIK boards retain a failed certificate association
+                # that prevents the following PSK session from completing.
+                return await self.async_step_psk_owner()
             existing_leaf = None
             if has_creds:
                 # Reuse an existing entry's credentials. Prefer one that has
@@ -1257,10 +1262,14 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self._finish_probe(info, existing)
 
-        # Both the first device and every later one now ask only for the host:
-        # the first tries self-signed, later ones reuse the stored leaf. The
-        # step_id still distinguishes them so their form text can differ.
-        schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
+        # IP-only setup keeps the certificate default. An existing OwnerPSK
+        # can skip that attempt; later certificate entries still reuse a leaf.
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST): _TEXT,
+                vol.Optional(CONF_USE_OWNER_PSK, default=False): bool,
+            }
+        )
         step_id = "user_reuse" if has_creds else "user"
 
         return self.async_show_form(
